@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -41,7 +41,7 @@ func DoGennaroRound1[
 	for _, pi := range participants {
 		r1bo[pi.SharingID()], err = pi.Round1()
 		if err != nil {
-			return nil, errs.WrapFailed(err, "%d could not run Gennaro round 1", pi.SharingID())
+			return nil, errs2.Wrap(err).WithMessage("%d could not run Gennaro round 1", pi.SharingID())
 		}
 	}
 
@@ -60,7 +60,7 @@ func DoGennaroRound2[
 	for _, pi := range participants {
 		r2bo[pi.SharingID()], r2uo[pi.SharingID()], err = pi.Round2(r2bi[pi.SharingID()])
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "%d could not run Gennaro round 2", pi.SharingID())
+			return nil, nil, errs2.Wrap(err).WithMessage("%d could not run Gennaro round 2", pi.SharingID())
 		}
 	}
 	return r2bo, r2uo, nil
@@ -77,7 +77,7 @@ func DoGennaroRound3[
 	for _, pi := range participants {
 		v, err := pi.Round3(r3bi[pi.SharingID()], r3ui[pi.SharingID()])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "%d could not run Gennaro round 3", pi.SharingID())
+			return nil, errs2.Wrap(err).WithMessage("%d could not run Gennaro round 3", pi.SharingID())
 		}
 		dkgOutput.Put(pi.SharingID(), v)
 	}
@@ -94,14 +94,14 @@ func DoGennaroDKG[
 	tb.Helper()
 	r1bo, err := DoGennaroRound1(participants)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run Gennaro round 1")
+		return nil, errs2.Wrap(err).WithMessage("could not run Gennaro round 1")
 	}
 
 	r2bi := ntu.MapBroadcastO2I(tb, participants, r1bo)
 
 	r2bo, r2uo, err := DoGennaroRound2(participants, r2bi)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run Gennaro round 2")
+		return nil, errs2.Wrap(err).WithMessage("could not run Gennaro round 2")
 	}
 
 	r3bi := ntu.MapBroadcastO2I(tb, participants, r2bo)
@@ -109,7 +109,7 @@ func DoGennaroDKG[
 
 	dkgOutput, err = DoGennaroRound3(participants, r3bi, r3ui)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run Gennaro round 3")
+		return nil, errs2.Wrap(err).WithMessage("could not run Gennaro round 3")
 	}
 
 	return dkgOutput, nil

@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
@@ -27,7 +27,7 @@ type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
 // If an access structure is provided, validates that the ID is a valid shareholder.
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *sharing.ThresholdAccessStructure) (*Share[FE], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
-		return nil, errs.NewMembership("share ID %d is not a valid shareholder", id)
+		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
 	return &Share[FE]{
 		id: id,
@@ -41,20 +41,20 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *sha
 func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[FE], error) {
 	field, ok := s.v.Structure().(algebra.PrimeField[FE])
 	if !ok {
-		return nil, errs.NewType("share value does not implement Field interface")
+		return nil, ErrType.WithMessage("share value does not implement Field interface")
 	}
 	lambdas, err := LagrangeCoefficients(field, qualifiedSet.Shareholders().List()...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not compute Lagrange coefficients")
+		return nil, errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
 	lambda_i, exists := lambdas.Get(s.id)
 	if !exists {
-		return nil, errs.NewMembership("share ID %d is not a valid shareholder", s.id)
+		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
 	}
 	converted := lambda_i.Mul(s.v)
 	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to convert Shamir share to additive")
+		return nil, errs2.Wrap(err).WithMessage("failed to convert Shamir share to additive")
 	}
 	return additiveShare, nil
 }
@@ -142,7 +142,7 @@ func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Shamir Share")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal Shamir Share")
 	}
 	return data, nil
 }

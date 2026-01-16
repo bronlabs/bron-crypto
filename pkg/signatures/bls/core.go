@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -129,7 +128,7 @@ func coreBatchSign[
 		errGroup.Go(func() error {
 			batch[i], err = coreSign(signatureSubGroup, privateKey, message, dst)
 			if err != nil {
-				return errs.WrapFailed(err, "could not sign message %s", message)
+				return errs2.Wrap(err).WithMessage("could not sign message %s", message)
 			}
 			return nil
 		})

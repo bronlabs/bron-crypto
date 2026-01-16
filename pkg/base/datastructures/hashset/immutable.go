@@ -1,57 +1,70 @@
 package hashset
 
 import (
-	"encoding/json"
 	"iter"
 	"slices"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 )
 
-type Immutable[E any] struct {
+// ImmutableSet is an immutable wrapper around a MutableSet.
+type ImmutableSet[E any] struct {
 	v ds.MutableSet[E]
 }
 
-func (s *Immutable[E]) Unfreeze() ds.MutableSet[E] {
+// Unfreeze returns a mutable copy of this set.
+func (s *ImmutableSet[E]) Unfreeze() ds.MutableSet[E] {
 	return s.v.Clone()
 }
 
-func (s *Immutable[E]) Contains(e E) bool {
+// Contains returns true if the element is in the set.
+func (s *ImmutableSet[E]) Contains(e E) bool {
 	return s.v.Contains(e)
 }
 
-func (s *Immutable[E]) Iter() iter.Seq[E] {
+// Iter returns an iterator over all elements in the set.
+func (s *ImmutableSet[E]) Iter() iter.Seq[E] {
 	return s.v.Iter()
 }
 
-func (s *Immutable[E]) Iter2() iter.Seq2[int, E] {
+// Iter2 returns an iterator with index and element pairs.
+func (s *ImmutableSet[E]) Iter2() iter.Seq2[int, E] {
 	return s.v.Iter2()
 }
 
-func (s *Immutable[E]) Size() int {
+// Size returns the number of elements in the set.
+func (s *ImmutableSet[E]) Size() int {
 	return s.v.Size()
 }
 
-func (s *Immutable[E]) IsEmpty() bool {
+// IsEmpty returns true if the set contains no elements.
+func (s *ImmutableSet[E]) IsEmpty() bool {
 	return s.v.IsEmpty()
 }
 
-func (s *Immutable[E]) Union(other ds.Set[E]) ds.Set[E] {
+// Union returns a new immutable set containing all elements from both sets.
+func (s *ImmutableSet[E]) Union(other ds.Set[E]) ds.Set[E] {
 	return s.v.Union(other.Unfreeze()).Freeze()
 }
 
-func (s *Immutable[E]) Intersection(other ds.Set[E]) ds.Set[E] {
+// Intersection returns a new immutable set containing only elements present in both sets.
+func (s *ImmutableSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	return s.v.Intersection(other.Unfreeze()).Freeze()
 }
-func (s *Immutable[E]) Difference(other ds.Set[E]) ds.Set[E] {
+
+// Difference returns a new immutable set containing elements in this set but not in the other.
+func (s *ImmutableSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	return s.v.Difference(other.Unfreeze()).Freeze()
 }
-func (s *Immutable[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
+
+// SymmetricDifference returns a new immutable set containing elements in either set but not both.
+func (s *ImmutableSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
 	return s.v.SymmetricDifference(other.Unfreeze()).Freeze()
 }
-func (s *Immutable[E]) SubSets() []ds.Set[E] {
+
+// SubSets returns all possible subsets of this set (power set).
+func (s *ImmutableSet[E]) SubSets() []ds.Set[E] {
 	return slices.Collect(
 		iterutils.Map(slices.Values(s.v.SubSets()), func(subset ds.MutableSet[E]) ds.Set[E] {
 			return subset.Freeze()
@@ -59,7 +72,8 @@ func (s *Immutable[E]) SubSets() []ds.Set[E] {
 	)
 }
 
-func (s *Immutable[E]) IsSubSet(of ds.Set[E]) bool {
+// IsSubSet returns true if all elements of this set are in the other set.
+func (s *ImmutableSet[E]) IsSubSet(of ds.Set[E]) bool {
 	for k := range s.Iter() {
 		if !of.Contains(k) {
 			return false
@@ -68,11 +82,13 @@ func (s *Immutable[E]) IsSubSet(of ds.Set[E]) bool {
 	return true
 }
 
-func (s *Immutable[E]) IsProperSubSet(of ds.Set[E]) bool {
+// IsProperSubSet returns true if this is a subset of other and they are not equal.
+func (s *ImmutableSet[E]) IsProperSubSet(of ds.Set[E]) bool {
 	return s.IsSubSet(of) && !s.Equal(of)
 }
 
-func (s *Immutable[E]) IsSuperSet(of ds.Set[E]) bool {
+// IsSuperSet returns true if all elements of the other set are in this set.
+func (s *ImmutableSet[E]) IsSuperSet(of ds.Set[E]) bool {
 	for k := range of.Iter() {
 		if !s.Contains(k) {
 			return false
@@ -81,11 +97,13 @@ func (s *Immutable[E]) IsSuperSet(of ds.Set[E]) bool {
 	return true
 }
 
-func (s *Immutable[E]) IsProperSuperSet(of ds.Set[E]) bool {
+// IsProperSuperSet returns true if this is a superset of other and they are not equal.
+func (s *ImmutableSet[E]) IsProperSuperSet(of ds.Set[E]) bool {
 	return s.IsSuperSet(of) && !s.Equal(of)
 }
 
-func (s *Immutable[E]) IterSubSets() iter.Seq[ds.Set[E]] {
+// IterSubSets returns an iterator over all possible subsets of this set.
+func (s *ImmutableSet[E]) IterSubSets() iter.Seq[ds.Set[E]] {
 	return func(yield func(ds.Set[E]) bool) {
 		for subset := range s.v.IterSubSets() {
 			if !yield(subset.Freeze()) {
@@ -95,25 +113,22 @@ func (s *Immutable[E]) IterSubSets() iter.Seq[ds.Set[E]] {
 	}
 }
 
-func (s *Immutable[E]) List() []E {
+// List returns a slice of all elements in the set.
+func (s *ImmutableSet[E]) List() []E {
 	return s.v.List()
 }
 
-func (s *Immutable[E]) Equal(other ds.Set[E]) bool {
+// Equal returns true if both sets contain exactly the same elements.
+func (s *ImmutableSet[E]) Equal(other ds.Set[E]) bool {
 	return s.v.Equal(other.Unfreeze())
 }
 
-func (s *Immutable[E]) Clone() ds.Set[E] {
+// Clone returns a copy of this set.
+func (s *ImmutableSet[E]) Clone() ds.Set[E] {
 	return s.v.Freeze()
 }
 
-func (s *Immutable[E]) Cardinality() int {
+// Cardinality returns the number of elements in the set.
+func (s *ImmutableSet[E]) Cardinality() int {
 	return s.v.Cardinality()
-}
-func (s *Immutable[E]) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(s.v)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal hashset")
-	}
-	return data, nil
 }

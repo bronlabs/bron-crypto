@@ -7,7 +7,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -30,24 +30,24 @@ type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 // The threshold must not exceed the number of shareholders.
 func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[FE], error) {
 	if f == nil {
-		return nil, errs.NewIsNil("invalid field")
+		return nil, ErrIsNil.WithMessage("invalid field")
 	}
 	if shareholders == nil {
-		return nil, errs.NewIsNil("shareholders is nil")
+		return nil, ErrIsNil.WithMessage("shareholders is nil")
 	}
 	if threshold < 2 {
-		return nil, errs.NewValue("threshold cannot be less than 2")
+		return nil, ErrValue.WithMessage("threshold cannot be less than 2")
 	}
 	if threshold > uint(shareholders.Size()) {
-		return nil, errs.NewValue("threshold cannot be greater than total number of shareholders")
+		return nil, ErrValue.WithMessage("threshold cannot be greater than total number of shareholders")
 	}
 	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create access structure")
+		return nil, errs2.Wrap(err).WithMessage("could not create access structure")
 	}
 	ring, err := polynomials.NewPolynomialRing(f)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create polynomial ring")
+		return nil, errs2.Wrap(err).WithMessage("could not create polynomial ring")
 	}
 
 	return &Scheme[FE]{
@@ -82,16 +82,16 @@ func (d *Scheme[FE]) PolynomialRing() *polynomials.PolynomialRing[FE] {
 // for verification or further computation.
 func (d *Scheme[FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[FE], *Secret[FE], DealerFunc[FE], error) {
 	if prng == nil {
-		return nil, nil, nil, errs.NewIsNil("prng is nil")
+		return nil, nil, nil, ErrIsNil.WithMessage("prng is nil")
 	}
 	value, err := d.f.Random(prng)
 	if err != nil {
-		return nil, nil, nil, errs.WrapRandomSample(err, "could not sample field element")
+		return nil, nil, nil, errs2.Wrap(err).WithMessage("could not sample field element")
 	}
 	secret := NewSecret(value)
 	shares, dealerFunc, err := d.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "could not create shares")
+		return nil, nil, nil, errs2.Wrap(err).WithMessage("could not create shares")
 	}
 	return shares, secret, dealerFunc, nil
 }
@@ -100,7 +100,7 @@ func (d *Scheme[FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutpu
 func (d *Scheme[FE]) DealRandom(prng io.Reader) (*DealerOutput[FE], *Secret[FE], error) {
 	shares, secret, _, err := d.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not deal random shares")
+		return nil, nil, errs2.Wrap(err).WithMessage("could not deal random shares")
 	}
 	return shares, secret, nil
 }
@@ -109,14 +109,14 @@ func (d *Scheme[FE]) DealRandom(prng io.Reader) (*DealerOutput[FE], *Secret[FE],
 // dealing polynomial f(x) where f(0) = secret.
 func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE], DealerFunc[FE], error) {
 	if secret == nil {
-		return nil, nil, errs.NewIsNil("secret is nil")
+		return nil, nil, ErrIsNil.WithMessage("secret is nil")
 	}
 	if prng == nil {
-		return nil, nil, errs.NewIsNil("prng is nil")
+		return nil, nil, ErrIsNil.WithMessage("prng is nil")
 	}
 	poly, err := d.polyRing.NewRandomWithConstantTerm(int(d.ac.Threshold()-1), secret.v, prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not generate random polynomial")
+		return nil, nil, errs2.Wrap(err).WithMessage("could not generate random polynomial")
 	}
 	shares := hashmap.NewComparable[sharing.ID, *Share[FE]]()
 	for id := range d.ac.Shareholders().Iter() {
@@ -133,7 +133,7 @@ func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 func (d *Scheme[FE]) Deal(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE], error) {
 	out, _, err := d.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not deal shares")
+		return nil, errs2.Wrap(err).WithMessage("could not deal shares")
 	}
 	return out, nil
 }
@@ -145,10 +145,10 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	sharesSet := hashset.NewHashable(shares...)
 	ids, err := sharing.CollectIDs(sharesSet.List()...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not collect IDs from shares")
+		return nil, errs2.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
 	if !d.ac.IsAuthorized(ids...) {
-		return nil, errs.NewFailed("shares are not authorized by the access structure")
+		return nil, ErrFailed.WithMessage("shares are not authorized by the access structure")
 	}
 	nodes := make([]FE, sharesSet.Size())
 	values := make([]FE, sharesSet.Size())
@@ -158,7 +158,7 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	}
 	reconstructed, err := interpolation.InterpolateAt(nodes, values, d.f.Zero())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not interpolate polynomial")
+		return nil, errs2.Wrap(err).WithMessage("could not interpolate polynomial")
 	}
 	return &Secret[FE]{reconstructed}, nil
 }

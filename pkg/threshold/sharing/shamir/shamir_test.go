@@ -58,12 +58,12 @@ func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Sc
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
-		name          string
-		secret        *shamir.Secret[FE]
-		prng          io.Reader
-		expectError   bool
-		errorContains string
-		verifyShares  bool
+		name         string
+		secret       *shamir.Secret[FE]
+		prng         io.Reader
+		expectError  bool
+		errorIs      error
+		verifyShares bool
 	}{
 		{
 			name:         "valid secret with constant 42",
@@ -94,25 +94,25 @@ func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Sc
 			verifyShares: true,
 		},
 		{
-			name:          "nil secret",
-			secret:        nil,
-			prng:          crand.Reader,
-			expectError:   true,
-			errorContains: "secret is nil",
+			name:        "nil secret",
+			secret:      nil,
+			prng:        crand.Reader,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
 		},
 		{
-			name:          "nil prng",
-			secret:        fortyTwoSecret,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "prng is nil",
+			name:        "nil prng",
+			secret:      fortyTwoSecret,
+			prng:        nil,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
 		},
 		{
-			name:          "both nil",
-			secret:        nil,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "secret is nil",
+			name:        "both nil",
+			secret:      nil,
+			prng:        nil,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
 		},
 	}
 
@@ -123,8 +123,8 @@ func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Sc
 
 			if tc.expectError {
 				require.Error(t, err)
-				if tc.errorContains != "" {
-					require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
 				}
 				require.Nil(t, out)
 				return
@@ -177,7 +177,7 @@ func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Sc
 					insufficientShares := shareSlice[:threshold-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
-					require.Contains(t, err.Error(), "not authorized")
+					require.ErrorIs(t, err, shamir.ErrFailed)
 				}
 			}
 		})
@@ -195,7 +195,7 @@ func dealRandomCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 		name             string
 		prng             io.Reader
 		expectError      bool
-		errorContains    string
+		errorIs          error
 		verifyUniqueness bool
 		iterations       int
 	}{
@@ -214,11 +214,11 @@ func dealRandomCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 			iterations:       5,
 		},
 		{
-			name:          "nil prng",
-			prng:          nil,
-			expectError:   true,
-			errorContains: "prng is nil",
-			iterations:    1,
+			name:        "nil prng",
+			prng:        nil,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
+			iterations:  1,
 		},
 		{
 			name: "deterministic prng produces same secret",
@@ -250,8 +250,8 @@ func dealRandomCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 
 				if tc.expectError {
 					require.Error(t, err)
-					if tc.errorContains != "" {
-						require.Contains(t, err.Error(), tc.errorContains)
+					if tc.errorIs != nil {
+						require.ErrorIs(t, err, tc.errorIs)
 					}
 					require.Nil(t, out)
 					require.Nil(t, secret)
@@ -926,7 +926,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 
 		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "is not a valid shareholder")
+		require.ErrorIs(t, err, shamir.ErrMembership)
 		require.Nil(t, additiveShare)
 	})
 
@@ -1070,7 +1070,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 			singleId.Freeze(),
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "must have at least 2 shareholders")
+		require.ErrorIs(t, err, sharing.ErrValue)
 	})
 
 	t.Run("share with modified value", func(t *testing.T) {

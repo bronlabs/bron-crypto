@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -18,11 +18,11 @@ const PaillierKeyLen = base.IFCKeyLength
 // SamplePaillierGroup generates a Paillier group with modulus of given bitlen.
 func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
-		return nil, errs.NewIsNil("prng")
+		return nil, ErrIsNil.WithMessage("prng")
 	}
 	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to generate prime pair")
+		return nil, errs2.Wrap(err).WithMessage("failed to generate prime pair")
 	}
 	return NewPaillierGroup(p, q)
 }
@@ -30,28 +30,28 @@ func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder,
 // NewPaillierGroup creates a Paillier group with known order from the given primes p and q.
 func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	if p == nil || q == nil {
-		return nil, errs.NewValue("p and q must not be nil")
+		return nil, ErrValue.WithMessage("p and q must not be nil")
 	}
 	if p.TrueLen() != q.TrueLen() {
-		return nil, errs.NewValue("p and q must have the same length")
+		return nil, ErrValue.WithMessage("p and q must have the same length")
 	}
 	if p.TrueLen() < PaillierKeyLen/2 {
-		return nil, errs.NewValue("p and q must be at least %d bits each", PaillierKeyLen/2)
+		return nil, ErrValue.WithMessage("p and q must be at least %d bits each", PaillierKeyLen/2)
 	}
 	if !p.IsProbablyPrime() {
-		return nil, errs.NewValue("p must be prime")
+		return nil, ErrValue.WithMessage("p must be prime")
 	}
 	if !q.IsProbablyPrime() {
-		return nil, errs.NewValue("q must be prime")
+		return nil, ErrValue.WithMessage("q must be prime")
 	}
 	n := p.Mul(q)
 	zMod, err := num.NewZMod(n.Square())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create ZMod")
+		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	exp, ok := modular.NewOddPrimeSquareFactors(p.Value(), q.Value())
 	if ok == ct.False {
-		return nil, errs.NewValue("failed to create OddPrimeFactors")
+		return nil, ErrFailed.WithMessage("failed to create OddPrimeFactors")
 	}
 	return &PaillierGroupKnownOrder{
 		UnitGroupTrait: UnitGroupTrait[*modular.OddPrimeSquareFactors, *PaillierGroupElement[*modular.OddPrimeSquareFactors], PaillierGroupElement[*modular.OddPrimeSquareFactors]]{
@@ -65,18 +65,18 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 // NewPaillierGroupOfUnknownOrder creates a Paillier group with unknown order from the given modulus n^2 and n.
 func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOrder, error) {
 	if n.TrueLen() < PaillierKeyLen-1 {
-		return nil, errs.NewValue("modulus n must be at least %d bits", PaillierKeyLen-1)
+		return nil, ErrValue.WithMessage("modulus n must be at least %d bits", PaillierKeyLen-1)
 	}
 	if !n.Mul(n).Equal(n2) {
-		return nil, errs.NewValue("n isn't sqrt of n")
+		return nil, ErrValue.WithMessage("n isn't sqrt of n")
 	}
 	zMod, err := num.NewZMod(n2)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create ZMod")
+		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	arith, ok := modular.NewSimple(zMod.Modulus().ModulusCT())
 	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create SimpleModulus")
+		return nil, ErrFailed.WithMessage("failed to create SimpleModulus")
 	}
 
 	return &PaillierGroupUnknownOrder{
@@ -125,14 +125,14 @@ func (g *PaillierGroup[X]) N() *num.NatPlus {
 // EmbedRSA embeds an RSA unit into the Paillier group as a Paillier unit.
 func (g *PaillierGroup[X]) EmbedRSA(u *RSAGroupElementUnknownOrder) (*PaillierGroupElement[X], error) {
 	if u == nil {
-		return nil, errs.NewIsNil("u")
+		return nil, ErrIsNil.WithMessage("u")
 	}
 	if !g.n.Equal(u.Modulus()) {
-		return nil, errs.NewValue("unit is not in the correct RSA group")
+		return nil, ErrValue.WithMessage("unit is not in the correct RSA group")
 	}
 	v, err := num.NewUintGivenModulus(u.Value().Value(), g.ModulusCT())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to embed RSA unit into Paillier unit")
+		return nil, errs2.Wrap(err).WithMessage("failed to embed RSA unit into Paillier unit")
 	}
 	return &PaillierGroupElement[X]{
 		UnitTrait: UnitTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
@@ -146,14 +146,14 @@ func (g *PaillierGroup[X]) EmbedRSA(u *RSAGroupElementUnknownOrder) (*PaillierGr
 // NthResidue computes the n-th residue of a Paillier group element of unknown order.
 func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*PaillierGroupElement[X], error) {
 	if u == nil {
-		return nil, errs.NewValue("argument must not be nil")
+		return nil, ErrIsNil.WithMessage("argument must not be nil")
 	}
 	if !u.Modulus().Equal(g.Modulus()) {
-		return nil, errs.NewValue("argument must be in the paillier group with modulus equal to the Paillier modulus")
+		return nil, ErrValue.WithMessage("argument must be in the paillier group with modulus equal to the Paillier modulus")
 	}
 	pu, err := g.FromNatCT(u.Value().Value())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to lift rsaUnit to Paillier group")
+		return nil, errs2.Wrap(err).WithMessage("failed to lift rsaUnit to Paillier group")
 	}
 	lift, ok := any(g.arith).(interface {
 		ExpToN(out, base *numct.Nat)
@@ -165,7 +165,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 	lift.ExpToN(&out, pu.Value().Value())
 	v, err := num.NewUintGivenModulus(&out, g.ModulusCT())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create unit from lifted value")
+		return nil, errs2.Wrap(err).WithMessage("failed to create unit from lifted value")
 	}
 	return &PaillierGroupElement[X]{
 		UnitTrait: UnitTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
@@ -179,7 +179,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 // Representative computes the representative of a plaintext in the Paillier group. It is equivalent to computing (1 + m*n) mod n^2.
 func (pg *PaillierGroup[X]) Representative(plaintext *numct.Int) (*PaillierGroupElement[X], error) {
 	if pg.N().ModulusCT().IsInRangeSymmetric(plaintext) == ct.False {
-		return nil, errs.NewValue("plaintext is out of range: |plaintext| >= n/2")
+		return nil, ErrValue.WithMessage("plaintext is out of range: |plaintext| >= n/2")
 	}
 	var shiftedPlaintext numct.Nat
 	pg.N().ModulusCT().ModI(&shiftedPlaintext, plaintext)
@@ -193,7 +193,7 @@ func (pg *PaillierGroup[X]) Representative(plaintext *numct.Int) (*PaillierGroup
 func (pg *PaillierGroup[X]) ForgetOrder() *PaillierGroupUnknownOrder {
 	arith, ok := modular.NewSimple(pg.zMod.Modulus().ModulusCT())
 	if ok == ct.False {
-		panic(errs.NewFailed("failed to create SimpleModulus"))
+		panic(ErrFailed.WithMessage("failed to create SimpleModulus"))
 	}
 	return &PaillierGroupUnknownOrder{
 		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *PaillierGroupElement[*modular.SimpleModulus], PaillierGroupElement[*modular.SimpleModulus]]{
@@ -235,10 +235,10 @@ func (u *PaillierGroupElement[X]) Structure() algebra.Structure[*PaillierGroupEl
 // LearnOrder converts a Paillier group element of unknown order to one with known order.
 func (u *PaillierGroupElement[X]) LearnOrder(g *PaillierGroupKnownOrder) (*PaillierGroupElementKnownOrder, error) {
 	if g == nil {
-		return nil, errs.NewIsNil("g")
+		return nil, ErrIsNil.WithMessage("g")
 	}
 	if !u.n.Equal(g.n) {
-		return nil, errs.NewValue("unit is not in the correct Paillier group")
+		return nil, ErrValue.WithMessage("unit is not in the correct Paillier group")
 	}
 	return &PaillierGroupElementKnownOrder{
 		UnitTrait: UnitTrait[*modular.OddPrimeSquareFactors, *PaillierGroupElementKnownOrder, PaillierGroupElementKnownOrder]{
@@ -253,7 +253,7 @@ func (u *PaillierGroupElement[X]) LearnOrder(g *PaillierGroupKnownOrder) (*Paill
 func (u *PaillierGroupElement[X]) ForgetOrder() *PaillierGroupElementUnknownOrder {
 	arith, ok := modular.NewSimple(u.v.Group().Modulus().ModulusCT())
 	if ok == ct.False {
-		panic(errs.NewFailed("failed to create SimpleModulus"))
+		panic(ErrFailed.WithMessage("failed to create SimpleModulus"))
 	}
 	return &PaillierGroupElementUnknownOrder{
 		UnitTrait: UnitTrait[*modular.SimpleModulus, *PaillierGroupElementUnknownOrder, PaillierGroupElementUnknownOrder]{

@@ -1,7 +1,7 @@
 package fkechacha20
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/chacha20"
 )
@@ -17,7 +17,7 @@ type Prng struct {
 func NewPrng(seed, salt []byte) (*Prng, error) {
 	chachaPrng := new(Prng)
 	if err := chachaPrng.Reseed(seed, salt); err != nil {
-		return nil, errs.WrapFailed(err, "Could not create ChachaPRNG")
+		return nil, errs2.Wrap(err).WithMessage("Could not create ChachaPRNG")
 	}
 	return chachaPrng, nil
 }
@@ -31,7 +31,7 @@ func (*Prng) New(seed, salt []byte) (csprng.SeedableCSPRNG, error) {
 // the `salt` parameter other than in the instantiation.
 func (c *Prng) Generate(buffer, salt []byte) error {
 	if !c.seeded {
-		return errs.NewRandomSample("ChachaPRNG not seeded")
+		return ErrRandomSample.WithMessage("not seeded")
 	}
 	c.chacha.XORKeyStream(buffer, buffer)
 	return nil
@@ -40,7 +40,7 @@ func (c *Prng) Generate(buffer, salt []byte) error {
 // Read fills the buffer with pseudo-random bytes.
 func (c *Prng) Read(buffer []byte) (n int, err error) {
 	if err = c.Generate(buffer, nil); err != nil {
-		return 0, errs.WrapFailed(err, "Could not Generate bytes on ChachaPRNG")
+		return 0, errs2.Wrap(err).WithMessage("Could not Generate bytes on ChachaPRNG")
 	}
 	return len(buffer), nil
 }
@@ -48,7 +48,7 @@ func (c *Prng) Read(buffer []byte) (n int, err error) {
 // Reseed refreshes the PRNG with the provided seed material. For ChachaPRNG, it is equivalent to `ResetState`.
 func (c *Prng) Reseed(seed, salt []byte) (err error) {
 	if len(seed) > chacha20.KeySize || len(salt) > chacha20.NonceSizeX {
-		return errs.NewArgument("invalid chacha seed or salt length (%d, %d)", len(seed), len(salt))
+		return ErrInvalidArgument.WithMessage("invalid chacha seed or salt length (%d, %d)", len(seed), len(salt))
 	}
 
 	var key [chacha20.KeySize]byte
@@ -57,7 +57,7 @@ func (c *Prng) Reseed(seed, salt []byte) (err error) {
 	copy(nonce[:], salt)
 	c.chacha, err = chacha20.NewFastErasureCipher(key[:], nonce[:])
 	if err != nil {
-		return errs.WrapFailed(err, "Could not create ChachaPRNG")
+		return errs2.Wrap(err).WithMessage("Could not create ChachaPRNG")
 	}
 	c.seeded = true
 	return nil
@@ -67,7 +67,7 @@ func (c *Prng) Reseed(seed, salt []byte) (err error) {
 func (c *Prng) Seed(seed, salt []byte) error {
 	err := c.Reseed(seed, salt)
 	if err != nil {
-		return errs.WrapFailed(err, "Could not re-initialise ChachaPRNG")
+		return errs2.Wrap(err).WithMessage("Could not re-initialise ChachaPRNG")
 	}
 	return nil
 }
@@ -75,3 +75,8 @@ func (c *Prng) Seed(seed, salt []byte) error {
 func (*Prng) SecurityStrength() int {
 	return chacha20.KeySize
 }
+
+var (
+	ErrInvalidArgument = errs2.New("ChachaPRNG invalid argument")
+	ErrRandomSample    = errs2.New("ChachaPRNG random sample error")
+)

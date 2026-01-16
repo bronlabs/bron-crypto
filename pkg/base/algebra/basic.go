@@ -2,7 +2,6 @@ package algebra
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 type (
@@ -21,7 +20,7 @@ func StructureIs[S crtp.Structure[E], E any](s Structure[E]) bool {
 func StructureAs[S crtp.Structure[E], E any](s Structure[E]) (S, error) {
 	out, ok := s.(S)
 	if !ok {
-		return *new(S), errs.NewType("structure does not implement the expected type")
+		return *new(S), ErrInvalidType.WithMessage("structure does not implement the expected type")
 	}
 	return out, nil
 }

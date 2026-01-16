@@ -4,7 +4,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -25,7 +25,7 @@ func (n *Nat) MarshalCBOR() ([]byte, error) {
 	dto := &natDTO{NatBytes: n.Bytes()}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Nat")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal Nat")
 	}
 	return data, nil
 }
@@ -49,7 +49,7 @@ func (i *Int) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Int")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal Int")
 	}
 	return data, nil
 }
@@ -71,7 +71,7 @@ func (m *Modulus) MarshalCBOR() ([]byte, error) {
 	serial := &modulusDTO{N: m.Nat()}
 	data, err := serde.MarshalCBOR(serial)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal ModulusBasic")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal ModulusBasic")
 	}
 	return data, nil
 }
@@ -82,14 +82,18 @@ func (m *Modulus) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if serial.N == nil {
-		return errs.NewIsNil("modulus data")
+		return ErrFailed.WithMessage("modulus data is nil")
 	}
 	if serial.N.IsZero() == ct.True {
-		return errs.NewValue("modulus cannot be zero")
+		return ErrFailed.WithMessage("modulus cannot be zero")
 	}
 	ok := m.SetNat(serial.N)
 	if ok == ct.False {
-		return errs.NewValue("invalid modulus")
+		return ErrFailed.WithMessage("invalid modulus")
 	}
 	return nil
 }
+
+var (
+	ErrFailed = errs2.New("failed")
+)
