@@ -5,6 +5,7 @@ import (
 	"io"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/binaryfields/bf128"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
@@ -146,7 +147,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// step 2.4: Verify the challenge response (ẋ, ṫ_i) using the challenge (χ)
 	err = s.verifyChallenge(challengeFiatShamir, &r1.ChallengeResponse, extCorrelations)
 	if err != nil {
-		return nil, errs2.ErrAbort.WithMessage("bad consistency check for SoftSpoken COTe")
+		return nil, base.ErrAbort.WithMessage("bad consistency check for SoftSpoken COTe")
 	}
 
 	s.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
@@ -296,7 +297,7 @@ func (s *Sender) verifyChallenge(
 		isCorrect = isCorrect && qiExpected.Equal(qi)
 	}
 	if !isCorrect {
-		return errs2.ErrAbort.WithMessage("expected q != q in SoftspokenOT, consistency check failed")
+		return base.ErrAbort.WithMessage("expected q != q in SoftspokenOT, consistency check failed")
 	}
 	return nil
 }

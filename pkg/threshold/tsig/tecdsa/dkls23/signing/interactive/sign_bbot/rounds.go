@@ -4,6 +4,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -122,7 +123,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 	mulR2 := make(map[sharing.ID]*rvole_bbot.Round2P2P[P, S])
 	for id, message := range incomingMessages {
 		if err := c.state.ck.Verifier().Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
-			return nil, nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("invalid commitment")
+			return nil, nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
 		c.state.bigR[id] = message.broadcast.BigR
 		zeroR2.Put(id, message.p2p.ZeroSetupR2)
@@ -186,18 +187,18 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	for id, message := range incomingMessages {
 		d, err := c.state.bobMul[id].Round4(message.p2p.MulR3)
 		if err != nil {
-			if errs2.Is(err, errs2.ErrAbort) {
-				return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("cannot run Bob mul round4")
+			if errs2.Is(err, base.ErrAbort) {
+				return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot run Bob mul round4")
 			}
 			return nil, errs2.Wrap(err).WithMessage("cannot run Bob mul round4")
 		}
 		c.state.pk[id] = message.broadcast.Pk
 
 		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
-			return nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("consistency check failed")
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("consistency check failed")
 		}
 		if !message.broadcast.Pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
-			return nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("consistency check failed")
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("consistency check failed")
 		}
 
 		psi = psi.Add(message.p2p.Psi)
@@ -208,7 +209,7 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.bigR))...)
 	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.pk))...)
 	if !pk.Equal(c.shard.PublicKey().Value()) {
-		return nil, errs2.ErrAbort.WithMessage("consistency check failed")
+		return nil, base.ErrAbort.WithMessage("consistency check failed")
 	}
 
 	u := c.state.r.Mul(c.state.phi.Add(psi)).Add(cudu)

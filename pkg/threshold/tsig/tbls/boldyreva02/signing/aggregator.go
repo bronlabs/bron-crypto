@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
@@ -165,13 +166,13 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 				return nil, errs2.Wrap(err).WithMessage("failed to create verifier for POP")
 			}
 			if err := popVerifier.Verify(psig.SigmaPopI, partialPublicKey, internalPopMessage); err != nil {
-				return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, sender).WithMessage("failed to verify POP signature")
+				return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify POP signature")
 			}
 		default:
 			return nil, ErrInvalidArgument.WithMessage("unsupported rogue key prevention algorithm: %d", A.scheme.RogueKeyPreventionAlgorithm())
 		}
 		if err := partialSignatureVerifier.Verify(psig.SigmaI, partialPublicKey, internalMessage); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, sender).WithMessage("failed to verify partial signature")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature")
 		}
 		shareInExponent, err := feldman.NewLiftedShare(sender, psig.SigmaI.Value())
 		if err != nil {

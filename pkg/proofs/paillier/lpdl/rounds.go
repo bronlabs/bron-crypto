@@ -3,6 +3,7 @@ package lpdl
 import (
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
@@ -165,7 +166,7 @@ func (prover *Prover[P, B, S]) Round4(r4In *Round3Output) (r4out *Round4Output[P
 		return nil, errs2.Wrap(err).WithMessage("cannot convert x to nat")
 	}
 	if !prover.state.alpha.Value().Equal(r4In.A.Lift().Mul(x).Add(r4In.B.Lift())) {
-		return nil, errs2.ErrAbort.WithMessage("verifier is misbehaving")
+		return nil, base.ErrAbort.WithMessage("verifier is misbehaving")
 	}
 
 	rangeProverOutput, err := prover.rangeProver.Round4(r4In.RangeVerifierMessage, r4In.RangeVerifierWitness)

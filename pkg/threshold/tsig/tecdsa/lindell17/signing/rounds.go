@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -87,7 +88,7 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 	}
 
 	if err := dlogVerify(pc.tape, pc.niDlogScheme, pc.secondarySharingId, pc.sid, r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
-		return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pc.secondarySharingId).WithMessage("cannot verify R2 dlog proof")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("cannot verify R2 dlog proof")
 	}
 
 	bigR1Proof, err := dlogProve(&pc.Cosigner, pc.state.k1, pc.state.bigR1, pc.secondarySharingId)
@@ -125,7 +126,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	}
 
 	if err := dlogVerify(sc.tape, sc.niDlogScheme, sc.primarySharingId, sc.sid, r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
-		return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, sc.primarySharingId).WithMessage("cannot verify R1 dlog proof")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingId).WithMessage("cannot verify R1 dlog proof")
 	}
 
 	bigR := r3out.BigR1.ScalarMul(sc.state.k2)
@@ -196,11 +197,11 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 	}
 	sPrimeInt, err := decrypter.Decrypt(r4out.C3)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pc.secondarySharingId).WithMessage("cannot decrypt c3")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("cannot decrypt c3")
 	}
 	sPrime, err := pc.suite.Curve().ScalarField().FromBytesBEReduce(sPrimeInt.Normalise().BytesBE())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pc.secondarySharingId).WithMessage("cannot convert decrypted c3 to scalar")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("cannot convert decrypted c3 to scalar")
 	}
 	k1Inv, err := pc.state.k1.TryInv()
 	if err != nil {
@@ -229,7 +230,7 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 		return nil, errs2.Wrap(err).WithMessage("could not create ecdsa verifier")
 	}
 	if err := verifier.Verify(signature, pc.shard.PublicKey(), message); err != nil {
-		return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pc.secondarySharingId).WithMessage("could not verify produced signature")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("could not verify produced signature")
 	}
 	pc.round += 2
 	return signature, nil

@@ -3,6 +3,7 @@ package gennaro
 import (
 	"encoding/binary"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
@@ -119,21 +120,21 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr prover")
 		}
-		statement := batch_schnorr.NewStatement[E, S](p.state.key.G(), inB.FeldmanVerificationVector.Coefficients()...)
+		statement := batch_schnorr.NewStatement(p.state.key.G(), inB.FeldmanVerificationVector.Coefficients()...)
 		err = verifier.Verify(statement, inB.Proof)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pid).WithMessage("failed to verify feldman verification vector")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman verification vector")
 		}
 		p.state.receivedFeldmanVerificationVectors.Put(pid, inB.FeldmanVerificationVector)
 
 		inU, _ := r3ui.Get(pid)
 		feldmanShare, _ := feldman.NewShare(inU.Share.ID(), inU.Share.Value(), nil)
 		if err := p.state.feldmanVSS.Verify(feldmanShare, inB.FeldmanVerificationVector); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pid).WithMessage("failed to verify feldman share from party %d", pid)
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman share from party %d", pid)
 		}
 		referencePedersenVector, _ := p.state.receivedPedersenVerificationVectors.Get(pid)
 		if err := p.state.pedersenVSS.Verify(inU.Share, referencePedersenVector); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pid).WithMessage("failed to verify pedersen share from party %d", pid)
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify pedersen share from party %d", pid)
 		}
 		summedShareValue = summedShareValue.Add(inU.Share.Value())
 		summedFeldmanVerificationVector = summedFeldmanVerificationVector.Op(inB.FeldmanVerificationVector)
