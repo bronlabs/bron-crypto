@@ -120,55 +120,47 @@ linters:
     - nakedret
     # Finds the code that returns nil even if it checks that the error is not nil.
     - nilerr
-    # # Reports ill-formed or insufficient nolint directives
-    # - nolintlint
-    # # Checks that there is no simultaneous return of nil error and an invalid value.
-    # - nilnil
+    # Reports ill-formed or insufficient nolint directives
+    - nolintlint
+    # Checks that there is no simultaneous return of nil error and an invalid value.
+    - nilnil
     # # Paralleltest detects missing usage of t.Parallel() method in your Go test.
-    # # TODO: enable later
-    # # - paralleltest
-    # # Finds slice declarations that could potentially be preallocated
-    # - prealloc
-    # # find code that shadows one of Go's predeclared identifiers
-    # - predeclared
-    # # Check Prometheus metrics naming via promlint.
-    # - promlinter
-    # # Check that struct tags are well aligned.
-    # - tagalign
+    # - paralleltest
+    # Finds slice declarations that could potentially be preallocated
+    - prealloc
+    # find code that shadows one of Go's predeclared identifiers
+    - predeclared
+    # Check that struct tags are well aligned.
+    - tagalign
     # # # Checks the struct tags.
     # # TODO: enable this once it doesn't spit out ast errors
     # # - tagliatelle
-    # # Linter checks if examples are testable (have an expected output).
-    # - testableexamples
-    # # Checks usage of github.com/stretchr/testify.
-    # - testifylint
-    # # # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
-    # # - revive
-    # # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    # # - staticcheck
-    # # linter that makes you use a separate _test package
-    # - testpackage
-    # # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
-    # - thelper
-    # # # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
-    # # # TODO: enable later
-    # # - tparallel
-    # # Remove unnecessary type conversions
-    # - unconvert
-    # # Reports unused function parameters
-    # - unparam
-    # # A linter that detect the possibility to use variables/constants from the Go standard library.
-    # - usestdlibvars
-    # # Checks Go code for unused constants, variables, functions and types
-    # - unused
-    # # wastedassign finds wasted assignment statements.
-    # - wastedassign
-    # # Tool for detection of leading and trailing whitespace
-    # - whitespace
-    # # Checks that errors returned from external packages are wrapped
-    # - wrapcheck
-    # # Detects the wrong usage of zerolog that a user forgets to dispatch with Send or Msg.
-    # - zerologlint
+    # Linter checks if examples are testable (have an expected output).
+    - testableexamples
+    # Checks usage of github.com/stretchr/testify.
+    - testifylint
+    # # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
+    # - revive
+    # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
+    # - staticcheck
+    # linter that makes you use a separate _test package
+    - testpackage
+    # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
+    - thelper
+    # Remove unnecessary type conversions
+    - unconvert
+    # Reports unused function parameters
+    - unparam
+    # A linter that detect the possibility to use variables/constants from the Go standard library.
+    - usestdlibvars
+    # Checks Go code for unused constants, variables, functions and types
+    - unused
+    # wastedassign finds wasted assignment statements.
+    - wastedassign
+    # Tool for detection of leading and trailing whitespace
+    - whitespace
+    # Checks that errors returned from external packages are wrapped
+    - wrapcheck
 
   settings:
     asasalint:
@@ -702,6 +694,7 @@ linters:
       - path: cbor.go
         linters:
           - gochecknoinits
+          - wrapcheck
       - path: key_agreement/
         text: "captLocal"
         linters:
