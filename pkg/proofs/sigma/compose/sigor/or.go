@@ -329,8 +329,10 @@ func (p *protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge
 	for i := range p.count - 1 {
 		eg.Go(func() error {
 			z.E[i] = make([]byte, p.GetChallengeBytesLength())
-			_, err := io.ReadFull(p.prng, z.E[i])
-			return errs2.Wrap(err).WithMessage("cannot sample challenge")
+			if _, err := io.ReadFull(p.prng, z.E[i]); err != nil {
+				return errs2.Wrap(err).WithMessage("cannot sample challenge")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {

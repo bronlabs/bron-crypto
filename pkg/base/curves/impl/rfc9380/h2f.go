@@ -28,7 +28,7 @@ func HashToField[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](out []F, par
 	uniformBytes := expander.ExpandMessage(dst, msg, uint(lenInBytes))
 	//  3. for i in (0, ..., count - 1):
 	for i := range uint64(len(out)) {
-		e := make([][]byte, 0, m)
+		e := make([][]byte, m)
 		//  4.   for j in (0, ..., m - 1):
 		for j := range m {
 			//  5.     elm_offset = L * (j + i * m)

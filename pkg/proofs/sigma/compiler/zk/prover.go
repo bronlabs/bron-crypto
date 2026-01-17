@@ -30,6 +30,7 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}
+	p.round = 2 // Prover starts at round 2 (receives verifier's challenge commitment first)
 	return &Prover[X, W, A, S, Z]{
 		participant: *p,
 		witness:     witness,
