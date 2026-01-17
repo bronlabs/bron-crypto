@@ -124,7 +124,7 @@ func Operator[E Operand[E]](a, b E) E {
 	return a.Op(b)
 }
 
-func FixedCapacityOperator[E FixedCapacityOperand[E]](a E, b E, capacity int) E {
+func FixedCapacityOperator[E FixedCapacityOperand[E]](a, b E, capacity int) E {
 	return a.OpCap(b, capacity)
 }
 
@@ -132,7 +132,7 @@ func DualOperator[E DualOperand[E]](a, b E) E {
 	return a.OtherOp(b)
 }
 
-func FixedCapacityDualOperator[E FixedCapacityDualOperand[E]](a E, b E, capacity int) E {
+func FixedCapacityDualOperator[E FixedCapacityDualOperand[E]](a, b E, capacity int) E {
 	return a.OtherOpCap(b, capacity)
 }
 
@@ -140,7 +140,7 @@ func Addition[E Summand[E]](a, b E) E {
 	return a.Add(b)
 }
 
-func FixedCapacityAddition[E FixedCapacitySummand[E]](a E, b E, capacity int) E {
+func FixedCapacityAddition[E FixedCapacitySummand[E]](a, b E, capacity int) E {
 	return a.AddCap(b, capacity)
 }
 
@@ -148,7 +148,7 @@ func MaybeAddition[E MaybeSummand[E]](a, b E) (E, error) {
 	return a.TryAdd(b)
 }
 
-func MaybeFixedCapacityAddition[E MaybeFixedCapacitySummand[E]](a E, b E, capacity int) (E, error) {
+func MaybeFixedCapacityAddition[E MaybeFixedCapacitySummand[E]](a, b E, capacity int) (E, error) {
 	return a.TryAddCap(b, capacity)
 }
 
@@ -156,14 +156,14 @@ func Subtraction[E Minuend[E]](a, b E) E {
 	return a.Sub(b)
 }
 
-func FixedCapacitySubtraction[E FixedCapacityMinuend[E]](a E, b E, capacity int) E {
+func FixedCapacitySubtraction[E FixedCapacityMinuend[E]](a, b E, capacity int) E {
 	return a.SubCap(b, capacity)
 }
 func MaybeSubtraction[E MaybeMinuend[E]](a, b E) (E, error) {
 	return a.TrySub(b)
 }
 
-func MaybeFixedCapacitySubtraction[E MaybeFixedCapacityMinuend[E]](a E, b E, capacity int) (E, error) {
+func MaybeFixedCapacitySubtraction[E MaybeFixedCapacityMinuend[E]](a, b E, capacity int) (E, error) {
 	return a.TrySubCap(b, capacity)
 }
 
@@ -171,7 +171,7 @@ func Multiplication[E Multiplicand[E]](a, b E) E {
 	return a.Mul(b)
 }
 
-func FixedCapacityMultiplication[E FixedCapacityMultiplicand[E]](a E, b E, capacity int) E {
+func FixedCapacityMultiplication[E FixedCapacityMultiplicand[E]](a, b E, capacity int) E {
 	return a.MulCap(b, capacity)
 }
 
@@ -179,7 +179,7 @@ func MaybeMultiplication[E MaybeMultiplicand[E]](a, b E) (E, error) {
 	return a.TryMul(b)
 }
 
-func MaybeFixedCapacityMultiplication[E MaybeFixedCapacityMultiplicand[E]](a E, b E, capacity int) (E, error) {
+func MaybeFixedCapacityMultiplication[E MaybeFixedCapacityMultiplicand[E]](a, b E, capacity int) (E, error) {
 	return a.TryMulCap(b, capacity)
 }
 
@@ -187,7 +187,7 @@ func Division[E Dividend[E]](a, b E) E {
 	return a.Div(b)
 }
 
-func FixedCapacityDivision[E FixedCapacityDividend[E]](a E, b E, capacity int) E {
+func FixedCapacityDivision[E FixedCapacityDividend[E]](a, b E, capacity int) E {
 	return a.DivCap(b, capacity)
 }
 
@@ -195,7 +195,7 @@ func MaybeDivision[E MaybeDividend[E]](a, b E) (E, error) {
 	return a.TryDiv(b)
 }
 
-func MaybeFixedCapacityDivision[E MaybeFixedCapacityDividend[E]](a E, b E, capacity int) (E, error) {
+func MaybeFixedCapacityDivision[E MaybeFixedCapacityDividend[E]](a, b E, capacity int) (E, error) {
 	return a.TryDivCap(b, capacity)
 }
 
@@ -203,20 +203,20 @@ func Modulo[E Residuand[M, Q], M Element[M], Q Residue[Q, M]](x E, m M) (Q, erro
 	return x.Mod(m)
 }
 
-func Exponentiate[A ExponentiationBase[A, E], E Element[E]](base A, exponent E) A {
-	return base.Exp(exponent)
+func Exponentiate[A ExponentiationBase[A, E], E Element[E]](b A, exponent E) A {
+	return b.Exp(exponent)
 }
 
-func FixedCapacityExponentiate[A FixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, capacity int) A {
-	return base.ExpCap(exponent, capacity)
+func FixedCapacityExponentiate[A FixedCapacityExponentiationBase[A, E], E Element[E]](b A, exponent E, capacity int) A {
+	return b.ExpCap(exponent, capacity)
 }
 
-func MaybeExponentiate[A MaybeExponentiationBase[A, E], E Element[E]](base A, exponent E) (A, error) {
-	return base.TryExp(exponent)
+func MaybeExponentiate[A MaybeExponentiationBase[A, E], E Element[E]](b A, exponent E) (A, error) {
+	return b.TryExp(exponent)
 }
 
-func MaybeFixedCapacityExponentiate[A MaybeFixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, capacity int) (A, error) {
-	return base.TryExpCap(exponent, capacity)
+func MaybeFixedCapacityExponentiate[A MaybeFixedCapacityExponentiationBase[A, E], E Element[E]](b A, exponent E, capacity int) (A, error) {
+	return b.TryExpCap(exponent, capacity)
 }
 
 func And[E Conjunct[E]](a, b E) E {

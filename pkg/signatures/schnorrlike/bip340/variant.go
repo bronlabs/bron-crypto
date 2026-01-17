@@ -53,7 +53,7 @@ func (*Variant) HashFunc() func() hash.Hash {
 //
 // This deterministic derivation prevents nonce reuse vulnerabilities while
 // the auxiliary randomness provides side-channel protection.
-func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
+func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.sk == nil || v.msg == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("need both private key and message")
 	}
@@ -109,7 +109,7 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	// 9. Let R = k'⋅G.
 	bigR := g.ScalarMul(kPrime)
 	// 10. Let k = k' if R.y is even, otherwise let k = n - k', R = k ⋅ G
-	k := kPrime
+	k = kPrime
 	ry, err := bigR.AffineY()
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")

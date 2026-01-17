@@ -42,18 +42,18 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 // This is the first round of the 5-round protocol.
 func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 	if v.round != 1 {
-		return *new(hash_comm.Commitment), ErrRound.WithMessage("r != 1 (%d)", v.round)
+		return hash_comm.Commitment{}, ErrRound.WithMessage("r != 1 (%d)", v.round)
 	}
 
 	v.challengeBytes = make([]byte, v.protocol.GetChallengeBytesLength())
 	_, err := io.ReadFull(v.prng, v.challengeBytes)
 	if err != nil {
-		return *new(hash_comm.Commitment), errs2.Wrap(err).WithMessage("couldn't sample challenge")
+		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't sample challenge")
 	}
 
 	eCommitment, eWitness, err := v.comm.Committer().Commit(v.challengeBytes, v.prng)
 	if err != nil {
-		return *new(hash_comm.Commitment), errs2.Wrap(err).WithMessage("couldn't commit to challenge")
+		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't commit to challenge")
 	}
 	v.eWitness = eWitness
 
@@ -66,7 +66,7 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 // Returns the challenge message and witness for the prover to verify.
 func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hash_comm.Message, hash_comm.Witness, error) {
 	if v.round != 3 {
-		return *new(hash_comm.Message), *new(hash_comm.Witness), ErrRound.WithMessage("r != 3 (%d)", v.round)
+		return hash_comm.Message(nil), hash_comm.Witness{}, ErrRound.WithMessage("r != 3 (%d)", v.round)
 	}
 	transcripts.Append(v.tape, commitmentLabel, commitment)
 	v.tape.AppendBytes(challengeLabel, v.challengeBytes)

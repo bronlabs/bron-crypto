@@ -4,7 +4,7 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-func EuclideanDiv(q, r, a, d *saferith.Nat) (*saferith.Nat, *saferith.Nat) {
+func EuclideanDiv(q, r, a, d *saferith.Nat) (quotient, remainder *saferith.Nat) {
 	var qq, rr, rt, t saferith.Nat
 
 	for i := a.AnnouncedLen() - 1; i >= 0; i-- {

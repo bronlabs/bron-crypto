@@ -7,7 +7,7 @@ import (
 )
 
 // Round1 runs the zero-sharing subprotocol to derive a refresh offset.
-func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S]], error) {
+func (p *Participant[G, S]) Round1() (broadcast *Round1Broadcast[G, S], unicasts network.OutgoingUnicasts[*Round1P2P[G, S]], err error) {
 	bc, uu, err := p.zeroParticipant.Round1()
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("failed to execute zero sharing Round1")
@@ -16,8 +16,8 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 }
 
 // Round2 finishes the refresh by adding the zero-share to the existing shard.
-func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S]], r2u network.RoundMessages[*Round1P2P[G, S]]) (*feldman.Share[S], feldman.VerificationVector[G, S], error) {
-	share, verification, err := p.zeroParticipant.Round2(r2b, r2u)
+func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S]], r2u network.RoundMessages[*Round1P2P[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
+	share, verification, err = p.zeroParticipant.Round2(r2b, r2u)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("failed to run round 2 of zero participant")
 	}

@@ -13,7 +13,7 @@ import (
 // NewSimple constructs a SimpleModulus modular arithmetic instance
 // from the given modulus m.
 // Returns ct.False if the input is invalid (nil).
-func NewSimple(m *numct.Modulus) (*SimpleModulus, ct.Bool) {
+func NewSimple(m *numct.Modulus) (simple *SimpleModulus, ok ct.Bool) {
 	return &SimpleModulus{m: m}, utils.BoolTo[ct.Bool](m != nil)
 }
 
@@ -48,7 +48,7 @@ func (u *SimpleModulus) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 }
 
 // MultiBaseExp computes out[i] = (bases[i] ^ exp) mod m for all i.
-func (u *SimpleModulus) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
+func (u *SimpleModulus) MultiBaseExp(out, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")
 	}
@@ -79,7 +79,7 @@ func (u *SimpleModulus) ModDiv(out, a, b *numct.Nat) ct.Bool {
 // Lift constructs a SimpleModulus modular arithmetic instance
 // by lifting the modulus m to m^2.
 // Returns ct.False if the lift operation fails.
-func (u *SimpleModulus) Lift() (*SimpleModulus, ct.Bool) {
+func (u *SimpleModulus) Lift() (lifted *SimpleModulus, ok ct.Bool) {
 	m := u.m.Nat()
 	var m2 numct.Nat
 	m2.Mul(m, m)

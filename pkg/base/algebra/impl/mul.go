@@ -75,8 +75,8 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 	maxBits := 0
 	for i, s := range scalars {
 		scalarBytes[i] = s
-		if bits := len(s) * 8; bits > maxBits {
-			maxBits = bits
+		if numBits := len(s) * 8; numBits > maxBits {
+			maxBits = numBits
 		}
 	}
 	if maxBits == 0 {

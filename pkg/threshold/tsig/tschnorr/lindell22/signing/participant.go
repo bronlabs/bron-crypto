@@ -68,7 +68,7 @@ func (c *Cosigner[GE, S, M]) SessionID() network.SID {
 // SharingID returns the party's identifier in the secret sharing scheme.
 func (c *Cosigner[GE, S, M]) SharingID() sharing.ID {
 	if c == nil {
-		return *new(sharing.ID)
+		return 0
 	}
 	return c.shard.Share().ID()
 }

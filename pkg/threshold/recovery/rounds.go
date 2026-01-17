@@ -94,7 +94,7 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 }
 
 // Round3 interpolates the blinded shares to reconstruct the missing share.
-func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]], r2u network.RoundMessages[*Round2P2P[G, S]]) (*feldman.Share[S], feldman.VerificationVector[G, S], error) {
+func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]], r2u network.RoundMessages[*Round2P2P[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
 	xs := []S{}
 	ys := []S{}
 
@@ -109,10 +109,8 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 		}
 		if verificationVector == nil {
 			verificationVector = b.VerificationVector
-		} else {
-			if !verificationVector.Equal(b.VerificationVector) {
-				return nil, nil, base.ErrAbort.WithMessage("mislayer verification vector does not match")
-			}
+		} else if !verificationVector.Equal(b.VerificationVector) {
+			return nil, nil, base.ErrAbort.WithMessage("mislayer verification vector does not match")
 		}
 
 		u, ok := r2u.Get(id)
@@ -127,7 +125,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 	if err != nil {
 		return nil, nil, base.ErrAbort.WithMessage("cannot interpolate")
 	}
-	share, err := feldman.NewShare(m.sharingId, shareValue, nil)
+	share, err = feldman.NewShare(m.sharingId, shareValue, nil)
 	if err != nil {
 		return nil, nil, ErrFailed.WithMessage("cannot create share")
 	}

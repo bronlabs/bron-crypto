@@ -8,12 +8,12 @@ import (
 )
 
 // Recombine is a one-shot variant that computes q^{-1} (mod p) on the fly.
-func Recombine(mp, mq, p, q *numct.Nat) (*numct.Nat, ct.Bool) {
+func Recombine(mp, mq, p, q *numct.Nat) (result *numct.Nat, ok ct.Bool) {
 	params, ok := Precompute(p, q)
 	return params.Recombine(mp, mq), ok
 }
 
-func Precompute(p, q *numct.Nat) (*Params, ct.Bool) {
+func Precompute(p, q *numct.Nat) (params *Params, ok ct.Bool) {
 	allOk := p.Coprime(q)
 	pModulus, ok := numct.NewModulus(p)
 	allOk &= ok
@@ -62,7 +62,7 @@ func (prm *Params) Recombine(mp, mq *numct.Nat) *numct.Nat {
 }
 
 // Extended returns an extended ParamsExtended structure.
-func (prm *Params) Extended() (*ParamsExtended, ct.Bool) {
+func (prm *Params) Extended() (ext *ParamsExtended, ok ct.Bool) {
 	qModulus, ok := numct.NewModulus(prm.QNat)
 	var mNat numct.Nat
 	mNat.Mul(prm.P.Nat(), prm.QNat)
@@ -77,18 +77,18 @@ func (prm *Params) Extended() (*ParamsExtended, ct.Bool) {
 }
 
 // PrecomputePairExtended is a one-shot variant that precomputes extended CRT parameters.
-func PrecomputePairExtended(p, q *numct.Nat) (*ParamsExtended, ct.Bool) {
+func PrecomputePairExtended(p, q *numct.Nat) (params *ParamsExtended, ok ct.Bool) {
 	prm, ok1 := Precompute(p, q)
 	prmx, ok2 := prm.Extended()
 	return prmx, ok1 & ok2
 }
 
 // NewParamsExtended constructs extended CRT parameters from given moduli p and q.
-func NewParamsExtended(p, q *numct.Modulus) (*ParamsExtended, ct.Bool) {
+func NewParamsExtended(p, q *numct.Modulus) (params *ParamsExtended, ok ct.Bool) {
 	qNat := q.Nat()
 	pNat := p.Nat()
 
-	ok := pNat.Coprime(qNat)
+	ok = pNat.Coprime(qNat)
 
 	// qModP := q mod p
 	qModP := new(numct.Nat)

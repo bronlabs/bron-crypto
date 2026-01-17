@@ -755,8 +755,8 @@ func FromCardinalRoundTripProperty[S algebra.NPlusLike[E], E algebra.NatPlusLike
 			rapid.Check(t, func(rt *rapid.T) {
 				original := c.Dist.Draw(rt, "original")
 
-				cardinal := original.Cardinal()
-				reconstructed, err := c.Value.FromCardinal(cardinal)
+				card := original.Cardinal()
+				reconstructed, err := c.Value.FromCardinal(card)
 				require.NoError(t, err, "FromCardinal returned error")
 
 				require.True(t, original.Equal(reconstructed), "FromCardinal round trip failed: original != FromCardinal(ToCardinal(original))")

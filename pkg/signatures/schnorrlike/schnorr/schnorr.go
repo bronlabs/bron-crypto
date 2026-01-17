@@ -268,7 +268,7 @@ func (v *Variant[GE, S]) HashFunc() func() hash.Hash {
 
 // ComputeNonceCommitment generates a random nonce k and commitment R = k·G.
 // If shouldNegateNonce was configured, applies parity correction to k.
-func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
+func (v *Variant[GE, S]) ComputeNonceCommitment() (R GE, k S, err error) {
 	if v == nil {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("variant is nil")
 	}
@@ -281,7 +281,7 @@ func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
 
 // ComputeChallenge computes the Fiat-Shamir challenge: e = H(R || P || m) mod n.
 // Uses the configured hash function and byte ordering.
-func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message Message) (S, error) {
+func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment, publicKeyValue GE, message Message) (S, error) {
 	if v == nil {
 		return *new(S), ErrInvalidArgument.WithMessage("variant is nil")
 	}
@@ -350,7 +350,7 @@ func (*Variant[GE, S]) NonceIsFunctionOfMessage() bool {
 
 // CorrectPartialNonceParity is a no-op for vanilla Schnorr (no parity constraints).
 // Returns the nonce and its commitment unchanged.
-func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (GE, S, error) {
+func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (R GE, correctedNonce S, err error) {
 	if utils.IsNil(aggregatedNonceCommitment) {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
 	}
@@ -362,7 +362,7 @@ func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, n
 	if !ok {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment type assertion failed")
 	}
-	R := group.ScalarBaseOp(nonce)
+	R = group.ScalarBaseOp(nonce)
 	return R, nonce, nil
 }
 

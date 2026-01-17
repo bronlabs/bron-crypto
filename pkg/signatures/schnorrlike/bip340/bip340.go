@@ -430,11 +430,11 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 // The verifier must be initialised with a PRNG using VerifyWithPRNG option.
 // The random coefficients a2...au prevent an attacker from constructing signatures
 // that pass batch verification but fail individual verification.
-func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message) error {
+func (v *Verifier) BatchVerify(sigs []*Signature, publicKeys []*PublicKey, messages []Message) error {
 	if v.prng == nil {
 		return ErrInvalidArgument.WithMessage("batch verification requires a prng. Initialise the verifier with the prng option")
 	}
-	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
+	if len(publicKeys) != len(sigs) || len(sigs) != len(messages) || len(sigs) == 0 {
 		return ErrInvalidArgument.WithMessage("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
 	if sliceutils.Any(publicKeys, func(pk *PublicKey) bool {
@@ -447,9 +447,9 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	sf := k256.NewScalarField()
 	var err error
 	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
-	a := make([]*k256.Scalar, len(signatures))
+	a := make([]*k256.Scalar, len(sigs))
 	a[0] = sf.One()
-	for i := 1; i < len(signatures); i++ {
+	for i := 1; i < len(sigs); i++ {
 		a[i], err = algebrautils.RandomNonIdentity(sf, v.prng)
 		if err != nil {
 			return errs2.Wrap(err).WithMessage("cannot generate random scalar for i=%d", i)
@@ -458,10 +458,10 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 
 	// For i = 1 .. u:
 	left := sf.Zero()
-	ae := make([]*k256.Scalar, len(signatures))
-	bigR := make([]*k256.Point, len(signatures))
-	bigP := make([]*k256.Point, len(signatures))
-	for i, sig := range signatures {
+	ae := make([]*k256.Scalar, len(sigs))
+	bigR := make([]*k256.Point, len(sigs))
+	bigP := make([]*k256.Point, len(sigs))
+	for i, sig := range sigs {
 		// 2. Let P_i = lift_x(int(pki))
 		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
 		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
@@ -474,7 +474,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		}
 
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
-		bigR[i] = LiftX(signatures[i].R)
+		bigR[i] = LiftX(sigs[i].R)
 
 		ae[i] = a[i].Mul(e)
 		left = left.Add(a[i].Mul(sig.S))

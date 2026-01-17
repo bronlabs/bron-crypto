@@ -204,9 +204,7 @@ func scalarTo255Bits(scalar *Scalar) []bool {
 // ComputeNonceCommitment generates the nonce k and commitment R = k·G.
 // Uses deterministic derivation if a private key was provided, otherwise uses PRNG.
 // The nonce is adjusted to ensure R has an even y-coordinate.
-func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
-	var k *Scalar
-	var err error
+func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.IsDeterministic() {
 		k, err = v.deriveNonceLegacy()
 	} else {
@@ -215,7 +213,7 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
-	R := group.ScalarBaseMul(k)
+	R = group.ScalarBaseMul(k)
 
 	// Ensure R has an even y-coordinate (same as BIP340)
 	ry, err := R.AffineY()
@@ -290,11 +288,11 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 // CorrectPartialNonceParity adjusts a partial nonce for Mina's even-y requirement.
 // If the aggregate nonce commitment R has odd y, each party must negate their
 // partial nonce k_i to ensure the final signature is valid.
-func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (*GroupElement, *Scalar, error) {
+func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (correctedR *GroupElement, correctedK *Scalar, err error) {
 	if aggregatedNonceCommitments == nil || localNonce == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}
-	correctedK := localNonce.Clone()
+	correctedK = localNonce.Clone()
 	ancy, err := aggregatedNonceCommitments.AffineY()
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot get y")
@@ -303,6 +301,6 @@ func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupEle
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.
 		correctedK = correctedK.Neg()
 	}
-	correctedR := group.ScalarBaseOp(correctedK)
+	correctedR = group.ScalarBaseOp(correctedK)
 	return correctedR, correctedK, nil
 }

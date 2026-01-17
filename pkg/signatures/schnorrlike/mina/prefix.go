@@ -97,7 +97,7 @@ func createCustomPrefix(input string) Prefix {
 // TestNet is 0x00 (8 bits), and custom networks encode the string as bits.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L305
-func getNetworkIdHashInput(nid NetworkId) (*big.Int, int) {
+func getNetworkIdHashInput(nid NetworkId) (val *big.Int, bitLen int) {
 	switch nid {
 	case MainNet:
 		return mainNetHashInput, 8
@@ -121,14 +121,14 @@ func numberToBytePadded(b byte) string {
 // then interpreted as an integer. Returns the value and total bit count.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L294
-func networkIdOfString(n string) (*big.Int, int) {
+func networkIdOfString(n string) (val *big.Int, bitLen int) {
 	acc := ""
 	for i := len(n) - 1; i >= 0; i-- {
 		b := n[i]
 		padded := numberToBytePadded(b)
 		acc += padded
 	}
-	val := new(big.Int)
+	val = new(big.Int)
 	val.SetString(acc, 2)
 	return val, len(acc)
 }

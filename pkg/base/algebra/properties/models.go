@@ -320,13 +320,13 @@ func FiniteField[S algebra.FiniteField[E], E algebra.FiniteFieldElement[E]](
 }
 
 func SemiModule[S algebra.SemiModule[E, RE], R algebra.SemiRing[RE], E algebra.SemiModuleElement[E, RE], RE algebra.SemiRingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 	op *BinaryOperator[E], identity *Constant[E],
 	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
 	monoid := Monoid(t, structure, g, op, identity)
-	baseSemiRing := SemiRing(t, base, gb)
+	baseSemiRing := SemiRing(t, scalarRing, gb)
 	out := PairWithAction(t, monoid, baseSemiRing, scalarOp)
 	out.Theory = append(out.Theory,
 		CommutativityProperty(t, out.Carrier2.First, op),
@@ -340,10 +340,10 @@ func SemiModule[S algebra.SemiModule[E, RE], R algebra.SemiRing[RE], E algebra.S
 }
 
 func AdditiveSemiModule[S algebra.AdditiveSemiModule[E, RE], R algebra.SemiRing[RE], E algebra.AdditiveSemiModuleElement[E, RE], RE algebra.SemiRingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	semiModule := SemiModule(t, structure, base, g, gb, Addition[E](), AdditiveIdentity(structure), ScalarMultiplication[E]())
+	semiModule := SemiModule(t, structure, scalarRing, g, gb, Addition[E](), AdditiveIdentity(structure), ScalarMultiplication[E]())
 	additiveMonoid := AdditiveMonoid(t, structure, g)
 	out := UnionAlongFirst(t, semiModule, additiveMonoid)
 	out.Theory = append(out.Theory,
@@ -353,10 +353,10 @@ func AdditiveSemiModule[S algebra.AdditiveSemiModule[E, RE], R algebra.SemiRing[
 }
 
 func MultiplicativeSemiModule[S algebra.MultiplicativeSemiModule[E, RE], R algebra.SemiRing[RE], E algebra.MultiplicativeSemiModuleElement[E, RE], RE algebra.SemiRingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	semiModule := SemiModule(t, structure, base, g, gb, Multiplication[E](), MultiplicativeIdentity(structure), ScalarExponentiation[E]())
+	semiModule := SemiModule(t, structure, scalarRing, g, gb, Multiplication[E](), MultiplicativeIdentity(structure), ScalarExponentiation[E]())
 	multiplicativeMonoid := MultiplicativeMonoid(t, structure, g)
 	out := UnionAlongFirst(t, semiModule, multiplicativeMonoid)
 	out.Theory = append(out.Theory,
@@ -366,12 +366,12 @@ func MultiplicativeSemiModule[S algebra.MultiplicativeSemiModule[E, RE], R algeb
 }
 
 func Module[S algebra.Module[E, RE], R algebra.Ring[RE], E algebra.ModuleElement[E, RE], RE algebra.RingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
 	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	semiModule := SemiModule(t, structure, base, g, gb, op, identity, scalarOp)
+	semiModule := SemiModule(t, structure, scalarRing, g, gb, op, identity, scalarOp)
 	group := Group(t, structure, g, op, identity, inv)
 	out := UnionAlongFirst(t, semiModule, group)
 	out.Theory = append(out.Theory,
@@ -381,11 +381,11 @@ func Module[S algebra.Module[E, RE], R algebra.Ring[RE], E algebra.ModuleElement
 }
 
 func AdditiveModule[S algebra.AdditiveModule[E, RE], R algebra.Ring[RE], E algebra.AdditiveModuleElement[E, RE], RE algebra.RingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	module := Module(t, structure, base, g, gb, Addition[E](), AdditiveIdentity(structure), Negation[E](), ScalarMultiplication[E]())
-	additiveSemiModule := AdditiveSemiModule(t, structure, base, g, gb)
+	module := Module(t, structure, scalarRing, g, gb, Addition[E](), AdditiveIdentity(structure), Negation[E](), ScalarMultiplication[E]())
+	additiveSemiModule := AdditiveSemiModule(t, structure, scalarRing, g, gb)
 	additiveGroup := AdditiveGroup(t, structure, g)
 	out := UnionAlongFirst(t, Union2(t, module, additiveSemiModule), additiveGroup)
 	out.Theory = append(out.Theory,
@@ -395,11 +395,11 @@ func AdditiveModule[S algebra.AdditiveModule[E, RE], R algebra.Ring[RE], E algeb
 }
 
 func MultiplicativeModule[S algebra.MultiplicativeModule[E, RE], R algebra.Ring[RE], E algebra.MultiplicativeModuleElement[E, RE], RE algebra.RingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	module := Module(t, structure, base, g, gb, Multiplication[E](), MultiplicativeIdentity(structure), Inversion[E](), ScalarExponentiation[E]())
-	multiplicativeSemiModule := MultiplicativeSemiModule(t, structure, base, g, gb)
+	module := Module(t, structure, scalarRing, g, gb, Multiplication[E](), MultiplicativeIdentity(structure), Inversion[E](), ScalarExponentiation[E]())
+	multiplicativeSemiModule := MultiplicativeSemiModule(t, structure, scalarRing, g, gb)
 	multiplicativeGroup := MultiplicativeGroup(t, structure, g)
 	out := UnionAlongFirst(t, Union2(t, module, multiplicativeSemiModule), multiplicativeGroup)
 	out.Theory = append(out.Theory,
@@ -412,21 +412,21 @@ func VectorSpace[
 	S algebra.VectorSpace[E, FE], F algebra.Field[FE],
 	E algebra.Vector[E, FE], FE algebra.FieldElement[FE],
 ](
-	t *testing.T, structure S, base F, g *rapid.Generator[E], gb *rapid.Generator[FE],
+	t *testing.T, structure S, scalarField F, g *rapid.Generator[E], gb *rapid.Generator[FE],
 	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
 	scalarOp *Action[FE, E],
 ) *TwoSortedModel[S, F, E, FE] {
 	t.Helper()
-	module := Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
-	field := Field(t, base, gb)
+	module := Module(t, structure, scalarField, g, gb, op, identity, inv, scalarOp)
+	field := Field(t, scalarField, gb)
 	return UnionAlongSecond(t, module, field)
 }
 
 func Algebra[S algebra.Algebra[AE, RE], R algebra.Ring[RE], AE algebra.AlgebraElement[AE, RE], RE algebra.RingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[AE], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[AE], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, AE, RE] {
 	t.Helper()
-	module := AdditiveModule(t, structure, base, g, gb)
+	module := AdditiveModule(t, structure, scalarRing, g, gb)
 	ring := Ring(t, structure, g)
 	out := UnionAlongFirst(t, module, ring)
 	return out
@@ -436,12 +436,12 @@ func PolynomialRing[
 	PS algebra.PolynomialRing[P, S], SS algebra.Ring[S],
 	P algebra.Polynomial[P, S], S algebra.RingElement[S],
 ](
-	t *testing.T, structure PS, base SS, g *rapid.Generator[P], gb *rapid.Generator[S],
+	t *testing.T, structure PS, coeffRing SS, g *rapid.Generator[P], gb *rapid.Generator[S],
 ) *TwoSortedModel[PS, SS, P, S] {
 	t.Helper()
-	algebra := Algebra(t, structure, base, g, gb)
+	alg := Algebra(t, structure, coeffRing, g, gb)
 	euclideanDomain := EuclideanDomain(t, structure, g)
-	out := UnionAlongFirst(t, algebra, euclideanDomain)
+	out := UnionAlongFirst(t, alg, euclideanDomain)
 	out.Theory = append(out.Theory,
 		PolynomialLikeConstantTermProperty[PS, SS, SS](t, out.First),
 		PolynomialLikeIsConstantProperty[PS, SS, SS](t, out.First),
@@ -450,7 +450,7 @@ func PolynomialRing[
 		PolynomialLikeDerivativeOfConstantIsZeroProperty[PS, SS, SS](t, out.First),
 		UnivariatePolynomialLikeFromCoefficientsRoundTripProperty(t, out.First),
 		PolynomialLeadingCoefficientProperty(t, out.First),
-		PolynomialEvalAtZeroProperty(t, out.First, base),
+		PolynomialEvalAtZeroProperty(t, out.First, coeffRing),
 		PolynomialEvalConstantProperty(t, out.First, gb),
 	)
 	return out
@@ -567,27 +567,27 @@ func PrimeField[S algebra.PrimeField[E], E algebra.PrimeFieldElement[E]](
 }
 
 func AbelianGroup[S algebra.AbelianGroup[E, RE], R algebra.Ring[RE], E algebra.AbelianGroupElement[E, RE], RE algebra.RingElement[RE]](
-	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
+	t *testing.T, structure S, scalarRing R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
 	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	return Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
+	return Module(t, structure, scalarRing, g, gb, op, identity, inv, scalarOp)
 }
 
 func PrimeGroup[
 	S algebra.PrimeGroup[E, FE], F algebra.PrimeField[FE],
 	E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE],
 ](
-	t *testing.T, structure S, base F, g *rapid.Generator[E], gb *rapid.Generator[FE],
+	t *testing.T, structure S, scalarField F, g *rapid.Generator[E], gb *rapid.Generator[FE],
 	op *BinaryOperator[E], scalarOp *Action[FE, E],
 	identity *Constant[E], inv *UnaryOperator[E],
 ) *TwoSortedModel[S, F, E, FE] {
 	t.Helper()
-	abelianGroup := AbelianGroup(t, structure, base, g, gb, op, identity, inv, scalarOp)
-	vectorSpace := VectorSpace(t, structure, base, g, gb, op, identity, inv, scalarOp)
+	abelianGroup := AbelianGroup(t, structure, scalarField, g, gb, op, identity, inv, scalarOp)
+	vectorSpace := VectorSpace(t, structure, scalarField, g, gb, op, identity, inv, scalarOp)
 	cyclicSemiGroup := CyclicSemiGroup(t, structure, g, op)
-	primeField := PrimeField(t, base, gb)
+	primeField := PrimeField(t, scalarField, gb)
 	out := UnionAlongSecond(
 		t,
 		UnionAlongFirst(
@@ -608,10 +608,10 @@ func AdditivePrimeGroup[
 	S algebra.AdditivePrimeGroup[E, FE], F algebra.PrimeField[FE],
 	E algebra.AdditivePrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE],
 ](
-	t *testing.T, structure S, base F, g *rapid.Generator[E], gb *rapid.Generator[FE],
+	t *testing.T, structure S, scalarField F, g *rapid.Generator[E], gb *rapid.Generator[FE],
 ) *TwoSortedModel[S, F, E, FE] {
 	t.Helper()
-	out := PrimeGroup(t, structure, base, g, gb, Addition[E](), ScalarMultiplication[E](), AdditiveIdentity(structure), Negation[E]())
+	out := PrimeGroup(t, structure, scalarField, g, gb, Addition[E](), ScalarMultiplication[E](), AdditiveIdentity(structure), Negation[E]())
 	out.Theory = append(out.Theory,
 		CanScalarBaseMul(t, out.Carrier2),
 	)

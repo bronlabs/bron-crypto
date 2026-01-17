@@ -28,7 +28,7 @@ var RandomOracleHashFunction = sha3.New256
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.3
 const HKDFKeyGenSalt = "BLS-SIG-KEYGEN-SALT-"
 
-func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S algebra.PrimeFieldElement[S]](group curves.Curve[K, FK, S], ikm []byte) (S, K, error) {
+func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S algebra.PrimeFieldElement[S]](group curves.Curve[K, FK, S], ikm []byte) (secret S, publicKey K, err error) {
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	if len(ikm) < sf.ElementSize() {
 		return *new(S), *new(K), ErrInvalidArgument.WithMessage("ikm is too short, must be at least %d bytes", sf.ElementSize())

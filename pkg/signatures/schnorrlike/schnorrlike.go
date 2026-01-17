@@ -462,12 +462,12 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 // BatchVerify verifies multiple signatures in sequence.
 // This is a naive implementation that verifies each signature individually.
 // Some variants (like BIP-340) provide optimised batch verification.
-func (v *VerifierTrait[VR, GE, S, M]) BatchVerify(signatures []*Signature[GE, S], publicKeys []*PublicKey[GE, S], messages []M) error {
-	if len(signatures) != len(publicKeys) || len(signatures) != len(messages) {
+func (v *VerifierTrait[VR, GE, S, M]) BatchVerify(sigs []*Signature[GE, S], publicKeys []*PublicKey[GE, S], messages []M) error {
+	if len(sigs) != len(publicKeys) || len(sigs) != len(messages) {
 		return ErrFailed.WithMessage("mismatched lengths")
 	}
-	for i := range signatures {
-		if err := v.Verify(signatures[i], publicKeys[i], messages[i]); err != nil {
+	for i := range sigs {
+		if err := v.Verify(sigs[i], publicKeys[i], messages[i]); err != nil {
 			return errs2.Wrap(err).WithMessage("batch verification failed")
 		}
 	}

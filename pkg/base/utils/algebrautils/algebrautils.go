@@ -136,8 +136,8 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 	for i, s := range scalars {
 		b := s.BytesBE()
 		scalarBytes[i] = b
-		if bits := len(b) * 8; bits > maxBits {
-			maxBits = bits
+		if numBits := len(b) * 8; numBits > maxBits {
+			maxBits = numBits
 		}
 	}
 	if maxBits == 0 {

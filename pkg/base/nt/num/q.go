@@ -354,7 +354,7 @@ func (r *Rat) Square() *Rat {
 }
 
 // EuclideanDiv performs Euclidean division of two Rat elements.
-func (r *Rat) EuclideanDiv(rhs *Rat) (quo *Rat, rem *Rat, err error) {
+func (r *Rat) EuclideanDiv(rhs *Rat) (quo, rem *Rat, err error) {
 	quo, err = r.TryDiv(rhs)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err)

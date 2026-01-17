@@ -53,12 +53,12 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 }
 
 // Round2 verifies all zero-shares and aggregates them into a single zero-share and verification vector.
-func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (*feldman.Share[S], feldman.VerificationVector[G, S], error) {
+func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
 	if p.round != 2 {
 		return nil, nil, ErrRound.WithMessage("expected round 2")
 	}
 
-	share := p.state.share
+	share = p.state.share
 	verificationVector := p.state.verificationVectors[p.sharingId]
 	for id := range p.accessStructure.Shareholders().Iter() {
 		if id == p.sharingId {
