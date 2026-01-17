@@ -13,14 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
-// interface compliance
-func _[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]]() {
-	var (
-		_ algebra.Module[*ModuleValuedPolynomial[ME, S], S]        = (*PolynomialModule[ME, S])(nil)
-		_ algebra.ModuleElement[*ModuleValuedPolynomial[ME, S], S] = (*ModuleValuedPolynomial[ME, S])(nil)
-	)
-}
-
 func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], baseElem algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {
 	coeffs := make([]ME, len(poly.coeffs))
 	for i, c := range poly.coeffs {
@@ -37,8 +29,11 @@ type PolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]]
 	module algebra.FiniteModule[ME, S]
 }
 
-func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.FiniteModule[ME, S]) *PolynomialModule[ME, S] {
-	return &PolynomialModule[ME, S]{module: module}
+func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.FiniteModule[ME, S]) (*PolynomialModule[ME, S], error) {
+	if module == nil {
+		return nil, ErrValidation.WithMessage("nil module")
+	}
+	return &PolynomialModule[ME, S]{module: module}, nil
 }
 
 func (m *PolynomialModule[ME, S]) New(coeffs ...ME) (*ModuleValuedPolynomial[ME, S], error) {
@@ -230,10 +225,14 @@ func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME,
 			coeffs: []ME{p.CoefficientStructure().OpIdentity()},
 		}
 	}
-	ring := p.ScalarStructure()
+	ring := algebra.StructureMustBeAs[algebra.FiniteRing[S]](p.ScalarStructure())
 	derivCoeffs := make([]ME, len(p.coeffs)-1)
 	for i := 1; i < len(p.coeffs); i++ {
-		rb, err := ring.FromBytes(binary.BigEndian.AppendUint64(nil, uint64(i)))
+		// Create properly sized big-endian bytes for the index
+		elemSize := ring.ElementSize()
+		indexBytes := make([]byte, elemSize)
+		binary.BigEndian.PutUint64(indexBytes[elemSize-8:], uint64(i))
+		rb, err := ring.FromBytes(indexBytes)
 		if err != nil {
 			panic("internal error: could not create ring element from uint64")
 		}

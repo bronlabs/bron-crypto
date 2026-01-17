@@ -221,7 +221,10 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 		return ErrVerificationFailed.WithMessage("invalid challenge length")
 	}
 
-	polyModule := polynomials.NewPolynomialModule(p.group)
+	polyModule, err := polynomials.NewPolynomialModule(p.group)
+	if err != nil {
+		return errs2.Wrap(err).WithMessage("cannot create polynomial module")
+	}
 	coefficients := append([]G{commitment.A}, statement.Xs...)
 	poly, err := polyModule.New(coefficients...)
 	if err != nil {
@@ -252,7 +255,10 @@ func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigm
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot convert challenge to scalar")
 	}
 
-	polyModule := polynomials.NewPolynomialModule(p.group)
+	polyModule, err := polynomials.NewPolynomialModule(p.group)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot create polynomial module")
+	}
 	coefficients := append([]G{p.group.OpIdentity()}, statement.Xs...)
 	poly, err := polyModule.New(coefficients...)
 	if err != nil {

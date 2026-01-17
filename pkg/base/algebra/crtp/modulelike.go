@@ -117,6 +117,7 @@ type PolynomialLikeStructure[P, S, C any] Module[P, S]
 
 type PolynomialLike[P, S, C any] interface {
 	ModuleElement[P, S]
+	Coefficients() []C
 	ConstantTerm() C
 	IsConstant() bool
 	Derivative() P
@@ -130,7 +131,6 @@ type UnivariatePolynomialLikeStructure[P, S, C any] interface {
 
 type UnivariatePolynomialLike[P, S, C, SS, CS any] interface {
 	PolynomialLike[P, S, C]
-	Coefficients() []C
 	LeadingCoefficient() C
 	Eval(S) C
 

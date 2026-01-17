@@ -420,6 +420,65 @@ func VectorSpace[
 	return UnionAlongSecond(t, module, field)
 }
 
+func Algebra[S algebra.Algebra[AE, RE], R algebra.Ring[RE], AE algebra.AlgebraElement[AE, RE], RE algebra.RingElement[RE]](
+	t *testing.T, structure S, base R, g *rapid.Generator[AE], gb *rapid.Generator[RE],
+) *TwoSortedModel[S, R, AE, RE] {
+	t.Helper()
+	module := AdditiveModule(t, structure, base, g, gb)
+	ring := Ring(t, structure, g)
+	out := UnionAlongFirst(t, module, ring)
+	return out
+}
+
+func PolynomialRing[
+	PS algebra.PolynomialRing[P, S], SS algebra.Ring[S],
+	P algebra.Polynomial[P, S], S algebra.RingElement[S],
+](
+	t *testing.T, structure PS, base SS, g *rapid.Generator[P], gb *rapid.Generator[S],
+) *TwoSortedModel[PS, SS, P, S] {
+	t.Helper()
+	algebra := Algebra(t, structure, base, g, gb)
+	euclideanDomain := EuclideanDomain(t, structure, g)
+	out := UnionAlongFirst(t, algebra, euclideanDomain)
+	out.Theory = append(out.Theory,
+		PolynomialLikeConstantTermProperty[PS, SS, SS](t, out.First),
+		PolynomialLikeIsConstantProperty[PS, SS, SS](t, out.First),
+		PolynomialLikeDegreeProperty[PS, SS, SS](t, out.First),
+		PolynomialLikeDerivativeDegreeDeclinesProperty[PS, SS, SS](t, out.First),
+		PolynomialLikeDerivativeOfConstantIsZeroProperty[PS, SS, SS](t, out.First),
+		UnivariatePolynomialLikeFromCoefficientsRoundTripProperty(t, out.First),
+		PolynomialLeadingCoefficientProperty(t, out.First),
+		PolynomialEvalAtZeroProperty(t, out.First, base),
+		PolynomialEvalConstantProperty(t, out.First, gb),
+	)
+	return out
+}
+
+func PolynomialModule[
+	PM algebra.PolynomialModule[MP, P, C, S],
+	CS algebra.Module[C, S],
+	SS algebra.Ring[S],
+	MP algebra.ModuleValuedPolynomial[MP, P, C, S],
+	P algebra.Polynomial[P, S],
+	C algebra.ModuleElement[C, S],
+	S algebra.RingElement[S],
+](
+	t *testing.T, structure PM, scalars SS, g *rapid.Generator[MP], gs *rapid.Generator[S],
+	op *BinaryOperator[MP], identity *Constant[MP], inv *UnaryOperator[MP],
+	scalarOp *Action[S, MP],
+) *TwoSortedModel[PM, SS, MP, S] {
+	t.Helper()
+	module := Module(t, structure, scalars, g, gs, op, identity, inv, scalarOp)
+	module.Theory = append(module.Theory,
+		PolynomialLikeConstantTermProperty[PM, SS, CS](t, module.First),
+		PolynomialLikeIsConstantProperty[PM, SS, CS](t, module.First),
+		PolynomialLikeDegreeProperty[PM, SS, CS](t, module.First),
+		PolynomialLikeDerivativeDegreeDeclinesProperty[PM, SS, CS](t, module.First),
+		PolynomialLikeDerivativeOfConstantIsZeroProperty[PM, SS, CS](t, module.First),
+	)
+	return module
+}
+
 func NumericStructure[S interface {
 	Structure
 	algebra.NumericStructure[E]

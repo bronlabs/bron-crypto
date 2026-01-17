@@ -274,7 +274,7 @@ func (p *Polynomial[RE]) Mul(e *Polynomial[RE]) *Polynomial[RE] {
 	}
 
 	for l := range len(p.coeffs) {
-		for r := range len(p.coeffs) {
+		for r := range len(e.coeffs) {
 			coeffs[l+r] = coeffs[l+r].Add(p.coeffs[l].Mul(e.coeffs[r]))
 		}
 	}
@@ -376,7 +376,11 @@ func (p *Polynomial[RE]) Derivative() *Polynomial[RE] {
 	}
 	derivCoeffs := make([]RE, len(p.coeffs)-1)
 	for i := 1; i < len(p.coeffs); i++ {
-		rb, err := ring.FromBytes(binary.BigEndian.AppendUint64(nil, uint64(i)))
+		// Create properly sized big-endian bytes for the index
+		elemSize := ring.ElementSize()
+		indexBytes := make([]byte, elemSize)
+		binary.BigEndian.PutUint64(indexBytes[elemSize-8:], uint64(i))
+		rb, err := ring.FromBytes(indexBytes)
 		if err != nil {
 			panic("internal error: could not create ring element from uint64")
 		}
@@ -412,30 +416,19 @@ func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot, rem *Polynomial[
 		quotCoeffs[i] = coeffField.Zero()
 	}
 
-	for degR >= degQ && degR >= 0 {
+	lcQ := q.coeffs[degQ]
+	for degR >= degQ {
 		lcR := rem.coeffs[degR]
-		lcQ := q.coeffs[degQ]
-
-		fieldElemR, err := coeffField.FromBytes(lcR.Bytes())
-		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("leading coefficient does not support field division")
-		}
-		fieldElemQ, err := coeffField.FromBytes(lcQ.Bytes())
-		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("divisor leading coefficient does not support field division")
-		}
-
-		factor, err := fieldElemR.TryDiv(fieldElemQ)
+		factor, err := lcR.TryDiv(lcQ)
 		if err != nil {
 			return nil, nil, errs2.Wrap(err).WithMessage("failed to divide leading coefficients")
 		}
 
 		shift := degR - degQ
-		quotCoeffs[shift] = quotCoeffs[shift].Add(factor)
+		quotCoeffs[shift] = factor
 
 		for i := 0; i <= degQ; i++ {
-			term := q.coeffs[i].Mul(factor)
-			rem.coeffs[i+shift] = rem.coeffs[i+shift].Add(term.Neg())
+			rem.coeffs[i+shift] = rem.coeffs[i+shift].Sub(q.coeffs[i].Mul(factor))
 		}
 
 		for degR >= 0 && rem.coeffs[degR].IsZero() {
@@ -445,19 +438,13 @@ func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot, rem *Polynomial[
 
 	if degR < 0 {
 		rem = &Polynomial[RE]{coeffs: []RE{coeffField.Zero()}}
-	} else if degR+1 < len(rem.coeffs) {
+	} else {
 		rem = &Polynomial[RE]{coeffs: rem.coeffs[:degR+1]}
 	}
 
 	quot = &Polynomial[RE]{coeffs: quotCoeffs}
-	quotDeg := len(quot.coeffs) - 1
-	for quotDeg >= 0 && quot.coeffs[quotDeg].IsZero() {
-		quotDeg--
-	}
-	if quotDeg < 0 {
-		quot = &Polynomial[RE]{coeffs: []RE{coeffField.Zero()}}
-	} else if quotDeg+1 < len(quot.coeffs) {
-		quot = &Polynomial[RE]{coeffs: quot.coeffs[:quotDeg+1]}
+	for len(quot.coeffs) > 1 && quot.coeffs[len(quot.coeffs)-1].IsZero() {
+		quot.coeffs = quot.coeffs[:len(quot.coeffs)-1]
 	}
 
 	return quot, rem, nil
