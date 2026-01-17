@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
@@ -114,7 +114,7 @@ func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 	if prng == nil {
 		return nil, nil, ErrIsNil.WithMessage("prng is nil")
 	}
-	poly, err := d.polyRing.NewRandomWithConstantTerm(int(d.ac.Threshold()-1), secret.v, prng)
+	poly, err := d.polyRing.RandomPolynomialWithConstantTerm(int(d.ac.Threshold()-1), secret.v, prng)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("could not generate random polynomial")
 	}
@@ -156,7 +156,7 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 		nodes[i] = d.SharingIDToLagrangeNode(share.ID())
 		values[i] = share.Value()
 	}
-	reconstructed, err := interpolation.InterpolateAt(nodes, values, d.f.Zero())
+	reconstructed, err := lagrange.InterpolateAt(nodes, values, d.f.Zero())
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not interpolate polynomial")
 	}

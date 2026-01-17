@@ -37,6 +37,8 @@ type (
 type (
 	Ring[RE crtp.RingElement[RE]]        = crtp.Ring[RE]
 	RingElement[RE crtp.RingElement[RE]] = crtp.RingElement[RE]
+
+	FiniteRing[RE crtp.RingElement[RE]] = crtp.FiniteRing[RE]
 )
 
 type (

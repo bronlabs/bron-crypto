@@ -32,6 +32,8 @@ type (
 
 	MultiplicativeModule[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]]        crtp.MultiplicativeModule[ME, S]
 	MultiplicativeModuleElement[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]] crtp.MultiplicativeModuleElement[ME, S]
+
+	FiniteModule[ME crtp.ModuleElement[ME, S], S crtp.RingElement[S]] = crtp.FiniteModule[ME, S]
 )
 
 type (
@@ -49,7 +51,7 @@ type (
 		P crtp.PolynomialLike[P, S, C],
 		S crtp.RingElement[S],
 		C crtp.GroupElement[C],
-	] = crtp.PolynomialLike[P, S, C]
+	] = crtp.PolynomialLikeStructure[P, S, C]
 
 	PolynomialLike[
 		P crtp.PolynomialLike[P, S, C],
@@ -61,16 +63,16 @@ type (
 		P crtp.UnivariatePolynomialLike[P, S, C, SS, CS],
 		S crtp.RingElement[S],
 		C crtp.GroupElement[C],
-		SS crtp.Structure[SS],
-		CS crtp.Structure[CS],
+		SS crtp.Structure[S],
+		CS crtp.Structure[C],
 	] = crtp.UnivariatePolynomialLikeStructure[P, S, C]
 
 	UnivariatePolynomialLike[
 		P crtp.UnivariatePolynomialLike[P, S, C, SS, CS],
 		S crtp.RingElement[S],
 		C crtp.GroupElement[C],
-		SS crtp.Structure[SS],
-		CS crtp.Structure[CS],
+		SS crtp.Structure[S],
+		CS crtp.Structure[C],
 	] = crtp.UnivariatePolynomialLike[P, S, C, SS, CS]
 
 	PolynomialModule[
