@@ -90,8 +90,8 @@ linters:
     - gochecksumtype
     # Finds repeated strings that could be replaced by a constant
     - goconst
-    # # Provides many diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
-    # - gocritic
+    # Provides many diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
+    - gocritic
     # Check if comments end in a period
     - godot
     # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.

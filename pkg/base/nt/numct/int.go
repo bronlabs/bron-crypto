@@ -192,13 +192,14 @@ func (i *Int) EuclideanDivVarTime(remainder *Nat, numerator, denominator *Int) (
 	z := rr.IsZero()
 
 	var qa Int
-	if sa == ct.False {
+	switch {
+	case sa == ct.False:
 		qa.Set(qq.Lift())
-	} else if (sa & z) != ct.False {
+	case (sa & z) != ct.False:
 		var qn Int
 		qn.Neg(qq.Lift())
 		qa.Set(&qn)
-	} else {
+	default:
 		var qn, qn1 Int
 		qn.Neg(qq.Lift())
 		qn1.Sub(&qn, IntOne())
@@ -218,11 +219,12 @@ func (i *Int) EuclideanDivVarTime(remainder *Nat, numerator, denominator *Int) (
 
 	if remainder != nil {
 		var rOut Int
-		if sa == ct.False {
+		switch {
+		case sa == ct.False:
 			rOut.Set(rr.Lift())
-		} else if (sa & z) != ct.False {
+		case (sa & z) != ct.False:
 			rOut.Set(IntZero())
-		} else {
+		default:
 			var notR Int
 			notR.SetNat(&d)
 			notR.Sub(&notR, rr.Lift())

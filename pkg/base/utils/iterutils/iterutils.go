@@ -265,7 +265,8 @@ func Truncate[V any](seq iter.Seq[V], n int) iter.Seq[V] {
 			if !yield(v) {
 				return
 			}
-			if n--; n <= 0 {
+			n--
+			if n <= 0 {
 				break
 			}
 		}
@@ -282,7 +283,8 @@ func Truncate2[K, V any](seq iter.Seq2[K, V], n int) iter.Seq2[K, V] {
 			if !yield(k, v) {
 				return
 			}
-			if n--; n <= 0 {
+			n--
+			if n <= 0 {
 				break
 			}
 		}

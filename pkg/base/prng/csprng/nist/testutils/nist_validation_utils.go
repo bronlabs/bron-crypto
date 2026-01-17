@@ -288,7 +288,7 @@ func RunNistTestCases(f *os.File, AesKeySize int, useDf, withReseed bool) error 
 					return err
 				}
 				// Scan empty line
-				if err = nistTest.Sscanf(true, ""); err != nil {
+				if err := nistTest.Sscanf(true, ""); err != nil {
 					return err
 				}
 			}
@@ -313,11 +313,11 @@ func RunNistValidationTest(keySize int, useDf bool) (err error) {
 			return err
 		}
 		// Run tests
-		if err = RunNistTestCases(f, keySize, useDf, caseParams.withReseed); err != nil {
+		if err := RunNistTestCases(f, keySize, useDf, caseParams.withReseed); err != nil {
 			return err
 		}
 		// Close test data file
-		if err = f.Close(); err != nil {
+		if err := f.Close(); err != nil {
 			return err
 		}
 	}

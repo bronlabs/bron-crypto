@@ -71,7 +71,8 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("could not create private key")
 	}
-	return sk, sk.PublicKey(), nil
+	pk := sk.PublicKey()
+	return sk, pk, nil
 }
 
 // Generate creates a new BLS key pair using random bytes from the provided reader.
