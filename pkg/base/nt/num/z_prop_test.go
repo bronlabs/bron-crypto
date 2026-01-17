@@ -11,6 +11,7 @@ import (
 )
 
 func IntGenerator(t *testing.T) *rapid.Generator[*num.Int] {
+	t.Helper()
 	return rapid.Custom(func(t *rapid.T) *num.Int {
 		n := rapid.Int64().Draw(t, "n")
 		return num.Z().FromInt64(n)
@@ -18,6 +19,7 @@ func IntGenerator(t *testing.T) *rapid.Generator[*num.Int] {
 }
 
 func SmallIntGenerator(t *testing.T) *rapid.Generator[*num.Int] {
+	t.Helper()
 	return rapid.Custom(func(t *rapid.T) *num.Int {
 		n := rapid.Int16().Draw(t, "n")
 		return num.Z().FromInt64(int64(n))

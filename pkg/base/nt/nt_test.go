@@ -1,4 +1,4 @@
-package nt
+package nt //nolint:testpackage // to access unexported identifiers
 
 import (
 	"testing"

@@ -13,6 +13,7 @@ import (
 )
 
 func PolynomialGenerator(t *testing.T) *rapid.Generator[*polynomials.Polynomial[*k256.Scalar]] {
+	t.Helper()
 	return rapid.Custom(func(t *rapid.T) *polynomials.Polynomial[*k256.Scalar] {
 		field := k256.NewScalarField()
 		polyRing, err := polynomials.NewPolynomialRing(field)
@@ -25,6 +26,7 @@ func PolynomialGenerator(t *testing.T) *rapid.Generator[*polynomials.Polynomial[
 }
 
 func ScalarGenerator(t *testing.T) *rapid.Generator[*k256.Scalar] {
+	t.Helper()
 	return rapid.Custom(func(t *rapid.T) *k256.Scalar {
 		field := k256.NewScalarField()
 		value := rapid.Uint64().Draw(t, "value")

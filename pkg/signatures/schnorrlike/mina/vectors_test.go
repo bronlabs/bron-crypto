@@ -362,10 +362,10 @@ func TestLegacySignatures(t *testing.T) {
 	}
 }
 
-func actualSignatureIsAsExpected(t testing.TB, actual *mina.Signature, expected *signature) {
-	t.Helper()
+func actualSignatureIsAsExpected(tb testing.TB, actual *mina.Signature, expected *signature) {
+	tb.Helper()
 	rx, err := actual.R.AffineX()
-	require.NoError(t, err)
-	require.Equal(t, expected.field, rx.String(), "R field does not match expected value")
-	require.Equal(t, expected.scalar, actual.S.String(), "S scalar does not match expected value")
+	require.NoError(tb, err)
+	require.Equal(tb, expected.field, rx.String(), "R field does not match expected value")
+	require.Equal(tb, expected.scalar, actual.S.String(), "S scalar does not match expected value")
 }

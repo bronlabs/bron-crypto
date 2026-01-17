@@ -1,4 +1,4 @@
-package mina
+package mina //nolint:testpackage // to test unexported identifiers
 
 import (
 	"bytes"

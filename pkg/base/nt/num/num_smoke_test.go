@@ -1,26 +1,29 @@
-package num
+package num_test
 
-import "github.com/bronlabs/bron-crypto/pkg/base/algebra"
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+)
 
 var (
-	_ algebra.NPlusLike[*NatPlus]   = (*PositiveNaturalNumbers)(nil)
-	_ algebra.NatPlusLike[*NatPlus] = (*NatPlus)(nil)
+	_ algebra.NPlusLike[*num.NatPlus]   = (*num.PositiveNaturalNumbers)(nil)
+	_ algebra.NatPlusLike[*num.NatPlus] = (*num.NatPlus)(nil)
 
-	_ algebra.NLike[*Nat]                   = (*NaturalNumbers)(nil)
-	_ algebra.NatLike[*Nat]                 = (*Nat)(nil)
-	_ algebra.SemiModule[*Nat, *Nat]        = (*NaturalNumbers)(nil)
-	_ algebra.SemiModuleElement[*Nat, *Nat] = (*Nat)(nil)
+	_ algebra.NLike[*num.Nat]                       = (*num.NaturalNumbers)(nil)
+	_ algebra.NatLike[*num.Nat]                     = (*num.Nat)(nil)
+	_ algebra.SemiModule[*num.Nat, *num.Nat]        = (*num.NaturalNumbers)(nil)
+	_ algebra.SemiModuleElement[*num.Nat, *num.Nat] = (*num.Nat)(nil)
 
-	_ algebra.ZLike[*Int]               = (*Integers)(nil)
-	_ algebra.IntLike[*Int]             = (*Int)(nil)
-	_ algebra.Module[*Int, *Int]        = (*Integers)(nil)
-	_ algebra.ModuleElement[*Int, *Int] = (*Int)(nil)
+	_ algebra.ZLike[*num.Int]                   = (*num.Integers)(nil)
+	_ algebra.IntLike[*num.Int]                 = (*num.Int)(nil)
+	_ algebra.Module[*num.Int, *num.Int]        = (*num.Integers)(nil)
+	_ algebra.ModuleElement[*num.Int, *num.Int] = (*num.Int)(nil)
 
-	_ algebra.ZModLike[*Uint]                = (*ZMod)(nil)
-	_ algebra.UintLike[*Uint]                = (*Uint)(nil)
-	_ algebra.SemiModule[*Uint, *Nat]        = (*ZMod)(nil)
-	_ algebra.SemiModuleElement[*Uint, *Nat] = (*Uint)(nil)
+	_ algebra.ZModLike[*num.Uint]                    = (*num.ZMod)(nil)
+	_ algebra.UintLike[*num.Uint]                    = (*num.Uint)(nil)
+	_ algebra.SemiModule[*num.Uint, *num.Nat]        = (*num.ZMod)(nil)
+	_ algebra.SemiModuleElement[*num.Uint, *num.Nat] = (*num.Uint)(nil)
 
-	_ algebra.Field[*Rat]        = (*Rationals)(nil)
-	_ algebra.FieldElement[*Rat] = (*Rat)(nil)
+	_ algebra.Field[*num.Rat]        = (*num.Rationals)(nil)
+	_ algebra.FieldElement[*num.Rat] = (*num.Rat)(nil)
 )

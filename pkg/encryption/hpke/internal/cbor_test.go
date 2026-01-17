@@ -1,4 +1,4 @@
-package internal
+package internal //nolint:testpackage // to test unexported identifiers
 
 import (
 	crand "crypto/rand"

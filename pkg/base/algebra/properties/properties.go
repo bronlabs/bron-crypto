@@ -25,6 +25,7 @@ func ReflexivityProperty[S algebra.Structure[E], E algebra.Element[E]](
 	return Axiom{
 		Name: "Reflexivity",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				require.True(t, R.Func(a, a), "reflexivity failed: aRa should be true")
@@ -40,6 +41,7 @@ func SymmetryProperty[S algebra.Structure[E], E algebra.Element[E]](
 	return Axiom{
 		Name: "Symmetry",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -58,6 +60,7 @@ func TransitiveProperty[S algebra.Structure[E], E algebra.Element[E]](
 	return Axiom{
 		Name: "Transitivity",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -88,6 +91,7 @@ func ClosureProperty[S algebra.Magma[E], E algebra.MagmaElement[E]](
 	return Axiom{
 		Name: op.Name + "_Closure",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -105,6 +109,7 @@ func AssociativityProperty[S algebra.SemiGroup[E], E algebra.SemiGroupElement[E]
 	return Axiom{
 		Name: op.Name + "_Associativity",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -124,6 +129,7 @@ func CommutativityProperty[S algebra.Magma[E], E algebra.MagmaElement[E]](
 	return Axiom{
 		Name: op.Name + "_Commutativity",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -142,6 +148,7 @@ func CyclicProperty[S algebra.CyclicSemiGroup[E], E algebra.CyclicSemiGroupEleme
 	return Axiom{
 		Name: op.Name + "_Cyclic",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				g := c.Value.Generator()
 				require.NotNil(t, g, "cyclic property failed: generator is nil")
@@ -160,6 +167,7 @@ func IdentityProperty[S algebra.Monoid[E], E algebra.MonoidElement[E]](
 	return Axiom{
 		Name: identity.Name,
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 
@@ -182,6 +190,7 @@ func CanDoubleProperty[S algebra.AdditiveSemiGroup[E], E algebra.AdditiveSemiGro
 	return Axiom{
 		Name: "CanDouble",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				expected := a.Add(a)
@@ -199,6 +208,7 @@ func CanSquareProperty[S algebra.MultiplicativeSemiGroup[E], E algebra.Multiplic
 	return Axiom{
 		Name: "CanSquare",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				expected := a.Mul(a)
@@ -216,6 +226,7 @@ func CanDistinguishAdditiveIdentity[S algebra.AdditiveMonoid[E], E algebra.Addit
 	return Axiom{
 		Name: "CanDistinguishZeroElement",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				zero := c.Value.Zero()
 				require.True(t, zero.IsZero(), "zero element is not marked as identity")
@@ -233,6 +244,7 @@ func CanDistinguishMultiplicativeIdentity[S algebra.MultiplicativeMonoid[E], E a
 	return Axiom{
 		Name: "CanDistinguishOneElement",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				one := c.Value.One()
 				require.True(t, one.IsOne(), "one element is not marked as identity")
@@ -250,6 +262,7 @@ func CanTrySub[S algebra.AdditiveMonoid[E], E algebra.AdditiveMonoidElement[E]](
 	return Axiom{
 		Name: "CanTrySub",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -273,6 +286,7 @@ func CanTryNeg[S algebra.AdditiveMonoid[E], E algebra.AdditiveMonoidElement[E]](
 	return Axiom{
 		Name: "CanTryNeg",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				neg, err := a.TryNeg()
@@ -296,6 +310,7 @@ func CanTryDiv[S algebra.MultiplicativeMonoid[E], E algebra.MultiplicativeMonoid
 	return Axiom{
 		Name: "CanTryDiv",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -319,6 +334,7 @@ func CanTryInv[S algebra.MultiplicativeMonoid[E], E algebra.MultiplicativeMonoid
 	return Axiom{
 		Name: "CanTryInv",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				inv, err := a.TryInv()
@@ -343,6 +359,7 @@ func GroupInverseProperty[S algebra.Group[E], E algebra.GroupElement[E]](
 	return Axiom{
 		Name: inv.Name,
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				invA := inv.Func(a)
@@ -365,6 +382,7 @@ func GroupInverseIsNeg[S algebra.AdditiveGroup[E], E algebra.AdditiveGroupElemen
 	return Axiom{
 		Name: "InverseIsNeg",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				invA := a.OpInv()
@@ -382,6 +400,7 @@ func CanSub[S algebra.AdditiveGroup[E], E algebra.AdditiveGroupElement[E]](
 	return Axiom{
 		Name: "CanSub",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -401,6 +420,7 @@ func GroupInverseIsInv[S algebra.MultiplicativeGroup[E], E algebra.Multiplicativ
 	return Axiom{
 		Name: "InverseIsInv",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				invA := a.OpInv()
@@ -418,6 +438,7 @@ func CanDiv[S algebra.MultiplicativeGroup[E], E algebra.MultiplicativeGroupEleme
 	return Axiom{
 		Name: "CanDiv",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -437,6 +458,7 @@ func HemiRingIsStandardProperty[S algebra.HemiRing[E], E algebra.HemiRingElement
 	return Axiom{
 		Name: "HemiRingIsStandard",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -462,6 +484,7 @@ func DistributivityOfMulOverAddProperty[S algebra.HemiRing[E], E algebra.HemiRin
 	return Axiom{
 		Name: "Mul_DistributesOver_Add",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -492,6 +515,7 @@ func EuclideanDivisionProperty[S algebra.EuclideanSemiDomain[E], E algebra.Eucli
 	return Axiom{
 		Name: "Euclidean_Division",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := c.Dist.Draw(rt, "b")
@@ -526,6 +550,7 @@ func EveryNonZeroElementHasMultiplicativeInverseProperty[S algebra.Field[E], E a
 	return Axiom{
 		Name: "EveryNonZeroElementHasMultiplicativeInverse",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Filter(func(x E) bool { return !x.IsZero() }).Draw(rt, "a")
 				aInv, err := a.TryInv()
@@ -543,6 +568,7 @@ func FieldExtensionComponentBytesRoundTripProperty[S algebra.FieldExtension[E], 
 	return Axiom{
 		Name: "FieldExtension_ComponentBytes_RoundTrip",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := a.ComponentsBytes()
@@ -564,6 +590,7 @@ func LeftDistributivityOfActionOverSemiModuleOperationProperty[S algebra.SemiMod
 	return Axiom{
 		Name: c.Action.Name + "_DistributesOver_Op",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
 				b := c.First.Dist.Draw(rt, "b")
@@ -587,6 +614,7 @@ func RightDistributivityOfSemiModuleOperationOverBaseSemiRingAdditionProperty[S 
 	return Axiom{
 		Name: "Op_DistributesOver_" + c.Action.Name,
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
 				sc1 := c.Second.Dist.Draw(rt, "sc1")
@@ -610,6 +638,7 @@ func AssociativityOfScalarsWRTRingMultiplicationProperty[S algebra.SemiModule[E,
 	return Axiom{
 		Name: c.Action.Name + "_Associativity_WRT_Ring_Multiplication",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
 				sc1 := c.Second.Dist.Draw(rt, "sc1")
@@ -633,6 +662,7 @@ func ScalarOpIsScalarMultiplicationProperty[S algebra.AdditiveSemiModule[E, RE],
 	return Axiom{
 		Name: "ScalarOp_Is_ScalarMultiplication",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
 				sc := c.Second.Dist.Draw(rt, "sc")
@@ -653,6 +683,7 @@ func ScalarOpIsScalarExponentiationProperty[S algebra.MultiplicativeSemiModule[E
 	return Axiom{
 		Name: "ScalarOp_Is_ScalarExponentiation",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
 				sc := c.Second.Dist.Draw(rt, "sc")
@@ -673,6 +704,7 @@ func BaseRingIdentityActsAsModuleIdentityProperty[S algebra.Module[E, RE], R alg
 	return Axiom{
 		Name: "BaseRingIdentity_ActsAs_ModuleIdentity",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
 				one := c.Second.Value.One()
@@ -698,6 +730,7 @@ func NumericStructureFromBytesBERoundTripProperty[S interface {
 	return Axiom{
 		Name: "NumericSerialisationRoundTrip",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				value := c.Dist.Draw(rt, "value")
 
@@ -718,6 +751,7 @@ func FromCardinalRoundTripProperty[S algebra.NPlusLike[E], E algebra.NatPlusLike
 	return Axiom{
 		Name: "FromCardinal_RoundTrip",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				original := c.Dist.Draw(rt, "original")
 
@@ -742,6 +776,7 @@ func AnyNumberIsEitherOddOrEvenProperty[S algebra.Structure[E], E interface {
 	return Axiom{
 		Name: "AnyNumberIsEitherOddOrEven",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 
@@ -762,6 +797,7 @@ func AnyNaturalNumberIsEitherZeroOrPositiveProperty[S algebra.NLike[E], E algebr
 	return Axiom{
 		Name: "AnyNaturalNumberIsEitherZeroOrPositive",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 
@@ -782,6 +818,7 @@ func AnyIntegerIsEitherPositiveOrNegativeOrZero[S algebra.ZLike[E], E algebra.In
 	return Axiom{
 		Name: "AnyIntegerIsEitherPositiveOrNegativeOrZero",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 
@@ -803,6 +840,7 @@ func ZModFromBytesBEReduceRoundTripProperty[S algebra.ZModLike[E], E algebra.Uin
 	return Axiom{
 		Name: "ZModFromBytesBE_Reduce_RoundTrip",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				modulus := c.Value.Characteristic()
 				extraCardinal := cardinal.New(rapid.Uint64Range(0, modulus.Uint64()-1).Draw(rt, "extra"))
@@ -826,6 +864,7 @@ func FromWideBytesRoundTripProperty[S algebra.PrimeField[E], E algebra.PrimeFiel
 	return Axiom{
 		Name: "FromWideBytes_RoundTrip",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				original := c.Dist.Draw(rt, "original")
 
@@ -850,6 +889,7 @@ func CanScalarBaseOp[S algebra.PrimeGroup[E, FE], F algebra.PrimeField[FE], E al
 	return Axiom{
 		Name: "CanScalarBaseOp",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				sc := c.Second.Dist.Draw(rt, "sc")
 				result := c.First.Value.ScalarBaseOp(sc)
@@ -867,6 +907,7 @@ func CanScalarBaseMul[S algebra.AdditivePrimeGroup[E, FE], F algebra.PrimeField[
 	return Axiom{
 		Name: "CanScalarBaseMul",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				sc := c.Second.Dist.Draw(rt, "sc")
 				result := c.First.Value.ScalarBaseMul(sc)
@@ -887,6 +928,7 @@ func PolynomialLikeConstantTermProperty[
 	return Axiom{
 		Name: "PolynomialLike_ConstantTerm",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				constantTerm := p.ConstantTerm()
@@ -907,6 +949,7 @@ func PolynomialLikeIsConstantProperty[
 	return Axiom{
 		Name: "PolynomialLike_IsConstant",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				coeffs := p.Coefficients()
@@ -933,6 +976,7 @@ func UnivariatePolynomialLikeFromCoefficientsRoundTripProperty[
 	return Axiom{
 		Name: "PolynomialLike_FromCoefficients_RoundTrip",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				coeffs := p.Coefficients()
@@ -955,6 +999,7 @@ func PolynomialLikeDegreeProperty[
 	return Axiom{
 		Name: "PolynomialLike_Degree",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				coeffs := p.Coefficients()
@@ -981,6 +1026,7 @@ func PolynomialLikeDerivativeDegreeDeclinesProperty[
 	return Axiom{
 		Name: "PolynomialLike_Derivative_DegreeDeclines",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				deg := p.Degree()
@@ -1006,6 +1052,7 @@ func PolynomialLikeDerivativeOfConstantIsZeroProperty[
 	return Axiom{
 		Name: "PolynomialLike_Derivative_ConstantIsZero",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				if p.IsConstant() {
@@ -1027,6 +1074,7 @@ func UnivariatePolynomialLikeLeadingCoefficientProperty[
 	return Axiom{
 		Name: "UnivariatePolynomialLike_LeadingCoefficient",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				deg := p.Degree()
@@ -1052,6 +1100,7 @@ func UnivariatePolynomialLikeEvalAtZeroProperty[
 	return Axiom{
 		Name: "UnivariatePolynomialLike_EvalAtZero",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				zero := scalarStructure.Zero()
@@ -1073,6 +1122,7 @@ func UnivariatePolynomialLikeEvalConstantProperty[
 	return Axiom{
 		Name: "UnivariatePolynomialLike_EvalConstant",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				if p.IsConstant() {
@@ -1096,6 +1146,7 @@ func PolynomialLeadingCoefficientProperty[
 	return Axiom{
 		Name: "Polynomial_LeadingCoefficient",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				deg := p.Degree()
@@ -1121,6 +1172,7 @@ func PolynomialEvalAtZeroProperty[
 	return Axiom{
 		Name: "Polynomial_EvalAtZero",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				zero := scalarStructure.Zero()
@@ -1142,6 +1194,7 @@ func PolynomialEvalConstantProperty[
 	return Axiom{
 		Name: "Polynomial_EvalConstant",
 		CheckFunc: func(t *testing.T) {
+			t.Helper()
 			rapid.Check(t, func(rt *rapid.T) {
 				p := c.Dist.Draw(rt, "p")
 				if p.IsConstant() {

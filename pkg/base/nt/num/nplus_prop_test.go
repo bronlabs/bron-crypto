@@ -12,6 +12,7 @@ import (
 )
 
 func NatPlusGenerator(t *testing.T) *rapid.Generator[*num.NatPlus] {
+	t.Helper()
 	return rapid.Custom(func(t *rapid.T) *num.NatPlus {
 		n := rapid.Uint64Min(1).Draw(t, "n")
 		out, err := num.NPlus().FromUint64(n)
@@ -21,6 +22,7 @@ func NatPlusGenerator(t *testing.T) *rapid.Generator[*num.NatPlus] {
 }
 
 func SmallNatPlusGenerator(t *testing.T) *rapid.Generator[*num.NatPlus] {
+	t.Helper()
 	return rapid.Custom(func(t *rapid.T) *num.NatPlus {
 		n := rapid.Uint16Min(1).Draw(t, "n")
 		out, err := num.NPlus().FromUint64(uint64(n))

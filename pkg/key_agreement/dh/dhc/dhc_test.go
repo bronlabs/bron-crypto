@@ -23,10 +23,22 @@ func TestDHC_BasicRoundtrip(t *testing.T) {
 		name   string
 		tester func(t *testing.T)
 	}{
-		{"k256", func(t *testing.T) { testRoundtrip(t, k256.NewCurve()) }},
-		{"p256", func(t *testing.T) { testRoundtrip(t, p256.NewCurve()) }},
-		{"edwards25519", func(t *testing.T) { testRoundtrip(t, edwards25519.NewPrimeSubGroup()) }},
-		{"curve25519", func(t *testing.T) { testRoundtripCurve25519(t, curve25519.NewPrimeSubGroup()) }},
+		{"k256", func(t *testing.T) {
+			t.Helper()
+			testRoundtrip(t, k256.NewCurve())
+		}},
+		{"p256", func(t *testing.T) {
+			t.Helper()
+			testRoundtrip(t, p256.NewCurve())
+		}},
+		{"edwards25519", func(t *testing.T) {
+			t.Helper()
+			testRoundtrip(t, edwards25519.NewPrimeSubGroup())
+		}},
+		{"curve25519", func(t *testing.T) {
+			t.Helper()
+			testRoundtripCurve25519(t, curve25519.NewPrimeSubGroup())
+		}},
 	}
 
 	for _, tc := range testCases {

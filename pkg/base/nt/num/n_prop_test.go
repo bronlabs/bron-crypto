@@ -11,6 +11,7 @@ import (
 )
 
 func NatGenerator(t *testing.T) *rapid.Generator[*num.Nat] {
+	t.Helper()
 	return rapid.Custom(func(t *rapid.T) *num.Nat {
 		n := rapid.Uint64().Draw(t, "n")
 		return num.N().FromUint64(n)

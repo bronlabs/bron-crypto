@@ -15,6 +15,7 @@ import (
 type MVP = *polynomials.ModuleValuedPolynomial[*k256.Point, *k256.Scalar]
 
 func ModuleValuedPolynomialGenerator(t *testing.T) *rapid.Generator[MVP] {
+	t.Helper()
 	curve := k256.NewCurve()
 	polyModule, err := polynomials.NewPolynomialModule(curve)
 	require.NoError(t, err)

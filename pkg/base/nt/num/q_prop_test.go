@@ -12,6 +12,7 @@ import (
 )
 
 func RatGenerator(t *testing.T) *rapid.Generator[*num.Rat] {
+	t.Helper()
 	return rapid.Custom(func(rt *rapid.T) *num.Rat {
 		a := IntGenerator(t).Draw(rt, "a")
 		b := NatPlusGenerator(t).Draw(rt, "b")
@@ -22,6 +23,7 @@ func RatGenerator(t *testing.T) *rapid.Generator[*num.Rat] {
 }
 
 func SmallRatGenerator(t *testing.T) *rapid.Generator[*num.Rat] {
+	t.Helper()
 	return rapid.Custom(func(rt *rapid.T) *num.Rat {
 		a := SmallIntGenerator(t).Draw(rt, "a")
 		b := SmallNatPlusGenerator(t).Draw(rt, "b")
