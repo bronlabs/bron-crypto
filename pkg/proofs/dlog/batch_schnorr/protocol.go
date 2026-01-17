@@ -208,7 +208,10 @@ func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witn
 		return nil, errs2.Wrap(err).WithMessage("cannot create polynomial ring")
 	}
 	coefficients := append([]S{state.S}, witness.Ws...)
-	poly := polyRing.New(coefficients)
+	poly, err := polyRing.New(coefficients...)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create polynomial")
+	}
 
 	e, err := p.scalarField.FromWideBytes(challenge)
 	if err != nil {
@@ -240,9 +243,15 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 		return ErrVerificationFailed.WithMessage("invalid challenge length")
 	}
 
-	polyModule := polynomials.NewPolynomialModule(p.group)
+	polyModule, err := polynomials.NewPolynomialModule(p.group)
+	if err != nil {
+		return errs2.Wrap(err).WithMessage("cannot create polynomial module")
+	}
 	coefficients := append([]G{commitment.A}, statement.Xs...)
-	poly := polyModule.New(coefficients...)
+	poly, err := polyModule.New(coefficients...)
+	if err != nil {
+		return errs2.Wrap(err).WithMessage("cannot create polynomial")
+	}
 
 	e, err := p.scalarField.FromWideBytes(challenge)
 	if err != nil {
@@ -269,9 +278,15 @@ func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigm
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot convert challenge to scalar")
 	}
 
-	polyModule := polynomials.NewPolynomialModule(p.group)
+	polyModule, err := polynomials.NewPolynomialModule(p.group)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot create polynomial module")
+	}
 	coefficients := append([]G{p.group.OpIdentity()}, statement.Xs...)
-	poly := polyModule.New(coefficients...)
+	poly, err := polyModule.New(coefficients...)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot create polynomial")
+	}
 	a := statement.Gen.ScalarOp(z).Op(poly.Eval(e).OpInv())
 
 	commitment := &Commitment[G, S]{

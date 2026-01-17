@@ -81,6 +81,11 @@ type RingElement[RE any] interface {
 	RngElement[RE]
 }
 
+type FiniteRing[RE any] interface {
+	Ring[RE]
+	FiniteStructure[RE]
+}
+
 // ******************** Domains.
 
 type EuclideanDomain[RE any] interface {

@@ -876,3 +876,281 @@ func CanScalarBaseMul[S algebra.AdditivePrimeGroup[E, FE], F algebra.PrimeField[
 		},
 	}
 }
+
+func PolynomialLikeConstantTermProperty[
+	PS algebra.PolynomialLikeStructure[P, S, C], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.PolynomialLike[P, S, C], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "PolynomialLike_ConstantTerm",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				constantTerm := p.ConstantTerm()
+				coeffs := p.Coefficients()
+				require.Equal(t, constantTerm.Equal(coeffs[0]), true, "polynomial-like constant term failed: ConstantTerm() != Coefficients()[0]")
+			})
+		},
+	}
+}
+
+func PolynomialLikeIsConstantProperty[
+	PS algebra.PolynomialLikeStructure[P, S, C], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.PolynomialLike[P, S, C], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "PolynomialLike_IsConstant",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				coeffs := p.Coefficients()
+				isConstant := true
+				for i := 1; i < len(coeffs); i++ {
+					if !coeffs[i].IsOpIdentity() {
+						isConstant = false
+						break
+					}
+				}
+				require.Equal(t, p.IsConstant(), isConstant, "polynomial-like is constant failed: IsConstant() does not match coefficients")
+			})
+		},
+	}
+}
+
+func UnivariatePolynomialLikeFromCoefficientsRoundTripProperty[
+	PS algebra.UnivariatePolynomialLikeStructure[P, S, C, SS, CS], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.UnivariatePolynomialLike[P, S, C, SS, CS], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "PolynomialLike_FromCoefficients_RoundTrip",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				coeffs := p.Coefficients()
+				reconstructed, err := c.Value.New(coeffs...)
+				require.NoError(t, err, "FromCoefficients returned error")
+
+				require.True(t, p.Equal(reconstructed), "polynomial-like from coefficients round trip failed: original != FromCoefficients(Coefficients(original))")
+			})
+		},
+	}
+}
+
+func PolynomialLikeDegreeProperty[
+	PS algebra.PolynomialLikeStructure[P, S, C], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.PolynomialLike[P, S, C], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "PolynomialLike_Degree",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				coeffs := p.Coefficients()
+				expectedDegree := -1
+				for i := len(coeffs) - 1; i >= 0; i-- {
+					if !coeffs[i].IsOpIdentity() {
+						expectedDegree = i
+						break
+					}
+				}
+				require.Equal(t, expectedDegree, p.Degree(), "polynomial-like degree failed: Degree() does not match highest non-zero coefficient index")
+			})
+		},
+	}
+}
+
+func PolynomialLikeDerivativeDegreeDeclinesProperty[
+	PS algebra.PolynomialLikeStructure[P, S, C], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.PolynomialLike[P, S, C], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "PolynomialLike_Derivative_DegreeDeclines",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				deg := p.Degree()
+				deriv := p.Derivative()
+				derivDeg := deriv.Degree()
+				if deg <= 0 {
+					require.Equal(t, -1, derivDeg, "polynomial-like derivative degree failed: derivative of constant should have degree -1")
+				} else {
+					require.LessOrEqual(t, derivDeg, deg-1, "polynomial-like derivative degree failed: derivative degree should be at most deg-1")
+				}
+			})
+		},
+	}
+}
+
+func PolynomialLikeDerivativeOfConstantIsZeroProperty[
+	PS algebra.PolynomialLikeStructure[P, S, C], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.PolynomialLike[P, S, C], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "PolynomialLike_Derivative_ConstantIsZero",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				if p.IsConstant() {
+					deriv := p.Derivative()
+					require.True(t, deriv.IsOpIdentity(), "polynomial-like derivative failed: derivative of constant should be zero")
+				}
+			})
+		},
+	}
+}
+
+func UnivariatePolynomialLikeLeadingCoefficientProperty[
+	PS algebra.UnivariatePolynomialLikeStructure[P, S, C, SS, CS], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.UnivariatePolynomialLike[P, S, C, SS, CS], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "UnivariatePolynomialLike_LeadingCoefficient",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				deg := p.Degree()
+				lc := p.LeadingCoefficient()
+				if deg >= 0 {
+					coeffs := p.Coefficients()
+					require.True(t, lc.Equal(coeffs[deg]), "univariate polynomial-like leading coefficient failed: LeadingCoefficient() != Coefficients()[Degree()]")
+				} else {
+					require.True(t, lc.IsOpIdentity(), "univariate polynomial-like leading coefficient failed: zero polynomial should have zero leading coefficient")
+				}
+			})
+		},
+	}
+}
+
+func UnivariatePolynomialLikeEvalAtZeroProperty[
+	PS algebra.UnivariatePolynomialLikeStructure[P, S, C, SS, CS], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.UnivariatePolynomialLike[P, S, C, SS, CS], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P], scalarStructure SS,
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "UnivariatePolynomialLike_EvalAtZero",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				zero := scalarStructure.Zero()
+				evalAtZero := p.Eval(zero)
+				constantTerm := p.ConstantTerm()
+				require.True(t, evalAtZero.Equal(constantTerm), "univariate polynomial-like eval at zero failed: Eval(0) != ConstantTerm()")
+			})
+		},
+	}
+}
+
+func UnivariatePolynomialLikeEvalConstantProperty[
+	PS algebra.UnivariatePolynomialLikeStructure[P, S, C, SS, CS], SS algebra.Ring[S], CS algebra.Group[C],
+	P algebra.UnivariatePolynomialLike[P, S, C, SS, CS], S algebra.RingElement[S], C algebra.GroupElement[C],
+](
+	t *testing.T, c *Carrier[PS, P], scalarDist *rapid.Generator[S],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "UnivariatePolynomialLike_EvalConstant",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				if p.IsConstant() {
+					x := scalarDist.Draw(rt, "x")
+					evalAtX := p.Eval(x)
+					constantTerm := p.ConstantTerm()
+					require.True(t, evalAtX.Equal(constantTerm), "univariate polynomial-like eval constant failed: constant polynomial should evaluate to its constant term at any point")
+				}
+			})
+		},
+	}
+}
+
+func PolynomialLeadingCoefficientProperty[
+	PS algebra.PolynomialRing[P, S],
+	P algebra.Polynomial[P, S], S algebra.RingElement[S],
+](
+	t *testing.T, c *Carrier[PS, P],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "Polynomial_LeadingCoefficient",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				deg := p.Degree()
+				lc := p.LeadingCoefficient()
+				if deg >= 0 {
+					coeffs := p.Coefficients()
+					require.True(t, lc.Equal(coeffs[deg]), "polynomial leading coefficient failed: LeadingCoefficient() != Coefficients()[Degree()]")
+				} else {
+					require.True(t, lc.IsOpIdentity(), "polynomial leading coefficient failed: zero polynomial should have zero leading coefficient")
+				}
+			})
+		},
+	}
+}
+
+func PolynomialEvalAtZeroProperty[
+	PS algebra.PolynomialRing[P, S],
+	P algebra.Polynomial[P, S], S algebra.RingElement[S],
+](
+	t *testing.T, c *Carrier[PS, P], scalarStructure algebra.Ring[S],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "Polynomial_EvalAtZero",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				zero := scalarStructure.Zero()
+				evalAtZero := p.Eval(zero)
+				constantTerm := p.ConstantTerm()
+				require.True(t, evalAtZero.Equal(constantTerm), "polynomial eval at zero failed: Eval(0) != ConstantTerm()")
+			})
+		},
+	}
+}
+
+func PolynomialEvalConstantProperty[
+	PS algebra.PolynomialRing[P, S],
+	P algebra.Polynomial[P, S], S algebra.RingElement[S],
+](
+	t *testing.T, c *Carrier[PS, P], scalarDist *rapid.Generator[S],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "Polynomial_EvalConstant",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				p := c.Dist.Draw(rt, "p")
+				if p.IsConstant() {
+					x := scalarDist.Draw(rt, "x")
+					evalAtX := p.Eval(x)
+					constantTerm := p.ConstantTerm()
+					require.True(t, evalAtX.Equal(constantTerm), "polynomial eval constant failed: constant polynomial should evaluate to its constant term at any point")
+				}
+			})
+		},
+	}
+}

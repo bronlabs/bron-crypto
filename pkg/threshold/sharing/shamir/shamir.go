@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
@@ -47,13 +47,13 @@ func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeF
 		sharingIdsScalar[i] = SharingIDToLagrangeNode(field, id)
 	}
 
-	basisPolynomials, err := interpolation.BasisAt(sharingIdsScalar, field.Zero())
+	basisPolynomialAtZero, err := lagrange.BasisAt(sharingIdsScalar, field.Zero())
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not compute all basis polynomials at x=0")
 	}
 
 	result := hashmap.NewComparable[sharing.ID, FE]()
-	for i, li := range basisPolynomials {
+	for i, li := range basisPolynomialAtZero.Coefficients() {
 		result.Put(sharingIds[i], li)
 	}
 

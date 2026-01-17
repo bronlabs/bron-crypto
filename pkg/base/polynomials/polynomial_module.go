@@ -1,43 +1,103 @@
 package polynomials
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
-	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
-// interface compliance
-func _[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]]() {
-	var (
-		_ algebra.Module[*ModuleValuedPolynomial[ME, S], S]        = (*PolynomialModule[ME, S])(nil)
-		_ algebra.ModuleElement[*ModuleValuedPolynomial[ME, S], S] = (*ModuleValuedPolynomial[ME, S])(nil)
-	)
+func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], baseElem algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {
+	coeffs := make([]ME, len(poly.coeffs))
+	for i, c := range poly.coeffs {
+		coeffs[i] = baseElem.ScalarOp(c)
+	}
+
+	p := &ModuleValuedPolynomial[ME, RE]{
+		coeffs: coeffs,
+	}
+	return p, nil
 }
 
 type PolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
-	module algebra.Module[ME, S]
+	module algebra.FiniteModule[ME, S]
 }
 
-func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.Module[ME, S]) *PolynomialModule[ME, S] {
-	return &PolynomialModule[ME, S]{module: module}
+func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.FiniteModule[ME, S]) (*PolynomialModule[ME, S], error) {
+	if module == nil {
+		return nil, ErrValidation.WithMessage("nil module")
+	}
+	return &PolynomialModule[ME, S]{module: module}, nil
 }
 
-func (m *PolynomialModule[ME, S]) New(coeffs ...ME) *ModuleValuedPolynomial[ME, S] {
+func (m *PolynomialModule[ME, S]) New(coeffs ...ME) (*ModuleValuedPolynomial[ME, S], error) {
 	if len(coeffs) < 1 {
-		return m.OpIdentity()
+		return m.OpIdentity(), nil
+	}
+	for _, c := range coeffs {
+		if utils.IsNil(c) {
+			return nil, ErrValidation.WithStackFrame()
+		}
 	}
 
 	return &ModuleValuedPolynomial[ME, S]{
 		coeffs: coeffs,
-	}
+	}, nil
 }
 
 func (m *PolynomialModule[ME, S]) Name() string {
 	return fmt.Sprintf("PolynomialModule[%s, %s]", m.module.Name(), m.module.ScalarStructure().Name())
+}
+
+func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
+	if degree < 0 {
+		return nil, ErrValidation.WithMessage("negative degree")
+	}
+	finiteModule := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](m.module)
+	constantTerm, err := finiteModule.Random(prng)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to sample random constant term")
+	}
+	poly, err := m.RandomModuleValuedPolynomialWithConstantTerm(degree, constantTerm, prng)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("could not create random polynomial with constant term")
+	}
+	return poly, nil
+}
+
+func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(degree int, constantTerm ME, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
+	if degree < 0 {
+		return nil, ErrValidation.WithMessage("negative degree")
+	}
+
+	finiteModule := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](m.module)
+	coeffs := make([]ME, degree+1)
+	coeffs[0] = constantTerm.Clone()
+	if degree == 0 {
+		return &ModuleValuedPolynomial[ME, S]{coeffs: coeffs}, nil
+	}
+	for i := 1; i < degree; i++ {
+		var err error
+		coeffs[i], err = finiteModule.Random(prng)
+		if err != nil {
+			return nil, errs2.Wrap(err).WithMessage("failed to sample random coefficient")
+		}
+	}
+	leading, err := algebrautils.RandomNonIdentity(finiteModule, prng)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to sample random leading coefficient")
+	}
+	coeffs[degree] = leading
+
+	return &ModuleValuedPolynomial[ME, S]{
+		coeffs: coeffs,
+	}, nil
 }
 
 func (m *PolynomialModule[ME, S]) Order() algebra.Cardinal {
@@ -50,7 +110,7 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 		return m.OpIdentity(), nil
 	}
 	if (len(bytes) % coeffSize) != 0 {
-		return nil, errs.NewLength("bytes length must be a multiple of coefficient module element size")
+		return nil, ErrValidation.WithMessage("invalid input length")
 	}
 
 	numCoeffs := len(bytes) / coeffSize
@@ -60,15 +120,19 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 		end := start + coeffSize
 		c, err := m.module.FromBytes(bytes[start:end])
 		if err != nil {
-			return nil, errs.WrapSerialisation(err, "failed to deserialize coefficient")
+			return nil, errs2.Wrap(err).WithMessage("failed to deserialize coefficient")
 		}
 		coeffs[i] = c
 	}
-	return m.New(coeffs...), nil
+	poly, err := m.New(coeffs...)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("could not create polynomial from deserialized coefficients")
+	}
+	return poly, nil
 }
 
 func (m *PolynomialModule[ME, S]) ElementSize() int {
-	panic("internal error: not supported")
+	return -1
 }
 
 func (m *PolynomialModule[ME, S]) OpIdentity() *ModuleValuedPolynomial[ME, S] {
@@ -81,10 +145,10 @@ func (m *PolynomialModule[ME, S]) ScalarStructure() algebra.Structure[S] {
 
 func (m *PolynomialModule[ME, S]) MultiScalarOp(scalars []S, elements []*ModuleValuedPolynomial[ME, S]) (*ModuleValuedPolynomial[ME, S], error) {
 	if len(scalars) != len(elements) {
-		return nil, errs.NewSize("scalar and polynomial slices must have the same length")
+		return nil, ErrLengthMismatch.WithMessage("scalar and elements mismatch")
 	}
 	if len(scalars) == 0 {
-		return nil, errs.NewValue("cannot perform multi-scalar operation on empty slices")
+		return nil, ErrValidation.WithMessage("empty input")
 	}
 
 	out := m.OpIdentity()
@@ -98,18 +162,84 @@ type ModuleValuedPolynomial[ME algebra.ModuleElement[ME, S], S algebra.RingEleme
 	coeffs []ME
 }
 
-type moduleValuedPolynomialDTO[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
-	Coeffs []ME `cbor:"coefficients"`
-}
-
 func (p *ModuleValuedPolynomial[ME, S]) Structure() algebra.Structure[*ModuleValuedPolynomial[ME, S]] {
 	if len(p.coeffs) == 0 {
 		panic("internal error: empty coeffs")
 	}
 
-	module := algebra.StructureMustBeAs[algebra.Module[ME, S]](p.coeffs[0].Structure())
+	module := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](p.coeffs[0].Structure())
 	return &PolynomialModule[ME, S]{
 		module: module,
+	}
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.FiniteModule[ME, S] {
+	if len(p.coeffs) == 0 {
+		panic("internal error: empty coeffs")
+	}
+	return algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](p.coeffs[0].Structure())
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) ScalarStructure() algebra.Ring[S] {
+	return algebra.StructureMustBeAs[algebra.Ring[S]](p.CoefficientStructure().ScalarStructure())
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) ConstantTerm() ME {
+	return p.coeffs[0]
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) IsConstant() bool {
+	return p.Degree() <= 0
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) LeadingCoefficient() ME {
+	deg := p.Degree()
+	if deg < 0 {
+		return p.CoefficientStructure().OpIdentity()
+	}
+	return p.coeffs[deg]
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) PolynomialOp(poly *Polynomial[S]) *ModuleValuedPolynomial[ME, S] {
+	if len(p.coeffs) == 0 || len(poly.coeffs) == 0 {
+		return p.Clone()
+	}
+	module := p.CoefficientStructure()
+	coeffs := make([]ME, len(p.coeffs)+len(poly.coeffs)-1)
+	for i := range coeffs {
+		coeffs[i] = module.OpIdentity()
+	}
+	for i := range p.coeffs {
+		for j := range poly.coeffs {
+			coeffs[i+j] = coeffs[i+j].Op(p.coeffs[i].ScalarOp(poly.coeffs[j]))
+		}
+	}
+	return &ModuleValuedPolynomial[ME, S]{
+		coeffs: coeffs,
+	}
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME, S] {
+	if len(p.coeffs) <= 1 {
+		return &ModuleValuedPolynomial[ME, S]{
+			coeffs: []ME{p.CoefficientStructure().OpIdentity()},
+		}
+	}
+	ring := algebra.StructureMustBeAs[algebra.FiniteRing[S]](p.ScalarStructure())
+	derivCoeffs := make([]ME, len(p.coeffs)-1)
+	for i := 1; i < len(p.coeffs); i++ {
+		// Create properly sized big-endian bytes for the index
+		elemSize := ring.ElementSize()
+		indexBytes := make([]byte, elemSize)
+		binary.BigEndian.PutUint64(indexBytes[elemSize-8:], uint64(i))
+		rb, err := ring.FromBytes(indexBytes)
+		if err != nil {
+			panic("internal error: could not create ring element from uint64")
+		}
+		derivCoeffs[i-1] = p.coeffs[i].ScalarOp(rb)
+	}
+	return &ModuleValuedPolynomial[ME, S]{
+		coeffs: derivCoeffs,
 	}
 }
 
@@ -132,7 +262,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Clone() *ModuleValuedPolynomial[ME, S] {
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Equal(rhs *ModuleValuedPolynomial[ME, S]) bool {
-	for i := 0; i < min(len(p.coeffs), len(rhs.coeffs)); i++ {
+	for i := range min(len(p.coeffs), len(rhs.coeffs)) {
 		if !p.coeffs[i].Equal(rhs.coeffs[i]) {
 			return false
 		}
@@ -170,7 +300,7 @@ func (p *ModuleValuedPolynomial[ME, S]) String() string {
 
 func (p *ModuleValuedPolynomial[ME, S]) Op(e *ModuleValuedPolynomial[ME, S]) *ModuleValuedPolynomial[ME, S] {
 	coeffs := make([]ME, max(len(p.coeffs), len(e.coeffs)))
-	for i := 0; i < min(len(p.coeffs), len(e.coeffs)); i++ {
+	for i := range min(len(p.coeffs), len(e.coeffs)) {
 		coeffs[i] = p.coeffs[i].Op(e.coeffs[i])
 	}
 	for i := len(p.coeffs); i < max(len(p.coeffs), len(e.coeffs)); i++ {
@@ -254,36 +384,4 @@ func (p *ModuleValuedPolynomial[ME, S]) Degree() int {
 
 func (p *ModuleValuedPolynomial[ME, S]) Coefficients() []ME {
 	return p.coeffs
-}
-
-func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
-	dto := &moduleValuedPolynomialDTO[ME, S]{
-		Coeffs: p.coeffs,
-	}
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal polynomial")
-	}
-	return data, nil
-}
-
-func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*moduleValuedPolynomialDTO[ME, S]](data)
-	if err != nil {
-		return err
-	}
-	p.coeffs = dto.Coeffs
-	return nil
-}
-
-func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], base algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {
-	coeffs := make([]ME, len(poly.coeffs))
-	for i, c := range poly.coeffs {
-		coeffs[i] = base.ScalarOp(c)
-	}
-
-	p := &ModuleValuedPolynomial[ME, RE]{
-		coeffs: coeffs,
-	}
-	return p, nil
 }
