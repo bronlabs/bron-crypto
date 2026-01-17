@@ -99,7 +99,11 @@ func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
 	for _, d := range data {
 		preimage = slices.Concat(preimage, d)
 	}
-	return hashing.Hash(p.suite.hashFunc, preimage)
+	out, err := hashing.Hash(p.suite.hashFunc, preimage)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot hash data")
+	}
+	return out, nil
 }
 
 // expand derives pseudorandom output from a seed message and choice bit.

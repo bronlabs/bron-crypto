@@ -245,7 +245,7 @@ func (s *Signer) Sign(message *Message) (*Signature, error) {
 	s.V.msg = message
 	sig, err := s.SignerTrait.Sign(message)
 	if err != nil {
-		return nil, err
+		return nil, errs2.Wrap(err).WithMessage("failed to sign message")
 	}
 	return sig, nil
 }

@@ -44,11 +44,11 @@ type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness] = internal.NonIn
 func Compile[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](compilerName Name, sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (NonInteractiveProtocol[X, W], error) {
 	switch compilerName {
 	case fiatshamir.Name:
-		return fiatshamir.NewCompiler(sigmaProtocol)
+		return fiatshamir.NewCompiler(sigmaProtocol) //nolint:wrapcheck // pass through
 	case fischlin.Name:
-		return fischlin.NewCompiler(sigmaProtocol, prng)
+		return fischlin.NewCompiler(sigmaProtocol, prng) //nolint:wrapcheck // pass through
 	case randfischlin.Name:
-		return randfischlin.NewCompiler(sigmaProtocol, prng)
+		return randfischlin.NewCompiler(sigmaProtocol, prng) //nolint:wrapcheck // pass through
 	default:
 		return nil, ErrUnsupportedType.WithMessage("unknown compiler name: %s", compilerName)
 	}

@@ -182,7 +182,11 @@ func (esk *ExtendedPrivateKey[S]) Equal(other *ExtendedPrivateKey[S]) bool {
 
 // NewPublicKey creates a new PublicKey instance.
 func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
-	return key_agreement.NewPublicKey(v, Type)
+	out, err := key_agreement.NewPublicKey(v, Type)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("could not create public key")
+	}
+	return out, nil
 }
 
 // NewSharedKey creates a new SharedKey instance.
@@ -193,7 +197,11 @@ func NewSharedKey[B algebra.FiniteFieldElement[B]](v B) (*SharedKey[B], error) {
 	} else {
 		b = v.Bytes()
 	}
-	return key_agreement.NewSharedKey(b, Type)
+	out, err := key_agreement.NewSharedKey(b, Type)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("could not create shared key")
+	}
+	return out, nil
 }
 
 func isFromCurve25519(name string) bool {
