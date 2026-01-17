@@ -3,12 +3,13 @@ package polynomials_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func PolynomialGenerator(t *testing.T) *rapid.Generator[*polynomials.Polynomial[*k256.Scalar]] {

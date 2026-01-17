@@ -712,6 +712,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 					return
 				}
 				sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+				require.NoError(t, err)
 			case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
 				aggregator, err := signing.NewAggregator(publicMaterial, s)
 				if err != nil {

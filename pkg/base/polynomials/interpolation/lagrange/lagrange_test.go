@@ -3,10 +3,11 @@ package lagrange_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBasisAt(t *testing.T) {
@@ -266,9 +267,9 @@ func TestInterpolateInExponentAt(t *testing.T) {
 			field.FromUint64(2),
 		}
 		values := []*k256.Point{
-			g.Clone(),                           // f(0) = 1*G
-			g.ScalarOp(field.FromUint64(3)),     // f(1) = 3*G
-			g.ScalarOp(field.FromUint64(5)),     // f(2) = 5*G
+			g.Clone(),                       // f(0) = 1*G
+			g.ScalarOp(field.FromUint64(3)), // f(1) = 3*G
+			g.ScalarOp(field.FromUint64(5)), // f(2) = 5*G
 		}
 
 		// Evaluate at x=3: f(3) = (2*3+1)G = 7G
@@ -450,7 +451,7 @@ func TestSharedSecretReconstruction(t *testing.T) {
 		// Generate all shares
 		allNodes := make([]*k256.Scalar, totalShares)
 		allShares := make([]*k256.Scalar, totalShares)
-		for i := 0; i < totalShares; i++ {
+		for i := range totalShares {
 			allNodes[i] = field.FromUint64(uint64(i + 1))
 			allShares[i] = poly.Eval(allNodes[i])
 		}

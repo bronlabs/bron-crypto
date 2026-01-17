@@ -3,10 +3,11 @@ package polynomials_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewPolynomialModule(t *testing.T) {
@@ -595,7 +596,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 
 	t.Run("degree of product equals sum of degrees", func(t *testing.T) {
 		// deg(p * q) = deg(p) + deg(q) when leading coefficients are non-zero
-		mvp, _ := polyMod.New(g.Clone(), g.Double(), g.Clone())            // degree 2
+		mvp, _ := polyMod.New(g.Clone(), g.Double(), g.Clone())      // degree 2
 		sp, _ := polyRing.New(field.One(), field.One(), field.One()) // degree 2
 
 		result := mvp.PolynomialOp(sp)
@@ -641,7 +642,6 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 		require.True(t, left.Equal(right))
 	})
 }
-
 
 func TestModuleValuedPolynomialClone(t *testing.T) {
 	t.Parallel()

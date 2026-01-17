@@ -88,10 +88,9 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	// step 1.9: Randomise by hashing t_{0,j,i}  j∈[η'], ∀i∈[κ]
 
 	receiverOutput.Messages = make([][][]byte, r.suite.Xi())
-	for j := 0; j < r.suite.Xi(); j++ {
+	for j := range r.suite.Xi() {
 		receiverOutput.Messages[j] = make([][]byte, r.suite.L())
-		for l := 0; l < r.suite.L(); l++ {
-			//
+		for l := range r.suite.L() {
 			digest, err := r.hash(j, l, tj[j*r.suite.L()+l])
 			if err != nil {
 				return nil, nil, errs2.Wrap(err).WithMessage("bad hashing t_j for SoftSpoken COTe")
@@ -173,10 +172,10 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 			Messages: make([][2][][]byte, s.suite.Xi()),
 		},
 	}
-	for j := 0; j < s.suite.Xi(); j++ {
+	for j := range s.suite.Xi() {
 		senderOutput.Messages[j][0] = make([][]byte, s.suite.L())
 		senderOutput.Messages[j][1] = make([][]byte, s.suite.L())
-		for l := 0; l < s.suite.L(); l++ {
+		for l := range s.suite.L() {
 			digest, err := s.hash(j, l, qjTransposed[j*s.suite.L()+l])
 			if err != nil {
 				return nil, errs2.Wrap(err).WithMessage("bad hashing q_j for SoftSpoken COTe (T&R.2)")
