@@ -21,7 +21,7 @@ func TestNewPolynomialModule(t *testing.T) {
 	})
 
 	t.Run("nil module returns error", func(t *testing.T) {
-		_, err := polynomials.NewPolynomialModule[*k256.Point, *k256.Scalar](nil)
+		_, err := polynomials.NewPolynomialModule[*k256.Point](nil)
 		require.Error(t, err)
 	})
 }

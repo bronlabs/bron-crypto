@@ -16,7 +16,7 @@ import (
 // requireBigIntEqual compares big.Int values semantically (using Cmp)
 // rather than structurally, since different internal representations
 // can represent the same mathematical value.
-func requireBigIntEqual(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) {
+func requireBigIntEqual(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) { //nolint:unparam // msgAndArgs may not get nil
 	t.Helper()
 	require.Equal(t, 0, expected.Cmp(actual), msgAndArgs...)
 }

@@ -6,7 +6,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,9 +14,9 @@ func TestNewDeterministicVariant(t *testing.T) {
 
 	t.Run("nil private key", func(t *testing.T) {
 		v, err := NewDeterministicVariant(TestNet, nil)
-		assert.Nil(t, v)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "nil")
+		require.Nil(t, v)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "nil")
 	})
 
 	t.Run("valid private key", func(t *testing.T) {
@@ -26,8 +25,8 @@ func TestNewDeterministicVariant(t *testing.T) {
 
 		v, err := NewDeterministicVariant(TestNet, privateKey)
 		require.NoError(t, err)
-		assert.NotNil(t, v)
-		assert.True(t, v.IsDeterministic())
+		require.NotNil(t, v)
+		require.True(t, v.IsDeterministic())
 	})
 }
 
@@ -36,16 +35,16 @@ func TestNewRandomisedVariant(t *testing.T) {
 
 	t.Run("nil prng", func(t *testing.T) {
 		v, err := NewRandomisedVariant(TestNet, nil)
-		assert.Nil(t, v)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "nil")
+		require.Nil(t, v)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "nil")
 	})
 
 	t.Run("valid prng", func(t *testing.T) {
 		v, err := NewRandomisedVariant(TestNet, crand.Reader)
 		require.NoError(t, err)
-		assert.NotNil(t, v)
-		assert.False(t, v.IsDeterministic())
+		require.NotNil(t, v)
+		require.False(t, v.IsDeterministic())
 	})
 }
 
@@ -58,7 +57,7 @@ func TestVariantType(t *testing.T) {
 	v, err := NewDeterministicVariant(TestNet, privateKey)
 	require.NoError(t, err)
 
-	assert.Equal(t, VariantType, v.Type())
+	require.Equal(t, VariantType, v.Type())
 }
 
 func TestVariantHashFunc(t *testing.T) {
@@ -71,11 +70,11 @@ func TestVariantHashFunc(t *testing.T) {
 	require.NoError(t, err)
 
 	hashFn := v.HashFunc()
-	assert.NotNil(t, hashFn)
+	require.NotNil(t, hashFn)
 
 	// Create a hash and verify it returns a valid hasher
 	h := hashFn()
-	assert.NotNil(t, h)
+	require.NotNil(t, h)
 
 	// Poseidon hash expects data length to be a multiple of 32 bytes
 	data := make([]byte, 32)
@@ -83,7 +82,7 @@ func TestVariantHashFunc(t *testing.T) {
 	_, err = h.Write(data)
 	require.NoError(t, err)
 	sum := h.Sum(nil)
-	assert.NotEmpty(t, sum)
+	require.NotEmpty(t, sum)
 }
 
 func TestFieldTo255Bits(t *testing.T) {
@@ -93,11 +92,11 @@ func TestFieldTo255Bits(t *testing.T) {
 	one := group.BaseField().One()
 
 	bits := fieldTo255Bits(one)
-	assert.Len(t, bits, 255)
+	require.Len(t, bits, 255)
 	// For value 1, only the first bit should be set in LSB-first order
-	assert.True(t, bits[0])
+	require.True(t, bits[0])
 	for i := 1; i < 255; i++ {
-		assert.False(t, bits[i], "bit %d should be false", i)
+		require.False(t, bits[i], "bit %d should be false", i)
 	}
 }
 
@@ -106,11 +105,11 @@ func TestScalarTo255Bits(t *testing.T) {
 
 	one := sf.One()
 	bits := scalarTo255Bits(one)
-	assert.Len(t, bits, 255)
+	require.Len(t, bits, 255)
 	// For value 1, only the first bit should be set in LSB-first order
-	assert.True(t, bits[0])
+	require.True(t, bits[0])
 	for i := 1; i < 255; i++ {
-		assert.False(t, bits[i], "bit %d should be false", i)
+		require.False(t, bits[i], "bit %d should be false", i)
 	}
 }
 
@@ -129,23 +128,23 @@ func TestBitsToBytes(t *testing.T) {
 
 	t.Run("empty bits", func(t *testing.T) {
 		result := bitsToBytes(nil)
-		assert.Empty(t, result)
+		require.Empty(t, result)
 	})
 
 	t.Run("single byte", func(t *testing.T) {
 		// 8 bits representing 0b11000011 = 195 in LSB-first order
 		bits := []bool{true, true, false, false, false, false, true, true}
 		result := bitsToBytes(bits)
-		assert.Len(t, result, 1)
-		assert.Equal(t, byte(0b11000011), result[0])
+		require.Len(t, result, 1)
+		require.Equal(t, byte(0b11000011), result[0])
 	})
 
 	t.Run("partial byte", func(t *testing.T) {
 		// 5 bits: 10101 in LSB-first = 0b10101 = 21
 		bits := []bool{true, false, true, false, true}
 		result := bitsToBytes(bits)
-		assert.Len(t, result, 1)
-		assert.Equal(t, byte(0b10101), result[0])
+		require.Len(t, result, 1)
+		require.Equal(t, byte(0b10101), result[0])
 	})
 
 	t.Run("multiple bytes", func(t *testing.T) {
@@ -155,9 +154,9 @@ func TestBitsToBytes(t *testing.T) {
 			bits[i] = true
 		}
 		result := bitsToBytes(bits)
-		assert.Len(t, result, 2)
-		assert.Equal(t, byte(0xFF), result[0])
-		assert.Equal(t, byte(0x00), result[1])
+		require.Len(t, result, 2)
+		require.Equal(t, byte(0xFF), result[0])
+		require.Equal(t, byte(0x00), result[1])
 	})
 }
 
@@ -173,9 +172,9 @@ func TestComputeNonceCommitment(t *testing.T) {
 
 		// Should fail because msg is nil
 		R, k, err := v.ComputeNonceCommitment()
-		assert.Nil(t, R)
-		assert.Nil(t, k)
-		assert.Error(t, err)
+		require.Nil(t, R)
+		require.Nil(t, k)
+		require.Error(t, err)
 	})
 
 	t.Run("deterministic mode with message", func(t *testing.T) {
@@ -192,13 +191,13 @@ func TestComputeNonceCommitment(t *testing.T) {
 
 		R, k, err := v.ComputeNonceCommitment()
 		require.NoError(t, err)
-		assert.NotNil(t, R)
-		assert.NotNil(t, k)
+		require.NotNil(t, R)
+		require.NotNil(t, k)
 
 		// Verify R has even y-coordinate
 		ry, err := R.AffineY()
 		require.NoError(t, err)
-		assert.False(t, ry.IsOdd(), "R should have even y-coordinate")
+		require.False(t, ry.IsOdd(), "R should have even y-coordinate")
 	})
 
 	t.Run("randomised mode", func(t *testing.T) {
@@ -207,13 +206,13 @@ func TestComputeNonceCommitment(t *testing.T) {
 
 		R, k, err := v.ComputeNonceCommitment()
 		require.NoError(t, err)
-		assert.NotNil(t, R)
-		assert.NotNil(t, k)
+		require.NotNil(t, R)
+		require.NotNil(t, k)
 
 		// Verify R has even y-coordinate
 		ry, err := R.AffineY()
 		require.NoError(t, err)
-		assert.False(t, ry.IsOdd(), "R should have even y-coordinate")
+		require.False(t, ry.IsOdd(), "R should have even y-coordinate")
 	})
 }
 
@@ -233,27 +232,27 @@ func TestComputeChallenge(t *testing.T) {
 
 	t.Run("nil nonce commitment", func(t *testing.T) {
 		e, err := v.ComputeChallenge(nil, publicKey.V, msg)
-		assert.Nil(t, e)
-		assert.Error(t, err)
+		require.Nil(t, e)
+		require.Error(t, err)
 	})
 
 	t.Run("nil public key", func(t *testing.T) {
 		e, err := v.ComputeChallenge(R, nil, msg)
-		assert.Nil(t, e)
-		assert.Error(t, err)
+		require.Nil(t, e)
+		require.Error(t, err)
 	})
 
 	t.Run("nil message", func(t *testing.T) {
 		e, err := v.ComputeChallenge(R, publicKey.V, nil)
-		assert.Nil(t, e)
-		assert.Error(t, err)
+		require.Nil(t, e)
+		require.Error(t, err)
 	})
 
 	t.Run("valid inputs", func(t *testing.T) {
 		e, err := v.ComputeChallenge(R, publicKey.V, msg)
 		require.NoError(t, err)
-		assert.NotNil(t, e)
-		assert.False(t, e.IsZero())
+		require.NotNil(t, e)
+		require.False(t, e.IsZero())
 	})
 }
 
@@ -272,29 +271,29 @@ func TestComputeResponse(t *testing.T) {
 
 	t.Run("nil private key value", func(t *testing.T) {
 		s, err := v.ComputeResponse(nil, nonce, challenge)
-		assert.Nil(t, s)
-		assert.Error(t, err)
+		require.Nil(t, s)
+		require.Error(t, err)
 	})
 
 	t.Run("nil nonce", func(t *testing.T) {
 		s, err := v.ComputeResponse(skValue, nil, challenge)
-		assert.Nil(t, s)
-		assert.Error(t, err)
+		require.Nil(t, s)
+		require.Error(t, err)
 	})
 
 	t.Run("nil challenge", func(t *testing.T) {
 		s, err := v.ComputeResponse(skValue, nonce, nil)
-		assert.Nil(t, s)
-		assert.Error(t, err)
+		require.Nil(t, s)
+		require.Error(t, err)
 	})
 
 	t.Run("valid inputs", func(t *testing.T) {
 		s, err := v.ComputeResponse(skValue, nonce, challenge)
 		require.NoError(t, err)
-		assert.NotNil(t, s)
+		require.NotNil(t, s)
 		// s = k + e*x
 		expected := nonce.Add(challenge.Mul(skValue))
-		assert.True(t, s.Equal(expected))
+		require.True(t, s.Equal(expected))
 	})
 }
 
@@ -303,8 +302,8 @@ func TestSerializeSignature(t *testing.T) {
 
 	t.Run("nil signature", func(t *testing.T) {
 		data, err := SerializeSignature(nil)
-		assert.Nil(t, data)
-		assert.Error(t, err)
+		require.Nil(t, data)
+		require.Error(t, err)
 	})
 
 	t.Run("nil signature via variant method", func(t *testing.T) {
@@ -312,8 +311,8 @@ func TestSerializeSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		data, err := v.SerializeSignature(nil)
-		assert.Nil(t, data)
-		assert.Error(t, err)
+		require.Nil(t, data)
+		require.Error(t, err)
 	})
 
 	t.Run("valid signature via variant method", func(t *testing.T) {
@@ -339,7 +338,7 @@ func TestSerializeSignature(t *testing.T) {
 
 		data, err := v.SerializeSignature(sig)
 		require.NoError(t, err)
-		assert.Len(t, data, SignatureSize)
+		require.Len(t, data, SignatureSize)
 	})
 
 	t.Run("valid signature", func(t *testing.T) {
@@ -363,7 +362,7 @@ func TestSerializeSignature(t *testing.T) {
 
 		data, err := SerializeSignature(sig)
 		require.NoError(t, err)
-		assert.Len(t, data, SignatureSize)
+		require.Len(t, data, SignatureSize)
 	})
 }
 
@@ -372,8 +371,8 @@ func TestDeserializeSignature(t *testing.T) {
 
 	t.Run("wrong size", func(t *testing.T) {
 		sig, err := DeserializeSignature(make([]byte, 32))
-		assert.Nil(t, sig)
-		assert.Error(t, err)
+		require.Nil(t, sig)
+		require.Error(t, err)
 	})
 
 	t.Run("round trip", func(t *testing.T) {
@@ -406,8 +405,8 @@ func TestDeserializeSignature(t *testing.T) {
 		// Verify they match
 		rx1, _ := sig.R.AffineX()
 		rx2, _ := sig2.R.AffineX()
-		assert.True(t, rx1.Equal(rx2))
-		assert.True(t, sig.S.Equal(sig2.S))
+		require.True(t, rx1.Equal(rx2))
+		require.True(t, sig.S.Equal(sig2.S))
 
 		// Verify the deserialized signature is valid
 		verifier, err := scheme.Verifier()
@@ -427,7 +426,7 @@ func TestCorrectAdditiveSecretShareParity(t *testing.T) {
 	// This should be a no-op for Mina
 	result, err := v.CorrectAdditiveSecretShareParity(nil, nil)
 	require.NoError(t, err)
-	assert.Nil(t, result)
+	require.Nil(t, result)
 }
 
 // TestCorrectPartialNonceParity tests the MPC parity correction for partial nonces.
@@ -439,17 +438,17 @@ func TestCorrectPartialNonceParity(t *testing.T) {
 
 	t.Run("nil nonce commitment", func(t *testing.T) {
 		R, k, err := v.CorrectPartialNonceParity(nil, sf.One())
-		assert.Nil(t, R)
-		assert.Nil(t, k)
-		assert.Error(t, err)
+		require.Nil(t, R)
+		require.Nil(t, k)
+		require.Error(t, err)
 	})
 
 	t.Run("nil local nonce", func(t *testing.T) {
 		aggR := group.ScalarBaseMul(sf.One())
 		R, k, err := v.CorrectPartialNonceParity(aggR, nil)
-		assert.Nil(t, R)
-		assert.Nil(t, k)
-		assert.Error(t, err)
+		require.Nil(t, R)
+		require.Nil(t, k)
+		require.Error(t, err)
 	})
 
 	t.Run("even y nonce commitment", func(t *testing.T) {
@@ -466,11 +465,11 @@ func TestCorrectPartialNonceParity(t *testing.T) {
 
 		correctedR, correctedK, err := v.CorrectPartialNonceParity(localR, localK)
 		require.NoError(t, err)
-		assert.NotNil(t, correctedR)
-		assert.NotNil(t, correctedK)
+		require.NotNil(t, correctedR)
+		require.NotNil(t, correctedK)
 
 		// Should not be negated
-		assert.True(t, localK.Equal(correctedK))
+		require.True(t, localK.Equal(correctedK))
 	})
 
 	t.Run("odd y nonce commitment", func(t *testing.T) {
@@ -487,11 +486,11 @@ func TestCorrectPartialNonceParity(t *testing.T) {
 
 		correctedR, correctedK, err := v.CorrectPartialNonceParity(localR, localK)
 		require.NoError(t, err)
-		assert.NotNil(t, correctedR)
-		assert.NotNil(t, correctedK)
+		require.NotNil(t, correctedR)
+		require.NotNil(t, correctedK)
 
 		// Should be negated
-		assert.True(t, localK.Neg().Equal(correctedK))
+		require.True(t, localK.Neg().Equal(correctedK))
 	})
 }
 
@@ -510,9 +509,9 @@ func TestRandomisedNonceCommitmentWithBadReader(t *testing.T) {
 	require.NoError(t, err)
 
 	R, k, err := v.ComputeNonceCommitment()
-	assert.Nil(t, R)
-	assert.Nil(t, k)
-	assert.Error(t, err)
+	require.Nil(t, R)
+	require.Nil(t, k)
+	require.Error(t, err)
 }
 
 // TestDeterministicNonceIsConsistent verifies that the same message produces the same nonce.
@@ -533,13 +532,13 @@ func TestDeterministicNonceIsConsistent(t *testing.T) {
 
 		R, k, err := v.ComputeNonceCommitment()
 		require.NoError(t, err)
-		assert.NotNil(t, R)
+		require.NotNil(t, R)
 		nonces = append(nonces, k)
 	}
 
 	// All nonces should be equal
 	for i := 1; i < len(nonces); i++ {
-		assert.True(t, nonces[0].Equal(nonces[i]), "nonces should be consistent")
+		require.True(t, nonces[0].Equal(nonces[i]), "nonces should be consistent")
 	}
 }
 
@@ -572,7 +571,7 @@ func TestDifferentMessagesProduceDifferentNonces(t *testing.T) {
 			// Note: nonces might be negated due to even y correction,
 			// so we check that neither k nor -k matches
 			kNeg := nonces[j].Neg()
-			assert.False(t, nonces[i].Equal(nonces[j]) || nonces[i].Equal(kNeg),
+			require.False(t, nonces[i].Equal(nonces[j]) || nonces[i].Equal(kNeg),
 				"different messages should produce different nonces")
 		}
 	}
@@ -603,7 +602,7 @@ func TestDifferentNetworksProduceDifferentNonces(t *testing.T) {
 
 	// Nonces should be different for different networks
 	kNeg := nonces[1].Neg()
-	assert.False(t, nonces[0].Equal(nonces[1]) || nonces[0].Equal(kNeg),
+	require.False(t, nonces[0].Equal(nonces[1]) || nonces[0].Equal(kNeg),
 		"different networks should produce different nonces")
 }
 
@@ -613,23 +612,23 @@ func TestReversedBytes(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 		result := reversedBytes(nil)
-		assert.Empty(t, result)
+		require.Empty(t, result)
 	})
 
 	t.Run("single byte", func(t *testing.T) {
 		result := reversedBytes([]byte{0x42})
-		assert.Equal(t, []byte{0x42}, result)
+		require.Equal(t, []byte{0x42}, result)
 	})
 
 	t.Run("multiple bytes", func(t *testing.T) {
 		result := reversedBytes([]byte{0x01, 0x02, 0x03, 0x04})
-		assert.Equal(t, []byte{0x04, 0x03, 0x02, 0x01}, result)
+		require.Equal(t, []byte{0x04, 0x03, 0x02, 0x01}, result)
 	})
 
 	t.Run("does not modify original", func(t *testing.T) {
 		original := []byte{0x01, 0x02, 0x03}
 		originalCopy := bytes.Clone(original)
 		_ = reversedBytes(original)
-		assert.Equal(t, originalCopy, original)
+		require.Equal(t, originalCopy, original)
 	})
 }

@@ -4,7 +4,6 @@ import (
 	crand "crypto/rand"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
@@ -16,8 +15,8 @@ func TestEncodePublicKey(t *testing.T) {
 
 	t.Run("nil public key", func(t *testing.T) {
 		encoded, err := mina.EncodePublicKey(nil)
-		assert.Empty(t, encoded)
-		assert.Error(t, err)
+		require.Empty(t, encoded)
+		require.Error(t, err)
 	})
 
 	t.Run("valid public key", func(t *testing.T) {
@@ -27,10 +26,10 @@ func TestEncodePublicKey(t *testing.T) {
 		publicKey := privateKey.PublicKey()
 		encoded, err := mina.EncodePublicKey(publicKey)
 		require.NoError(t, err)
-		assert.NotEmpty(t, encoded)
+		require.NotEmpty(t, encoded)
 
 		// Should start with expected prefix
-		assert.NotEmpty(t, encoded)
+		require.NotEmpty(t, encoded)
 	})
 }
 
@@ -42,21 +41,21 @@ func TestDecodePublicKey(t *testing.T) {
 		encoded := base58.Base58("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg")
 		pk, err := mina.DecodePublicKey(encoded)
 		require.NoError(t, err)
-		assert.NotNil(t, pk)
+		require.NotNil(t, pk)
 	})
 
 	t.Run("invalid base58", func(t *testing.T) {
 		pk, err := mina.DecodePublicKey(base58.Base58("invalid0O0base58"))
-		assert.Nil(t, pk)
-		assert.Error(t, err)
+		require.Nil(t, pk)
+		require.Error(t, err)
 	})
 
 	t.Run("wrong version prefix", func(t *testing.T) {
 		// Use a private key encoding (different version prefix)
 		pk, err := mina.DecodePublicKey(base58.Base58("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw"))
-		assert.Nil(t, pk)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "version prefix")
+		require.Nil(t, pk)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "version prefix")
 	})
 
 	t.Run("round trip", func(t *testing.T) {
@@ -78,7 +77,7 @@ func TestDecodePublicKey(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify they match
-		assert.True(t, publicKey.Value().Equal(decoded.Value()))
+		require.True(t, publicKey.Value().Equal(decoded.Value()))
 	})
 }
 
@@ -87,8 +86,8 @@ func TestEncodePrivateKey(t *testing.T) {
 
 	t.Run("nil private key", func(t *testing.T) {
 		encoded, err := mina.EncodePrivateKey(nil)
-		assert.Empty(t, encoded)
-		assert.Error(t, err)
+		require.Empty(t, encoded)
+		require.Error(t, err)
 	})
 
 	t.Run("valid private key", func(t *testing.T) {
@@ -97,7 +96,7 @@ func TestEncodePrivateKey(t *testing.T) {
 
 		encoded, err := mina.EncodePrivateKey(privateKey)
 		require.NoError(t, err)
-		assert.NotEmpty(t, encoded)
+		require.NotEmpty(t, encoded)
 	})
 }
 
@@ -108,21 +107,21 @@ func TestDecodePrivateKey(t *testing.T) {
 		encoded := base58.Base58("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		sk, err := mina.DecodePrivateKey(encoded)
 		require.NoError(t, err)
-		assert.NotNil(t, sk)
+		require.NotNil(t, sk)
 	})
 
 	t.Run("invalid base58", func(t *testing.T) {
 		sk, err := mina.DecodePrivateKey(base58.Base58("invalid0O0base58"))
-		assert.Nil(t, sk)
-		assert.Error(t, err)
+		require.Nil(t, sk)
+		require.Error(t, err)
 	})
 
 	t.Run("wrong version prefix", func(t *testing.T) {
 		// Use a public key encoding (different version prefix)
 		sk, err := mina.DecodePrivateKey(base58.Base58("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg"))
-		assert.Nil(t, sk)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "version prefix")
+		require.Nil(t, sk)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "version prefix")
 	})
 
 	t.Run("round trip", func(t *testing.T) {
@@ -144,7 +143,7 @@ func TestDecodePrivateKey(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify they match
-		assert.True(t, privateKey.Value().Equal(decoded.Value()))
+		require.True(t, privateKey.Value().Equal(decoded.Value()))
 	})
 }
 
@@ -153,8 +152,8 @@ func TestEncodeSignature(t *testing.T) {
 
 	t.Run("nil signature", func(t *testing.T) {
 		encoded, err := mina.EncodeSignature(nil)
-		assert.Empty(t, encoded)
-		assert.Error(t, err)
+		require.Empty(t, encoded)
+		require.Error(t, err)
 	})
 
 	t.Run("valid signature", func(t *testing.T) {
@@ -177,7 +176,7 @@ func TestEncodeSignature(t *testing.T) {
 
 		encoded, err := mina.EncodeSignature(sig)
 		require.NoError(t, err)
-		assert.NotEmpty(t, encoded)
+		require.NotEmpty(t, encoded)
 	})
 }
 
@@ -186,15 +185,15 @@ func TestDecodeSignature(t *testing.T) {
 
 	t.Run("invalid base58", func(t *testing.T) {
 		sig, err := mina.DecodeSignature(base58.Base58("invalid0O0base58"))
-		assert.Nil(t, sig)
-		assert.Error(t, err)
+		require.Nil(t, sig)
+		require.Error(t, err)
 	})
 
 	t.Run("wrong version prefix", func(t *testing.T) {
 		// Use a public key encoding (different version prefix)
 		sig, err := mina.DecodeSignature(base58.Base58("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg"))
-		assert.Nil(t, sig)
-		assert.Error(t, err)
+		require.Nil(t, sig)
+		require.Error(t, err)
 	})
 
 	t.Run("round trip", func(t *testing.T) {
@@ -226,8 +225,8 @@ func TestDecodeSignature(t *testing.T) {
 		// Verify they match
 		rx1, _ := sig.R.AffineX()
 		rx2, _ := decoded.R.AffineX()
-		assert.True(t, rx1.Equal(rx2))
-		assert.True(t, sig.S.Equal(decoded.S))
+		require.True(t, rx1.Equal(rx2))
+		require.True(t, sig.S.Equal(decoded.S))
 
 		// Verify the decoded signature is valid
 		verifier, err := scheme.Verifier()
@@ -267,17 +266,17 @@ func TestKnownKeyVectors(t *testing.T) {
 			derivedPK := sk.PublicKey()
 
 			// Verify they match
-			assert.True(t, derivedPK.Value().Equal(expectedPK.Value()),
+			require.True(t, derivedPK.Value().Equal(expectedPK.Value()),
 				"derived public key should match expected")
 
 			// Verify encoding round-trip produces same string
 			encodedPK, err := mina.EncodePublicKey(derivedPK)
 			require.NoError(t, err)
-			assert.Equal(t, tc.publicKey, encodedPK)
+			require.Equal(t, tc.publicKey, encodedPK)
 
 			encodedSK, err := mina.EncodePrivateKey(sk)
 			require.NoError(t, err)
-			assert.Equal(t, tc.privateKey, encodedSK)
+			require.Equal(t, tc.privateKey, encodedSK)
 		})
 	}
 }

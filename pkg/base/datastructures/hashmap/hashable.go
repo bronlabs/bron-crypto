@@ -121,6 +121,7 @@ func (m HashMapTrait[K, V]) Size() int {
 // Keys returns a slice of all keys in the map.
 func (m HashMapTrait[K, V]) Keys() []K {
 	var keys []K
+	keys = make([]K, 0, m.Size())
 	for _, entries := range m.inner {
 		for _, entry := range entries {
 			keys = append(keys, entry.Key)
@@ -131,7 +132,7 @@ func (m HashMapTrait[K, V]) Keys() []K {
 
 // Values returns a slice of all values in the map.
 func (m HashMapTrait[K, V]) Values() []V {
-	result := make([]V, 0)
+	result := make([]V, 0, m.Size())
 	for _, value := range m.Iter() {
 		result = append(result, value)
 	}

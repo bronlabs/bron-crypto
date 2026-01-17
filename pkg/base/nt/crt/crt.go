@@ -31,7 +31,7 @@ func Precompute(p, q *numct.Nat) (*Params, ct.Bool) {
 		P:    pModulus,
 		QNat: q.Clone(),
 		QInv: qInv,
-		Cap:  int(pModulus.BitLen() + q.AnnouncedLen()),
+		Cap:  pModulus.BitLen() + q.AnnouncedLen(),
 	}, allOk
 }
 
@@ -109,7 +109,7 @@ func NewParamsExtended(p, q *numct.Modulus) (*ParamsExtended, ct.Bool) {
 			P:    p,
 			QNat: qNat,
 			QInv: qInv,
-			Cap:  int(p.BitLen() + qNat.TrueLen()),
+			Cap:  p.BitLen() + qNat.TrueLen(),
 		},
 		PNat: pNat,
 		Q:    q,

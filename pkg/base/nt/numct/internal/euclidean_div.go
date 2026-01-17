@@ -8,7 +8,7 @@ func EuclideanDiv(q, r, a, d *saferith.Nat) (*saferith.Nat, *saferith.Nat) {
 	var qq, rr, rt, t saferith.Nat
 
 	for i := a.AnnouncedLen() - 1; i >= 0; i-- {
-		b := byte((a.Byte(i/8) >> (i % 8)) & 0b1)
+		b := (a.Byte(i/8) >> (i % 8)) & 0b1
 		rt.Lsh(&rr, 1, d.AnnouncedLen()+1)
 		t.SetUint64(uint64(b)).Resize(1)
 		rt.Add(&rt, &t, d.AnnouncedLen()+1)

@@ -139,7 +139,7 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 			if win == 0 {
 				continue
 			}
-			PP(buckets[win]).Add(buckets[win], points[i])
+			buckets[win].Add(buckets[win], points[i])
 		}
 
 		// Summation by running sum from highest bucket down.

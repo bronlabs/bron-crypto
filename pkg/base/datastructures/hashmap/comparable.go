@@ -221,14 +221,14 @@ func NewComparable[K comparable, V any](xs ...ds.MapEntry[K, V]) *MutableCompara
 	for _, entry := range xs {
 		out[entry.Key] = entry.Value
 	}
-	return &MutableComparableMap[K, V]{NativeMap[K, V](out)}
+	return &MutableComparableMap[K, V]{out}
 }
 
 // CollectToComparable creates a new mutable map from parallel slices of keys and values.
 // Returns an error if the slices have different lengths.
 func CollectToComparable[K comparable, V any](xs []K, ys []V) (ds.MutableMap[K, V], error) {
 	if len(xs) == 0 && len(ys) == 0 {
-		return &MutableComparableMap[K, V]{NativeMap[K, V](make(NativeMap[K, V]))}, nil
+		return &MutableComparableMap[K, V]{make(NativeMap[K, V])}, nil
 	}
 	if len(xs) != len(ys) {
 		return nil, ds.ErrInvalidSize.WithMessage("xs and ys must have the same length")
@@ -237,17 +237,17 @@ func CollectToComparable[K comparable, V any](xs []K, ys []V) (ds.MutableMap[K, 
 	for i, x := range xs {
 		out[x] = ys[i]
 	}
-	return &MutableComparableMap[K, V]{NativeMap[K, V](out)}, nil
+	return &MutableComparableMap[K, V]{out}, nil
 }
 
 // NewComparableFromNativeLike creates a new mutable map by copying from a native Go map.
 func NewComparableFromNativeLike[K comparable, V any, T ~map[K]V](arg T) ds.MutableMap[K, V] {
 	out := make(NativeMap[K, V])
 	if arg == nil {
-		return &MutableComparableMap[K, V]{NativeMap[K, V](out)}
+		return &MutableComparableMap[K, V]{out}
 	}
 	maps.Copy(out, arg)
-	return &MutableComparableMap[K, V]{NativeMap[K, V](out)}
+	return &MutableComparableMap[K, V]{out}
 }
 
 // MutableComparableMap is a mutable hash map for comparable key types.
@@ -263,13 +263,13 @@ func (m MutableComparableMap[K, V]) IsImmutable() bool {
 // Freeze returns an immutable snapshot of this map.
 func (m MutableComparableMap[K, V]) Freeze() ds.Map[K, V] {
 	return &ImmutableComparableMap[K, V]{
-		inner: NativeMap[K, V](maps.Clone(m.NativeMap)),
+		inner: maps.Clone(m.NativeMap),
 	}
 }
 
 // Clone returns a mutable copy of this map.
 func (m MutableComparableMap[K, V]) Clone() ds.MutableMap[K, V] {
-	return &MutableComparableMap[K, V]{NativeMap[K, V](maps.Clone(m.NativeMap))}
+	return &MutableComparableMap[K, V]{maps.Clone(m.NativeMap)}
 }
 
 // Filter returns a new map containing only entries where the predicate returns true.

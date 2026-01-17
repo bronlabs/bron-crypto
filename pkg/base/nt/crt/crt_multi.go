@@ -42,7 +42,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 	prod := numct.NatOne()
 	for i := range k {
 		params.Factors[i] = factors[i]
-		capMul := int(prod.AnnouncedLen() + factors[i].BitLen())
+		capMul := prod.AnnouncedLen() + factors[i].BitLen()
 		prod.MulCap(prod, factors[i].Nat(), capMul)
 	}
 	modulus, ok := numct.NewModulus(prod)
@@ -63,7 +63,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 		params.Inverses[i] = inv.Clone()
 
 		// Lift_i = (M_i * inv_i) mod N
-		capMul := int(Mi.AnnouncedLen() + inv.AnnouncedLen())
+		capMul := Mi.AnnouncedLen() + inv.AnnouncedLen()
 		lift.MulCap(&Mi, &inv, capMul)
 		params.Modulus.Mod(&lift, &lift)
 		params.Lifts[i] = lift.Clone()
@@ -79,7 +79,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 		pProd := numct.NatOne()
 		for j := range i {
 			// pProd = p_0 * ... * p_j
-			capMul := int(pProd.AnnouncedLen() + factors[j].BitLen())
+			capMul := pProd.AnnouncedLen() + factors[j].BitLen()
 			pProd.MulCap(pProd, factors[j].Nat(), capMul)
 
 			// Compute pProd^{-1} mod p_i
@@ -152,7 +152,7 @@ func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, 
 	pProd := numct.NatOne()
 	for i := 1; i < params.NumFactors; i++ {
 		// Update pProd = p_0 * ... * p_{i-1}
-		capMul := int(pProd.AnnouncedLen() + params.Factors[i-1].Nat().AnnouncedLen())
+		capMul := pProd.AnnouncedLen() + params.Factors[i-1].Nat().AnnouncedLen()
 		(pProd).MulCap(pProd, params.Factors[i-1].Nat(), capMul)
 
 		// Compute c_i = (a_i - x) * (p_0 * ... * p_{i-1})^{-1} mod p_i
@@ -163,9 +163,9 @@ func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, 
 
 		// x = x + c_i * pProd
 		var term numct.Nat
-		capMul = int(ci.AnnouncedLen() + pProd.AnnouncedLen())
+		capMul = ci.AnnouncedLen() + pProd.AnnouncedLen()
 		term.MulCap(&ci, pProd, capMul)
-		capAdd := int(result.AnnouncedLen() + term.AnnouncedLen())
+		capAdd := result.AnnouncedLen() + term.AnnouncedLen()
 		result.AddCap(result, &term, capAdd)
 	}
 

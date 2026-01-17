@@ -866,5 +866,5 @@ func dec(dec string) *pasta.PallasBaseFieldElement {
 		panic(err)
 	}
 
-	return fe //nolint:forcetypeassert,errcheck // force
+	return fe
 }

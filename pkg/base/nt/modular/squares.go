@@ -210,18 +210,18 @@ func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Na
 			var mp, mq numct.Nat
 			var wgInner sync.WaitGroup
 			wgInner.Add(2)
-			go func(i int) {
+			go func() {
 				defer wgInner.Done()
 				var epi numct.Nat
 				epi.Select(bi.Coprime(m.P.Factor.Nat()), exp, &ep)
 				m.CrtModN2.P.ModExp(&mp, bi, &epi)
-			}(i)
-			go func(i int) {
+			}()
+			go func() {
 				defer wgInner.Done()
 				var eqi numct.Nat
 				eqi.Select(bi.Coprime(m.Q.Factor.Nat()), exp, &eq)
 				m.CrtModN2.Q.ModExp(&mq, bi, &eqi)
-			}(i)
+			}()
 			wgInner.Wait()
 			out[i].Set(m.CrtModN2.Recombine(&mp, &mq))
 		}(i)

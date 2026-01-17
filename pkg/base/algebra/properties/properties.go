@@ -891,7 +891,7 @@ func PolynomialLikeConstantTermProperty[
 				p := c.Dist.Draw(rt, "p")
 				constantTerm := p.ConstantTerm()
 				coeffs := p.Coefficients()
-				require.Equal(t, constantTerm.Equal(coeffs[0]), true, "polynomial-like constant term failed: ConstantTerm() != Coefficients()[0]")
+				require.True(t, constantTerm.Equal(coeffs[0]), "polynomial-like constant term failed: ConstantTerm() != Coefficients()[0]")
 			})
 		},
 	}

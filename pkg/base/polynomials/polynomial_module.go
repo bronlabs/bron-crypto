@@ -244,7 +244,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME,
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Bytes() []byte {
-	var out []byte
+	out := make([]byte, 0, len(p.coeffs)*p.CoefficientStructure().ElementSize())
 	for _, c := range p.coeffs {
 		out = append(out, c.Bytes()...)
 	}

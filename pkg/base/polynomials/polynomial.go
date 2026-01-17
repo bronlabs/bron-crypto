@@ -184,7 +184,7 @@ func (p *Polynomial[RE]) Structure() algebra.Structure[*Polynomial[RE]] {
 }
 
 func (p *Polynomial[RE]) Bytes() []byte {
-	var out []byte
+	out := make([]byte, 0, len(p.coeffs)*p.CoefficientStructure().ElementSize())
 	for _, coeff := range p.coeffs {
 		out = append(out, coeff.Bytes()...)
 	}

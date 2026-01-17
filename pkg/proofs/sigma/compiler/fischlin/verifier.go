@@ -59,14 +59,14 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	commitmentSerialized := make([][]byte, 0)
-	for i := range uint64(fischlinProof.Rho) {
+	for i := range fischlinProof.Rho {
 		commitmentSerialized = append(commitmentSerialized, fischlinProof.A[i].Bytes())
 	}
 	v.transcript.AppendBytes(commitmentLabel, commitmentSerialized...)
 	v.transcript.AppendBytes(challengeLabel, fischlinProof.E...)
 
 	a := make([]byte, 0)
-	for i := range uint64(fischlinProof.Rho) {
+	for i := range fischlinProof.Rho {
 		a = append(a, fischlinProof.A[i].Bytes()...)
 	}
 
@@ -77,7 +77,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	// 4. For i ∈ {1, ..., ρ}
-	for i := range uint64(fischlinProof.Rho) {
+	for i := range fischlinProof.Rho {
 		digest, err := hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i].Bytes())
 		if err != nil {
 			return errs2.Wrap(err).WithMessage("cannot compute digest")
@@ -102,7 +102,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	responseSerialized := make([][]byte, 0)
-	for i := range uint64(fischlinProof.Rho) {
+	for i := range fischlinProof.Rho {
 		responseSerialized = append(responseSerialized, fischlinProof.Z[i].Bytes())
 	}
 	v.transcript.AppendBytes(responseLabel, responseSerialized...)

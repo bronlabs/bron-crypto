@@ -49,7 +49,7 @@ func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKP
 redo:
 	for {
 		// 1. For i = 1, ..., ρ:
-		for i := range uint64(p.rho) {
+		for i := range p.rho {
 			var err error
 
 			// 1.a. compute (m_i, σ_i) ← ProverFirstMessage(x, w) independently for each i
@@ -69,9 +69,9 @@ redo:
 		}
 
 		// 4. For i = 1, ..., ρ:
-		for i := range uint64(p.rho) {
+		for i := range p.rho {
 			// 4.a. For ei = 0, ..., 2^t − 1:
-			for j := uint64(0); j < (1 << p.t); j++ { //nolint:intrange // false positive
+			for j := range uint64(1 << p.t) {
 				// 4.a.i. z_i ← ProverSecondMessage(x, w, σ_i, e_i)
 				eI[i], zI[i], err = p.challengeBytesAndResponse(j, statement, witness, aI[i], stateI[i])
 				if err != nil {
@@ -101,11 +101,11 @@ redo:
 	}
 
 	commitmentSerialized := make([][]byte, 0)
-	for i := range uint64(p.rho) {
+	for i := range p.rho {
 		commitmentSerialized = append(commitmentSerialized, aI[i].Bytes())
 	}
 	responseSerialized := make([][]byte, 0)
-	for i := range uint64(p.rho) {
+	for i := range p.rho {
 		responseSerialized = append(responseSerialized, zI[i].Bytes())
 	}
 	p.transcript.AppendBytes(commitmentLabel, commitmentSerialized...)

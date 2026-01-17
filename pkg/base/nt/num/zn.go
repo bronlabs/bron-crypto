@@ -86,7 +86,7 @@ func (zn *ZMod) ModulusCT() *numct.Modulus {
 
 // ElementSize returns the size in bytes of an element.
 func (zn *ZMod) ElementSize() int {
-	return int(zn.n.AnnouncedLen())
+	return zn.n.AnnouncedLen()
 }
 
 // WideElementSize returns the size in bytes of a wide element.
