@@ -100,26 +100,26 @@ linters:
     - goprintffuncname
     # Inspects source code for security problems
     - gosec
-    # # Report certain i18n/l10n anti-patterns in your Go codebase.
-    # - gosmopolitan
-    # # Reports wrong mirror patterns of bytes/strings usage.
-    # - mirror
-    # # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
-    # - govet
-    # # Enforces consistent import aliases
-    # - importas
-    # # Intrange is a linter to find places where for loops could make use of an integer range.
-    # - intrange
-    # # Detects when assignments to existing variables are not used
-    # - ineffassign
-    # # Finds slice declarations with non-zero initial length
-    # - makezero
-    # # Finds commonly misspelled English words in comments
-    # - misspell
-    # # Finds naked returns in functions greater than a specified function length
-    # - nakedret
-    # # Finds the code that returns nil even if it checks that the error is not nil.
-    # - nilerr
+    # Report certain i18n/l10n anti-patterns in your Go codebase.
+    - gosmopolitan
+    # Reports wrong mirror patterns of bytes/strings usage.
+    - mirror
+    # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
+    - govet
+    # Enforces consistent import aliases
+    - importas
+    # Intrange is a linter to find places where for loops could make use of an integer range.
+    - intrange
+    # Detects when assignments to existing variables are not used
+    - ineffassign
+    # Finds slice declarations with non-zero initial length
+    - makezero
+    # Finds commonly misspelled English words in comments
+    - misspell
+    # Finds naked returns in functions greater than a specified function length
+    - nakedret
+    # Finds the code that returns nil even if it checks that the error is not nil.
+    - nilerr
     # # Reports ill-formed or insufficient nolint directives
     # - nolintlint
     # # Checks that there is no simultaneous return of nil error and an invalid value.
@@ -401,7 +401,7 @@ linters:
     gosec:
       excludes:
         - G115
-      severity: low
+      severity: medium
       confidence: low
       config:
         G101:

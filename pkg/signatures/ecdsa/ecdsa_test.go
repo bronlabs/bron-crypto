@@ -116,6 +116,7 @@ func Test_DeterministicHappyPath(t *testing.T) {
 	signature1, err := signer.Sign(message[:])
 	require.NoError(t, err)
 	signature2, err := signer.Sign(message[:])
+	require.NoError(t, err)
 
 	verifier, err := scheme.Verifier()
 	require.NoError(t, err)

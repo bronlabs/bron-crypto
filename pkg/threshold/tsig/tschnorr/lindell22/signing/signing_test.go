@@ -719,6 +719,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 					return
 				}
 				sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+				require.NoError(t, err)
 			}
 
 			results <- result{index, sig, err}
