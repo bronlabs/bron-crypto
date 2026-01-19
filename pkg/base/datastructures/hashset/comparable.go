@@ -3,8 +3,8 @@ package hashset
 
 import (
 	"iter"
-
-	"golang.org/x/exp/maps"
+	"maps"
+	"slices"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -57,7 +57,7 @@ func (s *MutableComparableSet[E]) Freeze() ds.Set[E] {
 
 // Clear removes all elements from the set.
 func (s *MutableComparableSet[E]) Clear() {
-	maps.Clear(s.v)
+	clear(s.v)
 }
 
 // Contains returns true if the element is in the set.
@@ -203,5 +203,5 @@ func (s *MutableComparableSet[E]) IterSubSets() iter.Seq[ds.MutableSet[E]] {
 
 // List returns a slice of all elements in the set.
 func (s *MutableComparableSet[E]) List() []E {
-	return maps.Keys(s.v)
+	return slices.AppendSeq(make([]E, 0, len(s.v)), maps.Keys(s.v))
 }

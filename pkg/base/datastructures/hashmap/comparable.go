@@ -3,8 +3,8 @@ package hashmap
 
 import (
 	"iter"
-
-	"golang.org/x/exp/maps"
+	"maps"
+	"slices"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
@@ -66,12 +66,12 @@ func (m NativeMap[K, V]) TryRemove(key K) (removed bool, removedValue V) {
 
 // Keys returns a slice of all keys in the map.
 func (m NativeMap[K, V]) Keys() []K {
-	return maps.Keys(m)
+	return slices.AppendSeq(make([]K, 0, len(m)), maps.Keys(m))
 }
 
 // Values returns a slice of all values in the map.
 func (m NativeMap[K, V]) Values() []V {
-	return maps.Values(m)
+	return slices.AppendSeq(make([]V, 0, len(m)), maps.Values(m))
 }
 
 // Iter returns an iterator over all key-value pairs.

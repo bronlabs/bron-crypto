@@ -77,9 +77,8 @@ linters:
     - exhaustive
     # Checks if all structure fields are initialized.
     - exhaustruct
-    # # # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
-    # # # TODO: enable this when it doesn't spit out FIXMEs in people'e code.
-    # # - exptostd
+    # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
+    - exptostd
     # Forbids identifiers
     - forbidigo
     # Checks that go compiler directive comments (//go:) are valid.
@@ -687,6 +686,9 @@ linters:
       - linters:
           - gocritic
         text: "captLocal: `Gt' should not be capitalized"
+      - linters:
+          - staticcheck
+        text: "ST1003: should not use underscores in package names"
       - path: ot/
         text: "captLocal"
         linters:
