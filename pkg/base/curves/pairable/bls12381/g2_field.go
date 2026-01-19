@@ -11,6 +11,7 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
@@ -88,7 +89,11 @@ func (f *BaseFieldG2) FromBytes(data []byte) (*BaseFieldElementG2, error) {
 	componentSize := f.ElementSize() / 2
 	components[0] = data[:componentSize]
 	components[1] = data[componentSize:]
-	return f.FromComponentsBytes(components)
+	out, err := f.FromComponentsBytes(components)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to convert bytes into field element")
+	}
+	return out, nil
 }
 
 // FromWideBytes decodes an element from wide bytes.

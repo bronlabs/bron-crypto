@@ -11,6 +11,7 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -100,7 +101,11 @@ func (f *BaseField) FromBytesBEReduce(input []byte) (*BaseFieldElement, error) {
 	nNat.SetBytes(input)
 	baseFieldOrder.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	return f.FromBytesBE(vBytes)
+	out, err := f.FromBytesBE(vBytes)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to convert reduced bytes into field element")
+	}
+	return out, nil
 }
 
 // BaseFieldElement represents an element of the base field.

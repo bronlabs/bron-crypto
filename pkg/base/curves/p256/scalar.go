@@ -11,8 +11,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
-	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
@@ -90,17 +90,21 @@ func (f *ScalarField) FromBytesBEReduce(input []byte) (*Scalar, error) {
 	nNat.SetBytes(input)
 	scalarFieldOrder.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	return f.FromBytesBE(vBytes)
+	out, err := f.FromBytesBE(vBytes)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to convert reduced bytes into field element")
+	}
+	return out, nil
 }
 
 // ElementSize returns the element size in bytes.
 func (*ScalarField) ElementSize() int {
-	return k256Impl.FqBytes
+	return p256Impl.FqBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
 func (*ScalarField) WideElementSize() int {
-	return k256Impl.FqWideBytes
+	return p256Impl.FqWideBytes
 }
 
 // BitLen returns the field modulus bit length.

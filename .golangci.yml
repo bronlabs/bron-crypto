@@ -604,8 +604,6 @@ linters:
           - forcetypeassert
           - err113
           - nakedret
-          # TODO: ENABLE THIS
-          - wrapcheck
           - dupl
       # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and
       # unused constants (poly).
