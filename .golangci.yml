@@ -39,9 +39,7 @@ formatters:
     paths:
       - gen
       - testutils
-      - thirdparty
-      - third_party$
-      - builtin$
+      - thirdparty$
       - examples$
 linters:
   default: none
@@ -504,18 +502,6 @@ linters:
     staticcheck:
       checks:
         - all
-    # tagliatelle:
-    #   case:
-    #     rules:
-    #       avro: snake
-    #       bson: camel
-    #       env: upperSnake
-    #       envconfig: upperSnake
-    #       json: camel
-    #       mapstructure: kebab
-    #       xml: camel
-    #       yaml: camel
-    #     use-field-name: false
     testifylint:
       enable-all: true
       disable:
@@ -621,17 +607,6 @@ linters:
           # TODO: ENABLE THIS
           - wrapcheck
           - dupl
-      - path: signatures/bls/
-        linters:
-          # so many castings to pairing point would then need redundant checks.
-          # fix when we move to actual algebraic interfaces
-          - errcheck
-          - forcetypeassert
-      # linter thinks value is unused if we type cast the interface and panic if not ok
-      - path: curves/
-        text: "SA4006"
-        linters:
-          staticcheck
       # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and
       # unused constants (poly).
       - path: thirdparty/
@@ -639,31 +614,14 @@ linters:
           - dupl
           - unused
           - intrange
-      # a lot of false positives for cselect
-      - path: curves/
-        text: "nilness: nil dereference in field selection"
-        linters:
-          govet
-      # contents of impl are not supposed to be used by outside libraries, its constants
-      - path: impl/
-        text: "unexported-return"
-        linters:
-          - revive
       - path: impl/
         linters:
           - dupl
-      - path: pkg/base/cgo
-        linters:
-          - gocritic
-          - godot
       - path: pkg/encryption/hpke/internal
         linters:
           - dupl
           - exhaustruct
       # Exclude some revive messages
-      - linters:
-          - revive
-        text: "var-naming: don't use ALL_CAPS in Go names; use CamelCase"
       # We don't want to check whether statements like `x, err := ...` shadows `err`
       - linters:
           - govet
@@ -672,37 +630,12 @@ linters:
           - govet
         text: 'shadow: declaration of "ok" shadows declaration at line'
       - linters:
-          - gocritic
-        text: "captLocal: `G1' should not be capitalized"
-      - linters:
-          - gocritic
-        text: "captLocal: `G2' should not be capitalized"
-      - linters:
-          - gocritic
-        text: "captLocal: `Gt' should not be capitalized"
-      - linters:
           - staticcheck
         text: "ST1003: should not use underscores in package names"
-      - path: ot/
-        text: "captLocal"
-        linters:
-          - gocritic
       - path: cbor.go
         linters:
           - gochecknoinits
           - wrapcheck
-      - path: key_agreement/
-        text: "captLocal"
-        linters:
-          - gocritic
-      - path: encryptions/
-        text: "captLocal: `AD' should not be capitalized"
-        linters:
-          - gocritic
-      - path: hpke/
-        text: "captLocal: `L' should not be capitalized"
-        linters:
-          - gocritic
       - path: hpke/
         text: "ST1003: should not use ALL_CAPS in Go names; use CamelCase instead"
         linters:
@@ -711,9 +644,3 @@ linters:
       - path: pkg/base/algebra/
         linters:
           - wrapcheck
-      # this has a collision with wrapcheck. We care about wrapcheck more, but
-      # errchkjson is also important because it reports unsafe marshaling
-      - linters:
-          - errchkjson
-        text: 'Error return value of `encoding/json.Marshal` is checked but passed argument is safe'
-
