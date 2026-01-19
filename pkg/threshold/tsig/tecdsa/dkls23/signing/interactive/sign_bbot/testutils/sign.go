@@ -29,10 +29,10 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	tb.Helper()
 
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionId[:]))
+	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
 	pk := slices.Collect(maps.Values(shards))[0].PublicKey()
 	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](pk.Value().Structure())
 	ecdsaSuite, err := ecdsa.NewSuite(curve, hashFunc)
@@ -44,7 +44,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 		shard, ok := shards[id]
 		require.True(tb, ok)
 		tapesMap[id] = tape.Clone()
-		consignersMap[id], err = sign_bbot.NewCosigner(sessionId, quorum, ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng, tapesMap[id])
+		consignersMap[id], err = sign_bbot.NewCosigner(sessionID, quorum, ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng, tapesMap[id])
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(consignersMap))

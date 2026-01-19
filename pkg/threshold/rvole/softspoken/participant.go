@@ -26,7 +26,7 @@ const (
 )
 
 type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	sessionId network.SID
+	sessionID network.SID
 	suite     *Suite[P, B, S]
 	xi        int
 	rho       int
@@ -54,7 +54,7 @@ type Bob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFiel
 	gamma    [][]S
 }
 
-func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant[P, B, S], error) {
+func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant[P, B, S], error) {
 	if suite == nil || prng == nil || tape == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
@@ -63,9 +63,9 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 	xi := kappa + base.CollisionResistance // normally this should be statistical security, but then xi is an invalid parameter for softspoken
 	rho := mathutils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	return &participant[P, B, S]{
-		sessionId: sessionId,
+		sessionID: sessionID,
 		suite:     suite,
 		xi:        xi,
 		rho:       rho,
@@ -76,8 +76,8 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 }
 
 // NewAlice returns a new Alice participant.
-func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader, tape transcripts.Transcript) (*Alice[P, B, S], error) {
-	p, err := newParticipant(sessionId, suite, prng, tape, 2)
+func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader, tape transcripts.Transcript) (*Alice[P, B, S], error) {
+	p, err := newParticipant(sessionID, suite, prng, tape, 2)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
@@ -86,7 +86,7 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 		return nil, errs2.Wrap(err).WithMessage("could not create softspoken suite")
 	}
 
-	sender, err := softspoken.NewSender(sessionId, seeds, softspokenSuite, tape, prng)
+	sender, err := softspoken.NewSender(sessionID, seeds, softspokenSuite, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create sender")
 	}
@@ -105,8 +105,8 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 }
 
 // NewBob returns a new Bob participant.
-func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader, tape transcripts.Transcript) (*Bob[P, B, S], error) {
-	p, err := newParticipant(sessionId, suite, prng, tape, 1)
+func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader, tape transcripts.Transcript) (*Bob[P, B, S], error) {
+	p, err := newParticipant(sessionID, suite, prng, tape, 1)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
@@ -115,7 +115,7 @@ func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeF
 		return nil, errs2.Wrap(err).WithMessage("could not create softspoken suite")
 	}
 
-	receiver, err := softspoken.NewReceiver(sessionId, seeds, softspokenSuite, tape, prng)
+	receiver, err := softspoken.NewReceiver(sessionID, seeds, softspokenSuite, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create receiver")
 	}

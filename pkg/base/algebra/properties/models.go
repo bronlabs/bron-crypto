@@ -329,9 +329,9 @@ func SemiModule[S algebra.SemiModule[E, RE], R algebra.SemiRing[RE], E algebra.S
 	baseSemiRing := SemiRing(t, scalarRing, gb)
 	out := PairWithAction(t, monoid, baseSemiRing, scalarOp)
 	out.Theory = append(out.Theory,
-		CommutativityProperty(t, out.Carrier2.First, op),
-		CommutativityProperty(t, out.Carrier2.Second, Addition[RE]()),
-		CommutativityProperty(t, out.Carrier2.Second, Multiplication[RE]()),
+		CommutativityProperty(t, out.First, op),
+		CommutativityProperty(t, out.Second, Addition[RE]()),
+		CommutativityProperty(t, out.Second, Multiplication[RE]()),
 		LeftDistributivityOfActionOverSemiModuleOperationProperty(t, out.Carrier2),
 		RightDistributivityOfSemiModuleOperationOverBaseSemiRingAdditionProperty(t, out.Carrier2),
 		AssociativityOfScalarsWRTRingMultiplicationProperty(t, out.Carrier2),

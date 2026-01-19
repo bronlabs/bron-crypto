@@ -15,7 +15,7 @@ import (
 
 const (
 	appTranscriptLabel       = "BRON_CRYPTO_NIZK_PAILLIER_N"
-	sessionIdTranscriptLabel = "BRON_CRYPTO_NIZK_PAILLIER_N_SESSION_ID"
+	sessionIDTranscriptLabel = "BRON_CRYPTO_NIZK_PAILLIER_N_SESSION_ID"
 	nTranscriptLabel         = "BRON_CRYPTO_NIZK_PAILLIER_N_N"
 
 	// Alpha ɑ.
@@ -44,19 +44,19 @@ type Prover struct {
 }
 
 // NewProver constructs a prover for the Paillier N proof.
-func NewProver(sessionId network.SID, enc encryption.SelfEncrypter[*paillier.PrivateKey, *paillier.Plaintext, *paillier.Ciphertext, *paillier.Nonce], tape transcripts.Transcript) (prover *Prover, err error) {
+func NewProver(sessionID network.SID, enc encryption.SelfEncrypter[*paillier.PrivateKey, *paillier.Plaintext, *paillier.Ciphertext, *paillier.Nonce], tape transcripts.Transcript) (prover *Prover, err error) {
 	if enc == nil {
 		return nil, ErrInvalidArgument.WithMessage("encrypter is nil")
 	}
 	if tape == nil {
 		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 	tape.AppendBytes(nTranscriptLabel, enc.PrivateKey().PublicKey().Modulus().BytesBE())
 
 	return &Prover{
-		sid:  sessionId,
+		sid:  sessionID,
 		enc:  enc,
 		tape: tape,
 	}, nil
@@ -91,7 +91,7 @@ func (p *Prover) Prove() (proof *Proof, statement *paillier.PublicKey, err error
 }
 
 // Verify validates a Paillier N proof for the given statement.
-func Verify(sessionId network.SID, tape transcripts.Transcript, statement *paillier.PublicKey, proof *Proof) error {
+func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paillier.PublicKey, proof *Proof) error {
 	if statement == nil {
 		return ErrInvalidArgument.WithMessage("statement is nil")
 	}
@@ -101,7 +101,7 @@ func Verify(sessionId network.SID, tape transcripts.Transcript, statement *paill
 	if tape == nil {
 		return ErrInvalidArgument.WithMessage("transcript is nil")
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 	tape.AppendBytes(nTranscriptLabel, statement.Modulus().BytesBE())
 

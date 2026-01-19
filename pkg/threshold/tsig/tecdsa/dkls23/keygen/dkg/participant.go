@@ -28,7 +28,7 @@ const (
 
 // Participant represents a DKG participant.
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	sessionId network.SID
+	sessionID network.SID
 	baseShard *tecdsa.Shard[P, B, S]
 	tape      transcripts.Transcript
 	prng      io.Reader
@@ -47,13 +47,13 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 }
 
 // NewParticipant returns a new participant.
-func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, baseShard *tecdsa.Shard[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
+func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, sharingID sharing.ID, baseShard *tecdsa.Shard[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
 	if baseShard == nil || tape == nil || prng == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
-	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, sessionId))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, sessionID))
 
-	zeroSetup, err := przsSetup.NewParticipant(sessionId, sharingId, baseShard.AccessStructure().Shareholders(), tape, prng)
+	zeroSetup, err := przsSetup.NewParticipant(sessionID, sharingID, baseShard.AccessStructure().Shareholders(), tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("error creating zero setup for participant")
 	}
@@ -66,20 +66,20 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	otSenders := make(map[sharing.ID]*vsot.Sender[P, B, S])
 	otReceivers := make(map[sharing.ID]*vsot.Receiver[P, B, S])
 	for id := range baseShard.AccessStructure().Shareholders().Iter() {
-		if id == sharingId {
+		if id == sharingID {
 			continue
 		}
 
 		otTape := tape.Clone()
-		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingId)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		otSender, err := vsot.NewSender(sessionId, otSuite, otTape, prng)
+		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingID)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		otSender, err := vsot.NewSender(sessionID, otSuite, otTape, prng)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("error creating vsot sender")
 		}
 
 		otTape = tape.Clone()
-		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingId)))
-		otReceiver, err := vsot.NewReceiver(sessionId, otSuite, otTape, prng)
+		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingID)))
+		otReceiver, err := vsot.NewReceiver(sessionID, otSuite, otTape, prng)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("error creating vsot receiver")
 		}
@@ -90,7 +90,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 
 	//nolint:exhaustruct // lazy initialisation
 	p := &Participant[P, B, S]{
-		sessionId:       sessionId,
+		sessionID:       sessionID,
 		baseShard:       baseShard,
 		tape:            tape,
 		prng:            prng,

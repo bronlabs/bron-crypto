@@ -288,14 +288,14 @@ func Test_Interactive(t *testing.T) {
 			R:  r,
 		}
 
-		var sessionId network.SID
-		copy(sessionId[:], "test sessionId")
+		var sessionID network.SID
+		copy(sessionID[:], "test sessionID")
 		proverTranscript := hagrid.NewTranscript("test")
 		verifierTranscript := hagrid.NewTranscript("test")
 
-		prover, err := sigma.NewProver(sessionId, proverTranscript, protocol, statement, witness)
+		prover, err := sigma.NewProver(sessionID, proverTranscript, protocol, statement, witness)
 		require.NoError(t, err)
-		verifier, err := sigma.NewVerifier(sessionId, verifierTranscript, protocol, statement, prng)
+		verifier, err := sigma.NewVerifier(sessionID, verifierTranscript, protocol, statement, prng)
 		require.NoError(t, err)
 
 		r1Out, err := prover.Round1()
@@ -352,14 +352,14 @@ func Test_InteractiveZk(t *testing.T) {
 			R:  r,
 		}
 
-		sessionId, err := network.NewSID([]byte("test sessionId"))
+		sessionID, err := network.NewSID([]byte("test sessionID"))
 		require.NoError(t, err)
 		proverTranscript := hagrid.NewTranscript("test")
 		verifierTranscript := hagrid.NewTranscript("test")
 
-		prover, err := zk.NewProver(sessionId, proverTranscript, protocol, statement, witness)
+		prover, err := zk.NewProver(sessionID, proverTranscript, protocol, statement, witness)
 		require.NoError(t, err)
-		verifier, err := zk.NewVerifier(sessionId, verifierTranscript, protocol, statement, prng)
+		verifier, err := zk.NewVerifier(sessionID, verifierTranscript, protocol, statement, prng)
 		require.NoError(t, err)
 
 		r1Out, err := verifier.Round1()
@@ -420,15 +420,15 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 	compiler, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
 
-	sessionId, err := network.NewSID([]byte("test sessionId"))
+	sessionID, err := network.NewSID([]byte("test sessionID"))
 	require.NoError(t, err)
 	proverTranscript := hagrid.NewTranscript("test")
 	verifierTranscript := hagrid.NewTranscript("test")
 
-	niProver, err := compiler.NewProver(sessionId, proverTranscript)
+	niProver, err := compiler.NewProver(sessionID, proverTranscript)
 	require.NoError(t, err)
 
-	niVerifier, err := compiler.NewVerifier(sessionId, verifierTranscript)
+	niVerifier, err := compiler.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	proof, err := niProver.Prove(statement, witness)
@@ -483,15 +483,15 @@ func Test_NonInteractiveFischlin(t *testing.T) {
 	compiler, err := fischlin.NewCompiler(protocol, prng)
 	require.NoError(t, err)
 
-	sessionId, err := network.NewSID([]byte("test sessionId"))
+	sessionID, err := network.NewSID([]byte("test sessionID"))
 	require.NoError(t, err)
 	proverTranscript := hagrid.NewTranscript("test")
 	verifierTranscript := hagrid.NewTranscript("test")
 
-	niProver, err := compiler.NewProver(sessionId, proverTranscript)
+	niProver, err := compiler.NewProver(sessionID, proverTranscript)
 	require.NoError(t, err)
 
-	niVerifier, err := compiler.NewVerifier(sessionId, verifierTranscript)
+	niVerifier, err := compiler.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	proof, err := niProver.Prove(statement, witness)

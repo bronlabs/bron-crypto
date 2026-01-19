@@ -19,7 +19,7 @@ type Prover[X Statement, W Witness, A Commitment, S State, Z Response] struct {
 }
 
 // NewProver constructs a sigma protocol prover.
-func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessionId network.SID, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessionID network.SID, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
 	if sigmaProtocol == nil {
 		return nil, ErrInvalidArgument.WithMessage("protocol, statement or witness is nil")
 	}
@@ -27,7 +27,7 @@ func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessio
 		return nil, ErrInvalidArgument.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionId[:]), transcriptLabel, sigmaProtocol.Name())
+	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionID[:]), transcriptLabel, sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 	transcript.AppendBytes(statementLabel, statement.Bytes())
 
@@ -35,7 +35,7 @@ func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessio
 	return &Prover[X, W, A, S, Z]{
 		//nolint:exhaustruct // initial state
 		participant: participant[X, W, A, S, Z]{
-			sessionId:     sessionId,
+			sessionID:     sessionID,
 			transcript:    transcript,
 			sigmaProtocol: sigmaProtocol,
 			statement:     statement,

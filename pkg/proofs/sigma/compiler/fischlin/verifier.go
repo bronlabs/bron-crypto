@@ -20,7 +20,7 @@ var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 
 // verifier implements the NIVerifier interface for Fischlin proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	sessionId     network.SID
+	sessionID     network.SID
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
@@ -71,7 +71,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	// 3. common-h ← H(x, m, sid)
-	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionId[:])
+	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionID[:])
 	if err != nil {
 		return errs2.Wrap(err).WithMessage("cannot serialise statement")
 	}

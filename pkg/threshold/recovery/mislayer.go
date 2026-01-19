@@ -10,7 +10,7 @@ import (
 
 // Mislayer represents the party whose share is being reconstructed.
 type Mislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	sharingId sharing.ID
+	sharingID sharing.ID
 	field     algebra.PrimeField[S]
 	scheme    *feldman.Scheme[G, S]
 	quorum    network.Quorum
@@ -29,7 +29,7 @@ func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 
 	m := &Mislayer[G, S]{
-		sharingId: id,
+		sharingID: id,
 		field:     field,
 		scheme:    scheme,
 		quorum:    quorum,
@@ -39,5 +39,5 @@ func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 
 // SharingID returns the identifier of the share being recovered.
 func (m *Mislayer[G, S]) SharingID() sharing.ID {
-	return m.sharingId
+	return m.sharingID
 }

@@ -17,8 +17,8 @@ type gennaroDkgRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 }
 
 // NewGennaroDKGRunner constructs a network runner that drives the three DKG rounds.
-func NewGennaroDKGRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], sessionId network.SID, sharingId sharing.ID, accessStructure *sharing.ThresholdAccessStructure, niCompilerName compiler.Name, tape ts.Transcript, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
-	party, err := NewParticipant(sessionId, group, sharingId, accessStructure, niCompilerName, tape, prng)
+func NewGennaroDKGRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], sessionID network.SID, sharingID sharing.ID, accessStructure *sharing.ThresholdAccessStructure, niCompilerName compiler.Name, tape ts.Transcript, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
+	party, err := NewParticipant(sessionID, group, sharingID, accessStructure, niCompilerName, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}

@@ -25,7 +25,7 @@ const (
 )
 
 type participant struct {
-	sessionId network.SID
+	sessionID network.SID
 	suite     *Suite
 	round     int
 	tape      transcripts.Transcript
@@ -47,7 +47,7 @@ type Receiver struct {
 }
 
 // NewSender constructs a SoftSpoken sender with VSOT seed outputs.
-func NewSender(sessionId network.SID, receiverSeeds *vsot.ReceiverOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Sender, error) {
+func NewSender(sessionID network.SID, receiverSeeds *vsot.ReceiverOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Sender, error) {
 	if receiverSeeds == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
@@ -55,10 +55,10 @@ func NewSender(sessionId network.SID, receiverSeeds *vsot.ReceiverOutput, suite 
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid receiver seeds")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	s := &Sender{
 		participant: participant{
-			sessionId,
+			sessionID,
 			suite,
 			2,
 			tape,
@@ -71,7 +71,7 @@ func NewSender(sessionId network.SID, receiverSeeds *vsot.ReceiverOutput, suite 
 }
 
 // NewReceiver constructs a SoftSpoken receiver with VSOT seed outputs.
-func NewReceiver(sessionId network.SID, senderSeeds *vsot.SenderOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Receiver, error) {
+func NewReceiver(sessionID network.SID, senderSeeds *vsot.SenderOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Receiver, error) {
 	if senderSeeds == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
@@ -79,10 +79,10 @@ func NewReceiver(sessionId network.SID, senderSeeds *vsot.SenderOutput, suite *S
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid sender seeds")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	r := &Receiver{
 		participant: participant{
-			sessionId,
+			sessionID,
 			suite,
 			1,
 			tape,
@@ -95,7 +95,7 @@ func NewReceiver(sessionId network.SID, senderSeeds *vsot.SenderOutput, suite *S
 }
 
 func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
-	preimage := slices.Concat(p.sessionId[:], binary.LittleEndian.AppendUint64(nil, uint64(j)), binary.LittleEndian.AppendUint64(nil, uint64(l)))
+	preimage := slices.Concat(p.sessionID[:], binary.LittleEndian.AppendUint64(nil, uint64(j)), binary.LittleEndian.AppendUint64(nil, uint64(l)))
 	for _, d := range data {
 		preimage = slices.Concat(preimage, d)
 	}
@@ -108,7 +108,7 @@ func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
 
 // expand derives pseudorandom output from a seed message and choice bit.
 func (p *participant) expand(outputLen, idx int, message []byte, choice int) ([]byte, error) {
-	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, p.sessionId[:])
+	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, p.sessionID[:])
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create blake2b XOF")
 	}

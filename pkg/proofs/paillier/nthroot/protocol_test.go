@@ -91,7 +91,7 @@ func Test_InvalidRootInteractive(t *testing.T) {
 
 func Test_HappyPathNonInteractive(t *testing.T) {
 	t.Parallel()
-	sessionId, err := network.NewSID([]byte("nthRootSession"))
+	sessionID, err := network.NewSID([]byte("nthRootSession"))
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
@@ -130,11 +130,11 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 
 	proverTranscript := hagrid.NewTranscript(appLabel)
-	prover, err := fsProtocol.NewProver(sessionId, proverTranscript)
+	prover, err := fsProtocol.NewProver(sessionID, proverTranscript)
 	require.NoError(t, err)
 
 	verifierTranscript := hagrid.NewTranscript(appLabel)
-	verifier, err := fsProtocol.NewVerifier(sessionId, verifierTranscript)
+	verifier, err := fsProtocol.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	theProof, err := prover.Prove(statement, witness)
@@ -146,7 +146,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 
 func Test_InvalidRootNonInteractive(t *testing.T) {
 	t.Parallel()
-	sessionId, err := network.NewSID([]byte("nthRootSession"))
+	sessionID, err := network.NewSID([]byte("nthRootSession"))
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
@@ -193,11 +193,11 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 
 	proverTranscript := hagrid.NewTranscript(appLabel)
-	prover, err := fsProtocol.NewProver(sessionId, proverTranscript)
+	prover, err := fsProtocol.NewProver(sessionID, proverTranscript)
 	require.NoError(t, err)
 
 	verifierTranscript := hagrid.NewTranscript(appLabel)
-	verifier, err := fsProtocol.NewVerifier(sessionId, verifierTranscript)
+	verifier, err := fsProtocol.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	statement1 := nthroot.NewStatement(x1)
@@ -330,8 +330,8 @@ func Test_Extractor(t *testing.T) {
 }
 
 func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, g *znstar.PaillierGroup[A], prng io.Reader) (err error) {
-	var sessionId network.SID
-	copy(sessionId[:], "nthRootSession")
+	var sessionID network.SID
+	copy(sessionID[:], "nthRootSession")
 	appLabel := "NthRoot"
 	protocol, err := nthroot.NewProtocol(g, prng)
 	if err != nil {
@@ -348,13 +348,13 @@ func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, 
 	proverStatement := nthroot.NewStatement(xUnit)
 	proverWitness := nthroot.NewWitness(yUnit)
 	proverTranscript := hagrid.NewTranscript(appLabel)
-	prover, err := sigma.NewProver(sessionId, proverTranscript, protocol, proverStatement, proverWitness)
+	prover, err := sigma.NewProver(sessionID, proverTranscript, protocol, proverStatement, proverWitness)
 	if err != nil {
 		return err
 	}
 
 	verifierTranscript := hagrid.NewTranscript(appLabel)
-	verifier, err := sigma.NewVerifier(sessionId, verifierTranscript, protocol, proverStatement, prng)
+	verifier, err := sigma.NewVerifier(sessionID, verifierTranscript, protocol, proverStatement, prng)
 	if err != nil {
 		return err
 	}

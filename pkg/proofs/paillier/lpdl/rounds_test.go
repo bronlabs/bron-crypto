@@ -58,7 +58,7 @@ func Test_HappyPath(t *testing.T) {
 	xEncrypted, r, err := senc.SelfEncrypt(xMessage, prng)
 	require.NoError(t, err)
 
-	sid, err := network.NewSID([]byte("sessionId"))
+	sid, err := network.NewSID([]byte("sessionID"))
 	require.NoError(t, err)
 	err = doProof(x, bigQ, curve, xEncrypted, r, pk, sk, sid, prng)
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	x1Encrypted, r, err := enc.Encrypt(x1Message, pk, prng)
 	require.NoError(t, err)
 
-	sid, err := network.NewSID([]byte("sessionId"))
+	sid, err := network.NewSID([]byte("sessionID"))
 	require.NoError(t, err)
 	err = doProof(x1, bigQ2, curve, x1Encrypted, r, pk, sk, sid, prng)
 	require.Error(t, err)
@@ -142,7 +142,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	x2Encrypted, r, err := enc.Encrypt(x2Message, pk, prng)
 	require.NoError(t, err)
 
-	sid, err := network.NewSID([]byte("sessionId"))
+	sid, err := network.NewSID([]byte("sessionID"))
 	require.NoError(t, err)
 	err = doProof(x, bigQ, curve, x2Encrypted, r, pk, sk, sid, prng)
 	require.Error(t, err)
@@ -159,17 +159,17 @@ func randomIntInRange(qBig *big.Int, prng io.Reader) (*numct.Nat, error) {
 	return (*numct.Nat)(new(saferith.Nat).Add(l, x, 2048)), nil
 }
 
-func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](x S, bigQ P, curve curves.Curve[P, B, S], xEncrypted *paillier.Ciphertext, r *paillier.Nonce, pk *paillier.PublicKey, sk *paillier.PrivateKey, sessionId network.SID, prng io.Reader) (err error) {
+func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](x S, bigQ P, curve curves.Curve[P, B, S], xEncrypted *paillier.Ciphertext, r *paillier.Nonce, pk *paillier.PublicKey, sk *paillier.PrivateKey, sessionID network.SID, prng io.Reader) (err error) {
 	transcriptLabel := "LPDL"
 
 	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	verifier, err := lpdl.NewVerifier(sessionId, pk, bigQ, xEncrypted, verifierTranscript, prng)
+	verifier, err := lpdl.NewVerifier(sessionID, pk, bigQ, xEncrypted, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
 	proverTranscript := hagrid.NewTranscript(transcriptLabel)
-	prover, err := lpdl.NewProver(sessionId, curve, sk, x, r, proverTranscript, prng)
+	prover, err := lpdl.NewProver(sessionID, curve, sk, x, r, proverTranscript, prng)
 	if err != nil {
 		return err
 	}

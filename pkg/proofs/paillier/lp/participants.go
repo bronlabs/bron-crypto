@@ -18,7 +18,7 @@ import (
 
 const (
 	appTranscriptLabel       = "BRON_CRYPTO_PAILLIER_LP-"
-	sessionIdTranscriptLabel = "BRON_CRYPTO_PAILLIER_LP_SESSION_ID"
+	sessionIDTranscriptLabel = "BRON_CRYPTO_PAILLIER_LP_SESSION_ID"
 )
 
 // Participant holds a common state for the LP protocol participants.
@@ -27,7 +27,7 @@ type Participant[A znstar.ArithmeticPaillier] struct {
 	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroot.Statement[A]], sigand.Witness[*nthroot.Witness[A]], sigand.Commitment[*nthroot.Commitment[A]], sigand.State[*nthroot.State[A]], sigand.Response[*nthroot.Response[A]]]
 	Prng                  io.Reader
 	Round                 int
-	SessionId             network.SID
+	SessionID             network.SID
 	Transcript            transcripts.Transcript
 
 	k int // security parameter - cheating prover can succeed with probability < 2^(-k)
@@ -81,7 +81,7 @@ type Prover struct {
 }
 
 // NewVerifier constructs a verifier instance for the LP protocol.
-func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(sessionID network.SID, k int, pk *paillier.PublicKey, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if err := validateVerifierInputs(k, pk, prng); err != nil {
 		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
 	}
@@ -89,7 +89,7 @@ func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape tran
 	if tape == nil {
 		tape = hagrid.NewTranscript(appTranscriptLabel)
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 
 	nthRootsSigmaProtocol, err := nthroot.NewProtocol(pk.Group(), prng)
@@ -109,7 +109,7 @@ func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape tran
 		Participant: Participant[*modular.SimpleModulus]{
 			k:                     k,
 			Round:                 1,
-			SessionId:             sessionId,
+			SessionID:             sessionID,
 			Transcript:            tape,
 			multiNthRootsProtocol: multiNthRootsProtocol,
 			Prng:                  prng,
@@ -138,7 +138,7 @@ func validateVerifierInputs(k int, pk *paillier.PublicKey, prng io.Reader) error
 }
 
 // NewProver constructs a prover instance for the LP protocol.
-func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+func NewProver(sessionID network.SID, k int, sk *paillier.PrivateKey, tape transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
 	if err := validateProverInputs(k, sk, prng); err != nil {
 		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
 	}
@@ -146,7 +146,7 @@ func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape trans
 	if tape == nil {
 		tape = hagrid.NewTranscript(appTranscriptLabel)
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 
 	nthRootsSigmaProtocol, err := nthroot.NewProtocol(sk.Group(), prng)
@@ -162,7 +162,7 @@ func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape trans
 		Participant: Participant[*modular.OddPrimeSquareFactors]{
 			k:                     k,
 			Round:                 2,
-			SessionId:             sessionId,
+			SessionID:             sessionID,
 			Transcript:            tape,
 			multiNthRootsProtocol: multiNthRootsProtocol,
 			Prng:                  prng,

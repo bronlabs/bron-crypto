@@ -36,11 +36,11 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	tb.Helper()
 
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)
 
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionId[:]))
+	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
 
 	// Create initial shards from Feldman DKG (or use a dealer)
 	feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure.Threshold(), accessStructure.Shareholders())
@@ -61,7 +61,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	participants := make(map[sharing.ID]*dkg.Participant[P, B, S])
 	for id, shard := range baseShards {
 		participants[id], err = dkg.NewParticipant(
-			sessionId,
+			sessionID,
 			shard,
 			curve,
 			prng,

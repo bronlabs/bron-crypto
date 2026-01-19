@@ -734,9 +734,9 @@ func TestNewScheme(t *testing.T) {
 
 	t.Run("single shareholder", func(t *testing.T) {
 		t.Parallel()
-		singleId := hashset.NewComparable[sharing.ID]()
-		singleId.Add(sharing.ID(1))
-		scheme, err := additive.NewScheme(field, singleId.Freeze())
+		singleID := hashset.NewComparable[sharing.ID]()
+		singleID.Add(sharing.ID(1))
+		scheme, err := additive.NewScheme(field, singleID.Freeze())
 		require.Error(t, err)
 		require.ErrorIs(t, err, sharing.ErrValue)
 		require.Nil(t, scheme)

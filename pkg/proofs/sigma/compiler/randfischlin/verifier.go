@@ -19,7 +19,7 @@ var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 
 // verifier implements the NIVerifier interface for randomised Fischlin proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	sessionId     network.SID
+	sessionID     network.SID
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
@@ -41,7 +41,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 		return ErrInvalid.WithMessage("invalid length")
 	}
 
-	v.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(v.sessionId[:])))
+	v.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(v.sessionID[:])))
 	crs, err := v.transcript.ExtractBytes(crsLabel, 32)
 	if err != nil {
 		return errs2.Wrap(err).WithMessage("cannot extract crs")

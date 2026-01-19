@@ -68,7 +68,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round2(r1out *Round1OutputP2P) (r2out *Rou
 	}
 	sc.state.bigR2 = sc.suite.Curve().ScalarBaseMul(sc.state.k2)
 	// step 2.2: π <- NIPoK.Prove(k2)
-	bigR2Proof, err := dlogProve(&sc.Cosigner, sc.state.k2, sc.state.bigR2, sc.primarySharingId)
+	bigR2Proof, err := dlogProve(&sc.Cosigner, sc.state.k2, sc.state.bigR2, sc.primarySharingID)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not prove dlog")
 	}
@@ -87,11 +87,11 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 3, pc.round)
 	}
 
-	if err := dlogVerify(pc.tape, pc.niDlogScheme, pc.secondarySharingId, pc.sid, r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
-		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("cannot verify R2 dlog proof")
+	if err := dlogVerify(pc.tape, pc.niDlogScheme, pc.secondarySharingID, pc.sid, r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("cannot verify R2 dlog proof")
 	}
 
-	bigR1Proof, err := dlogProve(&pc.Cosigner, pc.state.k1, pc.state.bigR1, pc.secondarySharingId)
+	bigR1Proof, err := dlogProve(&pc.Cosigner, pc.state.k1, pc.state.bigR1, pc.secondarySharingID)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create R1 dlog proof")
 	}
@@ -125,8 +125,8 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 		return nil, errs2.Wrap(err).WithMessage("cannot open R1 commitment")
 	}
 
-	if err := dlogVerify(sc.tape, sc.niDlogScheme, sc.primarySharingId, sc.sid, r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
-		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingId).WithMessage("cannot verify R1 dlog proof")
+	if err := dlogVerify(sc.tape, sc.niDlogScheme, sc.primarySharingID, sc.sid, r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("cannot verify R1 dlog proof")
 	}
 
 	bigR := r3out.BigR1.ScalarMul(sc.state.k2)
@@ -141,7 +141,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 
 	k2 := sc.state.k2
 
-	quorum := hashset.NewComparable(sc.SharingID(), sc.primarySharingId)
+	quorum := hashset.NewComparable(sc.SharingID(), sc.primarySharingID)
 	ac, err := sharing.NewMinimalQualifiedAccessStructure(quorum.Freeze())
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create access structure for additive sharing")
@@ -150,11 +150,11 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not convert Shamir share to additive share")
 	}
-	paillierPublicKey, exists := sc.shard.PaillierPublicKeys().Get(sc.primarySharingId)
+	paillierPublicKey, exists := sc.shard.PaillierPublicKeys().Get(sc.primarySharingID)
 	if !exists {
 		return nil, ErrMissing.WithMessage("couldn't get primary paillier public key")
 	}
-	cKey, exists := sc.shard.EncryptedShares().Get(sc.primarySharingId)
+	cKey, exists := sc.shard.EncryptedShares().Get(sc.primarySharingID)
 	if !exists {
 		return nil, ErrMissing.WithMessage("couldn't get primary encrypted signing key share")
 	}
@@ -163,7 +163,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot get Lagrange coefficients")
 	}
-	primaryLagrangeCoefficient, exists := coefficients.Get(sc.primarySharingId)
+	primaryLagrangeCoefficient, exists := coefficients.Get(sc.primarySharingID)
 	if !exists {
 		return nil, ErrMissing.WithMessage("could not get primary Lagrange coefficient")
 	}
@@ -197,11 +197,11 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 	}
 	sPrimeInt, err := decrypter.Decrypt(r4out.C3)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("cannot decrypt c3")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("cannot decrypt c3")
 	}
 	sPrime, err := pc.suite.Curve().ScalarField().FromBytesBEReduce(sPrimeInt.Normalise().BytesBE())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("cannot convert decrypted c3 to scalar")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("cannot convert decrypted c3 to scalar")
 	}
 	k1Inv, err := pc.state.k1.TryInv()
 	if err != nil {
@@ -230,7 +230,7 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 		return nil, errs2.Wrap(err).WithMessage("could not create ecdsa verifier")
 	}
 	if err := verifier.Verify(signature, pc.shard.PublicKey(), message); err != nil {
-		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingId).WithMessage("could not verify produced signature")
+		return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("could not verify produced signature")
 	}
 	pc.round += 2
 	return signature, nil
@@ -238,9 +238,9 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 
 func dlogProve[
 	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
-](c *Cosigner[P, B, S], k S, bigR P, otherSharingId sharing.ID) (compiler.NIZKPoKProof, error) {
+](c *Cosigner[P, B, S], k S, bigR P, otherSharingID sharing.ID) (compiler.NIZKPoKProof, error) {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
-	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(otherSharingId))
+	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(otherSharingID))
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
 	c.tape.AppendBytes(transcriptDLogSLabel, quorumBytes)
 	c.tape.AppendBytes(proverLabel, proverIDBytes)
@@ -263,9 +263,9 @@ func dlogProve[
 
 func dlogVerify[
 	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
-](tape transcripts.Transcript, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR P, mySharingId sharing.ID) error {
+](tape transcripts.Transcript, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR P, mySharingID sharing.ID) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
-	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(mySharingId))
+	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(mySharingID))
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
 	tape.AppendBytes(transcriptDLogSLabel, quorumBytes)
 	tape.AppendBytes(proverLabel, proverIDBytes)

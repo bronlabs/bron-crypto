@@ -207,7 +207,7 @@ func TestConcurrentSet_SymmetricDifference_Property(t *testing.T) {
 		for e := range symDiff.Iter() {
 			inS1 := s1.Contains(e)
 			inS2 := s2.Contains(e)
-			require.True(t, (inS1 || inS2) && !(inS1 && inS2))
+			require.True(t, (inS1 || inS2) && (!inS1 || !inS2))
 		}
 	})
 }

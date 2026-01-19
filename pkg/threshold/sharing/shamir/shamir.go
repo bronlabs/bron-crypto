@@ -37,24 +37,24 @@ func SharingIDToLagrangeNode[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeFi
 // convert Shamir shares to additive shares or to perform reconstruction.
 //
 // For shareholder i in set S, the coefficient λ_i = ∏_{j∈S,j≠i} j/(j-i).
-func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeField[FE], sharingIds ...sharing.ID) (ds.Map[sharing.ID, FE], error) {
-	if hashset.NewComparable(sharingIds...).Size() != len(sharingIds) {
+func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeField[FE], sharingIDs ...sharing.ID) (ds.Map[sharing.ID, FE], error) {
+	if hashset.NewComparable(sharingIDs...).Size() != len(sharingIDs) {
 		return nil, ErrMembership.WithMessage("invalid sharing id hash set")
 	}
 
-	sharingIdsScalar := make([]FE, len(sharingIds))
-	for i, id := range sharingIds {
-		sharingIdsScalar[i] = SharingIDToLagrangeNode(field, id)
+	sharingIDsScalar := make([]FE, len(sharingIDs))
+	for i, id := range sharingIDs {
+		sharingIDsScalar[i] = SharingIDToLagrangeNode(field, id)
 	}
 
-	basisPolynomialAtZero, err := lagrange.BasisAt(sharingIdsScalar, field.Zero())
+	basisPolynomialAtZero, err := lagrange.BasisAt(sharingIDsScalar, field.Zero())
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not compute all basis polynomials at x=0")
 	}
 
 	result := hashmap.NewComparable[sharing.ID, FE]()
 	for i, li := range basisPolynomialAtZero.Coefficients() {
-		result.Put(sharingIds[i], li)
+		result.Put(sharingIDs[i], li)
 	}
 
 	return result.Freeze(), nil

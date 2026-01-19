@@ -30,7 +30,7 @@ const (
 // Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite     *ecdsa.Suite[P, B, S]
-	sessionId network.SID
+	sessionID network.SID
 	shard     *dkls23.Shard[P, B, S]
 	quorum    network.Quorum
 	prng      io.Reader
@@ -59,7 +59,7 @@ type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 }
 
 // NewCosigner returns a new cosigner.
-func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
@@ -70,7 +70,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, ErrValidation.WithMessage("sharing id not part of the quorum")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 
 	//nolint:exhaustruct // lazy initialisation
 	c := &Cosigner[P, B, S]{
@@ -82,7 +82,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	}
 
 	var err error
-	c.state.zeroSetup, err = przsSetup.NewParticipant(sessionId, shard.Share().ID(), quorum, tape, prng)
+	c.state.zeroSetup, err = przsSetup.NewParticipant(sessionID, shard.Share().ID(), quorum, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("couldn't initialise zero setup protocol")
 	}
@@ -96,14 +96,14 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	for id := range c.otherCosigners() {
 		aliceTape := tape.Clone()
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.state.aliceMul[id], err = rvole_bbot.NewAlice(c.sessionId, mulSuite, prng, aliceTape)
+		c.state.aliceMul[id], err = rvole_bbot.NewAlice(c.sessionID, mulSuite, prng, aliceTape)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("couldn't initialise alice")
 		}
 
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
-		c.state.bobMul[id], err = rvole_bbot.NewBob(c.sessionId, mulSuite, prng, bobTape)
+		c.state.bobMul[id], err = rvole_bbot.NewBob(c.sessionID, mulSuite, prng, bobTape)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("couldn't initialise bob")
 		}

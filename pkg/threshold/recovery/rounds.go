@@ -100,7 +100,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 
 	var verificationVector feldman.VerificationVector[G, S]
 	for id := range m.quorum.Iter() {
-		if id == m.sharingId {
+		if id == m.sharingID {
 			continue
 		}
 		b, ok := r2b.Get(id)
@@ -121,11 +121,11 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 		ys = append(ys, u.BlindedShare.Value())
 	}
 
-	shareValue, err := lagrange.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.sharingId)))
+	shareValue, err := lagrange.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.sharingID)))
 	if err != nil {
 		return nil, nil, base.ErrAbort.WithMessage("cannot interpolate")
 	}
-	share, err = feldman.NewShare(m.sharingId, shareValue, nil)
+	share, err = feldman.NewShare(m.sharingID, shareValue, nil)
 	if err != nil {
 		return nil, nil, ErrFailed.WithMessage("cannot create share")
 	}

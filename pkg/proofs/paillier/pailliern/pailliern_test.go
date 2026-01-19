@@ -40,7 +40,7 @@ func Test_HappyPath(t *testing.T) {
 
 	prng := crand.Reader
 	label := "NizkPaillierNTranscriptLabel"
-	sessionId := "NizkPaillierNTestSessionId"
+	sessionID := "NizkPaillierNTestSessionID"
 
 	proverTranscript := hagrid.NewTranscript(label)
 	verifierTranscript := hagrid.NewTranscript(label)
@@ -48,7 +48,7 @@ func Test_HappyPath(t *testing.T) {
 	scheme := paillier.NewScheme()
 
 	for i := range 32 {
-		sid, err := network.NewSID([]byte(fmt.Sprintf("%s_%d", sessionId, i)))
+		sid, err := network.NewSID([]byte(fmt.Sprintf("%s_%d", sessionID, i)))
 		require.NoError(t, err)
 
 		pInt, err := crand.Prime(prng, znstar.PaillierKeyLen/2)

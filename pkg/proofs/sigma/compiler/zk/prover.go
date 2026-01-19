@@ -22,11 +22,11 @@ type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 // NewProver creates a new prover for the zero-knowledge compiled protocol.
 // The sigma protocol must have soundness error at least 2^(-80) (statistical security).
 // The prover will execute rounds 2 and 4 of the protocol.
-func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionID network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
 	if utils.IsNil(witness) {
 		return nil, ErrNil.WithMessage("witness")
 	}
-	p, err := newParticipant(sessionId, tape, sigmaProtocol, statement)
+	p, err := newParticipant(sessionID, tape, sigmaProtocol, statement)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}

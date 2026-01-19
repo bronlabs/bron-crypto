@@ -24,11 +24,11 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // The sigma protocol must have soundness error at least 2^(-80) (statistical security).
 // The prng is used to sample the random challenge. The verifier will execute
 // rounds 1, 3, and 5 of the protocol.
-func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
+func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionID network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
 	if prng == nil {
 		return nil, ErrNil.WithMessage("prng")
 	}
-	p, err := newParticipant(sessionId, tape, sigmaProtocol, statement)
+	p, err := newParticipant(sessionID, tape, sigmaProtocol, statement)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}

@@ -137,11 +137,11 @@ func TestRFCTestVectors(t *testing.T) {
 					t.Run(fmt.Sprintf("running encryption test for seq %d", test.Seq), func(t *testing.T) {
 						t.Parallel()
 
-						switch {
-						case suiteInfo.Setup.KEMID == DHKEM_P256_HKDF_SHA256:
+						switch suiteInfo.Setup.KEMID {
+						case DHKEM_P256_HKDF_SHA256:
 							kem := NewP256HKDFSha256KEM()
 							runnerEncryption(t, suiteInfo, kem, test)
-						case suiteInfo.Setup.KEMID == DHKEM_X25519_HKDF_SHA256:
+						case DHKEM_X25519_HKDF_SHA256:
 							kem := NewX25519HKDFSha256KEM()
 							runnerEncryption(t, suiteInfo, kem, test)
 						default:
@@ -154,11 +154,11 @@ func TestRFCTestVectors(t *testing.T) {
 					t.Run(fmt.Sprintf("running export test for iteration %d", i), func(t *testing.T) {
 						t.Parallel()
 
-						switch {
-						case suiteInfo.Setup.KEMID == DHKEM_P256_HKDF_SHA256:
+						switch suiteInfo.Setup.KEMID {
+						case DHKEM_P256_HKDF_SHA256:
 							kem := NewP256HKDFSha256KEM()
 							runnerExport(t, suiteInfo, kem, test)
-						case suiteInfo.Setup.KEMID == DHKEM_X25519_HKDF_SHA256:
+						case DHKEM_X25519_HKDF_SHA256:
 							kem := NewX25519HKDFSha256KEM()
 							runnerExport(t, suiteInfo, kem, test)
 						default:

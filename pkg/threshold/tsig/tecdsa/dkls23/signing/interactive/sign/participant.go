@@ -42,8 +42,8 @@ const (
 
 // Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	sessionId network.SID
-	sharingId sharing.ID
+	sessionID network.SID
+	sharingID sharing.ID
 	shard     *dkls23.Shard[P, B, S]
 	zeroSeeds przs.Seeds
 	quorum    network.Quorum
@@ -79,7 +79,7 @@ type State[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 }
 
 // NewCosigner returns a new cosigner.
-func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
@@ -90,7 +90,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, ErrValidation.WithMessage("sharing id not part of the quorum")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("couldn't randomise zero seeds")
@@ -102,22 +102,22 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	}
 	otSenders := make(map[sharing.ID]*ecbbot.Sender[P, S])
 	otReceivers := make(map[sharing.ID]*ecbbot.Receiver[P, S])
-	sharingId := shard.Share().ID()
+	sharingID := shard.Share().ID()
 	for id := range quorum.Iter() {
-		if id == sharingId {
+		if id == sharingID {
 			continue
 		}
 
 		otTape := tape.Clone()
-		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingId)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		otSender, err := ecbbot.NewSender(sessionId, otSuite, otTape, prng)
+		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingID)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		otSender, err := ecbbot.NewSender(sessionID, otSuite, otTape, prng)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("error creating bbot sender")
 		}
 
 		otTape = tape.Clone()
-		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingId)))
-		otReceiver, err := ecbbot.NewReceiver(sessionId, otSuite, otTape, prng)
+		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingID)))
+		otReceiver, err := ecbbot.NewReceiver(sessionID, otSuite, otTape, prng)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("error creating bbot receiver")
 		}
@@ -128,8 +128,8 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 
 	//nolint:exhaustruct // lazy initialisation
 	c := &Cosigner[P, B, S]{
-		sessionId:       sessionId,
-		sharingId:       sharingId,
+		sessionID:       sessionID,
+		sharingID:       sharingID,
 		quorum:          quorum,
 		shard:           shard,
 		suite:           suite,

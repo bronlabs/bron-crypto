@@ -13,8 +13,8 @@ type echoBroadcastRunner[B any] struct {
 }
 
 // NewEchoBroadcastRunner constructs an echo broadcast runner for the given party and quorum.
-func NewEchoBroadcastRunner[B any](sharingId sharing.ID, quorum network.Quorum, correlationId string, message B) (network.Runner[network.RoundMessages[B]], error) {
-	party, err := NewParticipant[B](sharingId, quorum)
+func NewEchoBroadcastRunner[B any](sharingID sharing.ID, quorum network.Quorum, correlationId string, message B) (network.Runner[network.RoundMessages[B]], error) {
+	party, err := NewParticipant[B](sharingID, quorum)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to create participant")
 	}

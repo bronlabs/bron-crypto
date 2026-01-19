@@ -95,11 +95,11 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	}
 }
 
-func stringifyShareholders(sharingIds []sharing.ID) string {
+func stringifyShareholders(sharingIDs []sharing.ID) string {
 	s := "("
-	for i, id := range sharingIds {
+	for i, id := range sharingIDs {
 		s += strconv.Itoa(int(id))
-		if i < len(sharingIds)-1 {
+		if i < len(sharingIDs)-1 {
 			s += ","
 		}
 	}

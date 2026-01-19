@@ -53,12 +53,7 @@ func TestPolynomialModuleProperties(t *testing.T) {
 		Func: func(s *k256.Scalar, a MVP) MVP { return a.ScalarOp(s) },
 	}
 
-	var suite *properties.TwoSortedModel[
-		*polynomials.PolynomialModule[*k256.Point, *k256.Scalar],
-		*k256.ScalarField,
-		MVP,
-		*k256.Scalar,
-	] = properties.PolynomialModule[
+	var suite = properties.PolynomialModule[
 		*polynomials.PolynomialModule[*k256.Point, *k256.Scalar],
 		*k256.Curve,
 	](

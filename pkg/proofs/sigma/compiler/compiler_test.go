@@ -50,22 +50,22 @@ func testUsagePattern(t *testing.T, compilerName compiler.Name) {
 	statementValue := curve.ScalarBaseMul(witnessValue)
 	statement := schnorr.NewStatement(statementValue)
 
-	var sessionId network.SID
-	_, err = io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err = io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 
 	// nizk, err := compiler.Compile(fiatshamir.Name, sigmaProtocol, prng)
 	nizk, err := compiler.Compile(compilerName, sigmaProtocol, prng)
 	require.NoError(t, err, "Compile should succeed for %s", compilerName)
 
-	// prover, _ := nizk.NewProver(sessionId, transcript)
+	// prover, _ := nizk.NewProver(sessionID, transcript)
 	proverTranscript := hagrid.NewTranscript("test")
-	prover, err := nizk.NewProver(sessionId, proverTranscript)
+	prover, err := nizk.NewProver(sessionID, proverTranscript)
 	require.NoError(t, err, "NewProver should succeed for %s", compilerName)
 
-	// verifier, _ := nizk.NewVerifier(sessionId, transcript)
+	// verifier, _ := nizk.NewVerifier(sessionID, transcript)
 	verifierTranscript := hagrid.NewTranscript("test")
-	verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
+	verifier, err := nizk.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err, "NewVerifier should succeed for %s", compilerName)
 
 	// proof, _ := prover.Prove(statement, witness)

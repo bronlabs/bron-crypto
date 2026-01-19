@@ -26,18 +26,18 @@ func NewMockCoordinator(quorum ...sharing.ID) *MockCoordinator {
 }
 
 // DeliveryFor returns a Delivery implementation bound to the given party.
-func (c *MockCoordinator) DeliveryFor(sharingId sharing.ID) network.Delivery {
-	recv := c.channels[sharingId]
+func (c *MockCoordinator) DeliveryFor(sharingID sharing.ID) network.Delivery {
+	recv := c.channels[sharingID]
 	send := make(map[sharing.ID]chan<- deliveryMessage)
 	for id, ch := range c.channels {
-		if id == sharingId {
+		if id == sharingID {
 			continue
 		}
 		send[id] = ch
 	}
 
 	return &mockDelivery{
-		sharingId:      sharingId,
+		sharingID:      sharingID,
 		quorum:         slices.Collect(maps.Keys(c.channels)),
 		receiveChannel: recv,
 		sendChannels:   send,
@@ -50,7 +50,7 @@ type deliveryMessage struct {
 }
 
 type mockDelivery struct {
-	sharingId      sharing.ID
+	sharingID      sharing.ID
 	quorum         []sharing.ID
 	receiveChannel <-chan deliveryMessage
 	sendChannels   map[sharing.ID]chan<- deliveryMessage
@@ -58,7 +58,7 @@ type mockDelivery struct {
 
 // PartyId returns the local party identifier.
 func (d *mockDelivery) PartyId() sharing.ID {
-	return d.sharingId
+	return d.sharingID
 }
 
 // Quorum returns the identifiers of the simulated quorum.
@@ -67,16 +67,16 @@ func (d *mockDelivery) Quorum() []sharing.ID {
 }
 
 // Send enqueues a message to the destination's channel.
-func (d *mockDelivery) Send(sharingId sharing.ID, payload []byte) error {
+func (d *mockDelivery) Send(sharingID sharing.ID, payload []byte) error {
 	payloadClone := make([]byte, len(payload))
 	copy(payloadClone, payload)
-	sendChan, ok := d.sendChannels[sharingId]
+	sendChan, ok := d.sendChannels[sharingID]
 	if !ok {
 		return errs2.Wrap(network.ErrFailed).WithMessage("no channel for recipient")
 	}
 
 	sendChan <- deliveryMessage{
-		From:    d.sharingId,
+		From:    d.sharingID,
 		Payload: payloadClone,
 	}
 	return nil

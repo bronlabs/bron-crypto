@@ -65,7 +65,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast]) 
 		received, _ := inb.Get(pid)
 		c.state.theirBigRCommitments[pid] = received.BigRCommitment
 	}
-	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionId, S, nic)
+	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
 	c.state.tapeFrozenBeforeDlogProof = c.tape.Clone()
 	bigRProof, statement, err := dlogProve(c, c.state.k, c.state.bigR, c.state.quorumBytes)
 	if err != nil {

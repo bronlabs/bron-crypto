@@ -40,7 +40,7 @@ type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness] interface {
 	// SigmaProtocolName returns the name of the underlying sigma protocol.
 	SigmaProtocolName() sigma.Name
 	// NewProver creates a new prover for generating proofs.
-	NewProver(sessionId network.SID, transcript transcripts.Transcript) (NIProver[X, W], error)
+	NewProver(sessionID network.SID, transcript transcripts.Transcript) (NIProver[X, W], error)
 	// NewVerifier creates a new verifier for checking proofs.
-	NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (NIVerifier[X], error)
+	NewVerifier(sessionID network.SID, transcript transcripts.Transcript) (NIVerifier[X], error)
 }

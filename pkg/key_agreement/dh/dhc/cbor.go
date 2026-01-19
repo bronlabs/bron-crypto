@@ -38,7 +38,7 @@ type extendedPrivateKeyDTO[S algebra.PrimeFieldElement[S]] struct {
 
 func (esk *ExtendedPrivateKey[S]) MarshalCBOR() ([]byte, error) {
 	dto := &extendedPrivateKeyDTO[S]{
-		V: esk.PrivateKey.v,
+		V: esk.v,
 		S: esk.s,
 	}
 	return serde.MarshalCBOR(dto)
@@ -72,7 +72,7 @@ func (esk *ExtendedPrivateKey[S]) UnmarshalCBOR(data []byte) error {
 	if !ok {
 		return ErrValidation.WithMessage("invalid extended private key scalar")
 	}
-	esk.PrivateKey.v = slices.Clone(dto.V)
+	esk.v = slices.Clone(dto.V)
 	esk.s = dto.S
 	return nil
 }

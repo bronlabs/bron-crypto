@@ -26,8 +26,8 @@ func Test_HappyPath(t *testing.T) {
 	as, err := sharing.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
 	require.NoError(t, err)
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err = io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err = io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 	curve := k256.NewCurve()
 
@@ -37,11 +37,11 @@ func Test_HappyPath(t *testing.T) {
 	tapes[2] = hagrid.NewTranscript("test")
 
 	participants := make([]*hjky.Participant[*k256.Point, *k256.Scalar], as.Shareholders().Size())
-	participants[0], err = hjky.NewParticipant(sessionId, 1, as, curve, tapes[0], prng)
+	participants[0], err = hjky.NewParticipant(sessionID, 1, as, curve, tapes[0], prng)
 	require.NoError(t, err)
-	participants[1], err = hjky.NewParticipant(sessionId, 2, as, curve, tapes[1], prng)
+	participants[1], err = hjky.NewParticipant(sessionID, 2, as, curve, tapes[1], prng)
 	require.NoError(t, err)
-	participants[2], err = hjky.NewParticipant(sessionId, 3, as, curve, tapes[2], prng)
+	participants[2], err = hjky.NewParticipant(sessionID, 3, as, curve, tapes[2], prng)
 
 	r1bo := make(map[sharing.ID]*hjky.Round1Broadcast[*k256.Point, *k256.Scalar])
 	r1uo := make(map[sharing.ID]network.RoundMessages[*hjky.Round1P2P[*k256.Point, *k256.Scalar]])

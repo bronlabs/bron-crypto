@@ -69,8 +69,8 @@ func Test_HappyPath(t *testing.T) {
 		}
 	})
 
-	var sessionId network.SID
-	_, err = io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err = io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 	hashFunc := sha256.New
 	suite, err := softspoken.NewSuite(XI, L, hashFunc)
@@ -78,7 +78,7 @@ func Test_HappyPath(t *testing.T) {
 	tape := hagrid.NewTranscript("test")
 
 	receiverTape := tape.Clone()
-	receiver, err := softspoken.NewReceiver(sessionId, senderSeeds, suite, receiverTape, prng)
+	receiver, err := softspoken.NewReceiver(sessionID, senderSeeds, suite, receiverTape, prng)
 	require.NoError(t, err)
 	choices := make([]byte, XI/8)
 	_, err = io.ReadFull(prng, choices)
@@ -87,7 +87,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	senderTape := tape.Clone()
-	sender, err := softspoken.NewSender(sessionId, receiverSeeds, suite, senderTape, prng)
+	sender, err := softspoken.NewSender(sessionID, receiverSeeds, suite, senderTape, prng)
 	require.NoError(t, err)
 	senderOutput, err := sender.Round2(r1)
 	require.NoError(t, err)

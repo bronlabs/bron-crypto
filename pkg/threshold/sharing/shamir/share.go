@@ -19,7 +19,7 @@ type Share[FE algebra.PrimeFieldElement[FE]] struct {
 }
 
 type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
-	ID sharing.ID `cbor:"sharingId"`
+	ID sharing.ID `cbor:"sharingID"`
 	V  FE         `cbor:"value"`
 }
 

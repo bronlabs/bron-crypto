@@ -20,8 +20,8 @@ func Test_HappyPath(t *testing.T) {
 	const XI = 128
 	const L = 1
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
@@ -34,9 +34,9 @@ func Test_HappyPath(t *testing.T) {
 
 	senderTape := hagrid.NewTranscript("test")
 	receiverTape := senderTape.Clone()
-	sender, err := vsot.NewSender(sessionId, suite, senderTape, prng)
+	sender, err := vsot.NewSender(sessionID, suite, senderTape, prng)
 	require.NoError(t, err)
-	receiver, err := vsot.NewReceiver(sessionId, suite, receiverTape, prng)
+	receiver, err := vsot.NewReceiver(sessionID, suite, receiverTape, prng)
 	require.NoError(t, err)
 
 	r1, err := sender.Round1()

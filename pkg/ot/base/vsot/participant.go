@@ -21,7 +21,7 @@ const (
 )
 
 type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	sessionId network.SID
+	sessionID network.SID
 	suite     *Suite[P, B, S]
 	tape      transcripts.Transcript
 	round     int
@@ -29,7 +29,7 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 }
 
 func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
-	digest, err := hashing.HashPrefixedLength(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionId[:], b.ToCompressed(), a.ToCompressed(), data)
+	digest, err := hashing.HashPrefixedLength(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot compute hash")
 	}
@@ -52,15 +52,15 @@ type senderState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 }
 
 // NewSender creates a VSOT sender bound to the session, suite, transcript, and randomness source.
-func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Sender[P, B, S], error) {
+func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Sender[P, B, S], error) {
 	if suite == nil || tape == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	s := &Sender[P, B, S]{
 		participant: participant[P, B, S]{
-			sessionId: sessionId,
+			sessionID: sessionID,
 			suite:     suite,
 			tape:      tape,
 			round:     1,
@@ -90,15 +90,15 @@ type receiverState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 }
 
 // NewReceiver creates a VSOT receiver bound to the session, suite, transcript, and randomness source.
-func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[P, B, S], error) {
+func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[P, B, S], error) {
 	if suite == nil || tape == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	r := &Receiver[P, B, S]{
 		participant: participant[P, B, S]{
-			sessionId: sessionId,
+			sessionID: sessionID,
 			suite:     suite,
 			tape:      tape,
 			round:     2,

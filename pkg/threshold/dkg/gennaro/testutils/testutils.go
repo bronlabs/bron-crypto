@@ -17,12 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionId network.SID, accessStructure *sharing.ThresholdAccessStructure, niCompiler compiler.Name, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionID network.SID, accessStructure *sharing.ThresholdAccessStructure, niCompiler compiler.Name, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
 	tb.Helper()
 
 	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])
 	for id := range accessStructure.Shareholders().Iter() {
-		runner, err := gennaro.NewGennaroDKGRunner(group, sessionId, id, accessStructure, niCompiler, tapes[id], crand.Reader)
+		runner, err := gennaro.NewGennaroDKGRunner(group, sessionID, id, accessStructure, niCompiler, tapes[id], crand.Reader)
 		require.NoError(tb, err)
 		runners[id] = runner
 	}

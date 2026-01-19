@@ -41,7 +41,7 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	dlogWitness := &dlogschnorr.Witness[S]{
 		W: s.state.b,
 	}
-	dlogProver, err := dlogProtocolCompiler.NewProver(s.sessionId, s.tape)
+	dlogProver, err := dlogProtocolCompiler.NewProver(s.sessionID, s.tape)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create dlog prover")
 	}
@@ -83,7 +83,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	dlogStatement := &dlogschnorr.Statement[P, S]{
 		X: r1.BigB,
 	}
-	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.sessionId, r.tape)
+	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.sessionID, r.tape)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog verifier")
 	}

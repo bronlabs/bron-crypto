@@ -22,7 +22,7 @@ func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldEleme
 
 	return func(yield func(p sharing.ID, m message[MB, MU]) bool) {
 		for id := range c.quorum.Iter() {
-			if id == c.sharingId {
+			if id == c.sharingID {
 				continue
 			}
 
@@ -48,7 +48,7 @@ func validateIncomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldEl
 
 	return func(yield func(p sharing.ID, m MU) bool) {
 		for id := range c.quorum.Iter() {
-			if id == c.sharingId {
+			if id == c.sharingID {
 				continue
 			}
 
@@ -71,7 +71,7 @@ type messagePointerConstraint[MP network.Message, M any] interface {
 func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](p *Cosigner[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
 	return func(yield func(p sharing.ID, out UPtr) bool) {
 		for id := range p.quorum.Iter() {
-			if id == p.sharingId {
+			if id == p.sharingID {
 				continue
 			}
 

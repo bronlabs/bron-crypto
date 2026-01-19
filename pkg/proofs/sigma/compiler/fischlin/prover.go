@@ -20,7 +20,7 @@ var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
 
 // prover implements the NIProver interface for Fischlin proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
-	sessionId     network.SID
+	sessionID     network.SID
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
@@ -63,7 +63,7 @@ redo:
 
 		// 3. common-h ← H(x, m, sid)
 		// (This is a full hash, with output length 2*κc)
-		commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, p.sessionId[:])
+		commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, p.sessionID[:])
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("cannot generate commitment")
 		}

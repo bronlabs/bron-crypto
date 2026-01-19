@@ -24,7 +24,7 @@ const (
 )
 
 type participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	sessionId network.SID
+	sessionID network.SID
 	suite     *Suite[G, S]
 	xi, rho   int
 	tape      transcripts.Transcript
@@ -51,12 +51,12 @@ type Bob[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] stru
 	gamma    [][]S
 }
 
-func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant[G, S], error) {
+func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant[G, S], error) {
 	if suite == nil || prng == nil || tape == nil || initialRound < 1 {
 		return nil, ErrNil.WithMessage("argument")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	kappa := suite.group.ScalarStructure().ElementSize() * 8
 	xi := kappa + 2*base.StatisticalSecurityBits
 	rho := mathutils.CeilDiv(kappa, base.ComputationalSecurityBits)
@@ -64,7 +64,7 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	return &participant[G, S]{
 		prng:      prng,
 		round:     initialRound,
-		sessionId: sessionId,
+		sessionID: sessionID,
 		suite:     suite,
 		tape:      tape,
 		xi:        xi,
@@ -73,8 +73,8 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 }
 
 // NewAlice returns a new Alice participant.
-func NewAlice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Alice[G, S], error) {
-	p, err := newParticipant(sessionId, suite, prng, tape, 2)
+func NewAlice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Alice[G, S], error) {
+	p, err := newParticipant(sessionID, suite, prng, tape, 2)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
@@ -82,7 +82,7 @@ func NewAlice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create ecbbot suite")
 	}
-	sender, err := ecbbot.NewSender(p.sessionId, otSuite, tape, prng)
+	sender, err := ecbbot.NewSender(p.sessionID, otSuite, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create sender")
 	}
@@ -102,8 +102,8 @@ func NewAlice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 }
 
 // NewBob returns a new Bob participant.
-func NewBob[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Bob[G, S], error) {
-	p, err := newParticipant(sessionId, suite, prng, tape, 1)
+func NewBob[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Bob[G, S], error) {
+	p, err := newParticipant(sessionID, suite, prng, tape, 1)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
@@ -111,7 +111,7 @@ func NewBob[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](s
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create ecbbot suite")
 	}
-	receiver, err := ecbbot.NewReceiver(p.sessionId, otSuite, tape, prng)
+	receiver, err := ecbbot.NewReceiver(p.sessionID, otSuite, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create receiver")
 	}

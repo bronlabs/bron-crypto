@@ -107,13 +107,13 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	for i := range iters {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			prng := crand.Reader
-			sessionId := ntu.MakeRandomSessionId(t, prng)
+			sessionID := ntu.MakeRandomSessionID(t, prng)
 			quorum := ntu.MakeRandomQuorum(t, prng, total)
 			accessStructure, err := sharing.NewThresholdAccessStructure(uint(threshold), quorum)
 			require.NoError(t, err)
 
 			tapes := ttu.MakeRandomTapes(t, prng, quorum)
-			runners := tu.MakeGennaroDKGRunners(t, sessionId, accessStructure, niCompiler, group, tapes)
+			runners := tu.MakeGennaroDKGRunners(t, sessionID, accessStructure, niCompiler, group, tapes)
 			dkgOutputs := ntu.TestExecuteRunners(t, runners)
 
 			t.Run("public materials are consistent", func(t *testing.T) {

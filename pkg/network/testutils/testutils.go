@@ -26,17 +26,17 @@ func MakeRandomQuorum(tb testing.TB, prng io.Reader, n int) network.Quorum {
 		var id [2]byte
 		_, err := io.ReadFull(prng, id[:])
 		require.NoError(tb, err)
-		sharingId := binary.LittleEndian.Uint16(id[:])
-		if sharingId != 0 {
-			quorum.Add(sharing.ID(sharingId))
+		sharingID := binary.LittleEndian.Uint16(id[:])
+		if sharingID != 0 {
+			quorum.Add(sharing.ID(sharingID))
 		}
 	}
 
 	return quorum.Freeze()
 }
 
-// MakeRandomSessionId reads 32 random bytes into an SID.
-func MakeRandomSessionId(tb testing.TB, prng io.Reader) network.SID {
+// MakeRandomSessionID reads 32 random bytes into an SID.
+func MakeRandomSessionID(tb testing.TB, prng io.Reader) network.SID {
 	tb.Helper()
 
 	var sid network.SID
