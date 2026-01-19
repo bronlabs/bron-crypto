@@ -175,6 +175,7 @@ func (s *Scheme[GE, S]) Verifier(opts ...VerifierOption[GE, S]) (*Verifier[GE, S
 		VerifierTrait: schnorrlike.VerifierTrait[*Variant[GE, S], GE, S, Message]{
 			V:                          s.vr,
 			ResponseOperatorIsNegative: s.vr.responseOperatorIsNegative,
+			ChallengePublicKey:         nil,
 		},
 	}
 	for _, opt := range opts {

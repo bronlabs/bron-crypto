@@ -102,6 +102,7 @@ func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
 	return &PublicMaterial[E, S]{
 		BasePublicMaterial: sh.BasePublicMaterial,
 		pk:                 sh.pk,
+		pkOnce:             sync.Once{},
 	}
 }
 
@@ -152,7 +153,7 @@ func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create public key from verification vector")
 	}
-	return &Shard[E, S]{BaseShard: *bs, pk: pk}, nil
+	return &Shard[E, S]{BaseShard: *bs, pk: pk, pkOnce: sync.Once{}}, nil
 }
 
 var (

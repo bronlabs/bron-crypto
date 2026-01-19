@@ -116,7 +116,11 @@ func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape tran
 		},
 		paillierPublicKey: pk,
 		enc:               enc,
-		state:             &VerifierState{},
+		state: &VerifierState{
+			rootsProver: nil,
+			x:           nil,
+			y:           nil,
+		},
 	}, nil
 }
 
@@ -164,7 +168,10 @@ func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape trans
 			Prng:                  prng,
 		},
 		paillierSecretKey: sk,
-		state:             &ProverState{},
+		state: &ProverState{
+			rootsVerifier: nil,
+			x:             nil,
+		},
 	}, nil
 }
 

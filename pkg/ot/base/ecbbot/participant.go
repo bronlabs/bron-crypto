@@ -58,6 +58,7 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 			tape:  tape,
 			prng:  prng,
 		},
+		state: SenderState[S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
 
 	return s, nil

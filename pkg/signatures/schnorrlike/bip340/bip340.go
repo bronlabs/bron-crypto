@@ -153,7 +153,10 @@ func (Scheme) Name() signatures.Name {
 // Variant returns the BIP-340 variant configuration for this scheme.
 func (s *Scheme) Variant() *Variant {
 	return &Variant{
-		Aux: s.aux,
+		sk:         nil,
+		Aux:        s.aux,
+		msg:        nil,
+		adjustedSk: nil,
 	}
 }
 
@@ -180,15 +183,19 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	variant := &Variant{
-		Aux: s.aux,
-		sk:  privateKey,
+		sk:         privateKey,
+		Aux:        s.aux,
+		msg:        nil,
+		adjustedSk: nil,
 	}
 	out := &Signer{
 		sg: schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]{
 			Sk: privateKey,
 			V:  variant,
 			Verifier: &Verifier{
-				variant: variant,
+				variant:            variant,
+				prng:               nil,
+				challengePublicKey: nil,
 			},
 		},
 	}
@@ -203,7 +210,9 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 // Verifier creates a verifier for validating BIP-340 signatures.
 func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	out := &Verifier{
-		variant: s.Variant(),
+		variant:            s.Variant(),
+		prng:               nil,
+		challengePublicKey: nil,
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
@@ -248,6 +257,7 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 		return nil, errs2.Wrap(err).WithMessage("invalid signature")
 	}
 	return &Signature{
+		E: nil,
 		R: r,
 		S: s,
 	}, nil

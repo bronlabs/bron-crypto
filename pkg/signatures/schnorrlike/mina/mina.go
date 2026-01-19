@@ -198,7 +198,9 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 		VerifierTrait: schnorrlike.VerifierTrait[*Variant, *GroupElement, *Scalar, *Message]{
 			V:                          s.vr,
 			ResponseOperatorIsNegative: false,
+			ChallengePublicKey:         nil,
 		},
+		prng: nil,
 	}
 	for _, opt := range opts {
 		if err := opt(verifier); err != nil {
@@ -348,8 +350,8 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 	}
 
 	return &Signature{
+		E: nil, // E is not stored in Mina signatures, it will be recomputed during verification
 		R: R,
 		S: s,
-		// E is not stored in Mina signatures, it will be recomputed during verification
 	}, nil
 }

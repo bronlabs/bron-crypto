@@ -23,7 +23,8 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 
 	receiverOutput := &ReceiverOutput{
 		ot.ReceiverOutput[[]byte]{
-			Choices: x,
+			Choices:  x,
+			Messages: nil,
 		},
 	}
 

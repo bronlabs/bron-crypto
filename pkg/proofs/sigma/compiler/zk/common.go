@@ -86,11 +86,13 @@ func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S si
 	}
 
 	return &participant[X, W, A, S, Z]{
-		sessionId: sessionId,
-		tape:      tape,
-		protocol:  sigmaProtocol,
-		comm:      comm,
-		statement: statement,
-		round:     1,
+		sessionId:  sessionId,
+		tape:       tape,
+		protocol:   sigmaProtocol,
+		statement:  statement,
+		commitment: *new(A),
+		response:   *new(Z),
+		comm:       comm,
+		round:      1,
 	}, nil
 }

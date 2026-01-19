@@ -52,7 +52,7 @@ func NewRecoverer[
 		mislayerId: mislayerId,
 		quorum:     quorum,
 		prng:       prng,
-		state:      RecovererState[G, S]{},
+		state:      RecovererState[G, S]{blindShare: nil},
 	}
 	return r, nil
 }

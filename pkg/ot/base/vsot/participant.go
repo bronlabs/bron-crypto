@@ -66,6 +66,7 @@ func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 			round:     1,
 			prng:      prng,
 		},
+		state: senderState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
 
 	return s, nil
@@ -103,6 +104,7 @@ func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 			round:     2,
 			prng:      prng,
 		},
+		state: receiverState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
 
 	return r, nil

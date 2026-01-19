@@ -42,6 +42,12 @@ func NewParticipant(sessionId network.SID, mySharingId sharing.ID, quorum networ
 		quorum:      quorum,
 		tape:        tape,
 		prng:        prng,
+		state: State{
+			commitmentScheme:  nil,
+			seedContributions: nil,
+			witnesses:         nil,
+			commitments:       nil,
+		},
 	}
 	p.tape.AppendBytes(domainSeparator, sessionId[:])
 

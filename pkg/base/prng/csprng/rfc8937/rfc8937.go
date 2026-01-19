@@ -39,8 +39,9 @@ func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 	}
 
 	return &WrappedReader{
-		salt:   salt,
-		wrapee: prng,
+		salt:    salt,
+		counter: atomic.Uint64{},
+		wrapee:  prng,
 	}, nil
 }
 

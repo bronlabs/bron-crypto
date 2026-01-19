@@ -158,6 +158,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) SignatureSubGroup() curves.PairingFri
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK, PKFE, SG, SGFE, E, S]) (*KeyGenerator[PK, PKFE, SG, SGFE, E, S], error) {
 	kg := &KeyGenerator[PK, PKFE, SG, SGFE, E, S]{
 		group: s.keySubGroup,
+		seed:  nil,
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
@@ -181,6 +182,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKF
 		cipherSuite:       s.cipherSuite,
 		signatureSubGroup: s.signatureSubGroup,
 		variant:           s.variant,
+		dst:               "",
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
@@ -200,6 +202,8 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, P
 		signatureSubGroup: s.signatureSubGroup,
 		rogueKeyAlg:       s.rogueKeyAlg,
 		variant:           s.variant,
+		pops:              nil,
+		dst:               "",
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {

@@ -33,8 +33,10 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}
 	return &Verifier[X, W, A, S, Z]{
-		participant: *p,
-		prng:        prng,
+		participant:    *p,
+		challengeBytes: nil,
+		eWitness:       hash_comm.Witness{},
+		prng:           prng,
 	}, nil
 }
 

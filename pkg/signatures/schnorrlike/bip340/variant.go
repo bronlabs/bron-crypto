@@ -169,13 +169,19 @@ func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 // Clone creates a deep copy of the variant.
 func (v *Variant) Clone() *Variant {
 	out := &Variant{
-		Aux: v.Aux,
+		sk:         nil,
+		Aux:        v.Aux,
+		msg:        nil,
+		adjustedSk: nil,
 	}
 	if v.sk != nil {
 		out.sk = v.sk.Clone()
 	}
 	if v.msg != nil {
 		copy(out.msg, v.msg)
+	}
+	if v.adjustedSk != nil {
+		out.adjustedSk = v.adjustedSk.Clone()
 	}
 	return out
 }

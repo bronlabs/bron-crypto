@@ -158,7 +158,12 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 				curve:  curve,
 				zModQ:  q,
 				zModQ2: q2,
+				a:      nil,
+				b:      nil,
 			},
+			cDoublePrimeWitness: hash_comm.Witness{},
+			bigQPrime:           *new(P),
+			cHat:                hash_comm.Commitment{},
 		},
 	}, nil
 }
@@ -261,7 +266,13 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 				curve:  curve,
 				zModQ:  q,
 				zModQ2: qSquared,
+				a:      nil,
+				b:      nil,
 			},
+			alpha:                  nil,
+			bigQHat:                *new(P),
+			bigQHatWitness:         hash_comm.Witness{},
+			cDoublePrimeCommitment: hash_comm.Commitment{},
 		},
 	}, nil
 }

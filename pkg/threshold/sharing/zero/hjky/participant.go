@@ -57,9 +57,13 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 		group:           g,
 		field:           field,
 		scheme:          scheme,
-		tape:            tape,
 		round:           1,
 		prng:            prng,
+		tape:            tape,
+		state: State[G, S]{
+			verificationVectors: nil,
+			share:               nil,
+		},
 	}, nil
 }
 

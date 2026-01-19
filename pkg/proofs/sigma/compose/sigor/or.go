@@ -165,6 +165,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 	}
 	a := make(Commitment[A], p.count)
 	s := &State[S, Z]{
+		B: 0,
 		S: make([]S, p.count),
 		E: make([][]byte, p.count),
 		Z: make([]Z, p.count),

@@ -75,8 +75,8 @@ linters:
     - errorlint
     # check exhaustiveness of enum switch statements
     - exhaustive
-    # # Checks if all structure fields are initialized.
-    # - exhaustruct
+    # Checks if all structure fields are initialized.
+    - exhaustruct
     # # # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
     # # # TODO: enable this when it doesn't spit out FIXMEs in people'e code.
     # # - exptostd

@@ -185,7 +185,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, 
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not sign")
 	}
-	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv}
+	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv, pop: nil}
 	if s.rogueKeyAlg == POP {
 		out.pop = &pop
 	}
@@ -233,7 +233,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not sign")
 	}
-	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv}
+	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv, pop: nil}
 	if s.rogueKeyAlg == POP {
 		out.pop = &pop
 	}
@@ -288,7 +288,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 	}
 
 	for i, v := range batchValues {
-		batch[i] = &Signature[SG, SGFE, PK, PKFE, E, S]{v: v}
+		batch[i] = &Signature[SG, SGFE, PK, PKFE, E, S]{v: v, pop: nil}
 		if s.rogueKeyAlg == POP {
 			batch[i].pop = &pop
 			continue

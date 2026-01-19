@@ -202,8 +202,12 @@ func NewCosigner[
 		variant:      variant,
 		round:        1,
 		state: &State[GE, S]{
-			quorumBytes:          quorumBytes,
-			theirBigRCommitments: make(map[sharing.ID]lindell22.Commitment, quorum.Size()-1),
+			quorumBytes:               quorumBytes,
+			k:                         *new(S),
+			bigR:                      *new(GE),
+			opening:                   lindell22.Opening{},
+			theirBigRCommitments:      make(map[sharing.ID]lindell22.Commitment, quorum.Size()-1),
+			tapeFrozenBeforeDlogProof: nil,
 		},
 	}, nil
 }

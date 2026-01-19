@@ -67,6 +67,7 @@ func NewReceiverOutput[S algebra.PrimeFieldElement[S]](xi, l int) *ReceiverOutpu
 	}
 	return &ReceiverOutput[S]{
 		ot.ReceiverOutput[S]{
+			Choices:  nil,
 			Messages: r,
 		},
 	}

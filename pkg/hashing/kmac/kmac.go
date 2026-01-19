@@ -73,10 +73,9 @@ func RightEncode(value uint64) []byte {
 
 // AbsorbPaddedKey creates a KMAC instance by absorbing the padded key into the cSHAKE state.
 func AbsorbPaddedKey(key []byte, tagSize int, c sha3.ShakeHash) hash.Hash {
-	k := &kmac{ShakeHash: c, tagSize: tagSize}
 	// absorb bytepad(encode_string(K), rate) into the internal state
-	k.initBlock = LeftEncode(uint64(len(key) * 8))
-	k.initBlock = slices.Concat(k.initBlock, key)
+	initBlock := slices.Concat(LeftEncode(uint64(len(key)*8)), key)
+	k := &kmac{ShakeHash: c, tagSize: tagSize, initBlock: initBlock}
 	k.Write(Bytepad(k.initBlock, k.BlockSize()))
 	return k
 }

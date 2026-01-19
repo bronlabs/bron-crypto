@@ -30,8 +30,10 @@ func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, e
 		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	return &Variant{
-		nid: nid,
-		sk:  privateKey,
+		nid:  nid,
+		sk:   privateKey,
+		prng: nil,
+		msg:  nil,
 	}, nil
 }
 
@@ -43,7 +45,9 @@ func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
 	}
 	return &Variant{
 		nid:  nid,
+		sk:   nil,
 		prng: prng,
+		msg:  nil,
 	}, nil
 }
 

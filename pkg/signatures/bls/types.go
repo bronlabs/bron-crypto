@@ -481,7 +481,7 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *Signature[Sig, S
 	if !other.v.IsTorsionFree() {
 		return nil, ErrInvalidArgument.WithMessage("cannot add signature with torsion point")
 	}
-	out := &Signature[Sig, SigFE, PK, PKFE, E, S]{v: sig.v.Add(other.v)}
+	out := &Signature[Sig, SigFE, PK, PKFE, E, S]{v: sig.v.Add(other.v), pop: nil}
 	if sig.pop == nil && other.pop == nil {
 		return out, nil
 	}

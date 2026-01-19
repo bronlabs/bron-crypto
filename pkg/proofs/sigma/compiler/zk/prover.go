@@ -32,8 +32,10 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 	}
 	p.round = 2 // Prover starts at round 2 (receives verifier's challenge commitment first)
 	return &Prover[X, W, A, S, Z]{
-		participant: *p,
-		witness:     witness,
+		participant:         *p,
+		challengeCommitment: hash_comm.Commitment{},
+		witness:             witness,
+		state:               *new(S),
 	}, nil
 }
 
