@@ -60,7 +60,7 @@ func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 		return nil, errs2.Wrap(err).WithMessage("cannot convert to scalar")
 	}
 
-	v, err := ecdsa.ComputeRecoveryId(r)
+	v, err := ecdsa.ComputeRecoveryID(r)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not compute recovery id")
 	}

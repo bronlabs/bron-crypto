@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 )
 
-func DeHex_Testing(h string) []byte {
+func DeHex_Testing(h string) []byte { //nolint:staticcheck // _Testing suffix is more clear.
 	result, _ := hex.DecodeString(h)
 	return result
 }
 
-type SetupInfo_Testing struct {
+type SetupInfo_Testing struct { //nolint:staticcheck // _Testing suffix is more clear.
 	Mode   ModeID
 	KEMID  KEMID
 	KDFID  KDFID
@@ -38,7 +38,7 @@ type SetupInfo_Testing struct {
 	SkSm []byte
 }
 
-type EncryptionInfo_Testing struct {
+type EncryptionInfo_Testing struct { //nolint:staticcheck // _Testing suffix is more clear.
 	Seq   uint64
 	Pt    []byte
 	Aad   []byte
@@ -46,20 +46,20 @@ type EncryptionInfo_Testing struct {
 	Ct    []byte
 }
 
-type ExportInfo_Testing struct {
+type ExportInfo_Testing struct { //nolint:staticcheck // _Testing suffix is more clear.
 	ExporterContext []byte
 	L               int
 	ExportedValue   []byte
 }
 
-type SuiteInfo_Testing struct {
+type SuiteInfo_Testing struct { //nolint:staticcheck // _Testing suffix is more clear.
 	Mode        ModeID
 	Setup       *SetupInfo_Testing
 	Encryptions []*EncryptionInfo_Testing
 	Exports     []*ExportInfo_Testing
 }
 
-type Suite_Testing struct {
+type Suite_Testing struct { //nolint:staticcheck // _Testing suffix is more clear.
 	Name string
 	Info []*SuiteInfo_Testing
 }

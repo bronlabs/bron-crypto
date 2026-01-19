@@ -11,10 +11,10 @@ import (
 )
 
 // ExchangeUnicastSimple sends messages to all participants and receives the same messages back from them.
-func ExchangeUnicastSimple[U any](rt *Router, correlationId string, messages RoundMessages[U]) (RoundMessages[U], error) {
+func ExchangeUnicastSimple[U any](rt *Router, correlationID string, messages RoundMessages[U]) (RoundMessages[U], error) {
 	messagesSerialized := make(map[sharing.ID][]byte)
 	for _, id := range rt.Quorum() {
-		if id == rt.PartyId() {
+		if id == rt.PartyID() {
 			continue
 		}
 		message, ok := messages.Get(id)
@@ -27,13 +27,13 @@ func ExchangeUnicastSimple[U any](rt *Router, correlationId string, messages Rou
 		}
 		messagesSerialized[id] = messageSerialized
 	}
-	err := rt.SendTo(correlationId, messagesSerialized)
+	err := rt.SendTo(correlationID, messagesSerialized)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to send messages")
 	}
 
 	coparties := slices.Collect(maps.Keys(messagesSerialized))
-	receivedMessagesSerialized, err := rt.ReceiveFrom(correlationId, coparties...)
+	receivedMessagesSerialized, err := rt.ReceiveFrom(correlationID, coparties...)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to exchange messages")
 	}

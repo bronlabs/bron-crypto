@@ -210,7 +210,7 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 	sDoublePrime := k1Inv.Mul(sPrime)
 
 	v := new(int)
-	*v, err = ecdsa.ComputeRecoveryId(pc.state.bigR)
+	*v, err = ecdsa.ComputeRecoveryID(pc.state.bigR)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not compute recovery id")
 	}

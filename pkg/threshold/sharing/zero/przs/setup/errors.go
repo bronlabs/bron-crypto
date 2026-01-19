@@ -1,4 +1,4 @@
-package przsSetup
+package przssetup
 
 import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
 

@@ -68,11 +68,11 @@ func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.R
 		}
 
 		message := p.state.messages[id]
-		for echoId := range p.quorum.Iter() {
-			if echoId == p.sharingID || echoId == id {
+		for echoID := range p.quorum.Iter() {
+			if echoID == p.sharingID || echoID == id {
 				continue
 			}
-			echo, ok := r2.Get(echoId)
+			echo, ok := r2.Get(echoID)
 			if !ok {
 				return nil, ErrFailed.WithMessage("missing message")
 			}

@@ -71,13 +71,13 @@ func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 //   - suite: The cipher suite specifying KEM, KDF, and AEAD algorithms
 //   - receiverPublicKey: The recipient's public key (pkR)
 //   - psk: The pre-shared key (MUST have at least 32 bytes of entropy)
-//   - pskId: Identifier for the PSK (used to select among multiple PSKs)
+//   - pskID: Identifier for the PSK (used to select among multiple PSKs)
 //   - info: Application-supplied information (optional; default "")
 //   - prng: Source of randomness for ephemeral key generation
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.2
-func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], psk, pskId, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
-	out, err := internal.NewSenderContext(PSk, suite, receiverPublicKey, nil, info, psk, pskId, prng)
+func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], psk, pskID, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
+	out, err := internal.NewSenderContext(PSk, suite, receiverPublicKey, nil, info, psk, pskID, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -104,12 +104,12 @@ func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra
 //   - receiverPrivatekey: The recipient's private key (skR)
 //   - ephemeralPublicKey: The capsule (enc) received from the sender
 //   - psk: The pre-shared key (must match sender's)
-//   - pskId: Identifier for the PSK (must match sender's)
+//   - pskID: Identifier for the PSK (must match sender's)
 //   - info: Application-supplied information (must match sender's)
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.2
-func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext[P, B, S], error) {
-	out, err := internal.NewReceiverContext(PSk, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, psk, pskId)
+func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], psk, pskID, info []byte) (*ReceiverContext[P, B, S], error) {
+	out, err := internal.NewReceiverContext(PSk, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, psk, pskID)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -175,13 +175,13 @@ func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 //   - receiverPublicKey: The recipient's public key (pkR)
 //   - senderPrivateKey: The sender's private key (skS) for authentication
 //   - psk: The pre-shared key (MUST have at least 32 bytes of entropy)
-//   - pskId: Identifier for the PSK
+//   - pskID: Identifier for the PSK
 //   - info: Application-supplied information (optional; default "")
 //   - prng: Source of randomness for ephemeral key generation
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4
-func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], psk, pskId, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
-	out, err := internal.NewSenderContext(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
+func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], psk, pskID, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
+	out, err := internal.NewSenderContext(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskID, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -200,12 +200,12 @@ func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 //   - ephemeralPublicKey: The capsule (enc) received from the sender
 //   - senderPublicKey: The sender's public key (pkS) for authentication
 //   - psk: The pre-shared key (must match sender's)
-//   - pskId: Identifier for the PSK (must match sender's)
+//   - pskID: Identifier for the PSK (must match sender's)
 //   - info: Application-supplied information (must match sender's)
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4
-func SetupAuthPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext[P, B, S], error) {
-	out, err := internal.NewReceiverContext(AuthPSk, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskId)
+func SetupAuthPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], psk, pskID, info []byte) (*ReceiverContext[P, B, S], error) {
+	out, err := internal.NewReceiverContext(AuthPSk, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskID)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}

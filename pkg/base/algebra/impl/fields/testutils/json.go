@@ -9,11 +9,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 )
 
-type FiniteFieldElementJson[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
+type FiniteFieldElementJSON[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
 	V F
 }
 
-func (f *FiniteFieldElementJson[FP, F]) UnmarshalJSON(data []byte) error {
+func (f *FiniteFieldElementJSON[FP, F]) UnmarshalJSON(data []byte) error {
 	type innerType []string
 	var innerData innerType
 	err := json.Unmarshal(data, &innerData)

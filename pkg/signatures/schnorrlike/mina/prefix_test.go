@@ -26,7 +26,7 @@ func TestSignaturePrefix(t *testing.T) {
 
 	t.Run("custom network", func(t *testing.T) {
 		t.Parallel()
-		prefix := SignaturePrefix(NetworkId("custom"))
+		prefix := SignaturePrefix(NetworkID("custom"))
 		// Should be "customSignature" padded to 20 chars
 		assert.Len(t, prefix, 20)
 		assert.Equal(t, Prefix("customSignature*****"), prefix)
@@ -34,7 +34,7 @@ func TestSignaturePrefix(t *testing.T) {
 
 	t.Run("long custom network", func(t *testing.T) {
 		t.Parallel()
-		prefix := SignaturePrefix(NetworkId("verylongnetworkname"))
+		prefix := SignaturePrefix(NetworkID("verylongnetworkname"))
 		// Should be truncated to 20 chars
 		assert.Len(t, prefix, 20)
 		// "verylongnetworknameSignature" truncated to 20
@@ -87,26 +87,26 @@ func TestPrefixToBaseFieldElement(t *testing.T) {
 	})
 }
 
-func TestGetNetworkIdHashInput(t *testing.T) {
+func TestGetNetworkIDHashInput(t *testing.T) {
 	t.Parallel()
 
 	t.Run("mainnet", func(t *testing.T) {
 		t.Parallel()
-		val, bits := getNetworkIdHashInput(MainNet)
+		val, bits := getNetworkIDHashInput(MainNet)
 		assert.Equal(t, uint64(1), val.Uint64())
 		assert.Equal(t, 8, bits)
 	})
 
 	t.Run("testnet", func(t *testing.T) {
 		t.Parallel()
-		val, bits := getNetworkIdHashInput(TestNet)
+		val, bits := getNetworkIDHashInput(TestNet)
 		assert.Equal(t, uint64(0), val.Uint64())
 		assert.Equal(t, 8, bits)
 	})
 
 	t.Run("custom network", func(t *testing.T) {
 		t.Parallel()
-		val, bits := getNetworkIdHashInput(NetworkId("test"))
+		val, bits := getNetworkIDHashInput(NetworkID("test"))
 		assert.NotNil(t, val)
 		// Custom network string "test" -> 4 bytes * 8 bits = 32 bits
 		assert.Equal(t, 32, bits)
@@ -146,26 +146,26 @@ func TestCreateCustomPrefix(t *testing.T) {
 	})
 }
 
-func TestNetworkIdOfString(t *testing.T) {
+func TestNetworkIDOfString(t *testing.T) {
 	t.Parallel()
 
 	t.Run("single char", func(t *testing.T) {
 		t.Parallel()
-		val, bits := networkIdOfString("a")
+		val, bits := networkIDOfString("a")
 		assert.NotNil(t, val)
 		assert.Equal(t, 8, bits)
 	})
 
 	t.Run("multiple chars", func(t *testing.T) {
 		t.Parallel()
-		val, bits := networkIdOfString("test")
+		val, bits := networkIDOfString("test")
 		assert.NotNil(t, val)
 		assert.Equal(t, 32, bits) // 4 chars * 8 bits
 	})
 
 	t.Run("empty string", func(t *testing.T) {
 		t.Parallel()
-		val, bits := networkIdOfString("")
+		val, bits := networkIDOfString("")
 		assert.NotNil(t, val)
 		assert.Equal(t, 0, bits)
 		assert.Equal(t, uint64(0), val.Uint64())

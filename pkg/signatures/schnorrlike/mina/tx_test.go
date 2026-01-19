@@ -10,7 +10,7 @@ import (
 func TestLegacyTokenId(t *testing.T) {
 	t.Parallel()
 
-	bits := legacyTokenId()
+	bits := legacyTokenID()
 	assert.Len(t, bits, 64)
 	// First bit should be true, rest should be false
 	assert.True(t, bits[0])

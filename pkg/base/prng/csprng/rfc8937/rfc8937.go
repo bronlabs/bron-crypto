@@ -24,12 +24,12 @@ type WrappedReader struct {
 	wrapee  io.Reader
 }
 
-func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceId []byte) (*WrappedReader, error) {
+func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceID []byte) (*WrappedReader, error) {
 	if !signer.IsDeterministic() {
 		return nil, ErrSignerDeterminism.WithMessage("signer must be deterministic")
 	}
 
-	sig, err := signer.Sign(uniqueDeviceId)
+	sig, err := signer.Sign(uniqueDeviceID)
 	if err != nil {
 		return nil, ErrUniqueDeviceIDSignature.WithMessage("could not sign unique device id")
 	}

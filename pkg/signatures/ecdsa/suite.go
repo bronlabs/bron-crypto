@@ -18,7 +18,7 @@ type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	baseField     algebra.PrimeField[B]
 	scalarField   algebra.PrimeField[S]
 	hashFunc      func() hash.Hash
-	hashId        crypto.Hash
+	hashID        crypto.Hash
 }
 
 // NewSuite creates a new ECDSA suite for randomised signing.
@@ -68,7 +68,7 @@ func NewDeterministicSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[
 		baseField:     baseField,
 		scalarField:   scalarField,
 		hashFunc:      h.New,
-		hashId:        h,
+		hashID:        h,
 	}
 	return s, nil
 }
@@ -98,7 +98,7 @@ func (s *Suite[P, B, S]) HashFunc() func() hash.Hash {
 	return s.hashFunc
 }
 
-// HashId returns the crypto.Hash identifier for deterministic suites, or 0 for randomised suites.
-func (s *Suite[P, B, S]) HashId() crypto.Hash {
-	return s.hashId
+// HashID returns the crypto.Hash identifier for deterministic suites, or 0 for randomised suites.
+func (s *Suite[P, B, S]) HashID() crypto.Hash {
+	return s.hashID
 }

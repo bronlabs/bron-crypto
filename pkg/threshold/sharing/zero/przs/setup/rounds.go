@@ -1,4 +1,4 @@
-package przsSetup
+package przssetup
 
 import (
 	"crypto/subtle"

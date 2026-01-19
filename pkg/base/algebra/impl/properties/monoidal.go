@@ -52,7 +52,7 @@ func (p *MonoidalLowLevel[E, T]) CanSet(t *testing.T) {
 func (p *MonoidalLowLevel[E, T]) AdditionIsAssociative(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
-		var a, b, c, ab, abc, bc, a_bc T
+		var a, b, c, ab, abc, bc, a_bc T //nolint:staticcheck // a_bc is more readable.
 		x := p.g.Draw(t, "x")
 		y := p.g.Draw(t, "y")
 		z := p.g.Draw(t, "z")

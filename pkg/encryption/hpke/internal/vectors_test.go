@@ -144,6 +144,8 @@ func TestRFCTestVectors(t *testing.T) {
 						case DHKEM_X25519_HKDF_SHA256:
 							kem := NewX25519HKDFSha256KEM()
 							runnerEncryption(t, suiteInfo, kem, test)
+						case DHKEM_RESERVED:
+							fallthrough
 						default:
 							require.Fail(t, "KEM ID not supported", suiteInfo.Setup.KEMID)
 						}
@@ -161,6 +163,8 @@ func TestRFCTestVectors(t *testing.T) {
 						case DHKEM_X25519_HKDF_SHA256:
 							kem := NewX25519HKDFSha256KEM()
 							runnerExport(t, suiteInfo, kem, test)
+						case DHKEM_RESERVED:
+							fallthrough
 						default:
 							require.Fail(t, "KEM ID not supported", suiteInfo.Setup.KEMID)
 						}

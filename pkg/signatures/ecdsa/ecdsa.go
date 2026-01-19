@@ -44,7 +44,7 @@ type Curve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	ToElliptic() elliptic.Curve
 }
 
-// ComputeRecoveryId calculates the recovery ID (v) for public key recovery from an ECDSA signature.
+// ComputeRecoveryID calculates the recovery ID (v) for public key recovery from an ECDSA signature.
 //
 // The recovery ID is not part of the ECDSA standard but is a Bitcoin-originated concept that
 // enables recovering the public key from just the signature and message hash. This is useful
@@ -60,7 +60,7 @@ type Curve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 //   - Bitcoin message signing: https://en.bitcoin.it/wiki/Message_signing
 //   - SEC 1 v2.0 Section 4.1.6: https://www.secg.org/sec1-v2.pdf
 //   - EIP-155 (Ethereum): recovery ID is equivalent to v in Ethereum transactions
-func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](bigR P) (int, error) {
+func ComputeRecoveryID[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](bigR P) (int, error) {
 	rx, err := bigR.AffineX()
 	if err != nil {
 		return -1, errs2.Wrap(err).WithMessage("cannot compute x")
@@ -73,18 +73,18 @@ func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](bigR.Structure())
 	subGroupOrder := curve.Order()
 
-	var recoveryId int
+	var recoveryID int
 	if !ry.IsOdd() {
-		recoveryId = 0
+		recoveryID = 0
 	} else {
-		recoveryId = 1
+		recoveryID = 1
 	}
 
 	if base.PartialCompare(rx.Cardinal(), subGroupOrder).IsGreaterThan() {
-		recoveryId += 2
+		recoveryID += 2
 	}
 
-	return recoveryId, nil
+	return recoveryID, nil
 }
 
 // RecoverPublicKey recovers the signer's public key from an ECDSA signature with recovery ID.

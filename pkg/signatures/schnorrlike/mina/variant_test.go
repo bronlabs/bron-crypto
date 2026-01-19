@@ -616,7 +616,7 @@ func TestDifferentNetworksProduceDifferentNonces(t *testing.T) {
 	msg := new(ROInput).Init()
 	msg.AddString("network separation test")
 
-	networks := []NetworkId{TestNet, MainNet}
+	networks := []NetworkID{TestNet, MainNet}
 	var nonces []*Scalar
 
 	for _, nid := range networks {

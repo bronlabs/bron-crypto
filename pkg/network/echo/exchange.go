@@ -9,8 +9,8 @@ import (
 )
 
 // ExchangeEchoBroadcastSimple runs an echo broadcast: send, echo, and verify consistent payloads for all parties.
-func ExchangeEchoBroadcastSimple[B any](rt *network.Router, correlationId string, message B) (network.RoundMessages[B], error) {
-	r, err := NewEchoBroadcastRunner(rt.PartyId(), hashset.NewComparable(rt.Quorum()...).Freeze(), correlationId, message)
+func ExchangeEchoBroadcastSimple[B any](rt *network.Router, correlationID string, message B) (network.RoundMessages[B], error) {
+	r, err := NewEchoBroadcastRunner(rt.PartyID(), hashset.NewComparable(rt.Quorum()...).Freeze(), correlationID, message)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to create echo broadcast runner")
 	}

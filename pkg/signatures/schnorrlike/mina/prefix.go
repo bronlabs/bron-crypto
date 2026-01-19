@@ -10,17 +10,17 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 )
 
-// NetworkId identifies a Mina network for domain separation in signatures.
+// NetworkID identifies a Mina network for domain separation in signatures.
 // Different networks use different prefixes to prevent signature replay attacks
 // across networks.
-type NetworkId string
+type NetworkID string
 
 const (
 	// TestNet is the Mina test network, using the legacy "CodaSignature" prefix.
 	// Reference: https://github.com/o1-labs/o1js-bindings/blob/df8c87ed6804465f79196fdff84e5147ae71e92d/crypto/constants.ts#L13
-	TestNet NetworkId = "testnet"
+	TestNet NetworkID = "testnet"
 	// MainNet is the Mina main network, using the "MinaSignatureMainnet" prefix.
-	MainNet NetworkId = "mainnet"
+	MainNet NetworkID = "mainnet"
 )
 
 var (
@@ -60,7 +60,7 @@ func (p Prefix) ToBaseFieldElement() (*pasta.PallasBaseFieldElement, error) {
 // Custom network IDs generate a prefix by padding/truncating to exactly 20 characters.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/885b50e60ead596cdcd8dc944df55fd3a4467a0a/src/mina-signer/src/signature.ts#L354
-func SignaturePrefix(nid NetworkId) Prefix {
+func SignaturePrefix(nid NetworkID) Prefix {
 	switch nid {
 	case MainNet:
 		return []byte("MinaSignatureMainnet")
@@ -92,19 +92,19 @@ func createCustomPrefix(input string) Prefix {
 	}
 }
 
-// getNetworkIdHashInput returns the network ID as a big.Int and its bit length
+// getNetworkIDHashInput returns the network ID as a big.Int and its bit length
 // for inclusion in the nonce derivation hash. MainNet is 0x01 (8 bits),
 // TestNet is 0x00 (8 bits), and custom networks encode the string as bits.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L305
-func getNetworkIdHashInput(nid NetworkId) (val *big.Int, bitLen int) {
+func getNetworkIDHashInput(nid NetworkID) (val *big.Int, bitLen int) {
 	switch nid {
 	case MainNet:
 		return mainNetHashInput, 8
 	case TestNet:
 		return testNetHashInput, 8
 	default:
-		return networkIdOfString(string(nid))
+		return networkIDOfString(string(nid))
 	}
 }
 
@@ -116,12 +116,12 @@ func numberToBytePadded(b byte) string {
 	return fmt.Sprintf("%08b", b)
 }
 
-// networkIdOfString converts a custom network ID string to a big.Int and bit length.
+// networkIDOfString converts a custom network ID string to a big.Int and bit length.
 // The string is encoded as reversed binary digits (each character as 8-bit MSB-first),
 // then interpreted as an integer. Returns the value and total bit count.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L294
-func networkIdOfString(n string) (val *big.Int, bitLen int) {
+func networkIDOfString(n string) (val *big.Int, bitLen int) {
 	acc := ""
 	for i := len(n) - 1; i >= 0; i-- {
 		b := n[i]

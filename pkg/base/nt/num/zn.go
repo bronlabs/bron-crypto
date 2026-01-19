@@ -287,7 +287,7 @@ func (*ZMod) ScalarStructure() algebra.Structure[*Nat] {
 }
 
 // AmbientStructure returns the ambient structure of quotient group ie. Z.
-func (*ZMod) AmbientStructure() algebra.Structure[*Int] {
+func (*ZMod) AmbientStructure() algebra.Structure[*Int] { //nolint:staticcheck // false positive.
 	return Z()
 }
 

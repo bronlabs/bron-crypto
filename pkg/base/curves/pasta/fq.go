@@ -123,13 +123,13 @@ func (*FqFieldElement) Structure() algebra.Structure[*FqFieldElement] {
 }
 
 // MarshalBinary implements encoding.BinaryMarshaler.
-func (s *FqFieldElement) MarshalBinary() ([]byte, error) {
-	return s.V.Bytes(), nil
+func (fe *FqFieldElement) MarshalBinary() ([]byte, error) {
+	return fe.V.Bytes(), nil
 }
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaler.
-func (s *FqFieldElement) UnmarshalBinary(data []byte) error {
-	if ok := s.V.SetBytes(data); ok == 0 {
+func (fe *FqFieldElement) UnmarshalBinary(data []byte) error {
+	if ok := fe.V.SetBytes(data); ok == 0 {
 		return curves.ErrSerialisation.WithMessage("cannot unmarshal scalar")
 	}
 

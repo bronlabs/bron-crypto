@@ -47,11 +47,11 @@ func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStruc
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
-	lambda_i, exists := lambdas.Get(s.id)
+	lambdaI, exists := lambdas.Get(s.id)
 	if !exists {
 		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
 	}
-	converted := lambda_i.Mul(s.v)
+	converted := lambdaI.Mul(s.v)
 	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to convert Shamir share to additive")

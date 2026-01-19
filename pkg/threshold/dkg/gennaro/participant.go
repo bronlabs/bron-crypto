@@ -47,7 +47,7 @@ type (
 
 const (
 	transcriptLabel              = "BRON_CRYPTO_DKG_GENNARO-"
-	proverIdLabel                = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
+	proverIDLabel                = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
 	secondPedersenGeneratorLabel = "second generator of pedersen key"
 )
 

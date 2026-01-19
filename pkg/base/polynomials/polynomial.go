@@ -491,11 +491,7 @@ func (p *Polynomial[RE]) ScalarMul(s RE) *Polynomial[RE] {
 
 func (p *Polynomial[RE]) IsTorsionFree() bool {
 	_, err := algebra.StructureAs[crtp.Field[RE]](p.coeffs[0].Structure())
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func (p *Polynomial[RE]) ScalarStructure() algebra.Ring[RE] {

@@ -144,12 +144,12 @@ func (c *CipherSuite) ID() []byte {
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1-13
 type KeyScheduleContext struct {
 	Mode      ModeID
-	PskIdHash []byte // size Nh
+	PskIDHash []byte // size Nh
 	InfoHash  []byte // size Nh
 }
 
 func (ksc *KeyScheduleContext) Marshal() []byte {
-	return slices.Concat([]byte{byte(ksc.Mode)}, ksc.PskIdHash, ksc.InfoHash)
+	return slices.Concat([]byte{byte(ksc.Mode)}, ksc.PskIDHash, ksc.InfoHash)
 }
 
 type context struct {
@@ -223,19 +223,19 @@ func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 // - psk A pre-shared key (PSK) held by both the sender and the recipient (optional; default value "").
 // - psk_id: An identifier for the PSK (optional; default value "").
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con
-func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, sharedSecret, info, psk, pskId []byte) (*context, *KeyScheduleContext, error) {
-	if err := verifyPSKInputs(mode, psk, pskId); err != nil {
+func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, sharedSecret, info, psk, pskID []byte) (*context, *KeyScheduleContext, error) {
+	if err := verifyPSKInputs(mode, psk, pskID); err != nil {
 		return nil, nil, errs2.Wrap(err)
 	}
 
 	var err error
 	kdf := kdfs[cipherSuite.kdf]
 	aead := aeads[cipherSuite.aead]
-	pskIdHash := kdf.labeledExtract(cipherSuite.ID(), nil, []byte("psk_id_hash"), pskId)
+	pskIDHash := kdf.labeledExtract(cipherSuite.ID(), nil, []byte("psk_id_hash"), pskID)
 	infoHash := kdf.labeledExtract(cipherSuite.ID(), nil, []byte("info_hash"), info)
 	keyScheduleContext := &KeyScheduleContext{
 		Mode:      mode,
-		PskIdHash: pskIdHash,
+		PskIDHash: pskIDHash,
 		InfoHash:  infoHash,
 	}
 	keyScheduleContextMarshaled := keyScheduleContext.Marshal()
@@ -266,11 +266,11 @@ func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, shared
 }
 
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1-10
-func verifyPSKInputs(mode ModeID, psk, pskId []byte) error {
+func verifyPSKInputs(mode ModeID, psk, pskID []byte) error {
 	gotPsk := psk != nil
-	gotPskId := pskId != nil
-	if gotPsk != gotPskId {
-		return ErrInvalidArgument.WithMessage("either psk and pskId should both be nil, or none should be nil")
+	gotPskID := pskID != nil
+	if gotPsk != gotPskID {
+		return ErrInvalidArgument.WithMessage("either psk and pskID should both be nil, or none should be nil")
 	}
 	if gotPsk && (mode == Base || mode == Auth) {
 		return ErrInvalidArgument.WithMessage("psk argument provided when not needed")
@@ -286,7 +286,7 @@ type SenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 	ctx     *context
 }
 
-func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info, psk, pskId []byte, prng io.Reader) (*SenderContext[P, B, S], error) {
+func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info, psk, pskID []byte, prng io.Reader) (*SenderContext[P, B, S], error) {
 	if suite == nil {
 		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil")
 	}
@@ -315,7 +315,7 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 		return nil, errs2.Wrap(err)
 	}
 
-	ctx, _, err := keySchedule(SenderRole, suite, mode, sharedSecret, info, psk, pskId)
+	ctx, _, err := keySchedule(SenderRole, suite, mode, sharedSecret, info, psk, pskID)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -351,7 +351,7 @@ type ReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S
 	capsule *PublicKey[P, B, S]
 }
 
-func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info, psk, pskId []byte) (*ReceiverContext[P, B, S], error) {
+func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info, psk, pskID []byte) (*ReceiverContext[P, B, S], error) {
 	if suite == nil {
 		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil")
 	}
@@ -380,7 +380,7 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 		return nil, errs2.Wrap(err)
 	}
 
-	ctx, _, err := keySchedule(ReceiverRole, suite, mode, sharedSecret, info, psk, pskId)
+	ctx, _, err := keySchedule(ReceiverRole, suite, mode, sharedSecret, info, psk, pskID)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}

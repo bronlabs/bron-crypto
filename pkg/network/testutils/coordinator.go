@@ -56,8 +56,8 @@ type mockDelivery struct {
 	sendChannels   map[sharing.ID]chan<- deliveryMessage
 }
 
-// PartyId returns the local party identifier.
-func (d *mockDelivery) PartyId() sharing.ID {
+// PartyID returns the local party identifier.
+func (d *mockDelivery) PartyID() sharing.ID {
 	return d.sharingID
 }
 

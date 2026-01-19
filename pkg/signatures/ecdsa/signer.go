@@ -55,7 +55,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 
 	var nativeR, nativeS *big.Int
 	if s.suite.IsDeterministic() {
-		asn1Sig, err := nativeSk.Sign(nil, digest, s.suite.hashId)
+		asn1Sig, err := nativeSk.Sign(nil, digest, s.suite.hashID)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("signing failed")
 		}

@@ -13,8 +13,8 @@ import (
 
 const (
 	// Test file names.
-	File_drgbvectors_no_reseed = "testutils/drbgtestvectors/drbgvectors_no_reseed/CTR_DRBG.rsp"
-	File_drgbvectors_pr_false  = "testutils/drbgtestvectors/drbgvectors_pr_false/CTR_DRBG.rsp"
+	FileDRGBVectorsNoReseed = "testutils/drbgtestvectors/drbgvectors_no_reseed/CTR_DRBG.rsp"
+	FILEDRGBVectorsPRFalse  = "testutils/drbgtestvectors/drbgvectors_pr_false/CTR_DRBG.rsp"
 	// Test file constants.
 	testHeaderLine = "[AES-%d %s df]" // Indicates the beginning of a new AES-based test
 	maxTestCount   = 14               // Number of tests per case
@@ -311,8 +311,8 @@ func RunNistValidationTest(keySize int, useDf bool) (err error) {
 		withReseed bool
 		fName      string
 	}{
-		{withReseed: false, fName: File_drgbvectors_no_reseed},
-		{withReseed: true, fName: File_drgbvectors_pr_false},
+		{withReseed: false, fName: FileDRGBVectorsNoReseed},
+		{withReseed: true, fName: FILEDRGBVectorsPRFalse},
 	} {
 		// Open test data file
 		f, err := os.Open(caseParams.fName)

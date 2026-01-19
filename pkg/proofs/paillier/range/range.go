@@ -367,8 +367,8 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 		case 0:
 			w1i := response.W1[i]
 			w2i := response.W2[i]
-			if !((isInRange(lowBound, highBound, w1i) && isInRange(ps.Zero(), lowBound, w2i)) ||
-				isInRange(lowBound, highBound, w2i) && isInRange(ps.Zero(), lowBound, w1i)) {
+			if (!isInRange(lowBound, highBound, w1i) || !isInRange(ps.Zero(), lowBound, w2i)) &&
+				(!isInRange(lowBound, highBound, w2i) || !isInRange(ps.Zero(), lowBound, w1i)) {
 
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}

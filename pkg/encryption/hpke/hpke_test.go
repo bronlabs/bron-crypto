@@ -170,21 +170,21 @@ func TestHPKE_PSKMode_Roundtrip(t *testing.T) {
 	psk := make([]byte, 32)
 	_, err = crand.Read(psk)
 	require.NoError(t, err)
-	pskId := []byte("test-psk-id")
+	pskID := []byte("test-psk-id")
 	info := []byte("psk test")
 
 	// Test message
 	plaintext := []byte("PSK encrypted message")
 
 	// Sender: Setup with PSK and encrypt
-	senderCtx, err := hpke.SetupPSKS(suite, receiverPk, psk, pskId, info, crand.Reader)
+	senderCtx, err := hpke.SetupPSKS(suite, receiverPk, psk, pskID, info, crand.Reader)
 	require.NoError(t, err)
 	ciphertext, err := senderCtx.Seal(plaintext, nil)
 	require.NoError(t, err)
 	require.NotEqual(t, plaintext, ciphertext)
 
 	// Receiver: Setup with PSK and decrypt
-	receiverCtx, err := hpke.SetupPSKR(suite, receiverSk, senderCtx.Capsule, psk, pskId, info)
+	receiverCtx, err := hpke.SetupPSKR(suite, receiverSk, senderCtx.Capsule, psk, pskID, info)
 	require.NoError(t, err)
 	decrypted, err := receiverCtx.Open(ciphertext, nil)
 	require.NoError(t, err)
@@ -209,21 +209,21 @@ func TestHPKE_AuthPSKMode_Roundtrip(t *testing.T) {
 	psk := make([]byte, 32)
 	_, err = crand.Read(psk)
 	require.NoError(t, err)
-	pskId := []byte("test-authpsk-id")
+	pskID := []byte("test-authpsk-id")
 	info := []byte("authpsk test")
 
 	// Test message
 	plaintext := []byte("AuthPSK encrypted message")
 
 	// Sender: Setup with Auth+PSK and encrypt
-	senderCtx, err := hpke.SetupAuthPSKS(suite, receiverPk, senderSk, psk, pskId, info, crand.Reader)
+	senderCtx, err := hpke.SetupAuthPSKS(suite, receiverPk, senderSk, psk, pskID, info, crand.Reader)
 	require.NoError(t, err)
 	ciphertext, err := senderCtx.Seal(plaintext, nil)
 	require.NoError(t, err)
 	require.NotEqual(t, plaintext, ciphertext)
 
 	// Receiver: Setup with Auth+PSK and decrypt
-	receiverCtx, err := hpke.SetupAuthPSKR(suite, receiverSk, senderCtx.Capsule, senderPk, psk, pskId, info)
+	receiverCtx, err := hpke.SetupAuthPSKR(suite, receiverSk, senderCtx.Capsule, senderPk, psk, pskID, info)
 	require.NoError(t, err)
 	decrypted, err := receiverCtx.Open(ciphertext, nil)
 	require.NoError(t, err)

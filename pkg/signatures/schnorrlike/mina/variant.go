@@ -25,7 +25,7 @@ var (
 // NewDeterministicVariant creates a Mina variant with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using Blake2b,
 // following the legacy Mina/o1js implementation.
-func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, error) {
+func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
@@ -39,7 +39,7 @@ func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, e
 
 // NewRandomisedVariant creates a Mina variant with random nonce generation.
 // This is used for MPC/threshold signing where nonces are collaboratively generated.
-func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
+func NewRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
@@ -55,7 +55,7 @@ func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
 // It handles deterministic or random nonce generation, Poseidon-based challenge
 // computation, and the even-y constraint on the nonce commitment.
 type Variant struct {
-	nid  NetworkId   // Network ID for domain separation (MainNet, TestNet, or custom)
+	nid  NetworkID   // Network ID for domain separation (MainNet, TestNet, or custom)
 	sk   *PrivateKey // Private key for deterministic nonce derivation (nil for random)
 	prng io.Reader   // PRNG for random nonce generation (nil for deterministic)
 	msg  *Message    // Message being signed (needed for deterministic nonce derivation)
@@ -138,7 +138,7 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	// Get network ID as bits
 	// In o1js: let idBits = bytesToBits([Number(id)])
 	// For mainnet id=1, testnet id=0, converted to 8 bits LSB-first
-	id, _ := getNetworkIdHashInput(v.nid)
+	id, _ := getNetworkIDHashInput(v.nid)
 	idByte := byte(id.Uint64())
 	idBits := make([]bool, 8)
 	for i := range 8 {

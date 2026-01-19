@@ -17,7 +17,7 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot deal blind")
 	}
 
-	shift, ok := blindOutput.Shares().Get(r.mislayerId)
+	shift, ok := blindOutput.Shares().Get(r.mislayerID)
 	if !ok {
 		return nil, nil, ErrInvalidArgument.WithMessage("cannot find mislayer share")
 	}
@@ -35,7 +35,7 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 	}
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[G, S]]()
 	for id := range r.quorum.Iter() {
-		if id == r.mislayerId || id == r.SharingID() {
+		if id == r.mislayerID || id == r.SharingID() {
 			continue
 		}
 		s, ok := blindShares[id]
@@ -56,7 +56,7 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 
 	blindedShare := r.state.blindShare.Add(r.shard.Share())
 	for id := range r.quorum.Iter() {
-		if id == r.mislayerId || id == r.SharingID() {
+		if id == r.mislayerID || id == r.SharingID() {
 			continue
 		}
 		u, ok := r1u.Get(id)
@@ -69,7 +69,7 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 		}
 
 		verificationVector := b.BlindVerificationVector
-		if !verificationVector.Eval(r.field.FromUint64(uint64(r.mislayerId))).IsOpIdentity() {
+		if !verificationVector.Eval(r.field.FromUint64(uint64(r.mislayerID))).IsOpIdentity() {
 			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
 		}
 
@@ -86,7 +86,7 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 		VerificationVector: r.shard.VerificationVector(),
 	}
 	r2u := hashmap.NewComparable[sharing.ID, *Round2P2P[G, S]]()
-	r2u.Put(r.mislayerId, &Round2P2P[G, S]{
+	r2u.Put(r.mislayerID, &Round2P2P[G, S]{
 		BlindedShare: blindedShare,
 	})
 

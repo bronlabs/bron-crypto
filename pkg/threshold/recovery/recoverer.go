@@ -18,7 +18,7 @@ type Recoverer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	scheme     *feldman.Scheme[G, S]
 	group      algebra.PrimeGroup[G, S]
 	field      algebra.PrimeField[S]
-	mislayerId sharing.ID
+	mislayerID sharing.ID
 	quorum     ds.Set[sharing.ID]
 	prng       io.Reader
 	state      RecovererState[G, S]
@@ -32,8 +32,8 @@ type RecovererState[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 // NewRecoverer creates a recoverer that helps reconstruct the mislayer's share.
 func NewRecoverer[
 	G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S],
-](mislayerId sharing.ID, quorum network.Quorum, shard *tsig.BaseShard[G, S], prng io.Reader) (*Recoverer[G, S], error) {
-	if quorum == nil || shard == nil || !quorum.Contains(shard.Share().ID()) || !quorum.Contains(mislayerId) || !quorum.IsSubSet(shard.AccessStructure().Shareholders()) {
+](mislayerID sharing.ID, quorum network.Quorum, shard *tsig.BaseShard[G, S], prng io.Reader) (*Recoverer[G, S], error) {
+	if quorum == nil || shard == nil || !quorum.Contains(shard.Share().ID()) || !quorum.Contains(mislayerID) || !quorum.IsSubSet(shard.AccessStructure().Shareholders()) {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 
@@ -49,7 +49,7 @@ func NewRecoverer[
 		scheme:     scheme,
 		group:      group,
 		field:      field,
-		mislayerId: mislayerId,
+		mislayerID: mislayerID,
 		quorum:     quorum,
 		prng:       prng,
 		state:      RecovererState[G, S]{blindShare: nil},

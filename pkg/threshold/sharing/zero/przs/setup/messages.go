@@ -1,4 +1,4 @@
-package przsSetup
+package przssetup
 
 import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"

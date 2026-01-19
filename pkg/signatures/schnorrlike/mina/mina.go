@@ -113,7 +113,7 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 // NewScheme creates a Mina signature scheme with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using
 // Blake2b, following the legacy Mina/o1js implementation.
-func NewScheme(nid NetworkId, privateKey *PrivateKey) (*Scheme, error) {
+func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 	vr, err := NewDeterministicVariant(nid, privateKey)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create variant")
@@ -126,7 +126,7 @@ func NewScheme(nid NetworkId, privateKey *PrivateKey) (*Scheme, error) {
 // NewRandomisedScheme creates a Mina signature scheme with random nonce generation.
 // This is typically used for MPC/threshold signing where nonces are generated
 // collaboratively rather than deterministically.
-func NewRandomisedScheme(nid NetworkId, prng io.Reader) (*Scheme, error) {
+func NewRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
 	vr, err := NewRandomisedVariant(nid, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create variant")

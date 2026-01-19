@@ -131,17 +131,14 @@ linters:
     - predeclared
     # Check that struct tags are well aligned.
     - tagalign
-    # # # Checks the struct tags.
-    # # TODO: enable this once it doesn't spit out ast errors
-    # # - tagliatelle
     # Linter checks if examples are testable (have an expected output).
     - testableexamples
     # Checks usage of github.com/stretchr/testify.
     - testifylint
     # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
     - revive
-    # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    # - staticcheck
+    # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
+    - staticcheck
     # linter that makes you use a separate _test package
     - testpackage
     # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
@@ -598,10 +595,7 @@ linters:
           - exhaustruct
           - predeclared
           - unconvert
-      # - path: utils.go
-      #   linters:
-      #     # TODO: enable this when round based stuff is here
-      #     - unparam
+          - staticcheck
       - path: testutils/
         linters:
           - depguard
@@ -709,6 +703,10 @@ linters:
         text: "captLocal: `L' should not be capitalized"
         linters:
           - gocritic
+      - path: hpke/
+        text: "ST1003: should not use ALL_CAPS in Go names; use CamelCase instead"
+        linters:
+          - staticcheck
       # Exclude algebra package from wrapcheck - lots of interface method calls
       - path: pkg/base/algebra/
         linters:
