@@ -163,7 +163,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 }
 
 // Name returns the protocol identifier.
-func (p *Protocol[G, S]) Name() sigma.Name {
+func (*Protocol[G, S]) Name() sigma.Name {
 	return Name
 }
 

@@ -191,7 +191,7 @@ func (u *UnitTrait[A, W, WT]) HashCode() base.HashCode {
 	return u.v.HashCode().Combine(u.v.HashCode())
 }
 
-func (u *UnitTrait[A, W, WT]) IsTorsionFree() bool {
+func (*UnitTrait[A, W, WT]) IsTorsionFree() bool {
 	return true
 }
 

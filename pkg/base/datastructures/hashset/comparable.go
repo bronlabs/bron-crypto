@@ -72,36 +72,36 @@ func (s *MutableComparableSet[E]) Clone() ds.MutableSet[E] {
 }
 
 // Equal returns true if both sets contain exactly the same elements.
-func (t *MutableComparableSet[E]) Equal(other ds.MutableSet[E]) bool {
-	return t.IsSubSet(other) && other.IsSubSet(t)
+func (s *MutableComparableSet[E]) Equal(other ds.MutableSet[E]) bool {
+	return s.IsSubSet(other) && other.IsSubSet(s)
 }
 
 // Size returns the number of elements in the set.
-func (t *MutableComparableSet[_]) Size() int {
-	return len(t.v)
+func (s *MutableComparableSet[_]) Size() int {
+	return len(s.v)
 }
 
 // Cardinality returns the number of elements in the set.
-func (t *MutableComparableSet[_]) Cardinality() int {
-	return len(t.v)
+func (s *MutableComparableSet[_]) Cardinality() int {
+	return len(s.v)
 }
 
 // IsEmpty returns true if the set contains no elements.
-func (t *MutableComparableSet[_]) IsEmpty() bool {
-	return len(t.v) == 0
+func (s *MutableComparableSet[_]) IsEmpty() bool {
+	return len(s.v) == 0
 }
 
 // Union returns a new set containing all elements from both sets.
-func (t *MutableComparableSet[E]) Union(other ds.MutableSet[E]) ds.MutableSet[E] {
-	out := t.Clone()
+func (s *MutableComparableSet[E]) Union(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := s.Clone()
 	out.AddAll(other.List()...)
 	return out
 }
 
 // Intersection returns a new set containing only elements present in both sets.
-func (t *MutableComparableSet[E]) Intersection(other ds.MutableSet[E]) ds.MutableSet[E] {
+func (s *MutableComparableSet[E]) Intersection(other ds.MutableSet[E]) ds.MutableSet[E] {
 	out := &MutableComparableSet[E]{v: make(comparableMapping[E])}
-	for k := range t.Iter() {
+	for k := range s.Iter() {
 		if other.Contains(k) {
 			out.v[k] = struct{}{}
 		}
@@ -110,22 +110,22 @@ func (t *MutableComparableSet[E]) Intersection(other ds.MutableSet[E]) ds.Mutabl
 }
 
 // Difference returns a new set containing elements in this set but not in the other.
-func (t *MutableComparableSet[E]) Difference(other ds.MutableSet[E]) ds.MutableSet[E] {
-	out := t.Clone()
+func (s *MutableComparableSet[E]) Difference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := s.Clone()
 	out.RemoveAll(other.List()...)
 	return out
 }
 
 // SymmetricDifference returns a new set containing elements in either set but not both.
-func (t *MutableComparableSet[E]) SymmetricDifference(other ds.MutableSet[E]) ds.MutableSet[E] {
-	return t.Union(other).Difference(t.Intersection(other))
+func (s *MutableComparableSet[E]) SymmetricDifference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	return s.Union(other).Difference(s.Intersection(other))
 }
 
 // SubSets returns all possible subsets of this set (power set).
-func (t *MutableComparableSet[E]) SubSets() []ds.MutableSet[E] {
-	result := make([]ds.MutableSet[E], 1<<t.Size())
+func (s *MutableComparableSet[E]) SubSets() []ds.MutableSet[E] {
+	result := make([]ds.MutableSet[E], 1<<s.Size())
 	i := 0
-	for subset := range t.IterSubSets() {
+	for subset := range s.IterSubSets() {
 		result[i] = subset
 		i++
 	}

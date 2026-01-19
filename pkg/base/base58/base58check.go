@@ -31,7 +31,7 @@ func DeriveChecksum(input []byte) (cksum Checksum) {
 	h := sha256.Sum256(input)
 	h2 := sha256.Sum256(h[:])
 	copy(cksum[:], h2[:ChecksumLen])
-	return
+	return cksum
 }
 
 func CheckEncode(input []byte, version VersionPrefix) Base58 {
@@ -60,5 +60,5 @@ func CheckDecode(input Base58) (result []byte, version VersionPrefix, err error)
 		return nil, 0, ErrChecksumMismatch.WithStackFrame()
 	}
 	result = versionAndPayload[VersionLen:]
-	return
+	return result, version, nil
 }

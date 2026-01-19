@@ -32,7 +32,7 @@ func (r *gennaroDkgRunner[G, S]) Run(rt *network.Router) (*DKGOutput[G, S], erro
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2InB, err := exchange.ExchangeBroadcast(rt, "GennaroDKGRound1", r1OutB)
+	r2InB, err := exchange.Broadcast(rt, "GennaroDKGRound1", r1OutB)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
 	}

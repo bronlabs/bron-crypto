@@ -79,7 +79,7 @@ func Decode(s Base58) []byte {
 	tmpval := answer.Big().Bytes()
 
 	var leadingZerosCount int
-	for leadingZerosCount = 0; leadingZerosCount < len(s) && s[leadingZerosCount] == alphabetIdx0; leadingZerosCount++ {
+	for leadingZerosCount = 0; leadingZerosCount < len(s) && s[leadingZerosCount] == alphabetIdx0; leadingZerosCount++ { //nolint:revive // empty block is intentional.
 		// count leading zeros
 	}
 	flen := leadingZerosCount + len(tmpval)

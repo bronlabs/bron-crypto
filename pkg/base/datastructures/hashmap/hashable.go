@@ -73,13 +73,13 @@ func (m HashableMapping[K, V]) TryRemove(key K) (removed bool, removedValue V) {
 	return true, removedValue
 }
 
-// HashMapTrait provides common functionality for hashable map implementations.
-type HashMapTrait[K ds.Hashable[K], V any] struct {
+// HashableTrait provides common functionality for hashable map implementations.
+type HashableTrait[K ds.Hashable[K], V any] struct {
 	inner HashableMapping[K, V]
 }
 
 // Get returns the value associated with the key and whether it exists.
-func (m HashMapTrait[K, V]) Get(key K) (value V, exists bool) {
+func (m HashableTrait[K, V]) Get(key K) (value V, exists bool) {
 	hashCode := key.HashCode()
 	values, ok := m.inner[hashCode]
 	if !ok {
@@ -95,7 +95,7 @@ func (m HashMapTrait[K, V]) Get(key K) (value V, exists bool) {
 }
 
 // ContainsKey returns true if the key exists in the map.
-func (m HashMapTrait[K, V]) ContainsKey(key K) bool {
+func (m HashableTrait[K, V]) ContainsKey(key K) bool {
 	for _, e := range m.inner[key.HashCode()] {
 		if key.Equal(e.Key) {
 			return true
@@ -105,12 +105,12 @@ func (m HashMapTrait[K, V]) ContainsKey(key K) bool {
 }
 
 // IsEmpty returns true if the map contains no entries.
-func (m HashMapTrait[K, V]) IsEmpty() bool {
+func (m HashableTrait[K, V]) IsEmpty() bool {
 	return len(m.inner) == 0
 }
 
 // Size returns the number of entries in the map.
-func (m HashMapTrait[K, V]) Size() int {
+func (m HashableTrait[K, V]) Size() int {
 	size := 0
 	for _, v := range m.inner {
 		size += len(v)
@@ -119,7 +119,7 @@ func (m HashMapTrait[K, V]) Size() int {
 }
 
 // Keys returns a slice of all keys in the map.
-func (m HashMapTrait[K, V]) Keys() []K {
+func (m HashableTrait[K, V]) Keys() []K {
 	var keys []K
 	keys = make([]K, 0, m.Size())
 	for _, entries := range m.inner {
@@ -131,7 +131,7 @@ func (m HashMapTrait[K, V]) Keys() []K {
 }
 
 // Values returns a slice of all values in the map.
-func (m HashMapTrait[K, V]) Values() []V {
+func (m HashableTrait[K, V]) Values() []V {
 	result := make([]V, 0, m.Size())
 	for _, value := range m.Iter() {
 		result = append(result, value)
@@ -140,7 +140,7 @@ func (m HashMapTrait[K, V]) Values() []V {
 }
 
 // Iter returns an iterator over all key-value pairs.
-func (m HashMapTrait[K, V]) Iter() iter.Seq2[K, V] {
+func (m HashableTrait[K, V]) Iter() iter.Seq2[K, V] {
 	keys := m.Keys()
 	return func(yield func(K, V) bool) {
 		for _, key := range keys {
@@ -153,7 +153,7 @@ func (m HashMapTrait[K, V]) Iter() iter.Seq2[K, V] {
 }
 
 // Enumerate returns an iterator with index and MapEntry pairs.
-func (m HashMapTrait[K, V]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
+func (m HashableTrait[K, V]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
 	return func(yield func(int, ds.MapEntry[K, V]) bool) {
 		i := 0
 		for key, value := range m.Iter() {
@@ -168,7 +168,7 @@ func (m HashMapTrait[K, V]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
 // NewImmutableHashable creates a new empty immutable map for hashable key types.
 func NewImmutableHashable[K ds.Hashable[K], V any]() ds.Map[K, V] {
 	return &ImmutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: make(HashableMapping[K, V]),
 		},
 	}
@@ -186,18 +186,18 @@ func CollectToImmutableHashable[K ds.Hashable[K], V any](xs []K, ys []V) (ds.Map
 
 // ImmutableHashableMap is an immutable hash map for hashable key types.
 type ImmutableHashableMap[K ds.Hashable[K], V any] struct {
-	HashMapTrait[K, V]
+	HashableTrait[K, V]
 }
 
 // IsImmutable returns true as this is an immutable map.
-func (m ImmutableHashableMap[K, V]) IsImmutable() bool {
+func (ImmutableHashableMap[K, V]) IsImmutable() bool {
 	return true
 }
 
 // Unfreeze returns a mutable copy of this map.
 func (m ImmutableHashableMap[K, V]) Unfreeze() ds.MutableMap[K, V] {
 	return &MutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: m.inner,
 		},
 	}
@@ -216,7 +216,7 @@ func (m ImmutableHashableMap[K, V]) Clone() ds.Map[K, V] {
 		}
 	}
 	return &ImmutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: inner,
 		},
 	}
@@ -233,7 +233,7 @@ func (m ImmutableHashableMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K,
 		}
 	}
 	return &ImmutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: inner,
 		},
 	}
@@ -254,7 +254,7 @@ func (m ImmutableHashableMap[K, V]) Retain(keys ...K) ds.Map[K, V] {
 // NewHashable creates a new empty mutable map for hashable key types.
 func NewHashable[K ds.Hashable[K], V any]() ds.MutableMap[K, V] {
 	return &MutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: make(HashableMapping[K, V]),
 		},
 	}
@@ -275,18 +275,18 @@ func CollectToHashable[K ds.Hashable[K], V any](xs []K, ys []V) (ds.MutableMap[K
 
 // MutableHashableMap is a mutable hash map for hashable key types.
 type MutableHashableMap[K ds.Hashable[K], V any] struct {
-	HashMapTrait[K, V]
+	HashableTrait[K, V]
 }
 
 // IsImmutable returns false as this is a mutable map.
-func (m MutableHashableMap[K, V]) IsImmutable() bool {
+func (MutableHashableMap[K, V]) IsImmutable() bool {
 	return false
 }
 
 // Freeze returns an immutable snapshot of this map.
 func (m MutableHashableMap[K, V]) Freeze() ds.Map[K, V] {
 	return &ImmutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: m.inner,
 		},
 	}
@@ -305,7 +305,7 @@ func (m MutableHashableMap[K, V]) Clone() ds.MutableMap[K, V] {
 		}
 	}
 	return &MutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: inner,
 		},
 	}
@@ -347,7 +347,7 @@ func (m MutableHashableMap[K, V]) Filter(predicate func(key K) bool) ds.MutableM
 		}
 	}
 	return &MutableHashableMap[K, V]{
-		HashMapTrait[K, V]{
+		HashableTrait[K, V]{
 			inner: inner,
 		},
 	}

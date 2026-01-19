@@ -88,6 +88,6 @@ func (a *anchor[A]) L() *num.Nat {
 	return a.n
 }
 
-func (a *anchor[A]) PreImage(x *znstar.PaillierGroupElement[A]) (w *znstar.PaillierGroupElement[A]) {
+func (*anchor[A]) PreImage(x *znstar.PaillierGroupElement[A]) (w *znstar.PaillierGroupElement[A]) {
 	return x
 }

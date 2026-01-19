@@ -52,17 +52,17 @@ func NewScalarField() *ScalarField {
 }
 
 // Name returns the name of the structure.
-func (f *ScalarField) Name() string {
+func (*ScalarField) Name() string {
 	return ScalarFieldName
 }
 
 // Order returns the group or field order.
-func (f *ScalarField) Order() cardinal.Cardinal {
+func (*ScalarField) Order() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(scalarFieldOrder.Nat())
 }
 
 // Characteristic returns the field characteristic.
-func (f *ScalarField) Characteristic() cardinal.Cardinal {
+func (*ScalarField) Characteristic() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(scalarFieldOrder.Nat())
 }
 
@@ -77,7 +77,7 @@ func (f *ScalarField) FromBytesBEReduce(input []byte) (*Scalar, error) {
 }
 
 // Hash maps input bytes to an element or point.
-func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
+func (*ScalarField) Hash(bytes []byte) (*Scalar, error) {
 	var e [1]k256Impl.Fq
 	h2c.HashToField(e[:], k256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, bytes)
 
@@ -87,17 +87,17 @@ func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
 }
 
 // ElementSize returns the element size in bytes.
-func (f *ScalarField) ElementSize() int {
+func (*ScalarField) ElementSize() int {
 	return k256Impl.FqBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
-func (f *ScalarField) WideElementSize() int {
+func (*ScalarField) WideElementSize() int {
 	return k256Impl.FqWideBytes
 }
 
 // BitLen returns the field modulus bit length.
-func (f *ScalarField) BitLen() int {
+func (*ScalarField) BitLen() int {
 	return k256Impl.FqBits
 }
 
@@ -107,7 +107,7 @@ type Scalar struct {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (fe *Scalar) Structure() algebra.Structure[*Scalar] {
+func (*Scalar) Structure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 

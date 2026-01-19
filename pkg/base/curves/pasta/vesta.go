@@ -56,17 +56,17 @@ func NewVestaCurve() *VestaCurve {
 }
 
 // Name returns the name of the structure.
-func (c *VestaCurve) Name() string {
+func (*VestaCurve) Name() string {
 	return VestaName
 }
 
 // Order returns the group or field order.
-func (c *VestaCurve) Order() cardinal.Cardinal {
+func (*VestaCurve) Order() cardinal.Cardinal {
 	return NewVestaScalarField().Order()
 }
 
 // Cofactor returns the curve cofactor.
-func (c *VestaCurve) Cofactor() cardinal.Cardinal {
+func (*VestaCurve) Cofactor() cardinal.Cardinal {
 	return cardinal.New(1)
 }
 
@@ -139,7 +139,7 @@ func (c *VestaCurve) FromUncompressed(input []byte) (*VestaPoint, error) {
 }
 
 // FromAffine builds a point from affine coordinates.
-func (c *VestaCurve) FromAffine(x, y *VestaBaseFieldElement) (*VestaPoint, error) {
+func (*VestaCurve) FromAffine(x, y *VestaBaseFieldElement) (*VestaPoint, error) {
 	var p VestaPoint
 	ok := p.V.SetAffine(&x.V, &y.V)
 	if ok != 1 {
@@ -149,7 +149,7 @@ func (c *VestaCurve) FromAffine(x, y *VestaBaseFieldElement) (*VestaPoint, error
 }
 
 // FromAffineX builds a point from an affine x-coordinate.
-func (c *VestaCurve) FromAffineX(x *VestaBaseFieldElement, b bool) (*VestaPoint, error) {
+func (*VestaCurve) FromAffineX(x *VestaBaseFieldElement, b bool) (*VestaPoint, error) {
 	var p VestaPoint
 	ok := p.V.SetFromAffineX(&x.V)
 	if ok != 1 {
@@ -172,44 +172,44 @@ func (c *VestaCurve) Hash(bytes []byte) (*VestaPoint, error) {
 }
 
 // HashWithDst maps input bytes to a point with a custom DST.
-func (c *VestaCurve) HashWithDst(dst string, bytes []byte) (*VestaPoint, error) {
+func (*VestaCurve) HashWithDst(dst string, bytes []byte) (*VestaPoint, error) {
 	var p VestaPoint
 	p.V.Hash(dst, bytes)
 	return &p, nil
 }
 
 // ElementSize returns the element size in bytes.
-func (c *VestaCurve) ElementSize() int {
+func (*VestaCurve) ElementSize() int {
 	return pastaImpl.FqBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
-func (c *VestaCurve) WideElementSize() int {
+func (*VestaCurve) WideElementSize() int {
 	return int(^uint(0) >> 1)
 }
 
 // ScalarStructure returns the scalar structure.
-func (c *VestaCurve) ScalarStructure() algebra.Structure[*VestaScalar] {
+func (*VestaCurve) ScalarStructure() algebra.Structure[*VestaScalar] {
 	return NewVestaScalarField()
 }
 
 // BaseStructure returns the base field structure.
-func (c *VestaCurve) BaseStructure() algebra.Structure[*VestaBaseFieldElement] {
+func (*VestaCurve) BaseStructure() algebra.Structure[*VestaBaseFieldElement] {
 	return NewVestaBaseField()
 }
 
 // ScalarRing returns the scalar ring.
-func (c *VestaCurve) ScalarRing() algebra.ZModLike[*VestaScalar] {
+func (*VestaCurve) ScalarRing() algebra.ZModLike[*VestaScalar] {
 	return NewVestaScalarField()
 }
 
 // ScalarField returns the scalar field.
-func (c *VestaCurve) ScalarField() algebra.PrimeField[*VestaScalar] {
+func (*VestaCurve) ScalarField() algebra.PrimeField[*VestaScalar] {
 	return NewVestaScalarField()
 }
 
 // BaseField returns the base field.
-func (c *VestaCurve) BaseField() algebra.FiniteField[*VestaBaseFieldElement] {
+func (*VestaCurve) BaseField() algebra.FiniteField[*VestaBaseFieldElement] {
 	return NewVestaBaseField()
 }
 
@@ -239,7 +239,7 @@ func (c *VestaCurve) ScalarBaseMul(sc *VestaScalar) *VestaPoint {
 }
 
 // ToElliptic returns the standard library elliptic.Curve adapter.
-func (c *VestaCurve) ToElliptic() elliptic.Curve {
+func (*VestaCurve) ToElliptic() elliptic.Curve {
 	return ellipticVestaInstance
 }
 
@@ -249,7 +249,7 @@ func (c *VestaCurve) MultiScalarOp(scalars []*VestaScalar, points []*VestaPoint)
 }
 
 // MultiScalarMul computes a multiscalar multiplication.
-func (c *VestaCurve) MultiScalarMul(scalars []*VestaScalar, points []*VestaPoint) (*VestaPoint, error) {
+func (*VestaCurve) MultiScalarMul(scalars []*VestaScalar, points []*VestaPoint) (*VestaPoint, error) {
 	if len(scalars) != len(points) {
 		return nil, curves.ErrInvalidLength.WithMessage("mismatched lengths of scalars and points")
 	}
@@ -277,7 +277,7 @@ func (p *VestaPoint) HashCode() base.HashCode {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (p *VestaPoint) Structure() algebra.Structure[*VestaPoint] {
+func (*VestaPoint) Structure() algebra.Structure[*VestaPoint] {
 	return NewVestaCurve()
 }
 
@@ -363,7 +363,7 @@ func (p *VestaPoint) ScalarMul(actor *VestaScalar) *VestaPoint {
 }
 
 // IsTorsionFree reports whether the point is torsion-free.
-func (p *VestaPoint) IsTorsionFree() bool {
+func (*VestaPoint) IsTorsionFree() bool {
 	return true
 }
 

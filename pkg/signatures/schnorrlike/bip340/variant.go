@@ -194,7 +194,7 @@ var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Varian
 // If the aggregate public key P = x·G has odd y, BIP-340 requires using -x instead.
 // This method negates the share if P.y is odd, ensuring all parties use
 // consistent (negated) shares when P.y is odd.
-func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
+func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
 	if publicKey == nil || share == nil {
 		return nil, ErrInvalidArgument.WithMessage("public key or secret share is nil")
 	}
@@ -215,7 +215,7 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 // that CorrectAdditiveSecretShareParity applies to private key shares. This is needed
 // for partial signature verification where the public key share must be corrected
 // based on the aggregate public key's Y coordinate parity.
-func (v *Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {
+func (*Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {
 	if aggregatePublicKey == nil || share == nil {
 		return nil, ErrInvalidArgument.WithMessage("aggregate public key or share is nil")
 	}
@@ -237,7 +237,7 @@ func (v *Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, sha
 // After all parties contribute their nonce commitments and the aggregate R is known,
 // if R.y is odd, each party must negate their partial nonce k_i.
 // This ensures the aggregate response s = Σk_i + e·Σx_i uses the correct nonces.
-func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
+func (*Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
 	if nonceCommitment == nil || k == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}

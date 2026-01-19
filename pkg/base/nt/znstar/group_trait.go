@@ -202,7 +202,7 @@ func (g *UnitGroupTrait[A, W, WT]) AmbientStructure() algebra.Structure[*num.Uin
 	return g.zMod
 }
 
-func (g *UnitGroupTrait[A, W, WT]) ScalarStructure() algebra.Structure[*num.Int] {
+func (*UnitGroupTrait[A, W, WT]) ScalarStructure() algebra.Structure[*num.Int] {
 	return num.Z()
 }
 

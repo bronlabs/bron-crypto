@@ -108,7 +108,7 @@ type Scheme[
 }
 
 // Name returns the signature scheme identifier ("BLS").
-func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Name() signatures.Name {
+func (*Scheme[PK, PKFE, SG, SGFE, E, S]) Name() signatures.Name {
 	return Name
 }
 

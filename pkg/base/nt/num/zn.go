@@ -282,12 +282,12 @@ func (zn *ZMod) IsDomain() bool {
 }
 
 // ScalarStructure returns the scalar structure of the group.
-func (zn *ZMod) ScalarStructure() algebra.Structure[*Nat] {
+func (*ZMod) ScalarStructure() algebra.Structure[*Nat] {
 	return N()
 }
 
 // AmbientStructure returns the ambient structure of quotient group ie. Z.
-func (zn *ZMod) AmbientStructure() algebra.Structure[*Int] {
+func (*ZMod) AmbientStructure() algebra.Structure[*Int] {
 	return Z()
 }
 
@@ -611,7 +611,7 @@ func (u *Uint) ScalarOp(other *Nat) *Uint {
 }
 
 // IsTorsionFree checks if the Uint element is torsion-free.
-func (u *Uint) IsTorsionFree() bool {
+func (*Uint) IsTorsionFree() bool {
 	return true
 }
 

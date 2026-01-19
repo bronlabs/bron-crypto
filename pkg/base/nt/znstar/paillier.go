@@ -156,7 +156,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 		return nil, errs2.Wrap(err).WithMessage("failed to lift rsaUnit to Paillier group")
 	}
 	lift, ok := any(g.arith).(interface {
-		ExpToN(out, base *numct.Nat)
+		ExpToN(out, base *numct.Nat) //nolint:revive // base shadows an import but here it's clearer.
 	})
 	if !ok {
 		return pu.Exp(g.n.Nat()), nil
@@ -177,29 +177,29 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 }
 
 // Representative computes the representative of a plaintext in the Paillier group. It is equivalent to computing (1 + m*n) mod n^2.
-func (pg *PaillierGroup[X]) Representative(plaintext *numct.Int) (*PaillierGroupElement[X], error) {
-	if pg.N().ModulusCT().IsInRangeSymmetric(plaintext) == ct.False {
+func (g *PaillierGroup[X]) Representative(plaintext *numct.Int) (*PaillierGroupElement[X], error) {
+	if g.N().ModulusCT().IsInRangeSymmetric(plaintext) == ct.False {
 		return nil, ErrValue.WithMessage("plaintext is out of range: |plaintext| >= n/2")
 	}
 	var shiftedPlaintext numct.Nat
-	pg.N().ModulusCT().ModI(&shiftedPlaintext, plaintext)
+	g.N().ModulusCT().ModI(&shiftedPlaintext, plaintext)
 	var out numct.Nat
-	pg.ModulusCT().ModMul(&out, &shiftedPlaintext, pg.N().Value())
+	g.ModulusCT().ModMul(&out, &shiftedPlaintext, g.N().Value())
 	out.Increment()
-	return pg.FromNatCT(&out)
+	return g.FromNatCT(&out)
 }
 
 // ForgetOrder returns a Paillier group with unknown order.
-func (pg *PaillierGroup[X]) ForgetOrder() *PaillierGroupUnknownOrder {
-	arith, ok := modular.NewSimple(pg.zMod.Modulus().ModulusCT())
+func (g *PaillierGroup[X]) ForgetOrder() *PaillierGroupUnknownOrder {
+	arith, ok := modular.NewSimple(g.zMod.Modulus().ModulusCT())
 	if ok == ct.False {
 		panic(ErrFailed.WithMessage("failed to create SimpleModulus"))
 	}
 	return &PaillierGroupUnknownOrder{
 		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *PaillierGroupElement[*modular.SimpleModulus], PaillierGroupElement[*modular.SimpleModulus]]{
-			zMod:  pg.zMod,
+			zMod:  g.zMod,
 			arith: arith,
-			n:     pg.n,
+			n:     g.n,
 		},
 	}
 }

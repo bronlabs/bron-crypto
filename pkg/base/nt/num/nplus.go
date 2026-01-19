@@ -72,7 +72,7 @@ func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 }
 
 // FromModulusCT creates a NatPlus from the given numct.Modulus.
-func (nps *PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) *NatPlus {
+func (*PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) *NatPlus {
 	return &NatPlus{v: m.Nat(), m: m}
 }
 
@@ -169,7 +169,7 @@ func (nps *PositiveNaturalNumbers) OpIdentity() *NatPlus {
 }
 
 // ElementSize returns -1 indicating that NatPlus does not have a fixed element size.
-func (nps *PositiveNaturalNumbers) ElementSize() int {
+func (*PositiveNaturalNumbers) ElementSize() int {
 	return -1
 }
 

@@ -221,7 +221,7 @@ func (p *Protocol[I, P]) Extract(x *Statement[I], a *Commitment[I], ei []sigma.C
 }
 
 // SpecialSoundness returns the protocol special soundness parameter.
-func (p *Protocol[I, P]) SpecialSoundness() uint {
+func (*Protocol[I, P]) SpecialSoundness() uint {
 	return specialSoundness
 }
 

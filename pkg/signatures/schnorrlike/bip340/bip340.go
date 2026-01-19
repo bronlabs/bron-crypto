@@ -146,7 +146,7 @@ type Scheme struct {
 }
 
 // Name returns the signature scheme identifier ("SchnorrLike").
-func (s Scheme) Name() signatures.Name {
+func (Scheme) Name() signatures.Name {
 	return schnorrlike.Name
 }
 
@@ -158,7 +158,7 @@ func (s *Scheme) Variant() *Variant {
 }
 
 // Keygen creates a key generator for BIP-340 key pairs.
-func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
+func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	out := &KeyGenerator{
 		KeyGeneratorTrait: schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]{
 			Grp: k256.NewCurve(),

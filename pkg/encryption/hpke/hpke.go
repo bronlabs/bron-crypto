@@ -207,7 +207,7 @@ type Scheme[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.
 }
 
 // Name returns the scheme identifier "HPKE".
-func (s *Scheme[P, B, S]) Name() encryption.Name {
+func (*Scheme[P, B, S]) Name() encryption.Name {
 	return Name
 }
 

@@ -118,7 +118,7 @@ type FpFieldElement struct {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (s *FpFieldElement) Structure() algebra.Structure[*FpFieldElement] {
+func (*FpFieldElement) Structure() algebra.Structure[*FpFieldElement] {
 	return newFpField()
 }
 

@@ -132,12 +132,12 @@ func (k Known) IsZero() bool {
 }
 
 // IsFinite checks if the known cardinal is finite, which is always true for Known.
-func (k Known) IsFinite() bool {
+func (Known) IsFinite() bool {
 	return true
 }
 
 // IsUnknown checks if the known cardinal is unknown, which is always false for Known.
-func (k Known) IsUnknown() bool {
+func (Known) IsUnknown() bool {
 	return false
 }
 

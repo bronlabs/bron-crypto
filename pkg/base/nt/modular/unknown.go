@@ -23,7 +23,7 @@ type SimpleModulus struct {
 }
 
 // MultiplicativeOrder returns an unknown cardinal for SimpleModulus.
-func (u *SimpleModulus) MultiplicativeOrder() algebra.Cardinal {
+func (*SimpleModulus) MultiplicativeOrder() algebra.Cardinal {
 	return cardinal.Unknown()
 }
 

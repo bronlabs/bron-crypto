@@ -121,7 +121,7 @@ func (sk *PrivateKey) Value() []byte {
 }
 
 // Type returns the type of the private key.
-func (sk *PrivateKey) Type() key_agreement.Type {
+func (*PrivateKey) Type() key_agreement.Type {
 	return Type
 }
 

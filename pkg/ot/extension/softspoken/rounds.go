@@ -214,7 +214,7 @@ func generateChallenge(transcript transcripts.Transcript, challengeLength int) (
 }
 
 // computeResponse Computes the challenge response ẋ, ṫ^i ∀i∈[κ].
-func (r *Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, challenge Challenge, challengeResponse *ChallengeResponse) error {
+func (*Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, challenge Challenge, challengeResponse *ChallengeResponse) error {
 	m := len(challenge)
 	etaBytes := (m * Sigma) / 8 // M = η/σ -> η = M*σ
 	// ẋ = x_{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • x_{(k-1)σ:kσ}

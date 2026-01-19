@@ -205,7 +205,7 @@ func (*Int) isValid(x *Int) (*Int, error) {
 }
 
 // Structure returns the algebraic structure of the integers.
-func (i *Int) Structure() algebra.Structure[*Int] {
+func (*Int) Structure() algebra.Structure[*Int] {
 	return Z()
 }
 
@@ -499,7 +499,7 @@ func (i *Int) ScalarOp(other *Int) *Int {
 }
 
 // IsTorsionFree returns true, indicating that the integers are torsion-free.
-func (i *Int) IsTorsionFree() bool {
+func (*Int) IsTorsionFree() bool {
 	return true
 }
 

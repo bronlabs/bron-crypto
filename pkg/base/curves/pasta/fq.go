@@ -118,7 +118,7 @@ type FqFieldElement struct {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (s *FqFieldElement) Structure() algebra.Structure[*FqFieldElement] {
+func (*FqFieldElement) Structure() algebra.Structure[*FqFieldElement] {
 	return newFqField()
 }
 

@@ -43,7 +43,7 @@ type (
 
 type (
 	Algebra[AE crtp.AlgebraElement[AE, S], S crtp.RingElement[S]]        crtp.Algebra[AE, S]
-	AlgebraElement[AE crtp.AlgebraElement[AE, S], S crtp.RingElement[S]] crtp.AlgebraElement[AE, S]
+	AlgebraElement[AE crtp.AlgebraElement[AE, S], S crtp.RingElement[S]] crtp.AlgebraElement[AE, S] //nolint:revive // algebra.AlgebraElement is meaningful because they relate to two different meaning of algebra.
 )
 
 type (

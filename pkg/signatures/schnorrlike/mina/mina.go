@@ -153,7 +153,7 @@ func (s *Scheme) Variant() *Variant {
 }
 
 // Keygen creates a key generator for Mina key pairs.
-func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
+func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	kg := &KeyGenerator{
 		schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]{
 			Grp: group,

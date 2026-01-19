@@ -56,17 +56,17 @@ func NewPallasCurve() *PallasCurve {
 }
 
 // Name returns the name of the structure.
-func (c *PallasCurve) Name() string {
+func (*PallasCurve) Name() string {
 	return PallasName
 }
 
 // Cofactor returns the curve cofactor.
-func (c *PallasCurve) Cofactor() cardinal.Cardinal {
+func (*PallasCurve) Cofactor() cardinal.Cardinal {
 	return cardinal.New(1)
 }
 
 // Order returns the group or field order.
-func (c *PallasCurve) Order() cardinal.Cardinal {
+func (*PallasCurve) Order() cardinal.Cardinal {
 	return NewPallasScalarField().Order()
 }
 
@@ -139,7 +139,7 @@ func (c *PallasCurve) FromUncompressed(input []byte) (*PallasPoint, error) {
 }
 
 // FromAffine builds a point from affine coordinates.
-func (c *PallasCurve) FromAffine(x, y *PallasBaseFieldElement) (*PallasPoint, error) {
+func (*PallasCurve) FromAffine(x, y *PallasBaseFieldElement) (*PallasPoint, error) {
 	var p PallasPoint
 	ok := p.V.SetAffine(&x.V, &y.V)
 	if ok != 1 {
@@ -149,7 +149,7 @@ func (c *PallasCurve) FromAffine(x, y *PallasBaseFieldElement) (*PallasPoint, er
 }
 
 // FromAffineX builds a point from an affine x-coordinate.
-func (c *PallasCurve) FromAffineX(x *PallasBaseFieldElement, b bool) (*PallasPoint, error) {
+func (*PallasCurve) FromAffineX(x *PallasBaseFieldElement, b bool) (*PallasPoint, error) {
 	var p PallasPoint
 	ok := p.V.SetFromAffineX(&x.V)
 	if ok != 1 {
@@ -172,44 +172,44 @@ func (c *PallasCurve) Hash(bytes []byte) (*PallasPoint, error) {
 }
 
 // HashWithDst maps input bytes to a point with a custom DST.
-func (c *PallasCurve) HashWithDst(dst string, bytes []byte) (*PallasPoint, error) {
+func (*PallasCurve) HashWithDst(dst string, bytes []byte) (*PallasPoint, error) {
 	var p PallasPoint
 	p.V.Hash(dst, bytes)
 	return &p, nil
 }
 
 // ElementSize returns the element size in bytes.
-func (c *PallasCurve) ElementSize() int {
+func (*PallasCurve) ElementSize() int {
 	return pastaImpl.FpBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
-func (c *PallasCurve) WideElementSize() int {
+func (*PallasCurve) WideElementSize() int {
 	return int(^uint(0) >> 1)
 }
 
 // ScalarStructure returns the scalar structure.
-func (c *PallasCurve) ScalarStructure() algebra.Structure[*PallasScalar] {
+func (*PallasCurve) ScalarStructure() algebra.Structure[*PallasScalar] {
 	return NewPallasScalarField()
 }
 
 // BaseStructure returns the base field structure.
-func (c *PallasCurve) BaseStructure() algebra.Structure[*PallasBaseFieldElement] {
+func (*PallasCurve) BaseStructure() algebra.Structure[*PallasBaseFieldElement] {
 	return NewPallasBaseField()
 }
 
 // ScalarRing returns the scalar ring.
-func (c *PallasCurve) ScalarRing() algebra.ZModLike[*PallasScalar] {
+func (*PallasCurve) ScalarRing() algebra.ZModLike[*PallasScalar] {
 	return NewPallasScalarField()
 }
 
 // ScalarField returns the scalar field.
-func (c *PallasCurve) ScalarField() algebra.PrimeField[*PallasScalar] {
+func (*PallasCurve) ScalarField() algebra.PrimeField[*PallasScalar] {
 	return NewPallasScalarField()
 }
 
 // BaseField returns the base field.
-func (c *PallasCurve) BaseField() algebra.FiniteField[*PallasBaseFieldElement] {
+func (*PallasCurve) BaseField() algebra.FiniteField[*PallasBaseFieldElement] {
 	return NewPallasBaseField()
 }
 
@@ -239,7 +239,7 @@ func (c *PallasCurve) ScalarBaseMul(sc *PallasScalar) *PallasPoint {
 }
 
 // ToElliptic returns the standard library elliptic.Curve adapter.
-func (c *PallasCurve) ToElliptic() elliptic.Curve {
+func (*PallasCurve) ToElliptic() elliptic.Curve {
 	return ellipticPallasInstance
 }
 
@@ -249,7 +249,7 @@ func (c *PallasCurve) MultiScalarOp(scalars []*PallasScalar, points []*PallasPoi
 }
 
 // MultiScalarMul computes a multiscalar multiplication.
-func (c *PallasCurve) MultiScalarMul(scalars []*PallasScalar, points []*PallasPoint) (*PallasPoint, error) {
+func (*PallasCurve) MultiScalarMul(scalars []*PallasScalar, points []*PallasPoint) (*PallasPoint, error) {
 	if len(scalars) != len(points) {
 		return nil, curves.ErrInvalidLength.WithMessage("mismatched lengths of scalars and points")
 	}
@@ -282,7 +282,7 @@ func (p *PallasPoint) Bytes() []byte {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (p *PallasPoint) Structure() algebra.Structure[*PallasPoint] {
+func (*PallasPoint) Structure() algebra.Structure[*PallasPoint] {
 	return NewPallasCurve()
 }
 
@@ -363,7 +363,7 @@ func (p *PallasPoint) ScalarMul(actor *PallasScalar) *PallasPoint {
 }
 
 // IsTorsionFree reports whether the point is torsion-free.
-func (p *PallasPoint) IsTorsionFree() bool {
+func (*PallasPoint) IsTorsionFree() bool {
 	return true
 }
 

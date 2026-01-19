@@ -241,7 +241,7 @@ func (sk *PrivateKey[PKV, SKV]) PublicKey() *PublicKey[PKV, SKV] {
 }
 
 // Name returns the signature scheme name ("SchnorrLike").
-func (sk *PrivateKey[PKV, SKV]) Name() signatures.Name {
+func (*PrivateKey[PKV, SKV]) Name() signatures.Name {
 	return Name
 }
 

@@ -342,8 +342,8 @@ func (e *Decrypter[P, B, S]) Mode() ModeID {
 
 // Decrypt decrypts a ciphertext encrypted to this receiver's public key.
 // This is equivalent to Open with nil associated data.
-func (d *Decrypter[P, B, S]) Decrypt(ciphertext Ciphertext) (Message, error) {
-	return d.Open(ciphertext, nil)
+func (e *Decrypter[P, B, S]) Decrypt(ciphertext Ciphertext) (Message, error) {
+	return e.Open(ciphertext, nil)
 }
 
 // Open decrypts a ciphertext with associated data. The associated data must match
@@ -353,11 +353,11 @@ func (d *Decrypter[P, B, S]) Decrypt(ciphertext Ciphertext) (Message, error) {
 // must be opened in the same order they were sealed by the sender.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2
-func (d *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, error) {
+func (e *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, error) {
 	if ciphertext == nil {
 		return nil, ErrInvalidArgument.WithStackFrame().WithMessage("ciphertext is nil")
 	}
-	pt, err := d.ctx.Open([]byte(ciphertext), aad)
+	pt, err := e.ctx.Open([]byte(ciphertext), aad)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -371,11 +371,11 @@ func (d *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, e
 // same output, enabling key agreement for additional symmetric keys.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.3
-func (d *Decrypter[P, B, S]) Export(context []byte, length uint) (*encryption.SymmetricKey, error) {
+func (e *Decrypter[P, B, S]) Export(context []byte, length uint) (*encryption.SymmetricKey, error) {
 	if length == 0 {
 		return nil, ErrInvalidLength.WithStackFrame()
 	}
-	k, err := d.ctx.Export(context, int(length))
+	k, err := e.ctx.Export(context, int(length))
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}

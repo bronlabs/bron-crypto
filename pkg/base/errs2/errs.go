@@ -210,11 +210,11 @@ func (e *sentinelError) Format(s fmt.State, verb rune) {
 	}
 }
 
-func (e *sentinelError) Tags() map[string]any {
+func (*sentinelError) Tags() map[string]any {
 	return nil
 }
 
-func (e *sentinelError) StackFrame() *StackFrame {
+func (*sentinelError) StackFrame() *StackFrame {
 	return nil
 }
 

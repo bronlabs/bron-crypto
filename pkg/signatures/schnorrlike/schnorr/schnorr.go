@@ -254,7 +254,7 @@ type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]
 }
 
 // Type returns the variant identifier "Schnorr".
-func (v *Variant[GE, S]) Type() schnorrlike.VariantType {
+func (*Variant[GE, S]) Type() schnorrlike.VariantType {
 	return VariantType
 }
 

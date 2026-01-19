@@ -107,7 +107,7 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 		if len(b) == 0 {
 			return 0
 		}
-		var acc uint = 0
+		var acc uint
 		for k := range w {
 			bitIndex := start + k
 			byteIndex := bitIndex / 8

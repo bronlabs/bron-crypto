@@ -35,7 +35,7 @@ func NewScheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 }
 
 // Name returns the signature scheme identifier ("ECDSA").
-func (s *Scheme[P, B, S]) Name() signatures.Name {
+func (*Scheme[P, B, S]) Name() signatures.Name {
 	return Name
 }
 

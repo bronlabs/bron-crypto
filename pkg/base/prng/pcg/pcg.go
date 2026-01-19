@@ -46,7 +46,7 @@ func (r *seededReader) Seed(seed, salt []byte) error {
 	return nil
 }
 
-func (r *seededReader) validateSeedInputs(seed, salt []byte) error {
+func (*seededReader) validateSeedInputs(seed, salt []byte) error {
 	validationErrs := []error{}
 	if len(seed) != 8 {
 		validationErrs = append(validationErrs, ErrInvalidSeedLength)
@@ -58,7 +58,7 @@ func (r *seededReader) validateSeedInputs(seed, salt []byte) error {
 }
 
 // New generates a new PRNG of the same type with the provided seed and salt.
-func (r *seededReader) New(seed, salt []byte) (prng.SeedablePRNG, error) {
+func (*seededReader) New(seed, salt []byte) (prng.SeedablePRNG, error) {
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)
 	return New(seedUint64, saltUint64), nil

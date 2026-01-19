@@ -185,13 +185,13 @@ func (prm *ParamsMulti) Recombine(residues ...*numct.Nat) (result *numct.Nat, ok
 
 // DecomposeSerial decomposes m into residues mod each prime.
 // Constant-time with respect to values (not the number of primes).
-func (params *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
-	residues := make([]*numct.Nat, params.NumFactors)
+func (prm *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
+	residues := make([]*numct.Nat, prm.NumFactors)
 
 	// Process all primes to maintain constant time
-	for i := range params.NumFactors {
+	for i := range prm.NumFactors {
 		var residueT numct.Nat
-		params.Factors[i].Mod(&residueT, m.Nat())
+		prm.Factors[i].Mod(&residueT, m.Nat())
 		residues[i] = &residueT
 	}
 
@@ -200,18 +200,18 @@ func (params *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
 
 // DecomposeParallel decomposes m into residues mod each prime in parallel.
 // Constant-time with respect to values (not the number of primes).
-func (params *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
-	residues := make([]*numct.Nat, params.NumFactors)
+func (prm *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
+	residues := make([]*numct.Nat, prm.NumFactors)
 
 	var wg sync.WaitGroup
-	wg.Add(params.NumFactors)
+	wg.Add(prm.NumFactors)
 
 	// Launch all goroutines to maintain constant time
-	for i := range params.NumFactors {
+	for i := range prm.NumFactors {
 		go func(idx int) {
 			defer wg.Done()
 			var residue numct.Nat
-			params.Factors[idx].Mod(&residue, m.Nat())
+			prm.Factors[idx].Mod(&residue, m.Nat())
 			residues[idx] = &residue
 		}(i)
 	}
@@ -222,11 +222,11 @@ func (params *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
 
 // Decompose chooses between serial and parallel based on size.
 // The choice is deterministic based on modulus size and prime count.
-func (params *ParamsMulti) Decompose(m *numct.Modulus) []*numct.Nat {
+func (prm *ParamsMulti) Decompose(m *numct.Modulus) []*numct.Nat {
 	// Use parallel for larger moduli or more primes
 	// This is a deterministic choice, not data-dependent
-	if m.BitLen() > 4096 || params.NumFactors > 3 {
-		return params.DecomposeParallel(m)
+	if m.BitLen() > 4096 || prm.NumFactors > 3 {
+		return prm.DecomposeParallel(m)
 	}
-	return params.DecomposeSerial(m)
+	return prm.DecomposeSerial(m)
 }

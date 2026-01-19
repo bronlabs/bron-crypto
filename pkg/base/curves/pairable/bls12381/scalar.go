@@ -106,7 +106,7 @@ type Scalar struct {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (s *Scalar) Structure() algebra.Structure[*Scalar] {
+func (*Scalar) Structure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 

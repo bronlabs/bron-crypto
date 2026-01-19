@@ -261,7 +261,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 }
 
 // ComputeResponse computes the Mina signature response: s = k + e·x mod n.
-func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
+func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
 		return nil, ErrInvalidArgument.WithMessage("privateKeyValue, nonce and challenge must not be nil")
 	}
@@ -269,7 +269,7 @@ func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*S
 }
 
 // SerializeSignature encodes the signature to 64 bytes in Mina's little-endian format.
-func (v *Variant) SerializeSignature(signature *Signature) ([]byte, error) {
+func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 	return SerializeSignature(signature)
 }
 
@@ -280,7 +280,7 @@ func (v *Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 
 // CorrectAdditiveSecretShareParity is a no-op for Mina since no parity correction
 // is needed for secret shares (only for nonce commitments).
-func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
+func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
 	// no changes needed
 	return share, nil
 }
@@ -288,7 +288,7 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 // CorrectPartialNonceParity adjusts a partial nonce for Mina's even-y requirement.
 // If the aggregate nonce commitment R has odd y, each party must negate their
 // partial nonce k_i to ensure the final signature is valid.
-func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (correctedR *GroupElement, correctedK *Scalar, err error) {
+func (*Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (correctedR *GroupElement, correctedK *Scalar, err error) {
 	if aggregatedNonceCommitments == nil || localNonce == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}

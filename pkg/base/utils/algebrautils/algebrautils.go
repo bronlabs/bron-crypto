@@ -166,7 +166,7 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 		if len(b) == 0 {
 			return 0
 		}
-		var acc uint = 0
+		var acc uint
 		for k := range w {
 			bitIndex := start + k
 			byteCount := len(b)

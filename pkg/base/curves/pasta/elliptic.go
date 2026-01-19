@@ -37,12 +37,12 @@ type ellipticPallas struct {
 }
 
 // Params returns the curve parameters.
-func (c *ellipticPallas) Params() *elliptic.CurveParams {
+func (*ellipticPallas) Params() *elliptic.CurveParams {
 	return ellipticPallasParams
 }
 
 // IsOnCurve reports whether the point is on the curve.
-func (c *ellipticPallas) IsOnCurve(x, y *big.Int) bool {
+func (*ellipticPallas) IsOnCurve(x, y *big.Int) bool {
 	// IsOnCurve is documented to reject (0, 0), the conventional point at infinity.
 	if x.Sign() == 0 && y.Sign() == 0 {
 		return false
@@ -52,7 +52,7 @@ func (c *ellipticPallas) IsOnCurve(x, y *big.Int) bool {
 }
 
 // Add sets the receiver to lhs + rhs.
-func (c *ellipticPallas) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
+func (*ellipticPallas) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 	p1, err := fromPallasAffine(x1, y1)
 	if err != nil {
 		panic("Add was called on an invalid point")
@@ -65,7 +65,7 @@ func (c *ellipticPallas) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 }
 
 // Double sets the receiver to 2*x.
-func (c *ellipticPallas) Double(x1, y1 *big.Int) (x, y *big.Int) {
+func (*ellipticPallas) Double(x1, y1 *big.Int) (x, y *big.Int) {
 	p, err := fromPallasAffine(x1, y1)
 	if err != nil {
 		panic("Double was called on an invalid point")
@@ -74,7 +74,7 @@ func (c *ellipticPallas) Double(x1, y1 *big.Int) (x, y *big.Int) {
 }
 
 // ScalarMult multiplies a point by a scalar.
-func (c *ellipticPallas) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
+func (*ellipticPallas) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
 	p, err := fromPallasAffine(x1, y1)
 	if err != nil {
 		panic("ScalarMult was called on an invalid point")
@@ -88,7 +88,7 @@ func (c *ellipticPallas) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
 }
 
 // ScalarBaseMult multiplies the generator by a scalar.
-func (c *ellipticPallas) ScalarBaseMult(k []byte) (x, y *big.Int) {
+func (*ellipticPallas) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	s, err := NewPallasScalarField().FromWideBytes(k)
 	if err != nil {
 		panic("ScalarMult was called with an invalid scalar")
@@ -100,12 +100,12 @@ type ellipticVesta struct {
 }
 
 // Params returns the curve parameters.
-func (c *ellipticVesta) Params() *elliptic.CurveParams {
+func (*ellipticVesta) Params() *elliptic.CurveParams {
 	return ellipticVestaParams
 }
 
 // IsOnCurve reports whether the point is on the curve.
-func (c *ellipticVesta) IsOnCurve(x, y *big.Int) bool {
+func (*ellipticVesta) IsOnCurve(x, y *big.Int) bool {
 	// IsOnCurve is documented to reject (0, 0), the conventional point at infinity.
 	if x.Sign() == 0 && y.Sign() == 0 {
 		return false
@@ -115,7 +115,7 @@ func (c *ellipticVesta) IsOnCurve(x, y *big.Int) bool {
 }
 
 // Add sets the receiver to lhs + rhs.
-func (c *ellipticVesta) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
+func (*ellipticVesta) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 	p1, err := fromVestaAffine(x1, y1)
 	if err != nil {
 		panic("Add was called on an invalid point")
@@ -128,7 +128,7 @@ func (c *ellipticVesta) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 }
 
 // Double sets the receiver to 2*x.
-func (c *ellipticVesta) Double(x1, y1 *big.Int) (x, y *big.Int) {
+func (*ellipticVesta) Double(x1, y1 *big.Int) (x, y *big.Int) {
 	p, err := fromVestaAffine(x1, y1)
 	if err != nil {
 		panic("Double was called on an invalid point")
@@ -137,7 +137,7 @@ func (c *ellipticVesta) Double(x1, y1 *big.Int) (x, y *big.Int) {
 }
 
 // ScalarMult multiplies a point by a scalar.
-func (c *ellipticVesta) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
+func (*ellipticVesta) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
 	p, err := fromVestaAffine(x1, y1)
 	if err != nil {
 		panic("ScalarMult was called on an invalid point")
@@ -151,7 +151,7 @@ func (c *ellipticVesta) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
 }
 
 // ScalarBaseMult multiplies the generator by a scalar.
-func (c *ellipticVesta) ScalarBaseMult(k []byte) (x, y *big.Int) {
+func (*ellipticVesta) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	s, err := NewVestaScalarField().FromWideBytes(k)
 	if err != nil {
 		panic("ScalarMult was called with an invalid scalar")
@@ -186,13 +186,13 @@ func fromPallasAffine(x *big.Int, y *big.Int) (*PallasPoint, error) {
 	return &p, nil
 }
 
-func toPallasAffine(p *PallasPoint) (*big.Int, *big.Int) {
+func toPallasAffine(p *PallasPoint) (x *big.Int, y *big.Int) {
 	if p.IsZero() {
 		return new(big.Int), new(big.Int)
 	}
-	x, _ := p.AffineX()
-	y, _ := p.AffineY()
-	return x.Cardinal().Big(), y.Cardinal().Big()
+	xp, _ := p.AffineX()
+	yp, _ := p.AffineY()
+	return xp.Cardinal().Big(), yp.Cardinal().Big()
 }
 
 func fromVestaAffine(x *big.Int, y *big.Int) (*VestaPoint, error) {
@@ -222,13 +222,13 @@ func fromVestaAffine(x *big.Int, y *big.Int) (*VestaPoint, error) {
 	return &p, nil
 }
 
-func toVestaAffine(p *VestaPoint) (*big.Int, *big.Int) {
+func toVestaAffine(p *VestaPoint) (x *big.Int, y *big.Int) {
 	if p.IsZero() {
 		return new(big.Int), new(big.Int)
 	}
-	x, _ := p.AffineX()
-	y, _ := p.AffineY()
-	return x.Cardinal().Big(), y.Cardinal().Big()
+	xp, _ := p.AffineX()
+	yp, _ := p.AffineY()
+	return xp.Cardinal().Big(), yp.Cardinal().Big()
 }
 
 func mustSetBigIntString(s string) *big.Int {

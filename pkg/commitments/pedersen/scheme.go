@@ -23,7 +23,7 @@ func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 }
 
 // Name returns the identifier of the Pedersen commitment scheme.
-func (s *Scheme[_, _]) Name() commitments.Name {
+func (*Scheme[_, _]) Name() commitments.Name {
 	return Name
 }
 

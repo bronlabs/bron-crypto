@@ -48,7 +48,7 @@ type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] s
 }
 
 // Name returns the canonical name of this scheme.
-func (s *Scheme[E, S]) Name() sharing.Name {
+func (*Scheme[E, S]) Name() sharing.Name {
 	return Name
 }
 

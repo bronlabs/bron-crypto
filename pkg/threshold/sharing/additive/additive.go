@@ -62,7 +62,7 @@ type Scheme[E GroupElement[E]] struct {
 }
 
 // Name returns the canonical name of this scheme.
-func (d *Scheme[E]) Name() sharing.Name {
+func (*Scheme[E]) Name() sharing.Name {
 	return Name
 }
 

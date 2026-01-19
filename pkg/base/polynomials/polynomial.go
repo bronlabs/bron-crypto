@@ -73,7 +73,7 @@ func (r *PolynomialRing[RE]) Name() string {
 	return fmt.Sprintf("PolynomialRing[%s]", r.ring.Name())
 }
 
-func (r *PolynomialRing[RE]) Order() algebra.Cardinal {
+func (*PolynomialRing[RE]) Order() algebra.Cardinal {
 	return cardinal.Infinite()
 }
 
@@ -104,7 +104,7 @@ func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) 
 	return poly, nil
 }
 
-func (r *PolynomialRing[RE]) ElementSize() int {
+func (*PolynomialRing[RE]) ElementSize() int {
 	return -1
 }
 
@@ -307,11 +307,11 @@ func (p *Polynomial[RE]) IsOne() bool {
 	return p.coeffs[0].IsOne()
 }
 
-func (p *Polynomial[RE]) TryInv() (*Polynomial[RE], error) {
+func (*Polynomial[RE]) TryInv() (*Polynomial[RE], error) {
 	return nil, ErrOperationNotSupported.WithStackFrame()
 }
 
-func (p *Polynomial[RE]) TryDiv(e *Polynomial[RE]) (*Polynomial[RE], error) {
+func (*Polynomial[RE]) TryDiv(e *Polynomial[RE]) (*Polynomial[RE], error) {
 	return nil, ErrOperationNotSupported.WithStackFrame()
 }
 

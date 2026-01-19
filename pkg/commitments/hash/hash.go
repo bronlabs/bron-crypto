@@ -96,7 +96,7 @@ type Scheme struct {
 }
 
 // Name returns the identifier of the hash-based commitment scheme.
-func (s *Scheme) Name() commitments.Name {
+func (*Scheme) Name() commitments.Name {
 	return Name
 }
 

@@ -230,7 +230,7 @@ func (pk *PublicKey[P1, F1, P2, F2, E, S]) Group() curves.PairingFriendlyCurve[P
 }
 
 // Name returns the signature scheme identifier ("BLS").
-func (pk *PublicKey[P1, F1, P2, F2, E, S]) Name() signatures.Name {
+func (*PublicKey[P1, F1, P2, F2, E, S]) Name() signatures.Name {
 	return Name
 }
 
@@ -340,7 +340,7 @@ type PrivateKey[
 }
 
 // Name returns the signature scheme identifier ("BLS").
-func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Name() signatures.Name {
+func (*PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Name() signatures.Name {
 	return Name
 }
 

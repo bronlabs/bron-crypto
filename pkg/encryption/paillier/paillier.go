@@ -26,12 +26,12 @@ func NewScheme() *Scheme {
 type Scheme struct{}
 
 // Name returns the identifier for the Paillier encryption scheme.
-func (s *Scheme) Name() encryption.Name {
+func (*Scheme) Name() encryption.Name {
 	return Name
 }
 
 // Keygen creates a new key generator with the given options.
-func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
+func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	kg := &KeyGenerator{
 		bits: KeyLen,
 	}
@@ -44,7 +44,7 @@ func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 }
 
 // Encrypter creates a new encrypter with the given options.
-func (s *Scheme) Encrypter(opts ...EncrypterOption) (*Encrypter, error) {
+func (*Scheme) Encrypter(opts ...EncrypterOption) (*Encrypter, error) {
 	e := &Encrypter{}
 	for _, opt := range opts {
 		if err := opt(e); err != nil {
@@ -57,7 +57,7 @@ func (s *Scheme) Encrypter(opts ...EncrypterOption) (*Encrypter, error) {
 // SelfEncrypter creates a new self-encrypter for the given private key.
 // A self-encrypter encrypts messages to the owner of the private key,
 // using CRT optimizations for faster encryption.
-func (s *Scheme) SelfEncrypter(sk *PrivateKey, opts ...SelfEncrypterOption) (*SelfEncrypter, error) {
+func (*Scheme) SelfEncrypter(sk *PrivateKey, opts ...SelfEncrypterOption) (*SelfEncrypter, error) {
 	if sk == nil {
 		return nil, ErrInvalidArgument.WithStackFrame()
 	}
@@ -72,7 +72,7 @@ func (s *Scheme) SelfEncrypter(sk *PrivateKey, opts ...SelfEncrypterOption) (*Se
 }
 
 // Decrypter creates a new decrypter for the given private key.
-func (s *Scheme) Decrypter(sk *PrivateKey, opts ...DecrypterOption) (*Decrypter, error) {
+func (*Scheme) Decrypter(sk *PrivateKey, opts ...DecrypterOption) (*Decrypter, error) {
 	if sk == nil {
 		return nil, ErrInvalidArgument.WithStackFrame()
 	}

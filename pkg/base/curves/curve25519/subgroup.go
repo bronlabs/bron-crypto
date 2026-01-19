@@ -42,27 +42,27 @@ type PrimeSubGroup struct {
 }
 
 // Name returns the name of the structure.
-func (c *PrimeSubGroup) Name() string {
+func (*PrimeSubGroup) Name() string {
 	return PrimeCurveName
 }
 
 // ElementSize returns the element size in bytes.
-func (c *PrimeSubGroup) ElementSize() int {
+func (*PrimeSubGroup) ElementSize() int {
 	return 32
 }
 
 // Cofactor returns the curve cofactor.
-func (c *PrimeSubGroup) Cofactor() cardinal.Cardinal {
+func (*PrimeSubGroup) Cofactor() cardinal.Cardinal {
 	return cardinal.New(8)
 }
 
 // Order returns the group or field order.
-func (c *PrimeSubGroup) Order() cardinal.Cardinal {
+func (*PrimeSubGroup) Order() cardinal.Cardinal {
 	return NewScalarField().Order()
 }
 
 // FromCompressed decodes a compressed point.
-func (c *PrimeSubGroup) FromCompressed(data []byte) (*PrimeSubGroupPoint, error) {
+func (*PrimeSubGroup) FromCompressed(data []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromCompressed(data)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
@@ -71,7 +71,7 @@ func (c *PrimeSubGroup) FromCompressed(data []byte) (*PrimeSubGroupPoint, error)
 }
 
 // FromBytes decodes an element from bytes.
-func (c *PrimeSubGroup) FromBytes(data []byte) (*PrimeSubGroupPoint, error) {
+func (*PrimeSubGroup) FromBytes(data []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromBytes(data)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
@@ -80,7 +80,7 @@ func (c *PrimeSubGroup) FromBytes(data []byte) (*PrimeSubGroupPoint, error) {
 }
 
 // FromUncompressed decodes an uncompressed point.
-func (c *PrimeSubGroup) FromUncompressed(data []byte) (*PrimeSubGroupPoint, error) {
+func (*PrimeSubGroup) FromUncompressed(data []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromUncompressed(data)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
@@ -89,7 +89,7 @@ func (c *PrimeSubGroup) FromUncompressed(data []byte) (*PrimeSubGroupPoint, erro
 }
 
 // FromAffine builds a point from affine coordinates.
-func (c *PrimeSubGroup) FromAffine(x, y *BaseFieldElement) (*PrimeSubGroupPoint, error) {
+func (*PrimeSubGroup) FromAffine(x, y *BaseFieldElement) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromAffine(x, y)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot set coordinates")
@@ -98,7 +98,7 @@ func (c *PrimeSubGroup) FromAffine(x, y *BaseFieldElement) (*PrimeSubGroupPoint,
 }
 
 // Hash maps input bytes to an element or point.
-func (c *PrimeSubGroup) Hash(bytes []byte) (*PrimeSubGroupPoint, error) {
+func (*PrimeSubGroup) Hash(bytes []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().Hash(bytes)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot hash to curve")
@@ -107,7 +107,7 @@ func (c *PrimeSubGroup) Hash(bytes []byte) (*PrimeSubGroupPoint, error) {
 }
 
 // HashWithDst maps input bytes to a point with a custom DST.
-func (c *PrimeSubGroup) HashWithDst(dst string, bytes []byte) (*PrimeSubGroupPoint, error) {
+func (*PrimeSubGroup) HashWithDst(dst string, bytes []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().HashWithDst(dst, bytes)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot hash to curve")
@@ -116,27 +116,27 @@ func (c *PrimeSubGroup) HashWithDst(dst string, bytes []byte) (*PrimeSubGroupPoi
 }
 
 // ScalarStructure returns the scalar structure.
-func (c *PrimeSubGroup) ScalarStructure() algebra.Structure[*Scalar] {
+func (*PrimeSubGroup) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
 // ScalarRing returns the scalar ring.
-func (c *PrimeSubGroup) ScalarRing() algebra.ZModLike[*Scalar] {
+func (*PrimeSubGroup) ScalarRing() algebra.ZModLike[*Scalar] {
 	return NewScalarField()
 }
 
 // ScalarField returns the scalar field.
-func (c *PrimeSubGroup) ScalarField() algebra.PrimeField[*Scalar] {
+func (*PrimeSubGroup) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
 
 // BaseField returns the base field.
-func (c *PrimeSubGroup) BaseField() algebra.FiniteField[*BaseFieldElement] {
+func (*PrimeSubGroup) BaseField() algebra.FiniteField[*BaseFieldElement] {
 	return NewBaseField()
 }
 
 // BaseStructure returns the base field structure.
-func (c *PrimeSubGroup) BaseStructure() algebra.Structure[*BaseFieldElement] {
+func (*PrimeSubGroup) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
 
@@ -156,7 +156,7 @@ func (c *PrimeSubGroup) MultiScalarOp(scalars []*Scalar, points []*PrimeSubGroup
 }
 
 // MultiScalarMul computes a multiscalar multiplication.
-func (c *PrimeSubGroup) MultiScalarMul(scalars []*Scalar, points []*PrimeSubGroupPoint) (*PrimeSubGroupPoint, error) {
+func (*PrimeSubGroup) MultiScalarMul(scalars []*Scalar, points []*PrimeSubGroupPoint) (*PrimeSubGroupPoint, error) {
 	if len(scalars) != len(points) {
 		return nil, curves.ErrInvalidLength.WithMessage("mismatched lengths of scalars and points")
 	}
@@ -182,7 +182,7 @@ func (p *PrimeSubGroupPoint) HashCode() base.HashCode {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (p *PrimeSubGroupPoint) Structure() algebra.Structure[*PrimeSubGroupPoint] {
+func (*PrimeSubGroupPoint) Structure() algebra.Structure[*PrimeSubGroupPoint] {
 	return NewPrimeSubGroup()
 }
 
@@ -219,7 +219,7 @@ func (p *PrimeSubGroupPoint) ScalarMul(actor *Scalar) *PrimeSubGroupPoint {
 }
 
 // IsTorsionFree reports whether the point is torsion-free.
-func (p *PrimeSubGroupPoint) IsTorsionFree() bool {
+func (*PrimeSubGroupPoint) IsTorsionFree() bool {
 	return true
 }
 

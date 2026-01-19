@@ -138,7 +138,7 @@ func CollectToImmutableComparable[K comparable, V any](xs []K, ys []V) (ds.Map[K
 }
 
 // IsImmutable returns true as this is an immutable map.
-func (m ImmutableComparableMap[K, V]) IsImmutable() bool {
+func (ImmutableComparableMap[K, V]) IsImmutable() bool {
 	return true
 }
 
@@ -256,7 +256,7 @@ type MutableComparableMap[K comparable, V any] struct {
 }
 
 // IsImmutable returns false as this is a mutable map.
-func (m MutableComparableMap[K, V]) IsImmutable() bool {
+func (MutableComparableMap[K, V]) IsImmutable() bool {
 	return false
 }
 

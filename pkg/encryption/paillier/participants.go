@@ -68,7 +68,7 @@ func (e *Encrypter) Encrypt(plaintext *Plaintext, receiver *PublicKey, prng io.R
 
 // EncryptWithNonce encrypts a plaintext using a provided nonce.
 // The ciphertext is computed as c = g^m * r^n mod n².
-func (e *Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, nonce *Nonce) (*Ciphertext, error) {
+func (*Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, nonce *Nonce) (*Ciphertext, error) {
 	embeddedNonce, err := receiver.group.EmbedRSA(nonce.Value())
 	if err != nil {
 		return nil, errs2.Wrap(err)
