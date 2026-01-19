@@ -43,6 +43,7 @@ func PaillierPlaintextGenerator(group *znstar.PaillierGroupKnownOrder) *rapid.Ge
 }
 
 func TestMultiplicativeGroup_Properties(t *testing.T) {
+	t.Parallel()
 	g, group := PaillierUnitGenerator(t)
 	suite := properties.MultiplicativeGroup(t, group, g)
 	suite.Theory = append(

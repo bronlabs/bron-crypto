@@ -12,6 +12,7 @@ import (
 )
 
 func TestEncodeDecodeRoundTrip(t *testing.T) {
+	t.Parallel()
 	// Generate a new key pair
 	scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 	require.NoError(t, err)
@@ -54,6 +55,7 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 // 5. Signature is (R.x, s)
 // 6. Verification: s*G == R + e*PK
 func TestSchnorrSignatureLogic(t *testing.T) {
+	t.Parallel()
 	// Create a random scheme
 	scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 	require.NoError(t, err)
@@ -106,6 +108,7 @@ func TestSchnorrSignatureLogic(t *testing.T) {
 
 // TestSchnorrDeterministicNonce verifies deterministic nonce generation
 func TestSchnorrDeterministicNonce(t *testing.T) {
+	t.Parallel()
 	// Decode test private key
 	privateKey, err := mina.DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 	require.NoError(t, err)
@@ -142,6 +145,7 @@ func TestSchnorrDeterministicNonce(t *testing.T) {
 
 // TestSchnorrParityCorrection verifies R has even y-coordinate
 func TestSchnorrParityCorrection(t *testing.T) {
+	t.Parallel()
 	// Create multiple random schemes and verify R parity
 	for range 10 {
 		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)

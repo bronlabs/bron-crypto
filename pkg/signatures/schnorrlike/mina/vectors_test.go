@@ -319,6 +319,7 @@ func TestLegacySignatures(t *testing.T) {
 	// Test string message signatures
 	for i, test := range stringTests {
 		t.Run(fmt.Sprintf("string_%d_devnet", i), func(t *testing.T) {
+			t.Parallel()
 			msg := new(mina.ROInput).Init()
 			msg.AddString(test.message)
 

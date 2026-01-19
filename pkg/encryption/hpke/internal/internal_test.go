@@ -164,6 +164,7 @@ func TestDHKEM_KeySizes(t *testing.T) {
 	t.Parallel()
 
 	t.Run("P256_Sizes", func(t *testing.T) {
+		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
 		require.Equal(t, 32, kem.NSecret())
@@ -174,6 +175,7 @@ func TestDHKEM_KeySizes(t *testing.T) {
 	})
 
 	t.Run("X25519_Sizes", func(t *testing.T) {
+		t.Parallel()
 		kem := NewX25519HKDFSha256KEM()
 
 		require.Equal(t, 32, kem.NSecret())
@@ -287,6 +289,7 @@ func TestKDF_LabeledExtract(t *testing.T) {
 	t.Parallel()
 
 	t.Run("SHA256", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA256()
 
 		suiteID := []byte("KEM")
@@ -304,6 +307,7 @@ func TestKDF_LabeledExtract(t *testing.T) {
 	})
 
 	t.Run("SHA512", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA512()
 
 		suiteID := []byte("KEM")
@@ -407,6 +411,7 @@ func TestPrivateKey_PublicKey_Creation(t *testing.T) {
 	t.Parallel()
 
 	t.Run("P256_Keys", func(t *testing.T) {
+		t.Parallel()
 		curve := p256.NewCurve()
 		scalar, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
@@ -424,6 +429,7 @@ func TestPrivateKey_PublicKey_Creation(t *testing.T) {
 	})
 
 	t.Run("X25519_Keys", func(t *testing.T) {
+		t.Parallel()
 		curve := curve25519.NewPrimeSubGroup()
 		scalar, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
@@ -480,6 +486,7 @@ func TestDHKEM_InvalidInputs(t *testing.T) {
 	t.Parallel()
 
 	t.Run("NilPRNG", func(t *testing.T) {
+		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
 		// Nil PRNG
@@ -491,6 +498,7 @@ func TestDHKEM_InvalidInputs(t *testing.T) {
 	})
 
 	t.Run("ShortIKM", func(t *testing.T) {
+		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
 		// IKM shorter than NSk
@@ -505,12 +513,14 @@ func TestKDF_HashLength(t *testing.T) {
 	t.Parallel()
 
 	t.Run("SHA256", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA256()
 		require.Equal(t, 32, kdf.Nh())
 		require.Equal(t, KDF_HKDF_SHA256, kdf.ID())
 	})
 
 	t.Run("SHA512", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA512()
 		require.Equal(t, 64, kdf.Nh())
 		require.Equal(t, KDF_HKDF_SHA512, kdf.ID())

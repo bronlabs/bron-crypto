@@ -13,6 +13,7 @@ import (
 )
 
 func TestHappyPath(t *testing.T) {
+	t.Parallel()
 	ids := sharing.NewOrdinalShareholderSet(3)
 	parties := []*echo.Participant[uint64]{}
 	for id := range ids.Iter() {

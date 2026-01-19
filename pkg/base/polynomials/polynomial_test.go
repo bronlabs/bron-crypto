@@ -10,6 +10,7 @@ import (
 )
 
 func TestPolynomialEuclideanDiv(t *testing.T) {
+	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -35,6 +36,7 @@ func TestPolynomialEuclideanDiv(t *testing.T) {
 }
 
 func TestPolynomialEuclideanDivDegreeLess(t *testing.T) {
+	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -58,6 +60,7 @@ func TestPolynomialEuclideanDivDegreeLess(t *testing.T) {
 }
 
 func TestPolynomialEuclideanDivByZero(t *testing.T) {
+	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -77,6 +80,7 @@ func TestPolynomialRingNew(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("empty coefficients returns zero polynomial", func(t *testing.T) {
+		t.Parallel()
 		poly, err := polyRing.New()
 		require.NoError(t, err)
 		require.True(t, poly.IsZero())
@@ -84,6 +88,7 @@ func TestPolynomialRingNew(t *testing.T) {
 	})
 
 	t.Run("single coefficient", func(t *testing.T) {
+		t.Parallel()
 		one := field.One()
 		poly, err := polyRing.New(one)
 		require.NoError(t, err)
@@ -92,6 +97,7 @@ func TestPolynomialRingNew(t *testing.T) {
 	})
 
 	t.Run("multiple coefficients", func(t *testing.T) {
+		t.Parallel()
 		one := field.One()
 		two := field.FromUint64(2)
 		three := field.FromUint64(3)
@@ -106,6 +112,7 @@ func TestPolynomialRingNew(t *testing.T) {
 	})
 
 	t.Run("nil coefficient returns error", func(t *testing.T) {
+		t.Parallel()
 		one := field.One()
 		_, err := polyRing.New(one, nil, one)
 		require.Error(t, err)
@@ -119,6 +126,7 @@ func TestPolynomialRingZeroAndOne(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("zero polynomial", func(t *testing.T) {
+		t.Parallel()
 		zero := polyRing.Zero()
 		require.True(t, zero.IsZero())
 		require.True(t, zero.IsOpIdentity())
@@ -126,6 +134,7 @@ func TestPolynomialRingZeroAndOne(t *testing.T) {
 	})
 
 	t.Run("one polynomial", func(t *testing.T) {
+		t.Parallel()
 		one := polyRing.One()
 		require.True(t, one.IsOne())
 		require.False(t, one.IsZero())
@@ -133,6 +142,7 @@ func TestPolynomialRingZeroAndOne(t *testing.T) {
 	})
 
 	t.Run("OpIdentity is zero", func(t *testing.T) {
+		t.Parallel()
 		require.True(t, polyRing.OpIdentity().Equal(polyRing.Zero()))
 	})
 }
@@ -161,6 +171,7 @@ func TestPolynomialRingFromBytes(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("roundtrip", func(t *testing.T) {
+		t.Parallel()
 		one := field.One()
 		two := field.FromUint64(2)
 		original, err := polyRing.New(one, two)
@@ -173,11 +184,13 @@ func TestPolynomialRingFromBytes(t *testing.T) {
 	})
 
 	t.Run("empty bytes returns error", func(t *testing.T) {
+		t.Parallel()
 		_, err := polyRing.FromBytes([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("invalid length returns error", func(t *testing.T) {
+		t.Parallel()
 		_, err := polyRing.FromBytes([]byte{1, 2, 3})
 		require.Error(t, err)
 	})
@@ -194,6 +207,7 @@ func TestPolynomialAdd(t *testing.T) {
 	three := field.FromUint64(3)
 
 	t.Run("same degree", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(one.Clone(), two.Clone())   // 1 + 2x
 		p2, _ := polyRing.New(two.Clone(), three.Clone()) // 2 + 3x
 		sum := p1.Add(p2)                                 // 3 + 5x
@@ -202,6 +216,7 @@ func TestPolynomialAdd(t *testing.T) {
 	})
 
 	t.Run("different degrees", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(one.Clone())                             // 1
 		p2, _ := polyRing.New(two.Clone(), three.Clone(), one.Clone()) // 2 + 3x + x^2
 		sum := p1.Add(p2)                                              // 3 + 3x + x^2
@@ -210,12 +225,14 @@ func TestPolynomialAdd(t *testing.T) {
 	})
 
 	t.Run("add zero", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		sum := p.Add(polyRing.Zero())
 		require.True(t, sum.Equal(p))
 	})
 
 	t.Run("Op is Add", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(one.Clone(), two.Clone())
 		p2, _ := polyRing.New(three.Clone())
 		require.True(t, p1.Add(p2).Equal(p1.Op(p2)))
@@ -232,6 +249,7 @@ func TestPolynomialMul(t *testing.T) {
 	two := field.FromUint64(2)
 
 	t.Run("multiply constants", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(two.Clone())
 		p2, _ := polyRing.New(field.FromUint64(3))
 		prod := p1.Mul(p2)
@@ -240,6 +258,7 @@ func TestPolynomialMul(t *testing.T) {
 	})
 
 	t.Run("multiply by x+1", func(t *testing.T) {
+		t.Parallel()
 		// (x + 1) * (x + 1) = x^2 + 2x + 1
 		xPlusOne, _ := polyRing.New(one.Clone(), one.Clone())
 		result := xPlusOne.Mul(xPlusOne)
@@ -248,18 +267,21 @@ func TestPolynomialMul(t *testing.T) {
 	})
 
 	t.Run("multiply by zero", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		result := p.Mul(polyRing.Zero())
 		require.True(t, result.IsZero())
 	})
 
 	t.Run("multiply by one", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		result := p.Mul(polyRing.One())
 		require.True(t, result.Equal(p))
 	})
 
 	t.Run("OtherOp is Mul", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(one.Clone(), two.Clone())
 		p2, _ := polyRing.New(one.Clone(), one.Clone())
 		require.True(t, p1.Mul(p2).Equal(p1.OtherOp(p2)))
@@ -277,6 +299,7 @@ func TestPolynomialSub(t *testing.T) {
 	three := field.FromUint64(3)
 
 	t.Run("subtraction", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(three.Clone(), two.Clone()) // 3 + 2x
 		p2, _ := polyRing.New(one.Clone(), one.Clone())   // 1 + x
 		diff := p1.Sub(p2)                                // 2 + x
@@ -285,6 +308,7 @@ func TestPolynomialSub(t *testing.T) {
 	})
 
 	t.Run("self subtraction is zero", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		diff := p.Sub(p)
 		require.True(t, diff.IsZero())
@@ -301,6 +325,7 @@ func TestPolynomialNeg(t *testing.T) {
 	two := field.FromUint64(2)
 
 	t.Run("negation", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		neg := p.Neg()
 		// p + neg(p) = 0
@@ -308,11 +333,13 @@ func TestPolynomialNeg(t *testing.T) {
 	})
 
 	t.Run("OpInv is Neg", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		require.True(t, p.Neg().Equal(p.OpInv()))
 	})
 
 	t.Run("TryNeg succeeds", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone())
 		neg, err := p.TryNeg()
 		require.NoError(t, err)
@@ -320,6 +347,7 @@ func TestPolynomialNeg(t *testing.T) {
 	})
 
 	t.Run("TryOpInv succeeds", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone())
 		inv, err := p.TryOpInv()
 		require.NoError(t, err)
@@ -337,20 +365,24 @@ func TestPolynomialDegree(t *testing.T) {
 	zero := field.Zero()
 
 	t.Run("zero polynomial has degree -1", func(t *testing.T) {
+		t.Parallel()
 		require.Equal(t, -1, polyRing.Zero().Degree())
 	})
 
 	t.Run("constant has degree 0", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone())
 		require.Equal(t, 0, p.Degree())
 	})
 
 	t.Run("linear has degree 1", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), one.Clone())
 		require.Equal(t, 1, p.Degree())
 	})
 
 	t.Run("trailing zeros ignored", func(t *testing.T) {
+		t.Parallel()
 		// Polynomial with coefficients [1, 2, 0] has degree 1
 		p, _ := polyRing.New(one.Clone(), field.FromUint64(2), zero.Clone())
 		require.Equal(t, 1, p.Degree())
@@ -382,15 +414,18 @@ func TestPolynomialLeadingCoefficient(t *testing.T) {
 	three := field.FromUint64(3)
 
 	t.Run("non-zero polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone(), three.Clone())
 		require.True(t, p.LeadingCoefficient().Equal(three))
 	})
 
 	t.Run("zero polynomial returns zero", func(t *testing.T) {
+		t.Parallel()
 		require.True(t, polyRing.Zero().LeadingCoefficient().IsZero())
 	})
 
 	t.Run("trailing zeros handled", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone(), field.Zero())
 		require.True(t, p.LeadingCoefficient().Equal(two))
 	})
@@ -406,15 +441,18 @@ func TestPolynomialIsConstant(t *testing.T) {
 	two := field.FromUint64(2)
 
 	t.Run("constant is constant", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone())
 		require.True(t, p.IsConstant())
 	})
 
 	t.Run("zero is not constant (degree -1)", func(t *testing.T) {
+		t.Parallel()
 		require.False(t, polyRing.Zero().IsConstant())
 	})
 
 	t.Run("linear is not constant", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		require.False(t, p.IsConstant())
 	})
@@ -430,20 +468,24 @@ func TestPolynomialIsMonic(t *testing.T) {
 	two := field.FromUint64(2)
 
 	t.Run("monic polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(two.Clone(), one.Clone()) // 2 + x
 		require.True(t, p.IsMonic())
 	})
 
 	t.Run("non-monic polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone()) // 1 + 2x
 		require.False(t, p.IsMonic())
 	})
 
 	t.Run("zero is not monic", func(t *testing.T) {
+		t.Parallel()
 		require.False(t, polyRing.Zero().IsMonic())
 	})
 
 	t.Run("one is monic", func(t *testing.T) {
+		t.Parallel()
 		require.True(t, polyRing.One().IsMonic())
 	})
 }
@@ -459,12 +501,14 @@ func TestPolynomialEval(t *testing.T) {
 	three := field.FromUint64(3)
 
 	t.Run("eval at zero gives constant term", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(two.Clone(), three.Clone(), one.Clone()) // 2 + 3x + x^2
 		result := p.Eval(field.Zero())
 		require.True(t, result.Equal(two))
 	})
 
 	t.Run("eval at one sums coefficients", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone(), three.Clone()) // 1 + 2x + 3x^2
 		result := p.Eval(one.Clone())
 		expected := field.FromUint64(6) // 1 + 2 + 3
@@ -472,6 +516,7 @@ func TestPolynomialEval(t *testing.T) {
 	})
 
 	t.Run("eval linear polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone()) // 1 + 2x
 		result := p.Eval(three.Clone())                // 1 + 2*3 = 7
 		expected := field.FromUint64(7)
@@ -479,6 +524,7 @@ func TestPolynomialEval(t *testing.T) {
 	})
 
 	t.Run("eval quadratic polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone(), three.Clone()) // 1 + 2x + 3x^2
 		result := p.Eval(two.Clone())                                 // 1 + 2*2 + 3*4 = 1 + 4 + 12 = 17
 		expected := field.FromUint64(17)
@@ -486,6 +532,7 @@ func TestPolynomialEval(t *testing.T) {
 	})
 
 	t.Run("eval zero polynomial", func(t *testing.T) {
+		t.Parallel()
 		result := polyRing.Zero().Eval(three.Clone())
 		require.True(t, result.IsZero())
 	})
@@ -502,12 +549,14 @@ func TestPolynomialDerivative(t *testing.T) {
 	three := field.FromUint64(3)
 
 	t.Run("constant derivative is zero", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(three.Clone())
 		deriv := p.Derivative()
 		require.True(t, deriv.IsZero())
 	})
 
 	t.Run("linear derivative is constant", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone()) // 1 + 2x
 		deriv := p.Derivative()                        // 2
 		expected, _ := polyRing.New(two.Clone())
@@ -515,6 +564,7 @@ func TestPolynomialDerivative(t *testing.T) {
 	})
 
 	t.Run("quadratic derivative", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone(), three.Clone()) // 1 + 2x + 3x^2
 		deriv := p.Derivative()                                       // 2 + 6x
 		expected, _ := polyRing.New(two.Clone(), field.FromUint64(6))
@@ -522,12 +572,14 @@ func TestPolynomialDerivative(t *testing.T) {
 	})
 
 	t.Run("derivative reduces degree", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone(), three.Clone(), one.Clone()) // degree 3
 		deriv := p.Derivative()
 		require.Equal(t, 2, deriv.Degree())
 	})
 
 	t.Run("zero derivative is zero", func(t *testing.T) {
+		t.Parallel()
 		deriv := polyRing.Zero().Derivative()
 		require.True(t, deriv.IsZero())
 	})
@@ -544,6 +596,7 @@ func TestPolynomialScalarMul(t *testing.T) {
 	three := field.FromUint64(3)
 
 	t.Run("scalar multiply", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone()) // 1 + 2x
 		result := p.ScalarMul(three.Clone())           // 3 + 6x
 		expected, _ := polyRing.New(three.Clone(), field.FromUint64(6))
@@ -551,18 +604,21 @@ func TestPolynomialScalarMul(t *testing.T) {
 	})
 
 	t.Run("multiply by zero", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		result := p.ScalarMul(field.Zero())
 		require.True(t, result.IsZero())
 	})
 
 	t.Run("multiply by one", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		result := p.ScalarMul(one.Clone())
 		require.True(t, result.Equal(p))
 	})
 
 	t.Run("ScalarOp is ScalarMul", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), two.Clone())
 		require.True(t, p.ScalarMul(three).Equal(p.ScalarOp(three)))
 	})
@@ -628,18 +684,21 @@ func TestPolynomialEqual(t *testing.T) {
 	zero := field.Zero()
 
 	t.Run("equal polynomials", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(one.Clone(), two.Clone())
 		p2, _ := polyRing.New(one.Clone(), two.Clone())
 		require.True(t, p1.Equal(p2))
 	})
 
 	t.Run("unequal polynomials", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(one.Clone(), two.Clone())
 		p2, _ := polyRing.New(two.Clone(), one.Clone())
 		require.False(t, p1.Equal(p2))
 	})
 
 	t.Run("different degrees with trailing zeros", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyRing.New(one.Clone(), two.Clone())
 		p2, _ := polyRing.New(one.Clone(), two.Clone(), zero.Clone())
 		require.True(t, p1.Equal(p2))
@@ -737,11 +796,13 @@ func TestPolynomialTryInvAndTryDiv(t *testing.T) {
 	p, _ := polyRing.New(one.Clone(), one.Clone())
 
 	t.Run("TryInv not supported", func(t *testing.T) {
+		t.Parallel()
 		_, err := p.TryInv()
 		require.Error(t, err)
 	})
 
 	t.Run("TryDiv not supported", func(t *testing.T) {
+		t.Parallel()
 		_, err := p.TryDiv(polyRing.One())
 		require.Error(t, err)
 	})
@@ -774,17 +835,20 @@ func TestPolynomialEuclideanValuation(t *testing.T) {
 	one := field.One()
 
 	t.Run("zero polynomial", func(t *testing.T) {
+		t.Parallel()
 		val := polyRing.Zero().EuclideanValuation()
 		require.True(t, val.IsFinite())
 	})
 
 	t.Run("constant polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone())
 		val := p.EuclideanValuation()
 		require.True(t, val.IsFinite())
 	})
 
 	t.Run("linear polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyRing.New(one.Clone(), one.Clone())
 		val := p.EuclideanValuation()
 		require.True(t, val.IsFinite())

@@ -49,6 +49,7 @@ func Test_HappyPath(t *testing.T) {
 	})
 
 	t.Run("zero seeds match", func(t *testing.T) {
+		t.Parallel()
 		for me := sharing.ID(1); me <= TOTAL; me++ {
 			for they := sharing.ID(1); they <= TOTAL; they++ {
 				if me == they {
@@ -68,6 +69,7 @@ func Test_HappyPath(t *testing.T) {
 	})
 
 	t.Run("OT seeds match", func(t *testing.T) {
+		t.Parallel()
 		for s := sharing.ID(1); s <= TOTAL; s++ {
 			for r := sharing.ID(1); r <= TOTAL; r++ {
 				if s == r {

@@ -552,6 +552,7 @@ func TestDealDeterministic(t *testing.T) {
 
 // TestDealRandomDistribution tests the statistical distribution of random secrets
 func TestDealRandomDistribution(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("skipping statistical test in short mode")
 	}

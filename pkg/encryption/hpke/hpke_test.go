@@ -378,16 +378,19 @@ func TestHPKE_InvalidInputs(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("NilCurve", func(t *testing.T) {
+		t.Parallel()
 		_, err := hpke.NewScheme[*p256.Point, *p256.BaseFieldElement, *p256.Scalar](nil, suite)
 		require.Error(t, err)
 	})
 
 	t.Run("NilCipherSuite", func(t *testing.T) {
+		t.Parallel()
 		_, err := hpke.NewScheme(curve, nil)
 		require.Error(t, err)
 	})
 
 	t.Run("InvalidCipherSuite", func(t *testing.T) {
+		t.Parallel()
 		// Try to create cipher suite with invalid parameters
 		_, err := hpke.NewCipherSuite(hpke.DHKEM_RESERVED, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
 		require.Error(t, err)

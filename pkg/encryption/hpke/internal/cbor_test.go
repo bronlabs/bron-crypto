@@ -226,6 +226,7 @@ func TestKeyPair_CBOR_Roundtrip(t *testing.T) {
 	t.Parallel()
 
 	t.Run("P256_MultipleRoundtrips", func(t *testing.T) {
+		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
 		for range 5 {
@@ -260,6 +261,7 @@ func TestKeyPair_CBOR_Roundtrip(t *testing.T) {
 	})
 
 	t.Run("X25519_MultipleRoundtrips", func(t *testing.T) {
+		t.Parallel()
 		kem := NewX25519HKDFSha256KEM()
 
 		for range 5 {
@@ -347,12 +349,14 @@ func TestPrivateKey_CBOR_InvalidData(t *testing.T) {
 	t.Parallel()
 
 	t.Run("EmptyData", func(t *testing.T) {
+		t.Parallel()
 		sk := new(PrivateKey[*p256.Scalar])
 		err := sk.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("InvalidCBOR", func(t *testing.T) {
+		t.Parallel()
 		sk := new(PrivateKey[*p256.Scalar])
 		err := sk.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF})
 		require.Error(t, err)
@@ -364,12 +368,14 @@ func TestPublicKey_CBOR_InvalidData(t *testing.T) {
 	t.Parallel()
 
 	t.Run("EmptyData", func(t *testing.T) {
+		t.Parallel()
 		pk := new(PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar])
 		err := pk.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("InvalidCBOR", func(t *testing.T) {
+		t.Parallel()
 		pk := new(PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar])
 		err := pk.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF})
 		require.Error(t, err)

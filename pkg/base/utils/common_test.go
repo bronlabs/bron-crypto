@@ -55,6 +55,7 @@ func TestLeadingZeroBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			require.Equal(t, tt.want, utils.LeadingZeroBytes(tt.input))
 		})
 	}
@@ -115,6 +116,7 @@ func TestBinomial(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
+			t.Parallel()
 			require.Equal(t, tt.want, utils.Binomial(tt.n, tt.k))
 		})
 	}

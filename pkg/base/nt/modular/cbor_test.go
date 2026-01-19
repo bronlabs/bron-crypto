@@ -312,6 +312,7 @@ func TestArithmetic_RoundTrip_AllTypes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Marshal
 			data, err := serde.MarshalCBOR(tc.arith)
 			require.NoError(t, err)
@@ -343,18 +344,21 @@ func TestCBOR_InvalidData(t *testing.T) {
 	t.Parallel()
 
 	t.Run("SimpleModulus_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		var s modular.SimpleModulus
 		err := cbor.Unmarshal([]byte{0x00}, &s)
 		require.Error(t, err)
 	})
 
 	t.Run("OddPrimeFactors_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		var opf modular.OddPrimeFactors
 		err := cbor.Unmarshal([]byte{0x00}, &opf)
 		require.Error(t, err)
 	})
 
 	t.Run("OddPrimeSquareFactors_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		var opsf modular.OddPrimeSquareFactors
 		err := cbor.Unmarshal([]byte{0x00}, &opsf)
 		require.Error(t, err)

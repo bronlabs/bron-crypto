@@ -14,12 +14,14 @@ func TestEncodePublicKey(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil public key", func(t *testing.T) {
+		t.Parallel()
 		encoded, err := mina.EncodePublicKey(nil)
 		require.Empty(t, encoded)
 		require.Error(t, err)
 	})
 
 	t.Run("valid public key", func(t *testing.T) {
+		t.Parallel()
 		privateKey, err := mina.DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
@@ -37,6 +39,7 @@ func TestDecodePublicKey(t *testing.T) {
 	t.Parallel()
 
 	t.Run("valid public key", func(t *testing.T) {
+		t.Parallel()
 		// Known valid public key
 		encoded := base58.Base58("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg")
 		pk, err := mina.DecodePublicKey(encoded)
@@ -45,12 +48,14 @@ func TestDecodePublicKey(t *testing.T) {
 	})
 
 	t.Run("invalid base58", func(t *testing.T) {
+		t.Parallel()
 		pk, err := mina.DecodePublicKey(base58.Base58("invalid0O0base58"))
 		require.Nil(t, pk)
 		require.Error(t, err)
 	})
 
 	t.Run("wrong version prefix", func(t *testing.T) {
+		t.Parallel()
 		// Use a private key encoding (different version prefix)
 		pk, err := mina.DecodePublicKey(base58.Base58("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw"))
 		require.Nil(t, pk)
@@ -59,6 +64,7 @@ func TestDecodePublicKey(t *testing.T) {
 	})
 
 	t.Run("round trip", func(t *testing.T) {
+		t.Parallel()
 		// Generate a new key pair
 		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
@@ -85,12 +91,14 @@ func TestEncodePrivateKey(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil private key", func(t *testing.T) {
+		t.Parallel()
 		encoded, err := mina.EncodePrivateKey(nil)
 		require.Empty(t, encoded)
 		require.Error(t, err)
 	})
 
 	t.Run("valid private key", func(t *testing.T) {
+		t.Parallel()
 		privateKey, err := mina.DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
@@ -104,6 +112,7 @@ func TestDecodePrivateKey(t *testing.T) {
 	t.Parallel()
 
 	t.Run("valid private key", func(t *testing.T) {
+		t.Parallel()
 		encoded := base58.Base58("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		sk, err := mina.DecodePrivateKey(encoded)
 		require.NoError(t, err)
@@ -111,12 +120,14 @@ func TestDecodePrivateKey(t *testing.T) {
 	})
 
 	t.Run("invalid base58", func(t *testing.T) {
+		t.Parallel()
 		sk, err := mina.DecodePrivateKey(base58.Base58("invalid0O0base58"))
 		require.Nil(t, sk)
 		require.Error(t, err)
 	})
 
 	t.Run("wrong version prefix", func(t *testing.T) {
+		t.Parallel()
 		// Use a public key encoding (different version prefix)
 		sk, err := mina.DecodePrivateKey(base58.Base58("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg"))
 		require.Nil(t, sk)
@@ -125,6 +136,7 @@ func TestDecodePrivateKey(t *testing.T) {
 	})
 
 	t.Run("round trip", func(t *testing.T) {
+		t.Parallel()
 		// Generate a new key pair
 		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
@@ -151,12 +163,14 @@ func TestEncodeSignature(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil signature", func(t *testing.T) {
+		t.Parallel()
 		encoded, err := mina.EncodeSignature(nil)
 		require.Empty(t, encoded)
 		require.Error(t, err)
 	})
 
 	t.Run("valid signature", func(t *testing.T) {
+		t.Parallel()
 		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
 
@@ -184,12 +198,14 @@ func TestDecodeSignature(t *testing.T) {
 	t.Parallel()
 
 	t.Run("invalid base58", func(t *testing.T) {
+		t.Parallel()
 		sig, err := mina.DecodeSignature(base58.Base58("invalid0O0base58"))
 		require.Nil(t, sig)
 		require.Error(t, err)
 	})
 
 	t.Run("wrong version prefix", func(t *testing.T) {
+		t.Parallel()
 		// Use a public key encoding (different version prefix)
 		sig, err := mina.DecodeSignature(base58.Base58("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg"))
 		require.Nil(t, sig)
@@ -197,6 +213,7 @@ func TestDecodeSignature(t *testing.T) {
 	})
 
 	t.Run("round trip", func(t *testing.T) {
+		t.Parallel()
 		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
 
@@ -254,6 +271,7 @@ func TestKnownKeyVectors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Decode private key
 			sk, err := mina.DecodePrivateKey(tc.privateKey)
 			require.NoError(t, err)

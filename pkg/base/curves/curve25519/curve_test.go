@@ -81,6 +81,7 @@ func Test_X25519(t *testing.T) {
 }
 
 func Test_HashToCurveRFC9380(t *testing.T) {
+	t.Parallel()
 	type testVector struct {
 		message string
 		px      string

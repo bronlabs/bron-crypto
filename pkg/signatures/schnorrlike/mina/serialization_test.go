@@ -167,6 +167,7 @@ func TestSignatureSerializationAllTestVectors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Create signature from known values
 			rxBigInt, ok := new(big.Int).SetString(tc.field, 10)
 			require.True(t, ok)

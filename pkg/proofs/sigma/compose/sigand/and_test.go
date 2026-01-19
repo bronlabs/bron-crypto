@@ -77,11 +77,13 @@ func Test_And_InvalidInputs(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nil_protocol", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigand.Compose[*schnorr.Statement[*k256.Point, *k256.Scalar], *schnorr.Witness[*k256.Scalar], *schnorr.Commitment[*k256.Point, *k256.Scalar], *schnorr.State[*k256.Scalar], *schnorr.Response[*k256.Scalar]](nil, 2)
 		require.Error(t, err)
 	})
 
 	t.Run("count_zero", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigand.Compose(protocol, 0)
 		require.Error(t, err)
 	})

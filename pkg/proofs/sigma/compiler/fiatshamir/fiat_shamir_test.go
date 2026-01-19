@@ -29,41 +29,49 @@ func TestFiatShamir_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, k256.NewCurve())
 		}
 	})
 	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, p256.NewCurve())
 		}
 	})
 	t.Run("edwards25519", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, edwards25519.NewPrimeSubGroup())
 		}
 	})
 	t.Run("curve25519", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, curve25519.NewPrimeSubGroup())
 		}
 	})
 	t.Run("pallas", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, pasta.NewPallasCurve())
 		}
 	})
 	t.Run("vesta", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, pasta.NewVestaCurve())
 		}
 	})
 	t.Run("BLS12-381 G1", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, bls12381.NewG1())
 		}
 	})
 	t.Run("BLS12-381 G2", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, bls12381.NewG2())
 		}

@@ -32,6 +32,7 @@ var checkEncodingStringTests = []struct {
 }
 
 func TestBase58Check(t *testing.T) {
+	t.Parallel()
 	for i, test := range checkEncodingStringTests {
 		t.Run(fmt.Sprintf("CheckEncode-%d", i), func(t *testing.T) {
 			// test encoding
@@ -49,11 +50,13 @@ func TestBase58Check(t *testing.T) {
 
 	// test the two decoding failure cases
 	t.Run("checksum error", func(t *testing.T) {
+		t.Parallel()
 		_, _, err := base58.CheckDecode("3MNQE1Y")
 		require.ErrorIs(t, err, base58.ErrChecksumMismatch)
 	})
 
 	t.Run("string lengths below 5 mean the version byte and/or the checksum bytes are missing).", func(t *testing.T) {
+		t.Parallel()
 		testString := base58.Base58("")
 		for range 4 {
 			// make a string of length `len`

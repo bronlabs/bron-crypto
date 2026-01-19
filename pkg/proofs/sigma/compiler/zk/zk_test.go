@@ -193,6 +193,7 @@ func TestZKCompiler_RoundOrderEnforcement(t *testing.T) {
 	statement := schnorr.NewStatement(statementValue)
 
 	t.Run("prover cannot skip to round 4", func(t *testing.T) {
+		t.Parallel()
 		proverTranscript := hagrid.NewTranscript("test")
 		prover, err := zk.NewProver(sessionId, proverTranscript, schnorrProtocol, statement, witness)
 		require.NoError(t, err)
@@ -204,6 +205,7 @@ func TestZKCompiler_RoundOrderEnforcement(t *testing.T) {
 	})
 
 	t.Run("verifier cannot skip to round 3", func(t *testing.T) {
+		t.Parallel()
 		verifierTranscript := hagrid.NewTranscript("test")
 		verifier, err := zk.NewVerifier(sessionId, verifierTranscript, schnorrProtocol, statement, prng)
 		require.NoError(t, err)
@@ -214,6 +216,7 @@ func TestZKCompiler_RoundOrderEnforcement(t *testing.T) {
 	})
 
 	t.Run("verifier cannot verify before round 5", func(t *testing.T) {
+		t.Parallel()
 		verifierTranscript := hagrid.NewTranscript("test")
 		verifier, err := zk.NewVerifier(sessionId, verifierTranscript, schnorrProtocol, statement, prng)
 		require.NoError(t, err)
@@ -244,11 +247,13 @@ func TestZKCompiler_NilInputs(t *testing.T) {
 	statement := schnorr.NewStatement(statementValue)
 
 	t.Run("prover with nil transcript", func(t *testing.T) {
+		t.Parallel()
 		_, err := zk.NewProver(sessionId, nil, schnorrProtocol, statement, witness)
 		require.Error(t, err)
 	})
 
 	t.Run("prover with empty sessionId", func(t *testing.T) {
+		t.Parallel()
 		transcript := hagrid.NewTranscript("test")
 		var emptySessionId network.SID
 		_, err := zk.NewProver(emptySessionId, transcript, schnorrProtocol, statement, witness)
@@ -256,11 +261,13 @@ func TestZKCompiler_NilInputs(t *testing.T) {
 	})
 
 	t.Run("verifier with nil transcript", func(t *testing.T) {
+		t.Parallel()
 		_, err := zk.NewVerifier(sessionId, nil, schnorrProtocol, statement, prng)
 		require.Error(t, err)
 	})
 
 	t.Run("verifier with empty sessionId", func(t *testing.T) {
+		t.Parallel()
 		transcript := hagrid.NewTranscript("test")
 		var emptySessionId network.SID
 		_, err := zk.NewVerifier(emptySessionId, transcript, schnorrProtocol, statement, prng)

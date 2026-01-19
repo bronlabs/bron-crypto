@@ -415,6 +415,7 @@ func homomorphicOpsCases[E additive.GroupElement[E]](t *testing.T, scheme *addit
 	require.NoError(t, err)
 
 	t.Run("add shares", func(t *testing.T) {
+		t.Parallel()
 		// Add corresponding shares
 		sumShares := make([]*additive.Share[E], 0)
 		for _, id := range shares1.Shares().Keys() {
@@ -442,6 +443,7 @@ func homomorphicOpsCases[E additive.GroupElement[E]](t *testing.T, scheme *addit
 	})
 
 	t.Run("share methods", func(t *testing.T) {
+		t.Parallel()
 		share, _ := shares1.Shares().Get(1)
 
 		// Test Set method
@@ -468,6 +470,7 @@ func homomorphicOpsCases[E additive.GroupElement[E]](t *testing.T, scheme *addit
 	})
 
 	t.Run("secret methods", func(t *testing.T) {
+		t.Parallel()
 		// Test Equal method
 		secret1Copy := secret1.Clone()
 		require.True(t, secret1.Equal(secret1Copy))
@@ -550,6 +553,7 @@ func TestDeal(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		testConfigs := []struct {
@@ -564,6 +568,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := additive.NewScheme(field, identities)
 				require.NoError(t, err)
@@ -573,6 +578,7 @@ func TestDeal(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		field := bls12381.NewScalarField()
 
 		testConfigs := []struct {
@@ -585,6 +591,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := additive.NewScheme(field, identities)
 				require.NoError(t, err)
@@ -598,6 +605,7 @@ func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		testConfigs := []struct {
@@ -610,6 +618,7 @@ func TestDealRandom(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := additive.NewScheme(field, identities)
 				require.NoError(t, err)
@@ -619,6 +628,7 @@ func TestDealRandom(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		field := bls12381.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(6)
@@ -632,6 +642,7 @@ func TestReconstruct(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		testConfigs := []struct {
@@ -645,6 +656,7 @@ func TestReconstruct(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := additive.NewScheme(field, identities)
 				require.NoError(t, err)
@@ -658,6 +670,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(5)
@@ -667,6 +680,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		field := bls12381.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(4)
@@ -693,6 +707,7 @@ func TestNewScheme(t *testing.T) {
 	field := k256.NewScalarField()
 
 	t.Run("valid construction", func(t *testing.T) {
+		t.Parallel()
 		identities := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := additive.NewScheme(field, identities)
 		require.NoError(t, err)
@@ -701,6 +716,7 @@ func TestNewScheme(t *testing.T) {
 	})
 
 	t.Run("nil identities", func(t *testing.T) {
+		t.Parallel()
 		scheme, err := additive.NewScheme(field, nil)
 		require.Error(t, err)
 		require.ErrorIs(t, err, additive.ErrIsNil)
@@ -708,6 +724,7 @@ func TestNewScheme(t *testing.T) {
 	})
 
 	t.Run("nil group", func(t *testing.T) {
+		t.Parallel()
 		identities := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := additive.NewScheme[*k256.Scalar](nil, identities)
 		require.Error(t, err)
@@ -716,6 +733,7 @@ func TestNewScheme(t *testing.T) {
 	})
 
 	t.Run("single shareholder", func(t *testing.T) {
+		t.Parallel()
 		singleId := hashset.NewComparable[sharing.ID]()
 		singleId.Add(sharing.ID(1))
 		scheme, err := additive.NewScheme(field, singleId.Freeze())
@@ -725,6 +743,7 @@ func TestNewScheme(t *testing.T) {
 	})
 
 	t.Run("custom identity set", func(t *testing.T) {
+		t.Parallel()
 		customIds := hashset.NewComparable[sharing.ID]()
 		customIds.Add(sharing.ID(10))
 		customIds.Add(sharing.ID(20))
@@ -749,6 +768,7 @@ func TestAccessStructure(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("IsAuthorized", func(t *testing.T) {
+		t.Parallel()
 		// Should be authorized only with all shareholders
 		require.True(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5)))
 		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))                               // Missing one
@@ -759,6 +779,7 @@ func TestAccessStructure(t *testing.T) {
 	})
 
 	t.Run("Shareholders", func(t *testing.T) {
+		t.Parallel()
 		shareholders := scheme.AccessStructure().Shareholders()
 		require.Equal(t, 5, shareholders.Size())
 		for i := range 5 {

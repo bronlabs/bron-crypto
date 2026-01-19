@@ -248,11 +248,13 @@ func TestDHC_InvalidInputs(t *testing.T) {
 	t.Parallel()
 
 	t.Run("ZeroPrivateKey", func(t *testing.T) {
+		t.Parallel()
 		_, err := dhc.NewPrivateKey(make([]byte, 32))
 		require.Error(t, err, "Should reject all-zero private key")
 	})
 
 	t.Run("InvalidPublicKey", func(t *testing.T) {
+		t.Parallel()
 		curve := p256.NewCurve()
 
 		// Identity point should be rejected
@@ -263,6 +265,7 @@ func TestDHC_InvalidInputs(t *testing.T) {
 
 // TestDHC_Type tests the Type() method
 func TestDHC_Type(t *testing.T) {
+	t.Parallel()
 	privBytes := make([]byte, 32)
 	privBytes[0] = 1
 	pk, err := dhc.NewPrivateKey(privBytes)
@@ -280,6 +283,7 @@ func TestDHC_Equality(t *testing.T) {
 	t.Parallel()
 
 	t.Run("PrivateKeyEquality", func(t *testing.T) {
+		t.Parallel()
 		privBytes := make([]byte, 32)
 		privBytes[0] = 1
 		pk1, err := dhc.NewPrivateKey(privBytes)
@@ -299,6 +303,7 @@ func TestDHC_Equality(t *testing.T) {
 	})
 
 	t.Run("ExtendedPrivateKeyEquality", func(t *testing.T) {
+		t.Parallel()
 		sf := curve25519.NewScalarField()
 		scalar1, err := sf.Random(crand.Reader)
 		require.NoError(t, err)

@@ -15,12 +15,14 @@ func TestNewPolynomialModule(t *testing.T) {
 	curve := k256.NewCurve()
 
 	t.Run("valid module", func(t *testing.T) {
+		t.Parallel()
 		polyMod, err := polynomials.NewPolynomialModule(curve)
 		require.NoError(t, err)
 		require.NotNil(t, polyMod)
 	})
 
 	t.Run("nil module returns error", func(t *testing.T) {
+		t.Parallel()
 		_, err := polynomials.NewPolynomialModule[*k256.Point](nil)
 		require.Error(t, err)
 	})
@@ -35,12 +37,14 @@ func TestPolynomialModuleNew(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("empty coefficients returns identity", func(t *testing.T) {
+		t.Parallel()
 		poly, err := polyMod.New()
 		require.NoError(t, err)
 		require.True(t, poly.IsOpIdentity())
 	})
 
 	t.Run("single coefficient", func(t *testing.T) {
+		t.Parallel()
 		poly, err := polyMod.New(g.Clone())
 		require.NoError(t, err)
 		require.Equal(t, 0, poly.Degree())
@@ -48,6 +52,7 @@ func TestPolynomialModuleNew(t *testing.T) {
 	})
 
 	t.Run("multiple coefficients", func(t *testing.T) {
+		t.Parallel()
 		g2 := g.Double()
 		g3 := g.ScalarOp(k256.NewScalarField().FromUint64(3))
 		poly, err := polyMod.New(g.Clone(), g2, g3)
@@ -58,6 +63,7 @@ func TestPolynomialModuleNew(t *testing.T) {
 	})
 
 	t.Run("nil coefficient returns error", func(t *testing.T) {
+		t.Parallel()
 		_, err := polyMod.New(g.Clone(), nil, g.Clone())
 		require.Error(t, err)
 	})
@@ -123,6 +129,7 @@ func TestPolynomialModuleFromBytes(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("roundtrip", func(t *testing.T) {
+		t.Parallel()
 		original, err := polyMod.New(g.Clone(), g.Double())
 		require.NoError(t, err)
 
@@ -133,12 +140,14 @@ func TestPolynomialModuleFromBytes(t *testing.T) {
 	})
 
 	t.Run("empty bytes returns identity", func(t *testing.T) {
+		t.Parallel()
 		poly, err := polyMod.FromBytes([]byte{})
 		require.NoError(t, err)
 		require.True(t, poly.IsOpIdentity())
 	})
 
 	t.Run("invalid length returns error", func(t *testing.T) {
+		t.Parallel()
 		_, err := polyMod.FromBytes([]byte{1, 2, 3})
 		require.Error(t, err)
 	})
@@ -152,18 +161,21 @@ func TestPolynomialModuleRandomModuleValuedPolynomial(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("degree 0", func(t *testing.T) {
+		t.Parallel()
 		poly, err := polyMod.RandomModuleValuedPolynomial(0, prng)
 		require.NoError(t, err)
 		require.Equal(t, 0, poly.Degree())
 	})
 
 	t.Run("degree 3", func(t *testing.T) {
+		t.Parallel()
 		poly, err := polyMod.RandomModuleValuedPolynomial(3, prng)
 		require.NoError(t, err)
 		require.Equal(t, 3, poly.Degree())
 	})
 
 	t.Run("negative degree returns error", func(t *testing.T) {
+		t.Parallel()
 		_, err := polyMod.RandomModuleValuedPolynomial(-1, prng)
 		require.Error(t, err)
 	})
@@ -178,12 +190,14 @@ func TestPolynomialModuleRandomWithConstantTerm(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("preserves constant term", func(t *testing.T) {
+		t.Parallel()
 		poly, err := polyMod.RandomModuleValuedPolynomialWithConstantTerm(2, g.Clone(), prng)
 		require.NoError(t, err)
 		require.True(t, poly.ConstantTerm().Equal(g))
 	})
 
 	t.Run("negative degree returns error", func(t *testing.T) {
+		t.Parallel()
 		_, err := polyMod.RandomModuleValuedPolynomialWithConstantTerm(-1, g.Clone(), prng)
 		require.Error(t, err)
 	})
@@ -198,6 +212,7 @@ func TestPolynomialModuleMultiScalarOp(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("multi scalar op", func(t *testing.T) {
+		t.Parallel()
 		p1, err := polyMod.New(g.Clone())
 		require.NoError(t, err)
 		p2, err := polyMod.New(g.Double())
@@ -216,6 +231,7 @@ func TestPolynomialModuleMultiScalarOp(t *testing.T) {
 	})
 
 	t.Run("length mismatch returns error", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyMod.New(g.Clone())
 		scalars := []*k256.Scalar{field.FromUint64(1), field.FromUint64(2)}
 		polys := []*polynomials.ModuleValuedPolynomial[*k256.Point, *k256.Scalar]{p1}
@@ -225,6 +241,7 @@ func TestPolynomialModuleMultiScalarOp(t *testing.T) {
 	})
 
 	t.Run("empty input returns error", func(t *testing.T) {
+		t.Parallel()
 		scalars := []*k256.Scalar{}
 		polys := []*polynomials.ModuleValuedPolynomial[*k256.Point, *k256.Scalar]{}
 
@@ -241,6 +258,7 @@ func TestModuleValuedPolynomialOp(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("addition of same degree", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyMod.New(g.Clone(), g.Double())
 		p2, _ := polyMod.New(g.Double(), g.Clone())
 		sum := p1.Op(p2)
@@ -253,6 +271,7 @@ func TestModuleValuedPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("addition of different degrees", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyMod.New(g.Clone())
 		p2, _ := polyMod.New(g.Clone(), g.Double(), g.Clone())
 		sum := p1.Op(p2)
@@ -261,6 +280,7 @@ func TestModuleValuedPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("add identity", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		sum := p.Op(polyMod.OpIdentity())
 		require.True(t, sum.Equal(p))
@@ -275,6 +295,7 @@ func TestModuleValuedPolynomialOpInv(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("op with inverse is identity", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		inv := p.OpInv()
 		result := p.Op(inv)
@@ -282,6 +303,7 @@ func TestModuleValuedPolynomialOpInv(t *testing.T) {
 	})
 
 	t.Run("TryOpInv succeeds", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone())
 		inv, err := p.TryOpInv()
 		require.NoError(t, err)
@@ -315,6 +337,7 @@ func TestModuleValuedPolynomialScalarOp(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("scalar multiplication", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		scalar := field.FromUint64(3)
 		result := p.ScalarOp(scalar)
@@ -327,12 +350,14 @@ func TestModuleValuedPolynomialScalarOp(t *testing.T) {
 	})
 
 	t.Run("multiply by zero", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone())
 		result := p.ScalarOp(field.Zero())
 		require.True(t, result.IsOpIdentity())
 	})
 
 	t.Run("multiply by one", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		result := p.ScalarOp(field.One())
 		require.True(t, result.Equal(p))
@@ -348,20 +373,24 @@ func TestModuleValuedPolynomialDegree(t *testing.T) {
 	identity := curve.OpIdentity()
 
 	t.Run("identity polynomial has degree -1", func(t *testing.T) {
+		t.Parallel()
 		require.Equal(t, -1, polyMod.OpIdentity().Degree())
 	})
 
 	t.Run("non-zero constant has degree 0", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone())
 		require.Equal(t, 0, p.Degree())
 	})
 
 	t.Run("linear has degree 1", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		require.Equal(t, 1, p.Degree())
 	})
 
 	t.Run("trailing identities ignored", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double(), identity.Clone())
 		require.Equal(t, 1, p.Degree())
 	})
@@ -387,15 +416,18 @@ func TestModuleValuedPolynomialLeadingCoefficient(t *testing.T) {
 	identity := curve.OpIdentity()
 
 	t.Run("non-zero polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		require.True(t, p.LeadingCoefficient().Equal(g.Double()))
 	})
 
 	t.Run("identity polynomial returns identity", func(t *testing.T) {
+		t.Parallel()
 		require.True(t, polyMod.OpIdentity().LeadingCoefficient().IsOpIdentity())
 	})
 
 	t.Run("trailing identities handled", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double(), identity.Clone())
 		require.True(t, p.LeadingCoefficient().Equal(g.Double()))
 	})
@@ -409,16 +441,19 @@ func TestModuleValuedPolynomialIsConstant(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("constant is constant", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone())
 		require.True(t, p.IsConstant())
 	})
 
 	t.Run("identity is constant (degree <= 0)", func(t *testing.T) {
+		t.Parallel()
 		// ModuleValuedPolynomial.IsConstant uses Degree() <= 0
 		require.True(t, polyMod.OpIdentity().IsConstant())
 	})
 
 	t.Run("linear is not constant", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		require.False(t, p.IsConstant())
 	})
@@ -433,12 +468,14 @@ func TestModuleValuedPolynomialEval(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("eval at zero gives constant term", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double())
 		result := p.Eval(field.Zero())
 		require.True(t, result.Equal(g))
 	})
 
 	t.Run("eval at one sums coefficients", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double()) // G + 2Gx
 		result := p.Eval(field.One())              // G + 2G = 3G
 		expected := g.ScalarOp(field.FromUint64(3))
@@ -446,6 +483,7 @@ func TestModuleValuedPolynomialEval(t *testing.T) {
 	})
 
 	t.Run("eval linear polynomial", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double()) // G + 2Gx
 		result := p.Eval(field.FromUint64(3))      // G + 2G*3 = G + 6G = 7G
 		expected := g.ScalarOp(field.FromUint64(7))
@@ -462,12 +500,14 @@ func TestModuleValuedPolynomialDerivative(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("constant derivative is identity", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone())
 		deriv := p.Derivative()
 		require.True(t, deriv.IsOpIdentity())
 	})
 
 	t.Run("linear derivative is constant", func(t *testing.T) {
+		t.Parallel()
 		p, _ := polyMod.New(g.Clone(), g.Double()) // G + 2Gx
 		deriv := p.Derivative()                    // 2G
 		require.Equal(t, 0, deriv.Degree())
@@ -475,6 +515,7 @@ func TestModuleValuedPolynomialDerivative(t *testing.T) {
 	})
 
 	t.Run("quadratic derivative", func(t *testing.T) {
+		t.Parallel()
 		threeG := g.ScalarOp(field.FromUint64(3))
 		p, _ := polyMod.New(g.Clone(), g.Double(), threeG) // G + 2Gx + 3Gx^2
 		deriv := p.Derivative()                            // 2G + 6Gx
@@ -496,6 +537,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("constant MVP times constant polynomial", func(t *testing.T) {
+		t.Parallel()
 		// 3G * 5 = 15G
 		threeG := g.ScalarOp(field.FromUint64(3))
 		mvp, _ := polyMod.New(threeG)
@@ -509,6 +551,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("constant MVP times linear polynomial", func(t *testing.T) {
+		t.Parallel()
 		// 2G * (3 + 4x) = 6G + 8Gx
 		twoG := g.Double()
 		mvp, _ := polyMod.New(twoG)
@@ -524,6 +567,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("linear MVP times constant polynomial", func(t *testing.T) {
+		t.Parallel()
 		// (G + 2Gx) * 3 = 3G + 6Gx
 		mvp, _ := polyMod.New(g.Clone(), g.Double())
 		sp, _ := polyRing.New(field.FromUint64(3))
@@ -538,6 +582,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("linear MVP times linear polynomial", func(t *testing.T) {
+		t.Parallel()
 		// (G + 2Gx) * (2 + x) = 2G + Gx + 4Gx + 2Gx^2 = 2G + 5Gx + 2Gx^2
 		mvp, _ := polyMod.New(g.Clone(), g.Double())
 		sp, _ := polyRing.New(field.FromUint64(2), field.One())
@@ -553,6 +598,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("quadratic MVP times linear polynomial", func(t *testing.T) {
+		t.Parallel()
 		// (G + 2Gx + 3Gx^2) * (1 + x) = G + Gx + 2Gx + 2Gx^2 + 3Gx^2 + 3Gx^3
 		//                             = G + 3Gx + 5Gx^2 + 3Gx^3
 		threeG := g.ScalarOp(field.FromUint64(3))
@@ -570,18 +616,21 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("multiply by zero polynomial", func(t *testing.T) {
+		t.Parallel()
 		mvp, _ := polyMod.New(g.Clone(), g.Double())
 		result := mvp.PolynomialOp(polyRing.Zero())
 		require.True(t, result.IsOpIdentity())
 	})
 
 	t.Run("multiply by one polynomial", func(t *testing.T) {
+		t.Parallel()
 		mvp, _ := polyMod.New(g.Clone(), g.Double())
 		result := mvp.PolynomialOp(polyRing.One())
 		require.True(t, result.Equal(mvp))
 	})
 
 	t.Run("multiply by x (shifts coefficients)", func(t *testing.T) {
+		t.Parallel()
 		// (G + 2Gx) * x = Gx + 2Gx^2
 		mvp, _ := polyMod.New(g.Clone(), g.Double())
 		x, _ := polyRing.New(field.Zero(), field.One()) // 0 + 1*x
@@ -595,6 +644,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("degree of product equals sum of degrees", func(t *testing.T) {
+		t.Parallel()
 		// deg(p * q) = deg(p) + deg(q) when leading coefficients are non-zero
 		mvp, _ := polyMod.New(g.Clone(), g.Double(), g.Clone())      // degree 2
 		sp, _ := polyRing.New(field.One(), field.One(), field.One()) // degree 2
@@ -604,6 +654,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("associativity with scalar multiplication", func(t *testing.T) {
+		t.Parallel()
 		// (s * mvp) * poly == mvp * (s * poly)
 		mvp, _ := polyMod.New(g.Clone(), g.Double())
 		sp, _ := polyRing.New(field.FromUint64(2), field.One())
@@ -619,6 +670,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("distributivity over MVP addition", func(t *testing.T) {
+		t.Parallel()
 		// (mvp1 + mvp2) * poly == mvp1 * poly + mvp2 * poly
 		mvp1, _ := polyMod.New(g.Clone(), g.Double())
 		mvp2, _ := polyMod.New(g.Double(), g.Clone())
@@ -631,6 +683,7 @@ func TestModuleValuedPolynomialPolynomialOp(t *testing.T) {
 	})
 
 	t.Run("distributivity over polynomial addition", func(t *testing.T) {
+		t.Parallel()
 		// mvp * (poly1 + poly2) == mvp * poly1 + mvp * poly2
 		mvp, _ := polyMod.New(g.Clone(), g.Double())
 		sp1, _ := polyRing.New(field.FromUint64(2), field.One())
@@ -669,18 +722,21 @@ func TestModuleValuedPolynomialEqual(t *testing.T) {
 	identity := curve.OpIdentity()
 
 	t.Run("equal polynomials", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyMod.New(g.Clone(), g.Double())
 		p2, _ := polyMod.New(g.Clone(), g.Double())
 		require.True(t, p1.Equal(p2))
 	})
 
 	t.Run("unequal polynomials", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyMod.New(g.Clone(), g.Double())
 		p2, _ := polyMod.New(g.Double(), g.Clone())
 		require.False(t, p1.Equal(p2))
 	})
 
 	t.Run("different degrees with trailing identities", func(t *testing.T) {
+		t.Parallel()
 		p1, _ := polyMod.New(g.Clone(), g.Double())
 		p2, _ := polyMod.New(g.Clone(), g.Double(), identity.Clone())
 		require.True(t, p1.Equal(p2))
@@ -771,6 +827,7 @@ func TestLiftPolynomial(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("lift scalar polynomial to module-valued polynomial", func(t *testing.T) {
+		t.Parallel()
 		one := field.One()
 		two := field.FromUint64(2)
 		scalarPoly, _ := polyRing.New(one.Clone(), two.Clone()) // 1 + 2x

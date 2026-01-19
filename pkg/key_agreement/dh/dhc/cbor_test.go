@@ -65,6 +65,7 @@ func TestPrivateKey_CBOR_InvalidData(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			pk := new(dhc.PrivateKey)
 			err := pk.UnmarshalCBOR(tc.cborData)
 			if tc.expectErr {
@@ -145,6 +146,7 @@ func TestExtendedPrivateKey_CBOR_Roundtrip(t *testing.T) {
 	t.Parallel()
 
 	t.Run("X25519_MultipleRoundtrips", func(t *testing.T) {
+		t.Parallel()
 		sf := curve25519.NewScalarField()
 
 		for range 10 {
@@ -180,6 +182,7 @@ func TestExtendedPrivateKey_CBOR_Roundtrip(t *testing.T) {
 	})
 
 	t.Run("P256_MultipleRoundtrips", func(t *testing.T) {
+		t.Parallel()
 		curve := p256.NewCurve()
 
 		for range 10 {
@@ -220,12 +223,14 @@ func TestExtendedPrivateKey_CBOR_InvalidData(t *testing.T) {
 	t.Parallel()
 
 	t.Run("EmptyData", func(t *testing.T) {
+		t.Parallel()
 		extPk := new(dhc.ExtendedPrivateKey[*curve25519.Scalar])
 		err := extPk.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("InvalidCBOR", func(t *testing.T) {
+		t.Parallel()
 		extPk := new(dhc.ExtendedPrivateKey[*curve25519.Scalar])
 		err := extPk.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF})
 		require.Error(t, err)

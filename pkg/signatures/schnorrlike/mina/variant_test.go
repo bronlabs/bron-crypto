@@ -13,6 +13,7 @@ func TestNewDeterministicVariant(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil private key", func(t *testing.T) {
+		t.Parallel()
 		v, err := NewDeterministicVariant(TestNet, nil)
 		require.Nil(t, v)
 		require.Error(t, err)
@@ -20,6 +21,7 @@ func TestNewDeterministicVariant(t *testing.T) {
 	})
 
 	t.Run("valid private key", func(t *testing.T) {
+		t.Parallel()
 		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
@@ -34,6 +36,7 @@ func TestNewRandomisedVariant(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
 		v, err := NewRandomisedVariant(TestNet, nil)
 		require.Nil(t, v)
 		require.Error(t, err)
@@ -41,6 +44,7 @@ func TestNewRandomisedVariant(t *testing.T) {
 	})
 
 	t.Run("valid prng", func(t *testing.T) {
+		t.Parallel()
 		v, err := NewRandomisedVariant(TestNet, crand.Reader)
 		require.NoError(t, err)
 		require.NotNil(t, v)
@@ -127,11 +131,13 @@ func TestBitsToBytes(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty bits", func(t *testing.T) {
+		t.Parallel()
 		result := bitsToBytes(nil)
 		require.Empty(t, result)
 	})
 
 	t.Run("single byte", func(t *testing.T) {
+		t.Parallel()
 		// 8 bits representing 0b11000011 = 195 in LSB-first order
 		bits := []bool{true, true, false, false, false, false, true, true}
 		result := bitsToBytes(bits)
@@ -140,6 +146,7 @@ func TestBitsToBytes(t *testing.T) {
 	})
 
 	t.Run("partial byte", func(t *testing.T) {
+		t.Parallel()
 		// 5 bits: 10101 in LSB-first = 0b10101 = 21
 		bits := []bool{true, false, true, false, true}
 		result := bitsToBytes(bits)
@@ -148,6 +155,7 @@ func TestBitsToBytes(t *testing.T) {
 	})
 
 	t.Run("multiple bytes", func(t *testing.T) {
+		t.Parallel()
 		// 16 bits: byte0=0xFF, byte1=0x00
 		bits := make([]bool, 16)
 		for i := range 8 {
@@ -164,6 +172,7 @@ func TestComputeNonceCommitment(t *testing.T) {
 	t.Parallel()
 
 	t.Run("deterministic mode without message", func(t *testing.T) {
+		t.Parallel()
 		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
@@ -178,6 +187,7 @@ func TestComputeNonceCommitment(t *testing.T) {
 	})
 
 	t.Run("deterministic mode with message", func(t *testing.T) {
+		t.Parallel()
 		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
@@ -201,6 +211,7 @@ func TestComputeNonceCommitment(t *testing.T) {
 	})
 
 	t.Run("randomised mode", func(t *testing.T) {
+		t.Parallel()
 		v, err := NewRandomisedVariant(TestNet, crand.Reader)
 		require.NoError(t, err)
 
@@ -231,24 +242,28 @@ func TestComputeChallenge(t *testing.T) {
 	msg.AddString("test")
 
 	t.Run("nil nonce commitment", func(t *testing.T) {
+		t.Parallel()
 		e, err := v.ComputeChallenge(nil, publicKey.V, msg)
 		require.Nil(t, e)
 		require.Error(t, err)
 	})
 
 	t.Run("nil public key", func(t *testing.T) {
+		t.Parallel()
 		e, err := v.ComputeChallenge(R, nil, msg)
 		require.Nil(t, e)
 		require.Error(t, err)
 	})
 
 	t.Run("nil message", func(t *testing.T) {
+		t.Parallel()
 		e, err := v.ComputeChallenge(R, publicKey.V, nil)
 		require.Nil(t, e)
 		require.Error(t, err)
 	})
 
 	t.Run("valid inputs", func(t *testing.T) {
+		t.Parallel()
 		e, err := v.ComputeChallenge(R, publicKey.V, msg)
 		require.NoError(t, err)
 		require.NotNil(t, e)
@@ -270,24 +285,28 @@ func TestComputeResponse(t *testing.T) {
 	challenge := scalarFromUint64(42)
 
 	t.Run("nil private key value", func(t *testing.T) {
+		t.Parallel()
 		s, err := v.ComputeResponse(nil, nonce, challenge)
 		require.Nil(t, s)
 		require.Error(t, err)
 	})
 
 	t.Run("nil nonce", func(t *testing.T) {
+		t.Parallel()
 		s, err := v.ComputeResponse(skValue, nil, challenge)
 		require.Nil(t, s)
 		require.Error(t, err)
 	})
 
 	t.Run("nil challenge", func(t *testing.T) {
+		t.Parallel()
 		s, err := v.ComputeResponse(skValue, nonce, nil)
 		require.Nil(t, s)
 		require.Error(t, err)
 	})
 
 	t.Run("valid inputs", func(t *testing.T) {
+		t.Parallel()
 		s, err := v.ComputeResponse(skValue, nonce, challenge)
 		require.NoError(t, err)
 		require.NotNil(t, s)
@@ -301,12 +320,14 @@ func TestSerializeSignature(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil signature", func(t *testing.T) {
+		t.Parallel()
 		data, err := SerializeSignature(nil)
 		require.Nil(t, data)
 		require.Error(t, err)
 	})
 
 	t.Run("nil signature via variant method", func(t *testing.T) {
+		t.Parallel()
 		v, err := NewRandomisedVariant(TestNet, crand.Reader)
 		require.NoError(t, err)
 
@@ -316,6 +337,7 @@ func TestSerializeSignature(t *testing.T) {
 	})
 
 	t.Run("valid signature via variant method", func(t *testing.T) {
+		t.Parallel()
 		scheme, err := NewRandomisedScheme(TestNet, crand.Reader)
 		require.NoError(t, err)
 
@@ -342,6 +364,7 @@ func TestSerializeSignature(t *testing.T) {
 	})
 
 	t.Run("valid signature", func(t *testing.T) {
+		t.Parallel()
 		// Create a valid signature
 		scheme, err := NewRandomisedScheme(TestNet, crand.Reader)
 		require.NoError(t, err)
@@ -370,12 +393,14 @@ func TestDeserializeSignature(t *testing.T) {
 	t.Parallel()
 
 	t.Run("wrong size", func(t *testing.T) {
+		t.Parallel()
 		sig, err := DeserializeSignature(make([]byte, 32))
 		require.Nil(t, sig)
 		require.Error(t, err)
 	})
 
 	t.Run("round trip", func(t *testing.T) {
+		t.Parallel()
 		// Create a valid signature
 		scheme, err := NewRandomisedScheme(TestNet, crand.Reader)
 		require.NoError(t, err)
@@ -437,6 +462,7 @@ func TestCorrectPartialNonceParity(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nil nonce commitment", func(t *testing.T) {
+		t.Parallel()
 		R, k, err := v.CorrectPartialNonceParity(nil, sf.One())
 		require.Nil(t, R)
 		require.Nil(t, k)
@@ -444,6 +470,7 @@ func TestCorrectPartialNonceParity(t *testing.T) {
 	})
 
 	t.Run("nil local nonce", func(t *testing.T) {
+		t.Parallel()
 		aggR := group.ScalarBaseMul(sf.One())
 		R, k, err := v.CorrectPartialNonceParity(aggR, nil)
 		require.Nil(t, R)
@@ -452,6 +479,7 @@ func TestCorrectPartialNonceParity(t *testing.T) {
 	})
 
 	t.Run("even y nonce commitment", func(t *testing.T) {
+		t.Parallel()
 		// Create a nonce commitment with even y
 		localK := scalarFromUint64(42)
 		localR := group.ScalarBaseMul(localK)
@@ -473,6 +501,7 @@ func TestCorrectPartialNonceParity(t *testing.T) {
 	})
 
 	t.Run("odd y nonce commitment", func(t *testing.T) {
+		t.Parallel()
 		// Create a nonce commitment with odd y
 		localK := scalarFromUint64(42)
 		localR := group.ScalarBaseMul(localK)
@@ -611,21 +640,25 @@ func TestReversedBytes(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
 		result := reversedBytes(nil)
 		require.Empty(t, result)
 	})
 
 	t.Run("single byte", func(t *testing.T) {
+		t.Parallel()
 		result := reversedBytes([]byte{0x42})
 		require.Equal(t, []byte{0x42}, result)
 	})
 
 	t.Run("multiple bytes", func(t *testing.T) {
+		t.Parallel()
 		result := reversedBytes([]byte{0x01, 0x02, 0x03, 0x04})
 		require.Equal(t, []byte{0x04, 0x03, 0x02, 0x01}, result)
 	})
 
 	t.Run("does not modify original", func(t *testing.T) {
+		t.Parallel()
 		original := []byte{0x01, 0x02, 0x03}
 		originalCopy := bytes.Clone(original)
 		_ = reversedBytes(original)

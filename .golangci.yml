@@ -124,8 +124,8 @@ linters:
     - nolintlint
     # Checks that there is no simultaneous return of nil error and an invalid value.
     - nilnil
-    # # Paralleltest detects missing usage of t.Parallel() method in your Go test.
-    # - paralleltest
+    # Paralleltest detects missing usage of t.Parallel() method in your Go test.
+    - paralleltest
     # Finds slice declarations that could potentially be preallocated
     - prealloc
     # find code that shadows one of Go's predeclared identifiers

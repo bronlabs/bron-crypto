@@ -14,6 +14,7 @@ import (
 )
 
 func TestNatSetRandomRangeH(t *testing.T) {
+	t.Parallel()
 	const bitLen = 2048
 	b := big.NewInt(1)
 	b.Lsh(b, bitLen)
@@ -159,12 +160,14 @@ func TestNat_AddCap(t *testing.T) {
 func TestNat_SubCap(t *testing.T) {
 	t.Parallel()
 	t.Run("no underflow", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Nat
 		result.SubCap(numct.NewNat(10), numct.NewNat(3), -1)
 		require.Equal(t, uint64(7), result.Uint64())
 	})
 
 	t.Run("underflow wraps", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Nat
 		a := numct.NewNat(0)
 		b := numct.NewNat(1)
@@ -352,12 +355,14 @@ func TestNat_Select(t *testing.T) {
 	x1 := numct.NewNat(20)
 
 	t.Run("choice 0", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Nat
 		result.Select(0, x0, x1)
 		require.Equal(t, ct.True, result.Equal(x0))
 	})
 
 	t.Run("choice 1", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Nat
 		result.Select(1, x0, x1)
 		require.Equal(t, ct.True, result.Equal(x1))
@@ -367,6 +372,7 @@ func TestNat_Select(t *testing.T) {
 func TestNat_CondAssign(t *testing.T) {
 	t.Parallel()
 	t.Run("choice 0 keeps original", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewNat(10)
 		x := numct.NewNat(20)
 		n.CondAssign(0, x)
@@ -374,6 +380,7 @@ func TestNat_CondAssign(t *testing.T) {
 	})
 
 	t.Run("choice 1 assigns", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewNat(10)
 		x := numct.NewNat(20)
 		n.CondAssign(1, x)
@@ -580,6 +587,7 @@ func TestNat_Random_Errors(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("low equals high", func(t *testing.T) {
+		t.Parallel()
 		var n numct.Nat
 		err := n.SetRandomRangeLH(numct.NewNat(10), numct.NewNat(10), prng)
 		require.Error(t, err)
@@ -675,6 +683,7 @@ func TestNat_GCD(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic cases", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			a, b, expected uint64
 		}{
@@ -703,6 +712,7 @@ func TestNat_GCD(t *testing.T) {
 	})
 
 	t.Run("powers of two", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			a, b, expected uint64
 		}{
@@ -721,6 +731,7 @@ func TestNat_GCD(t *testing.T) {
 	})
 
 	t.Run("large numbers", func(t *testing.T) {
+		t.Parallel()
 		// gcd(2^32, 2^32) = 2^32
 		a := numct.NewNat(1 << 32)
 		b := numct.NewNat(1 << 32)
@@ -736,6 +747,7 @@ func TestNat_GCD(t *testing.T) {
 	})
 
 	t.Run("large coprime numbers", func(t *testing.T) {
+		t.Parallel()
 		// Two large coprime numbers
 		a := numct.NewNat(1000000007) // large prime
 		b := numct.NewNat(1000000009) // another large prime
@@ -745,6 +757,7 @@ func TestNat_GCD(t *testing.T) {
 	})
 
 	t.Run("multi-limb numbers", func(t *testing.T) {
+		t.Parallel()
 		// Test with numbers larger than 64 bits
 		// gcd(2^100, 2^50) = 2^50
 		a := new(big.Int).Lsh(big.NewInt(1), 100)
@@ -760,6 +773,7 @@ func TestNat_GCD(t *testing.T) {
 	})
 
 	t.Run("commutativity", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct{ a, b uint64 }{
 			{12, 18},
 			{100, 35},
@@ -774,6 +788,7 @@ func TestNat_GCD(t *testing.T) {
 	})
 
 	t.Run("consistency with Coprime", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			a, b uint64
 		}{
@@ -795,6 +810,7 @@ func TestNat_GCD(t *testing.T) {
 	})
 
 	t.Run("nil input panics", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Nat
 		require.Panics(t, func() {
 			result.GCD(nil, numct.NewNat(5))
@@ -812,6 +828,7 @@ func TestNat_Sqrt(t *testing.T) {
 	t.Parallel()
 
 	t.Run("small perfect squares (fast path)", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			input    uint64
 			expected uint64
@@ -846,6 +863,7 @@ func TestNat_Sqrt(t *testing.T) {
 	})
 
 	t.Run("large perfect squares (multi-limb path)", func(t *testing.T) {
+		t.Parallel()
 		// Test numbers > 64 bits to exercise multi-limb path
 		cases := []struct {
 			name string
@@ -862,6 +880,7 @@ func TestNat_Sqrt(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				// Compute root^2
 				squared := new(big.Int).Mul(tc.root, tc.root)
 				n := numct.NewNatFromBig(squared, squared.BitLen())
@@ -876,6 +895,7 @@ func TestNat_Sqrt(t *testing.T) {
 	})
 
 	t.Run("large non-perfect squares (multi-limb path)", func(t *testing.T) {
+		t.Parallel()
 		// Numbers > 64 bits that are not perfect squares
 		cases := []struct {
 			name string
@@ -887,6 +907,7 @@ func TestNat_Sqrt(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				n := numct.NewNatFromBig(tc.n, tc.n.BitLen())
 				original := n.Clone()
 
@@ -899,6 +920,7 @@ func TestNat_Sqrt(t *testing.T) {
 	})
 
 	t.Run("edge cases", func(t *testing.T) {
+		t.Parallel()
 		// max uint64 squared
 		maxU64 := new(big.Int).SetUint64(^uint64(0))
 		maxSquared := new(big.Int).Mul(maxU64, maxU64)

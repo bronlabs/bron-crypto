@@ -18,6 +18,7 @@ func RSAUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.RSAGroupElementUnk
 }
 
 func TestMultiplicativeGroupProperties_RSA(t *testing.T) {
+	t.Parallel()
 	g, group := RSAUnitGenerator(t)
 	suite := properties.MultiplicativeGroup(t, group, g)
 	suite.Theory = append(

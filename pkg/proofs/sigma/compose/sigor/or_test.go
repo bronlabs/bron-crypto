@@ -90,11 +90,13 @@ func Test_Or_InvalidInputs(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nil_protocol", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigor.Compose[*schnorr.Statement[*k256.Point, *k256.Scalar], *schnorr.Witness[*k256.Scalar], *schnorr.Commitment[*k256.Point, *k256.Scalar], *schnorr.State[*k256.Scalar], *schnorr.Response[*k256.Scalar]](nil, 2, crand.Reader)
 		require.Error(t, err)
 	})
 
 	t.Run("count_less_than_2", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigor.Compose(protocol, 1, crand.Reader)
 		require.Error(t, err)
 
@@ -103,6 +105,7 @@ func Test_Or_InvalidInputs(t *testing.T) {
 	})
 
 	t.Run("nil_prng", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigor.Compose(protocol, 2, nil)
 		require.Error(t, err)
 	})

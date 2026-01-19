@@ -71,6 +71,7 @@ func bar() error {
 }
 
 func TestUnwrap(t *testing.T) {
+	t.Parallel()
 	err := bar()
 	require.ErrorIs(t, err, errFoo)
 

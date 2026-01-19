@@ -15,6 +15,7 @@ func TestBasisAt(t *testing.T) {
 	field := k256.NewScalarField()
 
 	t.Run("single node", func(t *testing.T) {
+		t.Parallel()
 		// With one node, L_0(x) = 1 for all x
 		nodes := []*k256.Scalar{field.FromUint64(5)}
 		at := field.FromUint64(10)
@@ -28,6 +29,7 @@ func TestBasisAt(t *testing.T) {
 	})
 
 	t.Run("two nodes evaluated at first node", func(t *testing.T) {
+		t.Parallel()
 		// L_0(x_0) = 1, L_1(x_0) = 0
 		x0 := field.FromUint64(1)
 		x1 := field.FromUint64(2)
@@ -43,6 +45,7 @@ func TestBasisAt(t *testing.T) {
 	})
 
 	t.Run("two nodes evaluated at second node", func(t *testing.T) {
+		t.Parallel()
 		// L_0(x_1) = 0, L_1(x_1) = 1
 		x0 := field.FromUint64(1)
 		x1 := field.FromUint64(2)
@@ -58,6 +61,7 @@ func TestBasisAt(t *testing.T) {
 	})
 
 	t.Run("basis coefficients sum to one", func(t *testing.T) {
+		t.Parallel()
 		// For any point, sum of L_i(at) = 1
 		nodes := []*k256.Scalar{
 			field.FromUint64(1),
@@ -77,6 +81,7 @@ func TestBasisAt(t *testing.T) {
 	})
 
 	t.Run("three nodes specific values", func(t *testing.T) {
+		t.Parallel()
 		// nodes: x_0=0, x_1=1, x_2=2, evaluate at x=3
 		// L_0(3) = (3-1)(3-2) / (0-1)(0-2) = 2*1 / (-1)(-2) = 2/2 = 1
 		// L_1(3) = (3-0)(3-2) / (1-0)(1-2) = 3*1 / 1*(-1) = -3
@@ -104,6 +109,7 @@ func TestBasisAt(t *testing.T) {
 	})
 
 	t.Run("duplicate nodes causes division by zero", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{
 			field.FromUint64(5),
 			field.FromUint64(5), // duplicate
@@ -120,6 +126,7 @@ func TestInterpolateAt(t *testing.T) {
 	field := k256.NewScalarField()
 
 	t.Run("interpolate constant function", func(t *testing.T) {
+		t.Parallel()
 		// f(x) = 7 for all x
 		// Interpolating through points (1,7), (2,7), (3,7) should give 7 at any x
 		nodes := []*k256.Scalar{
@@ -142,6 +149,7 @@ func TestInterpolateAt(t *testing.T) {
 	})
 
 	t.Run("interpolate linear function", func(t *testing.T) {
+		t.Parallel()
 		// f(x) = 2x + 1
 		// Points: (0,1), (1,3), (2,5)
 		nodes := []*k256.Scalar{
@@ -167,6 +175,7 @@ func TestInterpolateAt(t *testing.T) {
 	})
 
 	t.Run("interpolate quadratic function", func(t *testing.T) {
+		t.Parallel()
 		// f(x) = x^2
 		// Points: (0,0), (1,1), (2,4), (3,9)
 		nodes := []*k256.Scalar{
@@ -189,6 +198,7 @@ func TestInterpolateAt(t *testing.T) {
 	})
 
 	t.Run("interpolation passes through given points", func(t *testing.T) {
+		t.Parallel()
 		// Arbitrary values
 		nodes := []*k256.Scalar{
 			field.FromUint64(2),
@@ -210,6 +220,7 @@ func TestInterpolateAt(t *testing.T) {
 	})
 
 	t.Run("single point interpolation", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{field.FromUint64(3)}
 		values := []*k256.Scalar{field.FromUint64(42)}
 
@@ -220,6 +231,7 @@ func TestInterpolateAt(t *testing.T) {
 	})
 
 	t.Run("mismatched lengths returns error", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{field.FromUint64(1), field.FromUint64(2)}
 		values := []*k256.Scalar{field.FromUint64(1)} // one less
 
@@ -228,6 +240,7 @@ func TestInterpolateAt(t *testing.T) {
 	})
 
 	t.Run("duplicate nodes returns error", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{field.FromUint64(1), field.FromUint64(1)}
 		values := []*k256.Scalar{field.FromUint64(5), field.FromUint64(5)}
 
@@ -243,6 +256,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("interpolate constant in exponent", func(t *testing.T) {
+		t.Parallel()
 		// All values are the same point: 5G
 		// Interpolation should return 5G at any x
 		fiveG := g.ScalarOp(field.FromUint64(5))
@@ -259,6 +273,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 	})
 
 	t.Run("interpolate linear in exponent", func(t *testing.T) {
+		t.Parallel()
 		// f(x) = (2x+1)G
 		// Points: (0, G), (1, 3G), (2, 5G)
 		nodes := []*k256.Scalar{
@@ -280,6 +295,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 	})
 
 	t.Run("interpolation passes through given points", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{
 			field.FromUint64(2),
 			field.FromUint64(5),
@@ -299,6 +315,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 	})
 
 	t.Run("consistency with scalar interpolation", func(t *testing.T) {
+		t.Parallel()
 		// Interpolating scalars and then multiplying by G should equal
 		// interpolating G*scalars directly
 		nodes := []*k256.Scalar{
@@ -332,6 +349,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 	})
 
 	t.Run("mismatched lengths returns error", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{field.FromUint64(1), field.FromUint64(2)}
 		values := []*k256.Point{g.Clone()} // one less
 
@@ -340,6 +358,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 	})
 
 	t.Run("nil module returns error", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{field.FromUint64(1)}
 		values := []*k256.Point{g.Clone()}
 
@@ -348,6 +367,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 	})
 
 	t.Run("duplicate nodes returns error", func(t *testing.T) {
+		t.Parallel()
 		nodes := []*k256.Scalar{field.FromUint64(1), field.FromUint64(1)}
 		values := []*k256.Point{g.Clone(), g.Clone()}
 
@@ -363,6 +383,7 @@ func TestInterpolatePolynomialReconstruction(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("reconstruct polynomial from evaluations", func(t *testing.T) {
+		t.Parallel()
 		// Create a polynomial: p(x) = 3 + 2x + x^2
 		original, err := polyRing.New(
 			field.FromUint64(3),
@@ -405,6 +426,7 @@ func TestSharedSecretReconstruction(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Shamir secret sharing style reconstruction", func(t *testing.T) {
+		t.Parallel()
 		// Secret is the constant term
 		secret := field.FromUint64(42)
 
@@ -434,6 +456,7 @@ func TestSharedSecretReconstruction(t *testing.T) {
 	})
 
 	t.Run("threshold reconstruction", func(t *testing.T) {
+		t.Parallel()
 		// t-of-n threshold: need t points to reconstruct degree t-1 polynomial
 		secret := field.FromUint64(12345)
 		threshold := 3 // need 3 shares
