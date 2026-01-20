@@ -87,22 +87,22 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	require.NoError(t, err)
 
 	for subShareHolders := range sliceutils.KCoveringCombinations(shareholders, 2) {
-		var sessionId network.SID
-		_, err := io.ReadFull(prng, sessionId[:])
+		var sessionID network.SID
+		_, err := io.ReadFull(prng, sessionID[:])
 		require.NoError(t, err)
 
-		primaryId := subShareHolders[0]
-		secondaryId := subShareHolders[1]
-		primaryShard, ok := shards.Get(primaryId)
+		primaryID := subShareHolders[0]
+		secondaryID := subShareHolders[1]
+		primaryShard, ok := shards.Get(primaryID)
 		require.True(t, ok)
-		secondaryShard, ok := shards.Get(secondaryId)
+		secondaryShard, ok := shards.Get(secondaryID)
 		require.True(t, ok)
 		primaryTape := hagrid.NewTranscript("test")
 		secondaryTape := primaryTape.Clone()
 
-		primaryCosigner, err := signing.NewPrimaryCosigner(sessionId, suite, secondaryId, primaryShard, fiatshamir.Name, primaryTape, prng)
+		primaryCosigner, err := signing.NewPrimaryCosigner(sessionID, suite, secondaryID, primaryShard, fiatshamir.Name, primaryTape, prng)
 		require.NoError(t, err)
-		secondaryCosigner, err := signing.NewSecondaryCosigner(sessionId, suite, primaryId, secondaryShard, fiatshamir.Name, secondaryTape, prng)
+		secondaryCosigner, err := signing.NewSecondaryCosigner(sessionID, suite, primaryID, secondaryShard, fiatshamir.Name, secondaryTape, prng)
 		require.NoError(t, err)
 
 		message := []byte("hello world")

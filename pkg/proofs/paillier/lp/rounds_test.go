@@ -44,20 +44,20 @@ func Test_HappyPath(t *testing.T) {
 
 func doProof(k int, pk *paillier.PublicKey, sk *paillier.PrivateKey) (err error) {
 	prng := crand.Reader
-	sessionId, err := network.NewSID([]byte("lpSession"))
+	sessionID, err := network.NewSID([]byte("lpSession"))
 	if err != nil {
 		return err
 	}
 	transcriptLabel := "LP"
 
 	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	verifier, err := lp.NewVerifier(sessionId, k, pk, verifierTranscript, prng)
+	verifier, err := lp.NewVerifier(sessionID, k, pk, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
 	proverTranscript := hagrid.NewTranscript(transcriptLabel)
-	prover, err := lp.NewProver(sessionId, k, sk, proverTranscript, prng)
+	prover, err := lp.NewProver(sessionID, k, sk, proverTranscript, prng)
 	if err != nil {
 		return err
 	}

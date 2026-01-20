@@ -89,7 +89,7 @@ func (sig *Signature[S]) V() *int {
 //
 // In ECDSA, both (r, s) and (r, n-s) are valid signatures for the same message.
 // This malleability can cause issues in systems that use signature hashes as identifiers.
-// Normalization ensures s is in the lower half of its range [1, n/2], providing
+// Normalisation ensures s is in the lower half of its range [1, n/2], providing
 // a unique canonical representation.
 //
 // This is required by Bitcoin (BIP-62) and Ethereum to prevent transaction malleability.
@@ -107,13 +107,13 @@ func (sig *Signature[S]) Normalise() {
 }
 
 // IsNormalized returns true if the signature is in low-S canonical form.
-// A signature is normalized if s <= n/2, where n is the curve order.
+// A signature is normalised if s <= n/2, where n is the curve order.
 func (sig *Signature[S]) IsNormalized() bool {
 	return sig.s.Cardinal().Big().Cmp(sig.s.Neg().Cardinal().Big()) <= 0
 }
 
 // ToElliptic returns the r and s values as big.Int for use with Go's crypto/ecdsa package.
-func (sig *Signature[S]) ToElliptic() (r *big.Int, s *big.Int) {
+func (sig *Signature[S]) ToElliptic() (r, s *big.Int) {
 	nativeR := sig.r.Cardinal().Big()
 	nativeS := sig.s.Cardinal().Big()
 	return nativeR, nativeS

@@ -46,7 +46,7 @@ func NewCommitmentKey(sid network.SID, pid sharing.ID, quorumBytes [][]byte) (Co
 	pidBytes := binary.BigEndian.AppendUint64(nil, uint64(pid))
 	key, err := hash_comm.NewKeyFromCRSBytes(sid, commitmentDomainRLabel, append([][]byte{pidBytes}, quorumBytes...)...)
 	if err != nil {
-		return *new(CommitmentKey), errs2.Wrap(err).WithMessage("cannot create key for commitment scheme")
+		return CommitmentKey{}, errs2.Wrap(err).WithMessage("cannot create key for commitment scheme")
 	}
 	return key, nil
 }

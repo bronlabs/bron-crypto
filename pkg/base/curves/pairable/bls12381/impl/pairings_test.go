@@ -18,27 +18,27 @@ import (
 )
 
 //go:embed testvectors/optimal_ate_pairing.json
-var testVectorsJson string
+var testVectorsJSON string
 
-type g1Json = pointsTu.PointJson[*bls12381Impl.Fp, *bls12381Impl.G1Point, bls12381Impl.Fp, bls12381Impl.G1Point]
-type g2Json = pointsTu.PointJson[*bls12381Impl.Fp2, *bls12381Impl.G2Point, bls12381Impl.Fp2, bls12381Impl.G2Point]
-type gtJson = fieldsTu.FiniteFieldElementJson[*bls12381Impl.Fp12, bls12381Impl.Fp12]
+type g1JSON = pointsTu.PointJSON[*bls12381Impl.Fp, *bls12381Impl.G1Point, bls12381Impl.Fp, bls12381Impl.G1Point]
+type g2JSON = pointsTu.PointJSON[*bls12381Impl.Fp2, *bls12381Impl.G2Point, bls12381Impl.Fp2, bls12381Impl.G2Point]
+type gtJSON = fieldsTu.FiniteFieldElementJSON[*bls12381Impl.Fp12, bls12381Impl.Fp12]
 
 type testVectors struct {
 	Vectors []testVector `json:"vectors"`
 }
 
 type testVector struct {
-	G1 g1Json `json:"g1"`
-	G2 g2Json `json:"g2"`
-	Gt gtJson `json:"gt"`
+	G1 g1JSON `json:"g1"`
+	G2 g2JSON `json:"g2"`
+	Gt gtJSON `json:"gt"`
 }
 
 func Test_TestVectors(t *testing.T) {
 	t.Parallel()
 
 	var vectors testVectors
-	err := json.Unmarshal([]byte(testVectorsJson), &vectors)
+	err := json.Unmarshal([]byte(testVectorsJSON), &vectors)
 	require.NoError(t, err)
 
 	engine := new(bls12381Impl.Engine)

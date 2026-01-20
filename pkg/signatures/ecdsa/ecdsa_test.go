@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
@@ -116,6 +116,7 @@ func Test_DeterministicHappyPath(t *testing.T) {
 	signature1, err := signer.Sign(message[:])
 	require.NoError(t, err)
 	signature2, err := signer.Sign(message[:])
+	require.NoError(t, err)
 
 	verifier, err := scheme.Verifier()
 	require.NoError(t, err)

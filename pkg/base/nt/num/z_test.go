@@ -1,7 +1,7 @@
 package num_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -16,7 +16,7 @@ import (
 // requireBigIntEqual compares big.Int values semantically (using Cmp)
 // rather than structurally, since different internal representations
 // can represent the same mathematical value.
-func requireBigIntEqual(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) {
+func requireBigIntEqual(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) { //nolint:unparam // msgAndArgs may not get nil
 	t.Helper()
 	require.Equal(t, 0, expected.Cmp(actual), msgAndArgs...)
 }
@@ -45,7 +45,7 @@ func TestIntegers_Properties(t *testing.T) {
 
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
-		require.True(t, !z.Order().IsFinite(), "integers should have infinite order")
+		require.False(t, z.Order().IsFinite(), "integers should have infinite order")
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
@@ -400,7 +400,7 @@ func TestZ_Random(t *testing.T) {
 			result, err := z.Random(low, high, prng)
 			require.NoError(t, err)
 			require.True(t, result.Compare(low) >= 0, "result should be >= low")
-			require.True(t, result.Compare(high) < 0, "result should be < high")
+			require.Negative(t, result.Compare(high), "result should be < high")
 		}
 	})
 
@@ -412,7 +412,7 @@ func TestZ_Random(t *testing.T) {
 			result, err := z.Random(low, high, prng)
 			require.NoError(t, err)
 			require.True(t, result.Compare(low) >= 0)
-			require.True(t, result.Compare(high) < 0)
+			require.Negative(t, result.Compare(high))
 		}
 	})
 
@@ -426,7 +426,7 @@ func TestZ_Random(t *testing.T) {
 			result, err := z.Random(low, high, prng)
 			require.NoError(t, err)
 			require.True(t, result.Compare(low) >= 0)
-			require.True(t, result.Compare(high) < 0)
+			require.Negative(t, result.Compare(high))
 			if result.IsNegative() {
 				hasNegative = true
 			}
@@ -446,7 +446,7 @@ func TestZ_Random(t *testing.T) {
 			result, err := z.Random(low, high, prng)
 			require.NoError(t, err)
 			require.True(t, result.Compare(low) >= 0)
-			require.True(t, result.Compare(high) < 0)
+			require.Negative(t, result.Compare(high))
 			require.True(t, result.Equal(low), "only possible value is 50")
 		}
 	})
@@ -1285,7 +1285,7 @@ func TestInt_Mod(t *testing.T) {
 		result := z.FromInt64(-10).Mod(mod)
 		// Result should be in [0, 7)
 		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-		require.True(t, result.Big().Cmp(big.NewInt(7)) < 0)
+		require.Negative(t, result.Big().Cmp(big.NewInt(7)))
 	})
 
 	t.Run("zero mod", func(t *testing.T) {
@@ -1415,7 +1415,7 @@ func TestInt_Cardinal(t *testing.T) {
 	t.Run("positive", func(t *testing.T) {
 		t.Parallel()
 		card := z.FromInt64(42).Cardinal()
-		require.False(t, !card.IsFinite())
+		require.True(t, card.IsFinite())
 	})
 
 	t.Run("negative uses absolute value", func(t *testing.T) {
@@ -1436,7 +1436,7 @@ func TestInt_EuclideanValuation(t *testing.T) {
 	t.Run("positive", func(t *testing.T) {
 		t.Parallel()
 		ev := z.FromInt64(42).EuclideanValuation()
-		require.False(t, !ev.IsFinite())
+		require.True(t, ev.IsFinite())
 	})
 
 	t.Run("zero", func(t *testing.T) {
@@ -1454,7 +1454,7 @@ func TestInt_TrueLen(t *testing.T) {
 	t.Run("small value", func(t *testing.T) {
 		t.Parallel()
 		v := z.FromInt64(255)
-		require.Greater(t, v.TrueLen(), 0)
+		require.Positive(t, v.TrueLen())
 	})
 
 	t.Run("large value", func(t *testing.T) {
@@ -1462,7 +1462,7 @@ func TestInt_TrueLen(t *testing.T) {
 		largeVal := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
 		v, err := z.FromBig(largeVal)
 		require.NoError(t, err)
-		require.Greater(t, v.TrueLen(), 0)
+		require.Positive(t, v.TrueLen())
 	})
 }
 
@@ -1697,8 +1697,8 @@ func TestInt_RandomWithCryptoRand(t *testing.T) {
 	high := z.FromInt64(100)
 
 	// Test with crypto/rand
-	result, err := z.Random(low, high, rand.Reader)
+	result, err := z.Random(low, high, crand.Reader)
 	require.NoError(t, err)
 	require.True(t, result.Compare(low) >= 0)
-	require.True(t, result.Compare(high) < 0)
+	require.Negative(t, result.Compare(high))
 }

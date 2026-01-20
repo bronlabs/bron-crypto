@@ -81,14 +81,14 @@ package sigma_test
 // //			prng := crand.Reader
 // //			protocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
 // //			require.NoError(t, err)
-// //			sessionId := []byte("some_session_id_for_test" + strconv.Itoa(i))
+// //			sessionID := []byte("some_session_id_for_test" + strconv.Itoa(i))
 // //			transcript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
 // //			proverTranscript := transcript.Clone()
 // //			verifierTranscript := transcript.Clone()
 // //
-// //			prover, err := sigma.NewProver(sessionId, proverTranscript, protocol, statement, witness)
+// //			prover, err := sigma.NewProver(sessionID, proverTranscript, protocol, statement, witness)
 // //			require.NoError(t, err)
-// //			verifier, err := sigma.NewVerifier(sessionId, verifierTranscript, protocol, statement, prng)
+// //			verifier, err := sigma.NewVerifier(sessionID, verifierTranscript, protocol, statement, prng)
 // //			require.NoError(t, err)
 // //
 // //			// round 1
@@ -129,14 +129,14 @@ package sigma_test
 
 // 	protocol, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 // 	require.NoError(t, err)
-// 	sessionId := []byte("some_session_id_for_test" + curve.Name())
+// 	sessionID := []byte("some_session_id_for_test" + curve.Name())
 // 	transcript := simple.NewTranscript("Test" + curve.Name())
 // 	proverTranscript := transcript.Clone()
 // 	verifierTranscript := transcript.Clone()
 
-// 	prover, err := sigma.NewProver(sessionId, proverTranscript, protocol, statement, witness)
+// 	prover, err := sigma.NewProver(sessionID, proverTranscript, protocol, statement, witness)
 // 	require.NoError(t, err)
-// 	verifier, err := sigma.NewVerifier(sessionId, verifierTranscript, protocol, statement, prng)
+// 	verifier, err := sigma.NewVerifier(sessionID, verifierTranscript, protocol, statement, prng)
 // 	require.NoError(t, err)
 
 // 	// round 1

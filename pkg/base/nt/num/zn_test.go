@@ -1,7 +1,7 @@
 package num_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -22,13 +22,6 @@ func testZMod(t *testing.T, modValue uint64) *num.ZMod {
 	zmod, err := num.NewZMod(mod)
 	require.NoError(t, err)
 	return zmod
-}
-
-// requireBigIntEqualZN compares big.Int values semantically (using Cmp)
-// rather than structurally.
-func requireBigIntEqualZN(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) {
-	t.Helper()
-	require.Equal(t, 0, expected.Cmp(actual), msgAndArgs...)
 }
 
 // ============================================================================
@@ -86,21 +79,21 @@ func TestZMod_Properties(t *testing.T) {
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
 		order := zmod.Order()
-		require.False(t, !order.IsFinite())
+		require.True(t, order.IsFinite())
 		require.False(t, order.IsZero())
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
 		t.Parallel()
 		char := zmod.Characteristic()
-		require.False(t, !char.IsFinite())
+		require.True(t, char.IsFinite())
 		require.False(t, char.IsZero())
 	})
 
 	t.Run("ElementSize", func(t *testing.T) {
 		t.Parallel()
 		size := zmod.ElementSize()
-		require.Greater(t, size, 0)
+		require.Positive(t, size)
 	})
 
 	t.Run("WideElementSize", func(t *testing.T) {
@@ -113,7 +106,7 @@ func TestZMod_Properties(t *testing.T) {
 		t.Parallel()
 		mod := zmod.Modulus()
 		require.NotNil(t, mod)
-		requireBigIntEqualZN(t, big.NewInt(7), mod.Big())
+		requireBigIntEqual(t, big.NewInt(7), mod.Big())
 	})
 
 	t.Run("Zero", func(t *testing.T) {
@@ -134,7 +127,7 @@ func TestZMod_Properties(t *testing.T) {
 		top := zmod.Top()
 		require.True(t, top.IsTop())
 		// For mod 7, top = 6
-		requireBigIntEqualZN(t, big.NewInt(6), top.Big())
+		requireBigIntEqual(t, big.NewInt(6), top.Big())
 	})
 
 	t.Run("Bottom", func(t *testing.T) {
@@ -200,7 +193,7 @@ func TestZMod_FromUint64(t *testing.T) {
 			t.Parallel()
 			result := zmod.FromUint64(tt.input)
 			expected := new(big.Int).SetUint64(tt.expected)
-			requireBigIntEqualZN(t, expected, result.Big())
+			requireBigIntEqual(t, expected, result.Big())
 		})
 	}
 }
@@ -214,7 +207,7 @@ func TestZMod_FromInt64(t *testing.T) {
 		t.Parallel()
 		result, err := zmod.FromInt64(10)
 		require.NoError(t, err)
-		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
+		requireBigIntEqual(t, big.NewInt(3), result.Big())
 	})
 
 	t.Run("negative", func(t *testing.T) {
@@ -258,7 +251,7 @@ func TestZMod_FromInt(t *testing.T) {
 		require.NoError(t, err)
 		// -10 mod 7 = 4
 		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-		require.True(t, result.Big().Cmp(big.NewInt(7)) < 0)
+		require.Negative(t, result.Big().Cmp(big.NewInt(7)))
 	})
 }
 
@@ -357,7 +350,7 @@ func TestZMod_Random(t *testing.T) {
 		require.NoError(t, err)
 		// Should be in [0, 100)
 		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-		require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+		require.Negative(t, result.Big().Cmp(big.NewInt(100)))
 	}
 }
 
@@ -392,7 +385,7 @@ func TestZMod_Hash(t *testing.T) {
 		result, err := zmod.Hash([]byte("test"))
 		require.NoError(t, err)
 		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-		require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+		require.Negative(t, result.Big().Cmp(big.NewInt(100)))
 	})
 }
 
@@ -697,7 +690,7 @@ func TestUint_ExpBounded(t *testing.T) {
 		a := zmod.FromUint64(2)
 		// 2^3 = 8 = 1 mod 7
 		result := a.ExpBounded(n.FromUint64(3), 8)
-		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+		requireBigIntEqual(t, big.NewInt(1), result.Big())
 	})
 
 	t.Run("bounds larger exponent", func(t *testing.T) {
@@ -708,7 +701,7 @@ func TestUint_ExpBounded(t *testing.T) {
 		// So 2^0 = 1 mod 7
 		exp := n.FromUint64(256) // binary: 100000000
 		result := a.ExpBounded(exp, 2)
-		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+		requireBigIntEqual(t, big.NewInt(1), result.Big())
 	})
 
 	t.Run("full bits same as Exp", func(t *testing.T) {
@@ -733,7 +726,7 @@ func TestUint_ExpIBounded(t *testing.T) {
 		a := zmod.FromUint64(2)
 		// 2^3 = 8 = 1 mod 7
 		result := a.ExpIBounded(z.FromInt64(3), 8)
-		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+		requireBigIntEqual(t, big.NewInt(1), result.Big())
 	})
 
 	t.Run("full bits same as ExpI", func(t *testing.T) {
@@ -758,7 +751,7 @@ func TestUint_ScalarExp(t *testing.T) {
 		a := zmod.FromUint64(2)
 		// 2^3 = 8 = 1 mod 7
 		result := a.ScalarExp(n.FromUint64(3))
-		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+		requireBigIntEqual(t, big.NewInt(1), result.Big())
 	})
 
 	t.Run("zero exponent", func(t *testing.T) {
@@ -766,7 +759,7 @@ func TestUint_ScalarExp(t *testing.T) {
 		a := zmod.FromUint64(5)
 		result := a.ScalarExp(n.FromUint64(0))
 		// Any number^0 = 1
-		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+		requireBigIntEqual(t, big.NewInt(1), result.Big())
 	})
 
 	t.Run("one exponent", func(t *testing.T) {
@@ -788,7 +781,7 @@ func TestUint_TryNeg(t *testing.T) {
 		neg, err := a.TryNeg()
 		require.NoError(t, err)
 		// -3 mod 7 = 4
-		requireBigIntEqualZN(t, big.NewInt(4), neg.Big())
+		requireBigIntEqual(t, big.NewInt(4), neg.Big())
 	})
 
 	t.Run("negation of zero", func(t *testing.T) {
@@ -979,7 +972,7 @@ func TestUint_IsNegative(t *testing.T) {
 
 	t.Run("non-negative values", func(t *testing.T) {
 		t.Parallel()
-		for i := uint64(0); i <= 5; i++ {
+		for i := range uint64(6) {
 			a := zmod.FromUint64(i)
 			require.False(t, a.IsNegative(), "value %d should not be negative", i)
 		}
@@ -1327,7 +1320,7 @@ func TestUint_Cardinal(t *testing.T) {
 
 	a := zmod.FromUint64(42)
 	card := a.Cardinal()
-	require.False(t, !card.IsFinite())
+	require.True(t, card.IsFinite())
 }
 
 func TestUint_Modulus(t *testing.T) {
@@ -1337,7 +1330,7 @@ func TestUint_Modulus(t *testing.T) {
 
 	a := zmod.FromUint64(3)
 	mod := a.Modulus()
-	requireBigIntEqualZN(t, big.NewInt(7), mod.Big())
+	requireBigIntEqual(t, big.NewInt(7), mod.Big())
 }
 
 func TestUint_ModulusCT(t *testing.T) {
@@ -1397,7 +1390,7 @@ func TestUint_TrueLen(t *testing.T) {
 	zmod := testZMod(t, 256)
 
 	a := zmod.FromUint64(255)
-	require.Greater(t, a.TrueLen(), 0)
+	require.Positive(t, a.TrueLen())
 }
 
 func TestUint_AnnouncedLen(t *testing.T) {
@@ -1588,10 +1581,10 @@ func TestZMod_RandomWithCryptoRand(t *testing.T) {
 
 	zmod := testZMod(t, 100)
 
-	result, err := zmod.Random(rand.Reader)
+	result, err := zmod.Random(crand.Reader)
 	require.NoError(t, err)
 	require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-	require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+	require.Negative(t, result.Big().Cmp(big.NewInt(100)))
 }
 
 func TestUint_EuclideanDiv(t *testing.T) {
@@ -1660,7 +1653,7 @@ func TestZMod_FromBytesBEReduce(t *testing.T) {
 		// 3 in big-endian bytes
 		result, err := zmod.FromBytesBEReduce([]byte{3})
 		require.NoError(t, err)
-		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
+		requireBigIntEqual(t, big.NewInt(3), result.Big())
 	})
 
 	t.Run("value needs reduction", func(t *testing.T) {
@@ -1668,7 +1661,7 @@ func TestZMod_FromBytesBEReduce(t *testing.T) {
 		// 10 = 3 mod 7
 		result, err := zmod.FromBytesBEReduce([]byte{10})
 		require.NoError(t, err)
-		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
+		requireBigIntEqual(t, big.NewInt(3), result.Big())
 	})
 
 	t.Run("large value reduction", func(t *testing.T) {
@@ -1676,7 +1669,7 @@ func TestZMod_FromBytesBEReduce(t *testing.T) {
 		// 256 = 4 mod 7 (256 = 36*7 + 4)
 		result, err := zmod.FromBytesBEReduce([]byte{0x01, 0x00})
 		require.NoError(t, err)
-		requireBigIntEqualZN(t, big.NewInt(4), result.Big())
+		requireBigIntEqual(t, big.NewInt(4), result.Big())
 	})
 
 	t.Run("zero bytes", func(t *testing.T) {
@@ -1700,7 +1693,7 @@ func TestZMod_FromBytesBEReduce(t *testing.T) {
 		result, err := zmod.FromBytesBEReduce([]byte{0x12, 0x34, 0x56, 0x78})
 		require.NoError(t, err)
 		expected := new(big.Int).Mod(big.NewInt(0x12345678), big.NewInt(7))
-		requireBigIntEqualZN(t, expected, result.Big())
+		requireBigIntEqual(t, expected, result.Big())
 	})
 }
 
@@ -1721,7 +1714,7 @@ func TestZMod_FromNatCTReduced(t *testing.T) {
 		nat := n.FromUint64(3)
 		result, err := zmod.FromNatCTReduced(nat.Value())
 		require.NoError(t, err)
-		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
+		requireBigIntEqual(t, big.NewInt(3), result.Big())
 	})
 
 	t.Run("zero in range", func(t *testing.T) {
@@ -1738,7 +1731,7 @@ func TestZMod_FromNatCTReduced(t *testing.T) {
 		nat := n.FromUint64(6)
 		result, err := zmod.FromNatCTReduced(nat.Value())
 		require.NoError(t, err)
-		requireBigIntEqualZN(t, big.NewInt(6), result.Big())
+		requireBigIntEqual(t, big.NewInt(6), result.Big())
 	})
 
 	t.Run("value out of range", func(t *testing.T) {

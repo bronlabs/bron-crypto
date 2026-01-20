@@ -26,17 +26,15 @@ var (
 	one     = num.N().FromUint64(1)
 	// Pre-computed table: ASCII → 0–57 (invalid = 0xFF)
 	// Initialise once in init().
-	b58      [256]byte
-	digitNat [58]*num.Nat // tiny Nat values 0…57
+	b58 [256]byte
 )
 
-func init() {
+func init() { //nolint:gochecknoinits // initialises base58 decoding table
 	for i := range b58 {
 		b58[i] = 0xFF
 	}
 	for i, char := range Alphabet {
 		b58[char] = byte(i)
-		digitNat[i] = num.N().FromUint64(uint64(i))
 	}
 	if alphabetIdx0 != Alphabet[0] {
 		panic(errs2.New("alphabetIdx0 must be the first character of the alphabet"))
@@ -81,7 +79,7 @@ func Decode(s Base58) []byte {
 	tmpval := answer.Big().Bytes()
 
 	var leadingZerosCount int
-	for leadingZerosCount = 0; leadingZerosCount < len(s) && s[leadingZerosCount] == alphabetIdx0; leadingZerosCount++ {
+	for leadingZerosCount = 0; leadingZerosCount < len(s) && s[leadingZerosCount] == alphabetIdx0; leadingZerosCount++ { //nolint:revive // empty block is intentional.
 		// count leading zeros
 	}
 	flen := leadingZerosCount + len(tmpval)

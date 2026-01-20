@@ -34,7 +34,7 @@ type (
 		share *feldman.Share[S]
 	}
 
-	// DKGPublicOutput collects the public artifacts from the Gennaro DKG execution.
+	// DKGPublicOutput collects the public artefacts from the Gennaro DKG execution.
 	DKGPublicOutput[
 		E GroupElement[E, S], S Scalar[S],
 	] struct {
@@ -47,7 +47,7 @@ type (
 
 const (
 	transcriptLabel              = "BRON_CRYPTO_DKG_GENNARO-"
-	proverIdLabel                = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
+	proverIDLabel                = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
 	secondPedersenGeneratorLabel = "second generator of pedersen key"
 )
 

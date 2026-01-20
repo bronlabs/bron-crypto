@@ -23,20 +23,20 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 		return nil, nil, errs2.Wrap(err).WithMessage("could not deal shares")
 	}
 	p.state.verificationVectors = make(map[sharing.ID]feldman.VerificationVector[G, S])
-	p.state.verificationVectors[p.sharingId] = dealerOut.VerificationMaterial()
+	p.state.verificationVectors[p.sharingID] = dealerOut.VerificationMaterial()
 
 	var ok bool
-	p.state.share, ok = dealerOut.Shares().Get(p.sharingId)
+	p.state.share, ok = dealerOut.Shares().Get(p.sharingID)
 	if !ok {
 		return nil, nil, ErrFailed.WithMessage("missing share")
 	}
 
 	r1b := &Round1Broadcast[G, S]{
-		VerificationVector: p.state.verificationVectors[p.sharingId],
+		VerificationVector: p.state.verificationVectors[p.sharingID],
 	}
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[G, S]]()
 	for id := range p.accessStructure.Shareholders().Iter() {
-		if id == p.sharingId {
+		if id == p.sharingID {
 			continue
 		}
 		share, ok := dealerOut.Shares().Get(id)
@@ -53,15 +53,15 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 }
 
 // Round2 verifies all zero-shares and aggregates them into a single zero-share and verification vector.
-func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (*feldman.Share[S], feldman.VerificationVector[G, S], error) {
+func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
 	if p.round != 2 {
 		return nil, nil, ErrRound.WithMessage("expected round 2")
 	}
 
-	share := p.state.share
-	verificationVector := p.state.verificationVectors[p.sharingId]
+	share = p.state.share
+	verificationVector := p.state.verificationVectors[p.sharingID]
 	for id := range p.accessStructure.Shareholders().Iter() {
-		if id == p.sharingId {
+		if id == p.sharingID {
 			continue
 		}
 		b, ok := r1b.Get(id)

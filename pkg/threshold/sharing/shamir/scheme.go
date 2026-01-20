@@ -58,7 +58,7 @@ func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], thres
 }
 
 // Name returns the canonical name of this scheme.
-func (d *Scheme[FE]) Name() sharing.Name {
+func (*Scheme[FE]) Name() sharing.Name {
 	return Name
 }
 

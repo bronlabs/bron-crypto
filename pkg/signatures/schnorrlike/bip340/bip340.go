@@ -1,7 +1,7 @@
 // Package bip340 implements BIP-340 Schnorr signatures for Bitcoin.
 //
 // BIP-340 defines a Schnorr signature scheme over the secp256k1 curve with
-// specific design choices optimized for Bitcoin:
+// specific design choices optimised for Bitcoin:
 //
 // # Key Features
 //
@@ -56,7 +56,7 @@ type (
 
 	// Message is a byte slice to be signed.
 	Message = []byte
-	// PublicKey is a BIP-340 public key (x-only, 32 bytes when serialized).
+	// PublicKey is a BIP-340 public key (x-only, 32 bytes when serialised).
 	PublicKey = schnorrlike.PublicKey[*GroupElement, *Scalar]
 	// PrivateKey is a BIP-340 private key (32-byte scalar).
 	PrivateKey = schnorrlike.PrivateKey[*GroupElement, *Scalar]
@@ -146,19 +146,22 @@ type Scheme struct {
 }
 
 // Name returns the signature scheme identifier ("SchnorrLike").
-func (s Scheme) Name() signatures.Name {
+func (Scheme) Name() signatures.Name {
 	return schnorrlike.Name
 }
 
 // Variant returns the BIP-340 variant configuration for this scheme.
 func (s *Scheme) Variant() *Variant {
 	return &Variant{
-		Aux: s.aux,
+		sk:         nil,
+		Aux:        s.aux,
+		msg:        nil,
+		adjustedSk: nil,
 	}
 }
 
 // Keygen creates a key generator for BIP-340 key pairs.
-func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
+func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	out := &KeyGenerator{
 		KeyGeneratorTrait: schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]{
 			Grp: k256.NewCurve(),
@@ -180,15 +183,19 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	variant := &Variant{
-		Aux: s.aux,
-		sk:  privateKey,
+		sk:         privateKey,
+		Aux:        s.aux,
+		msg:        nil,
+		adjustedSk: nil,
 	}
 	out := &Signer{
 		sg: schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]{
 			Sk: privateKey,
 			V:  variant,
 			Verifier: &Verifier{
-				variant: variant,
+				variant:            variant,
+				prng:               nil,
+				challengePublicKey: nil,
 			},
 		},
 	}
@@ -203,7 +210,9 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 // Verifier creates a verifier for validating BIP-340 signatures.
 func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	out := &Verifier{
-		variant: s.Variant(),
+		variant:            s.Variant(),
+		prng:               nil,
+		challengePublicKey: nil,
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
@@ -248,12 +257,13 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 		return nil, errs2.Wrap(err).WithMessage("invalid signature")
 	}
 	return &Signature{
+		E: nil,
 		R: r,
 		S: s,
 	}, nil
 }
 
-// KeyGeneratorOption configures key generation behavior.
+// KeyGeneratorOption configures key generation behaviour.
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
 // KeyGenerator creates BIP-340 key pairs.
@@ -261,7 +271,7 @@ type KeyGenerator struct {
 	schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]
 }
 
-// SignerOption configures signing behavior.
+// SignerOption configures signing behaviour.
 type SignerOption = signatures.SignerOption[*Signer, Message, *Signature]
 
 // Signer produces BIP-340 signatures using deterministic nonce derivation.
@@ -287,7 +297,7 @@ func (s *Signer) Variant() *Variant {
 	return s.sg.V
 }
 
-// VerifierOption configures verification behavior.
+// VerifierOption configures verification behaviour.
 type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature]
 
 // VerifyWithPRNG configures the verifier with a PRNG for batch verification.
@@ -427,14 +437,14 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 // This is more efficient than individual verification when verifying many signatures,
 // as it requires only one multi-scalar multiplication instead of u separate ones.
 //
-// The verifier must be initialized with a PRNG using VerifyWithPRNG option.
+// The verifier must be initialised with a PRNG using VerifyWithPRNG option.
 // The random coefficients a2...au prevent an attacker from constructing signatures
 // that pass batch verification but fail individual verification.
-func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message) error {
+func (v *Verifier) BatchVerify(sigs []*Signature, publicKeys []*PublicKey, messages []Message) error {
 	if v.prng == nil {
 		return ErrInvalidArgument.WithMessage("batch verification requires a prng. Initialise the verifier with the prng option")
 	}
-	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
+	if len(publicKeys) != len(sigs) || len(sigs) != len(messages) || len(sigs) == 0 {
 		return ErrInvalidArgument.WithMessage("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
 	if sliceutils.Any(publicKeys, func(pk *PublicKey) bool {
@@ -447,9 +457,9 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	sf := k256.NewScalarField()
 	var err error
 	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
-	a := make([]*k256.Scalar, len(signatures))
+	a := make([]*k256.Scalar, len(sigs))
 	a[0] = sf.One()
-	for i := 1; i < len(signatures); i++ {
+	for i := 1; i < len(sigs); i++ {
 		a[i], err = algebrautils.RandomNonIdentity(sf, v.prng)
 		if err != nil {
 			return errs2.Wrap(err).WithMessage("cannot generate random scalar for i=%d", i)
@@ -458,10 +468,10 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 
 	// For i = 1 .. u:
 	left := sf.Zero()
-	ae := make([]*k256.Scalar, len(signatures))
-	bigR := make([]*k256.Point, len(signatures))
-	bigP := make([]*k256.Point, len(signatures))
-	for i, sig := range signatures {
+	ae := make([]*k256.Scalar, len(sigs))
+	bigR := make([]*k256.Point, len(sigs))
+	bigP := make([]*k256.Point, len(sigs))
+	for i, sig := range sigs {
 		// 2. Let P_i = lift_x(int(pki))
 		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
 		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
@@ -474,7 +484,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		}
 
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
-		bigR[i] = LiftX(signatures[i].R)
+		bigR[i] = LiftX(sigs[i].R)
 
 		ae[i] = a[i].Mul(e)
 		left = left.Add(a[i].Mul(sig.S))
@@ -540,7 +550,7 @@ func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
 }
 
 // SerializePublicKey encodes a BIP-340 public key to 32 bytes (x-only).
-// Only the x-coordinate is serialized; y is implicitly even.
+// Only the x-coordinate is serialised; y is implicitly even.
 func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	if publicKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("public key is nil")
@@ -548,7 +558,7 @@ func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	return publicKey.Value().ToCompressed()[1:], nil
 }
 
-// encodePoint serializes a point to 32 bytes (x-coordinate only).
+// encodePoint serialises a point to 32 bytes (x-coordinate only).
 func encodePoint(p *k256.Point) []byte {
 	return p.ToCompressed()[1:]
 }

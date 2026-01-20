@@ -180,7 +180,7 @@ func TestComparableHashMap_Keys_Property(t *testing.T) {
 
 		keys := m.Keys()
 
-		require.Equal(t, m.Size(), len(keys))
+		require.Len(t, keys, m.Size())
 		for _, k := range keys {
 			require.True(t, m.ContainsKey(k))
 		}
@@ -194,7 +194,7 @@ func TestComparableHashMap_Values_Property(t *testing.T) {
 
 		values := m.Values()
 
-		require.Equal(t, m.Size(), len(values))
+		require.Len(t, values, m.Size())
 		// Each value should correspond to some key
 		keys := m.Keys()
 		for i, k := range keys {
@@ -257,7 +257,7 @@ func TestComparableHashMap_Iter_Property(t *testing.T) {
 			visited[k] = v
 		}
 
-		require.Equal(t, m.Size(), len(visited))
+		require.Len(t, visited, m.Size())
 		for k, v := range visited {
 			got, exists := m.Get(k)
 			require.True(t, exists)
@@ -278,7 +278,7 @@ func TestComparableHashMap_Enumerate_Property(t *testing.T) {
 			entries[entry.Key] = entry.Value
 		}
 
-		require.Equal(t, m.Size(), len(indices))
+		require.Len(t, indices, m.Size())
 		// Indices should be 0, 1, 2, ..., n-1
 		slices.Sort(indices)
 		for i, idx := range indices {

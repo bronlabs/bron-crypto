@@ -25,12 +25,12 @@ type ellipticK256 struct {
 }
 
 // Params returns the curve parameters.
-func (c *ellipticK256) Params() *elliptic.CurveParams {
+func (*ellipticK256) Params() *elliptic.CurveParams {
 	return ellipticK256Params
 }
 
 // IsOnCurve reports whether the point is on the curve.
-func (c *ellipticK256) IsOnCurve(x, y *big.Int) bool {
+func (*ellipticK256) IsOnCurve(x, y *big.Int) bool {
 	// IsOnCurve is documented to reject (0, 0), the conventional point at infinity.
 	if x.Sign() == 0 && y.Sign() == 0 {
 		return false
@@ -40,7 +40,7 @@ func (c *ellipticK256) IsOnCurve(x, y *big.Int) bool {
 }
 
 // Add sets the receiver to lhs + rhs.
-func (c *ellipticK256) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
+func (*ellipticK256) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 	p1, err := fromAffine(x1, y1)
 	if err != nil {
 		panic("Add was called on an invalid point")
@@ -53,7 +53,7 @@ func (c *ellipticK256) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 }
 
 // Double sets the receiver to 2*x.
-func (c *ellipticK256) Double(x1, y1 *big.Int) (x, y *big.Int) {
+func (*ellipticK256) Double(x1, y1 *big.Int) (x, y *big.Int) {
 	p, err := fromAffine(x1, y1)
 	if err != nil {
 		panic("Double was called on an invalid point")
@@ -62,7 +62,7 @@ func (c *ellipticK256) Double(x1, y1 *big.Int) (x, y *big.Int) {
 }
 
 // ScalarMult multiplies a point by a scalar.
-func (c *ellipticK256) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
+func (*ellipticK256) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
 	p, err := fromAffine(x1, y1)
 	if err != nil {
 		panic("ScalarMult was called on an invalid point")
@@ -76,7 +76,7 @@ func (c *ellipticK256) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
 }
 
 // ScalarBaseMult multiplies the generator by a scalar.
-func (c *ellipticK256) ScalarBaseMult(k []byte) (x, y *big.Int) {
+func (*ellipticK256) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	s, err := NewScalarField().FromWideBytes(k)
 	if err != nil {
 		panic("ScalarMult was called with an invalid scalar")
@@ -99,11 +99,11 @@ func fromAffine(x *big.Int, y *big.Int) (*Point, error) {
 	return NewCurve().FromUncompressed(slices.Concat([]byte{0x04}, xBytes[:], yBytes[:]))
 }
 
-func toAffine(p *Point) (*big.Int, *big.Int) {
+func toAffine(p *Point) (x *big.Int, y *big.Int) {
 	if p.IsZero() {
 		return new(big.Int), new(big.Int)
 	}
-	x, _ := p.AffineX()
-	y, _ := p.AffineY()
-	return x.Cardinal().Big(), y.Cardinal().Big()
+	xp, _ := p.AffineX()
+	yp, _ := p.AffineY()
+	return xp.Cardinal().Big(), yp.Cardinal().Big()
 }

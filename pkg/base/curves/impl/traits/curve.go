@@ -26,14 +26,14 @@ type CurveTrait[FP fields.FiniteFieldElement[FP], P points.Point[FP, P], W Point
 }
 
 // Zero returns the curve's point at infinity.
-func (c *CurveTrait[FP, P, W, WT]) Zero() W {
+func (*CurveTrait[FP, P, W, WT]) Zero() W {
 	var zero WT
 	W(&zero).P().SetZero()
 	return &zero
 }
 
 // Random samples a curve point using the provided PRNG.
-func (c *CurveTrait[FP, P, W, WT]) Random(prng io.Reader) (W, error) {
+func (*CurveTrait[FP, P, W, WT]) Random(prng io.Reader) (W, error) {
 	var p WT
 	if ok := W(&p).P().SetRandom(prng); ok == 0 {
 		return nil, curves.ErrRandomSample.WithMessage("cannot sample point")
@@ -64,7 +64,7 @@ func (c *CurveTrait[FP, P, W, WT]) OpIdentity() W {
 }
 
 // PrimeSubGroupGenerator returns the designated prime subgroup generator.
-func (c *CurveTrait[FP, P, W, WT]) PrimeSubGroupGenerator() W {
+func (*CurveTrait[FP, P, W, WT]) PrimeSubGroupGenerator() W {
 	var gen WT
 	W(&gen).P().SetGenerator()
 	return &gen
@@ -76,7 +76,7 @@ type PrimeCurveTrait[FP fields.FiniteFieldElement[FP], P points.Point[FP, P], W 
 }
 
 // Generator returns the designated generator for the curve.
-func (c *PrimeCurveTrait[FP, P, W, WT]) Generator() W {
+func (*PrimeCurveTrait[FP, P, W, WT]) Generator() W {
 	var gen WT
 	W(&gen).P().SetGenerator()
 	return &gen

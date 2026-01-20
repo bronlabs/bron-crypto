@@ -72,21 +72,21 @@ func (f *Field) Hash(data []byte) (*FieldElement, error) {
 	return f.FromBytes(h.Sum(nil))
 }
 
-func (f *Field) Name() string {
+func (*Field) Name() string {
 	return Name
 }
 
-func (f *Field) Order() cardinal.Cardinal {
+func (*Field) Order() cardinal.Cardinal {
 	orderBig := new(big.Int)
 	orderBig.SetBit(orderBig, 128, 1)
 	return cardinal.NewFromBig(orderBig)
 }
 
-func (f *Field) ElementSize() int {
+func (*Field) ElementSize() int {
 	return FieldElementSize
 }
 
-func (f *Field) Characteristic() cardinal.Cardinal {
+func (*Field) Characteristic() cardinal.Cardinal {
 	return cardinal.New(2)
 }
 
@@ -94,19 +94,19 @@ func (f *Field) OpIdentity() *FieldElement {
 	return f.Zero()
 }
 
-func (f *Field) One() *FieldElement {
+func (*Field) One() *FieldElement {
 	return &FieldElement{1, 0}
 }
 
-func (f *Field) Zero() *FieldElement {
+func (*Field) Zero() *FieldElement {
 	return &FieldElement{0, 0}
 }
 
-func (f *Field) IsDomain() bool {
+func (*Field) IsDomain() bool {
 	return true
 }
 
-func (f *Field) ExtensionDegree() uint {
+func (*Field) ExtensionDegree() uint {
 	return 128
 }
 
@@ -117,7 +117,7 @@ func (f *Field) FromComponentsBytes(data [][]byte) (*FieldElement, error) {
 	return f.FromBytes(data[0])
 }
 
-func (f *Field) FromBytes(buf []byte) (*FieldElement, error) {
+func (*Field) FromBytes(buf []byte) (*FieldElement, error) {
 	el := &FieldElement{}
 	if len(buf) != FieldElementSize {
 		return nil, ErrInvalidLength.WithMessage("invalid length of bytes for F2e128 element (is %d, should be %d)", len(buf), 16)
@@ -127,7 +127,7 @@ func (f *Field) FromBytes(buf []byte) (*FieldElement, error) {
 	return el, nil
 }
 
-func (f *Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
+func (*Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
 	zSlice := ct.CSelectInts(ct.Choice(choice), x[:], y[:])
 	return &FieldElement{
 		zSlice[0],
@@ -137,7 +137,7 @@ func (f *Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
 
 type FieldElement [2]uint64
 
-func (el *FieldElement) Structure() algebra.Structure[*FieldElement] {
+func (*FieldElement) Structure() algebra.Structure[*FieldElement] {
 	return NewField()
 }
 
@@ -163,7 +163,7 @@ func (el *FieldElement) OtherOp(e *FieldElement) *FieldElement {
 	return el.Mul(e)
 }
 
-func (el *FieldElement) Double() *FieldElement {
+func (*FieldElement) Double() *FieldElement {
 	return NewField().Zero()
 }
 
@@ -242,7 +242,7 @@ func (el *FieldElement) Sub(e *FieldElement) *FieldElement {
 	return el.Add(e)
 }
 
-func (el *FieldElement) IsProbablyPrime() bool {
+func (*FieldElement) IsProbablyPrime() bool {
 	return false
 }
 
@@ -262,7 +262,7 @@ func (el *FieldElement) EuclideanValuation() cardinal.Cardinal {
 	}
 }
 
-func (el *FieldElement) ComponentsBytes() [][]byte {
+func (*FieldElement) ComponentsBytes() [][]byte {
 	panic("not implemented")
 }
 

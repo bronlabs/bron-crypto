@@ -44,11 +44,11 @@ func DeriveChildKeys[
 		return *new(SH), nil, ErrInvalidDerivation.WithStackFrame()
 	}
 	if publicKey.Value().Structure().Name() == k256.NewCurve().Name() {
-		shift, childChainCode, err := bip32(any(publicKey.Value()).(*k256.Point), chainCode, i)
+		shift, childChainCode, err := bip32(any(publicKey.Value()).(*k256.Point), chainCode, i) //nolint:errcheck // false positive
 		if err != nil {
 			return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot derive child key")
 		}
-		return any(shift).(SH), childChainCode, nil
+		return any(shift).(SH), childChainCode, nil //nolint:errcheck // false positive
 	} else {
 		return bip32Like(publicKey, chainCode, i)
 	}
@@ -79,7 +79,7 @@ func bip32Like[
 		algebra.AbelianGroupElement[PKV, SH]
 		algebra.AdditiveGroupElement[PKV]
 	}, SH algebra.PrimeFieldElement[SH],
-](publicKey PK, chainCode []byte, i uint32) (SH, []byte, error) {
+](publicKey PK, chainCode []byte, i uint32) (shift SH, childChainCode []byte, err error) {
 	pkSpace, ok := publicKey.Value().Structure().(algebra.AbelianGroup[PKV, SH])
 	if !ok {
 		return *new(SH), nil, ErrInvalidArgument.WithMessage("public key does not implement FiniteAbelianGroup")
@@ -104,8 +104,8 @@ func bip32Like[
 		return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot read digest")
 	}
 
-	childChainCode := digest[scalarWideLen:]
-	shift, err := sf.FromWideBytes(digest[:scalarWideLen])
+	childChainCode = digest[scalarWideLen:]
+	shift, err = sf.FromWideBytes(digest[:scalarWideLen])
 	if err != nil {
 		return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot create scalar from bytes")
 	}

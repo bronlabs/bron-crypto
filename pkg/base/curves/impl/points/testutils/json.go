@@ -9,14 +9,14 @@ import (
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 )
 
-type PointJson[FP fields.FiniteFieldElementPtr[FP, F], PP pointsImpl.PointPtr[FP, PP, P], F, P any] struct {
+type PointJSON[FP fields.FiniteFieldElementPtr[FP, F], PP pointsImpl.PointPtr[FP, PP, P], F, P any] struct {
 	V P
 }
 
-func (p *PointJson[FP, PP, F, P]) UnmarshalJSON(data []byte) error {
+func (p *PointJSON[FP, PP, F, P]) UnmarshalJSON(data []byte) error {
 	type innerType struct {
-		X fieldsTu.FiniteFieldElementJson[FP, F] `json:"x"`
-		Y fieldsTu.FiniteFieldElementJson[FP, F] `json:"y"`
+		X fieldsTu.FiniteFieldElementJSON[FP, F] `json:"x"`
+		Y fieldsTu.FiniteFieldElementJSON[FP, F] `json:"y"`
 	}
 	var innerData innerType
 	err := json.Unmarshal(data, &innerData)

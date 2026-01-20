@@ -3,9 +3,10 @@ package mathutils_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
 func TestCeilDiv_Property(t *testing.T) {

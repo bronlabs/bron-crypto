@@ -60,12 +60,12 @@ func (ns *NaturalNumbers) OpIdentity() *Nat {
 }
 
 // FromUint64 creates a Nat from a uint64 value.
-func (ns *NaturalNumbers) FromUint64(value uint64) *Nat {
+func (*NaturalNumbers) FromUint64(value uint64) *Nat {
 	return &Nat{v: numct.NewNat(value)}
 }
 
 // FromNatPlus creates a Nat from a NatPlus value, returning an error if the input is nil.
-func (ns *NaturalNumbers) FromNatPlus(value *NatPlus) (*Nat, error) {
+func (*NaturalNumbers) FromNatPlus(value *NatPlus) (*Nat, error) {
 	if value == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -96,7 +96,7 @@ func (ns *NaturalNumbers) FromRat(value *Rat) (*Nat, error) {
 }
 
 // FromNatCT creates a Nat from a numct.Nat value, returning an error if the input is nil.
-func (ns *NaturalNumbers) FromNatCT(value *numct.Nat) (*Nat, error) {
+func (*NaturalNumbers) FromNatCT(value *numct.Nat) (*Nat, error) {
 	if value == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -118,7 +118,7 @@ func (ns *NaturalNumbers) FromInt(value *Int) (*Nat, error) {
 }
 
 // FromBytes creates a Nat from a byte slice, returning an error if the input is nil.
-func (ns *NaturalNumbers) FromBytes(input []byte) (*Nat, error) {
+func (*NaturalNumbers) FromBytes(input []byte) (*Nat, error) {
 	if input == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -162,12 +162,12 @@ func (ns *NaturalNumbers) Bottom() *Nat {
 }
 
 // ElementSize returns -1 indicating that elements of NaturalNumbers do not have a fixed size.
-func (ns *NaturalNumbers) ElementSize() int {
+func (*NaturalNumbers) ElementSize() int {
 	return -1
 }
 
 // ScalarStructure returns the regular semi-module structure of NaturalNumbers.
-func (ns *NaturalNumbers) ScalarStructure() algebra.Structure[*Nat] {
+func (*NaturalNumbers) ScalarStructure() algebra.Structure[*Nat] {
 	return N()
 }
 
@@ -242,7 +242,7 @@ func (n *Nat) TryOpInv() (*Nat, error) {
 }
 
 // TryNeg attempts to compute the negation of the Nat. It will always return an error since natural numbers do not have negation.
-func (n *Nat) TryNeg() (*Nat, error) {
+func (*Nat) TryNeg() (*Nat, error) {
 	return nil, ErrUndefined.WithStackFrame()
 }
 
@@ -538,7 +538,7 @@ func (n *Nat) Big() *big.Int {
 }
 
 // IsTorsionFree checks if the Nat is torsion-free under addition, which is always true for natural numbers.
-func (n *Nat) IsTorsionFree() bool {
+func (*Nat) IsTorsionFree() bool {
 	return true
 }
 

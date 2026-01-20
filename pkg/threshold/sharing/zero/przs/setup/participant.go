@@ -1,4 +1,4 @@
-package przsSetup
+package przssetup
 
 import (
 	"io"
@@ -18,7 +18,7 @@ const (
 
 // Participant runs the PRZS seed-setup protocol.
 type Participant struct {
-	mySharingId sharing.ID
+	mySharingID sharing.ID
 	quorum      network.Quorum
 	tape        ts.Transcript
 	prng        io.Reader
@@ -34,16 +34,22 @@ type State struct {
 	commitments       ds.MutableMap[sharing.ID, ds.Map[sharing.ID, hash_comm.Commitment]]
 }
 
-// NewParticipant initializes the seed setup for a given session.
-func NewParticipant(sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum, tape ts.Transcript, prng io.Reader) (*Participant, error) {
+// NewParticipant initialises the seed setup for a given session.
+func NewParticipant(sessionID network.SID, mySharingID sharing.ID, quorum network.Quorum, tape ts.Transcript, prng io.Reader) (*Participant, error) {
 	// TODO: add validation
 	p := &Participant{
-		mySharingId: mySharingId,
+		mySharingID: mySharingID,
 		quorum:      quorum,
 		tape:        tape,
 		prng:        prng,
+		state: State{
+			commitmentScheme:  nil,
+			seedContributions: nil,
+			witnesses:         nil,
+			commitments:       nil,
+		},
 	}
-	p.tape.AppendBytes(domainSeparator, sessionId[:])
+	p.tape.AppendBytes(domainSeparator, sessionID[:])
 
 	var ck hash_comm.Key
 	ckBytes, err := p.tape.ExtractBytes("ck", uint(len(ck)))
@@ -61,5 +67,5 @@ func NewParticipant(sessionId network.SID, mySharingId sharing.ID, quorum networ
 
 // SharingID returns the participant identifier.
 func (p *Participant) SharingID() sharing.ID {
-	return p.mySharingId
+	return p.mySharingID
 }

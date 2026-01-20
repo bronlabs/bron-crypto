@@ -22,7 +22,7 @@ var (
 	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message] = (*Variant)(nil)
 )
 
-// Variant implements BIP-340 specific signing behavior.
+// Variant implements BIP-340 specific signing behaviour.
 // It handles the deterministic nonce derivation, even-y constraints,
 // and tagged hashing required by BIP-340.
 type Variant struct {
@@ -53,7 +53,7 @@ func (*Variant) HashFunc() func() hash.Hash {
 //
 // This deterministic derivation prevents nonce reuse vulnerabilities while
 // the auxiliary randomness provides side-channel protection.
-func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
+func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.sk == nil || v.msg == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("need both private key and message")
 	}
@@ -109,7 +109,7 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	// 9. Let R = k'⋅G.
 	bigR := g.ScalarMul(kPrime)
 	// 10. Let k = k' if R.y is even, otherwise let k = n - k', R = k ⋅ G
-	k := kPrime
+	k = kPrime
 	ry, err := bigR.AffineY()
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")
@@ -169,13 +169,19 @@ func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 // Clone creates a deep copy of the variant.
 func (v *Variant) Clone() *Variant {
 	out := &Variant{
-		Aux: v.Aux,
+		sk:         nil,
+		Aux:        v.Aux,
+		msg:        nil,
+		adjustedSk: nil,
 	}
 	if v.sk != nil {
 		out.sk = v.sk.Clone()
 	}
 	if v.msg != nil {
 		copy(out.msg, v.msg)
+	}
+	if v.adjustedSk != nil {
+		out.adjustedSk = v.adjustedSk.Clone()
 	}
 	return out
 }
@@ -194,7 +200,7 @@ var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Varian
 // If the aggregate public key P = x·G has odd y, BIP-340 requires using -x instead.
 // This method negates the share if P.y is odd, ensuring all parties use
 // consistent (negated) shares when P.y is odd.
-func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
+func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
 	if publicKey == nil || share == nil {
 		return nil, ErrInvalidArgument.WithMessage("public key or secret share is nil")
 	}
@@ -215,7 +221,7 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 // that CorrectAdditiveSecretShareParity applies to private key shares. This is needed
 // for partial signature verification where the public key share must be corrected
 // based on the aggregate public key's Y coordinate parity.
-func (v *Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {
+func (*Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {
 	if aggregatePublicKey == nil || share == nil {
 		return nil, ErrInvalidArgument.WithMessage("aggregate public key or share is nil")
 	}
@@ -237,7 +243,7 @@ func (v *Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, sha
 // After all parties contribute their nonce commitments and the aggregate R is known,
 // if R.y is odd, each party must negate their partial nonce k_i.
 // This ensures the aggregate response s = Σk_i + e·Σx_i uses the correct nonces.
-func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
+func (*Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
 	if nonceCommitment == nil || k == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}

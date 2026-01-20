@@ -1,4 +1,4 @@
-package przsSetup_test
+package przssetup_test
 
 import (
 	crand "crypto/rand"
@@ -12,34 +12,34 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 
 	quorum := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
 	tape := hagrid.NewTranscript("test")
 
-	participants := make([]*przsSetup.Participant, quorum.Size())
-	for i, sharingId := range quorum.Iter2() {
-		participants[i], err = przsSetup.NewParticipant(sessionId, sharingId, quorum, tape.Clone(), prng)
+	participants := make([]*przssetup.Participant, quorum.Size())
+	for i, sharingID := range quorum.Iter2() {
+		participants[i], err = przssetup.NewParticipant(sessionID, sharingID, quorum, tape.Clone(), prng)
 		require.NoError(t, err)
 	}
 
-	r1bo := make(map[sharing.ID]*przsSetup.Round1Broadcast)
+	r1bo := make(map[sharing.ID]*przssetup.Round1Broadcast)
 	for _, p := range participants {
 		r1bo[p.SharingID()], err = p.Round1()
 		require.NoError(t, err)
 	}
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-	r2uo := make(map[sharing.ID]network.RoundMessages[*przsSetup.Round2P2P])
+	r2uo := make(map[sharing.ID]network.RoundMessages[*przssetup.Round2P2P])
 	for _, p := range participants {
 		r2uo[p.SharingID()], err = p.Round2(r2bi[p.SharingID()])
 		require.NoError(t, err)

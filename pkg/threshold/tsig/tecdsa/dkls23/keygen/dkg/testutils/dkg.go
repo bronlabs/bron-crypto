@@ -33,18 +33,18 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	tb.Helper()
 
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)
 
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionId[:]))
+	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
 	tapesMap := make(map[sharing.ID]transcripts.Transcript)
 
 	ids := slices.Collect(accessStructure.Shareholders().Iter())
 	gennaroDkgParticipants := make([]*gennaro.Participant[P, S], accessStructure.Shareholders().Size())
 	for i, id := range ids {
 		tapesMap[id] = tape.Clone()
-		gennaroDkgParticipants[i], err = gennaro.NewParticipant(sessionId, curve, id, accessStructure, fiatshamir.Name, tapesMap[id], prng)
+		gennaroDkgParticipants[i], err = gennaro.NewParticipant(sessionID, curve, id, accessStructure, fiatshamir.Name, tapesMap[id], prng)
 		require.NoError(tb, err)
 	}
 	dkgOutputs, err := gennaroTU.DoGennaroDKG(tb, gennaroDkgParticipants)
@@ -57,7 +57,7 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 		ecdsaShard, err := tecdsa.NewShard(dkgOutput.Share(), dkgOutput.VerificationVector(), accessStructure)
 		require.NoError(tb, err)
 
-		dkgParticipantsMap[id], err = dkg.NewParticipant(sessionId, id, ecdsaShard, tapesMap[id], prng)
+		dkgParticipantsMap[id], err = dkg.NewParticipant(sessionID, id, ecdsaShard, tapesMap[id], prng)
 		require.NoError(tb, err)
 	}
 	dkgParticipants := slices.Collect(maps.Values(dkgParticipantsMap))

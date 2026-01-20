@@ -16,7 +16,7 @@ func Unknown() Cardinal {
 type unknown struct{}
 
 // IsLessThanOrEqual always returns false for Unknown cardinal.
-func (u unknown) IsLessThanOrEqual(other Cardinal) bool {
+func (unknown) IsLessThanOrEqual(other Cardinal) bool {
 	return false
 }
 
@@ -26,27 +26,27 @@ func (u unknown) Clone() Cardinal {
 }
 
 // HashCode returns a hash code for Unknown cardinal.
-func (u unknown) HashCode() base.HashCode {
+func (unknown) HashCode() base.HashCode {
 	return base.DeriveHashCode([]byte("UnknownCardinal"))
 }
 
 // Equal always returns false when comparing Unknown cardinal with any other cardinal.
-func (u unknown) Equal(other Cardinal) bool {
+func (unknown) Equal(other Cardinal) bool {
 	return false
 }
 
 // Bytes panics as Bytes is not defined for Unknown cardinal.
-func (u unknown) Bytes() []byte {
+func (unknown) Bytes() []byte {
 	panic("Bytes() not supported for Unknown cardinal")
 }
 
 // BytesBE panics as BytesBE is not defined for Unknown cardinal.
-func (u unknown) BytesBE() []byte {
+func (unknown) BytesBE() []byte {
 	panic("BytesBE() not supported for Unknown cardinal")
 }
 
 // String returns a string representation of Unknown cardinal.
-func (u unknown) String() string {
+func (unknown) String() string {
 	return "UnknownCardinal"
 }
 
@@ -61,36 +61,36 @@ func (u unknown) Mul(other Cardinal) Cardinal {
 }
 
 // Big panics as Big is not defined for Unknown cardinal.
-func (u unknown) Big() *big.Int {
+func (unknown) Big() *big.Int {
 	panic("Big() not supported for Unknown cardinal")
 }
 
 // Uint64 panics as Uint64 is not defined for Unknown cardinal.
-func (u unknown) Uint64() uint64 {
+func (unknown) Uint64() uint64 {
 	panic("Uint64() not supported for Unknown cardinal")
 }
 
 // IsZero always returns false for Unknown cardinal.
-func (u unknown) IsZero() bool {
+func (unknown) IsZero() bool {
 	return false
 }
 
 // IsFinite always returns true for Unknown cardinal.
-func (u unknown) IsFinite() bool {
+func (unknown) IsFinite() bool {
 	return true
 }
 
 // IsUnknown always returns true for Unknown cardinal.
-func (u unknown) IsUnknown() bool {
+func (unknown) IsUnknown() bool {
 	return true
 }
 
 // IsProbablyPrime panics as IsProbablyPrime is not defined for Unknown cardinal.
-func (u unknown) IsProbablyPrime() bool {
+func (unknown) IsProbablyPrime() bool {
 	panic("IsProbablyPrime() not supported for Unknown cardinal")
 }
 
 // BitLen panics as BitLen is not defined for Unknown cardinal.
-func (u unknown) BitLen() int {
+func (unknown) BitLen() int {
 	panic("BitLen() not supported for Unknown cardinal")
 }

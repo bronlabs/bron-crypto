@@ -11,6 +11,7 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
@@ -45,7 +46,7 @@ func NewG2BaseField() *BaseFieldG2 {
 }
 
 // Hash maps input bytes to an element or point.
-func (f *BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
+func (*BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
 	var e [1]bls12381Impl.Fp2
 	h2c.HashToField(e[:], bls12381Impl.G2CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveSuiteG2, bytes)
 
@@ -55,27 +56,27 @@ func (f *BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
 }
 
 // Name returns the name of the structure.
-func (f *BaseFieldG2) Name() string {
+func (*BaseFieldG2) Name() string {
 	return BaseFieldNameG2
 }
 
 // IsDomain reports whether the field forms an integral domain.
-func (f *BaseFieldG2) IsDomain() bool {
+func (*BaseFieldG2) IsDomain() bool {
 	return true
 }
 
 // Order returns the group or field order.
-func (f *BaseFieldG2) Order() cardinal.Cardinal {
+func (*BaseFieldG2) Order() cardinal.Cardinal {
 	return NewG1BaseField().Order().Add(NewG1BaseField().Order())
 }
 
 // Characteristic returns the field characteristic.
-func (f *BaseFieldG2) Characteristic() cardinal.Cardinal {
+func (*BaseFieldG2) Characteristic() cardinal.Cardinal {
 	return NewG1BaseField().Characteristic()
 }
 
 // ExtensionDegree returns the field extension degree.
-func (f *BaseFieldG2) ExtensionDegree() uint {
+func (*BaseFieldG2) ExtensionDegree() uint {
 	return 2
 }
 
@@ -88,22 +89,26 @@ func (f *BaseFieldG2) FromBytes(data []byte) (*BaseFieldElementG2, error) {
 	componentSize := f.ElementSize() / 2
 	components[0] = data[:componentSize]
 	components[1] = data[componentSize:]
-	return f.FromComponentsBytes(components)
+	out, err := f.FromComponentsBytes(components)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to convert bytes into field element")
+	}
+	return out, nil
 }
 
 // FromWideBytes decodes an element from wide bytes.
-func (f *BaseFieldG2) FromWideBytes(data []byte) (*BaseFieldElementG2, error) {
+func (*BaseFieldG2) FromWideBytes(data []byte) (*BaseFieldElementG2, error) {
 	// TODO
 	panic("implement me")
 }
 
 // ElementSize returns the element size in bytes.
-func (f *BaseFieldG2) ElementSize() int {
+func (*BaseFieldG2) ElementSize() int {
 	return 2 * bls12381Impl.FpBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
-func (f *BaseFieldG2) WideElementSize() int {
+func (*BaseFieldG2) WideElementSize() int {
 	return 2 * bls12381Impl.FpWideBytes
 }
 
@@ -113,7 +118,7 @@ type BaseFieldElementG2 struct {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (fe *BaseFieldElementG2) Structure() algebra.Structure[*BaseFieldElementG2] {
+func (*BaseFieldElementG2) Structure() algebra.Structure[*BaseFieldElementG2] {
 	return NewG2BaseField()
 }
 

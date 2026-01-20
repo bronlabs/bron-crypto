@@ -1,7 +1,6 @@
 package testutils
 
 import (
-	_ "embed"
 	"encoding/binary"
 	"io"
 	"math/bits"
@@ -208,6 +207,6 @@ func (fp *TestFp) Limbs() []uint64 {
 	return []uint64{uint64(*fp)}
 }
 
-func (fp *TestFp) Degree() uint64 {
+func (*TestFp) Degree() uint64 {
 	return 1
 }

@@ -71,6 +71,7 @@ func TestMultiScalarMul(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("single point", func(t *testing.T) {
+		t.Parallel()
 		scalar := scalarField.FromUint64(42)
 		points := []*k256.Point{g}
 		scalars := []*k256.Scalar{scalar}
@@ -83,6 +84,7 @@ func TestMultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("all zero scalars returns identity", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -99,6 +101,7 @@ func TestMultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("all one scalars returns sum of points", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -118,6 +121,7 @@ func TestMultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("small known values 2G + 3G = 5G", func(t *testing.T) {
+		t.Parallel()
 		two := scalarField.FromUint64(2)
 		three := scalarField.FromUint64(3)
 		five := scalarField.FromUint64(5)
@@ -133,6 +137,7 @@ func TestMultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("mixed zero and non-zero scalars", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -153,6 +158,7 @@ func TestMultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("identity point in input", func(t *testing.T) {
+		t.Parallel()
 		identity := curve.OpIdentity()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
@@ -170,6 +176,7 @@ func TestMultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("random batch correctness", func(t *testing.T) {
+		t.Parallel()
 		const n = 20
 		points := make([]*k256.Point, n)
 		scalars := make([]*k256.Scalar, n)
@@ -192,6 +199,7 @@ func TestMultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("consistency - same inputs same output", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)

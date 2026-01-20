@@ -5,9 +5,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 )
 
 func Benchmark_EuclideanDiv(b *testing.B) {
@@ -19,6 +20,7 @@ func Benchmark_EuclideanDiv(b *testing.B) {
 	xBig, err := crand.Int(prng, boundBig)
 	require.NoError(b, err)
 	yBig, err := crand.Int(prng, boundBig)
+	require.NoError(b, err)
 
 	x := new(saferith.Nat).SetBig(xBig, bits)
 	y := new(saferith.Nat).SetBig(yBig, bits)

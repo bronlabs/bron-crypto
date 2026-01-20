@@ -17,8 +17,8 @@ type gennaroDkgRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 }
 
 // NewGennaroDKGRunner constructs a network runner that drives the three DKG rounds.
-func NewGennaroDKGRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], sessionId network.SID, sharingId sharing.ID, accessStructure *sharing.ThresholdAccessStructure, niCompilerName compiler.Name, tape ts.Transcript, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
-	party, err := NewParticipant(sessionId, group, sharingId, accessStructure, niCompilerName, tape, prng)
+func NewGennaroDKGRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], sessionID network.SID, sharingID sharing.ID, accessStructure *sharing.ThresholdAccessStructure, niCompilerName compiler.Name, tape ts.Transcript, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
+	party, err := NewParticipant(sessionID, group, sharingID, accessStructure, niCompilerName, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}
@@ -32,7 +32,7 @@ func (r *gennaroDkgRunner[G, S]) Run(rt *network.Router) (*DKGOutput[G, S], erro
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2InB, err := exchange.ExchangeBroadcast(rt, "GennaroDKGRound1", r1OutB)
+	r2InB, err := exchange.Broadcast(rt, "GennaroDKGRound1", r1OutB)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
 	}

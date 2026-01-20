@@ -20,7 +20,7 @@ var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 
 // verifier implements the NIVerifier interface for Fischlin proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	sessionId     network.SID
+	sessionID     network.SID
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
@@ -59,25 +59,25 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	commitmentSerialized := make([][]byte, 0)
-	for i := uint64(0); i < fischlinProof.Rho; i++ {
+	for i := range fischlinProof.Rho {
 		commitmentSerialized = append(commitmentSerialized, fischlinProof.A[i].Bytes())
 	}
 	v.transcript.AppendBytes(commitmentLabel, commitmentSerialized...)
 	v.transcript.AppendBytes(challengeLabel, fischlinProof.E...)
 
 	a := make([]byte, 0)
-	for i := uint64(0); i < fischlinProof.Rho; i++ {
+	for i := range fischlinProof.Rho {
 		a = append(a, fischlinProof.A[i].Bytes()...)
 	}
 
 	// 3. common-h ← H(x, m, sid)
-	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionId[:])
+	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionID[:])
 	if err != nil {
 		return errs2.Wrap(err).WithMessage("cannot serialise statement")
 	}
 
 	// 4. For i ∈ {1, ..., ρ}
-	for i := uint64(0); i < fischlinProof.Rho; i++ {
+	for i := range fischlinProof.Rho {
 		digest, err := hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i].Bytes())
 		if err != nil {
 			return errs2.Wrap(err).WithMessage("cannot compute digest")
@@ -102,7 +102,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	responseSerialized := make([][]byte, 0)
-	for i := uint64(0); i < fischlinProof.Rho; i++ {
+	for i := range fischlinProof.Rho {
 		responseSerialized = append(responseSerialized, fischlinProof.Z[i].Bytes())
 	}
 	v.transcript.AppendBytes(responseLabel, responseSerialized...)

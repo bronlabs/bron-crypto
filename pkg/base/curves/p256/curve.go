@@ -54,17 +54,17 @@ func NewCurve() *Curve {
 }
 
 // Name returns the name of the structure.
-func (c *Curve) Name() string {
+func (*Curve) Name() string {
 	return CurveName
 }
 
 // ElementSize returns the element size in bytes.
-func (c *Curve) ElementSize() int {
+func (*Curve) ElementSize() int {
 	return compressedPointBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
-func (c *Curve) WideElementSize() int {
+func (*Curve) WideElementSize() int {
 	return int(^uint(0) >> 1)
 }
 
@@ -74,12 +74,12 @@ func (c *Curve) FromWideBytes(input []byte) (*Point, error) {
 }
 
 // Cofactor returns the curve cofactor.
-func (c *Curve) Cofactor() cardinal.Cardinal {
+func (*Curve) Cofactor() cardinal.Cardinal {
 	return cardinal.New(1)
 }
 
 // Order returns the group or field order.
-func (c *Curve) Order() cardinal.Cardinal {
+func (*Curve) Order() cardinal.Cardinal {
 	return NewScalarField().Order()
 }
 
@@ -169,7 +169,7 @@ func (c *Curve) FromUncompressed(input []byte) (*Point, error) {
 }
 
 // FromAffine builds a point from affine coordinates.
-func (c *Curve) FromAffine(x, y *BaseFieldElement) (*Point, error) {
+func (*Curve) FromAffine(x, y *BaseFieldElement) (*Point, error) {
 	var p Point
 	ok := p.V.SetAffine(&x.V, &y.V)
 	if ok != 1 {
@@ -179,7 +179,7 @@ func (c *Curve) FromAffine(x, y *BaseFieldElement) (*Point, error) {
 }
 
 // FromAffineX builds a point from an affine x-coordinate.
-func (c *Curve) FromAffineX(x *BaseFieldElement, b bool) (*Point, error) {
+func (*Curve) FromAffineX(x *BaseFieldElement, b bool) (*Point, error) {
 	var p Point
 	ok := p.V.SetFromAffineX(&x.V)
 	if ok != 1 {
@@ -202,39 +202,39 @@ func (c *Curve) Hash(bytes []byte) (*Point, error) {
 }
 
 // HashWithDst maps input bytes to a point with a custom DST.
-func (c *Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
+func (*Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
 	var p Point
 	p.V.Hash(dst, bytes)
 	return &p, nil
 }
 
 // ToElliptic returns the standard library elliptic.Curve adapter.
-func (c *Curve) ToElliptic() elliptic.Curve {
+func (*Curve) ToElliptic() elliptic.Curve {
 	return elliptic.P256()
 }
 
 // ScalarStructure returns the scalar structure.
-func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {
+func (*Curve) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
 // BaseStructure returns the base field structure.
-func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
+func (*Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
 
 // ScalarRing returns the scalar ring.
-func (c *Curve) ScalarRing() algebra.ZModLike[*Scalar] {
+func (*Curve) ScalarRing() algebra.ZModLike[*Scalar] {
 	return NewScalarField()
 }
 
 // ScalarField returns the scalar field.
-func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
+func (*Curve) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
 
 // BaseField returns the base field.
-func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
+func (*Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 	return NewBaseField()
 }
 
@@ -257,7 +257,7 @@ func (c *Curve) MultiScalarOp(scalars []*Scalar, points []*Point) (*Point, error
 }
 
 // MultiScalarMul computes a multiscalar multiplication.
-func (c *Curve) MultiScalarMul(scalars []*Scalar, points []*Point) (*Point, error) {
+func (*Curve) MultiScalarMul(scalars []*Scalar, points []*Point) (*Point, error) {
 	if len(scalars) != len(points) {
 		return nil, curves.ErrInvalidLength.WithMessage("mismatched lengths of scalars and points")
 	}
@@ -285,7 +285,7 @@ func (p *Point) HashCode() base.HashCode {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (p *Point) Structure() algebra.Structure[*Point] {
+func (*Point) Structure() algebra.Structure[*Point] {
 	return NewCurve()
 }
 
@@ -396,7 +396,7 @@ func (p *Point) ScalarMul(actor *Scalar) *Point {
 }
 
 // IsTorsionFree reports whether the point is torsion-free.
-func (p *Point) IsTorsionFree() bool {
+func (*Point) IsTorsionFree() bool {
 	return true
 }
 

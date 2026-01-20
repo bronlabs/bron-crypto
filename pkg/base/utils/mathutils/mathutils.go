@@ -26,12 +26,12 @@ func RandomUint64Range(prng io.Reader, bound uint64) (uint64, error) {
 	// The worst case is n=2^63+1, for which the probability of a reject is 1/2,
 	// and the expected number of iterations before the loop terminates is 2.
 	for {
-		bits, err := RandomUint64(prng)
+		randBits, err := RandomUint64(prng)
 		if err != nil {
 			return 0, errs2.Wrap(err).WithMessage("failed to sample random uint64")
 		}
-		val := bits % bound
-		if (bits - val) >= (bound - 1) {
+		val := randBits % bound
+		if (randBits - val) >= (bound - 1) {
 			return val, nil
 		}
 	}

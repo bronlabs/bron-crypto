@@ -13,7 +13,7 @@ import (
 // NewOddPrimeFactors constructs an OddPrimeFactors modular arithmetic
 // instance from the given odd prime factors p and q.
 // Returns ct.False if the inputs are invalid (not odd primes or equal).
-func NewOddPrimeFactors(p, q *numct.Nat) (*OddPrimeFactors, ct.Bool) {
+func NewOddPrimeFactors(p, q *numct.Nat) (factors *OddPrimeFactors, ok ct.Bool) {
 	allOk := p.Equal(q).Not() & p.IsProbablyPrime() & q.IsProbablyPrime() & p.IsOdd() & q.IsOdd()
 
 	params, ok := crt.PrecomputePairExtended(p, q)
@@ -135,7 +135,7 @@ func (m *OddPrimeFactors) ModDiv(out, a, b *numct.Nat) ct.Bool {
 }
 
 // MultiBaseExp computes out[i] = (bases[i] ^ exp) mod n for all i.
-func (m *OddPrimeFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
+func (m *OddPrimeFactors) MultiBaseExp(out, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")
 	}
@@ -201,8 +201,8 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 // Lift constructs an OddPrimeSquareFactors modular arithmetic instance
 // by lifting the modulus n = p * q to n^2 = p^2 * q^2.
 // Returns ct.False if the lift operation fails.
-func (m *OddPrimeFactors) Lift() (*OddPrimeSquareFactors, ct.Bool) {
-	// TODO: optimize
+func (m *OddPrimeFactors) Lift() (lifted *OddPrimeSquareFactors, ok ct.Bool) {
+	// TODO: optimise
 	out, ok := NewOddPrimeSquareFactors(
 		m.Params.PNat,
 		m.Params.QNat,

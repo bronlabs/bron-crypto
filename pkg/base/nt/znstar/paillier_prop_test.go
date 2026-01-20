@@ -3,14 +3,15 @@ package znstar_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func PaillierUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.PaillierGroupElementUnknownOrder], *znstar.PaillierGroupUnknownOrder) {
@@ -42,6 +43,7 @@ func PaillierPlaintextGenerator(group *znstar.PaillierGroupKnownOrder) *rapid.Ge
 }
 
 func TestMultiplicativeGroup_Properties(t *testing.T) {
+	t.Parallel()
 	g, group := PaillierUnitGenerator(t)
 	suite := properties.MultiplicativeGroup(t, group, g)
 	suite.Theory = append(

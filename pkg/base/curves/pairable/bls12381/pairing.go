@@ -71,7 +71,7 @@ func (p *OptimalAtePPE) Reset() {
 }
 
 // Name returns the name of the structure.
-func (p *OptimalAtePPE) Name() curves.PairingAlgorithm {
+func (*OptimalAtePPE) Name() curves.PairingAlgorithm {
 	return OptimalAteAlgorithm
 }
 
@@ -88,7 +88,7 @@ func (p *OptimalAtePPE) Equal(other curves.PPE[*PointG1, *BaseFieldElementG1, *P
 }
 
 // Type returns the pairing type.
-func (p *OptimalAtePPE) Type() curves.PairingType {
+func (*OptimalAtePPE) Type() curves.PairingType {
 	return curves.TypeIII
 }
 

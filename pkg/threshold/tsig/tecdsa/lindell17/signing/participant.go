@@ -50,7 +50,7 @@ type PrimaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 type PrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Cosigner[P, B, S]
 
-	secondarySharingId sharing.ID
+	secondarySharingID sharing.ID
 	state              *PrimaryCosignerState[P, B, S]
 }
 
@@ -65,7 +65,7 @@ type SecondaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement
 type SecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Cosigner[P, B, S]
 
-	primarySharingId sharing.ID
+	primarySharingID sharing.ID
 	state            *SecondaryCosignerState[P, B, S]
 }
 
@@ -74,16 +74,16 @@ func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
 	return cosigner.shard.Share().ID()
 }
 
-func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], err error) {
+func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], err error) {
 	err = validateInputs(suite, hisSharingID, myShard, niCompiler, tape, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
 	}
 
-	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sessionId, niCompiler, suite.Curve().Name())
+	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sessionID, niCompiler, suite.Curve().Name())
 	tape.AppendDomainSeparator(dst)
 
-	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst, myShard.PublicKey().Value().ToCompressed())
+	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, dst, myShard.PublicKey().Value().ToCompressed())
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create commitment key from CRS")
 	}
@@ -105,7 +105,7 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		round:            roundNo,
 		prng:             prng,
 		suite:            suite,
-		sid:              sessionId,
+		sid:              sessionID,
 		tape:             tape,
 		shard:            myShard,
 		commitmentScheme: commitmentScheme,
@@ -114,14 +114,14 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 }
 
 // NewPrimaryCosigner constructs a primary cosigner.
-func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
-	cosigner, err := newCosigner(sessionId, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
+func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
+	cosigner, err := newCosigner(sessionID, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not construct primary cosigner")
 	}
 	primaryCosigner = &PrimaryCosigner[P, B, S]{
 		Cosigner:           *cosigner,
-		secondarySharingId: secondarySharingID,
+		secondarySharingID: secondarySharingID,
 		//nolint:exhaustruct // partially initialised
 		state: &PrimaryCosignerState[P, B, S]{},
 	}
@@ -129,8 +129,8 @@ func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B],
 }
 
 // NewSecondaryCosigner constructs a secondary cosigner.
-func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
-	cosigner, err := newCosigner(sessionId, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
+func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
+	cosigner, err := newCosigner(sessionID, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not construct secondary cosigner")
 	}
@@ -138,7 +138,7 @@ func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 	//nolint:exhaustruct // partially initialised
 	secondaryCosigner = &SecondaryCosigner[P, B, S]{
 		Cosigner:         *cosigner,
-		primarySharingId: primarySharingID,
+		primarySharingID: primarySharingID,
 		state:            &SecondaryCosignerState[P, B, S]{},
 	}
 	return secondaryCosigner, nil

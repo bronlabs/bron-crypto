@@ -63,10 +63,10 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	phi := make([][2][]G, r.suite.Xi())
 	receiverOut = NewReceiverOutput[S](r.suite.Xi(), r.suite.L())
 	receiverOut.Choices = choices
-	for i := 0; i < r.suite.Xi(); i++ {
+	for i := range r.suite.Xi() {
 		ci := (choices[i/8] >> (i % 8)) & 0b1
 		phi[i] = [2][]G{make([]G, r.suite.L()), make([]G, r.suite.L())}
-		for l := 0; l < r.suite.L(); l++ {
+		for l := range r.suite.L() {
 			// step 2.2 (KA.R)
 			bi, err := r.ka.R(r.prng)
 			if err != nil {
@@ -113,9 +113,9 @@ func (s *Sender[G, S]) Round3(r2out *Round2P2P[G, S]) (senderOut *SenderOutput[S
 
 	// step 3.1
 	senderOut = NewSenderOutput[S](s.suite.Xi(), s.suite.L())
-	for i := 0; i < s.suite.Xi(); i++ {
-		for l := 0; l < s.suite.L(); l++ {
-			for j := byte(0); j < 2; j++ {
+	for i := range s.suite.Xi() {
+		for l := range s.suite.L() {
+			for j := range byte(2) {
 				// step 3.2 (POPF.Eval)
 				p, err := f.Eval(r2out.Phi[i][0][l], r2out.Phi[i][1][l], j)
 				if err != nil {

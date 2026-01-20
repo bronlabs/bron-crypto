@@ -64,7 +64,7 @@ func (d *Scheme[E, FE]) DealRandom(prng io.Reader) (*DealerOutput[E, FE], *Secre
 
 // DealRandomAndRevealDealerFunc generates shares for a random secret and returns
 // the dealing polynomial.
-func (d *Scheme[E, FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, FE], *Secret[FE], DealerFunc[FE], error) {
+func (d *Scheme[E, FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (output *DealerOutput[E, FE], secret *Secret[FE], dealerFunc DealerFunc[FE], err error) {
 	if prng == nil {
 		return nil, nil, nil, ErrIsNil.WithMessage("prng is nil")
 	}
@@ -72,7 +72,7 @@ func (d *Scheme[E, FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOu
 	if err != nil {
 		return nil, nil, nil, errs2.Wrap(err).WithMessage("could not sample field element")
 	}
-	secret := NewSecret(value)
+	secret = NewSecret(value)
 	out, poly, err := d.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
 		return nil, nil, nil, errs2.Wrap(err).WithMessage("could not create shares")

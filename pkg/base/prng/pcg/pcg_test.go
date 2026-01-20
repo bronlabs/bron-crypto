@@ -201,7 +201,7 @@ func TestMultipleReads(t *testing.T) {
 	}
 
 	// Check that each buffer is different from others
-	for i := 0; i < len(buffers); i++ {
+	for i := range buffers {
 		for j := i + 1; j < len(buffers); j++ {
 			require.False(t, bytes.Equal(buffers[i], buffers[j]),
 				"Buffers %d and %d should be different", i, j)

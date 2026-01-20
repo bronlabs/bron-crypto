@@ -54,16 +54,16 @@ type cipherSuiteDTO struct {
 	AEAD AEADID `cbor:"aead"`
 }
 
-func (cs *CipherSuite) MarshalCBOR() ([]byte, error) {
+func (c *CipherSuite) MarshalCBOR() ([]byte, error) {
 	dto := &cipherSuiteDTO{
-		KDF:  cs.kdf,
-		KEM:  cs.kem,
-		AEAD: cs.aead,
+		KDF:  c.kdf,
+		KEM:  c.kem,
+		AEAD: c.aead,
 	}
 	return serde.MarshalCBOR(dto)
 }
 
-func (cs *CipherSuite) UnmarshalCBOR(data []byte) error {
+func (c *CipherSuite) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[cipherSuiteDTO](data)
 	if err != nil {
 		return errs2.Wrap(err)
@@ -86,8 +86,8 @@ func (cs *CipherSuite) UnmarshalCBOR(data []byte) error {
 	if dto.AEAD != AEAD_AES_128_GCM && dto.AEAD != AEAD_AES_256_GCM && dto.AEAD != AEAD_CHACHA_20_POLY_1305 && dto.AEAD != AEAD_EXPORT_ONLY {
 		return ErrNotSupported.WithMessage("invalid cipher suite: unknown AEAD")
 	}
-	cs.kdf = dto.KDF
-	cs.kem = dto.KEM
-	cs.aead = dto.AEAD
+	c.kdf = dto.KDF
+	c.kem = dto.KEM
+	c.aead = dto.AEAD
 	return nil
 }

@@ -26,11 +26,11 @@ func Test_HappyPath(t *testing.T) {
 
 	prng := crand.Reader
 	ids := []sharing.ID{1, 2, 3}
-	sharingIds := hashset.NewComparable(ids...).Freeze()
-	as, err := sharing.NewThresholdAccessStructure(2, sharingIds)
+	sharingIDs := hashset.NewComparable(ids...).Freeze()
+	as, err := sharing.NewThresholdAccessStructure(2, sharingIDs)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
-	scheme, err := feldman.NewScheme(curve.Generator(), 2, sharingIds)
+	scheme, err := feldman.NewScheme(curve.Generator(), 2, sharingIDs)
 	require.NoError(t, err)
 	secretValue, err := k256.NewScalarField().Random(prng)
 	require.NoError(t, err)

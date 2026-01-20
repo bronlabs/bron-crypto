@@ -1,12 +1,13 @@
-package nt
+package nt //nolint:testpackage // to access unexported identifiers
 
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMillerRabinChecks(t *testing.T) {

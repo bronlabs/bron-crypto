@@ -71,7 +71,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot compile protocol to non interactive")
 	}
 	proverTape := p.tape.Clone()
-	proverTape.AppendBytes(proverIdLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.id)))
+	proverTape.AppendBytes(proverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.id)))
 	prover, err := niBatchSchnorr.NewProver(p.sid, proverTape)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr prover")
@@ -115,7 +115,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 
 		inB, _ := r3bi.Get(pid)
 		verifierTape := p.tape.Clone()
-		verifierTape.AppendBytes(proverIdLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
+		verifierTape.AppendBytes(proverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
 		verifier, err := niBatchSchnorr.NewVerifier(p.sid, verifierTape)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr prover")

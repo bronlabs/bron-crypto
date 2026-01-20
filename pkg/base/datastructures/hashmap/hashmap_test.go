@@ -3,9 +3,10 @@ package hashmap_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/stretchr/testify/require"
 )
 
 // CollidingKey is a test type where we can control the hash code to force collisions

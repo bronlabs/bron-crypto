@@ -1,10 +1,12 @@
-package numct
+package numct_test
 
 import (
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 func TestLCM(t *testing.T) {
@@ -30,9 +32,9 @@ func TestLCM(t *testing.T) {
 		}
 
 		for _, tc := range cases {
-			var out Nat
-			a, b := NewNat(tc.a), NewNat(tc.b)
-			LCM(&out, a, b)
+			var out numct.Nat
+			a, b := numct.NewNat(tc.a), numct.NewNat(tc.b)
+			numct.LCM(&out, a, b)
 			require.Equal(t, tc.expected, out.Uint64(), "lcm(%d, %d) should be %d", tc.a, tc.b, tc.expected)
 		}
 	})
@@ -48,10 +50,10 @@ func TestLCM(t *testing.T) {
 		}
 
 		for _, pair := range pairs {
-			var out1, out2 Nat
-			a, b := NewNat(pair[0]), NewNat(pair[1])
-			LCM(&out1, a, b)
-			LCM(&out2, b, a)
+			var out1, out2 numct.Nat
+			a, b := numct.NewNat(pair[0]), numct.NewNat(pair[1])
+			numct.LCM(&out1, a, b)
+			numct.LCM(&out2, b, a)
 			require.Equal(t, out1.Uint64(), out2.Uint64(), "lcm(%d, %d) should equal lcm(%d, %d)", pair[0], pair[1], pair[1], pair[0])
 		}
 	})
@@ -68,9 +70,9 @@ func TestLCM(t *testing.T) {
 		}
 
 		for _, pair := range pairs {
-			a, b := NewNat(pair[0]), NewNat(pair[1])
-			var lcmVal, gcdVal, product, lcmTimesGcd Nat
-			LCM(&lcmVal, a, b)
+			a, b := numct.NewNat(pair[0]), numct.NewNat(pair[1])
+			var lcmVal, gcdVal, product, lcmTimesGcd numct.Nat
+			numct.LCM(&lcmVal, a, b)
 			gcdVal.GCD(a, b)
 			product.Mul(a, b)
 			lcmTimesGcd.Mul(&lcmVal, &gcdVal)
@@ -83,14 +85,14 @@ func TestLCM(t *testing.T) {
 		t.Parallel()
 
 		// lcm(0, n) = 0 for any n
-		var out Nat
-		LCM(&out, NewNat(0), NewNat(5))
+		var out numct.Nat
+		numct.LCM(&out, numct.NewNat(0), numct.NewNat(5))
 		require.Equal(t, uint64(0), out.Uint64(), "lcm(0, 5) should be 0")
 
-		LCM(&out, NewNat(5), NewNat(0))
+		numct.LCM(&out, numct.NewNat(5), numct.NewNat(0))
 		require.Equal(t, uint64(0), out.Uint64(), "lcm(5, 0) should be 0")
 
-		LCM(&out, NewNat(0), NewNat(0))
+		numct.LCM(&out, numct.NewNat(0), numct.NewNat(0))
 		require.Equal(t, uint64(0), out.Uint64(), "lcm(0, 0) should be 0")
 	})
 
@@ -108,8 +110,8 @@ func TestLCM(t *testing.T) {
 		}
 
 		for _, tc := range cases {
-			var out Nat
-			LCM(&out, NewNat(tc.a), NewNat(tc.b))
+			var out numct.Nat
+			numct.LCM(&out, numct.NewNat(tc.a), numct.NewNat(tc.b))
 			require.Equal(t, tc.expected, out.Uint64(), "lcm(%d, %d) should be %d", tc.a, tc.b, tc.expected)
 		}
 	})
@@ -125,9 +127,9 @@ func TestLCM(t *testing.T) {
 		}
 
 		for _, pair := range pairs {
-			a, b := NewNat(pair[0]), NewNat(pair[1])
-			var out Nat
-			LCM(&out, a, b)
+			a, b := numct.NewNat(pair[0]), numct.NewNat(pair[1])
+			var out numct.Nat
+			numct.LCM(&out, a, b)
 
 			// Compute expected with big.Int
 			aBig, bBig := big.NewInt(int64(pair[0])), big.NewInt(int64(pair[1]))
@@ -150,11 +152,11 @@ func TestLCM(t *testing.T) {
 		p1Big, _ := new(big.Int).SetString(p1Str, 10)
 		p2Big, _ := new(big.Int).SetString(p2Str, 10)
 
-		p1 := NewNatFromBig(p1Big, p1Big.BitLen())
-		p2 := NewNatFromBig(p2Big, p2Big.BitLen())
+		p1 := numct.NewNatFromBig(p1Big, p1Big.BitLen())
+		p2 := numct.NewNatFromBig(p2Big, p2Big.BitLen())
 
-		var out Nat
-		LCM(&out, p1, p2)
+		var out numct.Nat
+		numct.LCM(&out, p1, p2)
 
 		// For coprime numbers, lcm = product
 		expectedBig := new(big.Int).Mul(p1Big, p2Big)

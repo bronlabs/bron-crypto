@@ -61,7 +61,7 @@ func Join(errs ...error) Error {
 	for _, e := range errs {
 		//nolint:errorlint // internal error library
 		if sentinelErr, ok := e.(*sentinelError); ok {
-			children = append(children, &errorImpl{
+			children = append(children, &implError{
 				message:    sentinelErr.message,
 				wrapped:    []error{sentinelErr},
 				stackFrame: nil,
@@ -72,7 +72,7 @@ func Join(errs ...error) Error {
 		}
 	}
 
-	return &errorImpl{
+	return &implError{
 		message:    "",
 		wrapped:    children,
 		stackFrame: NewStackFrame(pc),
@@ -85,14 +85,14 @@ func wrap(err error, i int) Error {
 
 	//nolint:errorlint // internal error library
 	if sentinelErr, ok := err.(*sentinelError); ok {
-		return &errorImpl{
+		return &implError{
 			message:    sentinelErr.message,
 			wrapped:    []error{sentinelErr},
 			stackFrame: NewStackFrame(pc),
 			tags:       nil,
 		}
 	} else {
-		return &errorImpl{
+		return &implError{
 			message:    "",
 			wrapped:    []error{err},
 			stackFrame: NewStackFrame(pc),
@@ -171,7 +171,7 @@ type sentinelError struct {
 
 func (e *sentinelError) WithTag(s string, a any) Error {
 	pc, _, _, _ := runtime.Caller(1)
-	return &errorImpl{
+	return &implError{
 		message:    e.message,
 		wrapped:    []error{e},
 		stackFrame: NewStackFrame(pc),
@@ -181,7 +181,7 @@ func (e *sentinelError) WithTag(s string, a any) Error {
 
 func (e *sentinelError) WithMessage(format string, args ...any) Error {
 	pc, _, _, _ := runtime.Caller(1)
-	return &errorImpl{
+	return &implError{
 		message:    e.message + sentinelSeparator + fmt.Sprintf(format, args...),
 		wrapped:    []error{e},
 		stackFrame: NewStackFrame(pc),
@@ -191,7 +191,7 @@ func (e *sentinelError) WithMessage(format string, args ...any) Error {
 
 func (e *sentinelError) WithStackFrame() Error {
 	pc, _, _, _ := runtime.Caller(1)
-	return &errorImpl{
+	return &implError{
 		message:    e.message,
 		wrapped:    []error{e},
 		stackFrame: NewStackFrame(pc),
@@ -210,22 +210,22 @@ func (e *sentinelError) Format(s fmt.State, verb rune) {
 	}
 }
 
-func (e *sentinelError) Tags() map[string]any {
+func (*sentinelError) Tags() map[string]any {
 	return nil
 }
 
-func (e *sentinelError) StackFrame() *StackFrame {
+func (*sentinelError) StackFrame() *StackFrame {
 	return nil
 }
 
-type errorImpl struct {
+type implError struct {
 	message    string
 	wrapped    []error
 	stackFrame *StackFrame
 	tags       map[string]any
 }
 
-func (e *errorImpl) WithTag(s string, a any) Error {
+func (e *implError) WithTag(s string, a any) Error {
 	if e.tags == nil {
 		e.tags = map[string]any{s: a}
 	} else {
@@ -234,7 +234,7 @@ func (e *errorImpl) WithTag(s string, a any) Error {
 	return e
 }
 
-func (e *errorImpl) WithMessage(format string, args ...any) Error {
+func (e *implError) WithMessage(format string, args ...any) Error {
 	if e.message == "" {
 		e.message = fmt.Sprintf(format, args...)
 	} else {
@@ -243,29 +243,29 @@ func (e *errorImpl) WithMessage(format string, args ...any) Error {
 	return e
 }
 
-func (e *errorImpl) WithStackFrame() Error {
+func (e *implError) WithStackFrame() Error {
 	pc, _, _, _ := runtime.Caller(1)
 	e.stackFrame = NewStackFrame(pc)
 	return e
 }
 
-func (e *errorImpl) Error() string {
+func (e *implError) Error() string {
 	return e.message
 }
 
-func (e *errorImpl) Unwrap() []error {
+func (e *implError) Unwrap() []error {
 	return e.wrapped
 }
 
-func (e *errorImpl) StackFrame() *StackFrame {
+func (e *implError) StackFrame() *StackFrame {
 	return e.stackFrame
 }
 
-func (e *errorImpl) Tags() map[string]any {
+func (e *implError) Tags() map[string]any {
 	return e.tags
 }
 
-func (e *errorImpl) Format(s fmt.State, verb rune) {
+func (e *implError) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {

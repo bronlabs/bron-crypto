@@ -40,6 +40,7 @@ func TestROInputClone(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty input", func(t *testing.T) {
+		t.Parallel()
 		original := new(mina.ROInput).Init()
 		cloned := original.Clone()
 
@@ -49,6 +50,7 @@ func TestROInputClone(t *testing.T) {
 	})
 
 	t.Run("with fields", func(t *testing.T) {
+		t.Parallel()
 		original := new(mina.ROInput).Init()
 		field := pasta.NewPallasBaseField().One()
 		original.AddFields(field)
@@ -60,6 +62,7 @@ func TestROInputClone(t *testing.T) {
 	})
 
 	t.Run("with bits", func(t *testing.T) {
+		t.Parallel()
 		original := new(mina.ROInput).Init()
 		original.AddBits(true, false, true)
 
@@ -69,6 +72,7 @@ func TestROInputClone(t *testing.T) {
 	})
 
 	t.Run("modifications don't affect original", func(t *testing.T) {
+		t.Parallel()
 		original := new(mina.ROInput).Init()
 		original.AddBits(true, false)
 
@@ -106,12 +110,14 @@ func TestROInputAddString(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty string", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddString("")
 		assert.Empty(t, input.Bits())
 	})
 
 	t.Run("single char", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddString("a") // 'a' = 0x61 = 0b01100001
 		bits := input.Bits()
@@ -128,6 +134,7 @@ func TestROInputAddString(t *testing.T) {
 	})
 
 	t.Run("multiple chars", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddString("ab")
 		bits := input.Bits()
@@ -139,12 +146,14 @@ func TestROInputAddBits(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddBits()
 		assert.Empty(t, input.Bits())
 	})
 
 	t.Run("single bit", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddBits(true)
 		bits := input.Bits()
@@ -153,6 +162,7 @@ func TestROInputAddBits(t *testing.T) {
 	})
 
 	t.Run("multiple bits", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddBits(true, false, true, false)
 		bits := input.Bits()
@@ -164,6 +174,7 @@ func TestROInputAddBits(t *testing.T) {
 	})
 
 	t.Run("append multiple times", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddBits(true)
 		input.AddBits(false)
@@ -181,6 +192,7 @@ func TestROInputFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("returns copy", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		field := pasta.NewPallasBaseField().One()
 		input.AddFields(field)
@@ -189,7 +201,7 @@ func TestROInputFields(t *testing.T) {
 		fields2 := input.Fields()
 
 		// Should be equal but not the same slice
-		assert.Equal(t, len(fields1), len(fields2))
+		assert.Len(t, fields2, len(fields1))
 		assert.True(t, fields1[0].Equal(fields2[0]))
 	})
 }
@@ -198,18 +210,21 @@ func TestROInputBits(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil bits", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput)
 		bits := input.Bits()
 		assert.Nil(t, bits)
 	})
 
 	t.Run("empty bits", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		bits := input.Bits()
 		assert.Empty(t, bits)
 	})
 
 	t.Run("returns copy", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddBits(true, false)
 
@@ -230,12 +245,14 @@ func TestROInputPackToFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty input", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		packed := input.PackToFields()
 		assert.Empty(t, packed)
 	})
 
 	t.Run("only fields", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		field := pasta.NewPallasBaseField().One()
 		input.AddFields(field)
@@ -246,6 +263,7 @@ func TestROInputPackToFields(t *testing.T) {
 	})
 
 	t.Run("only bits", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		// Add 8 bits
 		for range 8 {
@@ -257,6 +275,7 @@ func TestROInputPackToFields(t *testing.T) {
 	})
 
 	t.Run("bits spanning multiple fields", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		// Add 255 bits (fills one field at 254 bits + 1 bit in next)
 		for range 255 {
@@ -268,6 +287,7 @@ func TestROInputPackToFields(t *testing.T) {
 	})
 
 	t.Run("fields and bits combined", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		field := pasta.NewPallasBaseField().One()
 		input.AddFields(field)
@@ -282,6 +302,7 @@ func TestROInputMarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty input", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		data, err := input.MarshalJSON()
 		require.NoError(t, err)
@@ -293,6 +314,7 @@ func TestROInputMarshalJSON(t *testing.T) {
 	})
 
 	t.Run("with fields", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		field := pasta.NewPallasBaseField().One()
 		input.AddFields(field)
@@ -307,6 +329,7 @@ func TestROInputMarshalJSON(t *testing.T) {
 	})
 
 	t.Run("with bits", func(t *testing.T) {
+		t.Parallel()
 		input := new(mina.ROInput).Init()
 		input.AddBits(true, false, true)
 
@@ -325,6 +348,7 @@ func TestROInputIntegration(t *testing.T) {
 	t.Parallel()
 
 	t.Run("message signing workflow", func(t *testing.T) {
+		t.Parallel()
 		// Create a message like in real signing
 		input := new(mina.ROInput).Init()
 
@@ -343,10 +367,10 @@ func TestROInputIntegration(t *testing.T) {
 
 		// Verify the structure
 		assert.Len(t, input.Fields(), 1)
-		assert.True(t, len(input.Bits()) > 0)
+		assert.NotEmpty(t, input.Bits())
 
 		// Pack to fields for hashing
 		packed := input.PackToFields()
-		assert.True(t, len(packed) > 0)
+		assert.NotEmpty(t, packed)
 	})
 }

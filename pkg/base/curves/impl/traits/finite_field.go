@@ -31,7 +31,7 @@ type FiniteFieldElementWrapperPtrConstraint[FP fieldsImpl.FiniteFieldElement[FP]
 type FiniteFieldTrait[FP fieldsImpl.FiniteFieldElement[FP], WP FiniteFieldElementWrapperPtrConstraint[FP, W], W any] struct{}
 
 // FromComponentsBytes builds an element from big-endian component byte slices.
-func (f *FiniteFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, error) {
+func (*FiniteFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, error) {
 	leData := make([][]byte, len(data))
 	for i, d := range data {
 		leData[i] = sliceutils.Reversed(d)
@@ -44,7 +44,7 @@ func (f *FiniteFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, er
 }
 
 // Random samples a field element using the provided PRNG.
-func (f *FiniteFieldTrait[FP, WP, W]) Random(prng io.Reader) (WP, error) {
+func (*FiniteFieldTrait[FP, WP, W]) Random(prng io.Reader) (WP, error) {
 	if prng == nil {
 		return nil, curves.ErrNil.WithMessage("prng")
 	}
@@ -73,14 +73,14 @@ func (f *FiniteFieldTrait[FP, WP, W]) Iter() iter.Seq[WP] {
 }
 
 // One returns the multiplicative identity.
-func (f *FiniteFieldTrait[FP, WP, W]) One() WP {
+func (*FiniteFieldTrait[FP, WP, W]) One() WP {
 	var one W
 	WP(&one).Fp().SetOne()
 	return &one
 }
 
 // Zero returns the additive identity.
-func (f *FiniteFieldTrait[FP, WP, W]) Zero() WP {
+func (*FiniteFieldTrait[FP, WP, W]) Zero() WP {
 	var zero W
 	WP(&zero).Fp().SetZero()
 	return &zero
@@ -102,7 +102,7 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) Fp() FP {
 }
 
 // Clone returns a new element with the same value.
-func (fe *FiniteFieldElementTrait[FP, F, WP, W]) Clone() WP {
+func (*FiniteFieldElementTrait[FP, F, WP, W]) Clone() WP {
 	var clone W
 	WP(&clone).Fp()
 	return &clone
@@ -263,13 +263,13 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanValuation() cardinal.C
 }
 
 // IsProbablyPrime is unimplemented for finite fields.
-func (fe *FiniteFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {
+func (*FiniteFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {
 	//TODO implement me
 	panic("implement me")
 }
 
 // String is unimplemented for finite fields.
-func (fe *FiniteFieldElementTrait[FP, F, WP, W]) String() string {
+func (*FiniteFieldElementTrait[FP, F, WP, W]) String() string {
 	//TODO implement me
 	panic("implement me")
 }

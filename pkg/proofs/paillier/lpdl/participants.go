@@ -22,7 +22,7 @@ import (
 
 const (
 	appTranscriptLabel       = "BRON_CRYPTO_PAILLIER_LPDL-"
-	sessionIdTranscriptLabel = "BRON_CRYPTO_PAILLIER_LPDL_SESSION_ID"
+	sessionIDTranscriptLabel = "BRON_CRYPTO_PAILLIER_LPDL_SESSION_ID"
 )
 
 // Participant holds common state for the LPDL protocol participants.
@@ -30,7 +30,7 @@ type Participant[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	pk         *paillier.PublicKey
 	bigQ       P
 	round      int
-	sessionId  network.SID
+	sessionID  network.SID
 	transcript transcripts.Transcript
 	prng       io.Reader
 }
@@ -87,7 +87,7 @@ type Prover[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.
 }
 
 // NewVerifier constructs a verifier instance for the LPDL protocol.
-func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier[P, B, S], err error) {
+func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier[P, B, S], err error) {
 	err = validateVerifierInputs(publicKey, bigQ, xEncrypted, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
@@ -98,7 +98,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	if tape == nil {
 		tape = hagrid.NewTranscript(appTranscriptLabel)
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 
 	rangeProofTranscript := tape.Clone()
@@ -121,12 +121,12 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	xUnknown := paillier.NewCiphertextFromUnit(xEncrypted.Value().ForgetOrder())
 	rangeCiphertext := xUnknown.HomSub(qThird)
 	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
-	rangeVerifier, err := zkcompiler.NewVerifier(sessionId, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
+	rangeVerifier, err := zkcompiler.NewVerifier(sessionID, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create Paillier range verifier")
 	}
 
-	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, appTranscriptLabel)
+	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, appTranscriptLabel)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot instantiate committer")
 	}
@@ -145,7 +145,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 			pk:         publicKey,
 			bigQ:       bigQ,
 			round:      1,
-			sessionId:  sessionId,
+			sessionID:  sessionID,
 			transcript: tape,
 			prng:       prng,
 		},
@@ -158,7 +158,12 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 				curve:  curve,
 				zModQ:  q,
 				zModQ2: q2,
+				a:      nil,
+				b:      nil,
 			},
+			cDoublePrimeWitness: hash_comm.Witness{},
+			bigQPrime:           *new(P),
+			cHat:                hash_comm.Commitment{},
 		},
 	}, nil
 }
@@ -183,15 +188,15 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 }
 
 // NewProver constructs a prover instance for the LPDL protocol.
-func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, tape transcripts.Transcript, prng io.Reader) (verifier *Prover[P, B, S], err error) {
-	if err = validateProverInputs(sessionId, curve, secretKey, x, r, prng); err != nil {
+func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, tape transcripts.Transcript, prng io.Reader) (verifier *Prover[P, B, S], err error) {
+	if err = validateProverInputs(sessionID, curve, secretKey, x, r, prng); err != nil {
 		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	if tape == nil {
 		tape = hagrid.NewTranscript(appTranscriptLabel)
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 
 	rangeProofTranscript := tape.Clone()
@@ -212,7 +217,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	}
 	rangePlainText := xAsPlaintext.Sub(qThirdAsPlaintext)
 
-	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, appTranscriptLabel)
+	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, appTranscriptLabel)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot instantiate committer")
 	}
@@ -232,7 +237,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	}
 	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
 	rangeStatement := paillierrange.NewStatement(secretKey.PublicKey(), rangeCipherText, qThirdNat)
-	rangeProver, err := zkcompiler.NewProver(sessionId, rangeProofTranscript, rangeProtocol, rangeStatement, rangeWitness)
+	rangeProver, err := zkcompiler.NewProver(sessionID, rangeProofTranscript, rangeProtocol, rangeStatement, rangeWitness)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("couldn't initialise prover")
 	}
@@ -247,7 +252,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 			pk:         secretKey.PublicKey(),
 			bigQ:       curve.ScalarBaseMul(x),
 			round:      2,
-			sessionId:  sessionId,
+			sessionID:  sessionID,
 			transcript: tape,
 			prng:       prng,
 		},
@@ -261,14 +266,20 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 				curve:  curve,
 				zModQ:  q,
 				zModQ2: qSquared,
+				a:      nil,
+				b:      nil,
 			},
+			alpha:                  nil,
+			bigQHat:                *new(P),
+			bigQHatWitness:         hash_comm.Witness{},
+			cDoublePrimeCommitment: hash_comm.Commitment{},
 		},
 	}, nil
 }
 
-func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) error {
-	if len(sessionId) == 0 {
-		return ErrInvalidArgument.WithMessage("sessionId is empty")
+func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) error { //nolint:unparam // sessionID is used!
+	if len(sessionID) == 0 {
+		return ErrInvalidArgument.WithMessage("sessionID is empty")
 	}
 	if secretKey == nil {
 		return ErrInvalidArgument.WithMessage("secret key is nil")

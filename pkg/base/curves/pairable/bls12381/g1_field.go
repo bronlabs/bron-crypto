@@ -10,6 +10,7 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -48,22 +49,22 @@ func NewG1BaseField() *BaseFieldG1 {
 }
 
 // Name returns the name of the structure.
-func (f *BaseFieldG1) Name() string {
+func (*BaseFieldG1) Name() string {
 	return BaseFieldNameG1
 }
 
 // Order returns the group or field order.
-func (f *BaseFieldG1) Order() cardinal.Cardinal {
+func (*BaseFieldG1) Order() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(baseFieldOrderG1.Nat())
 }
 
 // Characteristic returns the field characteristic.
-func (f *BaseFieldG1) Characteristic() cardinal.Cardinal {
+func (*BaseFieldG1) Characteristic() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(baseFieldOrderG1.Nat())
 }
 
 // Hash maps input bytes to an element or point.
-func (f *BaseFieldG1) Hash(bytes []byte) (*BaseFieldElementG1, error) {
+func (*BaseFieldG1) Hash(bytes []byte) (*BaseFieldElementG1, error) {
 	var e [1]bls12381Impl.Fp
 	h2c.HashToField(e[:], bls12381Impl.G1CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveSuiteG1, bytes)
 
@@ -73,17 +74,17 @@ func (f *BaseFieldG1) Hash(bytes []byte) (*BaseFieldElementG1, error) {
 }
 
 // ElementSize returns the element size in bytes.
-func (f *BaseFieldG1) ElementSize() int {
+func (*BaseFieldG1) ElementSize() int {
 	return bls12381Impl.FpBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
-func (f *BaseFieldG1) WideElementSize() int {
+func (*BaseFieldG1) WideElementSize() int {
 	return bls12381Impl.FpWideBytes
 }
 
 // BitLen returns the field modulus bit length.
-func (f *BaseFieldG1) BitLen() int {
+func (*BaseFieldG1) BitLen() int {
 	return bls12381Impl.FpBits
 }
 
@@ -94,7 +95,11 @@ func (f *BaseFieldG1) FromBytesBEReduce(input []byte) (*BaseFieldElementG1, erro
 	nNat.SetBytes(input)
 	baseFieldOrderG1.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	return f.FromBytesBE(vBytes)
+	out, err := f.FromBytesBE(vBytes)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to convert reduced bytes into field element")
+	}
+	return out, nil
 }
 
 // BaseFieldElementG1 represents an element of the G1 base field.
@@ -103,7 +108,7 @@ type BaseFieldElementG1 struct {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (fe *BaseFieldElementG1) Structure() algebra.Structure[*BaseFieldElementG1] {
+func (*BaseFieldElementG1) Structure() algebra.Structure[*BaseFieldElementG1] {
 	return NewG1BaseField()
 }
 

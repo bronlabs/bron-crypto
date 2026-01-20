@@ -37,7 +37,7 @@ type LiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElemen
 }
 
 type liftedShareDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
-	ID sharing.ID `cbor:"sharingId"`
+	ID sharing.ID `cbor:"sharingID"`
 	V  E          `cbor:"value"`
 }
 
@@ -80,11 +80,11 @@ func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAc
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
-	lambda_i, exists := lambdas.Get(s.id)
+	lambdaI, exists := lambdas.Get(s.id)
 	if !exists {
 		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
 	}
-	converted := s.v.ScalarOp(lambda_i)
+	converted := s.v.ScalarOp(lambdaI)
 	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to convert Feldman share to additive")
@@ -151,11 +151,11 @@ func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 	}
 	converted := make([]*additive.Share[E], 0, len(s))
 	for _, share := range s {
-		lambda_i, exists := lambdas.Get(share.ID())
+		lambdaI, exists := lambdas.Get(share.ID())
 		if !exists {
 			return *new(E), ErrMembership.WithMessage("share ID %d is not a valid shareholder", share.ID())
 		}
-		si, err := additive.NewShare(share.ID(), share.v.ScalarOp(lambda_i), nil)
+		si, err := additive.NewShare(share.ID(), share.v.ScalarOp(lambdaI), nil)
 		if err != nil {
 			return *new(E), errs2.Wrap(err).WithMessage("could not create additive share from share in exponent")
 		}

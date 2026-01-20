@@ -72,7 +72,7 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {
-	sessionId  network.SID
+	sessionID  network.SID
 	transcript transcripts.Transcript
 
 	sigmaProtocol  Protocol[X, W, A, S, Z]

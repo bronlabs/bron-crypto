@@ -20,8 +20,8 @@ const (
 
 // Participant executes the HJKY zero-sharing protocol.
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	sessionId       network.SID
-	sharingId       sharing.ID
+	sessionID       network.SID
+	sharingID       sharing.ID
 	accessStructure *sharing.ThresholdAccessStructure
 	group           algebra.PrimeGroup[G, S]
 	field           algebra.PrimeField[S]
@@ -51,19 +51,23 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
 
 	return &Participant[G, S]{
-		sessionId:       sid,
-		sharingId:       id,
+		sessionID:       sid,
+		sharingID:       id,
 		accessStructure: as,
 		group:           g,
 		field:           field,
 		scheme:          scheme,
-		tape:            tape,
 		round:           1,
 		prng:            prng,
+		tape:            tape,
+		state: State[G, S]{
+			verificationVectors: nil,
+			share:               nil,
+		},
 	}, nil
 }
 
 // SharingID returns the identifier for this participant within the access structure.
 func (p *Participant[G, S]) SharingID() sharing.ID {
-	return p.sharingId
+	return p.sharingID
 }

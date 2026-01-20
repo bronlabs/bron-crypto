@@ -4,11 +4,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func UintGeneratorGivenModulus(t *testing.T, modulus *num.NatPlus) *rapid.Generator[*num.Uint] {

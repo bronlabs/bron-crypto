@@ -13,7 +13,7 @@ import (
 // NewOddPrimeSquare constructs an OddPrimeSquare modular arithmetic
 // instance from the given odd prime factor p.
 // Returns ct.False if the input is invalid (not an odd prime).
-func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (*OddPrimeSquare, ct.Bool) {
+func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (m *OddPrimeSquare, ok ct.Bool) {
 	allOk := oddPrimeFactor.IsProbablyPrime() & oddPrimeFactor.IsOdd()
 
 	p, ok := numct.NewModulus(oddPrimeFactor)
@@ -69,7 +69,7 @@ func (m *OddPrimeSquare) MultiplicativeOrder() algebra.Cardinal {
 // NewOddPrimeSquareFactors constructs an OddPrimeSquareFactors modular arithmetic
 // instance from the given odd prime factors p and q.
 // Returns ct.False if the inputs are invalid (not distinct).
-func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (*OddPrimeSquareFactors, ct.Bool) {
+func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (m *OddPrimeSquareFactors, ok ct.Bool) {
 	allOk := firstPrime.Equal(secondPrime).Not()
 
 	// Clone the inputs to avoid any possibility of mutation
@@ -191,7 +191,7 @@ func (m *OddPrimeSquareFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 }
 
 // MultiBaseExp computes out[i] = (bases[i] ^ exp) mod n^2 for all i.
-func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
+func (m *OddPrimeSquareFactors) MultiBaseExp(out, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")
 	}
@@ -210,18 +210,18 @@ func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Na
 			var mp, mq numct.Nat
 			var wgInner sync.WaitGroup
 			wgInner.Add(2)
-			go func(i int) {
+			go func() {
 				defer wgInner.Done()
 				var epi numct.Nat
 				epi.Select(bi.Coprime(m.P.Factor.Nat()), exp, &ep)
 				m.CrtModN2.P.ModExp(&mp, bi, &epi)
-			}(i)
-			go func(i int) {
+			}()
+			go func() {
 				defer wgInner.Done()
 				var eqi numct.Nat
 				eqi.Select(bi.Coprime(m.Q.Factor.Nat()), exp, &eq)
 				m.CrtModN2.Q.ModExp(&mq, bi, &eqi)
-			}(i)
+			}()
 			wgInner.Wait()
 			out[i].Set(m.CrtModN2.Recombine(&mp, &mq))
 		}(i)
@@ -253,7 +253,6 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	go func() {
 		defer wg.Done()
 		m.P.Squared.ModExp(&yp, a, m.NExpP2) //  Ep2 = p * (N mod (p-1))
-
 	}()
 	go func() {
 		defer wg.Done()

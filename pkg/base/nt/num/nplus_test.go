@@ -26,7 +26,7 @@ func TestPositiveNaturalNumbers_Properties(t *testing.T) {
 
 	require.Equal(t, "N\\{0}", np.Name())
 	require.True(t, np.Characteristic().IsZero())
-	require.True(t, !np.Order().IsFinite())
+	require.False(t, np.Order().IsFinite())
 	require.Equal(t, -1, np.ElementSize())
 	require.True(t, np.One().IsOne())
 	require.True(t, np.OpIdentity().IsOne())
@@ -622,7 +622,7 @@ func TestNatPlus_Cardinal(t *testing.T) {
 	np, _ := num.NPlus().FromUint64(42)
 	c := np.Cardinal()
 	require.False(t, c.IsZero())
-	require.False(t, !c.IsFinite())
+	require.True(t, c.IsFinite())
 }
 
 func TestNatPlus_Bit(t *testing.T) {
@@ -642,7 +642,7 @@ func TestNatPlus_Byte(t *testing.T) {
 func TestNatPlus_TrueLen_AnnouncedLen(t *testing.T) {
 	t.Parallel()
 	np, _ := num.NPlus().FromUint64(255)
-	require.True(t, np.TrueLen() > 0)
+	require.Positive(t, np.TrueLen())
 	require.True(t, np.AnnouncedLen() >= np.TrueLen())
 }
 

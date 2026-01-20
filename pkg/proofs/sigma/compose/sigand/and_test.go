@@ -5,6 +5,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -12,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_And_HappyPath(t *testing.T) {
@@ -76,11 +77,13 @@ func Test_And_InvalidInputs(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nil_protocol", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigand.Compose[*schnorr.Statement[*k256.Point, *k256.Scalar], *schnorr.Witness[*k256.Scalar], *schnorr.Commitment[*k256.Point, *k256.Scalar], *schnorr.State[*k256.Scalar], *schnorr.Response[*k256.Scalar]](nil, 2)
 		require.Error(t, err)
 	})
 
 	t.Run("count_zero", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigand.Compose(protocol, 0)
 		require.Error(t, err)
 	})
@@ -105,7 +108,7 @@ func testAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 	statements := make(sigand.Statement[*schnorr.Statement[P, S]], count)
 	witnesses := make(sigand.Witness[*schnorr.Witness[S]], count)
 
-	for i := uint(0); i < count; i++ {
+	for i := range count {
 		w, err := sf.Random(crand.Reader)
 		require.NoError(tb, err)
 
@@ -154,7 +157,7 @@ func testAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 
 	// Create random statements (no valid witnesses needed for simulator)
 	statements := make(sigand.Statement[*schnorr.Statement[P, S]], count)
-	for i := uint(0); i < count; i++ {
+	for i := range count {
 		x, err := curve.Random(crand.Reader)
 		require.NoError(tb, err)
 		statements[i] = schnorr.NewStatement(x)

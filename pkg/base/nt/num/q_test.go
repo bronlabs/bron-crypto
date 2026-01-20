@@ -1,7 +1,7 @@
 package num_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -11,13 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
-
-// requireBigIntEqualQ compares big.Int values semantically (using Cmp)
-// rather than structurally.
-func requireBigIntEqualQ(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) {
-	t.Helper()
-	require.Equal(t, 0, expected.Cmp(actual), msgAndArgs...)
-}
 
 // ============================================================================
 // Structure Tests
@@ -43,7 +36,7 @@ func TestRationals_Properties(t *testing.T) {
 
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
-		require.True(t, !q.Order().IsFinite(), "rationals should have infinite order")
+		require.False(t, q.Order().IsFinite(), "rationals should have infinite order")
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
@@ -119,7 +112,7 @@ func TestQ_New(t *testing.T) {
 		require.NoError(t, err)
 		rat, err := q.New(numer, denom)
 		require.NoError(t, err)
-		requireBigIntEqualQ(t, big.NewInt(3), rat.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(3), rat.Numerator().Big())
 	})
 }
 
@@ -143,7 +136,7 @@ func TestQ_FromInt64(t *testing.T) {
 			t.Parallel()
 			result := q.FromInt64(tt.input)
 			require.True(t, result.IsInt())
-			requireBigIntEqualQ(t, big.NewInt(tt.expected), result.Numerator().Big())
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Numerator().Big())
 		})
 	}
 }
@@ -169,7 +162,7 @@ func TestQ_FromUint64(t *testing.T) {
 			result := q.FromUint64(tt.input)
 			require.True(t, result.IsInt())
 			expected := new(big.Int).SetUint64(tt.expected)
-			requireBigIntEqualQ(t, expected, result.Numerator().Big())
+			requireBigIntEqual(t, expected, result.Numerator().Big())
 		})
 	}
 }
@@ -200,7 +193,7 @@ func TestQ_FromNat(t *testing.T) {
 		result, err := q.FromNat(nat)
 		require.NoError(t, err)
 		require.True(t, result.IsInt())
-		requireBigIntEqualQ(t, big.NewInt(42), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(42), result.Numerator().Big())
 	})
 }
 
@@ -259,7 +252,7 @@ func TestQ_FromInt(t *testing.T) {
 		result, err := q.FromInt(z.FromInt64(42))
 		require.NoError(t, err)
 		require.True(t, result.IsInt())
-		requireBigIntEqualQ(t, big.NewInt(42), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(42), result.Numerator().Big())
 	})
 
 	t.Run("negative", func(t *testing.T) {
@@ -267,7 +260,7 @@ func TestQ_FromInt(t *testing.T) {
 		result, err := q.FromInt(z.FromInt64(-42))
 		require.NoError(t, err)
 		require.True(t, result.IsInt())
-		requireBigIntEqualQ(t, big.NewInt(-42), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(-42), result.Numerator().Big())
 	})
 }
 
@@ -293,14 +286,14 @@ func TestQ_FromBig(t *testing.T) {
 		t.Parallel()
 		result, err := q.FromBig(big.NewInt(12345))
 		require.NoError(t, err)
-		requireBigIntEqualQ(t, big.NewInt(12345), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(12345), result.Numerator().Big())
 	})
 
 	t.Run("negative", func(t *testing.T) {
 		t.Parallel()
 		result, err := q.FromBig(big.NewInt(-12345))
 		require.NoError(t, err)
-		requireBigIntEqualQ(t, big.NewInt(-12345), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(-12345), result.Numerator().Big())
 	})
 }
 
@@ -331,7 +324,7 @@ func TestQ_FromBigRat(t *testing.T) {
 		require.False(t, result.IsInt())
 		// 3/4 should remain 3/4 (canonical)
 		canonical := result.Canonical()
-		requireBigIntEqualQ(t, big.NewInt(3), canonical.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(3), canonical.Numerator().Big())
 	})
 
 	t.Run("negative fraction", func(t *testing.T) {
@@ -365,7 +358,7 @@ func TestQ_FromUint(t *testing.T) {
 		u := zmod.FromUint64(42)
 		result, err := q.FromUint(u)
 		require.NoError(t, err)
-		requireBigIntEqualQ(t, big.NewInt(42), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(42), result.Numerator().Big())
 	})
 }
 
@@ -440,7 +433,7 @@ func TestQ_RandomInt(t *testing.T) {
 			require.NoError(t, err)
 			// Result should be integer in range
 			require.True(t, result.Compare(num.Z().FromInt64(0)) >= 0)
-			require.True(t, result.Compare(num.Z().FromInt64(10)) < 0)
+			require.Negative(t, result.Compare(num.Z().FromInt64(10)))
 		}
 	})
 
@@ -550,7 +543,7 @@ func TestRat_Add(t *testing.T) {
 		require.NoError(t, err)
 		result := a.Add(b).Canonical()
 		// 1/4 + 2/4 = 3/4
-		requireBigIntEqualQ(t, big.NewInt(3), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(3), result.Numerator().Big())
 	})
 
 	t.Run("fraction addition different denominators", func(t *testing.T) {
@@ -567,7 +560,7 @@ func TestRat_Add(t *testing.T) {
 		require.NoError(t, err)
 		result := a.Add(b).Canonical()
 		// 1/2 + 1/3 = 5/6
-		requireBigIntEqualQ(t, big.NewInt(5), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(5), result.Numerator().Big())
 	})
 
 	t.Run("commutativity", func(t *testing.T) {
@@ -657,7 +650,7 @@ func TestRat_Mul(t *testing.T) {
 		require.NoError(t, err)
 		result := a.Mul(b).Canonical()
 		// 1/2 * 2/3 = 2/6 = 1/3
-		requireBigIntEqualQ(t, big.NewInt(1), result.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(1), result.Numerator().Big())
 	})
 
 	t.Run("commutativity", func(t *testing.T) {
@@ -743,7 +736,7 @@ func TestRat_TryDiv(t *testing.T) {
 		result, err := a.TryDiv(b)
 		require.NoError(t, err)
 		canonical := result.Canonical()
-		requireBigIntEqualQ(t, big.NewInt(10), canonical.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(10), canonical.Numerator().Big())
 	})
 
 	t.Run("division by negative", func(t *testing.T) {
@@ -784,7 +777,7 @@ func TestRat_TryInv(t *testing.T) {
 		require.NoError(t, err)
 		// 2^-1 = 1/2
 		canonical := inv.Canonical()
-		requireBigIntEqualQ(t, big.NewInt(1), canonical.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(1), canonical.Numerator().Big())
 	})
 
 	t.Run("invert fraction", func(t *testing.T) {
@@ -799,7 +792,7 @@ func TestRat_TryInv(t *testing.T) {
 		require.NoError(t, err)
 		// (2/3)^-1 = 3/2
 		canonical := inv.Canonical()
-		requireBigIntEqualQ(t, big.NewInt(3), canonical.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(3), canonical.Numerator().Big())
 	})
 
 	t.Run("invert negative", func(t *testing.T) {
@@ -1072,7 +1065,7 @@ func TestRat_Canonical(t *testing.T) {
 		rat, err := q.New(z.FromInt64(2), denom)
 		require.NoError(t, err)
 		canonical := rat.Canonical()
-		requireBigIntEqualQ(t, big.NewInt(2), canonical.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(2), canonical.Numerator().Big())
 	})
 
 	t.Run("reduce fraction", func(t *testing.T) {
@@ -1083,7 +1076,7 @@ func TestRat_Canonical(t *testing.T) {
 		rat, err := q.New(z.FromInt64(4), denom)
 		require.NoError(t, err)
 		canonical := rat.Canonical()
-		requireBigIntEqualQ(t, big.NewInt(1), canonical.Numerator().Big())
+		requireBigIntEqual(t, big.NewInt(1), canonical.Numerator().Big())
 	})
 
 	t.Run("zero", func(t *testing.T) {
@@ -1148,7 +1141,7 @@ func TestRat_Numerator(t *testing.T) {
 	rat, err := q.New(z.FromInt64(3), denom)
 	require.NoError(t, err)
 
-	requireBigIntEqualQ(t, big.NewInt(3), rat.Numerator().Big())
+	requireBigIntEqual(t, big.NewInt(3), rat.Numerator().Big())
 }
 
 func TestRat_Denominator(t *testing.T) {
@@ -1163,7 +1156,7 @@ func TestRat_Denominator(t *testing.T) {
 	rat, err := q.New(z.FromInt64(3), denom)
 	require.NoError(t, err)
 
-	requireBigIntEqualQ(t, big.NewInt(5), rat.Denominator().Big())
+	requireBigIntEqual(t, big.NewInt(5), rat.Denominator().Big())
 }
 
 func TestRat_Ceil(t *testing.T) {
@@ -1177,7 +1170,7 @@ func TestRat_Ceil(t *testing.T) {
 		t.Parallel()
 		ceil, err := q.FromInt64(5).Ceil()
 		require.NoError(t, err)
-		requireBigIntEqualQ(t, big.NewInt(5), ceil.Big())
+		requireBigIntEqual(t, big.NewInt(5), ceil.Big())
 	})
 
 	t.Run("positive fraction", func(t *testing.T) {
@@ -1332,7 +1325,7 @@ func TestRat_RandomWithCryptoRand(t *testing.T) {
 	high := q.FromInt64(100)
 
 	// Test with crypto/rand
-	result, err := q.Random(low, high, rand.Reader)
+	result, err := q.Random(low, high, crand.Reader)
 	require.NoError(t, err)
 	require.True(t, low.IsLessThanOrEqual(result))
 	require.True(t, result.IsLessThanOrEqual(high) && !result.Equal(high))

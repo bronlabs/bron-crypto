@@ -14,7 +14,7 @@ type DealerFunc[S algebra.PrimeFieldElement[S]] struct {
 }
 
 // NewDealerFunc creates a new dealer function from the secret and blinding polynomials.
-func NewDealerFunc[S algebra.PrimeFieldElement[S]](g *polynomials.Polynomial[S], h *polynomials.Polynomial[S]) *DealerFunc[S] {
+func NewDealerFunc[S algebra.PrimeFieldElement[S]](g, h *polynomials.Polynomial[S]) *DealerFunc[S] {
 	return &DealerFunc[S]{G: g, H: h}
 }
 

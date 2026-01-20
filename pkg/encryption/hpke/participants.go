@@ -99,15 +99,15 @@ func EncryptingWithAuthentication[P curves.Point[P, B, S], B algebra.FiniteField
 
 // EncryptingWithPreSharedKey returns an option that enables PSK mode (mode_psk = 0x01).
 // Both sender and receiver must possess the same pre-shared key (psk) and PSK identifier
-// (pskId). The PSK is incorporated into the key schedule, providing sender authentication.
+// (pskID). The PSK is incorporated into the key schedule, providing sender authentication.
 //
-// Per RFC 9180, the psk MUST have at least 32 bytes of entropy, and pskId is a sequence
+// Per RFC 9180, the psk MUST have at least 32 bytes of entropy, and pskID is a sequence
 // of bytes used to identify the PSK.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.2
-func EncryptingWithPreSharedKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](pskId []byte, psk *encryption.SymmetricKey) encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]] {
+func EncryptingWithPreSharedKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](pskID []byte, psk *encryption.SymmetricKey) encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]] {
 	return func(e *Encrypter[P, B, S]) error {
-		e.pskId = pskId
+		e.pskID = pskID
 		e.psk = psk
 		return nil
 	}
@@ -118,10 +118,10 @@ func EncryptingWithPreSharedKey[P curves.Point[P, B, S], B algebra.FiniteFieldEl
 // authentication, providing defence in depth.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4
-func EncryptingWithAuthPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sk *PrivateKey[S], pskId []byte, psk *encryption.SymmetricKey) encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]] {
+func EncryptingWithAuthPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sk *PrivateKey[S], pskID []byte, psk *encryption.SymmetricKey) encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]] {
 	return func(e *Encrypter[P, B, S]) error {
 		e.senderPrivateKey = sk
-		e.pskId = pskId
+		e.pskID = pskID
 		e.psk = psk
 		return nil
 	}
@@ -138,7 +138,7 @@ type Encrypter[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	suite            *CipherSuite
 	senderPrivateKey *PrivateKey[S]
 	info             []byte
-	pskId            []byte
+	pskID            []byte
 	psk              *encryption.SymmetricKey
 
 	shouldCacheCtx bool
@@ -149,7 +149,7 @@ type Encrypter[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 // Mode returns the HPKE mode that will be used for encryption, determined by
 // which authentication parameters have been configured.
 func (e *Encrypter[P, B, S]) Mode() ModeID {
-	if e.psk != nil && len(e.pskId) > 0 {
+	if e.psk != nil && len(e.pskID) > 0 {
 		if e.senderPrivateKey != nil {
 			return AuthPSk
 		}
@@ -199,9 +199,9 @@ func (e *Encrypter[P, B, S]) Seal(plaintext Message, receiver *PublicKey[P, B, S
 	case Auth:
 		ctx, err = SetupAuthS(e.suite, receiver, e.senderPrivateKey, e.info, prng)
 	case PSk:
-		ctx, err = SetupPSKS(e.suite, receiver, e.psk.Bytes(), e.pskId, e.info, prng)
+		ctx, err = SetupPSKS(e.suite, receiver, e.psk.Bytes(), e.pskID, e.info, prng)
 	case AuthPSk:
-		ctx, err = SetupAuthPSKS(e.suite, receiver, e.senderPrivateKey, e.psk.Bytes(), e.pskId, e.info, prng)
+		ctx, err = SetupAuthPSKS(e.suite, receiver, e.senderPrivateKey, e.psk.Bytes(), e.pskID, e.info, prng)
 	default:
 		return nil, nil, ErrNotSupported.WithStackFrame().WithMessage("unsupported mode")
 	}
@@ -285,9 +285,9 @@ func DecryptingWithAuthentication[P curves.Point[P, B, S], B algebra.FiniteField
 // for decryption. The PSK and PSK ID must match those used by the sender.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.2
-func DecryptingWithPreSharedKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](pskId []byte, psk *encryption.SymmetricKey) encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext] {
+func DecryptingWithPreSharedKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](pskID []byte, psk *encryption.SymmetricKey) encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext] {
 	return func(d *Decrypter[P, B, S]) error {
-		d.pskId = pskId
+		d.pskID = pskID
 		d.psk = psk
 		return nil
 	}
@@ -298,10 +298,10 @@ func DecryptingWithPreSharedKey[P curves.Point[P, B, S], B algebra.FiniteFieldEl
 // used by the sender.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4
-func DecryptingWithAuthPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](pk *PublicKey[P, B, S], pskId []byte, psk *encryption.SymmetricKey) encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext] {
+func DecryptingWithAuthPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](pk *PublicKey[P, B, S], pskID []byte, psk *encryption.SymmetricKey) encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext] {
 	return func(d *Decrypter[P, B, S]) error {
 		d.senderPublicKey = pk
-		d.pskId = pskId
+		d.pskID = pskID
 		d.psk = psk
 		return nil
 	}
@@ -319,7 +319,7 @@ type Decrypter[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	senderPublicKey    *PublicKey[P, B, S] // For Auth modes - sender's static public key
 	ephemeralPublicKey *Capsule[P, B, S]   // Ephemeral public key
 	info               []byte
-	pskId              []byte
+	pskID              []byte
 	psk                *encryption.SymmetricKey
 
 	ctx *ReceiverContext[P, B, S]
@@ -328,7 +328,7 @@ type Decrypter[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 // Mode returns the HPKE mode configured for decryption, determined by which
 // authentication parameters have been set.
 func (e *Decrypter[P, B, S]) Mode() ModeID {
-	if e.psk != nil && len(e.pskId) > 0 {
+	if e.psk != nil && len(e.pskID) > 0 {
 		if e.senderPublicKey != nil {
 			return AuthPSk
 		}
@@ -342,8 +342,8 @@ func (e *Decrypter[P, B, S]) Mode() ModeID {
 
 // Decrypt decrypts a ciphertext encrypted to this receiver's public key.
 // This is equivalent to Open with nil associated data.
-func (d *Decrypter[P, B, S]) Decrypt(ciphertext Ciphertext) (Message, error) {
-	return d.Open(ciphertext, nil)
+func (e *Decrypter[P, B, S]) Decrypt(ciphertext Ciphertext) (Message, error) {
+	return e.Open(ciphertext, nil)
 }
 
 // Open decrypts a ciphertext with associated data. The associated data must match
@@ -353,11 +353,11 @@ func (d *Decrypter[P, B, S]) Decrypt(ciphertext Ciphertext) (Message, error) {
 // must be opened in the same order they were sealed by the sender.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2
-func (d *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, error) {
+func (e *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, error) {
 	if ciphertext == nil {
 		return nil, ErrInvalidArgument.WithStackFrame().WithMessage("ciphertext is nil")
 	}
-	pt, err := d.ctx.Open([]byte(ciphertext), aad)
+	pt, err := e.ctx.Open([]byte(ciphertext), aad)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -371,11 +371,11 @@ func (d *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, e
 // same output, enabling key agreement for additional symmetric keys.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.3
-func (d *Decrypter[P, B, S]) Export(context []byte, length uint) (*encryption.SymmetricKey, error) {
+func (e *Decrypter[P, B, S]) Export(context []byte, length uint) (*encryption.SymmetricKey, error) {
 	if length == 0 {
 		return nil, ErrInvalidLength.WithStackFrame()
 	}
-	k, err := d.ctx.Export(context, int(length))
+	k, err := e.ctx.Export(context, int(length))
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}

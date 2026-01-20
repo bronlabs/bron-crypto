@@ -26,8 +26,8 @@ func NewStackFrame(pc uintptr) *StackFrame {
 		fnPkgName += fnName[:period]
 		fnName = fnName[period+1:]
 	}
-	//nolint:gocritic // false positive
-	fnName = strings.Replace(fnName, "·", ".", -1)
+
+	fnName = strings.ReplaceAll(fnName, "·", ".")
 
 	return &StackFrame{File: fnFileName, LineNo: fnLineNo, Name: fnName, Package: fnPkgName, ProgramCounter: pc}
 }

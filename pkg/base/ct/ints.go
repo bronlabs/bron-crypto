@@ -53,7 +53,7 @@ func CompareInt[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 
 	// Less: 1 if x < y, else 0
 	lt = Less(x, y)
-	return
+	return gt, eq, lt
 }
 
 // CSelectInt returns x0 if choice == 0 and x1 if choice == 1. Undefined for other values of choice.
@@ -99,7 +99,7 @@ func Max[T constraints.Integer](a, b T) T {
 // Isqrt64 computes floor(sqrt(n)) for a 64-bit n in constant time.
 // Uses binary search with 32 iterations to ensure constant time execution.
 func Isqrt64(n uint64) uint64 {
-	var result uint64 = 0
+	var result uint64
 	var bit uint64 = 1 << 31 // Start with highest bit for 32-bit result
 
 	// Binary search: test each bit from high to low

@@ -3,8 +3,13 @@ package chacha20
 import (
 	"encoding/binary"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/internal/alias"
+)
+
+var (
+	ErrInvalidSize = errs2.New("chacha20: invalid size")
 )
 
 type FastKeyErasureCipher struct {
@@ -22,7 +27,7 @@ func NewFastErasureCipher(key, nonce []byte) (*FastKeyErasureCipher, error) {
 func (c *FastKeyErasureCipher) setKey(key []byte) {
 	key = key[:KeySize]
 	c.precompDone = false
-	c.Cipher.key = [8]uint32{
+	c.key = [8]uint32{
 		binary.LittleEndian.Uint32(key[0:4]),
 		binary.LittleEndian.Uint32(key[4:8]),
 		binary.LittleEndian.Uint32(key[8:12]),
@@ -113,7 +118,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 
 	full := len(src) - len(src)%bufSize
 	if full > 0 {
-		c.xorKeyStreamBlocks(dst[:full], src[:full], &c.Cipher.key)
+		c.xorKeyStreamBlocks(dst[:full], src[:full], &c.key)
 	}
 	dst, src = dst[full:], src[full:]
 
@@ -125,7 +130,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 		numBlocks := (len(src) + blockSize - 1) / blockSize
 		buf := c.buf[bufSize-numBlocks*blockSize:]
 		copy(buf, src)
-		c.xorKeyStreamBlocksGeneric(buf, buf, &c.Cipher.key)
+		c.xorKeyStreamBlocksGeneric(buf, buf, &c.key)
 		c.remaining = len(buf) - copy(dst, buf)
 		sliceutils.Fill(buf, 0) // CUSTOM: erasure of keystream
 		return
@@ -136,7 +141,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 	if len(src) > 0 {
 		c.buf = [bufSize]byte{}
 		copy(c.buf[:], src)
-		c.xorKeyStreamBlocks(c.buf[:], c.buf[:], &c.Cipher.key)
+		c.xorKeyStreamBlocks(c.buf[:], c.buf[:], &c.key)
 		c.remaining = bufSize - copy(dst, c.buf[:])
 		sliceutils.Fill(c.buf[:bufSize-c.remaining], 0) // CUSTOM: erasure of keystream
 	}

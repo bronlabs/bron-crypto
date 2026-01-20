@@ -6,6 +6,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -13,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigor"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_Or_HappyPath(t *testing.T) {
@@ -89,11 +90,13 @@ func Test_Or_InvalidInputs(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nil_protocol", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigor.Compose[*schnorr.Statement[*k256.Point, *k256.Scalar], *schnorr.Witness[*k256.Scalar], *schnorr.Commitment[*k256.Point, *k256.Scalar], *schnorr.State[*k256.Scalar], *schnorr.Response[*k256.Scalar]](nil, 2, crand.Reader)
 		require.Error(t, err)
 	})
 
 	t.Run("count_less_than_2", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigor.Compose(protocol, 1, crand.Reader)
 		require.Error(t, err)
 
@@ -102,6 +105,7 @@ func Test_Or_InvalidInputs(t *testing.T) {
 	})
 
 	t.Run("nil_prng", func(t *testing.T) {
+		t.Parallel()
 		_, err := sigor.Compose(protocol, 2, nil)
 		require.Error(t, err)
 	})
@@ -127,7 +131,7 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 	statements := make(sigor.Statement[*schnorr.Statement[P, S]], count)
 	var witness sigor.Witness[*schnorr.Witness[S]]
 
-	for i := uint(0); i < count; i++ {
+	for i := range count {
 		if i == 0 {
 			// Valid witness: x = g^w
 			w, err := sf.Random(crand.Reader)
@@ -183,7 +187,7 @@ func testOrSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 
 	// Create random statements (no valid witnesses)
 	statements := make(sigor.Statement[*schnorr.Statement[P, S]], count)
-	for i := uint(0); i < count; i++ {
+	for i := range count {
 		x, err := curve.Random(crand.Reader)
 		require.NoError(tb, err)
 		statements[i] = schnorr.NewStatement(x)
@@ -226,7 +230,7 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	statements := make(sigor.Statement[*schnorr.Statement[P, S]], count)
 	var witness sigor.Witness[*schnorr.Witness[S]]
 
-	for i := uint(0); i < count; i++ {
+	for i := range count {
 		if i == 0 {
 			w, err := sf.Random(crand.Reader)
 			require.NoError(tb, err)

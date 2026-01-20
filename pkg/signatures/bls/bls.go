@@ -108,7 +108,7 @@ type Scheme[
 }
 
 // Name returns the signature scheme identifier ("BLS").
-func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Name() signatures.Name {
+func (*Scheme[PK, PKFE, SG, SGFE, E, S]) Name() signatures.Name {
 	return Name
 }
 
@@ -158,6 +158,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) SignatureSubGroup() curves.PairingFri
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK, PKFE, SG, SGFE, E, S]) (*KeyGenerator[PK, PKFE, SG, SGFE, E, S], error) {
 	kg := &KeyGenerator[PK, PKFE, SG, SGFE, E, S]{
 		group: s.keySubGroup,
+		seed:  nil,
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
@@ -168,7 +169,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK,
 }
 
 // Signer creates a signer for producing BLS signatures with the given private key.
-// Options can be used to customize the domain separation tag.
+// Options can be used to customise the domain separation tag.
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKFE, SG, SGFE, E, S], opts ...SignerOption[PK, PKFE, SG, SGFE, E, S]) (*Signer[PK, PKFE, SG, SGFE, E, S], error) {
@@ -181,6 +182,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKF
 		cipherSuite:       s.cipherSuite,
 		signatureSubGroup: s.signatureSubGroup,
 		variant:           s.variant,
+		dst:               "",
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
@@ -191,7 +193,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKF
 }
 
 // Verifier creates a verifier for validating BLS signatures.
-// Options can be used to customize the domain separation tag or provide proofs of possession.
+// Options can be used to customise the domain separation tag or provide proofs of possession.
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.7
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, PKFE, SG, SGFE, E, S]) (*Verifier[PK, PKFE, SG, SGFE, E, S], error) {
@@ -200,6 +202,8 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, P
 		signatureSubGroup: s.signatureSubGroup,
 		rogueKeyAlg:       s.rogueKeyAlg,
 		variant:           s.variant,
+		pops:              nil,
+		dst:               "",
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {

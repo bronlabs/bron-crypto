@@ -15,15 +15,15 @@ import (
 // Sampler deterministically derives zero-sharing scalars from pairwise seeds.
 type Sampler[FE algebra.PrimeFieldElement[FE]] struct {
 	field       algebra.PrimeField[FE]
-	mySharingId sharing.ID
+	mySharingID sharing.ID
 	seededPrngs ds.Map[sharing.ID, io.Reader]
 }
 
 // NewSampler builds a sampler from per-party seeds agreed during setup.
-func NewSampler[FE algebra.PrimeFieldElement[FE]](sharingId sharing.ID, quorum network.Quorum, seeds Seeds, field algebra.PrimeField[FE]) (*Sampler[FE], error) {
+func NewSampler[FE algebra.PrimeFieldElement[FE]](sharingID sharing.ID, quorum network.Quorum, seeds Seeds, field algebra.PrimeField[FE]) (*Sampler[FE], error) {
 	prngs := hashmap.NewComparable[sharing.ID, io.Reader]()
 	for id := range quorum.Iter() {
-		if id == sharingId {
+		if id == sharingID {
 			continue
 		}
 		seed, ok := seeds.Get(id)
@@ -36,7 +36,7 @@ func NewSampler[FE algebra.PrimeFieldElement[FE]](sharingId sharing.ID, quorum n
 	}
 	p := &Sampler[FE]{
 		field:       field,
-		mySharingId: sharingId,
+		mySharingID: sharingID,
 		seededPrngs: prngs.Freeze(),
 	}
 
@@ -54,7 +54,7 @@ func (s *Sampler[FE]) Sample() (FE, error) {
 			return nilFE, errs2.Wrap(err).WithMessage("could not sample scalar")
 		}
 
-		if id < s.mySharingId {
+		if id < s.mySharingID {
 			share = share.Add(sample)
 		} else {
 			share = share.Add(sample.Neg())

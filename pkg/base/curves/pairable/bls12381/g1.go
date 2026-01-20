@@ -53,17 +53,17 @@ func NewG1() *G1 {
 }
 
 // Name returns the name of the structure.
-func (c *G1) Name() string {
+func (*G1) Name() string {
 	return CurveNameG1
 }
 
 // ElementSize returns the element size in bytes.
-func (c *G1) ElementSize() int {
+func (*G1) ElementSize() int {
 	return bls12381Impl.FpBytes
 }
 
 // WideElementSize returns the wide element size in bytes.
-func (c *G1) WideElementSize() int {
+func (*G1) WideElementSize() int {
 	return int(^uint(0) >> 1)
 }
 
@@ -73,17 +73,17 @@ func (c *G1) FromWideBytes(input []byte) (*PointG1, error) {
 }
 
 // DualStructure returns the dual group structure.
-func (c *G1) DualStructure() curves.PairingFriendlyCurve[*PointG2, *BaseFieldElementG2, *PointG1, *BaseFieldElementG1, *GtElement, *Scalar] {
+func (*G1) DualStructure() curves.PairingFriendlyCurve[*PointG2, *BaseFieldElementG2, *PointG1, *BaseFieldElementG1, *GtElement, *Scalar] {
 	return NewG2()
 }
 
 // PairingAlgorithm returns the pairing algorithm identifier.
-func (c *G1) PairingAlgorithm() curves.PairingAlgorithm {
+func (*G1) PairingAlgorithm() curves.PairingAlgorithm {
 	return OptimalAteAlgorithm
 }
 
 // MultiPair computes a multi-pairing.
-func (c *G1) MultiPair(these []*PointG1, with []*PointG2) (*GtElement, error) {
+func (*G1) MultiPair(these []*PointG1, with []*PointG2) (*GtElement, error) {
 	if len(these) != len(with) {
 		return nil, curves.ErrFailed.WithMessage("number of G1 and G2 points must match")
 	}
@@ -99,7 +99,7 @@ func (c *G1) MultiPair(these []*PointG1, with []*PointG2) (*GtElement, error) {
 }
 
 // MultiPairAndInvertDuals computes a multi-pairing and inverts dual points.
-func (c *G1) MultiPairAndInvertDuals(these []*PointG1, with []*PointG2) (*GtElement, error) {
+func (*G1) MultiPairAndInvertDuals(these []*PointG1, with []*PointG2) (*GtElement, error) {
 	if len(these) != len(with) {
 		return nil, curves.ErrFailed.WithMessage("number of G1 and G2 points must match")
 	}
@@ -116,17 +116,17 @@ func (c *G1) MultiPairAndInvertDuals(these []*PointG1, with []*PointG2) (*GtElem
 }
 
 // Cofactor returns the curve cofactor.
-func (c *G1) Cofactor() cardinal.Cardinal {
+func (*G1) Cofactor() cardinal.Cardinal {
 	return cardinal.New(1)
 }
 
 // Order returns the group or field order.
-func (c *G1) Order() cardinal.Cardinal {
+func (*G1) Order() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(scalarFieldOrder.Nat())
 }
 
 // FromCompressed decodes a compressed point.
-func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
+func (*G1) FromCompressed(input []byte) (*PointG1, error) {
 	if len(input) != bls12381Impl.FpBytes {
 		return nil, curves.ErrInvalidLength.WithMessage("invalid input")
 	}
@@ -186,7 +186,7 @@ func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
 }
 
 // FromAffineX builds a point from an affine x-coordinate.
-func (c *G1) FromAffineX(x *BaseFieldElementG1, b bool) (*PointG1, error) {
+func (*G1) FromAffineX(x *BaseFieldElementG1, b bool) (*PointG1, error) {
 	var p PointG1
 	ok := p.V.SetFromAffineX(&x.V)
 	if ok != 1 {
@@ -209,7 +209,7 @@ func (c *G1) FromBytes(input []byte) (*PointG1, error) {
 }
 
 // FromUncompressed decodes an uncompressed point.
-func (c *G1) FromUncompressed(input []byte) (*PointG1, error) {
+func (*G1) FromUncompressed(input []byte) (*PointG1, error) {
 	if len(input) != 2*bls12381Impl.FpBytes {
 		return nil, curves.ErrInvalidLength.WithMessage("invalid input")
 	}
@@ -249,7 +249,7 @@ func (c *G1) FromUncompressed(input []byte) (*PointG1, error) {
 }
 
 // FromAffine builds a point from affine coordinates.
-func (c *G1) FromAffine(x, y *BaseFieldElementG1) (*PointG1, error) {
+func (*G1) FromAffine(x, y *BaseFieldElementG1) (*PointG1, error) {
 	var p PointG1
 	ok := p.V.SetAffine(&x.V, &y.V)
 	if ok != 1 {
@@ -264,34 +264,34 @@ func (c *G1) Hash(bytes []byte) (*PointG1, error) {
 }
 
 // HashWithDst maps input bytes to a point with a custom DST.
-func (c *G1) HashWithDst(dst string, bytes []byte) (*PointG1, error) {
+func (*G1) HashWithDst(dst string, bytes []byte) (*PointG1, error) {
 	var p PointG1
 	p.V.Hash(dst, bytes)
 	return &p, nil
 }
 
 // ScalarStructure returns the scalar structure.
-func (c *G1) ScalarStructure() algebra.Structure[*Scalar] {
+func (*G1) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
 // BaseStructure returns the base field structure.
-func (c *G1) BaseStructure() algebra.Structure[*BaseFieldElementG1] {
+func (*G1) BaseStructure() algebra.Structure[*BaseFieldElementG1] {
 	return NewG1BaseField()
 }
 
 // ScalarRing returns the scalar ring.
-func (c *G1) ScalarRing() algebra.ZModLike[*Scalar] {
+func (*G1) ScalarRing() algebra.ZModLike[*Scalar] {
 	return NewScalarField()
 }
 
 // ScalarField returns the scalar field.
-func (c *G1) ScalarField() algebra.PrimeField[*Scalar] {
+func (*G1) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
 
 // BaseField returns the base field.
-func (c *G1) BaseField() algebra.FiniteField[*BaseFieldElementG1] {
+func (*G1) BaseField() algebra.FiniteField[*BaseFieldElementG1] {
 	return NewG1BaseField()
 }
 
@@ -314,7 +314,7 @@ func (c *G1) MultiScalarOp(scalars []*Scalar, points []*PointG1) (*PointG1, erro
 }
 
 // MultiScalarMul computes a multiscalar multiplication.
-func (c *G1) MultiScalarMul(scalars []*Scalar, points []*PointG1) (*PointG1, error) {
+func (*G1) MultiScalarMul(scalars []*Scalar, points []*PointG1) (*PointG1, error) {
 	if len(scalars) != len(points) {
 		return nil, curves.ErrInvalidLength.WithMessage("mismatched lengths of scalars and points")
 	}
@@ -377,7 +377,7 @@ func (p *PointG1) MultiPairAndInvertDuals(with ...*PointG2) (*GtElement, error) 
 }
 
 // InSourceGroup reports whether p is in the source group.
-func (p *PointG1) InSourceGroup() bool {
+func (*PointG1) InSourceGroup() bool {
 	return true
 }
 
@@ -389,7 +389,7 @@ func (p *PointG1) HashCode() base.HashCode {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (p *PointG1) Structure() algebra.Structure[*PointG1] {
+func (*PointG1) Structure() algebra.Structure[*PointG1] {
 	return NewG1()
 }
 

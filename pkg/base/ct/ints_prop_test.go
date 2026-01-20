@@ -151,7 +151,7 @@ func TestCSwapInt_Property(t *testing.T) {
 			expectedX = x
 			expectedY = y
 		}
-		var actualX, actualY int = x, y
+		var actualX, actualY = x, y
 		ct.CSwapInt(&actualX, &actualY, choice)
 		require.Equal(t, expectedX, actualX)
 		require.Equal(t, expectedY, actualY)

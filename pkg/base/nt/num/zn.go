@@ -86,7 +86,7 @@ func (zn *ZMod) ModulusCT() *numct.Modulus {
 
 // ElementSize returns the size in bytes of an element.
 func (zn *ZMod) ElementSize() int {
-	return int(zn.n.AnnouncedLen())
+	return zn.n.AnnouncedLen()
 }
 
 // WideElementSize returns the size in bytes of a wide element.
@@ -282,12 +282,12 @@ func (zn *ZMod) IsDomain() bool {
 }
 
 // ScalarStructure returns the scalar structure of the group.
-func (zn *ZMod) ScalarStructure() algebra.Structure[*Nat] {
+func (*ZMod) ScalarStructure() algebra.Structure[*Nat] {
 	return N()
 }
 
 // AmbientStructure returns the ambient structure of quotient group ie. Z.
-func (zn *ZMod) AmbientStructure() algebra.Structure[*Int] {
+func (*ZMod) AmbientStructure() algebra.Structure[*Int] { //nolint:staticcheck // false positive.
 	return Z()
 }
 
@@ -611,7 +611,7 @@ func (u *Uint) ScalarOp(other *Nat) *Uint {
 }
 
 // IsTorsionFree checks if the Uint element is torsion-free.
-func (u *Uint) IsTorsionFree() bool {
+func (*Uint) IsTorsionFree() bool {
 	return true
 }
 

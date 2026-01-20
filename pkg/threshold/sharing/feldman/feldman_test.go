@@ -552,6 +552,7 @@ func TestDealDeterministic(t *testing.T) {
 
 // TestDealRandomDistribution tests the statistical distribution of random secrets
 func TestDealRandomDistribution(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("skipping statistical test in short mode")
 	}
@@ -1277,10 +1278,10 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	t.Run("single shareholder qualified set", func(t *testing.T) {
 		t.Parallel()
 		// This should fail as minimal qualified set needs at least 2 shareholders
-		singleId := hashset.NewComparable[sharing.ID]()
-		singleId.Add(sharing.ID(1))
+		singleID := hashset.NewComparable[sharing.ID]()
+		singleID.Add(sharing.ID(1))
 
-		_, err := sharing.NewMinimalQualifiedAccessStructure(singleId.Freeze())
+		_, err := sharing.NewMinimalQualifiedAccessStructure(singleID.Freeze())
 		require.Error(t, err)
 		require.ErrorIs(t, err, sharing.ErrValue)
 	})

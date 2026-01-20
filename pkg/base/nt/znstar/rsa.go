@@ -56,6 +56,7 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 		UnitGroupTrait: UnitGroupTrait[*modular.OddPrimeFactors, *RSAGroupElement[*modular.OddPrimeFactors], RSAGroupElement[*modular.OddPrimeFactors]]{
 			zMod:  zMod,
 			arith: arith,
+			n:     n,
 		},
 	}, nil
 }
@@ -77,6 +78,7 @@ func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (*RSAGroupUnknownOrder, error) {
 		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *RSAGroupElement[*modular.SimpleModulus], RSAGroupElement[*modular.SimpleModulus]]{
 			zMod:  zMod,
 			arith: arith,
+			n:     m,
 		},
 	}, nil
 }
@@ -120,6 +122,7 @@ func (g *RSAGroup[X]) ForgetOrder() *RSAGroupUnknownOrder {
 		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *RSAGroupElement[*modular.SimpleModulus], RSAGroupElement[*modular.SimpleModulus]]{
 			zMod:  g.zMod,
 			arith: arith,
+			n:     g.n,
 		},
 	}
 }
@@ -136,6 +139,7 @@ func (u *RSAGroupElement[X]) Clone() *RSAGroupElement[X] {
 		UnitTrait: UnitTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]{
 			v:     u.v.Clone(),
 			arith: u.arith,
+			n:     u.n,
 		},
 	}
 }
@@ -146,6 +150,7 @@ func (u *RSAGroupElement[X]) Structure() algebra.Structure[*RSAGroupElement[X]] 
 		UnitGroupTrait: UnitGroupTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]{
 			zMod:  u.v.Group(),
 			arith: u.arith,
+			n:     u.n,
 		},
 	}
 }
@@ -162,6 +167,7 @@ func (u *RSAGroupElement[X]) LearnOrder(g *RSAGroupKnownOrder) (*RSAGroupElement
 		UnitTrait: UnitTrait[*modular.OddPrimeFactors, *RSAGroupElementKnownOrder, RSAGroupElementKnownOrder]{
 			v:     u.v.Clone(),
 			arith: g.arith,
+			n:     g.n,
 		},
 	}, nil
 }
@@ -176,6 +182,7 @@ func (u *RSAGroupElement[X]) ForgetOrder() *RSAGroupElementUnknownOrder {
 		UnitTrait: UnitTrait[*modular.SimpleModulus, *RSAGroupElementUnknownOrder, RSAGroupElementUnknownOrder]{
 			v:     u.v.Clone(),
 			arith: arith,
+			n:     u.n,
 		},
 	}
 }

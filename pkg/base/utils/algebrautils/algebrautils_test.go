@@ -135,6 +135,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("single point matches ScalarMul", func(t *testing.T) {
+		t.Parallel()
 		scalar := scalarField.FromUint64(42)
 		points := []*k256.Point{g}
 		scalars := []*k256.Scalar{scalar}
@@ -145,6 +146,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("all zero scalars returns identity", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -159,6 +161,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("all one scalars returns sum of points", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -176,6 +179,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("small known values", func(t *testing.T) {
+		t.Parallel()
 		// Test: 2*G + 3*G = 5*G
 		two := scalarField.FromUint64(2)
 		three := scalarField.FromUint64(3)
@@ -190,6 +194,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("mixed zero and non-zero scalars", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -209,6 +214,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("identity point in input", func(t *testing.T) {
+		t.Parallel()
 		identity := curve.OpIdentity()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
@@ -225,6 +231,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("random batch correctness", func(t *testing.T) {
+		t.Parallel()
 		const n = 20
 		points := make([]*k256.Point, n)
 		scalars := make([]*k256.Scalar, n)
@@ -251,6 +258,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("consistency - same inputs same output", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -269,12 +277,14 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	})
 
 	t.Run("empty input panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			algebrautils.MultiScalarMul([]*k256.Scalar{}, []*k256.Point{})
 		})
 	})
 
 	t.Run("mismatched lengths panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			algebrautils.MultiScalarMul(
 				[]*k256.Scalar{scalarField.One()},
@@ -291,6 +301,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	g := curve.Generator()
 
 	t.Run("single point matches ScalarMul", func(t *testing.T) {
+		t.Parallel()
 		scalar := scalarField.FromUint64(42)
 		points := []*edwards25519.PrimeSubGroupPoint{g}
 		scalars := []*edwards25519.Scalar{scalar}
@@ -301,6 +312,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("all zero scalars returns identity", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -315,6 +327,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("all one scalars returns sum of points", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -332,6 +345,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("small known values", func(t *testing.T) {
+		t.Parallel()
 		// Test: 2*G + 3*G = 5*G
 		two := scalarField.FromUint64(2)
 		three := scalarField.FromUint64(3)
@@ -346,6 +360,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("mixed zero and non-zero scalars", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -365,6 +380,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("identity point in input", func(t *testing.T) {
+		t.Parallel()
 		identity := curve.OpIdentity()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
@@ -381,6 +397,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("random batch correctness", func(t *testing.T) {
+		t.Parallel()
 		const n = 20
 		points := make([]*edwards25519.PrimeSubGroupPoint, n)
 		scalars := make([]*edwards25519.Scalar, n)
@@ -407,6 +424,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("consistency - same inputs same output", func(t *testing.T) {
+		t.Parallel()
 		p1, err := curve.Random(crand.Reader)
 		require.NoError(t, err)
 		p2, err := curve.Random(crand.Reader)
@@ -425,12 +443,14 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	})
 
 	t.Run("empty input panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			algebrautils.MultiScalarMul([]*edwards25519.Scalar{}, []*edwards25519.PrimeSubGroupPoint{})
 		})
 	})
 
 	t.Run("mismatched lengths panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			algebrautils.MultiScalarMul(
 				[]*edwards25519.Scalar{scalarField.One()},

@@ -42,38 +42,38 @@ func NewGt() *Gt {
 }
 
 // Name returns the name of the structure.
-func (g *Gt) Name() string {
+func (*Gt) Name() string {
 	return GtName
 }
 
 // ElementSize returns the element size in bytes.
-func (g *Gt) ElementSize() int {
+func (*Gt) ElementSize() int {
 	return 96
 }
 
 // Order returns the group or field order.
-func (g *Gt) Order() cardinal.Cardinal {
+func (*Gt) Order() cardinal.Cardinal {
 	//TODO implement me
 	panic("implement me")
 }
 
 // Hash maps input bytes to an element or point.
-func (g *Gt) Hash(bytes []byte) (*GtElement, error) {
+func (*Gt) Hash(bytes []byte) (*GtElement, error) {
 	panic("Hashing not implemented for Gt")
 }
 
 // Random samples a random element.
-func (g *Gt) Random(prng io.Reader) (*GtElement, error) {
+func (*Gt) Random(prng io.Reader) (*GtElement, error) {
 	panic("Random sampling not implemented for Gt")
 }
 
 // Iter returns an iterator over elements.
-func (g *Gt) Iter() iter.Seq[*GtElement] {
+func (*Gt) Iter() iter.Seq[*GtElement] {
 	panic("implement me")
 }
 
 // One returns the multiplicative identity.
-func (g *Gt) One() *GtElement {
+func (*Gt) One() *GtElement {
 	var one GtElement
 	one.V.SetOne()
 	return &one
@@ -85,7 +85,7 @@ func (g *Gt) OpIdentity() *GtElement {
 }
 
 // FromBytes decodes an element from bytes.
-func (g *Gt) FromBytes(inBytes []byte) (*GtElement, error) {
+func (*Gt) FromBytes(inBytes []byte) (*GtElement, error) {
 	if len(inBytes) != 96 {
 		return nil, curves.ErrInvalidLength.WithMessage("input must be 96 bytes long")
 	}
@@ -128,7 +128,7 @@ func (ge *GtElement) Bytes() []byte {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (ge *GtElement) Structure() algebra.Structure[*GtElement] {
+func (*GtElement) Structure() algebra.Structure[*GtElement] {
 	return NewGt()
 }
 
@@ -196,7 +196,7 @@ func (ge *GtElement) OpInv() *GtElement {
 }
 
 // String returns the string form of the receiver.
-func (ge *GtElement) String() string {
+func (*GtElement) String() string {
 	//TODO implement me
 	panic("implement me")
 }

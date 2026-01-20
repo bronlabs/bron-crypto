@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/mina"
-	"github.com/stretchr/testify/require"
 )
 
 // Test vectors from https://github.com/o1-labs/o1js/blob/main/src/mina-signer/src/test-vectors/legacySignatures.ts
@@ -318,6 +319,7 @@ func TestLegacySignatures(t *testing.T) {
 	// Test string message signatures
 	for i, test := range stringTests {
 		t.Run(fmt.Sprintf("string_%d_devnet", i), func(t *testing.T) {
+			t.Parallel()
 			msg := new(mina.ROInput).Init()
 			msg.AddString(test.message)
 
@@ -361,10 +363,10 @@ func TestLegacySignatures(t *testing.T) {
 	}
 }
 
-func actualSignatureIsAsExpected(t testing.TB, actual *mina.Signature, expected *signature) {
-	t.Helper()
+func actualSignatureIsAsExpected(tb testing.TB, actual *mina.Signature, expected *signature) {
+	tb.Helper()
 	rx, err := actual.R.AffineX()
-	require.NoError(t, err)
-	require.Equal(t, expected.field, rx.String(), "R field does not match expected value")
-	require.Equal(t, expected.scalar, actual.S.String(), "S scalar does not match expected value")
+	require.NoError(tb, err)
+	require.Equal(tb, expected.field, rx.String(), "R field does not match expected value")
+	require.Equal(tb, expected.scalar, actual.S.String(), "S scalar does not match expected value")
 }

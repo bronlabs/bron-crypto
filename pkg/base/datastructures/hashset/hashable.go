@@ -106,22 +106,22 @@ func (s *MutableHashableSet[E]) Intersection(other ds.MutableSet[E]) ds.MutableS
 }
 
 // Difference returns a new set containing elements in this set but not in the other.
-func (t *MutableHashableSet[E]) Difference(other ds.MutableSet[E]) ds.MutableSet[E] {
-	out := t.Clone()
+func (s *MutableHashableSet[E]) Difference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := s.Clone()
 	out.RemoveAll(other.List()...)
 	return out
 }
 
 // SymmetricDifference returns a new set containing elements in either set but not both.
-func (t *MutableHashableSet[E]) SymmetricDifference(other ds.MutableSet[E]) ds.MutableSet[E] {
-	return t.Union(other).Difference(t.Intersection(other))
+func (s *MutableHashableSet[E]) SymmetricDifference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	return s.Union(other).Difference(s.Intersection(other))
 }
 
 // SubSets returns all possible subsets of this set (power set).
-func (t *MutableHashableSet[E]) SubSets() []ds.MutableSet[E] {
-	result := make([]ds.MutableSet[E], 1<<t.Size())
+func (s *MutableHashableSet[E]) SubSets() []ds.MutableSet[E] {
+	result := make([]ds.MutableSet[E], 1<<s.Size())
 	i := 0
-	for subset := range t.IterSubSets() {
+	for subset := range s.IterSubSets() {
 		result[i] = subset
 		i++
 	}

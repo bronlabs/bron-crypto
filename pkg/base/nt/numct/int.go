@@ -5,12 +5,12 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
@@ -192,13 +192,14 @@ func (i *Int) EuclideanDivVarTime(remainder *Nat, numerator, denominator *Int) (
 	z := rr.IsZero()
 
 	var qa Int
-	if sa == ct.False {
+	switch {
+	case sa == ct.False:
 		qa.Set(qq.Lift())
-	} else if (sa & z) != ct.False {
+	case (sa & z) != ct.False:
 		var qn Int
 		qn.Neg(qq.Lift())
 		qa.Set(&qn)
-	} else {
+	default:
 		var qn, qn1 Int
 		qn.Neg(qq.Lift())
 		qn1.Sub(&qn, IntOne())
@@ -218,11 +219,12 @@ func (i *Int) EuclideanDivVarTime(remainder *Nat, numerator, denominator *Int) (
 
 	if remainder != nil {
 		var rOut Int
-		if sa == ct.False {
+		switch {
+		case sa == ct.False:
 			rOut.Set(rr.Lift())
-		} else if (sa & z) != ct.False {
+		case (sa & z) != ct.False:
 			rOut.Set(IntZero())
-		} else {
+		default:
 			var notR Int
 			notR.SetNat(&d)
 			notR.Sub(&notR, rr.Lift())
@@ -390,9 +392,9 @@ func (i *Int) Square(x *Int) {
 }
 
 //// Bit returns the value of the bit at the given index.
-//func (i *Int) Bit(index uint) byte {
+// func (i *Int) Bit(index uint) byte {
 //	return i.Absed().Bit(index)
-//}
+// }.
 
 // Bytes returns a sign-magnitude encoding:
 //

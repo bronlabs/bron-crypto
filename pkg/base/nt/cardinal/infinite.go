@@ -17,7 +17,7 @@ type infinite struct{}
 
 // IsLessThanOrEqual checks if the infinite cardinal is less than or equal to another cardinal.
 // It will be equal only to another Infinite cardinal.
-func (i infinite) IsLessThanOrEqual(other Cardinal) bool {
+func (infinite) IsLessThanOrEqual(other Cardinal) bool {
 	_, otherIsInfinite := other.(infinite)
 	return otherIsInfinite
 }
@@ -28,29 +28,29 @@ func (i infinite) Clone() Cardinal {
 }
 
 // HashCode returns the hash code of the infinite cardinal.
-func (i infinite) HashCode() base.HashCode {
+func (infinite) HashCode() base.HashCode {
 	return base.DeriveHashCode([]byte("InfiniteCardinal"))
 }
 
 // Equal checks if the infinite cardinal is equal to another cardinal.
 // It will be equal only to another Infinite cardinal.
-func (i infinite) Equal(other Cardinal) bool {
+func (infinite) Equal(other Cardinal) bool {
 	_, otherIsInfinite := other.(infinite)
 	return otherIsInfinite
 }
 
 // Bytes panics as Bytes is not defined for Infinite cardinal.
-func (i infinite) Bytes() []byte {
+func (infinite) Bytes() []byte {
 	panic("Bytes() not supported for Infinite cardinal")
 }
 
 // BytesBE panics as BytesBE is not defined for Infinite cardinal.
-func (i infinite) BytesBE() []byte {
+func (infinite) BytesBE() []byte {
 	panic("BytesBE() not supported for Infinite cardinal")
 }
 
 // String returns the string representation of the infinite cardinal.
-func (i infinite) String() string {
+func (infinite) String() string {
 	return "InfiniteCardinal"
 }
 
@@ -65,36 +65,36 @@ func (i infinite) Mul(other Cardinal) Cardinal {
 }
 
 // Big panics as Big is not defined for Infinite cardinal.
-func (i infinite) Big() *big.Int {
+func (infinite) Big() *big.Int {
 	panic("Big() not supported for Infinite cardinal")
 }
 
 // Uint64 panics as Uint64 is not defined for Infinite cardinal.
-func (i infinite) Uint64() uint64 {
+func (infinite) Uint64() uint64 {
 	panic("Uint64() not supported for Infinite cardinal")
 }
 
 // IsZero always returns false for Infinite cardinal.
-func (i infinite) IsZero() bool {
+func (infinite) IsZero() bool {
 	return false
 }
 
 // IsFinite always returns false for Infinite cardinal.
-func (i infinite) IsFinite() bool {
+func (infinite) IsFinite() bool {
 	return false
 }
 
 // IsUnknown always returns false for Infinite cardinal.
-func (i infinite) IsUnknown() bool {
+func (infinite) IsUnknown() bool {
 	return false
 }
 
 // IsProbablyPrime panics as IsProbablyPrime is not defined for Infinite cardinal.
-func (i infinite) IsProbablyPrime() bool {
+func (infinite) IsProbablyPrime() bool {
 	panic("IsProbablyPrime() not supported for Infinite cardinal")
 }
 
 // BitLen panics as BitLen is not defined for Infinite cardinal.
-func (i infinite) BitLen() int {
+func (infinite) BitLen() int {
 	panic("BitLen() not supported for Infinite cardinal")
 }

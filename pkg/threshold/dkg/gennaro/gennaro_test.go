@@ -68,6 +68,7 @@ func setup[
 }
 
 func Test_Sanity(t *testing.T) {
+	t.Parallel()
 	threshold := uint(3)
 	total := uint(5)
 	group := k256.NewCurve()
@@ -160,6 +161,7 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			group := k256.NewCurve()
 			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-threshold-%s", tc.name))))
 			tape := hagrid.NewTranscript(tc.name)
@@ -231,6 +233,7 @@ func TestDKGPublicKeyFields(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("public key consistency", func(t *testing.T) {
+		t.Parallel()
 		var commonPublicKey *k256.Point
 		for id, output := range outputs.Iter() {
 			pk := output.PublicKeyValue()
@@ -247,6 +250,7 @@ func TestDKGPublicKeyFields(t *testing.T) {
 	})
 
 	t.Run("partial public keys properties", func(t *testing.T) {
+		t.Parallel()
 		// Collect all partial public keys
 		allPartialPKs := make(map[sharing.ID]map[sharing.ID]*k256.Point)
 
@@ -282,6 +286,7 @@ func TestDKGPublicKeyFields(t *testing.T) {
 	})
 
 	t.Run("partial public keys match verification vector evaluations", func(t *testing.T) {
+		t.Parallel()
 		// Get the common verification vector
 		output0 := outputs.Values()[0]
 		verificationVector := output0.VerificationVector()
@@ -327,6 +332,7 @@ func TestDKGShareProperties(t *testing.T) {
 	}
 
 	t.Run("share uniqueness", func(t *testing.T) {
+		t.Parallel()
 		// Verify all shares have unique values
 		shareValues := make(map[string]sharing.ID)
 		for id, share := range sharesByID {
@@ -339,12 +345,14 @@ func TestDKGShareProperties(t *testing.T) {
 	})
 
 	t.Run("share IDs match participant IDs", func(t *testing.T) {
+		t.Parallel()
 		for id, share := range sharesByID {
 			require.Equal(t, id, share.ID())
 		}
 	})
 
 	t.Run("verification vectors consistency", func(t *testing.T) {
+		t.Parallel()
 		var referenceVV feldman.VerificationVector[*k256.Point, *k256.Scalar]
 		for _, output := range outputs.Values() {
 			if referenceVV == nil {
@@ -357,6 +365,7 @@ func TestDKGShareProperties(t *testing.T) {
 	})
 
 	t.Run("share reconstruction subsets", func(t *testing.T) {
+		t.Parallel()
 		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
 		require.NoError(t, err)
 
@@ -477,6 +486,7 @@ func TestDKGRoundMessages(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("round 1 message properties", func(t *testing.T) {
+		t.Parallel()
 		_, parties := setup(t, threshold, total, group, sid, tape, prng)
 
 		r1broadcasts, err := tu.DoGennaroRound1(parties.Values())
@@ -544,6 +554,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("participant not in access structure", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
@@ -563,6 +574,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 	})
 
 	t.Run("minimum participants", func(t *testing.T) {
+		t.Parallel()
 		// Test with minimum viable configuration (2-of-2)
 		shareholders := sharing.NewOrdinalShareholderSet(2)
 		ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
@@ -645,6 +657,7 @@ func TestParticipantCreation(t *testing.T) {
 	prng := pcg.New(12345, 67890)
 
 	t.Run("valid participant creation", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
@@ -665,6 +678,7 @@ func TestParticipantCreation(t *testing.T) {
 	})
 
 	t.Run("nil group", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
@@ -684,6 +698,7 @@ func TestParticipantCreation(t *testing.T) {
 	})
 
 	t.Run("nil tape", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
@@ -703,6 +718,7 @@ func TestParticipantCreation(t *testing.T) {
 	})
 
 	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
@@ -722,6 +738,7 @@ func TestParticipantCreation(t *testing.T) {
 	})
 
 	t.Run("nil access structure", func(t *testing.T) {
+		t.Parallel()
 		p, err := gennaro.NewParticipant(
 			sid,
 			curve,
@@ -737,6 +754,7 @@ func TestParticipantCreation(t *testing.T) {
 	})
 
 	t.Run("invalid participant ID not in shareholders", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
@@ -769,6 +787,7 @@ func TestRoundProgression(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("round 1 broadcasts", func(t *testing.T) {
+		t.Parallel()
 		_, parties := setup(t, threshold, total, group, sid, tape, prng)
 		// Execute round 1 for all participants
 		r1broadcasts, err := tu.DoGennaroRound1(parties.Values())
@@ -791,6 +810,7 @@ func TestRoundProgression(t *testing.T) {
 	})
 
 	t.Run("round 2 broadcasts and unicasts", func(t *testing.T) {
+		t.Parallel()
 		_, parties := setup(t, threshold, total, group, sid, tape, prng)
 		// Execute round 1
 		r1broadcasts, err := tu.DoGennaroRound1(parties.Values())
@@ -834,6 +854,7 @@ func TestRoundProgression(t *testing.T) {
 	})
 
 	t.Run("round 3 output", func(t *testing.T) {
+		t.Parallel()
 		_, parties := setup(t, threshold, total, group, sid, tape.Clone(), prng)
 		outputs, err := tu.DoGennaroDKG(t, parties.Values())
 		require.NoError(t, err)
@@ -885,6 +906,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 	participant := parties.Values()[0]
 
 	t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
+		t.Parallel()
 		// Create dummy round 2 input
 		dummyR2Input := hashmap.NewComparable[sharing.ID, *gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]]().Freeze()
 
@@ -894,6 +916,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 	})
 
 	t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) {
+		t.Parallel()
 		// Create dummy round 3 inputs
 		dummyR3Broadcast := hashmap.NewComparable[sharing.ID, *gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]]().Freeze()
 		dummyR3Unicast := hashmap.NewComparable[sharing.ID, *gennaro.Round2Unicast[*k256.Point, *k256.Scalar]]().Freeze()
@@ -904,6 +927,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 	})
 
 	t.Run("cannot re-execute round 1", func(t *testing.T) {
+		t.Parallel()
 		// Execute round 1
 		_, err := participant.Round1()
 		require.NoError(t, err)
@@ -927,6 +951,7 @@ func TestMaliciousParticipants(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("invalid Pedersen share in round 2", func(t *testing.T) {
+		t.Parallel()
 		t.Skip("TODO: Fix this test - need to understand how to create corrupted shares with new Message/Witness API")
 		_, parties := setup(t, threshold, total, group, sid, tape, prng)
 
@@ -997,6 +1022,7 @@ func TestDifferentThresholds(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			group := k256.NewCurve()
 			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-%s", tc.name))))
 			tape := hagrid.NewTranscript(tc.name)
@@ -1040,6 +1066,7 @@ func TestDifferentCurves(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256 curve", func(t *testing.T) {
+		t.Parallel()
 		threshold := uint(3)
 		total := uint(5)
 		group := k256.NewCurve()
@@ -1054,6 +1081,7 @@ func TestDifferentCurves(t *testing.T) {
 	})
 
 	t.Run("bls12-381 curve", func(t *testing.T) {
+		t.Parallel()
 		threshold := uint(3)
 		total := uint(5)
 		group := bls12381.NewG1()
@@ -1174,6 +1202,7 @@ func TestShareCombination(t *testing.T) {
 
 	// Test reconstruction with different subsets
 	t.Run("different threshold subsets", func(t *testing.T) {
+		t.Parallel()
 		// Generate different combinations of threshold shares
 		subsets := [][]sharing.ID{
 			{1, 2, 3},
@@ -1214,6 +1243,7 @@ func TestErrorPropagation(t *testing.T) {
 	t.Parallel()
 
 	t.Run("insufficient randomness", func(t *testing.T) {
+		t.Parallel()
 		threshold := uint(3)
 		total := uint(5)
 		group := k256.NewCurve()

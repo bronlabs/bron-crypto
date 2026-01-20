@@ -688,7 +688,7 @@ func TestRat_CBOR_EdgeCases(t *testing.T) {
 func TestRat_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	a := num.Z().FromInt64(22)
 	b, err := num.NPlus().FromUint64(7)
 	require.NoError(t, err)
@@ -703,7 +703,7 @@ func TestRat_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestRat_CBOR_Operations(t *testing.T) {

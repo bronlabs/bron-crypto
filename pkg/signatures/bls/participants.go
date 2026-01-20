@@ -71,7 +71,8 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("could not create private key")
 	}
-	return sk, sk.PublicKey(), nil
+	pk := sk.PublicKey()
+	return sk, pk, nil
 }
 
 // Generate creates a new BLS key pair using random bytes from the provided reader.
@@ -118,7 +119,7 @@ func SignWithCustomDST[
 	}
 }
 
-// Signer produces BLS signatures using the CoreSign algorithm. The signing behavior
+// Signer produces BLS signatures using the CoreSign algorithm. The signing behaviour
 // depends on the configured rogue key prevention algorithm:
 //   - Basic: signs the message directly
 //   - MessageAugmentation: signs pk || message
@@ -184,7 +185,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, 
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not sign")
 	}
-	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv}
+	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv, pop: nil}
 	if s.rogueKeyAlg == POP {
 		out.pop = &pop
 	}
@@ -232,7 +233,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not sign")
 	}
-	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv}
+	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv, pop: nil}
 	if s.rogueKeyAlg == POP {
 		out.pop = &pop
 	}
@@ -287,7 +288,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 	}
 
 	for i, v := range batchValues {
-		batch[i] = &Signature[SG, SGFE, PK, PKFE, E, S]{v: v}
+		batch[i] = &Signature[SG, SGFE, PK, PKFE, E, S]{v: v, pop: nil}
 		if s.rogueKeyAlg == POP {
 			batch[i].pop = &pop
 			continue
@@ -351,7 +352,7 @@ func VerifyWithProofsOfPossession[
 // Verifier validates BLS signatures using the CoreVerify algorithm.
 // Verification uses the pairing equation to check: e(pk, H(m)) = e(G, sig)
 //
-// The verification behavior depends on the rogue key prevention algorithm:
+// The verification behaviour depends on the rogue key prevention algorithm:
 //   - Basic: verifies signature directly
 //   - MessageAugmentation: reconstructs pk || message before verification
 //   - POP: verifies attached proof of possession before signature verification
@@ -373,7 +374,7 @@ type Verifier[
 
 // Verify validates a BLS signature against a public key and message.
 //
-// The verification uses an optimized pairing check: e(pk^-1, H(m)) * e(G, sig) = 1
+// The verification uses an optimised pairing check: e(pk^-1, H(m)) * e(G, sig) = 1
 // which reduces the number of Miller loop iterations.
 //
 // Security: Validates that both the public key and signature are valid non-identity
@@ -434,13 +435,13 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) Verify(signature *Signature[SG, SGF
 }
 
 // AggregateVerify validates an aggregate signature against multiple public keys and messages.
-// The verification behavior depends on the rogue key prevention algorithm:
+// The verification behaviour depends on the rogue key prevention algorithm:
 //
 //   - Basic: requires all messages to be distinct to prevent rogue key attacks
 //   - MessageAugmentation: augments each message with its corresponding public key
 //   - POP: requires valid proofs of possession for each public key (via VerifyWithProofsOfPossession)
 //
-// When all messages are identical and using the POP scheme, the optimized FastAggregateVerify
+// When all messages are identical and using the POP scheme, the optimised FastAggregateVerify
 // algorithm is used, which aggregates public keys before verification.
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.9

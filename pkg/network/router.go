@@ -12,7 +12,7 @@ import (
 
 // Delivery abstracts a transport layer used by the router.
 type Delivery interface {
-	PartyId() sharing.ID
+	PartyID() sharing.ID
 	Quorum() []sharing.ID
 	Send(to sharing.ID, message []byte) error
 	Receive() (from sharing.ID, message []byte, err error)
@@ -33,11 +33,11 @@ func NewRouter(delivery Delivery) *Router {
 }
 
 // SendTo serialises and sends messages to the given recipients under a correlation identifier.
-func (r *Router) SendTo(correlationId string, messages map[sharing.ID][]byte) error {
+func (r *Router) SendTo(correlationID string, messages map[sharing.ID][]byte) error {
 	for id, payload := range messages {
 		//nolint:exhaustruct // From is optional
 		message := routerMessage{
-			CorrelationId: correlationId,
+			CorrelationID: correlationID,
 			Payload:       payload,
 		}
 		serializedMessage, err := serde.MarshalCBOR(&message)
@@ -54,11 +54,11 @@ func (r *Router) SendTo(correlationId string, messages map[sharing.ID][]byte) er
 
 // ReceiveFrom collects messages matching the correlation identifier from the specified senders,
 // buffering unrelated messages for later retrieval.
-func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sharing.ID][]byte, error) {
+func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sharing.ID][]byte, error) {
 	received := make(map[sharing.ID][]byte)
 	var kept []routerMessage
 	for _, bufferedMsg := range r.receiveBuffer {
-		if bufferedMsg.CorrelationId == correlationId {
+		if bufferedMsg.CorrelationID == correlationID {
 			received[bufferedMsg.From] = bufferedMsg.Payload
 		} else {
 			kept = append(kept, bufferedMsg)
@@ -76,7 +76,7 @@ func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sha
 			return nil, errs2.Wrap(err).WithMessage("failed to decode message")
 		}
 
-		if message.CorrelationId == correlationId {
+		if message.CorrelationID == correlationID {
 			received[from] = message.Payload
 		} else {
 			message.From = from
@@ -86,9 +86,9 @@ func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sha
 	return received, nil
 }
 
-// PartyId returns the router's local party identifier.
-func (r *Router) PartyId() sharing.ID {
-	return r.delivery.PartyId()
+// PartyID returns the router's local party identifier.
+func (r *Router) PartyID() sharing.ID {
+	return r.delivery.PartyID()
 }
 
 // Quorum returns the identifiers of all parties in the session.
@@ -98,6 +98,6 @@ func (r *Router) Quorum() []sharing.ID {
 
 type routerMessage struct {
 	From          sharing.ID `cbor:"from"`
-	CorrelationId string     `cbor:"correlationId"`
+	CorrelationID string     `cbor:"correlationID"`
 	Payload       []byte     `cbor:"payload"`
 }

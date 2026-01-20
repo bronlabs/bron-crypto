@@ -61,7 +61,7 @@ func (a *ThresholdAccessStructure) Shareholders() ds.Set[ID] {
 func (a *ThresholdAccessStructure) IsAuthorized(ids ...ID) bool {
 	idsSet := hashset.NewComparable(ids...)
 	return idsSet.Size() >= int(a.t) &&
-		idsSet.Size() <= int(a.ps.Size()) &&
+		idsSet.Size() <= a.ps.Size() &&
 		idsSet.Freeze().IsSubSet(a.ps)
 }
 

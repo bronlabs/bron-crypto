@@ -10,6 +10,7 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -109,7 +110,11 @@ func (f *FqField) FromBytesBEReduce(input []byte) (*FqFieldElement, error) {
 	nNat.SetBytes(input)
 	fqFieldOrder.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	return f.FromBytesBE(vBytes)
+	out, err := f.FromBytesBE(vBytes)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to convert reduced bytes into field element")
+	}
+	return out, nil
 }
 
 // FqFieldElement represents a field element.
@@ -118,18 +123,18 @@ type FqFieldElement struct {
 }
 
 // Structure returns the algebraic structure for the receiver.
-func (s *FqFieldElement) Structure() algebra.Structure[*FqFieldElement] {
+func (*FqFieldElement) Structure() algebra.Structure[*FqFieldElement] {
 	return newFqField()
 }
 
 // MarshalBinary implements encoding.BinaryMarshaler.
-func (s *FqFieldElement) MarshalBinary() ([]byte, error) {
-	return s.V.Bytes(), nil
+func (fe *FqFieldElement) MarshalBinary() ([]byte, error) {
+	return fe.V.Bytes(), nil
 }
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaler.
-func (s *FqFieldElement) UnmarshalBinary(data []byte) error {
-	if ok := s.V.SetBytes(data); ok == 0 {
+func (fe *FqFieldElement) UnmarshalBinary(data []byte) error {
+	if ok := fe.V.SetBytes(data); ok == 0 {
 		return curves.ErrSerialisation.WithMessage("cannot unmarshal scalar")
 	}
 

@@ -1,4 +1,4 @@
-package przsSetup
+package przssetup
 
 import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
@@ -10,7 +10,7 @@ type Round1Broadcast struct {
 	Commitments map[sharing.ID]hash_comm.Commitment `cbor:"commitments"`
 }
 
-func (m *Round1Broadcast) Bytes() []byte {
+func (*Round1Broadcast) Bytes() []byte {
 	panic("not used")
 }
 
@@ -19,6 +19,6 @@ type Round2P2P struct {
 	Witness          hash_comm.Witness     `cbor:"witness"`
 }
 
-func (m *Round2P2P) Bytes() []byte {
+func (*Round2P2P) Bytes() []byte {
 	panic("not used")
 }

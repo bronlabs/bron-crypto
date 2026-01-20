@@ -22,7 +22,7 @@ type Share[S algebra.PrimeFieldElement[S]] struct {
 }
 
 type shareDTO[S algebra.PrimeFieldElement[S]] struct {
-	ID       sharing.ID         `cbor:"sharingId"`
+	ID       sharing.ID         `cbor:"sharingID"`
 	Secret_  *pedcom.Message[S] `cbor:"secret"`
 	Blinding *pedcom.Witness[S] `cbor:"blinding"`
 }

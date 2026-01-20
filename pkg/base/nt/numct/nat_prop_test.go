@@ -77,10 +77,10 @@ func TestNat_EuclideanDiv_Property(t *testing.T) {
 			dqr.Mul(d, &q)
 			dqr.Add(&dqr, &r)
 
-			require.Equal(t, ok, ct.True)
-			require.Equal(t, dqr.Equal(a), ct.True)
+			require.Equal(t, ct.True, ok)
+			require.Equal(t, ct.True, dqr.Equal(a))
 			lt, _, _ := r.Compare(d)
-			require.Equal(t, lt, ct.True)
+			require.Equal(t, ct.True, lt)
 		} else {
 			require.Equal(t, ct.True, d.IsZero())
 		}
@@ -100,10 +100,10 @@ func TestNat_EuclideanDivVarTime_Property(t *testing.T) {
 			dqr.Mul(d, &q)
 			dqr.Add(&dqr, &r)
 
-			require.Equal(t, ok, ct.True)
-			require.Equal(t, dqr.Equal(a), ct.True)
+			require.Equal(t, ct.True, ok)
+			require.Equal(t, ct.True, dqr.Equal(a))
 			lt, _, _ := r.Compare(d)
-			require.Equal(t, lt, ct.True)
+			require.Equal(t, ct.True, lt)
 		} else {
 			require.Equal(t, ct.True, d.IsZero())
 		}

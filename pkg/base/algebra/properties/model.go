@@ -4,12 +4,14 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 type Model[S Structure, E Element] struct {
 	*Carrier[S, E]
+
 	Theory []Axiom
 }
 
@@ -23,6 +25,7 @@ type TwoSortedModel[
 	E1, E2 Element,
 ] struct {
 	*Carrier2[S1, S2, E1, E2]
+
 	Theory []Axiom
 }
 
@@ -33,9 +36,9 @@ func (m *TwoSortedModel[S1, S2, E1, E2]) Check(t *testing.T) {
 
 func Union[S Structure, E Element](t *testing.T, models ...*Model[S, E]) *Model[S, E] {
 	t.Helper()
-	require.Greater(t, len(models), 0)
+	require.NotEmpty(t, models)
 	for _, m := range models {
-		require.EqualValues(t, models[0].Value.Name(), m.Value.Name())
+		require.Equal(t, models[0].Value.Name(), m.Value.Name())
 	}
 	return &Model[S, E]{
 		Carrier: models[0].Carrier,
@@ -53,10 +56,10 @@ func Union2[
 	E1, E2 Element,
 ](t *testing.T, models ...*TwoSortedModel[S1, S2, E1, E2]) *TwoSortedModel[S1, S2, E1, E2] {
 	t.Helper()
-	require.Greater(t, len(models), 0)
+	require.NotEmpty(t, models)
 	for _, m := range models {
-		require.EqualValues(t, models[0].First.Value.Name(), m.First.Value.Name())
-		require.EqualValues(t, models[0].Second.Value.Name(), m.Second.Value.Name())
+		require.Equal(t, models[0].First.Value.Name(), m.First.Value.Name())
+		require.Equal(t, models[0].Second.Value.Name(), m.Second.Value.Name())
 	}
 	return &TwoSortedModel[S1, S2, E1, E2]{
 		Carrier2: models[0].Carrier2,
@@ -74,9 +77,9 @@ func UnionAlongFirst[
 	E1, E2 Element,
 ](t *testing.T, model *TwoSortedModel[S1, S2, E1, E2], others ...*Model[S1, E1]) *TwoSortedModel[S1, S2, E1, E2] {
 	t.Helper()
-	require.Greater(t, len(others), 0)
+	require.NotEmpty(t, others)
 	for _, m := range others {
-		require.EqualValues(t, model.First.Value.Name(), m.Value.Name())
+		require.Equal(t, model.First.Value.Name(), m.Value.Name())
 	}
 	return &TwoSortedModel[S1, S2, E1, E2]{
 		Carrier2: model.Carrier2,
@@ -97,9 +100,9 @@ func UnionAlongSecond[
 	E1, E2 Element,
 ](t *testing.T, model *TwoSortedModel[S1, S2, E1, E2], others ...*Model[S2, E2]) *TwoSortedModel[S1, S2, E1, E2] {
 	t.Helper()
-	require.Greater(t, len(others), 0)
+	require.NotEmpty(t, others)
 	for _, m := range others {
-		require.EqualValues(t, model.Second.Value.Name(), m.Value.Name())
+		require.Equal(t, model.Second.Value.Name(), m.Value.Name())
 	}
 	return &TwoSortedModel[S1, S2, E1, E2]{
 		Carrier2: model.Carrier2,
@@ -124,6 +127,7 @@ func Pair[
 		Carrier2: &Carrier2[S1, S2, E1, E2]{
 			First:  first.Carrier,
 			Second: second.Carrier,
+			Action: nil,
 		},
 		Theory: slices.Concat(first.Theory, second.Theory),
 	}

@@ -11,7 +11,7 @@ import (
 // Name is the identifier for a compiler implementation (e.g., "FiatShamir", "Fischlin").
 type Name string
 
-// NIZKPoKProof is a serialized non-interactive zero-knowledge proof of knowledge.
+// NIZKPoKProof is a serialised non-interactive zero-knowledge proof of knowledge.
 // The format depends on the compiler that generated it.
 type NIZKPoKProof []byte
 
@@ -40,7 +40,7 @@ type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness] interface {
 	// SigmaProtocolName returns the name of the underlying sigma protocol.
 	SigmaProtocolName() sigma.Name
 	// NewProver creates a new prover for generating proofs.
-	NewProver(sessionId network.SID, transcript transcripts.Transcript) (NIProver[X, W], error)
+	NewProver(sessionID network.SID, transcript transcripts.Transcript) (NIProver[X, W], error)
 	// NewVerifier creates a new verifier for checking proofs.
-	NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (NIVerifier[X], error)
+	NewVerifier(sessionID network.SID, transcript transcripts.Transcript) (NIVerifier[X], error)
 }

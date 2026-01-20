@@ -31,7 +31,7 @@ func (r *agreeOnRandomRunner) Run(rt *network.Router) ([]byte, error) {
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2In, err := exchange.ExchangeBroadcast(rt, "AgreeOnRandomRound1Broadcast", r1Out)
+	r2In, err := exchange.Broadcast(rt, "AgreeOnRandomRound1Broadcast", r1Out)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
@@ -41,7 +41,7 @@ func (r *agreeOnRandomRunner) Run(rt *network.Router) ([]byte, error) {
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3In, err := exchange.ExchangeBroadcast(rt, "AgreeOnRandomRound2Broadcast", r2Out)
+	r3In, err := exchange.Broadcast(rt, "AgreeOnRandomRound2Broadcast", r2Out)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
 	}

@@ -6,6 +6,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -19,7 +21,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 const iters = 128
@@ -28,41 +29,49 @@ func TestFiatShamir_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, k256.NewCurve())
 		}
 	})
 	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, p256.NewCurve())
 		}
 	})
 	t.Run("edwards25519", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, edwards25519.NewPrimeSubGroup())
 		}
 	})
 	t.Run("curve25519", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, curve25519.NewPrimeSubGroup())
 		}
 	})
 	t.Run("pallas", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, pasta.NewPallasCurve())
 		}
 	})
 	t.Run("vesta", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, pasta.NewVestaCurve())
 		}
 	})
 	t.Run("BLS12-381 G1", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, bls12381.NewG1())
 		}
 	})
 	t.Run("BLS12-381 G2", func(t *testing.T) {
+		t.Parallel()
 		for range iters {
 			testSchnorrFiatShamir(t, bls12381.NewG2())
 		}
@@ -75,6 +84,7 @@ func testSchnorrFiatShamir[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	prng := crand.Reader
 	var sid network.SID
 	_, err := io.ReadFull(prng, sid[:])
+	require.NoError(t, err)
 	g := group.Generator()
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	witnessValue, err := field.Random(prng)
@@ -115,8 +125,8 @@ func TestFiatShamir_WrongWitness(t *testing.T) {
 	prng := crand.Reader
 	curve := k256.NewCurve()
 
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
@@ -139,12 +149,12 @@ func TestFiatShamir_WrongWitness(t *testing.T) {
 	proverTranscript := hagrid.NewTranscript("test")
 	verifierTranscript := proverTranscript.Clone()
 
-	prover, err := niScheme.NewProver(sessionId, proverTranscript)
+	prover, err := niScheme.NewProver(sessionID, proverTranscript)
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, wrongWitness)
 	require.NoError(t, err)
 
-	verifier, err := niScheme.NewVerifier(sessionId, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	// Verification should fail with wrong witness
@@ -158,8 +168,8 @@ func TestFiatShamir_TamperedProof(t *testing.T) {
 	prng := crand.Reader
 	curve := k256.NewCurve()
 
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
@@ -177,7 +187,7 @@ func TestFiatShamir_TamperedProof(t *testing.T) {
 	proverTranscript := hagrid.NewTranscript("test")
 	verifierTranscript := proverTranscript.Clone()
 
-	prover, err := niScheme.NewProver(sessionId, proverTranscript)
+	prover, err := niScheme.NewProver(sessionID, proverTranscript)
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(t, err)
@@ -187,7 +197,7 @@ func TestFiatShamir_TamperedProof(t *testing.T) {
 		proof[0] ^= 0xFF
 	}
 
-	verifier, err := niScheme.NewVerifier(sessionId, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	// Verification should fail with tampered proof
@@ -201,8 +211,8 @@ func TestFiatShamir_EmptyProof(t *testing.T) {
 	prng := crand.Reader
 	curve := k256.NewCurve()
 
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
@@ -217,7 +227,7 @@ func TestFiatShamir_EmptyProof(t *testing.T) {
 	require.NoError(t, err)
 
 	verifierTranscript := hagrid.NewTranscript("test")
-	verifier, err := niScheme.NewVerifier(sessionId, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	// Verification should fail with empty proof
@@ -228,16 +238,16 @@ func TestFiatShamir_EmptyProof(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestFiatShamir_WrongSessionId(t *testing.T) {
+func TestFiatShamir_WrongSessionID(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
 	curve := k256.NewCurve()
 
-	var proverSessionId, verifierSessionId network.SID
-	_, err := io.ReadFull(prng, proverSessionId[:])
+	var proverSessionID, verifierSessionID network.SID
+	_, err := io.ReadFull(prng, proverSessionID[:])
 	require.NoError(t, err)
-	_, err = io.ReadFull(prng, verifierSessionId[:])
+	_, err = io.ReadFull(prng, verifierSessionID[:])
 	require.NoError(t, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
@@ -255,13 +265,13 @@ func TestFiatShamir_WrongSessionId(t *testing.T) {
 	proverTranscript := hagrid.NewTranscript("test")
 	verifierTranscript := hagrid.NewTranscript("test")
 
-	prover, err := niScheme.NewProver(proverSessionId, proverTranscript)
+	prover, err := niScheme.NewProver(proverSessionID, proverTranscript)
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(t, err)
 
 	// Use different session ID for verifier
-	verifier, err := niScheme.NewVerifier(verifierSessionId, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(verifierSessionID, verifierTranscript)
 	require.NoError(t, err)
 
 	// Verification should fail with wrong session ID
@@ -299,8 +309,8 @@ func testTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	tb.Helper()
 
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
@@ -318,12 +328,12 @@ func testTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	proverTranscript := hagrid.NewTranscript("test")
 	verifierTranscript := hagrid.NewTranscript("test")
 
-	prover, err := niScheme.NewProver(sessionId, proverTranscript)
+	prover, err := niScheme.NewProver(sessionID, proverTranscript)
 	require.NoError(tb, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(tb, err)
 
-	verifier, err := niScheme.NewVerifier(sessionId, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
 	require.NoError(tb, err)
 	err = verifier.Verify(statement, proof)
 	require.NoError(tb, err)

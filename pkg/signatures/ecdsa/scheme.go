@@ -19,7 +19,7 @@ type Scheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 
 // NewScheme creates a new ECDSA scheme from a suite and random source.
 //
-// For randomized ECDSA suites, prng must be a cryptographically secure random source
+// For randomised ECDSA suites, prng must be a cryptographically secure random source
 // (e.g., crypto/rand.Reader). For deterministic suites (RFC 6979), prng can be nil
 // as the nonce is derived from the private key and message.
 func NewScheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], prng io.Reader) (*Scheme[P, B, S], error) {
@@ -35,7 +35,7 @@ func NewScheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 }
 
 // Name returns the signature scheme identifier ("ECDSA").
-func (s *Scheme[P, B, S]) Name() signatures.Name {
+func (*Scheme[P, B, S]) Name() signatures.Name {
 	return Name
 }
 

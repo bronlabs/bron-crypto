@@ -75,8 +75,8 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 	maxBits := 0
 	for i, s := range scalars {
 		scalarBytes[i] = s
-		if bits := len(s) * 8; bits > maxBits {
-			maxBits = bits
+		if numBits := len(s) * 8; numBits > maxBits {
+			maxBits = numBits
 		}
 	}
 	if maxBits == 0 {
@@ -107,8 +107,8 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 		if len(b) == 0 {
 			return 0
 		}
-		var acc uint = 0
-		for k := 0; k < w; k++ {
+		var acc uint
+		for k := range w {
 			bitIndex := start + k
 			byteIndex := bitIndex / 8
 			if byteIndex >= len(b) {
@@ -124,7 +124,7 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 	var acc P
 	PP(&acc).SetZero()
 	for wIdx := numWindows - 1; wIdx >= 0; wIdx-- {
-		for i := 0; i < w; i++ {
+		for range w {
 			PP(&acc).Add(&acc, &acc)
 		}
 		buckets := make([]PP, windowSize)
@@ -139,7 +139,7 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 			if win == 0 {
 				continue
 			}
-			PP(buckets[win]).Add(buckets[win], points[i])
+			buckets[win].Add(buckets[win], points[i])
 		}
 
 		// Summation by running sum from highest bucket down.

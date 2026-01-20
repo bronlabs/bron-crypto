@@ -9,13 +9,13 @@ func NewPaymentMessage(source, receiver *PublicKey, amount, fee uint64, nonce, v
 
 	// ===== COMMON SECTION =====
 	// Reference: commonToInputLegacy in sign-legacy.ts
-	// Order: fee, legacyTokenId, feePayer, nonce, validUntil, memo
+	// Order: fee, legacyTokenID, feePayer, nonce, validUntil, memo
 
 	// 1. Fee (64 bits, LSB-first)
 	msg.AddBits(uint64ToBits(fee)...)
 
 	// 2. Legacy token ID (64 bits: [true, false*63])
-	msg.AddBits(legacyTokenId()...)
+	msg.AddBits(legacyTokenID()...)
 
 	// 3. Fee payer public key (x as field, isOdd as 1 bit)
 	// In payments, the fee payer is the source
@@ -34,7 +34,7 @@ func NewPaymentMessage(source, receiver *PublicKey, amount, fee uint64, nonce, v
 
 	// ===== BODY SECTION =====
 	// Reference: bodyToInputLegacy in sign-legacy.ts
-	// Order: tag, source, receiver, legacyTokenId, amount, tokenLocked
+	// Order: tag, source, receiver, legacyTokenID, amount, tokenLocked
 
 	// 1. Tag (3 bits: Payment=0 -> [false, false, false])
 	msg.AddBits(tagToBits(0)...)
@@ -50,7 +50,7 @@ func NewPaymentMessage(source, receiver *PublicKey, amount, fee uint64, nonce, v
 	}
 
 	// 4. Legacy token ID again
-	msg.AddBits(legacyTokenId()...)
+	msg.AddBits(legacyTokenID()...)
 
 	// 5. Amount (64 bits, LSB-first)
 	msg.AddBits(uint64ToBits(amount)...)
@@ -66,13 +66,13 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 
 	// ===== COMMON SECTION =====
 	// Reference: commonToInputLegacy in sign-legacy.ts
-	// Order: fee, legacyTokenId, feePayer, nonce, validUntil, memo
+	// Order: fee, legacyTokenID, feePayer, nonce, validUntil, memo
 
 	// 1. Fee (64 bits, LSB-first)
 	msg.AddBits(uint64ToBits(fee)...)
 
 	// 2. Legacy token ID (64 bits: [true, false*63])
-	msg.AddBits(legacyTokenId()...)
+	msg.AddBits(legacyTokenID()...)
 
 	// 3. Fee payer public key (x as field, isOdd as 1 bit)
 	if err := addPublicKeyToInput(msg, source); err != nil {
@@ -90,7 +90,7 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 
 	// ===== BODY SECTION =====
 	// Reference: bodyToInputLegacy in sign-legacy.ts
-	// Order: tag, source, receiver (delegate), legacyTokenId, amount, tokenLocked
+	// Order: tag, source, receiver (delegate), legacyTokenID, amount, tokenLocked
 
 	// 1. Tag (3 bits: StakeDelegation=1 -> [false, false, true])
 	msg.AddBits(tagToBits(1)...)
@@ -105,7 +105,7 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 	}
 
 	// 4. Legacy token ID again
-	msg.AddBits(legacyTokenId()...)
+	msg.AddBits(legacyTokenID()...)
 
 	// 5. Amount (64 bits, LSB-first) - 0 for delegation
 	msg.AddBits(uint64ToBits(0)...)
@@ -116,9 +116,9 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 	return msg, nil
 }
 
-// legacyTokenId is [true, false, false, ..., false] (64 bits total).
+// legacyTokenID is [true, false, false, ..., false] (64 bits total).
 // Reference: https://github.com/o1-labs/o1js/blob/main/src/mina-signer/src/sign-legacy.ts
-func legacyTokenId() []bool {
+func legacyTokenID() []bool {
 	bits := make([]bool, 64)
 	bits[0] = true
 	return bits

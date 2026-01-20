@@ -65,7 +65,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast]) 
 		received, _ := inb.Get(pid)
 		c.state.theirBigRCommitments[pid] = received.BigRCommitment
 	}
-	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionId, S, nic)
+	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
 	c.state.tapeFrozenBeforeDlogProof = c.tape.Clone()
 	bigRProof, statement, err := dlogProve(c, c.state.k, c.state.bigR, c.state.quorumBytes)
 	if err != nil {
@@ -126,7 +126,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 
 func commitBigR[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
-](c *Cosigner[E, S, M], bigR E) (lindell22.Commitment, lindell22.Opening, error) {
+](c *Cosigner[E, S, M], bigR E) (commitment lindell22.Commitment, opening lindell22.Opening, err error) {
 	key, err := lindell22.NewCommitmentKey(c.sid, c.SharingID(), c.state.quorumBytes)
 	if err != nil {
 		return lindell22.Commitment{}, lindell22.Opening{}, errs2.Wrap(err).WithMessage("cannot create commitment key")
@@ -136,7 +136,7 @@ func commitBigR[
 	if err != nil {
 		return lindell22.Commitment{}, lindell22.Opening{}, errs2.Wrap(err).WithMessage("cannot create commitment scheme")
 	}
-	commitment, opening, err := commitmentScheme.Committer().Commit(bigR.Bytes(), c.prng)
+	commitment, opening, err = commitmentScheme.Committer().Commit(bigR.Bytes(), c.prng)
 	if err != nil {
 		return lindell22.Commitment{}, lindell22.Opening{}, errs2.Wrap(err).WithMessage("cannot commit to R")
 	}
@@ -162,7 +162,7 @@ func verifyBigRCommitment[
 
 func dlogProve[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
-](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (compiler.NIZKPoKProof, *schnorrpok.Statement[E, S], error) {
+](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (proof compiler.NIZKPoKProof, statement *schnorrpok.Statement[E, S], err error) {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	c.tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
 	c.tape.AppendBytes("prover", proverIDBytes)
@@ -170,13 +170,13 @@ func dlogProve[
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog prover")
 	}
-	statement := &schnorrpok.Statement[E, S]{
+	statement = &schnorrpok.Statement[E, S]{
 		X: bigR,
 	}
 	witness := &schnorrpok.Witness[S]{
 		W: k,
 	}
-	proof, err := prover.Prove(statement, witness)
+	proof, err = prover.Prove(statement, witness)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog proof")
 	}

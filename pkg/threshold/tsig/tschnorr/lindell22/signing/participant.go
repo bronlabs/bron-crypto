@@ -68,7 +68,7 @@ func (c *Cosigner[GE, S, M]) SessionID() network.SID {
 // SharingID returns the party's identifier in the secret sharing scheme.
 func (c *Cosigner[GE, S, M]) SharingID() sharing.ID {
 	if c == nil {
-		return *new(sharing.ID)
+		return 0
 	}
 	return c.shard.Share().ID()
 }
@@ -202,8 +202,12 @@ func NewCosigner[
 		variant:      variant,
 		round:        1,
 		state: &State[GE, S]{
-			quorumBytes:          quorumBytes,
-			theirBigRCommitments: make(map[sharing.ID]lindell22.Commitment, quorum.Size()-1),
+			quorumBytes:               quorumBytes,
+			k:                         *new(S),
+			bigR:                      *new(GE),
+			opening:                   lindell22.Opening{},
+			theirBigRCommitments:      make(map[sharing.ID]lindell22.Commitment, quorum.Size()-1),
+			tapeFrozenBeforeDlogProof: nil,
 		},
 	}, nil
 }

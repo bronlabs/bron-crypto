@@ -1,15 +1,16 @@
-package mina
+package mina //nolint:testpackage // to test unexported identifiers
 
 import (
 	"math/big"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 )
 
-// TestSignatureSerializationFormat verifies that our signature serialization
+// TestSignatureSerializationFormat verifies that our signature serialisation
 // matches the o1js/mina-signer format: (R.x || s) in little-endian, 64 bytes total.
 func TestSignatureSerializationFormat(t *testing.T) {
 	t.Parallel()
@@ -51,30 +52,30 @@ func TestSignatureSerializationFormat(t *testing.T) {
 	// Create signature
 	sig := &Signature{R: R, S: s}
 
-	// Serialize signature
-	serialized, err := SerializeSignature(sig)
+	// Serialise signature
+	serialised, err := SerializeSignature(sig)
 	require.NoError(t, err)
-	assert.Len(t, serialized, 64, "serialized signature should be 64 bytes")
+	assert.Len(t, serialised, 64, "serialised signature should be 64 bytes")
 
 	// Verify the first 32 bytes are R.x in little-endian
 	// o1js uses little-endian byte order
-	rxBytesLE := serialized[:32]
-	for i := 0; i < 32; i++ {
+	rxBytesLE := serialised[:32]
+	for i := range 32 {
 		assert.Equal(t, rxBytesBE[31-i], rxBytesLE[i],
 			"R.x byte %d: expected %02x (from BE position %d), got %02x",
 			i, rxBytesBE[31-i], 31-i, rxBytesLE[i])
 	}
 
 	// Verify the second 32 bytes are s in little-endian
-	sBytesLE := serialized[32:]
-	for i := 0; i < 32; i++ {
+	sBytesLE := serialised[32:]
+	for i := range 32 {
 		assert.Equal(t, sBytesBE[31-i], sBytesLE[i],
 			"s byte %d: expected %02x (from BE position %d), got %02x",
 			i, sBytesBE[31-i], 31-i, sBytesLE[i])
 	}
 
 	// Test deserialization round-trip
-	deserialized, err := DeserializeSignature(serialized)
+	deserialized, err := DeserializeSignature(serialised)
 	require.NoError(t, err)
 
 	// Verify R.x matches
@@ -133,7 +134,7 @@ func TestSignatureBase58Encoding(t *testing.T) {
 	assert.Equal(t, scalarStr, decoded.S.String())
 }
 
-// TestSignatureSerializationAllTestVectors verifies serialization for all test vectors.
+// TestSignatureSerializationAllTestVectors verifies serialisation for all test vectors.
 func TestSignatureSerializationAllTestVectors(t *testing.T) {
 	t.Parallel()
 
@@ -166,6 +167,7 @@ func TestSignatureSerializationAllTestVectors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Create signature from known values
 			rxBigInt, ok := new(big.Int).SetString(tc.field, 10)
 			require.True(t, ok)
@@ -186,12 +188,12 @@ func TestSignatureSerializationAllTestVectors(t *testing.T) {
 
 			sig := &Signature{R: R, S: s}
 
-			// Test serialize -> deserialize round-trip
-			serialized, err := SerializeSignature(sig)
+			// Test serialise -> deserialize round-trip
+			serialised, err := SerializeSignature(sig)
 			require.NoError(t, err)
-			assert.Len(t, serialized, 64)
+			assert.Len(t, serialised, 64)
 
-			deserialized, err := DeserializeSignature(serialized)
+			deserialized, err := DeserializeSignature(serialised)
 			require.NoError(t, err)
 
 			decodedRx, _ := deserialized.R.AffineX()
@@ -235,24 +237,24 @@ func TestSignatureSerializationByteOrder(t *testing.T) {
 
 	sig := &Signature{R: R, S: s}
 
-	serialized, err := SerializeSignature(sig)
+	serialised, err := SerializeSignature(sig)
 	require.NoError(t, err)
 
 	// For R.x = 1 in little-endian, byte 0 should be 0x01, rest should be 0x00
-	assert.Equal(t, byte(0x01), serialized[0], "R.x first byte (LE) should be 0x01")
+	assert.Equal(t, byte(0x01), serialised[0], "R.x first byte (LE) should be 0x01")
 	for i := 1; i < 32; i++ {
-		assert.Equal(t, byte(0x00), serialized[i], "R.x byte %d should be 0x00", i)
+		assert.Equal(t, byte(0x00), serialised[i], "R.x byte %d should be 0x00", i)
 	}
 
 	// For S = 2 in little-endian, byte 32 should be 0x02, rest should be 0x00
-	assert.Equal(t, byte(0x02), serialized[32], "S first byte (LE) should be 0x02")
+	assert.Equal(t, byte(0x02), serialised[32], "S first byte (LE) should be 0x02")
 	for i := 33; i < 64; i++ {
-		assert.Equal(t, byte(0x00), serialized[i], "S byte %d should be 0x00", i)
+		assert.Equal(t, byte(0x00), serialised[i], "S byte %d should be 0x00", i)
 	}
 }
 
 // TestSignedSignatureSerializationRoundTrip tests that signatures produced by
-// actual signing can be serialized and deserialized correctly.
+// actual signing can be serialised and deserialized correctly.
 func TestSignedSignatureSerializationRoundTrip(t *testing.T) {
 	t.Parallel()
 
@@ -271,19 +273,19 @@ func TestSignedSignatureSerializationRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := new(ROInput).Init()
-	msg.AddString("serialization test message")
+	msg.AddString("serialisation test message")
 
 	// Sign the message
 	sig, err := signer.Sign(msg)
 	require.NoError(t, err)
 
-	// Serialize to bytes
-	serialized, err := SerializeSignature(sig)
+	// Serialise to bytes
+	serialised, err := SerializeSignature(sig)
 	require.NoError(t, err)
-	assert.Len(t, serialized, 64)
+	assert.Len(t, serialised, 64)
 
 	// Deserialize
-	deserialized, err := DeserializeSignature(serialized)
+	deserialized, err := DeserializeSignature(serialised)
 	require.NoError(t, err)
 
 	// Verify the deserialized signature works

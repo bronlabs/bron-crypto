@@ -24,7 +24,7 @@ func New(seed, salt uint64) prng.SeedablePRNG {
 
 // NewRandomised creates a new PCG PRNG with random seed and salt.
 func NewRandomised() prng.SeedablePRNG {
-	return &seededReader{v: mrand.NewPCG(mrand.Uint64(), mrand.Uint64())}
+	return &seededReader{v: mrand.NewPCG(mrand.Uint64(), mrand.Uint64())} //nolint:gosec // weak prng is intentional.
 }
 
 // Read fills the provided byte slice p with random bytes.
@@ -46,7 +46,7 @@ func (r *seededReader) Seed(seed, salt []byte) error {
 	return nil
 }
 
-func (r *seededReader) validateSeedInputs(seed, salt []byte) error {
+func (*seededReader) validateSeedInputs(seed, salt []byte) error {
 	validationErrs := []error{}
 	if len(seed) != 8 {
 		validationErrs = append(validationErrs, ErrInvalidSeedLength)
@@ -58,7 +58,7 @@ func (r *seededReader) validateSeedInputs(seed, salt []byte) error {
 }
 
 // New generates a new PRNG of the same type with the provided seed and salt.
-func (r *seededReader) New(seed, salt []byte) (prng.SeedablePRNG, error) {
+func (*seededReader) New(seed, salt []byte) (prng.SeedablePRNG, error) {
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)
 	return New(seedUint64, saltUint64), nil

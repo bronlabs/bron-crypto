@@ -140,7 +140,7 @@ func Flatten[V any](seq iter.Seq[iter.Seq[V]]) iter.Seq[V] {
 	}
 }
 
-// Flatten2 flattens a sequence of key-value pair sequences into a single key-value pair sequence
+// Flatten2 flattens a sequence of key-value pair sequences into a single key-value pair sequence.
 func Flatten2[K, V any](seq iter.Seq[iter.Seq2[K, V]]) iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for s := range seq {
@@ -265,7 +265,8 @@ func Truncate[V any](seq iter.Seq[V], n int) iter.Seq[V] {
 			if !yield(v) {
 				return
 			}
-			if n--; n <= 0 {
+			n--
+			if n <= 0 {
 				break
 			}
 		}
@@ -282,7 +283,8 @@ func Truncate2[K, V any](seq iter.Seq2[K, V], n int) iter.Seq2[K, V] {
 			if !yield(k, v) {
 				return
 			}
-			if n--; n <= 0 {
+			n--
+			if n <= 0 {
 				break
 			}
 		}

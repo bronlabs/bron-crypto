@@ -4,9 +4,10 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/stretchr/testify/require"
 )
 
 // TestDHKEM_Encap_Decap_Roundtrip tests basic encapsulation/decapsulation
@@ -163,6 +164,7 @@ func TestDHKEM_KeySizes(t *testing.T) {
 	t.Parallel()
 
 	t.Run("P256_Sizes", func(t *testing.T) {
+		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
 		require.Equal(t, 32, kem.NSecret())
@@ -173,6 +175,7 @@ func TestDHKEM_KeySizes(t *testing.T) {
 	})
 
 	t.Run("X25519_Sizes", func(t *testing.T) {
+		t.Parallel()
 		kem := NewX25519HKDFSha256KEM()
 
 		require.Equal(t, 32, kem.NSecret())
@@ -270,7 +273,7 @@ func TestContexts_SequenceNumber(t *testing.T) {
 	require.NoError(t, err)
 
 	// Encrypt and decrypt multiple messages, checking sequence numbers
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		msg := []byte("Message " + string(rune(i)))
 		ct, err := senderCtx.Seal(msg, nil)
 		require.NoError(t, err)
@@ -281,11 +284,12 @@ func TestContexts_SequenceNumber(t *testing.T) {
 	}
 }
 
-// TestKDF_LabeledExtract tests labeled extract function
+// TestKDF_LabeledExtract tests labelled extract function
 func TestKDF_LabeledExtract(t *testing.T) {
 	t.Parallel()
 
 	t.Run("SHA256", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA256()
 
 		suiteID := []byte("KEM")
@@ -303,6 +307,7 @@ func TestKDF_LabeledExtract(t *testing.T) {
 	})
 
 	t.Run("SHA512", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA512()
 
 		suiteID := []byte("KEM")
@@ -320,7 +325,7 @@ func TestKDF_LabeledExtract(t *testing.T) {
 	})
 }
 
-// TestKDF_LabeledExpand tests labeled expand function
+// TestKDF_LabeledExpand tests labelled expand function
 func TestKDF_LabeledExpand(t *testing.T) {
 	t.Parallel()
 
@@ -406,6 +411,7 @@ func TestPrivateKey_PublicKey_Creation(t *testing.T) {
 	t.Parallel()
 
 	t.Run("P256_Keys", func(t *testing.T) {
+		t.Parallel()
 		curve := p256.NewCurve()
 		scalar, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
@@ -423,6 +429,7 @@ func TestPrivateKey_PublicKey_Creation(t *testing.T) {
 	})
 
 	t.Run("X25519_Keys", func(t *testing.T) {
+		t.Parallel()
 		curve := curve25519.NewPrimeSubGroup()
 		scalar, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
@@ -479,6 +486,7 @@ func TestDHKEM_InvalidInputs(t *testing.T) {
 	t.Parallel()
 
 	t.Run("NilPRNG", func(t *testing.T) {
+		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
 		// Nil PRNG
@@ -490,6 +498,7 @@ func TestDHKEM_InvalidInputs(t *testing.T) {
 	})
 
 	t.Run("ShortIKM", func(t *testing.T) {
+		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
 		// IKM shorter than NSk
@@ -504,12 +513,14 @@ func TestKDF_HashLength(t *testing.T) {
 	t.Parallel()
 
 	t.Run("SHA256", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA256()
 		require.Equal(t, 32, kdf.Nh())
 		require.Equal(t, KDF_HKDF_SHA256, kdf.ID())
 	})
 
 	t.Run("SHA512", func(t *testing.T) {
+		t.Parallel()
 		kdf := NewKDFSHA512()
 		require.Equal(t, 64, kdf.Nh())
 		require.Equal(t, KDF_HKDF_SHA512, kdf.ID())

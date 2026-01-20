@@ -207,7 +207,7 @@ type Scheme[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.
 }
 
 // Name returns the scheme identifier "HPKE".
-func (s *Scheme[P, B, S]) Name() encryption.Name {
+func (*Scheme[P, B, S]) Name() encryption.Name {
 	return Name
 }
 
@@ -349,11 +349,11 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 	case Base:
 		ctx, err = SetupBaseR(s.cipherSuite, receiverPrivateKey, decrypter.ephemeralPublicKey, decrypter.info)
 	case PSk:
-		ctx, err = SetupPSKR(s.cipherSuite, receiverPrivateKey, decrypter.ephemeralPublicKey, decrypter.psk.Bytes(), decrypter.pskId, decrypter.info)
+		ctx, err = SetupPSKR(s.cipherSuite, receiverPrivateKey, decrypter.ephemeralPublicKey, decrypter.psk.Bytes(), decrypter.pskID, decrypter.info)
 	case Auth:
 		ctx, err = SetupAuthR(s.cipherSuite, receiverPrivateKey, decrypter.ephemeralPublicKey, decrypter.senderPublicKey, decrypter.info)
 	case AuthPSk:
-		ctx, err = SetupAuthPSKR(s.cipherSuite, receiverPrivateKey, decrypter.ephemeralPublicKey, decrypter.senderPublicKey, decrypter.psk.Bytes(), decrypter.pskId, decrypter.info)
+		ctx, err = SetupAuthPSKR(s.cipherSuite, receiverPrivateKey, decrypter.ephemeralPublicKey, decrypter.senderPublicKey, decrypter.psk.Bytes(), decrypter.pskID, decrypter.info)
 	default:
 		return nil, ErrNotSupported.WithMessage("HPKE mode")
 	}

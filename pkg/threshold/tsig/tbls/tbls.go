@@ -110,6 +110,7 @@ type Shard[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	PublicMaterial[PK, PKFE, SG, SGFE, E, S]
+
 	share *feldman.Share[S]
 }
 
@@ -142,6 +143,7 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *PublicMaterial[PK
 	return &PublicMaterial[PK, PKFE, SG, SGFE, E, S]{
 		publicKey:         s.publicKey.Clone(),
 		accessStructure:   s.accessStructure.Clone(),
+		fv:                s.fv,
 		partialPublicKeys: s.partialPublicKeys.Clone(),
 	}
 }
@@ -228,6 +230,7 @@ func NewShortKeyShard[
 		PublicMaterial: PublicMaterial[P1, FE1, P2, FE2, E, S]{
 			publicKey:         publicKey,
 			accessStructure:   accessStructure,
+			fv:                &vector,
 			partialPublicKeys: partialPublicKeys.Freeze(),
 		},
 	}, nil
@@ -291,6 +294,7 @@ func NewLongKeyShard[
 		PublicMaterial: PublicMaterial[P2, FE2, P1, FE1, E, S]{
 			publicKey:         publicKey,
 			accessStructure:   accessStructure,
+			fv:                &vector,
 			partialPublicKeys: partialPublicKeys.Freeze(),
 		},
 	}, nil

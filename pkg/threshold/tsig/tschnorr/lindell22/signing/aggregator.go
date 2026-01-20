@@ -95,6 +95,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
 		return x == nil || !x.Sig.E.Equal(e)
 	}) {
+
 		return nil, ErrInvalidType.WithMessage("invalid partial signature")
 	}
 	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)

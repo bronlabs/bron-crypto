@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
-// MapOrError applies the function f to each element of the input slice in,
+// MapOrError applies the function f to each element of the input slice in,.
 func MapOrError[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (out []TOut, err error) {
 	out = make([]TOut, len(in))
 	for i, in := range in {

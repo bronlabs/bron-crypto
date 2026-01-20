@@ -19,7 +19,7 @@ func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P]
 
 	r1 := hashmap.NewComparable[sharing.ID, *Round1P2P]()
 	for id := range p.quorum.Iter() {
-		if id == p.sharingId {
+		if id == p.sharingID {
 			continue
 		}
 		r1.Put(id, &Round1P2P{
@@ -27,7 +27,7 @@ func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P]
 		})
 	}
 
-	p.state.messages[p.sharingId] = serializedMessage
+	p.state.messages[p.sharingID] = serializedMessage
 	return r1.Freeze(), nil
 }
 
@@ -35,7 +35,7 @@ func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P]
 func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.OutgoingUnicasts[*Round2P2P], error) {
 	receivedMessages := make(map[sharing.ID][]byte)
 	for id := range p.quorum.Iter() {
-		if id == p.sharingId {
+		if id == p.sharingID {
 			continue
 		}
 		m, ok := r1.Get(id)
@@ -48,7 +48,7 @@ func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.O
 
 	r2 := hashmap.NewComparable[sharing.ID, *Round2P2P]()
 	for id := range p.quorum.Iter() {
-		if id == p.sharingId {
+		if id == p.sharingID {
 			continue
 		}
 		r2.Put(id, &Round2P2P{
@@ -63,21 +63,21 @@ func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.O
 func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.RoundMessages[B], error) {
 	received := make(map[sharing.ID][]byte)
 	for id := range p.quorum.Iter() {
-		if id == p.sharingId {
+		if id == p.sharingID {
 			continue
 		}
 
 		message := p.state.messages[id]
-		for echoId := range p.quorum.Iter() {
-			if echoId == p.sharingId || echoId == id {
+		for echoID := range p.quorum.Iter() {
+			if echoID == p.sharingID || echoID == id {
 				continue
 			}
-			echo, ok := r2.Get(echoId)
+			echo, ok := r2.Get(echoID)
 			if !ok {
 				return nil, ErrFailed.WithMessage("missing message")
 			}
 			echoMessage := echo.Echo[id]
-			if bytes.Compare(message, echoMessage) != 0 {
+			if !bytes.Equal(message, echoMessage) {
 				return nil, ErrFailed.WithMessage("mismatched echo")
 			}
 		}
@@ -86,7 +86,7 @@ func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.R
 
 	r3 := hashmap.NewComparable[sharing.ID, B]()
 	for id := range p.quorum.Iter() {
-		if id == p.sharingId {
+		if id == p.sharingID {
 			continue
 		}
 		message, err := serde.UnmarshalCBOR[B](received[id])

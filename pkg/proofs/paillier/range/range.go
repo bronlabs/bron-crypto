@@ -32,7 +32,7 @@ type Witness struct {
 	R  *paillier.Nonce
 }
 
-// Bytes serializes the witness for transcript binding.
+// Bytes serialises the witness for transcript binding.
 func (w *Witness) Bytes() []byte {
 	var buf bytes.Buffer
 	buf.Write(w.Sk.Group().Modulus().Bytes())
@@ -57,7 +57,7 @@ type Statement struct {
 	L  *numct.Nat
 }
 
-// Bytes serializes the statement for transcript binding.
+// Bytes serialises the statement for transcript binding.
 func (s *Statement) Bytes() []byte {
 	pkBytes := s.Pk.Group().Modulus().Bytes()
 	cBytes := s.C.Value().Bytes()
@@ -84,7 +84,7 @@ type Commitment struct {
 	C2 []*paillier.Ciphertext
 }
 
-// Bytes serializes the commitment for transcript binding.
+// Bytes serialises the commitment for transcript binding.
 func (c *Commitment) Bytes() []byte {
 	var a []byte
 
@@ -130,7 +130,7 @@ type Response struct {
 	J  []uint
 }
 
-// Bytes serializes the response for transcript binding.
+// Bytes serialises the response for transcript binding.
 func (r *Response) Bytes() []byte {
 	var a []byte
 
@@ -367,8 +367,8 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 		case 0:
 			w1i := response.W1[i]
 			w2i := response.W2[i]
-			if !((isInRange(lowBound, highBound, w1i) && isInRange(ps.Zero(), lowBound, w2i)) ||
-				isInRange(lowBound, highBound, w2i) && isInRange(ps.Zero(), lowBound, w1i)) {
+			if (!isInRange(lowBound, highBound, w1i) || !isInRange(ps.Zero(), lowBound, w2i)) &&
+				(!isInRange(lowBound, highBound, w2i) || !isInRange(ps.Zero(), lowBound, w1i)) {
 
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}

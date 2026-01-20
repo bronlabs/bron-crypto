@@ -21,7 +21,7 @@ import (
 // Returns the nonce commitment R and the nonce scalar k.
 func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
 	group Group[GE, S], prng io.Reader, shouldNegateNonce func(nonceCommitment GE) bool,
-) (GE, S, error) {
+) (R GE, k S, err error) {
 	if prng == nil {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("prng is nil")
 	}
@@ -29,14 +29,14 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
 	if !ok {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("group type assertion failed")
 	}
-	k, err := algebrautils.RandomNonIdentity(sf, prng)
+	k, err = algebrautils.RandomNonIdentity(sf, prng)
 	if err != nil {
 		return *new(GE), *new(S), errs2.Wrap(err).WithMessage("scalar")
 	}
 	if shouldNegateNonce != nil && shouldNegateNonce(group.ScalarBaseOp(k)) {
 		k = k.Neg()
 	}
-	R := group.ScalarBaseOp(k)
+	R = group.ScalarBaseOp(k)
 	return R, k, nil
 }
 

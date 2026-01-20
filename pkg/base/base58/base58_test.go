@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 )
 
 var stringTests = []struct {

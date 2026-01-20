@@ -48,16 +48,19 @@ func TestNewIntFromBytes(t *testing.T) {
 	t.Parallel()
 	// Sign-magnitude encoding: b[0] = sign, b[1:] = magnitude
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewIntFromBytes([]byte{0x00, 0x2A}) // +42
 		require.Equal(t, int64(42), n.Int64())
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewIntFromBytes([]byte{0x01, 0x2A}) // -42
 		require.Equal(t, int64(-42), n.Int64())
 	})
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewIntFromBytes([]byte{0x00, 0x00})
 		require.Equal(t, int64(0), n.Int64())
 	})
@@ -238,6 +241,7 @@ func TestInt_Div(t *testing.T) {
 	t.Parallel()
 
 	t.Run("positive/positive", func(t *testing.T) {
+		t.Parallel()
 		n := int64(97)
 		d := int64(21)
 		expectedQ := n / d
@@ -250,6 +254,7 @@ func TestInt_Div(t *testing.T) {
 	})
 
 	t.Run("negative/positive", func(t *testing.T) {
+		t.Parallel()
 		n := int64(-97)
 		d := int64(21)
 		expectedQ := n / d
@@ -262,6 +267,7 @@ func TestInt_Div(t *testing.T) {
 	})
 
 	t.Run("positive/negative", func(t *testing.T) {
+		t.Parallel()
 		n := int64(97)
 		d := int64(-21)
 		expectedQ := n / d
@@ -274,6 +280,7 @@ func TestInt_Div(t *testing.T) {
 	})
 
 	t.Run("negative/negative", func(t *testing.T) {
+		t.Parallel()
 		n := int64(-97)
 		d := int64(-21)
 		expectedQ := n / d
@@ -290,6 +297,7 @@ func TestInt_DivVarTime(t *testing.T) {
 	t.Parallel()
 
 	t.Run("positive/positive", func(t *testing.T) {
+		t.Parallel()
 		n := int64(97)
 		d := int64(21)
 		expectedQ := n / d
@@ -302,6 +310,7 @@ func TestInt_DivVarTime(t *testing.T) {
 	})
 
 	t.Run("negative/positive", func(t *testing.T) {
+		t.Parallel()
 		n := int64(-97)
 		d := int64(21)
 		expectedQ := n / d
@@ -314,6 +323,7 @@ func TestInt_DivVarTime(t *testing.T) {
 	})
 
 	t.Run("positive/negative", func(t *testing.T) {
+		t.Parallel()
 		n := int64(97)
 		d := int64(-21)
 		expectedQ := n / d
@@ -326,6 +336,7 @@ func TestInt_DivVarTime(t *testing.T) {
 	})
 
 	t.Run("negative/negative", func(t *testing.T) {
+		t.Parallel()
 		n := int64(-97)
 		d := int64(-21)
 		expectedQ := n / d
@@ -350,6 +361,7 @@ func TestInt_IsUnit(t *testing.T) {
 func TestInt_Inv(t *testing.T) {
 	t.Parallel()
 	t.Run("unit 1", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Int
 		ok := result.Inv(numct.NewInt(1))
 		require.Equal(t, ct.True, ok)
@@ -357,6 +369,7 @@ func TestInt_Inv(t *testing.T) {
 	})
 
 	t.Run("unit -1", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Int
 		ok := result.Inv(numct.NewInt(-1))
 		require.Equal(t, ct.True, ok)
@@ -364,6 +377,7 @@ func TestInt_Inv(t *testing.T) {
 	})
 
 	t.Run("non-unit", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Int
 		result.SetOne()
 		ok := result.Inv(numct.NewInt(2))
@@ -424,6 +438,7 @@ func TestInt_Sqrt(t *testing.T) {
 	t.Parallel()
 
 	t.Run("small perfect squares (fast path)", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			input    int64
 			expected int64
@@ -469,6 +484,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("large perfect squares (multi-limb path)", func(t *testing.T) {
+		t.Parallel()
 		// Test numbers > 64 bits to exercise multi-limb path
 		cases := []struct {
 			name string
@@ -485,6 +501,7 @@ func TestInt_Sqrt(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				// Compute root^2
 				squared := new(big.Int).Mul(tc.root, tc.root)
 				n := numct.NewIntFromBig(squared, squared.BitLen())
@@ -499,6 +516,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("large non-perfect squares (multi-limb path)", func(t *testing.T) {
+		t.Parallel()
 		// Numbers > 64 bits that are not perfect squares
 		cases := []struct {
 			name string
@@ -510,6 +528,7 @@ func TestInt_Sqrt(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				n := numct.NewIntFromBig(tc.n, tc.n.BitLen())
 				original := n.Clone()
 
@@ -522,6 +541,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("large negative numbers", func(t *testing.T) {
+		t.Parallel()
 		// Large negative numbers should always fail
 		largeNeg := new(big.Int).Lsh(big.NewInt(1), 128)
 		largeNeg.Neg(largeNeg)
@@ -535,6 +555,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("edge cases", func(t *testing.T) {
+		t.Parallel()
 		// max uint64 squared
 		maxU64 := new(big.Int).SetUint64(^uint64(0))
 		maxSquared := new(big.Int).Mul(maxU64, maxU64)
@@ -569,12 +590,14 @@ func TestInt_Square(t *testing.T) {
 func TestInt_Bytes(t *testing.T) {
 	t.Parallel()
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewInt(42)
 		b := n.Bytes()
 		require.Equal(t, byte(0), b[0]) // sign = 0 for positive
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewInt(-42)
 		b := n.Bytes()
 		require.Equal(t, byte(1), b[0]) // sign = 1 for negative
@@ -584,6 +607,7 @@ func TestInt_Bytes(t *testing.T) {
 func TestInt_SetBytes(t *testing.T) {
 	t.Parallel()
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
 		var n numct.Int
 		ok := n.SetBytes([]byte{0x00, 0x2A}) // +42
 		require.Equal(t, ct.True, ok)
@@ -591,6 +615,7 @@ func TestInt_SetBytes(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
 		var n numct.Int
 		ok := n.SetBytes([]byte{0x01, 0x2A}) // -42
 		require.Equal(t, ct.True, ok)
@@ -598,6 +623,7 @@ func TestInt_SetBytes(t *testing.T) {
 	})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
 		var n numct.Int
 		ok := n.SetBytes([]byte{})
 		require.Equal(t, ct.False, ok)
@@ -719,12 +745,14 @@ func TestInt_Select(t *testing.T) {
 	x1 := numct.NewInt(-20)
 
 	t.Run("choice 0", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Int
 		result.Select(0, x0, x1)
 		require.Equal(t, ct.True, result.Equal(x0))
 	})
 
 	t.Run("choice 1", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Int
 		result.Select(1, x0, x1)
 		require.Equal(t, ct.True, result.Equal(x1))
@@ -734,6 +762,7 @@ func TestInt_Select(t *testing.T) {
 func TestInt_CondAssign(t *testing.T) {
 	t.Parallel()
 	t.Run("choice 0 keeps original", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewInt(10)
 		x := numct.NewInt(-20)
 		n.CondAssign(0, x)
@@ -741,6 +770,7 @@ func TestInt_CondAssign(t *testing.T) {
 	})
 
 	t.Run("choice 1 assigns", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewInt(10)
 		x := numct.NewInt(-20)
 		n.CondAssign(1, x)
@@ -751,12 +781,14 @@ func TestInt_CondAssign(t *testing.T) {
 func TestInt_CondNeg(t *testing.T) {
 	t.Parallel()
 	t.Run("choice 0 keeps sign", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewInt(42)
 		n.CondNeg(0)
 		require.Equal(t, int64(42), n.Int64())
 	})
 
 	t.Run("choice 1 negates", func(t *testing.T) {
+		t.Parallel()
 		n := numct.NewInt(42)
 		n.CondNeg(1)
 		require.Equal(t, int64(-42), n.Int64())
@@ -938,6 +970,7 @@ func TestInt_SetRandomRangeLH_Errors(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("low equals high", func(t *testing.T) {
+		t.Parallel()
 		var n numct.Int
 		err := n.SetRandomRangeLH(numct.NewInt(10), numct.NewInt(10), prng)
 		require.Error(t, err)
@@ -1001,6 +1034,7 @@ func TestInt_GCD(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic cases with positive numbers", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			a, b, expected int64
 		}{
@@ -1029,6 +1063,7 @@ func TestInt_GCD(t *testing.T) {
 	})
 
 	t.Run("negative inputs", func(t *testing.T) {
+		t.Parallel()
 		// GCD in Z is defined on absolute values, result is always non-negative
 		cases := []struct {
 			a, b, expected int64
@@ -1052,6 +1087,7 @@ func TestInt_GCD(t *testing.T) {
 	})
 
 	t.Run("mixed signs", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			a, b int64
 		}{
@@ -1072,6 +1108,7 @@ func TestInt_GCD(t *testing.T) {
 	})
 
 	t.Run("commutativity", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct{ a, b int64 }{
 			{12, 18},
 			{-12, 18},
@@ -1087,6 +1124,7 @@ func TestInt_GCD(t *testing.T) {
 	})
 
 	t.Run("consistency with Coprime", func(t *testing.T) {
+		t.Parallel()
 		cases := []struct {
 			a, b int64
 		}{
@@ -1109,6 +1147,7 @@ func TestInt_GCD(t *testing.T) {
 	})
 
 	t.Run("large numbers", func(t *testing.T) {
+		t.Parallel()
 		// Test with numbers at the edge of int64 range
 		a := numct.NewInt(1000000007)  // large prime
 		b := numct.NewInt(-1000000009) // another large prime (negative)
@@ -1119,6 +1158,7 @@ func TestInt_GCD(t *testing.T) {
 	})
 
 	t.Run("multi-limb numbers", func(t *testing.T) {
+		t.Parallel()
 		// Test with numbers larger than 64 bits
 		// gcd(2^100, -2^50) = 2^50
 		a := new(big.Int).Lsh(big.NewInt(1), 100)
@@ -1136,6 +1176,7 @@ func TestInt_GCD(t *testing.T) {
 	})
 
 	t.Run("nil input panics", func(t *testing.T) {
+		t.Parallel()
 		var result numct.Int
 		require.Panics(t, func() {
 			result.GCD(nil, numct.NewInt(5))

@@ -34,8 +34,8 @@ type simpleDTO struct {
 	Modulus *numct.Modulus `cbor:"modulus"`
 }
 
-func (s *SimpleModulus) MarshalCBOR() ([]byte, error) {
-	dto := &simpleDTO{Modulus: s.m}
+func (m *SimpleModulus) MarshalCBOR() ([]byte, error) {
+	dto := &simpleDTO{Modulus: m.m}
 	data, err := serde.MarshalCBORTagged(dto, SimpleModulusTag)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to marshal SimpleModulus")
@@ -43,12 +43,12 @@ func (s *SimpleModulus) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (s *SimpleModulus) UnmarshalCBOR(data []byte) error {
+func (m *SimpleModulus) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[simpleDTO](data)
 	if err != nil {
 		return err
 	}
-	s.m = dto.Modulus
+	m.m = dto.Modulus
 	return nil
 }
 
@@ -57,10 +57,10 @@ type pairDTO struct {
 	Q *numct.Nat `cbor:"q"`
 }
 
-func (o *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
+func (m *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
 	dto := &pairDTO{
-		P: o.Params.P.Nat(),
-		Q: o.Params.Q.Nat(),
+		P: m.Params.P.Nat(),
+		Q: m.Params.Q.Nat(),
 	}
 	data, err := serde.MarshalCBORTagged(dto, OddPrimeFactorsTag)
 	if err != nil {
@@ -69,7 +69,7 @@ func (o *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (o *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
+func (m *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[pairDTO](data)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (o *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
 	if ok == ct.False {
 		return ErrFailed.WithMessage("failed to create OddPrimeFactors")
 	}
-	*o = *out
+	*m = *out
 	return nil
 }
 

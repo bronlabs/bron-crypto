@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
-// hashFunc implies L = 32 bytes
+// hashFunc implies L = 32 bytes.
 var hashFunc = sha3.New256
 
 type WrappedReader struct {
@@ -24,12 +24,12 @@ type WrappedReader struct {
 	wrapee  io.Reader
 }
 
-func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceId []byte) (*WrappedReader, error) {
+func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceID []byte) (*WrappedReader, error) {
 	if !signer.IsDeterministic() {
 		return nil, ErrSignerDeterminism.WithMessage("signer must be deterministic")
 	}
 
-	sig, err := signer.Sign(uniqueDeviceId)
+	sig, err := signer.Sign(uniqueDeviceID)
 	if err != nil {
 		return nil, ErrUniqueDeviceIDSignature.WithMessage("could not sign unique device id")
 	}
@@ -39,8 +39,9 @@ func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 	}
 
 	return &WrappedReader{
-		salt:   salt,
-		wrapee: prng,
+		salt:    salt,
+		counter: atomic.Uint64{},
+		wrapee:  prng,
 	}, nil
 }
 

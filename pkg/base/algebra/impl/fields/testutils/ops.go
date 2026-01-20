@@ -13,9 +13,9 @@ type BinaryOpVectors[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct
 }
 
 type BinaryOpVector[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
-	A FiniteFieldElementJson[FP, F] `json:"a"`
-	B FiniteFieldElementJson[FP, F] `json:"b"`
-	C FiniteFieldElementJson[FP, F] `json:"c"`
+	A FiniteFieldElementJSON[FP, F] `json:"a"`
+	B FiniteFieldElementJSON[FP, F] `json:"b"`
+	C FiniteFieldElementJSON[FP, F] `json:"c"`
 }
 
 type BinaryOpVectorsWithOk[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
@@ -23,9 +23,9 @@ type BinaryOpVectorsWithOk[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] 
 }
 
 type BinaryOpVectorWithOk[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
-	A  FiniteFieldElementJson[FP, F] `json:"a"`
-	B  FiniteFieldElementJson[FP, F] `json:"b"`
-	C  FiniteFieldElementJson[FP, F] `json:"c"`
+	A  FiniteFieldElementJSON[FP, F] `json:"a"`
+	B  FiniteFieldElementJSON[FP, F] `json:"b"`
+	C  FiniteFieldElementJSON[FP, F] `json:"c"`
 	Ok ct.Bool                       `json:"ok"`
 }
 
@@ -34,8 +34,8 @@ type UnaryOpVectors[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct 
 }
 
 type UnaryOpVector[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
-	A FiniteFieldElementJson[FP, F] `json:"a"`
-	C FiniteFieldElementJson[FP, F] `json:"c"`
+	A FiniteFieldElementJSON[FP, F] `json:"a"`
+	C FiniteFieldElementJSON[FP, F] `json:"c"`
 }
 
 type UnaryOpVectorsWithOk[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
@@ -43,8 +43,8 @@ type UnaryOpVectorsWithOk[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] s
 }
 
 type UnaryOpVectorWithOk[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
-	A  FiniteFieldElementJson[FP, F] `json:"a"`
-	C  FiniteFieldElementJson[FP, F] `json:"c"`
+	A  FiniteFieldElementJSON[FP, F] `json:"a"`
+	C  FiniteFieldElementJSON[FP, F] `json:"c"`
 	Ok ct.Bool                       `json:"ok"`
 }
 

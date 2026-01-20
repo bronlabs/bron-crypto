@@ -90,17 +90,17 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 }
 
 // NewProver creates a new non-interactive prover for generating randomised Fischlin proofs.
-// The sessionId and transcript are used for domain separation.
-func (c *rf[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
+// The sessionID and transcript are used for domain separation.
+func (c *rf[X, W, A, S, Z]) NewProver(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if transcript == nil {
 		return nil, ErrNil.WithMessage("transcript")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionId[:]))
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
 	transcript.AppendDomainSeparator(dst)
 
 	return &prover[X, W, A, S, Z]{
-		sessionId:     sessionId,
+		sessionID:     sessionID,
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 		prng:          c.prng,
@@ -108,17 +108,17 @@ func (c *rf[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcri
 }
 
 // NewVerifier creates a new non-interactive verifier for checking randomised Fischlin proofs.
-// The sessionId and transcript must match those used by the prover.
-func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
+// The sessionID and transcript must match those used by the prover.
+func (c *rf[X, W, A, S, Z]) NewVerifier(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if transcript == nil {
 		return nil, ErrNil.WithMessage("transcript")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionId[:]))
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
 	transcript.AppendDomainSeparator(dst)
 
 	return &verifier[X, W, A, S, Z]{
-		sessionId:     sessionId,
+		sessionID:     sessionID,
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil

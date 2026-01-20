@@ -69,9 +69,9 @@ var (
 	group    = pasta.NewPallasCurve()
 	sf       = pasta.NewPallasScalarField()
 
-	// SignatureSize is the size of a serialized Mina signature (64 bytes).
+	// SignatureSize is the size of a serialised Mina signature (64 bytes).
 	SignatureSize = group.ElementSize() + sf.ElementSize()
-	// PublicKeySize is the size of a serialized Mina public key (32 bytes).
+	// PublicKeySize is the size of a serialised Mina public key (32 bytes).
 	PublicKeySize = group.ElementSize()
 	// PrivateKeySize is the size of a Mina private key (32 bytes).
 	PrivateKeySize = sf.ElementSize()
@@ -113,7 +113,7 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 // NewScheme creates a Mina signature scheme with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using
 // Blake2b, following the legacy Mina/o1js implementation.
-func NewScheme(nid NetworkId, privateKey *PrivateKey) (*Scheme, error) {
+func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 	vr, err := NewDeterministicVariant(nid, privateKey)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create variant")
@@ -126,7 +126,7 @@ func NewScheme(nid NetworkId, privateKey *PrivateKey) (*Scheme, error) {
 // NewRandomisedScheme creates a Mina signature scheme with random nonce generation.
 // This is typically used for MPC/threshold signing where nonces are generated
 // collaboratively rather than deterministically.
-func NewRandomisedScheme(nid NetworkId, prng io.Reader) (*Scheme, error) {
+func NewRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
 	vr, err := NewRandomisedVariant(nid, prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create variant")
@@ -137,7 +137,7 @@ func NewRandomisedScheme(nid NetworkId, prng io.Reader) (*Scheme, error) {
 }
 
 // Scheme implements the Mina Schnorr signature scheme.
-// It supports both deterministic and randomized nonce generation modes.
+// It supports both deterministic and randomised nonce generation modes.
 type Scheme struct {
 	vr *Variant
 }
@@ -153,7 +153,7 @@ func (s *Scheme) Variant() *Variant {
 }
 
 // Keygen creates a key generator for Mina key pairs.
-func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
+func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	kg := &KeyGenerator{
 		schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]{
 			Grp: group,
@@ -198,7 +198,9 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 		VerifierTrait: schnorrlike.VerifierTrait[*Variant, *GroupElement, *Scalar, *Message]{
 			V:                          s.vr,
 			ResponseOperatorIsNegative: false,
+			ChallengePublicKey:         nil,
 		},
+		prng: nil,
 	}
 	for _, opt := range opts {
 		if err := opt(verifier); err != nil {
@@ -221,7 +223,7 @@ func (s *Scheme) PartialSignatureVerifier(publicKey *PublicKey, opts ...signatur
 	return verifier, nil
 }
 
-// KeyGeneratorOption configures key generation behavior.
+// KeyGeneratorOption configures key generation behaviour.
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
 // KeyGenerator creates Mina key pairs on the Pallas curve.
@@ -229,7 +231,7 @@ type KeyGenerator struct {
 	schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]
 }
 
-// SignerOption configures signing behavior.
+// SignerOption configures signing behaviour.
 type SignerOption = signatures.SignerOption[*Signer, *Message, *Signature]
 
 // Signer produces Mina signatures.
@@ -245,12 +247,12 @@ func (s *Signer) Sign(message *Message) (*Signature, error) {
 	s.V.msg = message
 	sig, err := s.SignerTrait.Sign(message)
 	if err != nil {
-		return nil, err
+		return nil, errs2.Wrap(err).WithMessage("failed to sign message")
 	}
 	return sig, nil
 }
 
-// VerifierOption configures verification behavior.
+// VerifierOption configures verification behaviour.
 type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, *Message, *Signature]
 
 // VerifyWithPRNG configures the verifier with a PRNG (for future batch verification).
@@ -273,7 +275,7 @@ type Verifier struct {
 
 // SerializeSignature encodes a Mina signature to 64 bytes in little-endian format.
 // The format is (R.x || s) where both components are in little-endian byte order.
-// This matches the Mina/o1js serialization convention.
+// This matches the Mina/o1js serialisation convention.
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil {
 		return nil, ErrInvalidArgument.WithMessage("signature is nil")
@@ -348,8 +350,8 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 	}
 
 	return &Signature{
+		E: nil, // E is not stored in Mina signatures, it will be recomputed during verification
 		R: R,
 		S: s,
-		// E is not stored in Mina signatures, it will be recomputed during verification
 	}, nil
 }

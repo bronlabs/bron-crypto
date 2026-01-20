@@ -17,11 +17,12 @@ import (
 	"io"
 	"slices"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"golang.org/x/sync/errgroup"
 )
 
 // Statement represents an OR-composed statement consisting of n sub-statements.
@@ -164,6 +165,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 	}
 	a := make(Commitment[A], p.count)
 	s := &State[S, Z]{
+		B: 0,
 		S: make([]S, p.count),
 		E: make([][]byte, p.count),
 		Z: make([]Z, p.count),
@@ -328,8 +330,10 @@ func (p *protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge
 	for i := range p.count - 1 {
 		eg.Go(func() error {
 			z.E[i] = make([]byte, p.GetChallengeBytesLength())
-			_, err := io.ReadFull(p.prng, z.E[i])
-			return err
+			if _, err := io.ReadFull(p.prng, z.E[i]); err != nil {
+				return errs2.Wrap(err).WithMessage("cannot sample challenge")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {

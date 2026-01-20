@@ -39,7 +39,7 @@ const (
 // Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite     *ecdsa.Suite[P, B, S]
-	sessionId network.SID
+	sessionID network.SID
 	shard     *dkls23.Shard[P, B, S]
 	zeroSeeds przs.Seeds
 	quorum    network.Quorum
@@ -68,7 +68,7 @@ type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 }
 
 // NewCosigner returns a new cosigner.
-func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
@@ -79,7 +79,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, ErrValidation.WithMessage("sharing id not part of the quorum")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("couldn't randomise zero seeds")
@@ -112,7 +112,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		}
 		aliceTape := tape.Clone()
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(c.sessionId, mulSuite, aliceSeed, prng, aliceTape)
+		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(c.sessionID, mulSuite, aliceSeed, prng, aliceTape)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("couldn't initialise Alice")
 		}
@@ -123,7 +123,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		}
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
-		c.state.bobMul[id], err = rvole_softspoken.NewBob(c.sessionId, mulSuite, bobSeed, prng, bobTape)
+		c.state.bobMul[id], err = rvole_softspoken.NewBob(c.sessionID, mulSuite, bobSeed, prng, bobTape)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("couldn't initialise Bob")
 		}

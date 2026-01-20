@@ -43,7 +43,7 @@ type proofDTO[A sigma.Commitment, Z sigma.Response] struct {
 	Z Z `cbor:"Z"`
 }
 
-// MarshalCBOR serializes the proof to CBOR format.
+// MarshalCBOR serialises the proof to CBOR format.
 func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
 	dto := &proofDTO[A, Z]{
 		A: p.a,
@@ -90,9 +90,9 @@ func NewCompiler[
 }
 
 // NewProver creates a new non-interactive prover for generating Fiat-Shamir proofs.
-// The sessionId and transcript are used for domain separation.
-func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
-	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
+// The sessionID and transcript are used for domain separation.
+func (c *fs[X, W, A, S, Z]) NewProver(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
+	dst := fmt.Sprintf("%s-%s-%s", sessionID, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
 	return &prover[X, W, A, S, Z]{
@@ -102,9 +102,9 @@ func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcri
 }
 
 // NewVerifier creates a new non-interactive verifier for checking Fiat-Shamir proofs.
-// The sessionId and transcript must match those used by the prover.
-func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
-	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
+// The sessionID and transcript must match those used by the prover.
+func (c *fs[X, W, A, S, Z]) NewVerifier(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
+	dst := fmt.Sprintf("%s-%s-%s", sessionID, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
 	return &verifier[X, W, A, S, Z]{

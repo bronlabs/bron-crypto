@@ -18,17 +18,18 @@ import (
 )
 
 func Test_HappyPath(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 
 	quorum := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
 	tape := hagrid.NewTranscript("test")
 
 	participants := make([]*przsSetup.Participant, quorum.Size())
-	for i, sharingId := range quorum.Iter2() {
-		participants[i], err = przsSetup.NewParticipant(sessionId, sharingId, quorum, tape.Clone(), prng)
+	for i, sharingID := range quorum.Iter2() {
+		participants[i], err = przsSetup.NewParticipant(sessionID, sharingID, quorum, tape.Clone(), prng)
 		require.NoError(t, err)
 	}
 

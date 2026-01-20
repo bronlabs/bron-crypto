@@ -3,11 +3,12 @@ package znstar_test
 import (
 	"testing"
 
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"pgregory.net/rapid"
 )
 
 func RSAUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.RSAGroupElementUnknownOrder], *znstar.RSAGroupUnknownOrder) {
@@ -17,6 +18,7 @@ func RSAUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.RSAGroupElementUnk
 }
 
 func TestMultiplicativeGroupProperties_RSA(t *testing.T) {
+	t.Parallel()
 	g, group := RSAUnitGenerator(t)
 	suite := properties.MultiplicativeGroup(t, group, g)
 	suite.Theory = append(

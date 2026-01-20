@@ -136,8 +136,8 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 	for i, s := range scalars {
 		b := s.BytesBE()
 		scalarBytes[i] = b
-		if bits := len(b) * 8; bits > maxBits {
-			maxBits = bits
+		if numBits := len(b) * 8; numBits > maxBits {
+			maxBits = numBits
 		}
 	}
 	if maxBits == 0 {
@@ -166,8 +166,8 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 		if len(b) == 0 {
 			return 0
 		}
-		var acc uint = 0
-		for k := 0; k < w; k++ {
+		var acc uint
+		for k := range w {
 			bitIndex := start + k
 			byteCount := len(b)
 			byteIndexFromLSB := bitIndex / 8
@@ -184,7 +184,7 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 
 	acc := monoid.OpIdentity()
 	for wIdx := numWindows - 1; wIdx >= 0; wIdx-- {
-		for i := 0; i < w; i++ {
+		for range w {
 			acc = acc.Op(acc)
 		}
 		buckets := make([]E, windowSize)

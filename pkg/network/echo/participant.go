@@ -7,7 +7,7 @@ import (
 
 // Participant drives the echo broadcast protocol for a single party.
 type Participant[B any] struct {
-	sharingId sharing.ID
+	sharingID sharing.ID
 	quorum    network.Quorum
 	state     state
 }
@@ -18,11 +18,11 @@ type state struct {
 
 func NewParticipant[B any](id sharing.ID, quorum network.Quorum) (*Participant[B], error) {
 	if quorum == nil || !quorum.Contains(id) {
-		return nil, ErrInvalidArgument.WithMessage("sharingId not in quorum")
+		return nil, ErrInvalidArgument.WithMessage("sharingID not in quorum")
 	}
 
 	p := &Participant[B]{
-		sharingId: id,
+		sharingID: id,
 		quorum:    quorum,
 		state: state{
 			messages: make(map[sharing.ID][]byte),
@@ -33,7 +33,7 @@ func NewParticipant[B any](id sharing.ID, quorum network.Quorum) (*Participant[B
 
 // SharingID returns the participant's identifier.
 func (p *Participant[B]) SharingID() sharing.ID {
-	return p.sharingId
+	return p.sharingID
 }
 
 // Quorum returns the participant quorum.

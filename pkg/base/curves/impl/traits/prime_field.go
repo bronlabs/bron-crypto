@@ -31,12 +31,12 @@ type PrimeFieldElementWrapperPtrConstraint[FP fieldsImpl.PrimeFieldElement[FP], 
 type PrimeFieldTrait[FP fieldsImpl.PrimeFieldElement[FP], WP PrimeFieldElementWrapperPtrConstraint[FP, W], W any] struct{}
 
 // IsDomain reports whether the field forms an integral domain.
-func (f *PrimeFieldTrait[FP, WP, W]) IsDomain() bool {
+func (*PrimeFieldTrait[FP, WP, W]) IsDomain() bool {
 	return true
 }
 
 // FromBytes builds an element from big-endian bytes.
-func (f *PrimeFieldTrait[FP, WP, W]) FromBytes(bytes []byte) (WP, error) {
+func (*PrimeFieldTrait[FP, WP, W]) FromBytes(bytes []byte) (WP, error) {
 	leBytes := sliceutils.Reversed(bytes)
 	var e W
 	if ok := WP(&e).Fp().SetBytes(leBytes); ok == 0 {
@@ -51,7 +51,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) FromBytesBE(input []byte) (WP, error) {
 }
 
 // FromWideBytes builds an element from wide big-endian bytes.
-func (f *PrimeFieldTrait[FP, WP, W]) FromWideBytes(bytes []byte) (WP, error) {
+func (*PrimeFieldTrait[FP, WP, W]) FromWideBytes(bytes []byte) (WP, error) {
 	leBytes := sliceutils.Reversed(bytes)
 	var e W
 	if ok := WP(&e).Fp().SetBytesWide(leBytes); ok == 0 {
@@ -61,7 +61,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) FromWideBytes(bytes []byte) (WP, error) {
 }
 
 // FromComponentsBytes builds an element from big-endian component byte slices.
-func (f *PrimeFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, error) {
+func (*PrimeFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, error) {
 	leData := make([][]byte, len(data))
 	for i, d := range data {
 		leData[i] = sliceutils.Reversed(d)
@@ -74,14 +74,14 @@ func (f *PrimeFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, err
 }
 
 // FromUint64 builds an element from a uint64 value.
-func (f *PrimeFieldTrait[FP, WP, W]) FromUint64(v uint64) WP {
+func (*PrimeFieldTrait[FP, WP, W]) FromUint64(v uint64) WP {
 	var e W
 	WP(&e).Fp().SetUint64(v)
 	return &e
 }
 
 // FromCardinal builds an element from a cardinal value.
-func (f *PrimeFieldTrait[FP, WP, W]) FromCardinal(card cardinal.Cardinal) (WP, error) {
+func (*PrimeFieldTrait[FP, WP, W]) FromCardinal(card cardinal.Cardinal) (WP, error) {
 	leData := sliceutils.Reverse(card.Bytes())
 	var e W
 	if ok := WP(&e).Fp().SetBytesWide(leData); ok == 0 {
@@ -91,14 +91,14 @@ func (f *PrimeFieldTrait[FP, WP, W]) FromCardinal(card cardinal.Cardinal) (WP, e
 }
 
 // One returns the multiplicative identity.
-func (f *PrimeFieldTrait[FP, WP, W]) One() WP {
+func (*PrimeFieldTrait[FP, WP, W]) One() WP {
 	var one W
 	WP(&one).Fp().SetOne()
 	return &one
 }
 
 // Zero returns the additive identity.
-func (f *PrimeFieldTrait[FP, WP, W]) Zero() WP {
+func (*PrimeFieldTrait[FP, WP, W]) Zero() WP {
 	var zero W
 	WP(&zero).Fp().SetZero()
 	return &zero
@@ -122,7 +122,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) Iter() iter.Seq[WP] {
 }
 
 // Random samples a field element using the provided PRNG.
-func (f *PrimeFieldTrait[FP, WP, W]) Random(prng io.Reader) (WP, error) {
+func (*PrimeFieldTrait[FP, WP, W]) Random(prng io.Reader) (WP, error) {
 	if prng == nil {
 		return nil, curves.ErrNil.WithMessage("prng")
 	}
@@ -134,7 +134,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) Random(prng io.Reader) (WP, error) {
 }
 
 // ExtensionDegree returns the degree of the prime field extension.
-func (f *PrimeFieldTrait[FP, WP, W]) ExtensionDegree() uint {
+func (*PrimeFieldTrait[FP, WP, W]) ExtensionDegree() uint {
 	return 1
 }
 
@@ -144,7 +144,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) PartialCompare(x, y WP) base.PartialOrderin
 }
 
 // Compare returns an ordering for x and y.
-func (f *PrimeFieldTrait[FP, WP, W]) Compare(x, y WP) base.Ordering {
+func (*PrimeFieldTrait[FP, WP, W]) Compare(x, y WP) base.Ordering {
 	out := base.ParseOrderingFromMasks(fieldsImpl.SliceCmpLE(x.Fp().Limbs(), y.Fp().Limbs()))
 	if out.IsIncomparable() {
 		panic("prime field elements cannot be incomparable")
@@ -158,7 +158,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) OpIdentity() WP {
 }
 
 // SubFieldIdentity is unimplemented for prime fields.
-func (f *PrimeFieldTrait[FP, WP, W]) SubFieldIdentity(i uint) (any, error) {
+func (*PrimeFieldTrait[FP, WP, W]) SubFieldIdentity(i uint) (any, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -313,12 +313,8 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) BytesBE() []byte {
 
 // ComponentsBytes returns big-endian component byte slices.
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) ComponentsBytes() [][]byte {
-	// TODO: fix
-	leBytes := fe.ComponentsBytes()
-	beBytes := make([][]byte, len(leBytes))
-	for i, b := range leBytes {
-		beBytes[i] = sliceutils.Reverse(b)
-	}
+	beBytes := make([][]byte, 1) // not a field extension
+	beBytes[0] = fe.BytesBE()
 	return beBytes
 }
 

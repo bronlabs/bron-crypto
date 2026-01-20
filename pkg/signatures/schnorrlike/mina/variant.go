@@ -25,33 +25,37 @@ var (
 // NewDeterministicVariant creates a Mina variant with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using Blake2b,
 // following the legacy Mina/o1js implementation.
-func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, error) {
+func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	return &Variant{
-		nid: nid,
-		sk:  privateKey,
+		nid:  nid,
+		sk:   privateKey,
+		prng: nil,
+		msg:  nil,
 	}, nil
 }
 
 // NewRandomisedVariant creates a Mina variant with random nonce generation.
 // This is used for MPC/threshold signing where nonces are collaboratively generated.
-func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
+func NewRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return &Variant{
 		nid:  nid,
+		sk:   nil,
 		prng: prng,
+		msg:  nil,
 	}, nil
 }
 
-// Variant implements Mina-specific signing behavior.
+// Variant implements Mina-specific signing behaviour.
 // It handles deterministic or random nonce generation, Poseidon-based challenge
 // computation, and the even-y constraint on the nonce commitment.
 type Variant struct {
-	nid  NetworkId   // Network ID for domain separation (MainNet, TestNet, or custom)
+	nid  NetworkID   // Network ID for domain separation (MainNet, TestNet, or custom)
 	sk   *PrivateKey // Private key for deterministic nonce derivation (nil for random)
 	prng io.Reader   // PRNG for random nonce generation (nil for deterministic)
 	msg  *Message    // Message being signed (needed for deterministic nonce derivation)
@@ -134,7 +138,7 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	// Get network ID as bits
 	// In o1js: let idBits = bytesToBits([Number(id)])
 	// For mainnet id=1, testnet id=0, converted to 8 bits LSB-first
-	id, _ := getNetworkIdHashInput(v.nid)
+	id, _ := getNetworkIDHashInput(v.nid)
 	idByte := byte(id.Uint64())
 	idBits := make([]bool, 8)
 	for i := range 8 {
@@ -204,9 +208,7 @@ func scalarTo255Bits(scalar *Scalar) []bool {
 // ComputeNonceCommitment generates the nonce k and commitment R = k·G.
 // Uses deterministic derivation if a private key was provided, otherwise uses PRNG.
 // The nonce is adjusted to ensure R has an even y-coordinate.
-func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
-	var k *Scalar
-	var err error
+func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.IsDeterministic() {
 		k, err = v.deriveNonceLegacy()
 	} else {
@@ -215,7 +217,7 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
-	R := group.ScalarBaseMul(k)
+	R = group.ScalarBaseMul(k)
 
 	// Ensure R has an even y-coordinate (same as BIP340)
 	ry, err := R.AffineY()
@@ -263,7 +265,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 }
 
 // ComputeResponse computes the Mina signature response: s = k + e·x mod n.
-func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
+func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
 		return nil, ErrInvalidArgument.WithMessage("privateKeyValue, nonce and challenge must not be nil")
 	}
@@ -271,7 +273,7 @@ func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*S
 }
 
 // SerializeSignature encodes the signature to 64 bytes in Mina's little-endian format.
-func (v *Variant) SerializeSignature(signature *Signature) ([]byte, error) {
+func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 	return SerializeSignature(signature)
 }
 
@@ -282,7 +284,7 @@ func (v *Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 
 // CorrectAdditiveSecretShareParity is a no-op for Mina since no parity correction
 // is needed for secret shares (only for nonce commitments).
-func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
+func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
 	// no changes needed
 	return share, nil
 }
@@ -290,11 +292,11 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 // CorrectPartialNonceParity adjusts a partial nonce for Mina's even-y requirement.
 // If the aggregate nonce commitment R has odd y, each party must negate their
 // partial nonce k_i to ensure the final signature is valid.
-func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (*GroupElement, *Scalar, error) {
+func (*Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (correctedR *GroupElement, correctedK *Scalar, err error) {
 	if aggregatedNonceCommitments == nil || localNonce == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}
-	correctedK := localNonce.Clone()
+	correctedK = localNonce.Clone()
 	ancy, err := aggregatedNonceCommitments.AffineY()
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot get y")
@@ -303,6 +305,6 @@ func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupEle
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.
 		correctedK = correctedK.Neg()
 	}
-	correctedR := group.ScalarBaseOp(correctedK)
+	correctedR = group.ScalarBaseOp(correctedK)
 	return correctedR, correctedK, nil
 }

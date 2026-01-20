@@ -1,11 +1,8 @@
 package zk
 
 import (
-	"fmt"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -27,48 +24,19 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // The sigma protocol must have soundness error at least 2^(-80) (statistical security).
 // The prng is used to sample the random challenge. The verifier will execute
 // rounds 1, 3, and 5 of the protocol.
-func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
-	if len(sessionId) == 0 {
-		return nil, ErrInvalid.WithMessage("sessionId is empty")
+func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionID network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
+	if prng == nil {
+		return nil, ErrNil.WithMessage("prng")
 	}
-	if sigmaProtocol == nil {
-		return nil, ErrNil.WithMessage("protocol")
-	}
-	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurityBits {
-		return nil, ErrInvalid.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
-	}
-	if sigmaProtocol.GetChallengeBytesLength() > k256Impl.FqBytes {
-		return nil, ErrFailed.WithMessage("challengeBytes is too long for the compiler")
-	}
-
-	if tape == nil {
-		return nil, ErrNil.WithMessage("tape")
-	}
-	dst := fmt.Sprintf("%s-%s-%x", transcriptLabel, sigmaProtocol.Name(), sessionId)
-	tape.AppendDomainSeparator(dst)
-
-	tape.AppendBytes(statementLabel, statement.Bytes())
-
-	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst)
+	p, err := newParticipant(sessionID, tape, sigmaProtocol, statement)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create hash commitment key")
+		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}
-
-	comm, err := hash_comm.NewScheme(ck)
-	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create commitment scheme")
-	}
-
 	return &Verifier[X, W, A, S, Z]{
-		participant: participant[X, W, A, S, Z]{
-			sessionId: sessionId,
-			tape:      tape,
-			protocol:  sigmaProtocol,
-			comm:      comm,
-			statement: statement,
-			round:     1,
-		},
-		prng: prng,
+		participant:    *p,
+		challengeBytes: nil,
+		eWitness:       hash_comm.Witness{},
+		prng:           prng,
 	}, nil
 }
 
@@ -76,18 +44,18 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 // This is the first round of the 5-round protocol.
 func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 	if v.round != 1 {
-		return *new(hash_comm.Commitment), ErrRound.WithMessage("r != 1 (%d)", v.round)
+		return hash_comm.Commitment{}, ErrRound.WithMessage("r != 1 (%d)", v.round)
 	}
 
 	v.challengeBytes = make([]byte, v.protocol.GetChallengeBytesLength())
 	_, err := io.ReadFull(v.prng, v.challengeBytes)
 	if err != nil {
-		return *new(hash_comm.Commitment), errs2.Wrap(err).WithMessage("couldn't sample challenge")
+		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't sample challenge")
 	}
 
 	eCommitment, eWitness, err := v.comm.Committer().Commit(v.challengeBytes, v.prng)
 	if err != nil {
-		return *new(hash_comm.Commitment), errs2.Wrap(err).WithMessage("couldn't commit to challenge")
+		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't commit to challenge")
 	}
 	v.eWitness = eWitness
 
@@ -100,7 +68,7 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 // Returns the challenge message and witness for the prover to verify.
 func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hash_comm.Message, hash_comm.Witness, error) {
 	if v.round != 3 {
-		return *new(hash_comm.Message), *new(hash_comm.Witness), ErrRound.WithMessage("r != 3 (%d)", v.round)
+		return hash_comm.Message(nil), hash_comm.Witness{}, ErrRound.WithMessage("r != 3 (%d)", v.round)
 	}
 	transcripts.Append(v.tape, commitmentLabel, commitment)
 	v.tape.AppendBytes(challengeLabel, v.challengeBytes)

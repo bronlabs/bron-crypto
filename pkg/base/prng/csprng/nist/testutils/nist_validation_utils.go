@@ -13,8 +13,8 @@ import (
 
 const (
 	// Test file names.
-	File_drgbvectors_no_reseed = "testutils/drbgtestvectors/drbgvectors_no_reseed/CTR_DRBG.rsp"
-	File_drgbvectors_pr_false  = "testutils/drbgtestvectors/drbgvectors_pr_false/CTR_DRBG.rsp"
+	FileDRGBVectorsNoReseed = "testutils/drbgtestvectors/drbgvectors_no_reseed/CTR_DRBG.rsp"
+	FILEDRGBVectorsPRFalse  = "testutils/drbgtestvectors/drbgvectors_pr_false/CTR_DRBG.rsp"
 	// Test file constants.
 	testHeaderLine = "[AES-%d %s df]" // Indicates the beginning of a new AES-based test
 	maxTestCount   = 14               // Number of tests per case
@@ -87,7 +87,14 @@ func NewNistTestHelper(f *os.File, AesKeySize int, UseDf bool) *NistTestHelper {
 		isNewTestExpr: fmt.Sprintf(testHeaderLine,
 			AesKeySize,
 			map[bool]string{true: "use", false: "no"}[UseDf]),
-		Config:      &NistTestConfig{},
+		Config: &NistTestConfig{
+			PredictionResistance:     false,
+			EntropyInputLen:          0,
+			NonceLen:                 0,
+			PersonalizationStringLen: 0,
+			AdditionalInputLen:       0,
+			ReturnedBitsLen:          0,
+		},
 		State:       nil,
 		FileScanner: bufio.NewScanner(f),
 		LineNo:      0,
@@ -138,22 +145,22 @@ func (nistTest *NistTestHelper) Sscanf(canBeEmpty bool, format string, a ...any)
 //	[ReturnedBitsLen = 512]
 func (nistTest *NistTestHelper) ScanTestConfig() error {
 	if err := nistTest.Sscanf(false, "[PredictionResistance = %t]", &nistTest.Config.PredictionResistance); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "[EntropyInputLen = %d]", &nistTest.Config.EntropyInputLen); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "[NonceLen = %d]", &nistTest.Config.NonceLen); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "[PersonalizationStringLen = %d]", &nistTest.Config.PersonalizationStringLen); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "[AdditionalInputLen = %d]", &nistTest.Config.AdditionalInputLen); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "[ReturnedBitsLen = %d]", &nistTest.Config.ReturnedBitsLen); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	// Scan the empty line after the test config
 	if !nistTest.Scan() {
@@ -176,33 +183,33 @@ func (nistTest *NistTestHelper) ScanTestConfig() error {
 //	ReturnedBits = 5862eb38bd558dd978a696e6df164782ddd887e7e9a6c9f3f1fbafb78941b535a64912dfd224c6dc7454e5250b3d97165e16260c2faf1cc7735cb75fb4f07e1d
 func (nistTest *NistTestHelper) ScanTestCase(withReseed bool) error {
 	if err := nistTest.Sscanf(false, "COUNT = %d", &nistTest.State.Count); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "EntropyInput = %x", &nistTest.State.EntropyInput); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "Nonce = %x", &nistTest.State.Nonce); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(true, "PersonalizationString = %x", &nistTest.State.PersonalizationStr); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if withReseed {
 		if err := nistTest.Sscanf(true, "EntropyInputReseed = %x", &nistTest.State.EntropyInputReseed); err != nil {
-			return err
+			return errs2.Wrap(err)
 		}
 		if err := nistTest.Sscanf(true, "AdditionalInputReseed = %x", &nistTest.State.AdditionalInputReseed); err != nil {
-			return err
+			return errs2.Wrap(err)
 		}
 	}
 	if err := nistTest.Sscanf(true, "AdditionalInput = %x", &nistTest.State.AdditionalInput1); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(true, "AdditionalInput = %x", &nistTest.State.AdditionalInput2); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := nistTest.Sscanf(false, "ReturnedBits = %x", &nistTest.State.ReturnedBits); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	return nil
 }
@@ -215,7 +222,7 @@ func (nistTest *NistTestHelper) RunInit(AesKeySize int) (*nist.PrngNist, error) 
 	}
 	prng, err := nist.NewNistPRNG(AesKeySize, nil, nistTest.State.EntropyInput, nistTest.State.Nonce, nistTest.State.PersonalizationStr)
 	if err != nil {
-		return nil, err
+		return nil, errs2.Wrap(err)
 	}
 	return prng, nil
 }
@@ -224,10 +231,10 @@ func (nistTest *NistTestHelper) RunInit(AesKeySize int) (*nist.PrngNist, error) 
 // and stores them in `buffer`.
 func (nistTest *NistTestHelper) RunGenerate(prng *nist.PrngNist, buffer []byte) error {
 	if err := prng.Generate(buffer, nistTest.State.AdditionalInput1); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if err := prng.Generate(buffer, nistTest.State.AdditionalInput2); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	return nil
 }
@@ -235,7 +242,7 @@ func (nistTest *NistTestHelper) RunGenerate(prng *nist.PrngNist, buffer []byte) 
 // RunReseed seeds the prng with the provided entropy and the additional input.
 func (nistTest *NistTestHelper) RunReseed(prng *nist.PrngNist, buffer []byte) error {
 	if err := prng.Reseed(nistTest.State.EntropyInputReseed, nistTest.State.AdditionalInputReseed); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	return nil
 }
@@ -243,10 +250,10 @@ func (nistTest *NistTestHelper) RunReseed(prng *nist.PrngNist, buffer []byte) er
 // RunRead reads the next `len(buffer)` random bytes and stores them in `buffer`.
 func (*NistTestHelper) RunRead(prng *nist.PrngNist, buffer []byte) error {
 	if _, err := io.ReadFull(prng, buffer); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	if _, err := io.ReadFull(prng, buffer); err != nil {
-		return err
+		return errs2.Wrap(err)
 	}
 	return nil
 }
@@ -259,37 +266,37 @@ func RunNistTestCases(f *os.File, AesKeySize int, useDf, withReseed bool) error 
 		if nistTest.IsNewTestCase() {
 			// Scan test config
 			if err := nistTest.ScanTestConfig(); err != nil {
-				return err
+				return errs2.Wrap(err)
 			}
 			returnedBits := make([]byte, nistTest.Config.ReturnedBitsLen/8)
 
 			for nistTest.CountNo = 0; nistTest.CountNo < maxTestCount; nistTest.CountNo++ {
 				// Scan test state
 				if err := nistTest.ScanTestCase(withReseed); err != nil {
-					return err
+					return errs2.Wrap(err)
 				}
 				// Run initialisation
 				prng, err := nistTest.RunInit(AesKeySize)
 				if err != nil {
-					return err
+					return errs2.Wrap(err)
 				}
 				// Run reseed
 				if withReseed {
 					if err := nistTest.RunReseed(prng, returnedBits); err != nil {
-						return err
+						return errs2.Wrap(err)
 					}
 				}
 				// Run generation
 				if err := nistTest.RunGenerate(prng, returnedBits); err != nil {
-					return err
+					return errs2.Wrap(err)
 				}
 				// Check test results
 				if !bytes.Equal(nistTest.State.ReturnedBits, returnedBits) {
-					return err
+					return errs2.Wrap(err)
 				}
 				// Scan empty line
-				if err = nistTest.Sscanf(true, ""); err != nil {
-					return err
+				if err := nistTest.Sscanf(true, ""); err != nil {
+					return errs2.Wrap(err)
 				}
 			}
 			nistTest.TestNo++
@@ -304,21 +311,21 @@ func RunNistValidationTest(keySize int, useDf bool) (err error) {
 		withReseed bool
 		fName      string
 	}{
-		{withReseed: false, fName: File_drgbvectors_no_reseed},
-		{withReseed: true, fName: File_drgbvectors_pr_false},
+		{withReseed: false, fName: FileDRGBVectorsNoReseed},
+		{withReseed: true, fName: FILEDRGBVectorsPRFalse},
 	} {
 		// Open test data file
 		f, err := os.Open(caseParams.fName)
 		if err != nil {
-			return err
+			return errs2.Wrap(err)
 		}
 		// Run tests
-		if err = RunNistTestCases(f, keySize, useDf, caseParams.withReseed); err != nil {
-			return err
+		if err := RunNistTestCases(f, keySize, useDf, caseParams.withReseed); err != nil {
+			return errs2.Wrap(err)
 		}
 		// Close test data file
-		if err = f.Close(); err != nil {
-			return err
+		if err := f.Close(); err != nil {
+			return errs2.Wrap(err)
 		}
 	}
 	return nil

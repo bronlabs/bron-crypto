@@ -70,7 +70,7 @@ func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]
 		}
 
 		otTape := globalOtTape.Clone()
-		otTape.AppendBytes(otRandomizerSender, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
+		otTape.AppendBytes(otRandomizerSender, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingID)))
 		otTape.AppendBytes(otRandomizerReceiver, binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		otKey, err := otTape.ExtractBytes(otRandomizerKey, 32)
 		if err != nil {
@@ -115,9 +115,9 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample r")
 	}
 	c.state.bigR = make(map[sharing.ID]P)
-	c.state.bigR[c.sharingId] = c.suite.Curve().ScalarBaseMul(c.state.r)
+	c.state.bigR[c.sharingID] = c.suite.Curve().ScalarBaseMul(c.state.r)
 	c.state.bigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
-	c.state.bigRCommitment[c.sharingId], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.sharingId].ToCompressed(), c.prng)
+	c.state.bigRCommitment[c.sharingID], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.sharingID].ToCompressed(), c.prng)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot commit to r")
 	}
@@ -128,7 +128,7 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 	c.state.chi = make(map[sharing.ID]S)
 
 	bOut := &Round3Broadcast{
-		BigRCommitment: c.state.bigRCommitment[c.sharingId],
+		BigRCommitment: c.state.bigRCommitment[c.sharingID],
 	}
 
 	mulSuite, err := rvole_softspoken.NewSuite(2, c.suite.Curve(), sha256.New)
@@ -148,7 +148,7 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 
 		otTape := globalOtTape.Clone()
 		otTape.AppendBytes(otRandomizerSender, binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		otTape.AppendBytes(otRandomizerReceiver, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
+		otTape.AppendBytes(otRandomizerReceiver, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingID)))
 		otKey, err := otTape.ExtractBytes(otRandomizerKey, base.CollisionResistanceBytesCeil)
 		if err != nil {
 			return nil, nil, errs2.Wrap(err).WithMessage("cannot extract OT randomizer key")
@@ -162,8 +162,8 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 			return nil, nil, ErrFailed.WithMessage("couldn't find alice seed")
 		}
 		aliceTape := c.tape.Clone()
-		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.aliceMul[id], err = rvole_softspoken.NewAlice(c.sessionId, mulSuite, aliceSeed, c.prng, aliceTape)
+		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingID)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		c.aliceMul[id], err = rvole_softspoken.NewAlice(c.sessionID, mulSuite, aliceSeed, c.prng, aliceTape)
 		if err != nil {
 			return nil, nil, errs2.Wrap(err).WithMessage("couldn't initialise Alice")
 		}
@@ -173,8 +173,8 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 			return nil, nil, ErrFailed.WithMessage("couldn't find bob seed")
 		}
 		bobTape := c.tape.Clone()
-		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
-		c.bobMul[id], err = rvole_softspoken.NewBob(c.sessionId, mulSuite, bobSeed, c.prng, bobTape)
+		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.sharingID)))
+		c.bobMul[id], err = rvole_softspoken.NewBob(c.sessionID, mulSuite, bobSeed, c.prng, bobTape)
 		if err != nil {
 			return nil, nil, errs2.Wrap(err).WithMessage("couldn't initialise Bob")
 		}
@@ -202,7 +202,7 @@ func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast], 
 		mulR1[id] = message.p2p.MulR1
 	}
 
-	c.zeroSampler, err = przs.NewSampler(c.sharingId, c.quorum, c.zeroSeeds, c.suite.ScalarField())
+	c.zeroSampler, err = przs.NewSampler(c.sharingID, c.quorum, c.zeroSeeds, c.suite.ScalarField())
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
@@ -221,13 +221,13 @@ func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast], 
 	}
 	c.state.sk = sk.Value().Add(zeta)
 	c.state.pk = make(map[sharing.ID]P)
-	c.state.pk[c.sharingId] = c.suite.Curve().ScalarBaseMul(c.state.sk)
+	c.state.pk[c.sharingID] = c.suite.Curve().ScalarBaseMul(c.state.sk)
 	c.state.c = make(map[sharing.ID][]S)
 
 	bOut := &Round4Broadcast[P, B, S]{
-		BigR:        c.state.bigR[c.sharingId],
+		BigR:        c.state.bigR[c.sharingID],
 		BigRWitness: c.state.bigRWitness,
-		Pk:          c.state.pk[c.sharingId],
+		Pk:          c.state.pk[c.sharingID],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {

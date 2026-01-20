@@ -14,17 +14,17 @@ import (
 )
 
 // RunBBOT runs the full batched base OT protocol.
-func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](xi, l int, group algebra.PrimeGroup[GE, SE], sessionId network.SID, tape transcripts.Transcript, prng io.Reader) (*ecbbot.SenderOutput[SE], *ecbbot.ReceiverOutput[SE], error) {
+func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](xi, l int, group algebra.PrimeGroup[GE, SE], sessionID network.SID, tape transcripts.Transcript, prng io.Reader) (*ecbbot.SenderOutput[SE], *ecbbot.ReceiverOutput[SE], error) {
 	suite, err := ecbbot.NewSuite(xi, l, group)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("constructing OT suite in run BatchedBaseOT")
 	}
 
-	sender, err := ecbbot.NewSender(sessionId, suite, tape.Clone(), prng)
+	sender, err := ecbbot.NewSender(sessionID, suite, tape.Clone(), prng)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("constructing OT sender in run BatchedBaseOT")
 	}
-	receiver, err := ecbbot.NewReceiver(sessionId, suite, tape.Clone(), prng)
+	receiver, err := ecbbot.NewReceiver(sessionID, suite, tape.Clone(), prng)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("constructing OT receiver in run BatchedBaseOT")
 	}

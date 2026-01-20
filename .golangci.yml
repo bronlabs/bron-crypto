@@ -1,9 +1,16 @@
 version: "2"
 run:
-#  build-tags:
-#    - nobignum
-#    - purego
+  build-tags:
+   - nobignum
+   - purego
   tests: true
+
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
+  fix: false
 
 formatters:
   enable:
@@ -32,9 +39,7 @@ formatters:
     paths:
       - gen
       - testutils
-      - thirdparty
-      - third_party$
-      - builtin$
+      - thirdparty$
       - examples$
 linters:
   default: none
@@ -62,22 +67,18 @@ linters:
     - err113
     # Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases
     - errcheck
-    # # TODO: add when sentinel errors are used
-    # # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
-    # - errname
+    # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
+    - errname
     # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
     - errorlint
     # check exhaustiveness of enum switch statements
     - exhaustive
     # Checks if all structure fields are initialized.
     - exhaustruct
-    # # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
-    # # TODO: enable this when it doesn't spit out FIXMEs in people'e code.
-    # - exptostd
+    # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
+    - exptostd
     # Forbids identifiers
     - forbidigo
-    # finds forced type assertions
-    - forcetypeassert
     # Checks that go compiler directive comments (//go:) are valid.
     - gocheckcompilerdirectives
     # Checks that no init functions are present in Go code
@@ -121,34 +122,25 @@ linters:
     # Checks that there is no simultaneous return of nil error and an invalid value.
     - nilnil
     # Paralleltest detects missing usage of t.Parallel() method in your Go test.
-    # TODO: enable later
-    # - paralleltest
+    - paralleltest
     # Finds slice declarations that could potentially be preallocated
     - prealloc
     # find code that shadows one of Go's predeclared identifiers
     - predeclared
-    # Check Prometheus metrics naming via promlint.
-    - promlinter
     # Check that struct tags are well aligned.
     - tagalign
-    # # Checks the struct tags.
-    # TODO: enable this once it doesn't spit out ast errors
-    # - tagliatelle
     # Linter checks if examples are testable (have an expected output).
     - testableexamples
     # Checks usage of github.com/stretchr/testify.
     - testifylint
-    # # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
-    # - revive
-    # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    # - staticcheck
+    # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
+    - revive
+    # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
+    - staticcheck
     # linter that makes you use a separate _test package
     - testpackage
     # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     - thelper
-    # # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
-    # # TODO: enable later
-    # - tparallel
     # Remove unnecessary type conversions
     - unconvert
     # Reports unused function parameters
@@ -163,8 +155,6 @@ linters:
     - whitespace
     # Checks that errors returned from external packages are wrapped
     - wrapcheck
-    # Detects the wrong usage of zerolog that a user forgets to dispatch with Send or Msg.
-    - zerologlint
 
   settings:
     asasalint:
@@ -397,7 +387,7 @@ linters:
     gosec:
       excludes:
         - G115
-      severity: low
+      severity: medium
       confidence: low
       config:
         G101:
@@ -512,18 +502,6 @@ linters:
     staticcheck:
       checks:
         - all
-    # tagliatelle:
-    #   case:
-    #     rules:
-    #       avro: snake
-    #       bson: camel
-    #       env: upperSnake
-    #       envconfig: upperSnake
-    #       json: camel
-    #       mapstructure: kebab
-    #       xml: camel
-    #       yaml: camel
-    #     use-field-name: false
     testifylint:
       enable-all: true
       disable:
@@ -603,10 +581,7 @@ linters:
           - exhaustruct
           - predeclared
           - unconvert
-      - path: utils.go
-        linters:
-          # TODO: enable this when round based stuff is here
-          - unparam
+          - staticcheck
       - path: testutils/
         linters:
           - depguard
@@ -629,20 +604,7 @@ linters:
           - forcetypeassert
           - err113
           - nakedret
-          # TODO: ENABLE THIS
-          - wrapcheck
           - dupl
-      - path: signatures/bls/
-        linters:
-          # so many castings to pairing point would then need redundant checks.
-          # fix when we move to actual algebraic interfaces
-          - errcheck
-          - forcetypeassert
-      # linter thinks value is unused if we type cast the interface and panic if not ok
-      - path: curves/
-        text: "SA4006"
-        linters:
-          staticcheck
       # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and
       # unused constants (poly).
       - path: thirdparty/
@@ -650,26 +612,14 @@ linters:
           - dupl
           - unused
           - intrange
-      # a lot of false positives for cselect
-      - path: curves/
-        text: "nilness: nil dereference in field selection"
-        linters:
-          govet
-      # contents of impl are not supposed to be used by outside libraries, its constants
-      - path: impl/
-        text: "unexported-return"
-        linters:
-          - revive
       - path: impl/
         linters:
           - dupl
-      - path: pkg/cgo
+      - path: pkg/encryption/hpke/internal
         linters:
-          - gocritic
+          - dupl
+          - exhaustruct
       # Exclude some revive messages
-      - linters:
-          - revive
-        text: "var-naming: don't use ALL_CAPS in Go names; use CamelCase"
       # We don't want to check whether statements like `x, err := ...` shadows `err`
       - linters:
           - govet
@@ -678,40 +628,17 @@ linters:
           - govet
         text: 'shadow: declaration of "ok" shadows declaration at line'
       - linters:
-          - gocritic
-        text: "captLocal: `G1' should not be capitalized"
-      - linters:
-          - gocritic
-        text: "captLocal: `G2' should not be capitalized"
-      - linters:
-          - gocritic
-        text: "captLocal: `Gt' should not be capitalized"
-      - path: ot/
-        text: "captLocal"
+          - staticcheck
+        text: "ST1003: should not use underscores in package names"
+      - path: cbor.go
         linters:
-          - gocritic
-      - path: key_agreement/
-        text: "captLocal"
-        linters:
-          - gocritic
-      - path: encryptions/
-        text: "captLocal: `AD' should not be capitalized"
-        linters:
-          - gocritic
+          - gochecknoinits
+          - wrapcheck
       - path: hpke/
-        text: "captLocal: `L' should not be capitalized"
+        text: "ST1003: should not use ALL_CAPS in Go names; use CamelCase instead"
         linters:
-          - gocritic
+          - staticcheck
       # Exclude algebra package from wrapcheck - lots of interface method calls
       - path: pkg/base/algebra/
         linters:
           - wrapcheck
-      # this has a collision with wrapcheck. We care about wrapcheck more, but
-      # errchkjson is also important because it reports unsafe marshaling
-      - linters:
-          - errchkjson
-        text: 'Error return value of `encoding/json.Marshal` is checked but passed argument is safe'
-
-  issues:
-    max-same-issues: 0
-    fix: false

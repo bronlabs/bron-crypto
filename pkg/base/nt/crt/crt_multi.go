@@ -24,24 +24,25 @@ type ParamsMulti struct {
 }
 
 // NewParamsMulti constructs multi-factor CRT parameters from given moduli.
-func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
+func NewParamsMulti(factors ...*numct.Modulus) (params *ParamsMulti, ok ct.Bool) {
 	k := len(factors)
 	allOk := ct.GreaterOrEqual(k, 2)
 
-	params := &ParamsMulti{
+	params = &ParamsMulti{
 		Factors:      make([]*numct.Modulus, k),
 		Products:     make([]*numct.Nat, k),
 		Inverses:     make([]*numct.Nat, k),
 		Lifts:        make([]*numct.Nat, k),
 		NumFactors:   k,
 		GarnerCoeffs: make([][]*numct.Nat, k),
+		Modulus:      nil,
 	}
 
 	// Set p_i as moduli and compute N = ∏ p_i
 	prod := numct.NatOne()
 	for i := range k {
 		params.Factors[i] = factors[i]
-		capMul := int(prod.AnnouncedLen() + factors[i].BitLen())
+		capMul := prod.AnnouncedLen() + factors[i].BitLen()
 		prod.MulCap(prod, factors[i].Nat(), capMul)
 	}
 	modulus, ok := numct.NewModulus(prod)
@@ -62,7 +63,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 		params.Inverses[i] = inv.Clone()
 
 		// Lift_i = (M_i * inv_i) mod N
-		capMul := int(Mi.AnnouncedLen() + inv.AnnouncedLen())
+		capMul := Mi.AnnouncedLen() + inv.AnnouncedLen()
 		lift.MulCap(&Mi, &inv, capMul)
 		params.Modulus.Mod(&lift, &lift)
 		params.Lifts[i] = lift.Clone()
@@ -78,7 +79,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 		pProd := numct.NatOne()
 		for j := range i {
 			// pProd = p_0 * ... * p_j
-			capMul := int(pProd.AnnouncedLen() + factors[j].BitLen())
+			capMul := pProd.AnnouncedLen() + factors[j].BitLen()
 			pProd.MulCap(pProd, factors[j].Nat(), capMul)
 
 			// Compute pProd^{-1} mod p_i
@@ -95,7 +96,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 // PrecomputeMulti precomputes CRT parameters for k primes.
 // All operations are constant-time with respect to the prime values.
 // Returns nil if any prime is not coprime to the others.
-func PrecomputeMulti(factors ...*numct.Nat) (*ParamsMulti, ct.Bool) {
+func PrecomputeMulti(factors ...*numct.Nat) (params *ParamsMulti, ok ct.Bool) {
 	allOk := ct.True
 	fs := make([]*numct.Modulus, len(factors))
 	for i, f := range factors {
@@ -110,34 +111,34 @@ func PrecomputeMulti(factors ...*numct.Nat) (*ParamsMulti, ct.Bool) {
 
 // RecombineParallel reconstructs x (mod N) from residues[i] = x mod p_i using precomputed lifts.
 // x ≡ Σ residues[i] * Lift_i (mod N).
-func (params *ParamsMulti) RecombineParallel(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
-	eqLen := ct.Equal(len(residues), params.NumFactors)
+func (prm *ParamsMulti) RecombineParallel(residues ...*numct.Nat) (result *numct.Nat, ok ct.Bool) {
+	eqLen := ct.Equal(len(residues), prm.NumFactors)
 	if eqLen == ct.False {
 		return nil, eqLen
 	}
 	var wg sync.WaitGroup
-	wg.Add(params.NumFactors)
+	wg.Add(prm.NumFactors)
 
-	terms := make([]*numct.Nat, params.NumFactors)
-	for i := range params.NumFactors {
+	terms := make([]*numct.Nat, prm.NumFactors)
+	for i := range prm.NumFactors {
 		go func(idx int) {
 			defer wg.Done()
 			var term numct.Nat
-			params.Modulus.ModMul(&term, residues[idx], params.Lifts[idx])
+			prm.Modulus.ModMul(&term, residues[idx], prm.Lifts[idx])
 			terms[idx] = &term
 		}(i)
 	}
 	wg.Wait()
-	result := numct.NatZero()
+	result = numct.NatZero()
 	for i := range terms {
-		params.Modulus.ModAdd(result, result, terms[i])
+		prm.Modulus.ModAdd(result, result, terms[i])
 	}
 	return result, eqLen
 }
 
 // RecombineSerial reconstructs x (mod N) from residues[i] = x mod p_i using Garner's algorithm.
-func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
-	eqLen := ct.Equal(len(residues), params.NumFactors)
+func (prm *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (result *numct.Nat, ok ct.Bool) {
+	eqLen := ct.Equal(len(residues), prm.NumFactors)
 	if eqLen == ct.False {
 		return nil, eqLen
 	}
@@ -147,24 +148,24 @@ func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, 
 	//   c_i = (a_i - x) * (p_0 * ... * p_{i-1})^{-1} mod p_i
 	//   x = x + c_i * (p_0 * ... * p_{i-1})
 
-	result := residues[0].Clone() // x = a_0
+	result = residues[0].Clone() // x = a_0
 	pProd := numct.NatOne()
-	for i := 1; i < params.NumFactors; i++ {
+	for i := 1; i < prm.NumFactors; i++ {
 		// Update pProd = p_0 * ... * p_{i-1}
-		capMul := int(pProd.AnnouncedLen() + params.Factors[i-1].Nat().AnnouncedLen())
-		(pProd).MulCap(pProd, params.Factors[i-1].Nat(), capMul)
+		capMul := pProd.AnnouncedLen() + prm.Factors[i-1].Nat().AnnouncedLen()
+		(pProd).MulCap(pProd, prm.Factors[i-1].Nat(), capMul)
 
 		// Compute c_i = (a_i - x) * (p_0 * ... * p_{i-1})^{-1} mod p_i
 		var xModPi, diff, ci numct.Nat
-		params.Factors[i].Mod(&xModPi, result)
-		params.Factors[i].ModSub(&diff, residues[i], &xModPi)
-		params.Factors[i].ModMul(&ci, &diff, params.GarnerCoeffs[i][i-1])
+		prm.Factors[i].Mod(&xModPi, result)
+		prm.Factors[i].ModSub(&diff, residues[i], &xModPi)
+		prm.Factors[i].ModMul(&ci, &diff, prm.GarnerCoeffs[i][i-1])
 
 		// x = x + c_i * pProd
 		var term numct.Nat
-		capMul = int(ci.AnnouncedLen() + pProd.AnnouncedLen())
+		capMul = ci.AnnouncedLen() + pProd.AnnouncedLen()
 		term.MulCap(&ci, pProd, capMul)
-		capAdd := int(result.AnnouncedLen() + term.AnnouncedLen())
+		capAdd := result.AnnouncedLen() + term.AnnouncedLen()
 		result.AddCap(result, &term, capAdd)
 	}
 
@@ -175,22 +176,22 @@ func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, 
 // Recombine reconstructs x (mod N) from residues[i] = x mod p_i.
 // Recombine chooses between serial and parallel based on size.
 // The choice is deterministic based on modulus size and prime count.
-func (params *ParamsMulti) Recombine(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
-	if params.NumFactors <= 4 {
-		return params.RecombineSerial(residues...)
+func (prm *ParamsMulti) Recombine(residues ...*numct.Nat) (result *numct.Nat, ok ct.Bool) {
+	if prm.NumFactors <= 4 {
+		return prm.RecombineSerial(residues...)
 	}
-	return params.RecombineParallel(residues...)
+	return prm.RecombineParallel(residues...)
 }
 
 // DecomposeSerial decomposes m into residues mod each prime.
 // Constant-time with respect to values (not the number of primes).
-func (params *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
-	residues := make([]*numct.Nat, params.NumFactors)
+func (prm *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
+	residues := make([]*numct.Nat, prm.NumFactors)
 
 	// Process all primes to maintain constant time
-	for i := range params.NumFactors {
+	for i := range prm.NumFactors {
 		var residueT numct.Nat
-		params.Factors[i].Mod(&residueT, m.Nat())
+		prm.Factors[i].Mod(&residueT, m.Nat())
 		residues[i] = &residueT
 	}
 
@@ -199,18 +200,18 @@ func (params *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
 
 // DecomposeParallel decomposes m into residues mod each prime in parallel.
 // Constant-time with respect to values (not the number of primes).
-func (params *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
-	residues := make([]*numct.Nat, params.NumFactors)
+func (prm *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
+	residues := make([]*numct.Nat, prm.NumFactors)
 
 	var wg sync.WaitGroup
-	wg.Add(params.NumFactors)
+	wg.Add(prm.NumFactors)
 
 	// Launch all goroutines to maintain constant time
-	for i := range params.NumFactors {
+	for i := range prm.NumFactors {
 		go func(idx int) {
 			defer wg.Done()
 			var residue numct.Nat
-			params.Factors[idx].Mod(&residue, m.Nat())
+			prm.Factors[idx].Mod(&residue, m.Nat())
 			residues[idx] = &residue
 		}(i)
 	}
@@ -221,11 +222,11 @@ func (params *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
 
 // Decompose chooses between serial and parallel based on size.
 // The choice is deterministic based on modulus size and prime count.
-func (params *ParamsMulti) Decompose(m *numct.Modulus) []*numct.Nat {
+func (prm *ParamsMulti) Decompose(m *numct.Modulus) []*numct.Nat {
 	// Use parallel for larger moduli or more primes
 	// This is a deterministic choice, not data-dependent
-	if m.BitLen() > 4096 || params.NumFactors > 3 {
-		return params.DecomposeParallel(m)
+	if m.BitLen() > 4096 || prm.NumFactors > 3 {
+		return prm.DecomposeParallel(m)
 	}
-	return params.DecomposeSerial(m)
+	return prm.DecomposeSerial(m)
 }

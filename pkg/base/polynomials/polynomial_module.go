@@ -100,7 +100,7 @@ func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(d
 	}, nil
 }
 
-func (m *PolynomialModule[ME, S]) Order() algebra.Cardinal {
+func (*PolynomialModule[ME, S]) Order() algebra.Cardinal {
 	return cardinal.Infinite()
 }
 
@@ -131,7 +131,7 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 	return poly, nil
 }
 
-func (m *PolynomialModule[ME, S]) ElementSize() int {
+func (*PolynomialModule[ME, S]) ElementSize() int {
 	return -1
 }
 
@@ -244,7 +244,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME,
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Bytes() []byte {
-	var out []byte
+	out := make([]byte, 0, len(p.coeffs)*p.CoefficientStructure().ElementSize())
 	for _, c := range p.coeffs {
 		out = append(out, c.Bytes()...)
 	}

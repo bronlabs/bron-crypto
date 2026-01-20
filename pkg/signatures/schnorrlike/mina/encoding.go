@@ -82,7 +82,7 @@ func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 
 	// Extract x-coordinate and y-parity
 	xBytesLE := data[2:34] // 32 bytes in little-endian
-	yParity := data[34]     // 1 byte
+	yParity := data[34]    // 1 byte
 
 	// Convert x from little-endian (Mina format) to big-endian (internal format)
 	xBytesBE := make([]byte, len(xBytesLE))
@@ -174,7 +174,7 @@ func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 }
 
 // EncodeSignature encodes a Mina signature to Base58Check format.
-// The signature is first serialized to 64 bytes (R.x || s in little-endian),
+// The signature is first serialised to 64 bytes (R.x || s in little-endian),
 // then encoded with version prefix 0x9A.
 func EncodeSignature(signature *Signature) (base58.Base58, error) {
 	if signature == nil {

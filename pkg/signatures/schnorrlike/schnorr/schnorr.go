@@ -175,6 +175,7 @@ func (s *Scheme[GE, S]) Verifier(opts ...VerifierOption[GE, S]) (*Verifier[GE, S
 		VerifierTrait: schnorrlike.VerifierTrait[*Variant[GE, S], GE, S, Message]{
 			V:                          s.vr,
 			ResponseOperatorIsNegative: s.vr.responseOperatorIsNegative,
+			ChallengePublicKey:         nil,
 		},
 	}
 	for _, opt := range opts {
@@ -201,7 +202,7 @@ func (s *Scheme[GE, S]) PartialSignatureVerifier(
 	return verifier, nil
 }
 
-// KeyGeneratorOption configures key generation behavior.
+// KeyGeneratorOption configures key generation behaviour.
 type KeyGeneratorOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = signatures.KeyGeneratorOption[*KeyGenerator[GE, S], *PrivateKey[GE, S], *PublicKey[GE, S]]
 
 // KeyGenerator creates Schnorr key pairs for the configured curve.
@@ -209,7 +210,7 @@ type KeyGenerator[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEleme
 	schnorrlike.KeyGeneratorTrait[GE, S]
 }
 
-// SignerOption configures signing behavior.
+// SignerOption configures signing behaviour.
 type SignerOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = signatures.SignerOption[*Signer[GE, S], Message, *Signature[GE, S]]
 
 // Signer produces Schnorr signatures using random nonce generation.
@@ -225,7 +226,7 @@ func (sg *Signer[GE, S]) Variant() *Variant[GE, S] {
 	return sg.V
 }
 
-// VerifierOption configures verification behavior.
+// VerifierOption configures verification behaviour.
 type VerifierOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = signatures.VerifierOption[*Verifier[GE, S], *PublicKey[GE, S], Message, *Signature[GE, S]]
 
 // Verifier validates Schnorr signatures.
@@ -241,7 +242,7 @@ func (v *Verifier[GE, S]) Variant() *Variant[GE, S] {
 	return v.V
 }
 
-// Variant implements variant-specific behavior for vanilla Schnorr.
+// Variant implements variant-specific behaviour for vanilla Schnorr.
 // It stores all configurable parameters for the signature scheme.
 type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
 	g                                algebra.PrimeGroup[GE, S]     // underlying group
@@ -254,7 +255,7 @@ type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]
 }
 
 // Type returns the variant identifier "Schnorr".
-func (v *Variant[GE, S]) Type() schnorrlike.VariantType {
+func (*Variant[GE, S]) Type() schnorrlike.VariantType {
 	return VariantType
 }
 
@@ -268,7 +269,7 @@ func (v *Variant[GE, S]) HashFunc() func() hash.Hash {
 
 // ComputeNonceCommitment generates a random nonce k and commitment R = k·G.
 // If shouldNegateNonce was configured, applies parity correction to k.
-func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
+func (v *Variant[GE, S]) ComputeNonceCommitment() (R GE, k S, err error) {
 	if v == nil {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("variant is nil")
 	}
@@ -281,7 +282,7 @@ func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
 
 // ComputeChallenge computes the Fiat-Shamir challenge: e = H(R || P || m) mod n.
 // Uses the configured hash function and byte ordering.
-func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message Message) (S, error) {
+func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment, publicKeyValue GE, message Message) (S, error) {
 	if v == nil {
 		return *new(S), ErrInvalidArgument.WithMessage("variant is nil")
 	}
@@ -350,7 +351,7 @@ func (*Variant[GE, S]) NonceIsFunctionOfMessage() bool {
 
 // CorrectPartialNonceParity is a no-op for vanilla Schnorr (no parity constraints).
 // Returns the nonce and its commitment unchanged.
-func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (GE, S, error) {
+func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (R GE, correctedNonce S, err error) {
 	if utils.IsNil(aggregatedNonceCommitment) {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
 	}
@@ -362,7 +363,7 @@ func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, n
 	if !ok {
 		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment type assertion failed")
 	}
-	R := group.ScalarBaseOp(nonce)
+	R = group.ScalarBaseOp(nonce)
 	return R, nonce, nil
 }
 

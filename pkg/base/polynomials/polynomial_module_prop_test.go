@@ -3,17 +3,19 @@ package polynomials_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 type MVP = *polynomials.ModuleValuedPolynomial[*k256.Point, *k256.Scalar]
 
 func ModuleValuedPolynomialGenerator(t *testing.T) *rapid.Generator[MVP] {
+	t.Helper()
 	curve := k256.NewCurve()
 	polyModule, err := polynomials.NewPolynomialModule(curve)
 	require.NoError(t, err)
@@ -51,12 +53,7 @@ func TestPolynomialModuleProperties(t *testing.T) {
 		Func: func(s *k256.Scalar, a MVP) MVP { return a.ScalarOp(s) },
 	}
 
-	var suite *properties.TwoSortedModel[
-		*polynomials.PolynomialModule[*k256.Point, *k256.Scalar],
-		*k256.ScalarField,
-		MVP,
-		*k256.Scalar,
-	] = properties.PolynomialModule[
+	var suite = properties.PolynomialModule[
 		*polynomials.PolynomialModule[*k256.Point, *k256.Scalar],
 		*k256.Curve,
 	](

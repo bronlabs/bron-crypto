@@ -1,10 +1,11 @@
 package znstar
 
 import (
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/fxamacker/cbor/v2"
 )
 
 var (
@@ -94,7 +95,7 @@ type paillierGroupUnknownOrderElementDTO struct {
 	N          *num.NatPlus           `cbor:"n"`
 }
 
-// ========== CBOR Serialization ==========
+// ========== CBOR Serialisation ==========.
 
 func (pg *PaillierGroup[X]) MarshalCBOR() ([]byte, error) {
 	var tag uint64
@@ -102,8 +103,8 @@ func (pg *PaillierGroup[X]) MarshalCBOR() ([]byte, error) {
 	case *modular.OddPrimeSquareFactors:
 		tag = PaillierGroupKnownOrderTag
 		dto := &paillierGroupKnownOrderDTO{
-			P: num.NPlus().FromModulusCT(any(pg.arith).(*modular.OddPrimeSquareFactors).P.Factor),
-			Q: num.NPlus().FromModulusCT(any(pg.arith).(*modular.OddPrimeSquareFactors).Q.Factor),
+			P: num.NPlus().FromModulusCT(any(pg.arith).(*modular.OddPrimeSquareFactors).P.Factor), //nolint:errcheck // false positive
+			Q: num.NPlus().FromModulusCT(any(pg.arith).(*modular.OddPrimeSquareFactors).Q.Factor), //nolint:errcheck // false positive
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	case *modular.SimpleModulus:
@@ -128,7 +129,7 @@ func (pg *PaillierGroup[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*pg = *any(reconstructed).(*PaillierGroup[X])
+		*pg = *any(reconstructed).(*PaillierGroup[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderDTO](data)
@@ -140,7 +141,7 @@ func (pg *PaillierGroup[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*pg = *any(reconstructed).(*PaillierGroup[X])
+		*pg = *any(reconstructed).(*PaillierGroup[X]) //nolint:errcheck // false positive
 		return nil
 	default:
 		panic("unknown arithmetic type in UnmarshalCBOR")
@@ -154,14 +155,14 @@ func (u *PaillierGroupElement[X]) MarshalCBOR() ([]byte, error) {
 		tag = PaillierGroupKnownOrderElementTag
 		dto := &paillierGroupKnownOrderElementDTO{
 			V:          u.v,
-			Arithmetic: any(u.arith).(*modular.OddPrimeSquareFactors),
+			Arithmetic: any(u.arith).(*modular.OddPrimeSquareFactors), //nolint:errcheck // false positive
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	case *modular.SimpleModulus:
 		tag = PaillierGroupUnknownOrderElementTag
 		dto := &paillierGroupUnknownOrderElementDTO{
 			V:          u.v,
-			Arithmetic: any(u.arith).(*modular.SimpleModulus),
+			Arithmetic: any(u.arith).(*modular.SimpleModulus), //nolint:errcheck // false positive
 			N:          u.n,
 		}
 		return serde.MarshalCBORTagged(dto, tag)
@@ -187,7 +188,7 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*u = *any(elem).(*PaillierGroupElement[X])
+		*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
@@ -203,7 +204,7 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*u = *any(elem).(*PaillierGroupElement[X])
+		*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	default:
 		// For initial unmarshal when arith is zero value, try both
@@ -218,7 +219,7 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 			if err != nil {
 				return err
 			}
-			*u = *any(elem).(*PaillierGroupElement[X])
+			*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 			return nil
 		}
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
@@ -234,7 +235,7 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*u = *any(elem).(*PaillierGroupElement[X])
+		*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	}
 }
@@ -246,8 +247,8 @@ func (rg *RSAGroup[X]) MarshalCBOR() ([]byte, error) {
 	case *modular.OddPrimeFactors:
 		tag = RSAGroupKnownOrderTag
 		dto := &rsaGroupKnownOrderDTO{
-			P: num.NPlus().FromModulusCT(any(rg.arith).(*modular.OddPrimeFactors).Params.P),
-			Q: num.NPlus().FromModulusCT(any(rg.arith).(*modular.OddPrimeFactors).Params.Q),
+			P: num.NPlus().FromModulusCT(any(rg.arith).(*modular.OddPrimeFactors).Params.P), //nolint:errcheck // false positive
+			Q: num.NPlus().FromModulusCT(any(rg.arith).(*modular.OddPrimeFactors).Params.Q), //nolint:errcheck // false positive
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	case *modular.SimpleModulus:
@@ -273,7 +274,7 @@ func (rg *RSAGroup[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*rg = *any(reconstructed).(*RSAGroup[X])
+		*rg = *any(reconstructed).(*RSAGroup[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderDTO](data)
@@ -284,7 +285,7 @@ func (rg *RSAGroup[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*rg = *any(reconstructed).(*RSAGroup[X])
+		*rg = *any(reconstructed).(*RSAGroup[X]) //nolint:errcheck // false positive
 		return nil
 	default:
 		panic("unknown arithmetic type in UnmarshalCBOR")
@@ -298,14 +299,14 @@ func (u *RSAGroupElement[X]) MarshalCBOR() ([]byte, error) {
 		tag = RSAGroupKnownOrderElementTag
 		dto := &rsaGroupKnownOrderElementDTO{
 			V:          u.v,
-			Arithmetic: any(u.arith).(*modular.OddPrimeFactors),
+			Arithmetic: any(u.arith).(*modular.OddPrimeFactors), //nolint:errcheck // false positive
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	case *modular.SimpleModulus:
 		tag = RSAGroupUnknownOrderElementTag
 		dto := &rsaGroupUnknownOrderElementDTO{
 			V:          u.v,
-			Arithmetic: any(u.arith).(*modular.SimpleModulus),
+			Arithmetic: any(u.arith).(*modular.SimpleModulus), //nolint:errcheck // false positive
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	default:
@@ -330,7 +331,7 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*u = *any(elem).(*RSAGroupElement[X])
+		*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
@@ -345,7 +346,7 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*u = *any(elem).(*RSAGroupElement[X])
+		*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	default:
 		// For initial unmarshal when arith is zero value, try both
@@ -360,7 +361,7 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 			if err != nil {
 				return err
 			}
-			*u = *any(elem).(*RSAGroupElement[X])
+			*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 			return nil
 		}
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
@@ -375,7 +376,7 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		*u = *any(elem).(*RSAGroupElement[X])
+		*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	}
 }

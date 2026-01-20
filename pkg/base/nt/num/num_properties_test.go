@@ -4,10 +4,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
 func FromBigRoundTrip_Property[E interface {
@@ -20,7 +21,7 @@ func FromBigRoundTrip_Property[E interface {
 		n := g.Draw(t, "n")
 		elem, err := structure.FromBig(n.Big())
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Big().Bytes())
 	})
 }
 
@@ -34,7 +35,7 @@ func FromNatPlusRoundTrip_Property[E interface {
 		n := g.Draw(t, "n")
 		elem, err := structure.FromNatPlus(n)
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Big().Bytes())
 	})
 }
 
@@ -52,7 +53,7 @@ func FromNatRoundTrip_Property[E interface {
 			return
 		}
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Big().Bytes())
 	})
 }
 
@@ -74,7 +75,7 @@ func FromIntRoundTrip_Property[E interface {
 			return
 		}
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Big().Bytes())
 	})
 }
 
@@ -100,7 +101,7 @@ func FromRatRoundTrip_Property[E interface {
 			return
 		}
 		require.NoError(t, err)
-		require.EqualValues(t, n.Canonical().Numerator().Big().Bytes(), elem.Big().Bytes())
+		require.Equal(t, n.Canonical().Numerator().Big().Bytes(), elem.Big().Bytes())
 	})
 }
 

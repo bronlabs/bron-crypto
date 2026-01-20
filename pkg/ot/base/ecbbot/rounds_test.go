@@ -18,13 +18,13 @@ func Test_HappyPathRandomOT(t *testing.T) {
 	const CHI = 128
 	const L = 1
 	prng := crand.Reader
-	var sessionId network.SID
-	_, err := io.ReadFull(prng, sessionId[:])
+	var sessionID network.SID
+	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 	tape := hagrid.NewTranscript("test")
 	curve := k256.NewCurve()
 
-	senderOutput, receiverOutput, err := ecbbottestutils.RunBBOT(CHI, L, curve, sessionId, tape, prng)
+	senderOutput, receiverOutput, err := ecbbottestutils.RunBBOT(CHI, L, curve, sessionID, tape, prng)
 	require.NoError(t, err)
 	ecbbottestutils.ValidateOT(t, CHI, L, senderOutput, receiverOutput)
 }
@@ -37,11 +37,11 @@ func Test_HappyPathRandomOT(t *testing.T) {
 //	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 //	require.NoError(b, err)
 //	senderKey, receiverKey := authKeys[0], authKeys[1]
-//	uniqueSessionId := [32]byte{}
-//	_, err = crand.Read(uniqueSessionId[:])
+//	uniqueSessionID := [32]byte{}
+//	_, err = crand.Read(uniqueSessionID[:])
 //	require.NoError(b, err)
 //	for _, curve := range curveInstances {
-//		_, _, err := ecbbottestutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
+//		_, _, err := ecbbottestutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionID[:], crand.Reader)
 //		require.NoError(b, err)
 //	}
 //}

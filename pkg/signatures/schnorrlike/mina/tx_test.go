@@ -1,4 +1,4 @@
-package mina
+package mina //nolint:testpackage // to test unexported identifiers
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 func TestLegacyTokenId(t *testing.T) {
 	t.Parallel()
 
-	bits := legacyTokenId()
+	bits := legacyTokenID()
 	assert.Len(t, bits, 64)
 	// First bit should be true, rest should be false
 	assert.True(t, bits[0])
@@ -23,14 +23,16 @@ func TestUint64ToBits(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
 		bits := uint64ToBits(0)
 		assert.Len(t, bits, 64)
-		for i := 0; i < 64; i++ {
+		for i := range 64 {
 			assert.False(t, bits[i], "bit %d should be false for 0", i)
 		}
 	})
 
 	t.Run("one", func(t *testing.T) {
+		t.Parallel()
 		bits := uint64ToBits(1)
 		assert.Len(t, bits, 64)
 		assert.True(t, bits[0], "bit 0 should be true for 1")
@@ -40,21 +42,23 @@ func TestUint64ToBits(t *testing.T) {
 	})
 
 	t.Run("max uint64", func(t *testing.T) {
+		t.Parallel()
 		bits := uint64ToBits(^uint64(0))
 		assert.Len(t, bits, 64)
-		for i := 0; i < 64; i++ {
+		for i := range 64 {
 			assert.True(t, bits[i], "bit %d should be true for max", i)
 		}
 	})
 
 	t.Run("specific value", func(t *testing.T) {
+		t.Parallel()
 		// 100000000 in binary (fee from test vector)
 		bits := uint64ToBits(100000000)
 		assert.Len(t, bits, 64)
 		// Verify LSB-first encoding is correct
 		// Reconstruct the value
 		var result uint64
-		for i := 0; i < 64; i++ {
+		for i := range 64 {
 			if bits[i] {
 				result |= 1 << i
 			}
@@ -67,14 +71,16 @@ func TestUint32ToBits(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
 		bits := uint32ToBits(0)
 		assert.Len(t, bits, 32)
-		for i := 0; i < 32; i++ {
+		for i := range 32 {
 			assert.False(t, bits[i], "bit %d should be false for 0", i)
 		}
 	})
 
 	t.Run("one", func(t *testing.T) {
+		t.Parallel()
 		bits := uint32ToBits(1)
 		assert.Len(t, bits, 32)
 		assert.True(t, bits[0], "bit 0 should be true for 1")
@@ -84,20 +90,22 @@ func TestUint32ToBits(t *testing.T) {
 	})
 
 	t.Run("max uint32", func(t *testing.T) {
+		t.Parallel()
 		bits := uint32ToBits(^uint32(0))
 		assert.Len(t, bits, 32)
-		for i := 0; i < 32; i++ {
+		for i := range 32 {
 			assert.True(t, bits[i], "bit %d should be true for max", i)
 		}
 	})
 
 	t.Run("specific value", func(t *testing.T) {
+		t.Parallel()
 		// nonce=141 from test vector
 		bits := uint32ToBits(141)
 		assert.Len(t, bits, 32)
 		// Reconstruct the value
 		var result uint32
-		for i := 0; i < 32; i++ {
+		for i := range 32 {
 			if bits[i] {
 				result |= 1 << i
 			}
@@ -110,6 +118,7 @@ func TestMemoToBits(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty memo", func(t *testing.T) {
+		t.Parallel()
 		bits := memoToBits("")
 		assert.Len(t, bits, 34*8)
 		// First byte should be type tag (0x01)
@@ -124,6 +133,7 @@ func TestMemoToBits(t *testing.T) {
 	})
 
 	t.Run("short memo", func(t *testing.T) {
+		t.Parallel()
 		bits := memoToBits("test")
 		assert.Len(t, bits, 34*8)
 		// First byte: type tag (0x01) = 0b00000001 LSB-first
@@ -135,12 +145,13 @@ func TestMemoToBits(t *testing.T) {
 	})
 
 	t.Run("max length memo", func(t *testing.T) {
+		t.Parallel()
 		memo := "12345678901234567890123456789012" // 32 chars
 		bits := memoToBits(memo)
 		assert.Len(t, bits, 34*8)
 		// Second byte: length (32) = 0b00100000 LSB-first
 		var length byte
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			if bits[8+i] {
 				length |= 1 << i
 			}
@@ -149,12 +160,13 @@ func TestMemoToBits(t *testing.T) {
 	})
 
 	t.Run("memo exceeds max length", func(t *testing.T) {
+		t.Parallel()
 		memo := "123456789012345678901234567890123456" // 36 chars, should truncate to 32
 		bits := memoToBits(memo)
 		assert.Len(t, bits, 34*8)
 		// Second byte: length (32)
 		var length byte
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			if bits[8+i] {
 				length |= 1 << i
 			}
@@ -167,6 +179,7 @@ func TestTagToBits(t *testing.T) {
 	t.Parallel()
 
 	t.Run("payment tag (0)", func(t *testing.T) {
+		t.Parallel()
 		bits := tagToBits(0)
 		assert.Len(t, bits, 3)
 		assert.False(t, bits[0])
@@ -175,6 +188,7 @@ func TestTagToBits(t *testing.T) {
 	})
 
 	t.Run("delegation tag (1)", func(t *testing.T) {
+		t.Parallel()
 		bits := tagToBits(1)
 		assert.Len(t, bits, 3)
 		assert.False(t, bits[0])
@@ -183,6 +197,7 @@ func TestTagToBits(t *testing.T) {
 	})
 
 	t.Run("tag 7", func(t *testing.T) {
+		t.Parallel()
 		bits := tagToBits(7)
 		assert.Len(t, bits, 3)
 		assert.True(t, bits[0])
@@ -200,6 +215,7 @@ func TestNewPaymentMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid payment message", func(t *testing.T) {
+		t.Parallel()
 		msg, err := NewPaymentMessage(publicKey, receiver, 42, 3, 200, 10000, "test memo")
 		require.NoError(t, err)
 		assert.NotNil(t, msg)
@@ -218,12 +234,14 @@ func TestNewPaymentMessage(t *testing.T) {
 	})
 
 	t.Run("nil source", func(t *testing.T) {
+		t.Parallel()
 		msg, err := NewPaymentMessage(nil, receiver, 42, 3, 200, 10000, "test")
 		assert.Nil(t, msg)
 		assert.Error(t, err)
 	})
 
 	t.Run("nil receiver", func(t *testing.T) {
+		t.Parallel()
 		msg, err := NewPaymentMessage(publicKey, nil, 42, 3, 200, 10000, "test")
 		assert.Nil(t, msg)
 		assert.Error(t, err)
@@ -239,6 +257,7 @@ func TestNewDelegationMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid delegation message", func(t *testing.T) {
+		t.Parallel()
 		msg, err := NewDelegationMessage(publicKey, delegate, 3, 10, 4000, "test memo")
 		require.NoError(t, err)
 		assert.NotNil(t, msg)
@@ -254,12 +273,14 @@ func TestNewDelegationMessage(t *testing.T) {
 	})
 
 	t.Run("nil source", func(t *testing.T) {
+		t.Parallel()
 		msg, err := NewDelegationMessage(nil, delegate, 3, 10, 4000, "test")
 		assert.Nil(t, msg)
 		assert.Error(t, err)
 	})
 
 	t.Run("nil delegate", func(t *testing.T) {
+		t.Parallel()
 		msg, err := NewDelegationMessage(publicKey, nil, 3, 10, 4000, "test")
 		assert.Nil(t, msg)
 		assert.Error(t, err)

@@ -28,32 +28,32 @@ func Q() *Rationals {
 type Rationals struct{}
 
 // Name returns the name of the structure.
-func (q *Rationals) Name() string {
+func (*Rationals) Name() string {
 	return "Q"
 }
 
 // Characteristic returns the characteristic of the field Q, which is 0.
-func (q *Rationals) Characteristic() algebra.Cardinal {
+func (*Rationals) Characteristic() algebra.Cardinal {
 	return cardinal.New(0)
 }
 
 // Order returns the order of the field Q, which is infinite.
-func (q *Rationals) Order() algebra.Cardinal {
+func (*Rationals) Order() algebra.Cardinal {
 	return cardinal.Infinite()
 }
 
 // ElementSize returns -1 to indicate that elements of Q do not have a fixed size.
-func (q *Rationals) ElementSize() int {
+func (*Rationals) ElementSize() int {
 	return -1
 }
 
 // ExtensionDegree returns the extension degree of Q over itself, which is 1.
-func (q *Rationals) ExtensionDegree() uint {
+func (*Rationals) ExtensionDegree() uint {
 	return 1
 }
 
 // New creates a new Rat element with the given numerator and denominator.
-func (q *Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
+func (*Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
 	if a == nil || b == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -64,7 +64,7 @@ func (q *Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
 }
 
 // FromBytes deserializes a Rat element from the given byte slice.
-func (q *Rationals) FromBytes(data []byte) (*Rat, error) {
+func (*Rationals) FromBytes(data []byte) (*Rat, error) {
 	var r Rat
 	if err := r.UnmarshalCBOR(data); err != nil {
 		return nil, errs2.Wrap(err)
@@ -73,7 +73,7 @@ func (q *Rationals) FromBytes(data []byte) (*Rat, error) {
 }
 
 // FromUint64 creates a Rat element from a uint64 value.
-func (q *Rationals) FromUint64(n uint64) *Rat {
+func (*Rationals) FromUint64(n uint64) *Rat {
 	return &Rat{
 		a: Z().FromUint64(n),
 		b: NPlus().One(),
@@ -81,7 +81,7 @@ func (q *Rationals) FromUint64(n uint64) *Rat {
 }
 
 // FromInt64 creates a Rat element from an int64 value.
-func (q *Rationals) FromInt64(n int64) *Rat {
+func (*Rationals) FromInt64(n int64) *Rat {
 	return &Rat{
 		a: Z().FromInt64(n),
 		b: NPlus().One(),
@@ -89,7 +89,7 @@ func (q *Rationals) FromInt64(n int64) *Rat {
 }
 
 // FromNatPlus creates a Rat element from a NatPlus value.
-func (q *Rationals) FromNatPlus(n *NatPlus) (*Rat, error) {
+func (*Rationals) FromNatPlus(n *NatPlus) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -100,7 +100,7 @@ func (q *Rationals) FromNatPlus(n *NatPlus) (*Rat, error) {
 }
 
 // FromNat creates a Rat element from a Nat value.
-func (q *Rationals) FromNat(n *Nat) (*Rat, error) {
+func (*Rationals) FromNat(n *Nat) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -111,7 +111,7 @@ func (q *Rationals) FromNat(n *Nat) (*Rat, error) {
 }
 
 // FromInt creates a Rat element from an Int value.
-func (q *Rationals) FromInt(n *Int) (*Rat, error) {
+func (*Rationals) FromInt(n *Int) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -122,7 +122,7 @@ func (q *Rationals) FromInt(n *Int) (*Rat, error) {
 }
 
 // FromUint creates a Rat element from a Uint value.
-func (q *Rationals) FromUint(n *Uint) (*Rat, error) {
+func (*Rationals) FromUint(n *Uint) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -133,7 +133,7 @@ func (q *Rationals) FromUint(n *Uint) (*Rat, error) {
 }
 
 // FromBig creates a *Rat element from a *big.Int value.
-func (q *Rationals) FromBig(n *big.Int) (*Rat, error) {
+func (*Rationals) FromBig(n *big.Int) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -148,7 +148,7 @@ func (q *Rationals) FromBig(n *big.Int) (*Rat, error) {
 }
 
 // FromBigRat creates a *Rat element from a *big.Rat value.
-func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
+func (*Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -166,8 +166,8 @@ func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	}, nil
 }
 
-// Random samples a random *Rat element in the interval [lowInclusive, highExclusive)
-func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat, error) {
+// Random samples a random *Rat element in the interval [lowInclusive, highExclusive).
+func (*Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat, error) {
 	if prng == nil || lowInclusive == nil || highExclusive == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -199,7 +199,7 @@ func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*R
 // equivalent to the half-open integer interval [ceil(lowInclusive), ceil(highExclusive)).
 //
 // Returns ErrOutOfRange if the interval contains no integers.
-func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) (*Int, error) {
+func (*Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) (*Int, error) {
 	if prng == nil || lowInclusive == nil || highExclusive == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
@@ -237,7 +237,7 @@ func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) 
 }
 
 // IsDomain indicates that Q is a domain.
-func (q *Rationals) IsDomain() bool {
+func (*Rationals) IsDomain() bool {
 	return true
 }
 
@@ -247,7 +247,7 @@ func (q *Rationals) OpIdentity() *Rat {
 }
 
 // Zero returns the zero element of Q.
-func (q *Rationals) Zero() *Rat {
+func (*Rationals) Zero() *Rat {
 	return &Rat{
 		a: Z().Zero(),
 		b: NPlus().One(),
@@ -255,7 +255,7 @@ func (q *Rationals) Zero() *Rat {
 }
 
 // One returns the multiplicative identity element of Q.
-func (q *Rationals) One() *Rat {
+func (*Rationals) One() *Rat {
 	return &Rat{
 		a: Z().One(),
 		b: NPlus().One(),
@@ -300,7 +300,7 @@ func (r *Rat) Floor() (*Int, error) {
 }
 
 // Structure returns the algebraic structure to which the Rat element belongs.
-func (r *Rat) Structure() algebra.Structure[*Rat] {
+func (*Rat) Structure() algebra.Structure[*Rat] {
 	return Q()
 }
 
@@ -354,7 +354,7 @@ func (r *Rat) Square() *Rat {
 }
 
 // EuclideanDiv performs Euclidean division of two Rat elements.
-func (r *Rat) EuclideanDiv(rhs *Rat) (quo *Rat, rem *Rat, err error) {
+func (r *Rat) EuclideanDiv(rhs *Rat) (quo, rem *Rat, err error) {
 	quo, err = r.TryDiv(rhs)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err)
@@ -526,7 +526,7 @@ func (r *Rat) Equal(rhs *Rat) bool {
 	return r.a.Mul(rhs.b.Lift()).Equal(r.b.Lift().Mul(rhs.a))
 }
 
-// Bytes serializes the Rat element to a byte slice.
+// Bytes serialises the Rat element to a byte slice.
 func (r *Rat) Bytes() []byte {
 	out, err := r.MarshalCBOR()
 	if err != nil {

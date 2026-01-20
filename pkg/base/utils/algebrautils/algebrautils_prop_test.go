@@ -4,10 +4,11 @@ import (
 	crand "crypto/rand"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 func TestRandomNonIdentity_Property(t *testing.T) {
