@@ -3,19 +3,36 @@ package indcpacom
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
+// CommitterOption is a functional option for configuring a Committer.
+type CommitterOption[
+	N interface {
+		encryption.Nonce
+		algebra.Operand[N]
+	}, P encryption.Plaintext, CX encryption.ReRandomisableCiphertext[CX, N, PK],
+	PK encryption.PublicKey[PK],
+] = func(*Committer[N, P, CX, PK]) error
+
+// Committer creates IND-CPA commitments by encrypting messages.
 type Committer[
-	N encryption.Nonce, P encryption.Plaintext, CX encryption.ReRandomisableCiphertext[CX, N, PK],
+	N interface {
+		encryption.Nonce
+		algebra.Operand[N]
+	}, P encryption.Plaintext, CX encryption.ReRandomisableCiphertext[CX, N, PK],
 	PK encryption.PublicKey[PK],
 ] struct {
 	key *Key[PK]
 	enc encryption.LinearlyRandomisedEncrypter[PK, P, CX, N]
 }
 
+// Commit creates a commitment to the given message using fresh randomness from prng.
+// Returns the commitment and the witness (nonce) needed to open it.
+// Returns an error if the message or prng is nil.
 func (c *Committer[N, P, CX, PK]) Commit(
 	message *Message[P],
 	prng io.Reader,
@@ -30,6 +47,9 @@ func (c *Committer[N, P, CX, PK]) Commit(
 	return &Commitment[CX, N, PK]{v: ciphertext}, &Witness[N]{v: nonce}, nil
 }
 
+// CommitWithWitness creates a commitment to the given message using the provided witness.
+// This allows for deterministic commitment creation when the same witness is used.
+// Returns an error if the message or witness is nil.
 func (c *Committer[N, P, CX, PK]) CommitWithWitness(
 	message *Message[P],
 	witness *Witness[N],
@@ -44,8 +64,22 @@ func (c *Committer[N, P, CX, PK]) CommitWithWitness(
 	return &Commitment[CX, N, PK]{v: ciphertext}, nil
 }
 
+// VerifierOption is a functional option for configuring a Verifier.
+type VerifierOption[
+	N interface {
+		encryption.Nonce
+		algebra.Operand[N]
+	}, P encryption.Plaintext, CX encryption.ReRandomisableCiphertext[CX, N, PK],
+	PK encryption.PublicKey[PK],
+] = func(*Verifier[N, P, CX, PK]) error
+
+// Verifier verifies IND-CPA commitments by re-computing the commitment from
+// the message and witness and comparing it to the provided commitment.
 type Verifier[
-	N encryption.Nonce, P encryption.Plaintext, CX encryption.ReRandomisableCiphertext[CX, N, PK],
+	N interface {
+		encryption.Nonce
+		algebra.Operand[N]
+	}, P encryption.Plaintext, CX encryption.ReRandomisableCiphertext[CX, N, PK],
 	PK encryption.PublicKey[PK],
 ] struct {
 	c *commitments.GenericVerifier[
@@ -54,4 +88,16 @@ type Verifier[
 		*Message[P],
 		*Commitment[CX, N, PK],
 	]
+}
+
+// Verify checks that the commitment is valid for the given message and witness.
+// It re-computes the commitment from the message and witness and compares it
+// to the provided commitment. Returns nil if verification succeeds, or an error
+// if verification fails.
+func (v *Verifier[N, P, CX, PK]) Verify(
+	commitment *Commitment[CX, N, PK],
+	message *Message[P],
+	witness *Witness[N],
+) error {
+	return v.c.Verify(commitment, message, witness)
 }

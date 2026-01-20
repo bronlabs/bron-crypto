@@ -105,22 +105,36 @@ func (*Scheme) Name() commitments.Name {
 }
 
 // Committer returns a committer initialised with the scheme key.
-func (s *Scheme) Committer() *Committer {
-	return &Committer{s.key.hmacInit()}
+func (s *Scheme) Committer(opts ...CommitterOption) (*Committer, error) {
+	committer := &Committer{s.key.hmacInit()}
+	for _, opt := range opts {
+		if err := opt(committer); err != nil {
+			return nil, errs2.Wrap(err).WithMessage("cannot apply committer option")
+		}
+	}
+	return committer, nil
 }
 
 // Verifier returns a verifier compatible with commitments produced by the scheme.
-func (s *Scheme) Verifier() *Verifier {
+func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	committingParty := &Committer{s.key.hmacInit()}
 	generic := commitments.NewGenericVerifier(committingParty)
 	out := &Verifier{GenericVerifier: *generic}
-	return out
+	for _, opt := range opts {
+		if err := opt(out); err != nil {
+			return nil, errs2.Wrap(err).WithMessage("cannot apply verifier option")
+		}
+	}
+	return out, nil
 }
 
 // Key returns the scheme key material.
 func (s *Scheme) Key() Key {
 	return s.key
 }
+
+// CommitterOption is a functional option for configuring committers.
+type CommitterOption = func(*Committer) error
 
 // Committer computes hash-based commitments with an HMAC keyed by the CRS output.
 type Committer struct {
@@ -153,6 +167,9 @@ func (c *Committer) Commit(message Message, prng io.Reader) (commitment Commitme
 
 	return commitment, witness, nil
 }
+
+// VerifierOption is a functional option for configuring verifiers.
+type VerifierOption = func(*Verifier) error
 
 // Verifier checks commitments against provided messages and witnesses.
 type Verifier struct {

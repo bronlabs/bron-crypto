@@ -29,7 +29,11 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 			return nil, errs2.Wrap(err).WithMessage("cannot sample seed contribution")
 		}
 
-		seedContributionCommitment, seedContributionWitness, err := p.state.commitmentScheme.Committer().Commit(seedContribution[:], p.prng)
+		committer, err := p.state.commitmentScheme.Committer()
+		if err != nil {
+			return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+		}
+		seedContributionCommitment, seedContributionWitness, err := committer.Commit(seedContribution[:], p.prng)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("cannot commit seed contribution")
 		}
@@ -108,7 +112,11 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 		if !ok {
 			return nil, ErrFailed.WithMessage("missing commitment for %d", sharingID)
 		}
-		if p.state.commitmentScheme.Verifier().Verify(theirCommitment, theirSeedContribution[:], theirWitness) != nil {
+		verifier, err := p.state.commitmentScheme.Verifier()
+		if err != nil {
+			return nil, errs2.Wrap(err).WithMessage("cannot create verifier")
+		}
+		if verifier.Verify(theirCommitment, theirSeedContribution[:], theirWitness) != nil {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, sharingID).WithMessage("invalid seed contribution")
 		}
 		mySeedContribution, ok := p.state.seedContributions.Get(sharingID)

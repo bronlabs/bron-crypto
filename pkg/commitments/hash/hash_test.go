@@ -18,10 +18,14 @@ func Test_ValidCommitment(t *testing.T) {
 	ck := randomCk(t, prng)
 	m := randomMessage(t, prng)
 
-	c, r, err := ck.Committer().Commit(m, prng)
+	committer, err := ck.Committer()
+	require.NoError(t, err)
+	c, r, err := committer.Commit(m, prng)
 	require.NoError(t, err)
 
-	err = ck.Verifier().Verify(c, m, r)
+	verifier, err := ck.Verifier()
+	require.NoError(t, err)
+	err = verifier.Verify(c, m, r)
 	require.NoError(t, err)
 }
 
@@ -33,21 +37,25 @@ func Test_InvalidCommitment(t *testing.T) {
 	m := randomMessage(t, prng)
 	invalidM := randomMessage(t, prng)
 
-	c, r, err := scheme.Committer().Commit(m, prng)
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
+	c, r, err := committer.Commit(m, prng)
 	require.NoError(t, err)
 
-	invalidC, invalidR, err := scheme.Committer().Commit(invalidM, prng)
+	invalidC, invalidR, err := committer.Commit(invalidM, prng)
 	require.NoError(t, err)
 
-	err = scheme.Verifier().Verify(c, m, r)
+	verifier, err := scheme.Verifier()
 	require.NoError(t, err)
-	err = scheme.Verifier().Verify(invalidC, m, r)
+	err = verifier.Verify(c, m, r)
+	require.NoError(t, err)
+	err = verifier.Verify(invalidC, m, r)
 	require.Error(t, err)
-	err = scheme.Verifier().Verify(c, invalidM, r)
+	err = verifier.Verify(c, invalidM, r)
 	require.Error(t, err)
-	err = scheme.Verifier().Verify(c, m, invalidR)
+	err = verifier.Verify(c, m, invalidR)
 	require.Error(t, err)
-	err = scheme.Verifier().Verify(c, invalidM, invalidR)
+	err = verifier.Verify(c, invalidM, invalidR)
 	require.Error(t, err)
 }
 

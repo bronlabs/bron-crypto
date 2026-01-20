@@ -41,7 +41,10 @@ type (
 		Encrypt(plaintext M, receiver PK, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
 	}
 
-	LinearlyRandomisedEncrypter[PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N Nonce] interface {
+	LinearlyRandomisedEncrypter[PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N interface {
+		Nonce
+		algebra.Operand[N]
+	}] interface {
 		Encrypter[PK, M, C, N]
 		EncryptWithNonce(plaintext M, receiver PK, nonce N) (ciphertext C, err error)
 	}
@@ -51,7 +54,10 @@ type (
 		SelfEncrypt(plaintext M, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
 	}
 
-	LinearlyRandomisedSelfEncrypter[SK PrivateKey[SK], PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N Nonce] interface {
+	LinearlyRandomisedSelfEncrypter[SK PrivateKey[SK], PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N interface {
+		Nonce
+		algebra.Operand[N]
+	}] interface {
 		SelfEncrypter[SK, M, C, N]
 		SelfEncryptWithNonce(plaintext M, nonce N) (ciphertext C, err error)
 	}
@@ -83,7 +89,10 @@ type Scheme[
 
 // ******** Homomorphic.
 
-type ReRandomisableCiphertext[C Ciphertext[C], N Nonce, PK PublicKey[PK]] interface {
+type ReRandomisableCiphertext[C Ciphertext[C], N interface {
+	Nonce
+	algebra.Operand[N]
+}, PK PublicKey[PK]] interface {
 	Ciphertext[C]
 	ReRandomise(PK, io.Reader) (C, N, error)
 	ReRandomiseWithNonce(PK, N) (C, error)
@@ -97,7 +106,10 @@ type HomomorphicCiphertext[C Ciphertext[C], CV algebra.MonoidElement[CV], S alge
 
 type ShiftTypeCiphertext[
 	C Ciphertext[C], CV algebra.GroupElement[CV],
-	M Plaintext, PK PublicKey[PK], N Nonce, S algebra.NatLike[S],
+	M Plaintext, PK PublicKey[PK], N interface {
+		Nonce
+		algebra.Operand[N]
+	}, S algebra.NatLike[S],
 ] interface {
 	HomomorphicCiphertext[C, CV, S]
 	ReRandomisableCiphertext[C, N, PK]

@@ -53,7 +53,11 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't sample challenge")
 	}
 
-	eCommitment, eWitness, err := v.comm.Committer().Commit(v.challengeBytes, v.prng)
+	committer, err := v.comm.Committer()
+	if err != nil {
+		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't create committer")
+	}
+	eCommitment, eWitness, err := committer.Commit(v.challengeBytes, v.prng)
 	if err != nil {
 		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't commit to challenge")
 	}

@@ -23,5 +23,7 @@ func _[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]() {
 			*pedersen.Witness[S],
 			*pedersen.Key[E, S],
 		] = (*pedersen.Commitment[E, S])(nil)
+
+		_ algebra.Actable[*pedersen.Commitment[E, S], *pedersen.Message[S]] = (*pedersen.Commitment[E, S])(nil)
 	)
 }

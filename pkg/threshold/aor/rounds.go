@@ -29,7 +29,11 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 
 	// step 1.2: commit your sample
 	p.state.rCommitments = make(map[sharing.ID]hash_comm.Commitment)
-	p.state.rCommitments[p.id], p.state.rWitness, err = p.commitmentScheme.Committer().Commit(p.state.r, p.prng)
+	committer, err := p.commitmentScheme.Committer()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("could not create committer")
+	}
+	p.state.rCommitments[p.id], p.state.rWitness, err = committer.Commit(p.state.r, p.prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not commit to the seed")
 	}
@@ -72,8 +76,12 @@ func (p *Participant) Round3(r2 network.RoundMessages[*Round2Broadcast]) ([]byte
 	}
 
 	r := p.state.r
+	verifier, err := p.commitmentScheme.Verifier()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("could not create verifier")
+	}
 	for id, m := range incomingMessages {
-		if err := p.commitmentScheme.Verifier().Verify(p.state.rCommitments[id], m.Message, m.Witness); err != nil {
+		if err := verifier.Verify(p.state.rCommitments[id], m.Message, m.Witness); err != nil {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("could not verify commitment")
 		}
 		subtle.XORBytes(r, r, m.Message)

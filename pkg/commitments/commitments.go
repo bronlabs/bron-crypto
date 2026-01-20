@@ -30,28 +30,42 @@ type (
 	}
 )
 
-// Committer produces commitments from messages (and optionally supplied witnesses).
-type Committer[W Witness, M Message, C Commitment[C]] interface {
-	// Commit samples fresh randomness and commits to a message, returning the commitment and witness.
-	Commit(message M, prng io.Reader) (C, W, error)
-	// CommitWithWitness commits to a message using caller-supplied witness randomness.
-	CommitWithWitness(message M, W W) (C, error)
-}
+type (
+	// Committer produces commitments from messages (and optionally supplied witnesses).
+	Committer[W Witness, M Message, C Commitment[C]] interface {
+		// Commit samples fresh randomness and commits to a message, returning the commitment and witness.
+		Commit(message M, prng io.Reader) (C, W, error)
+		// CommitWithWitness commits to a message using caller-supplied witness randomness.
+		CommitWithWitness(message M, W W) (C, error)
+	}
+
+	// CommitterOption is a functional option for configuring committers.
+	CommitterOption[
+		COM Committer[W, M, C], W Witness, M Message, C Commitment[C],
+	] = func(COM) error
+)
 
 // Verifier checks commitments against messages and witnesses.
-type Verifier[W Witness, M Message, C Commitment[C]] interface {
-	// Verify checks commitments against provided messages and witnesses.
-	Verify(commitment C, message M, witness W) error
-}
+type (
+	Verifier[W Witness, M Message, C Commitment[C]] interface {
+		// Verify checks commitments against provided messages and witnesses.
+		Verify(commitment C, message M, witness W) error
+	}
+
+	// VerifierOption is a functional option for configuring verifiers.
+	VerifierOption[
+		VF Verifier[W, M, C], W Witness, M Message, C Commitment[C],
+	] = func(VF) error
+)
 
 // Scheme exposes a commitment protocol with its committer, verifier, and key material.
-type Scheme[K Key, W Witness, M Message, C Commitment[C], CO Committer[W, M, C], VF Verifier[W, M, C]] interface {
+type Scheme[K Key, W Witness, M Message, C Commitment[C], COM Committer[W, M, C], VF Verifier[W, M, C]] interface {
 	// Name returns the identifier of the commitment scheme.
 	Name() Name
 	// Committer returns a committer configured with the scheme.
-	Committer() CO
+	Committer(...CommitterOption[COM, W, M, C]) (COM, error)
 	// Verifier returns a verifier compatible with commitments produced by the scheme.
-	Verifier() VF
+	Verifier(...VerifierOption[VF, W, M, C]) (VF, error)
 	// Key exposes the scheme key.
 	Key() K
 }

@@ -2,6 +2,7 @@ package pedersen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 )
 
@@ -28,14 +29,20 @@ func (*Scheme[_, _]) Name() commitments.Name {
 }
 
 // Committer returns a committer configured with the scheme key.
-func (s *Scheme[E, S]) Committer() *Committer[E, S] {
-	return &Committer[E, S]{
+func (s *Scheme[E, S]) Committer(opts ...CommitterOption[E, S]) (*Committer[E, S], error) {
+	out := &Committer[E, S]{
 		key: s.key,
 	}
+	for _, opt := range opts {
+		if err := opt(out); err != nil {
+			return nil, errs2.Wrap(err).WithMessage("cannot apply committer option")
+		}
+	}
+	return out, nil
 }
 
 // Verifier returns a verifier compatible with commitments produced by this scheme.
-func (s *Scheme[E, S]) Verifier() *Verifier[E, S] {
+func (s *Scheme[E, S]) Verifier(opts ...VerifierOption[E, S]) (*Verifier[E, S], error) {
 	committingParty := &Committer[E, S]{
 		key: s.key,
 	}
@@ -43,7 +50,12 @@ func (s *Scheme[E, S]) Verifier() *Verifier[E, S] {
 	v := &Verifier[E, S]{
 		GenericVerifier: *generic,
 	}
-	return v
+	for _, opt := range opts {
+		if err := opt(v); err != nil {
+			return nil, errs2.Wrap(err).WithMessage("cannot apply verifier option")
+		}
+	}
+	return v, nil
 }
 
 // Key exposes the scheme CRS.
