@@ -2,24 +2,34 @@
 
 package boring
 
+import "C"
+import (
+	"bytes"
+	"runtime"
+	"unsafe"
+)
+
 // #include "openssl/bn.h"
 // #include "openssl/err.h"
 //
 // extern int bn_jacobi(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
+// extern int bn_lcm_consttime(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
 // OPENSSL_EXPORT int BN_jacobi(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
+// OPENSSL_EXPORT int BN_lcm_consttime(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
 //
 // int BN_jacobi(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx) {
 //     return bn_jacobi(a, b, ctx);
+// }
+//
+// int BN_lcm_consttime(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx) {
+//     return bn_lcm_consttime(r, a, b, ctx);
 // }
 import (
 	"C"
 )
 
 import (
-	"bytes"
 	"errors"
-	"runtime"
-	"unsafe"
 )
 
 func (bn *BigNum) Jacobi(b *BigNum, bnCtx *BigNumCtx) (int, error) {
@@ -40,6 +50,27 @@ func (bn *BigNum) Jacobi(b *BigNum, bnCtx *BigNumCtx) (int, error) {
 	runtime.KeepAlive(b)
 	runtime.KeepAlive(bnCtx)
 	return int(ret), nil
+}
+
+func (bn *BigNum) Lcm(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
+	bn.copyChecker.Check()
+	a.copyChecker.Check()
+	b.copyChecker.Check()
+	bnCtx.copyChecker.Check()
+
+	lockOSThread()
+	ret := C.BN_lcm_consttime(&bn.nativeBigNum, &a.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
+	if ret != 1 {
+		err := lastError()
+		unlockOSThread()
+		return nil, err
+	}
+	unlockOSThread()
+
+	runtime.KeepAlive(a)
+	runtime.KeepAlive(b)
+	runtime.KeepAlive(bnCtx)
+	return bn, nil
 }
 
 // lastError retrieves the most recent error from BoringSSL's thread-local error queue.

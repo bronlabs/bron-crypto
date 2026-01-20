@@ -13,4 +13,4 @@ conf:
     "*": "test-{{ vars.test-suite }}"
 
 build:
-  - golang: make deps build lint {{ conf.test-suite }}
+  - golang: make build test lint {{ conf.test-suite }}

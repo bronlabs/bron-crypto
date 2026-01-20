@@ -2,11 +2,7 @@
 
 package boring
 
-// TODO: do below in glue.go
-
 // #include "openssl/bn.h"
-// // Forward-declare BoringSSL’s exported symbol (not in public headers).
-// int bn_lcm_consttime(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
 import (
 	"C"
 )
@@ -86,27 +82,6 @@ func (bn *BigNum) Gcd(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 
 	lockOSThread()
 	ret := C.BN_gcd(&bn.nativeBigNum, &a.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
-	if ret != 1 {
-		err := lastError()
-		unlockOSThread()
-		return nil, err
-	}
-	unlockOSThread()
-
-	runtime.KeepAlive(a)
-	runtime.KeepAlive(b)
-	runtime.KeepAlive(bnCtx)
-	return bn, nil
-}
-
-func (bn *BigNum) Lcm(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
-	bn.copyChecker.Check()
-	a.copyChecker.Check()
-	b.copyChecker.Check()
-	bnCtx.copyChecker.Check()
-
-	lockOSThread()
-	ret := C.bn_lcm_consttime(&bn.nativeBigNum, &a.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret != 1 {
 		err := lastError()
 		unlockOSThread()
