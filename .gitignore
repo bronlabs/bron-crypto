@@ -41,3 +41,6 @@ docs/build/*
 /.gocache
 
 /thirdparty/boringssl
+
+/coverage.out
+/coverage.html

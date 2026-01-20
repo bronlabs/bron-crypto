@@ -21,19 +21,23 @@ generate:
 
 .PHONY: build
 build: build-boringssl
-	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE}/)" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go build "${BRON_CRYPTO_HOME}/..."
+	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go build "${BRON_CRYPTO_HOME}/..."
 
 .PHONY: test
 test: build-boringssl
-	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE}/)" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test "${BRON_CRYPTO_HOME}/..."
+	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test "${BRON_CRYPTO_HOME}/..."
 
 .PHONY: test-race
 test-race: build-boringssl
-	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE}/)" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test -race "${BRON_CRYPTO_HOME}/..."
+	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test -race "${BRON_CRYPTO_HOME}/..."
 
 .PHONY: bench
 bench: build-boringssl
-	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE}/)" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test "${BRON_CRYPTO_HOME}/..." -bench=. -run=____NONE____
+	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test "${BRON_CRYPTO_HOME}/..." -bench=. -run=^$
+
+.PHONY: coverage
+coverage: build-boringssl
+	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test "${BRON_CRYPTO_HOME}/..." -coverprofile=coverage.out
 
 .PHONY: lint
 lint: build-boringssl
@@ -42,4 +46,3 @@ lint: build-boringssl
 .PHONY: lint-fix
 lint-fix: build-boringssl
 	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" golangci-lint run "${BRON_CRYPTO_HOME}/..." --fix
-

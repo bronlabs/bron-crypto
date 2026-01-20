@@ -8,7 +8,7 @@
 - C/C++ toolchain (tested with GCC but clang should work too)
 - `cmake` and `ninja` (used to build BoringSSL)
 - `git` (used to vendor BoringSSL)
-- (optional) `docker` (if you want to regenerate code, test vectors, or run build and tests in an isolated container)
+- `docker` (optional - if you want to regenerate code, test vectors, or run build and tests in an isolated container)
 
 ### Quick start
 
@@ -52,6 +52,11 @@ make lint
 
 See `TESTING.md` for guidance on adding unit tests.
 
+### Output artifacts
+
+This repo does not produce a distributable binary or library artifact. It is intended to be used via its Go
+packages in other projects rather than as a standalone installable library.
+
 ### Code generation (optional)
 
 Some packages use `go generate` (and a few generators shell out to Docker) to generate code and test vectors.
@@ -78,3 +83,9 @@ This builds a container from `build.Dockerfile`, mounts the repo at `/src`, and 
 so the BoringSSL build stays separate from the host build. None of the intermediate artifacts are shared between
 the host and container builds, and this is by design to avoid polluting the host filesystem and to have consistent
 builds across platforms.
+
+## License
+
+SPDX-License-Identifier: Apache-2.0
+
+See `LICENSE`.
