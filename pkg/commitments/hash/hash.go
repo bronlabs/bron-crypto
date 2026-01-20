@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	_ commitments.Commitment = Commitment{}
-	_ commitments.Message    = Message(nil)
-	_ commitments.Witness    = Witness{}
-	_ commitments.Key        = Key{}
+	_ commitments.Commitment[Commitment] = Commitment{}
+	_ commitments.Message                = Message(nil)
+	_ commitments.Witness                = Witness{}
+	_ commitments.Key                    = Key{}
 
 	// HmacFunc defines the hash function used to instantiate the HMAC-based commitments.
 	HmacFunc = blake2b.New256
@@ -45,6 +45,10 @@ type (
 // Bytes returns the raw commitment digest bytes.
 func (c Commitment) Bytes() []byte {
 	return c[:]
+}
+
+func (c Commitment) Equal(other Commitment) bool {
+	return ct.SliceEqual(c[:], other[:]) == 1
 }
 
 // Bytes returns the raw witness bytes.
@@ -108,9 +112,7 @@ func (s *Scheme) Committer() *Committer {
 // Verifier returns a verifier compatible with commitments produced by the scheme.
 func (s *Scheme) Verifier() *Verifier {
 	committingParty := &Committer{s.key.hmacInit()}
-	generic := commitments.NewGenericVerifier(committingParty, func(c1, c2 Commitment) bool {
-		return ct.SliceEqual(c1[:], c2[:]) == 1
-	})
+	generic := commitments.NewGenericVerifier(committingParty)
 	out := &Verifier{GenericVerifier: *generic}
 	return out
 }

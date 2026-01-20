@@ -3,6 +3,7 @@ package commitments
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
@@ -17,11 +18,11 @@ type (
 	// Witness is the randomness used to hide the message.
 	Witness any
 	// Commitment is the opaque commitment value.
-	Commitment any
+	Commitment[C any] base.Equatable[C]
 
 	// ReRandomisableCommitment supports re-randomisation of an existing commitment.
-	ReRandomisableCommitment[C Commitment, W Witness, K Key] interface {
-		Commitment
+	ReRandomisableCommitment[C Commitment[C], W Witness, K Key] interface {
+		Commitment[C]
 		// ReRandomiseWithWitness re-randomises an existing commitment using caller-supplied witness shift.
 		ReRandomiseWithWitness(K, W) (C, error)
 		// ReRandomise re-randomises an existing commitment using fresh randomness shift.
@@ -30,7 +31,7 @@ type (
 )
 
 // Committer produces commitments from messages (and optionally supplied witnesses).
-type Committer[W Witness, M Message, C Commitment] interface {
+type Committer[W Witness, M Message, C Commitment[C]] interface {
 	// Commit samples fresh randomness and commits to a message, returning the commitment and witness.
 	Commit(message M, prng io.Reader) (C, W, error)
 	// CommitWithWitness commits to a message using caller-supplied witness randomness.
@@ -38,13 +39,13 @@ type Committer[W Witness, M Message, C Commitment] interface {
 }
 
 // Verifier checks commitments against messages and witnesses.
-type Verifier[W Witness, M Message, C Commitment] interface {
+type Verifier[W Witness, M Message, C Commitment[C]] interface {
 	// Verify checks commitments against provided messages and witnesses.
 	Verify(commitment C, message M, witness W) error
 }
 
 // Scheme exposes a commitment protocol with its committer, verifier, and key material.
-type Scheme[K Key, W Witness, M Message, C Commitment, CO Committer[W, M, C], VF Verifier[W, M, C]] interface {
+type Scheme[K Key, W Witness, M Message, C Commitment[C], CO Committer[W, M, C], VF Verifier[W, M, C]] interface {
 	// Name returns the identifier of the commitment scheme.
 	Name() Name
 	// Committer returns a committer configured with the scheme.
@@ -68,7 +69,7 @@ type HomomorphicScheme[
 		algebra.HomomorphicLike[M, MT]
 	}, MT algebra.GroupElement[MT],
 	C interface {
-		Commitment
+		Commitment[C]
 		algebra.HomomorphicLike[C, CT]
 		algebra.Actable[C, M]
 	}, CT algebra.GroupElement[CT],
@@ -86,7 +87,7 @@ type GroupHomomorphicScheme[
 		algebra.HomomorphicLike[M, MT]
 	}, MT algebra.UintLike[MT],
 	C interface {
-		Commitment
+		Commitment[C]
 		algebra.HomomorphicLike[C, CT]
 		algebra.Actable[C, M]
 	}, CT algebra.AbelianGroupElement[CT, WT],

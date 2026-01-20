@@ -39,9 +39,7 @@ func (s *Scheme[E, S]) Verifier() *Verifier[E, S] {
 	committingParty := &Committer[E, S]{
 		key: s.key,
 	}
-	generic := commitments.NewGenericVerifier(committingParty, func(c1, c2 *Commitment[E, S]) bool {
-		return c1.Equal(c2)
-	})
+	generic := commitments.NewGenericVerifier(committingParty)
 	v := &Verifier[E, S]{
 		GenericVerifier: *generic,
 	}

@@ -494,7 +494,7 @@ func TestReRandomization(t *testing.T) {
 		require.NoError(t, err)
 
 		// Re-randomise with specific witness
-		c2, err := c1.ReRandomiseWith(key, r)
+		c2, err := c1.ReRandomiseWithWitness(key, r)
 		require.NoError(t, err)
 
 		// The new witness is w1 + r
@@ -522,14 +522,14 @@ func TestReRandomization(t *testing.T) {
 		require.Contains(t, err.Error(), "prng cannot be nil")
 
 		// ReRandomiseWith with nil witness
-		_, err = c.ReRandomiseWith(key, nil)
+		_, err = c.ReRandomiseWithWitness(key, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "witness cannot be nil")
 
 		// ReRandomiseWith with nil key
 		r, err := pedersen.NewWitness(field.FromUint64(123))
 		require.NoError(t, err)
-		_, err = c.ReRandomiseWith(nil, r)
+		_, err = c.ReRandomiseWithWitness(nil, r)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "key cannot be nil")
 	})

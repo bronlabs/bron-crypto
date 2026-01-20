@@ -18,8 +18,8 @@ type (
 	}
 	Plaintext any
 
-	Ciphertext any
-	Nonce      any
+	Ciphertext[C any] base.Equatable[C]
+	Nonce             any
 )
 
 type (
@@ -37,7 +37,7 @@ type (
 )
 
 type (
-	Encrypter[PK PublicKey[PK], M Plaintext, C Ciphertext, X any] interface {
+	Encrypter[PK PublicKey[PK], M Plaintext, C Ciphertext[C], X any] interface {
 		Encrypt(plaintext M, receiver PK, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
 	}
 
@@ -46,7 +46,7 @@ type (
 		EncryptWithNonce(plaintext M, receiver PK, nonce N) (ciphertext C, err error)
 	}
 
-	SelfEncrypter[SK PrivateKey[SK], M Plaintext, C Ciphertext, X any] interface {
+	SelfEncrypter[SK PrivateKey[SK], M Plaintext, C Ciphertext[C], X any] interface {
 		PrivateKey() SK
 		SelfEncrypt(plaintext M, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
 	}
@@ -57,22 +57,22 @@ type (
 	}
 
 	EncrypterOption[
-		ENC Encrypter[PK, M, C, X], PK PublicKey[PK], M Plaintext, C Ciphertext, X any,
+		ENC Encrypter[PK, M, C, X], PK PublicKey[PK], M Plaintext, C Ciphertext[C], X any,
 	] = func(ENC) error
 )
 
 type (
-	Decrypter[M Plaintext, C Ciphertext] interface {
+	Decrypter[M Plaintext, C Ciphertext[C]] interface {
 		Decrypt(ciphertext C) (plaintext M, err error)
 	}
 
 	DecrypterOption[
-		DEC Decrypter[M, C], M Plaintext, C Ciphertext,
+		DEC Decrypter[M, C], M Plaintext, C Ciphertext[C],
 	] = func(DEC) error
 )
 
 type Scheme[
-	SK PrivateKey[SK], PK PublicKey[PK], M Plaintext, C Ciphertext, N Nonce,
+	SK PrivateKey[SK], PK PublicKey[PK], M Plaintext, C Ciphertext[C], N Nonce,
 	KG KeyGenerator[SK, PK], ENC Encrypter[PK, M, C, N], DEC Decrypter[M, C],
 ] interface {
 	Name() Name
@@ -83,24 +83,24 @@ type Scheme[
 
 // ******** Homomorphic.
 
-type ReRandomisableCiphertext[C Ciphertext, N Nonce, PK PublicKey[PK]] interface {
-	Ciphertext
+type ReRandomisableCiphertext[C Ciphertext[C], N Nonce, PK PublicKey[PK]] interface {
+	Ciphertext[C]
 	ReRandomise(PK, io.Reader) (C, N, error)
+	ReRandomiseWithNonce(PK, N) (C, error)
 }
 
-type HomomorphicCiphertext[C Ciphertext, CV algebra.MonoidElement[CV], S algebra.NatLike[S]] interface {
-	Ciphertext
+type HomomorphicCiphertext[C Ciphertext[C], CV algebra.MonoidElement[CV], S algebra.NatLike[S]] interface {
+	Ciphertext[C]
 	algebra.HomomorphicLike[C, CV]
 	algebra.Actable[C, S]
 }
 
 type ShiftTypeCiphertext[
-	C Ciphertext, CV algebra.GroupElement[CV],
+	C Ciphertext[C], CV algebra.GroupElement[CV],
 	M Plaintext, PK PublicKey[PK], N Nonce, S algebra.NatLike[S],
 ] interface {
 	HomomorphicCiphertext[C, CV, S]
 	ReRandomisableCiphertext[C, N, PK]
-	ReRandomiseWithNonce(PK, N) (C, error)
 	Shift(PK, M) (C, error)
 }
 

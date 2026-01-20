@@ -4,6 +4,7 @@ import (
 	"crypto/cipher"
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
@@ -34,7 +35,7 @@ type (
 type HybridEncrypter[
 	PK PublicKey[PK],
 	M Plaintext,
-	C Ciphertext,
+	C Ciphertext[C],
 	U Capsule,
 ] interface {
 	Encrypter[PK, M, C, U]
@@ -43,7 +44,7 @@ type HybridEncrypter[
 
 type HybridDecrypter[
 	M Plaintext,
-	C Ciphertext,
+	C Ciphertext[C],
 ] interface {
 	Decrypter[M, C]
 	Open(ciphertext C, aad []byte) (M, error)
@@ -53,7 +54,7 @@ type HybridScheme[
 	SK PrivateKey[SK],
 	PK PublicKey[PK],
 	M Plaintext,
-	C Ciphertext,
+	C Ciphertext[C],
 	U Capsule,
 	KG KeyGenerator[SK, PK],
 	KM KEM[PK, U],
@@ -70,7 +71,10 @@ type AEADBasedHybridScheme[
 	SK PrivateKey[SK],
 	PK PublicKey[PK],
 	M ~[]byte,
-	C ~[]byte,
+	C interface {
+		~[]byte
+		base.Equatable[C]
+	},
 	U Capsule,
 	KG KeyGenerator[SK, PK],
 	KM KEM[PK, U],
