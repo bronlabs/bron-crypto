@@ -114,7 +114,7 @@ func (w *Witness[N]) Value() N {
 }
 
 // Op combines two witnesses by applying the underlying nonce operation.
-// This is used to compute the combined witness needed to verify a re-randomized
+// This is used to compute the combined witness needed to verify a re-randomised
 // commitment: if C' = ReRandomise(C, r'), then Verify(C', m, w.Op(w')) succeeds
 // where w is the original witness and w' is the re-randomization witness.
 // Panics if other is nil.

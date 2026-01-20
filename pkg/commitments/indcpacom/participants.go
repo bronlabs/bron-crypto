@@ -99,5 +99,8 @@ func (v *Verifier[N, P, CX, PK]) Verify(
 	message *Message[P],
 	witness *Witness[N],
 ) error {
-	return v.c.Verify(commitment, message, witness)
+	if err := v.c.Verify(commitment, message, witness); err != nil {
+		return errs2.Wrap(err).WithMessage("IND-CPA commitment verification failed")
+	}
+	return nil
 }

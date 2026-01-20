@@ -144,14 +144,14 @@ func TestReRandomization(t *testing.T) {
 	commitment1, witness1, err := committer.Commit(message, crand.Reader)
 	require.NoError(t, err)
 
-	// Re-randomize the commitment
+	// Re-randomise the commitment
 	commitment2, rerandWitness, err := commitment1.ReRandomise(key, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, commitment2)
 	require.NotNil(t, rerandWitness)
 
-	// Re-randomized commitment should be different
-	require.False(t, commitment1.Equal(commitment2), "re-randomized commitment should be different")
+	// Re-randomised commitment should be different
+	require.False(t, commitment1.Equal(commitment2), "re-randomised commitment should be different")
 
 	// The original commitment should still verify with original witness
 	verifier, err := scheme.Verifier()
@@ -159,10 +159,10 @@ func TestReRandomization(t *testing.T) {
 	err = verifier.Verify(commitment1, message, witness1)
 	require.NoError(t, err)
 
-	// The re-randomized commitment should verify with combined witness
+	// The re-randomised commitment should verify with combined witness
 	combinedWitness := witness1.Op(rerandWitness)
 	err = verifier.Verify(commitment2, message, combinedWitness)
-	require.NoError(t, err, "re-randomized commitment should verify with combined witness")
+	require.NoError(t, err, "re-randomised commitment should verify with combined witness")
 }
 
 func TestReRandomizationWithWitness(t *testing.T) {
@@ -188,14 +188,14 @@ func TestReRandomizationWithWitness(t *testing.T) {
 	rerandWitness, err := indcpacom.NewWitness(rerandNonce)
 	require.NoError(t, err)
 
-	// Re-randomize with specific witness twice - should produce same result
+	// Re-randomise with specific witness twice - should produce same result
 	commitment2, err := commitment1.ReRandomiseWithWitness(key, rerandWitness)
 	require.NoError(t, err)
 
 	commitment3, err := commitment1.ReRandomiseWithWitness(key, rerandWitness)
 	require.NoError(t, err)
 
-	// Same witness should produce same re-randomized commitment
+	// Same witness should produce same re-randomised commitment
 	require.True(t, commitment2.Equal(commitment3), "deterministic re-randomization should match")
 }
 
@@ -216,7 +216,7 @@ func TestMultipleReRandomizations(t *testing.T) {
 	commitment0, witness0, err := committer.Commit(message, crand.Reader)
 	require.NoError(t, err)
 
-	// Re-randomize multiple times, tracking witnesses
+	// Re-randomise multiple times, tracking witnesses
 	commitment1, rerandWitness1, err := commitment0.ReRandomise(key, crand.Reader)
 	require.NoError(t, err)
 	commitment2, rerandWitness2, err := commitment1.ReRandomise(key, crand.Reader)
@@ -327,25 +327,25 @@ func TestReRandomizeNilInputErrors(t *testing.T) {
 	commitment, witness, err := committer.Commit(message, crand.Reader)
 	require.NoError(t, err)
 
-	t.Run("re-randomize with nil key", func(t *testing.T) {
+	t.Run("re-randomise with nil key", func(t *testing.T) {
 		t.Parallel()
 		_, _, err := commitment.ReRandomise(nil, crand.Reader)
 		require.Error(t, err)
 	})
 
-	t.Run("re-randomize with nil prng", func(t *testing.T) {
+	t.Run("re-randomise with nil prng", func(t *testing.T) {
 		t.Parallel()
 		_, _, err := commitment.ReRandomise(key, nil)
 		require.Error(t, err)
 	})
 
-	t.Run("re-randomize with witness nil key", func(t *testing.T) {
+	t.Run("re-randomise with witness nil key", func(t *testing.T) {
 		t.Parallel()
 		_, err := commitment.ReRandomiseWithWitness(nil, witness)
 		require.Error(t, err)
 	})
 
-	t.Run("re-randomize with witness nil witness", func(t *testing.T) {
+	t.Run("re-randomise with witness nil witness", func(t *testing.T) {
 		t.Parallel()
 		_, err := commitment.ReRandomiseWithWitness(key, nil)
 		require.Error(t, err)
