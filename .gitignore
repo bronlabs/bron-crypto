@@ -40,4 +40,7 @@ docs/build/*
 /.golangcicache
 /.gocache
 
-thirdparty/boringssl
+/thirdparty/boringssl
+
+/coverage.out
+/coverage.html
