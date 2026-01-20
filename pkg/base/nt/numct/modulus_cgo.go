@@ -65,8 +65,6 @@ func (m *Modulus) cacheMont() {
 	// use a temporary BN_CTX to build the mont ctx
 	tmp, _ := bnCtxPool.Get().(*boring.BigNumCtx)
 	defer bnCtxPool.Put(tmp)
-	b, _ := m.mNum.Bytes()
-	println(len(b))
 	mont, err := boring.NewBigNumMontCtx(m.mNum, tmp)
 	if err != nil {
 		panic(err)
@@ -75,8 +73,6 @@ func (m *Modulus) cacheMont() {
 }
 
 func (m *Modulus) ensureMont() {
-	b, _ := m.mNum.Bytes()
-	println(len(b))
 	if m.mont != nil {
 		return
 	}

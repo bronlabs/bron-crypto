@@ -2,7 +2,6 @@ go 1.25.3
 
 use (
 	.
-	./tools/dudect
 	./tools/edwards25519-tester
 	./tools/field-codegen
 	./tools/secparams-codegen

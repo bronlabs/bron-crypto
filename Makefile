@@ -27,6 +27,14 @@ build: build-boringssl
 test: build-boringssl
 	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE}/)" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test "${BRON_CRYPTO_HOME}/..."
 
+.PHONY: test-race
+test-race: build-boringssl
+	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE}/)" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test -race "${BRON_CRYPTO_HOME}/..."
+
+.PHONY: bench
+bench: build-boringssl
+	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE}/)" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" go test "${BRON_CRYPTO_HOME}/..." -bench=. -run=____NONE____
+
 .PHONY: lint
 lint: build-boringssl
 	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" golangci-lint run "${BRON_CRYPTO_HOME}/..."
@@ -34,3 +42,4 @@ lint: build-boringssl
 .PHONY: lint-fix
 lint-fix: build-boringssl
 	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" golangci-lint run "${BRON_CRYPTO_HOME}/..." --fix
+
