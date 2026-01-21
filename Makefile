@@ -5,6 +5,9 @@ BORINGSSL_HOME := ${BRON_CRYPTO_HOME}/thirdparty/boringssl/
 BORINGSSL_INCLUDE := ${BORINGSSL_HOME}/include
 BORINGSSL_LIB := ${BORINGSSL_HOME}/${BUILD_PREFIX}build/
 
+.PHONY: all
+all: build sbom
+
 ${BORINGSSL_INCLUDE}/openssl:
 	git clone --depth 1 --branch "${BORINGSSL_TAG}" "${BORINGSSL_URL}" "${BORINGSSL_HOME}"
 
@@ -46,3 +49,15 @@ lint: build-boringssl
 .PHONY: lint-fix
 lint-fix: build-boringssl
 	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" golangci-lint run "${BRON_CRYPTO_HOME}/..." --fix
+
+sbom.json:
+	syft "${BRON_CRYPTO_HOME}/" -o cyclonedx-json=$@
+
+.PHONY: sbom
+sbom: sbom.json
+
+.PHONY: clean
+clean:
+	go clean -cache
+	rm -rf "${BRON_CRYPTO_HOME}/sbom.json" "${BORINGSSL_HOME}"
+
