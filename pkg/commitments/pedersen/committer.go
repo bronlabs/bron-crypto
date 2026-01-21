@@ -44,7 +44,6 @@ func (c *Committer[E, S]) CommitWithWitness(message *Message[S], witness *Witnes
 		return nil, ErrInvalidArgument.WithMessage("witness cannot be nil")
 	}
 
-	// TODO: change to multiscalar op? (for two ops, we gain almost nothing)
 	// Compute g^m * h^r
 	v := c.key.g.ScalarOp(message.v).Op(c.key.h.ScalarOp(witness.v))
 	return &Commitment[E, S]{v: v}, nil

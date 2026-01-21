@@ -16,12 +16,14 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -952,7 +954,6 @@ func TestMaliciousParticipants(t *testing.T) {
 
 	t.Run("invalid Pedersen share in round 2", func(t *testing.T) {
 		t.Parallel()
-		t.Skip("TODO: Fix this test - need to understand how to create corrupted shares with new Message/Witness API")
 		_, parties := setup(t, threshold, total, group, sid, tape, prng)
 
 		// Execute round 1
@@ -964,25 +965,39 @@ func TestMaliciousParticipants(t *testing.T) {
 		r2broadcasts, r2unicasts, err := tu.DoGennaroRound2(parties.Values(), r2inputs)
 		require.NoError(t, err)
 
-		// Corrupt a share from participant 0 to participant 1
-		maliciousParticipant := parties.Values()[0]
-		victimID := parties.Values()[1].SharingID()
+		// Use deterministic IDs: malicious is ID 1, victim is ID 2
+		maliciousID := sharing.ID(1)
+		victimID := sharing.ID(2)
 
-		// Get the unicast messages from malicious participant
+		// Get the unicast messages from malicious participant and corrupt the one to the victim
 		maliciousUnicasts := hashmap.NewComparable[sharing.ID, *gennaro.Round2Unicast[*k256.Point, *k256.Scalar]]()
-		for id, msg := range r2unicasts[0].Iter() {
+		for id, msg := range r2unicasts[maliciousID].Iter() {
 			if id == victimID {
-				// TODO: Fix this test - the pedersen share interface has changed
-				// and we need to understand how to properly create a corrupted share
-				// with the new Message/Witness API
+				// Corrupt the share by modifying the secret value
+				originalShare := msg.Share
+				scalarField := k256.NewScalarField()
 
-				// For now, just use the original share
-				maliciousUnicasts.Put(id, msg)
+				// Create a corrupted secret by adding 1 to the original value
+				corruptedSecretValue := originalShare.Value().Add(scalarField.One())
+				corruptedSecret := pedcom.NewMessage(corruptedSecretValue)
+
+				// Create a new corrupted share with the modified secret but same blinding
+				corruptedShare, err := pedersenVSS.NewShare(
+					originalShare.ID(),
+					corruptedSecret,
+					originalShare.Blinding(),
+					nil,
+				)
+				require.NoError(t, err)
+
+				maliciousUnicasts.Put(id, &gennaro.Round2Unicast[*k256.Point, *k256.Scalar]{
+					Share: corruptedShare,
+				})
 			} else {
 				maliciousUnicasts.Put(id, msg)
 			}
 		}
-		r2unicasts[0] = maliciousUnicasts.Freeze()
+		r2unicasts[maliciousID] = maliciousUnicasts.Freeze()
 
 		// Map round 2 outputs to round 3 inputs
 		r3broadcastInputs := ntu.MapBroadcastO2I(t, parties.Values(), r2broadcasts)
@@ -993,9 +1008,9 @@ func TestMaliciousParticipants(t *testing.T) {
 			output, err := participant.Round3(r3broadcastInputs[participant.SharingID()], r3unicastInputs[participant.SharingID()])
 			if participant.SharingID() == victimID {
 				require.Error(t, err)
-				require.ErrorIs(t, err, gennaro.ErrFailed)
+				require.ErrorIs(t, err, feldman.ErrVerification)
 				require.Nil(t, output)
-			} else if participant.SharingID() != maliciousParticipant.SharingID() {
+			} else if participant.SharingID() != maliciousID {
 				// Other honest participants should succeed
 				require.NoError(t, err)
 				require.NotNil(t, output)

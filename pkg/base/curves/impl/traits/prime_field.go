@@ -157,12 +157,6 @@ func (f *PrimeFieldTrait[FP, WP, W]) OpIdentity() WP {
 	return f.Zero()
 }
 
-// SubFieldIdentity is unimplemented for prime fields.
-func (*PrimeFieldTrait[FP, WP, W]) SubFieldIdentity(i uint) (any, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 // PrimeFieldElementTrait implements common arithmetic operations for elements.
 type PrimeFieldElementTrait[FP fieldsImpl.PrimeFieldElementPtr[FP, F], F any, WP PrimeFieldElementWrapperPtrConstraint[FP, W], W any] struct {
 	V F

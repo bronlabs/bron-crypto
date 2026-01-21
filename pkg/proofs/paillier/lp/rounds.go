@@ -141,10 +141,9 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	var m numct.Nat
 	prover.paillierSecretKey.Arithmetic().CrtModN.Phi.ModInv(&m, prover.paillierSecretKey.Group().N().Value())
 
-	// TODO: clean up and put in a helper
 	yPrime := make([]*numct.Nat, prover.k)
 	for i := range yPrime {
-		yPrime[i] = numct.NewNat(0)
+		yPrime[i] = numct.NewNat(0) // initialise.
 	}
 	prover.paillierSecretKey.Arithmetic().CrtModN.MultiBaseExp(
 		yPrime,
