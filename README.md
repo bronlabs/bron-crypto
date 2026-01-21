@@ -88,4 +88,4 @@ builds across platforms.
 
 SPDX-License-Identifier: Apache-2.0
 
-See `LICENSE`.
+See `LICENSE` and `thirdparty/NOTICE` files for details.

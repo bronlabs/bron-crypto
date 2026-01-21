@@ -1,2 +1,4 @@
 # `thirdparty` directory
-This directory contains third-party libraries that are used by the project. The libraries are directly forked from the original repositories, with the main modifications contained in `custom.go` files and in `// CUSTOM` comments in the code.
+This directory contains third-party libraries that are used by the project.
+The libraries are directly forked from the original repositories,
+with the main modifications contained in `custom.go` files and in `// CUSTOM` comments in the code.
