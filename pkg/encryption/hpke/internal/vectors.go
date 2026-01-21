@@ -5,7 +5,10 @@ import (
 )
 
 func DeHex_Testing(h string) []byte { //nolint:staticcheck // _Testing suffix is more clear.
-	result, _ := hex.DecodeString(h)
+	result, err := hex.DecodeString(h)
+	if err != nil {
+		panic(err)
+	}
 	return result
 }
 
@@ -993,7 +996,7 @@ var TestVectors = []*Suite_Testing{
 						Pt:    DeHex_Testing("4265617574792069732074727574682c20747275746820626561757479"),
 						Aad:   DeHex_Testing("436f756e742d30"),
 						Nonce: DeHex_Testing("7e45c21e20e869ae00492123"),
-						Ct:    DeHex_Testing("25881f219935eec5ba70d7b421f13c35005734f3e4d959680270f55d71e2f5cb3bd2daced2770bf3d9d4916872,"),
+						Ct:    DeHex_Testing("25881f219935eec5ba70d7b421f13c35005734f3e4d959680270f55d71e2f5cb3bd2daced2770bf3d9d4916872"),
 					},
 					{
 						Seq:   1,
@@ -1075,7 +1078,7 @@ var TestVectors = []*Suite_Testing{
 					Secret:             DeHex_Testing("fe52b4412590e825ea2603fa88e145b2ee014b942a774b55fab4f081301f16f4"),
 					Key:                DeHex_Testing("31e140c8856941315d4067239fdc4ebe077fbf45a6fc78a61e7a6c8b3bacb10a"),
 					BaseNonce:          DeHex_Testing("75838a8010d2e4760254dd56"),
-					ExporterSecret:     DeHex_Testing("600895965755db9c5027f25f039a6e3e506c35b3b7084ce33c4a48d59ee1f0e3,"),
+					ExporterSecret:     DeHex_Testing("600895965755db9c5027f25f039a6e3e506c35b3b7084ce33c4a48d59ee1f0e3"),
 				},
 				Encryptions: []*EncryptionInfo_Testing{
 					{
