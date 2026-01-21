@@ -42,7 +42,11 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 	c.state.bigR = make(map[sharing.ID]P)
 	c.state.bigR[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.r)
 	c.state.bigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
-	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
+	committer, err := c.state.ck.Committer()
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot create committer")
+	}
+	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = committer.Commit(c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot commit to r")
 	}
@@ -133,8 +137,12 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 	psi := c.suite.ScalarField().Zero()
 	cudu := c.suite.ScalarField().Zero()
 	cvdv := c.suite.ScalarField().Zero()
+	verifier, err := c.state.ck.Verifier()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create verifier")
+	}
 	for id, message := range incomingMessages {
-		if err := c.state.ck.Verifier().Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
+		if err := verifier.Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
 			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
 		c.state.bigR[id] = message.broadcast.BigR

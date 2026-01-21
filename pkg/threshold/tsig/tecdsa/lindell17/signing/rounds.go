@@ -39,7 +39,11 @@ func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P, err error)
 	}
 	pc.state.bigR1 = pc.suite.Curve().ScalarBaseMul(pc.state.k1)
 	// step 1.2: c1 <- Commit(sid || Q || R1)
-	bigR1Commitment, bigR1Opening, err := pc.commitmentScheme.Committer().Commit(pc.state.bigR1.ToCompressed(), pc.prng) // sid and Q are part of the commitment key
+	committer, err := pc.commitmentScheme.Committer()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+	}
+	bigR1Commitment, bigR1Opening, err := committer.Commit(pc.state.bigR1.ToCompressed(), pc.prng) // sid and Q are part of the commitment key
 	if err != nil {
 		return nil, ErrFailed.WithMessage("cannot commit to R")
 	}
@@ -121,7 +125,11 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 		return nil, ErrRound.WithMessage("Running round %d but secondary cosigner expected round %d", 4, sc.round)
 	}
 
-	if err := sc.commitmentScheme.Verifier().Verify(sc.state.bigR1Commitment, r3out.BigR1.ToCompressed(), r3out.BigR1Opening); err != nil {
+	verifier, err := sc.commitmentScheme.Verifier()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create verifier")
+	}
+	if err := verifier.Verify(sc.state.bigR1Commitment, r3out.BigR1.ToCompressed(), r3out.BigR1Opening); err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot open R1 commitment")
 	}
 

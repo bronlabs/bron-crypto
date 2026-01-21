@@ -136,7 +136,11 @@ func commitBigR[
 	if err != nil {
 		return lindell22.Commitment{}, lindell22.Opening{}, errs2.Wrap(err).WithMessage("cannot create commitment scheme")
 	}
-	commitment, opening, err = commitmentScheme.Committer().Commit(bigR.Bytes(), c.prng)
+	committer, err := commitmentScheme.Committer()
+	if err != nil {
+		return lindell22.Commitment{}, lindell22.Opening{}, errs2.Wrap(err).WithMessage("cannot create commitment committer")
+	}
+	commitment, opening, err = committer.Commit(bigR.Bytes(), c.prng)
 	if err != nil {
 		return lindell22.Commitment{}, lindell22.Opening{}, errs2.Wrap(err).WithMessage("cannot commit to R")
 	}
@@ -154,7 +158,11 @@ func verifyBigRCommitment[
 	if err != nil {
 		return errs2.Wrap(err).WithMessage("cannot create commitment scheme for participant %d", theirID)
 	}
-	if err := commitmentScheme.Verifier().Verify(theirCommitment, theirBigR.Bytes(), theirOpening); err != nil {
+	verifier, err := commitmentScheme.Verifier()
+	if err != nil {
+		return errs2.Wrap(err).WithMessage("cannot create commitment verifier for participant %d", theirID)
+	}
+	if err := verifier.Verify(theirCommitment, theirBigR.Bytes(), theirOpening); err != nil {
 		return errs2.Wrap(err).WithMessage("cannot verify commitment for participant %d", theirID)
 	}
 	return nil

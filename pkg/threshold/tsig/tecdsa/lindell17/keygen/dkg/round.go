@@ -45,7 +45,11 @@ func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast, err error) {
 	bigQDoublePrime := p.curve.ScalarBaseMul(xDoublePrime)
 
 	// 1.iii. calculates commitments Qcom to Q' and Q''
-	bigQCommitment, bigQOpening, err := p.state.commitmentSchemes[p.shard.Share().ID()].Committer().Commit(
+	committer, err := p.state.commitmentSchemes[p.shard.Share().ID()].Committer()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+	}
+	bigQCommitment, bigQOpening, err := committer.Commit(
 		slices.Concat(bigQPrime.ToCompressed(), bigQDoublePrime.ToCompressed()),
 		p.prng,
 	)
@@ -124,7 +128,11 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 		}
 
 		// 3.i. open commitments
-		if err := p.state.commitmentSchemes[id].Verifier().Verify(
+		verifier, err := p.state.commitmentSchemes[id].Verifier()
+		if err != nil {
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot create verifier")
+		}
+		if err := verifier.Verify(
 			p.state.theirBigQCommitment[id],
 			slices.Concat(message.BigQPrime.ToCompressed(), message.BigQDoublePrime.ToCompressed()),
 			message.BigQOpening,

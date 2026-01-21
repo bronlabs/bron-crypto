@@ -4,6 +4,7 @@ import (
 	"crypto/cipher"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
@@ -362,4 +363,9 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 	}
 	decrypter.ctx = ctx
 	return decrypter, nil
+}
+
+// Equal reports whether both ciphertexts are equal.
+func (c Ciphertext) Equal(other Ciphertext) bool {
+	return ct.SliceEqual([]byte(c), []byte(other)) == ct.True
 }

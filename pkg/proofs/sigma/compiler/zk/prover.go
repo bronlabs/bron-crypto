@@ -72,7 +72,11 @@ func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash
 	if p.round != 4 {
 		return zero, ErrRound.WithMessage("r != 4 (%d)", p.round)
 	}
-	if err := p.comm.Verifier().Verify(p.challengeCommitment, challenge, witness); err != nil {
+	verifier, err := p.comm.Verifier()
+	if err != nil {
+		return zero, errs2.Wrap(err).WithMessage("cannot create verifier")
+	}
+	if err := verifier.Verify(p.challengeCommitment, challenge, witness); err != nil {
 		return zero, errs2.Wrap(err).WithMessage("invalid challenge")
 	}
 

@@ -39,7 +39,11 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 	cPrime := acEnc.HomAdd(bEnc)
 
 	// 1.ii. compute c'' = commit(a, b)
-	cDoublePrimeCommitment, cDoublePrimeWitness, err := verifier.commitmentScheme.Committer().Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
+	committer, err := verifier.commitmentScheme.Committer()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+	}
+	cDoublePrimeCommitment, cDoublePrimeWitness, err := committer.Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot commit to a and b")
 	}
@@ -97,8 +101,11 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output) (r2out *Round2Output,
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMul(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
-
-	bigQHatCommitment, bigQHatWitness, err := prover.commitmentScheme.Committer().Commit(prover.state.bigQHat.ToCompressed(), prover.prng)
+	committer, err := prover.commitmentScheme.Committer()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+	}
+	bigQHatCommitment, bigQHatWitness, err := committer.Commit(prover.state.bigQHat.ToCompressed(), prover.prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot commit to Q hat")
 	}
@@ -156,7 +163,11 @@ func (prover *Prover[P, B, S]) Round4(r4In *Round3Output) (r4out *Round4Output[P
 		return nil, errs2.Wrap(err).WithMessage("invalid round 4 input")
 	}
 
-	if err := prover.commitmentScheme.Verifier().Verify(prover.state.cDoublePrimeCommitment, slices.Concat(r4In.A.Bytes(), r4In.B.Bytes()), r4In.CDoublePrimeWitness); err != nil {
+	verifier, err := prover.commitmentScheme.Verifier()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create verifier")
+	}
+	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, slices.Concat(r4In.A.Bytes(), r4In.B.Bytes()), r4In.CDoublePrimeWitness); err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot open R commitment")
 	}
 
@@ -193,7 +204,11 @@ func (verifier *Verifier[P, B, S]) Round5(input *Round4Output[P, B, S]) (err err
 		return errs2.Wrap(err).WithMessage("invalid round 5 input")
 	}
 
-	if err := verifier.commitmentScheme.Verifier().Verify(verifier.state.cHat, input.BigQHat.ToCompressed(), input.BigQHatWitness); err != nil {
+	v, err := verifier.commitmentScheme.Verifier()
+	if err != nil {
+		return errs2.Wrap(err).WithMessage("cannot create verifier")
+	}
+	if err := v.Verify(verifier.state.cHat, input.BigQHat.ToCompressed(), input.BigQHatWitness); err != nil {
 		return errs2.Wrap(err).WithMessage("cannot decommit Q hat")
 	}
 

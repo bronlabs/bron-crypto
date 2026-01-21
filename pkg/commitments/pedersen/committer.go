@@ -7,6 +7,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
+// CommitterOption is a functional option for configuring committers.
+type CommitterOption[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] = func(*Committer[E, S]) error
+
 // Committer produces Pedersen commitments using the provided key.
 type Committer[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	key *Key[E, S]
@@ -44,7 +47,6 @@ func (c *Committer[E, S]) CommitWithWitness(message *Message[S], witness *Witnes
 		return nil, ErrInvalidArgument.WithMessage("witness cannot be nil")
 	}
 
-	// TODO: change to multiscalar op? (for two ops, we gain almost nothing)
 	// Compute g^m * h^r
 	v := c.key.g.ScalarOp(message.v).Op(c.key.h.ScalarOp(witness.v))
 	return &Commitment[E, S]{v: v}, nil

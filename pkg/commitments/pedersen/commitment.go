@@ -56,8 +56,8 @@ func (c *Commitment[E, S]) ScalarOp(message *Message[S]) *Commitment[E, S] {
 	return &Commitment[E, S]{v: c.v.ScalarOp(message.v)}
 }
 
-// ReRandomiseWith blinds the commitment using the provided witness randomness.
-func (c *Commitment[E, S]) ReRandomiseWith(key *Key[E, S], r *Witness[S]) (*Commitment[E, S], error) {
+// ReRandomiseWithWitness blinds the commitment using the provided witness randomness.
+func (c *Commitment[E, S]) ReRandomiseWithWitness(key *Key[E, S], r *Witness[S]) (*Commitment[E, S], error) {
 	if r == nil {
 		return nil, ErrInvalidArgument.WithMessage("witness cannot be nil")
 	}
@@ -93,7 +93,7 @@ func (c *Commitment[E, S]) ReRandomise(key *Key[E, S], prng io.Reader) (*Commitm
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create witness")
 	}
-	commitment, err := c.ReRandomiseWith(key, witness)
+	commitment, err := c.ReRandomiseWithWitness(key, witness)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot re-randomise commitment with witness")
 	}

@@ -200,7 +200,10 @@ func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) 
 	if err != nil {
 		return errs2.Wrap(err).WithMessage("could not create commitment from recomputed value")
 	}
-	verifier := s.commitmentScheme.Verifier()
+	verifier, err := s.commitmentScheme.Verifier()
+	if err != nil {
+		return errs2.Wrap(err).WithMessage("could not create verifier")
+	}
 	if err := verifier.Verify(commitment, share.secret, share.blinding); err != nil {
 		return errs2.Wrap(err).WithMessage("could not verify commitment")
 	}

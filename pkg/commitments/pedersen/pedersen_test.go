@@ -34,7 +34,8 @@ func TestBasicCommitment(t *testing.T) {
 	message := pedersen.NewMessage(field.FromUint64(42))
 
 	// Commit to the message
-	committer := scheme.Committer()
+	committer, err := scheme.Committer()
+	require.NoError(t, err, "could not create committer")
 	commitment, witness, err := committer.Commit(message, crand.Reader)
 	require.NoError(t, err, "could not commit")
 	require.NotNil(t, commitment)
@@ -42,7 +43,8 @@ func TestBasicCommitment(t *testing.T) {
 	require.False(t, witness.Value().IsZero(), "witness should not be zero")
 
 	// Verify the commitment
-	verifier := scheme.Verifier()
+	verifier, err := scheme.Verifier()
+	require.NoError(t, err, "could not create verifier")
 	err = verifier.Verify(commitment, message, witness)
 	verified := err == nil
 	require.True(t, verified, "commitment should verify")
@@ -137,7 +139,8 @@ func TestCommitmentCreation(t *testing.T) {
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
-	committer := scheme.Committer()
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
 
 	t.Run("nil message", func(t *testing.T) {
 		t.Parallel()
@@ -165,7 +168,8 @@ func TestCommitmentCreation(t *testing.T) {
 		require.NotNil(t, commitment)
 
 		// Verify
-		verifier := scheme.Verifier()
+		verifier, err := scheme.Verifier()
+		require.NoError(t, err)
 		err = verifier.Verify(commitment, message, witness)
 		verified := err == nil
 		require.True(t, verified)
@@ -343,8 +347,10 @@ func TestHomomorphicProperties(t *testing.T) {
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
-	committer := scheme.Committer()
-	verifier := scheme.Verifier()
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
+	verifier, err := scheme.Verifier()
+	require.NoError(t, err)
 
 	t.Run("additive homomorphism", func(t *testing.T) {
 		t.Parallel()
@@ -451,8 +457,10 @@ func TestReRandomization(t *testing.T) {
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
-	committer := scheme.Committer()
-	verifier := scheme.Verifier()
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
+	verifier, err := scheme.Verifier()
+	require.NoError(t, err)
 
 	t.Run("re-randomization preserves message", func(t *testing.T) {
 		t.Parallel()
@@ -494,7 +502,7 @@ func TestReRandomization(t *testing.T) {
 		require.NoError(t, err)
 
 		// Re-randomise with specific witness
-		c2, err := c1.ReRandomiseWith(key, r)
+		c2, err := c1.ReRandomiseWithWitness(key, r)
 		require.NoError(t, err)
 
 		// The new witness is w1 + r
@@ -522,14 +530,14 @@ func TestReRandomization(t *testing.T) {
 		require.Contains(t, err.Error(), "prng cannot be nil")
 
 		// ReRandomiseWith with nil witness
-		_, err = c.ReRandomiseWith(key, nil)
+		_, err = c.ReRandomiseWithWitness(key, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "witness cannot be nil")
 
 		// ReRandomiseWith with nil key
 		r, err := pedersen.NewWitness(field.FromUint64(123))
 		require.NoError(t, err)
-		_, err = c.ReRandomiseWith(nil, r)
+		_, err = c.ReRandomiseWithWitness(nil, r)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "key cannot be nil")
 	})
@@ -577,7 +585,8 @@ func TestCommitmentOperations(t *testing.T) {
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
-	committer := scheme.Committer()
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
 
 	t.Run("commitment creation", func(t *testing.T) {
 		t.Parallel()
@@ -673,19 +682,22 @@ func TestEdgeCases(t *testing.T) {
 
 	t.Run("short random source", func(t *testing.T) {
 		t.Parallel()
-		committer := scheme.Committer()
+		committer, err := scheme.Committer()
+		require.NoError(t, err)
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Provide insufficient randomness
 		shortRandom := bytes.NewReader([]byte{1, 2, 3}) // Too short
-		_, _, err := committer.Commit(message, shortRandom)
+		_, _, err = committer.Commit(message, shortRandom)
 		require.Error(t, err)
 	})
 
 	t.Run("commitment to zero message", func(t *testing.T) {
 		t.Parallel()
-		committer := scheme.Committer()
-		verifier := scheme.Verifier()
+		committer, err := scheme.Committer()
+		require.NoError(t, err)
+		verifier, err := scheme.Verifier()
+		require.NoError(t, err)
 
 		// Commitment to zero is valid
 		zeroMessage := pedersen.NewMessage(field.Zero())
@@ -716,8 +728,10 @@ func TestMultipleCurves(t *testing.T) {
 		require.NoError(t, err)
 
 		// Test basic commitment
-		committer := scheme.Committer()
-		verifier := scheme.Verifier()
+		committer, err := scheme.Committer()
+		require.NoError(t, err)
+		verifier, err := scheme.Verifier()
+		require.NoError(t, err)
 
 		message := pedersen.NewMessage(field.FromUint64(42))
 		commitment, witness, err := committer.Commit(message, crand.Reader)
@@ -743,8 +757,10 @@ func TestMultipleCurves(t *testing.T) {
 		require.NoError(t, err)
 
 		// Test basic commitment
-		committer := scheme.Committer()
-		verifier := scheme.Verifier()
+		committer, err := scheme.Committer()
+		require.NoError(t, err)
+		verifier, err := scheme.Verifier()
+		require.NoError(t, err)
 
 		message := pedersen.NewMessage(field.FromUint64(42))
 		commitment, witness, err := committer.Commit(message, crand.Reader)
@@ -769,7 +785,8 @@ func BenchmarkCommit(b *testing.B) {
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
-	committer := scheme.Committer()
+	committer, err := scheme.Committer()
+	require.NoError(b, err)
 
 	message := pedersen.NewMessage(field.FromUint64(42))
 
@@ -793,8 +810,10 @@ func BenchmarkVerify(b *testing.B) {
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
-	committer := scheme.Committer()
-	verifier := scheme.Verifier()
+	committer, err := scheme.Committer()
+	require.NoError(b, err)
+	verifier, err := scheme.Verifier()
+	require.NoError(b, err)
 
 	message := pedersen.NewMessage(field.FromUint64(42))
 	commitment, witness, err := committer.Commit(message, crand.Reader)
@@ -820,7 +839,8 @@ func BenchmarkReRandomise(b *testing.B) {
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
-	committer := scheme.Committer()
+	committer, err := scheme.Committer()
+	require.NoError(b, err)
 
 	message := pedersen.NewMessage(field.FromUint64(42))
 	commitment, _, err := committer.Commit(message, crand.Reader)
@@ -846,7 +866,8 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
-	committer := scheme.Committer()
+	committer, err := scheme.Committer()
+	require.NoError(b, err)
 
 	m1 := pedersen.NewMessage(field.FromUint64(10))
 	m2 := pedersen.NewMessage(field.FromUint64(20))
