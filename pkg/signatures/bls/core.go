@@ -43,7 +43,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	// step 2.3.1
 	for d.IsZero() {
 		// step 2.3.2
-		kdf := hkdf.New(hashing.HashFuncTypeErase(RandomOracleHashFunction), slices.Concat(ikm, []byte{0}), salt, []byte{0, bls12381Impl.FpBytes}) // TODO: make sure this is correct
+		kdf := hkdf.New(hashing.HashFuncTypeErase(RandomOracleHashFunction), slices.Concat(ikm, []byte{0}), salt, []byte{0, bls12381Impl.FpBytes})
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
 		okm := make([]byte, bls12381Impl.FpBytes)

@@ -2,9 +2,9 @@
 
 package boring
 
-import "C"
 import (
 	"bytes"
+	"errors"
 	"runtime"
 	"unsafe"
 )
@@ -26,10 +26,6 @@ import (
 // }
 import (
 	"C"
-)
-
-import (
-	"errors"
 )
 
 func (bn *BigNum) Jacobi(b *BigNum, bnCtx *BigNumCtx) (int, error) {

@@ -52,8 +52,6 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 
 // Round2 aggregates blinded shares and publishes the original verification vector.
 func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (*Round2Broadcast[G, S], network.OutgoingUnicasts[*Round2P2P[G, S]], error) {
-	// TODO add share verification
-
 	blindedShare := r.state.blindShare.Add(r.shard.Share())
 	for id := range r.quorum.Iter() {
 		if id == r.mislayerID || id == r.SharingID() {
