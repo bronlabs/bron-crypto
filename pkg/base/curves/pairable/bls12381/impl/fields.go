@@ -45,13 +45,11 @@ func (fp6Params) MulByCubicNonResidue(out, in *Fp2) {
 
 // RootOfUnity returns the field root of unity.
 func (fp6Params) RootOfUnity(out *Fp2) {
-	//TODO implement me
 	panic("implement me")
 }
 
 // ProgenitorExponent returns the progenitor exponent.
 func (fp6Params) ProgenitorExponent() []uint8 {
-	//TODO implement me
 	panic("implement me")
 }
 

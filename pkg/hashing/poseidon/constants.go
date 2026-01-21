@@ -25,7 +25,6 @@ var poseidonParamsKimchiFp = &Parameters{
 	rate:                     2,
 	power:                    7,
 	hashInitialRoundConstant: true,
-	// TODO: import these
 	roundConstants: [][]*pasta.PallasBaseFieldElement{
 		{
 			dec("21155079691556475130150866428468322463125560312786319980770950159250751855431"),

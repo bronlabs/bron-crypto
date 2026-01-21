@@ -3,7 +3,7 @@ package ct
 type (
 	// Choice represents a constant-time boolean choice.
 	Choice uint64
-	Bool   = Choice // TODO: remove
+	Bool   = Choice
 )
 
 const (

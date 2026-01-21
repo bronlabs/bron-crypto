@@ -7,7 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
-// TODO: convert to struct
 type Cardinal interface {
 	base.Comparable[Cardinal]
 	base.Clonable[Cardinal]
@@ -97,7 +96,7 @@ type PrimeField[E any] interface {
 	FromWideBytes([]byte) (E, error)
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
-	FromUint64(uint64) E // TODO: should we add error to this?
+	FromUint64(uint64) E
 }
 
 type PrimeFieldElement[E any] interface {

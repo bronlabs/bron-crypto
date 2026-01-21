@@ -30,14 +30,12 @@ type HashableStructure[E any] interface {
 }
 
 // BytesLike represents types that can provide a byte slice representation.
-// TODO: move to transcripts package
 type BytesLike interface {
 	// Bytes returns the byte slice representation of the receiver.
 	Bytes() []byte
 }
 
 // BytesLikeFactory represents a factory for creating elements of type E from byte slices.
-// TODO: move back to algebra, and only keep element size
 type BytesLikeFactory[E any] interface {
 	// FromBytes creates an element of type E from the given byte slice.
 	FromBytes([]byte) (E, error)

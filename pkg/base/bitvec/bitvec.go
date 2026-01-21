@@ -1,5 +1,3 @@
-//TODO: (Mateusz) Implement this before the audit
-
 // Copyright (c) 2014 Dropbox, Inc.
 // All rights reserved.
 //

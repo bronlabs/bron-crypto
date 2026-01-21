@@ -203,7 +203,7 @@ func (n *Nat) Byte(i uint) byte {
 }
 
 // Compare compares n with rhs and returns lt, eq, gt (each will be 1 or 0).
-func (n *Nat) Compare(rhs *Nat) (lt, eq, gt ct.Bool) { // TODO: swap order
+func (n *Nat) Compare(rhs *Nat) (lt, eq, gt ct.Bool) {
 	sgt, seq, slt := (*saferith.Nat)(n).Cmp((*saferith.Nat)(rhs))
 	return ct.Bool(slt), ct.Bool(seq), ct.Bool(sgt)
 }
