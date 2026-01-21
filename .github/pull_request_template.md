@@ -1,41 +1,23 @@
-<!--- If Trivial, specify in the title and feel free to fill in anything. --->
-<!--- Describe your changes in detail. Provide context and motivation if needed. If this is a test, provide some context and select the right option. -->
+## Summary
+
 ## Description
 
+## Pull Request Checklist
 
+### Scope
+- [ ] Summary and description are provided.
+- [ ] Changes are focused and scoped to one purpose.
 
-<!--- If the type of the testing is not captured by options below, describe it. If you think your testing strategy or rationale is needs explainations, then explain it. It's almost never good to not have tests.  --->
-## Tests
-<!--- Ensures the correct answer is achieved if everything goes right. --->
-[ ] Happy Path
-<!--- Ensures we fail as expected, if specific things go wrong.. --->
-[ ] Failure Tests
-<!--- Ensures we fail, if more involved and technical cryptographic attacks are done. --->
-[ ] Technical Attacks
+### Testing (select all that apply)
+- [ ] Unit tests
+- [ ] Property tests
+- [ ] Test vectors tests
+- [ ] Benchmarks
+- [ ] Not run (explain why)
 
-[ ] Benchmarking
+### Documentation / Spec (if relevant)
+- [ ] Updated/added docs or comments
+- [ ] Spec updated or linked
 
-[ ] Fuzzing
-
-<!--- If this is a primitive, you need to have all. --->
-## Documentation
-[ ] Comments on hard to understand places
-
-[ ] Comments on exported function
-
-<!--- Every logical piece of your code corresponds to a numbered code on a spec written somewhere in README.md or in LaTeX In overleaf. --->
-[ ] Spec
-
-<!--- These should be simple enough, and tied to this ticket enough to warrant fixing it in the same PR. Otherwise, create a new ticket. --->
-## Other Issues Fix, If Any:
-
-
-
-<!--- If It's a Bug, Fill in both. If it's a feature, fill at least one. --->
-## Impact
-<!--- Priority: The level of (business) importance.                --->
-<!---           Critical (select carefully) | High | Medium | Low  --->
-Priority:
-<!--- Severity: The degree of impact on the development or operation of a component or system. --->
-<!---           Critical (select carefully) | Major | Minor | Low                              --->
-Severity:
+### Notes
+- [ ] Additional context is provided (if needed)
