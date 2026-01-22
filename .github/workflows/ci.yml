@@ -18,4 +18,4 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Build
-        run: make build test lint
+        run: GODEBUG="cpu.avx2=off" make build test lint
