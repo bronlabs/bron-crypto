@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
@@ -141,12 +141,12 @@ func (c *Curve) FromUncompressed(data []byte) (*Point, error) {
 func (c *Curve) FromAffine(x, y *BaseFieldElement) (*Point, error) {
 	p, err := c.FromCompressed(x.V.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return nil, errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 
 	y2, err := p.AffineY()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return nil, errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	if y.Equal(y2) {
 		return p, nil
@@ -155,7 +155,7 @@ func (c *Curve) FromAffine(x, y *BaseFieldElement) (*Point, error) {
 	p = p.Neg()
 	y2, err = p.AffineY()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return nil, errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	if y.Equal(y2) {
 		return p, nil
@@ -261,7 +261,7 @@ func (p *Point) ToCompressed() []byte {
 
 	x, err := p.AffineX()
 	if err != nil {
-		panic(errs2.Wrap(err).WithMessage("this should never happen"))
+		panic(errs.Wrap(err).WithMessage("this should never happen"))
 	}
 
 	return x.V.Bytes()
@@ -287,11 +287,11 @@ func (p *Point) ToUncompressed() []byte {
 
 	x, err := p.AffineX()
 	if err != nil {
-		panic(errs2.Wrap(err).WithMessage("this should never happen"))
+		panic(errs.Wrap(err).WithMessage("this should never happen"))
 	}
 	y, err := p.AffineY()
 	if err != nil {
-		panic(errs2.Wrap(err).WithMessage("this should never happen"))
+		panic(errs.Wrap(err).WithMessage("this should never happen"))
 	}
 
 	return append(x.V.Bytes(), y.V.Bytes()...)

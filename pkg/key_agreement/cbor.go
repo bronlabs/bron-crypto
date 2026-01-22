@@ -2,7 +2,7 @@ package key_agreement
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -22,10 +22,10 @@ func (sk *PrivateKey[V]) MarshalCBOR() ([]byte, error) {
 func (sk *PrivateKey[V]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[privateKeyDTO[V]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("couldn't serialise private key")
+		return errs.Wrap(err).WithMessage("couldn't serialise private key")
 	}
 	if _, err := NewPrivateKey(dto.V, dto.T); err != nil {
-		return errs2.Wrap(err).WithMessage("invalid private key")
+		return errs.Wrap(err).WithMessage("invalid private key")
 	}
 	sk.v = dto.V
 	sk.t = dto.T
@@ -48,10 +48,10 @@ func (pk *PublicKey[V, S]) MarshalCBOR() ([]byte, error) {
 func (pk *PublicKey[V, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[publicKeyDTO[V, S]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("couldn't serialise public key")
+		return errs.Wrap(err).WithMessage("couldn't serialise public key")
 	}
 	if _, err := NewPublicKey(dto.V, dto.T); err != nil {
-		return errs2.Wrap(err).WithMessage("invalid public key")
+		return errs.Wrap(err).WithMessage("invalid public key")
 	}
 	pk.v = dto.V
 	pk.t = dto.T
@@ -74,10 +74,10 @@ func (k *SharedKey) MarshalCBOR() ([]byte, error) {
 func (k *SharedKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[sharedKeyDTO](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("couldn't serialise shared key")
+		return errs.Wrap(err).WithMessage("couldn't serialise shared key")
 	}
 	if _, err := NewSharedKey(dto.V, dto.T); err != nil {
-		return errs2.Wrap(err).WithMessage("invalid shared key")
+		return errs.Wrap(err).WithMessage("invalid shared key")
 	}
 	k.v = dto.V
 	k.t = dto.T

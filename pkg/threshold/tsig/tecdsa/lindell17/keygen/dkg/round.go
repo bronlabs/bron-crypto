@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
@@ -37,7 +37,7 @@ func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast, err error) {
 	// 1.i. choose randomly x' and x'' such that x = 3x' + x'' and both x' and x'' are in (q/3, 2q/3) range
 	xPrime, xDoublePrime, err := lindell17.DecomposeTwoThirds(p.shard.Share().Value(), p.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot split share")
+		return nil, errs.Wrap(err).WithMessage("cannot split share")
 	}
 
 	// 1.ii. calculate Q' and Q''
@@ -47,14 +47,14 @@ func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast, err error) {
 	// 1.iii. calculates commitments Qcom to Q' and Q''
 	committer, err := p.state.commitmentSchemes[p.shard.Share().ID()].Committer()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+		return nil, errs.Wrap(err).WithMessage("cannot create committer")
 	}
 	bigQCommitment, bigQOpening, err := committer.Commit(
 		slices.Concat(bigQPrime.ToCompressed(), bigQDoublePrime.ToCompressed()),
 		p.prng,
 	)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot commit to (Q', Q'')")
+		return nil, errs.Wrap(err).WithMessage("cannot commit to (Q', Q'')")
 	}
 
 	p.state.myXPrime = xPrime
@@ -93,11 +93,11 @@ func (p *Participant[P, B, S]) Round2(input network.RoundMessages[*Round1Broadca
 	dlogTranscript := p.tape.Clone()
 	bigQPrimeProof, err := dlogProve(p, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.state.myXPrime, dlogTranscript)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog proof of Q'")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog proof of Q'")
 	}
 	bigQDoublePrimeProof, err := dlogProve(p, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.state.myXDoublePrime, dlogTranscript)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog proof of Q''")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog proof of Q''")
 	}
 
 	// 2.ii. send opening of Qcom revealing Q', Q'' and broadcast proofs of dlog knowledge of these (Qdl', Qdl'' respectively)
@@ -130,22 +130,22 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 		// 3.i. open commitments
 		verifier, err := p.state.commitmentSchemes[id].Verifier()
 		if err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot create verifier")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot create verifier")
 		}
 		if err := verifier.Verify(
 			p.state.theirBigQCommitment[id],
 			slices.Concat(message.BigQPrime.ToCompressed(), message.BigQDoublePrime.ToCompressed()),
 			message.BigQOpening,
 		); err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot open (Q', Q'') commitment")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot open (Q', Q'') commitment")
 		}
 
 		dlogTranscript := p.tape.Clone()
 		if err := dlogVerify(p, id, message.BigQPrimeProof, message.BigQPrime, message.BigQDoublePrime, dlogTranscript); err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify dlog proof of Q'")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify dlog proof of Q'")
 		}
 		if err := dlogVerify(p, id, message.BigQDoublePrimeProof, message.BigQDoublePrime, message.BigQPrime, dlogTranscript); err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify dlog proof of Q''")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify dlog proof of Q''")
 		}
 		p.state.theirBigQPrime[id] = message.BigQPrime
 		p.state.theirBigQDoublePrime[id] = message.BigQDoublePrime
@@ -164,33 +164,33 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	// 3.iii. generate a Paillier key pair
 	keyGenerator, err := p.state.paillierScheme.Keygen()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot generate Paillier key generator")
+		return nil, errs.Wrap(err).WithMessage("cannot generate Paillier key generator")
 	}
 	p.state.myPaillierSk, p.state.myPaillierPk, err = keyGenerator.Generate(p.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot generate Paillier keys")
+		return nil, errs.Wrap(err).WithMessage("cannot generate Paillier keys")
 	}
 	// 3.iv. calculate ckey' = Enc(x'; r') and ckey'' = Enc(x''; r'')
 	ps := p.state.myPaillierPk.PlaintextSpace()
 	xPrimeMessage, err := ps.FromBytes(p.state.myXPrime.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create plaintext from x'")
+		return nil, errs.Wrap(err).WithMessage("cannot create plaintext from x'")
 	}
 	selfEncrypter, err := p.state.paillierScheme.SelfEncrypter(p.state.myPaillierSk)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create paillier self encrypter")
+		return nil, errs.Wrap(err).WithMessage("cannot create paillier self encrypter")
 	}
 	cKeyPrime, rPrime, err := selfEncrypter.SelfEncrypt(xPrimeMessage, p.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot encrypt x'")
+		return nil, errs.Wrap(err).WithMessage("cannot encrypt x'")
 	}
 	xDoublePrimeMessage, err := ps.FromBytes(p.state.myXDoublePrime.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create plaintext from x'")
+		return nil, errs.Wrap(err).WithMessage("cannot create plaintext from x'")
 	}
 	cKeyDoublePrime, rDoublePrime, err := selfEncrypter.SelfEncrypt(xDoublePrimeMessage, p.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot encrypt x''")
+		return nil, errs.Wrap(err).WithMessage("cannot encrypt x''")
 	}
 	p.state.myRPrime = rPrime
 	p.state.myRDoublePrime = rDoublePrime
@@ -205,15 +205,15 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 		}
 		p.state.lpProvers[id], err = lp.NewProver(p.sid, base.ComputationalSecurityBits, p.state.myPaillierSk, paillierProofsTranscript, p.prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create LP prover")
+			return nil, errs.Wrap(err).WithMessage("cannot create LP prover")
 		}
 		p.state.lpdlPrimeProvers[id], err = lpdl.NewProver(p.sid, p.curve, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, paillierProofsTranscript, p.prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create PDL prover")
+			return nil, errs.Wrap(err).WithMessage("cannot create PDL prover")
 		}
 		p.state.lpdlDoublePrimeProvers[id], err = lpdl.NewProver(p.sid, p.curve, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, paillierProofsTranscript, p.prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create PDL prover")
+			return nil, errs.Wrap(err).WithMessage("cannot create PDL prover")
 		}
 	}
 
@@ -255,29 +255,29 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 		paillierProofsTranscript := p.tape.Clone()
 		p.state.lpVerifiers[id], err = lp.NewVerifier(p.sid, base.ComputationalSecurityBits, theirPaillierPublicKey, paillierProofsTranscript, p.prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create P verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot create P verifier")
 		}
 		p.state.lpdlPrimeVerifiers[id], err = lpdl.NewVerifier(p.sid, theirPaillierPublicKey, p.state.theirBigQPrime[id], theirCKeyPrime, paillierProofsTranscript, p.prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create PDL verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot create PDL verifier")
 		}
 		p.state.lpdlDoublePrimeVerifiers[id], err = lpdl.NewVerifier(p.sid, theirPaillierPublicKey, p.state.theirBigQDoublePrime[id], theirCKeyDoublePrime, paillierProofsTranscript, p.prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create PDL verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot create PDL verifier")
 		}
 
 		outgoingMessage := new(Round4P2P)
 		outgoingMessage.LpRound1Output, err = p.state.lpVerifiers[id].Round1()
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 1 of LP verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 1 of LP verifier")
 		}
 		outgoingMessage.LpdlPrimeRound1Output, err = p.state.lpdlPrimeVerifiers[id].Round1()
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 1 of LPDL verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 1 of LPDL verifier")
 		}
 		outgoingMessage.LpdlDoublePrimeRound1Output, err = p.state.lpdlDoublePrimeVerifiers[id].Round1()
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 1 of LPDLP verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 1 of LPDLP verifier")
 		}
 		r4o.Put(id, outgoingMessage)
 	}
@@ -309,7 +309,7 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P]) (
 			var err error
 			outgoingMessage.LpRound2Output, err = p.state.lpProvers[id].Round2(message.LpRound1Output)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("cannot run round 2 of LP prover")
+				return errs.Wrap(err).WithMessage("cannot run round 2 of LP prover")
 			}
 			return nil
 		})
@@ -317,7 +317,7 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P]) (
 			var err error
 			outgoingMessage.LpdlPrimeRound2Output, err = p.state.lpdlPrimeProvers[id].Round2(message.LpdlPrimeRound1Output)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("cannot run round 2 of LPDL prover")
+				return errs.Wrap(err).WithMessage("cannot run round 2 of LPDL prover")
 			}
 			return nil
 		})
@@ -325,12 +325,12 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P]) (
 			var err error
 			outgoingMessage.LpdlDoublePrimeRound2Output, err = p.state.lpdlDoublePrimeProvers[id].Round2(message.LpdlDoublePrimeRound1Output)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("cannot run round 2 of LPDL prover")
+				return errs.Wrap(err).WithMessage("cannot run round 2 of LPDL prover")
 			}
 			return nil
 		})
 		if err := errGroup.Wait(); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("round 5")
+			return nil, errs.Wrap(err).WithMessage("round 5")
 		}
 		r5o.Put(id, outgoingMessage)
 	}
@@ -359,15 +359,15 @@ func (p *Participant[P, B, S]) Round6(input network.RoundMessages[*Round5P2P]) (
 		outgoingMessage := new(Round6P2P)
 		outgoingMessage.LpRound3Output, err = p.state.lpVerifiers[id].Round3(message.LpRound2Output)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 3 of LP verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 3 of LP verifier")
 		}
 		outgoingMessage.LpdlPrimeRound3Output, err = p.state.lpdlPrimeVerifiers[id].Round3(message.LpdlPrimeRound2Output)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 3 of LP verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 3 of LP verifier")
 		}
 		outgoingMessage.LpdlDoublePrimeRound3Output, err = p.state.lpdlDoublePrimeVerifiers[id].Round3(message.LpdlDoublePrimeRound2Output)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 3 of LP verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 3 of LP verifier")
 		}
 		r6o.Put(id, outgoingMessage)
 	}
@@ -396,15 +396,15 @@ func (p *Participant[P, B, S]) Round7(input network.RoundMessages[*Round6P2P]) (
 		outgoingMessage := new(Round7P2P[P, B, S])
 		outgoingMessage.LpRound4Output, err = p.state.lpProvers[id].Round4(message.LpRound3Output)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 2 of LP prover")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 2 of LP prover")
 		}
 		outgoingMessage.LpdlPrimeRound4Output, err = p.state.lpdlPrimeProvers[id].Round4(message.LpdlPrimeRound3Output)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 2 of LP prover")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 2 of LP prover")
 		}
 		outgoingMessage.LpdlDoublePrimeRound4Output, err = p.state.lpdlDoublePrimeProvers[id].Round4(message.LpdlDoublePrimeRound3Output)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 2 of LP prover")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 2 of LP prover")
 		}
 		r7o.Put(id, outgoingMessage)
 	}
@@ -429,13 +429,13 @@ func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, 
 		}
 
 		if err := p.state.lpVerifiers[id].Round5(message.LpRound4Output); err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify valid Paillier public-key")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify valid Paillier public-key")
 		}
 		if err := p.state.lpdlPrimeVerifiers[id].Round5(message.LpdlPrimeRound4Output); err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify encrypted dlog")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify encrypted dlog")
 		}
 		if err := p.state.lpdlDoublePrimeVerifiers[id].Round5(message.LpdlDoublePrimeRound4Output); err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify encrypted dlog")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify encrypted dlog")
 		}
 	}
 
@@ -447,11 +447,11 @@ func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, 
 		hashmap.NewComparableFromNativeLike(p.state.theirPaillierEncryptedShares).Freeze(),
 	)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create auxiliary info")
+		return nil, errs.Wrap(err).WithMessage("cannot create auxiliary info")
 	}
 	shard, err := lindell17.NewShard(p.shard, auxInfo)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create lindell17 shard")
+		return nil, errs.Wrap(err).WithMessage("cannot create lindell17 shard")
 	}
 	return shard, nil
 }
@@ -465,7 +465,7 @@ func dlogProve[
 	tape.AppendBytes(bigQTwinLabel, bigQTwin.ToCompressed())
 	prover, err := c.state.niDlogScheme.NewProver(c.sid, tape)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog prover")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
 	statement := &schnorrpok.Statement[P, S]{
 		X: bigQ,
@@ -475,7 +475,7 @@ func dlogProve[
 	}
 	proof, err := prover.Prove(statement, witness)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog proof")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog proof")
 	}
 	return proof, nil
 }
@@ -489,13 +489,13 @@ func dlogVerify[
 	tape.AppendBytes(bigQTwinLabel, bigQTwin.ToCompressed())
 	verifier, err := c.state.niDlogScheme.NewVerifier(c.sid, tape)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create dlog verifier")
+		return errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}
 	statement := &schnorrpok.Statement[P, S]{
 		X: bigQ,
 	}
 	if err := verifier.Verify(statement, proof); err != nil {
-		return errs2.Wrap(err).WithMessage("cannot verify dlog proof for participant %d", proverID)
+		return errs.Wrap(err).WithMessage("cannot verify dlog proof for participant %d", proverID)
 	}
 	return nil
 }

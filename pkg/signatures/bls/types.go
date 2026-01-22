@@ -20,7 +20,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -199,7 +199,7 @@ func NewPublicKeyFromBytes[
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	v, err := subGroup.FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create public key from bytes")
+		return nil, errs.Wrap(err).WithMessage("could not create public key from bytes")
 	}
 	return NewPublicKey(v)
 }
@@ -318,7 +318,7 @@ func NewPrivateKeyFromBytes[
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](subGroup.ScalarStructure())
 	v, err := sf.FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create private key from bytes")
+		return nil, errs.Wrap(err).WithMessage("could not create private key from bytes")
 	}
 	return NewPrivateKey(subGroup, v)
 }
@@ -418,7 +418,7 @@ func NewSignatureFromBytes[
 	}
 	v, err := subGroup.FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create signature from bytes")
+		return nil, errs.Wrap(err).WithMessage("could not create signature from bytes")
 	}
 	return NewSignature(v, pop)
 }
@@ -487,7 +487,7 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *Signature[Sig, S
 	}
 	popAgg, err := sig.pop.TryAdd(other.pop)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not add proofs of possession in signature with proof of possession")
+		return nil, errs.Wrap(err).WithMessage("could not add proofs of possession in signature with proof of possession")
 	}
 	out.pop = popAgg
 	return out, nil
@@ -532,7 +532,7 @@ func NewProofOfPossession[
 	}
 	sig, err := NewSignature(v, nil)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create proof of possession from signature")
+		return nil, errs.Wrap(err).WithMessage("could not create proof of possession from signature")
 	}
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
 		Signature: *sig,
@@ -551,11 +551,11 @@ func NewProofOfPossessionFromBytes[
 	}
 	v, err := subGroup.FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create proof of possession from bytes")
+		return nil, errs.Wrap(err).WithMessage("could not create proof of possession from bytes")
 	}
 	pop, err := NewProofOfPossession(v)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create proof of possession from signature")
+		return nil, errs.Wrap(err).WithMessage("could not create proof of possession from signature")
 	}
 	return pop, nil
 }
@@ -616,7 +616,7 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *ProofOfP
 	}
 	v, err := pop.Signature.TryAdd(&other.Signature)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not add signatures in proof of possession")
+		return nil, errs.Wrap(err).WithMessage("could not add signatures in proof of possession")
 	}
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
 		Signature: *v,
@@ -653,12 +653,12 @@ func AggregateAll[
 		func(acc X, pk X) (X, error) {
 			aggregated, err := acc.TryAdd(pk)
 			if err != nil {
-				return *new(X), errs2.Wrap(err).WithMessage("could not aggregate public keys")
+				return *new(X), errs.Wrap(err).WithMessage("could not aggregate public keys")
 			}
 			return aggregated, nil
 		})
 	if err != nil {
-		return *new(X), errs2.Wrap(err).WithMessage("failed to aggregate BLS elements")
+		return *new(X), errs.Wrap(err).WithMessage("failed to aggregate BLS elements")
 	}
 	return result, nil
 }

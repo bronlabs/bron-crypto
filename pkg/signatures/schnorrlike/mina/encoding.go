@@ -2,7 +2,7 @@ package mina
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Base58Check version prefixes for Mina key and signature encoding.
@@ -32,11 +32,11 @@ func EncodePublicKey(publicKey *PublicKey) (base58.Base58, error) {
 	// Get x-coordinate and y-parity
 	x, err := publicKey.V.AffineX()
 	if err != nil {
-		return "", errs2.Wrap(err).WithMessage("failed to get x coordinate")
+		return "", errs.Wrap(err).WithMessage("failed to get x coordinate")
 	}
 	y, err := publicKey.V.AffineY()
 	if err != nil {
-		return "", errs2.Wrap(err).WithMessage("failed to get y coordinate")
+		return "", errs.Wrap(err).WithMessage("failed to get y coordinate")
 	}
 
 	// Convert x from big-endian (internal) to little-endian (Mina format)
@@ -66,7 +66,7 @@ func EncodePublicKey(publicKey *PublicKey) (base58.Base58, error) {
 func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 	data, v, err := base58.CheckDecode(s)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to decode public key")
+		return nil, errs.Wrap(err).WithMessage("failed to decode public key")
 	}
 	if v != NonZeroCurvePointCompressedBase58VersionPrefix {
 		return nil, ErrVerificationFailed.WithMessage("invalid version prefix for public key. got :%d, need :%d", v, NonZeroCurvePointCompressedBase58VersionPrefix)
@@ -93,17 +93,17 @@ func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 	// Parse x-coordinate
 	x, err := group.BaseField().FromBytes(xBytesBE)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to parse x coordinate")
+		return nil, errs.Wrap(err).WithMessage("failed to parse x coordinate")
 	}
 
 	// Reconstruct point from x and y-parity
 	pkv, err := group.FromAffineX(x, yParity == 1)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create public key from coordinates")
+		return nil, errs.Wrap(err).WithMessage("failed to create public key from coordinates")
 	}
 	publicKey, err := NewPublicKey(pkv)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create public key")
+		return nil, errs.Wrap(err).WithMessage("failed to create public key")
 	}
 	return publicKey, nil
 }
@@ -139,7 +139,7 @@ func EncodePrivateKey(privateKey *PrivateKey) (base58.Base58, error) {
 func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 	data, v, err := base58.CheckDecode(s)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to decode private key")
+		return nil, errs.Wrap(err).WithMessage("failed to decode private key")
 	}
 	if v != PrivateKeyBase58VersionPrefix {
 		return nil, ErrVerificationFailed.WithMessage("invalid version prefix for private key. got :%d, need :%d", v, PrivateKeyBase58VersionPrefix)
@@ -164,11 +164,11 @@ func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 
 	skv, err := sf.FromBytes(scalarBytesBE)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
+		return nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
 	privateKey, err := NewPrivateKey(skv)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create private key")
+		return nil, errs.Wrap(err).WithMessage("failed to create private key")
 	}
 	return privateKey, nil
 }
@@ -182,7 +182,7 @@ func EncodeSignature(signature *Signature) (base58.Base58, error) {
 	}
 	data, err := SerializeSignature(signature)
 	if err != nil {
-		return "", errs2.Wrap(err).WithMessage("failed to serialise signature")
+		return "", errs.Wrap(err).WithMessage("failed to serialise signature")
 	}
 	return base58.CheckEncode(data, SignatureBase58VersionPrefix), nil
 }
@@ -193,7 +193,7 @@ func EncodeSignature(signature *Signature) (base58.Base58, error) {
 func DecodeSignature(s base58.Base58) (*Signature, error) {
 	data, v, err := base58.CheckDecode(s)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to decode signature")
+		return nil, errs.Wrap(err).WithMessage("failed to decode signature")
 	}
 	if v != SignatureBase58VersionPrefix {
 		return nil, ErrVerificationFailed.WithMessage("invalid version prefix for signature. got :%d, need :%d", v, SignatureBase58VersionPrefix)
@@ -203,7 +203,7 @@ func DecodeSignature(s base58.Base58) (*Signature, error) {
 	}
 	sig, err := DeserializeSignature(data)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to deserialize signature")
+		return nil, errs.Wrap(err).WithMessage("failed to deserialize signature")
 	}
 	return sig, nil
 }

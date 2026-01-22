@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -242,7 +242,7 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) TryDiv(e WP) (WP, error) {
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) EuclideanDiv(rhs WP) (quot, rem WP, err error) {
 	quot, err = fe.TryDiv(rhs)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("division by zero")
+		return nil, nil, errs.Wrap(err).WithMessage("division by zero")
 	}
 
 	var r W

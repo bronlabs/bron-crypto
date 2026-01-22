@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -131,7 +131,7 @@ func (sh *Shard[E, S]) AsSchnorrPrivateKey() (*schnorrlike.PrivateKey[E, S], err
 	}
 	sk, err := schnorrlike.NewPrivateKey(sh.Share().Value(), sh.PublicKey())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create schnorr private key from share")
+		return nil, errs.Wrap(err).WithMessage("failed to create schnorr private key from share")
 	}
 	return sk, nil
 }
@@ -147,15 +147,15 @@ func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]
 	}
 	bs, err := tsig.NewBaseShard(share, fv, accessStructure)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create base shard")
+		return nil, errs.Wrap(err).WithMessage("could not create base shard")
 	}
 	pk, err := schnorrlike.NewPublicKey(fv.Coefficients()[0])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create public key from verification vector")
+		return nil, errs.Wrap(err).WithMessage("could not create public key from verification vector")
 	}
 	return &Shard[E, S]{BaseShard: *bs, pk: pk, pkOnce: sync.Once{}}, nil
 }
 
 var (
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 )

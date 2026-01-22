@@ -19,7 +19,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
 )
 
@@ -38,7 +38,7 @@ import (
 func SetupBaseS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	out, err := internal.NewSenderContext(Base, suite, receiverPublicKey, nil, info, nil, nil, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -56,7 +56,7 @@ func SetupBaseS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext[P, B, S], error) {
 	out, err := internal.NewReceiverContext(Base, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, nil, nil)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -79,7 +79,7 @@ func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], psk, pskID, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	out, err := internal.NewSenderContext(PSk, suite, receiverPublicKey, nil, info, psk, pskID, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -91,7 +91,7 @@ func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *SenderContext[P, B, S], additionalData, plaintext []byte) (ciphertext []byte, err error) {
 	out, err := ctx.Seal(plaintext, additionalData)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -111,7 +111,7 @@ func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra
 func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], psk, pskID, info []byte) (*ReceiverContext[P, B, S], error) {
 	out, err := internal.NewReceiverContext(PSk, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, psk, pskID)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -135,7 +135,7 @@ func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 func SetupAuthS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	out, err := internal.NewSenderContext(Auth, suite, receiverPublicKey, senderPrivateKey, info, nil, nil, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -158,7 +158,7 @@ func SetupAuthS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext[P, B, S], error) {
 	out, err := internal.NewReceiverContext(Auth, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, nil, nil)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -183,7 +183,7 @@ func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], psk, pskID, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	out, err := internal.NewSenderContext(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskID, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -207,7 +207,7 @@ func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 func SetupAuthPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], psk, pskID, info []byte) (*ReceiverContext[P, B, S], error) {
 	out, err := internal.NewReceiverContext(AuthPSk, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskID)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }

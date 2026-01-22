@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -20,7 +20,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 
 	dealerOut, err := p.scheme.Deal(feldman.NewSecret(p.field.Zero()), p.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not deal shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal shares")
 	}
 	p.state.verificationVectors = make(map[sharing.ID]feldman.VerificationVector[G, S])
 	p.state.verificationVectors[p.sharingID] = dealerOut.VerificationMaterial()

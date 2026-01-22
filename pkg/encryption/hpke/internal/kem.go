@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	dh "github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
@@ -100,12 +100,12 @@ func (s *DHKEMScheme[P, B, S]) GenerateKeyPair(prng io.Reader) (*PrivateKey[S], 
 
 	ikm, err := s.produceIKM(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	privateKey, publicKey, err := s.DeriveKeyPair(ikm)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	return privateKey, publicKey, nil
@@ -141,18 +141,18 @@ func (s *DHKEMScheme[P, B, S]) DeriveKeyPair(ikm []byte) (*PrivateKey[S], *Publi
 			FromClampedBytes([]byte) (S, error)
 		}](s.curve.ScalarStructure()).FromClampedBytes(skBytes)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err)
+			return nil, nil, errs.Wrap(err)
 		}
 	default:
 		return nil, nil, ErrNotSupported.WithMessage("curve %s not supported", s.curve.Name())
 	}
 	sk, err := NewPrivateKey(s.curve.ScalarField(), skBytes)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	pk, err := NewPublicKey(s.curve.ScalarBaseMul(skv))
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return sk, pk, nil
 }
@@ -166,18 +166,18 @@ func (s *DHKEMScheme[P, B, S]) Encap(receiverPublicKey *PublicKey[P, B, S], prng
 
 	ikmE, err := s.produceIKM(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	sharedSecret, ephemeralPublicKey, err = s.EncapWithIKM(receiverPublicKey, ikmE)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return sharedSecret, ephemeralPublicKey, nil
 }
 
 func (s *DHKEMScheme[P, B, S]) EncapWithIKM(receiverPublicKey *PublicKey[P, B, S], ikmE []byte) (sharedSecret []byte, ephemeralPublicKey *PublicKey[P, B, S], err error) {
 	if receiverPublicKey == nil || ikmE == nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	if receiverPublicKey.Value().IsOpIdentity() {
 		return nil, nil, ErrInvalidPublicKey.WithMessage("receiver public key is identity")
@@ -188,16 +188,16 @@ func (s *DHKEMScheme[P, B, S]) EncapWithIKM(receiverPublicKey *PublicKey[P, B, S
 
 	ephemeralPrivateKey, ephemeralPublicKey, err := s.DeriveKeyPair(ikmE)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	dhReceiverPublicKey, err := dh.NewPublicKey(receiverPublicKey.Value())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	dhKey, err := dh.DeriveSharedSecret(&ephemeralPrivateKey.ExtendedPrivateKey, dhReceiverPublicKey)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	enc := ephemeralPublicKey.Bytes()
@@ -214,7 +214,7 @@ func (s *DHKEMScheme[P, B, S]) EncapWithIKM(receiverPublicKey *PublicKey[P, B, S
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-2.1.2.6
 func (s *DHKEMScheme[P, B, S]) Decap(receiverPrivateKey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S]) (sharedSecret []byte, err error) {
 	if receiverPrivateKey == nil || ephemeralPublicKey == nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	if ephemeralPublicKey.Value().IsOpIdentity() {
 		return nil, ErrInvalidPublicKey.WithMessage("ephemeral public key is identity")
@@ -229,16 +229,16 @@ func (s *DHKEMScheme[P, B, S]) Decap(receiverPrivateKey *PrivateKey[S], ephemera
 
 	dhEphemeralPublicKey, err := dh.NewPublicKey(ephemeralPublicKey.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	dhKey, err := dh.DeriveSharedSecret(&receiverPrivateKey.ExtendedPrivateKey, dhEphemeralPublicKey)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	receiverPublicKey, err := NewPublicKey(curve.ScalarBaseMul(receiverPrivateKey.Value()))
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	pkRm := receiverPublicKey.Bytes()
 	kemContext := make([]byte, len(enc)+len(pkRm))
@@ -258,12 +258,12 @@ func (s *DHKEMScheme[P, B, S]) AuthEncap(receiverPublicKey *PublicKey[P, B, S], 
 
 	ikmE, err := s.produceIKM(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	sharedSecret, ephemeralPublicKey, err = s.AuthEncapWithIKM(receiverPublicKey, senderPrivateKey, ikmE)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	return sharedSecret, ephemeralPublicKey, nil
@@ -284,22 +284,22 @@ func (s *DHKEMScheme[P, B, S]) AuthEncapWithIKM(receiverPublicKey *PublicKey[P, 
 
 	ephemeralPrivateKey, ephemeralPublicKey, err := s.DeriveKeyPair(ikmE)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	dhReceiverPublicKey, err := dh.NewPublicKey(receiverPublicKey.Value())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	dhER, err := dh.DeriveSharedSecret(&ephemeralPrivateKey.ExtendedPrivateKey, dhReceiverPublicKey)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	dhSR, err := dh.DeriveSharedSecret(&senderPrivateKey.ExtendedPrivateKey, dhReceiverPublicKey)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	dhERBytes := dhER.Bytes()
@@ -312,7 +312,7 @@ func (s *DHKEMScheme[P, B, S]) AuthEncapWithIKM(receiverPublicKey *PublicKey[P, 
 	pkRm := receiverPublicKey.Bytes()
 	senderPublicKey, err := NewPublicKey(curve.ScalarBaseMul(senderPrivateKey.Value()))
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	pkSm := senderPublicKey.Bytes()
 	kemContext := make([]byte, len(enc)+len(pkRm)+len(pkSm))
@@ -341,21 +341,21 @@ func (s *DHKEMScheme[P, B, S]) AuthDecap(receiverPrivateKey *PrivateKey[S], send
 
 	dhEphemeralPublicKey, err := dh.NewPublicKey(ephemeralPublicKey.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	dhSenderPublicKey, err := dh.NewPublicKey(senderPublicKey.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	dhRE, err := dh.DeriveSharedSecret(&receiverPrivateKey.ExtendedPrivateKey, dhEphemeralPublicKey)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	dhRS, err := dh.DeriveSharedSecret(&receiverPrivateKey.ExtendedPrivateKey, dhSenderPublicKey)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	dhREBytes := dhRE.Bytes()
@@ -367,7 +367,7 @@ func (s *DHKEMScheme[P, B, S]) AuthDecap(receiverPrivateKey *PrivateKey[S], send
 	enc := ephemeralPublicKey.Bytes()
 	receiverPK, err := NewPublicKey(curve.ScalarBaseMul(receiverPrivateKey.Value()))
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	pkRm := receiverPK.Bytes()
 	pkSm := senderPublicKey.Bytes()
@@ -421,7 +421,7 @@ func (s *DHKEMScheme[P, B, S]) suiteID() []byte {
 func (s *DHKEMScheme[P, B, S]) produceIKM(prng io.Reader) ([]byte, error) {
 	ikm := make([]byte, s.NSk())
 	if _, err := io.ReadFull(prng, ikm); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return ikm, nil
 }

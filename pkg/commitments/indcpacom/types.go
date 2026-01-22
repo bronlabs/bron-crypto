@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
@@ -41,7 +41,7 @@ func (c *Commitment[C, N, PK]) ReRandomiseWithWitness(k *Key[PK], w *Witness[N])
 	}
 	newCiphertext, err := c.v.ReRandomiseWithNonce(k.v, w.v)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot re-randomise commitment")
+		return nil, errs.Wrap(err).WithMessage("cannot re-randomise commitment")
 	}
 	return &Commitment[C, N, PK]{v: newCiphertext}, nil
 }
@@ -56,7 +56,7 @@ func (c *Commitment[C, N, PK]) ReRandomise(k *Key[PK], prng io.Reader) (*Commitm
 	}
 	newCiphertext, newNonce, err := c.v.ReRandomise(k.v, prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot re-randomise commitment")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot re-randomise commitment")
 	}
 	return &Commitment[C, N, PK]{v: newCiphertext}, &Witness[N]{v: newNonce}, nil
 }
@@ -140,9 +140,9 @@ func NewWitness[N interface {
 // Errors returned by the indcpacom package.
 var (
 	// ErrIsNil is returned when a required value is nil.
-	ErrIsNil = errs2.New("value is nil")
+	ErrIsNil = errs.New("value is nil")
 	// ErrVerificationFailed is returned when commitment verification fails.
-	ErrVerificationFailed = errs2.New("commitment verification failed")
+	ErrVerificationFailed = errs.New("commitment verification failed")
 	// ErrInvalidType is returned when a type assertion fails.
-	ErrInvalidType = errs2.New("invalid type")
+	ErrInvalidType = errs.New("invalid type")
 )

@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/hjky"
@@ -34,7 +34,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](shard.VerificationVector().Coefficients()[0].Structure())
 	zeroParticipant, err := hjky.NewParticipant(sid, shard.Share().ID(), shard.AccessStructure(), group, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create zero participant")
+		return nil, errs.Wrap(err).WithMessage("failed to create zero participant")
 	}
 
 	p := &Participant[G, S]{

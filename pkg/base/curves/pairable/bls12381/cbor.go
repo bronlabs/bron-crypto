@@ -3,7 +3,7 @@ package bls12381
 import (
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -38,7 +38,7 @@ func (fe *BaseFieldElementG1) UnmarshalCBOR(data []byte) error {
 	}
 	e, err := NewG1BaseField().FromBytes(dto.FieldBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize base field element")
+		return errs.Wrap(err).WithMessage("cannot deserialize base field element")
 	}
 	fe.V.Set(&e.V)
 	return nil
@@ -62,7 +62,7 @@ func (fe *BaseFieldElementG2) UnmarshalCBOR(data []byte) error {
 	}
 	e, err := NewG2BaseField().FromBytes(dto.FieldBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize base field element")
+		return errs.Wrap(err).WithMessage("cannot deserialize base field element")
 	}
 	fe.V.Set(&e.V)
 	return nil
@@ -86,7 +86,7 @@ func (s *Scalar) UnmarshalCBOR(data []byte) error {
 	}
 	e, err := NewScalarField().FromBytes(dto.FieldBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize scalar")
+		return errs.Wrap(err).WithMessage("cannot deserialize scalar")
 	}
 	s.V.Set(&e.V)
 	return nil
@@ -110,7 +110,7 @@ func (p *PointG1) UnmarshalCBOR(data []byte) error {
 	}
 	e, err := NewG1().FromCompressed(dto.AffineCompressedBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize scalar")
+		return errs.Wrap(err).WithMessage("cannot deserialize scalar")
 	}
 	p.V.Set(&e.V)
 	return nil
@@ -134,7 +134,7 @@ func (p *PointG2) UnmarshalCBOR(data []byte) error {
 	}
 	e, err := NewG2().FromCompressed(dto.AffineCompressedBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize scalar")
+		return errs.Wrap(err).WithMessage("cannot deserialize scalar")
 	}
 	p.V.Set(&e.V)
 	return nil

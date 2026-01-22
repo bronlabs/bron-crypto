@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
@@ -92,7 +92,7 @@ func (*G1) MultiPair(these []*PointG1, with []*PointG2) (*GtElement, error) {
 
 	for i, p1 := range these {
 		if err := ppe.Add(p1, with[i]); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine at index %d", i)
+			return nil, errs.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine at index %d", i)
 		}
 	}
 	return ppe.Result(), nil
@@ -108,7 +108,7 @@ func (*G1) MultiPairAndInvertDuals(these []*PointG1, with []*PointG2) (*GtElemen
 
 	for i, p1 := range these {
 		if err := ppe.AddAndInvG2(p1, with[i]); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine at index %d", i)
+			return nil, errs.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine at index %d", i)
 		}
 	}
 	result := ppe.Result()
@@ -341,7 +341,7 @@ func (p *PointG1) Pair(p2 *PointG2) (*GtElement, error) {
 	}
 	ppe := NewOptimalAtePPE()
 	if err := ppe.Add(p, p2); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine")
+		return nil, errs.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine")
 	}
 	return ppe.Result(), nil
 }
@@ -355,7 +355,7 @@ func (p *PointG1) MultiPair(with ...*PointG2) (*GtElement, error) {
 	ppe := NewOptimalAtePPE()
 	for _, p2 := range with {
 		if err := ppe.Add(p, p2); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine")
+			return nil, errs.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine")
 		}
 	}
 	return ppe.Result(), nil
@@ -370,7 +370,7 @@ func (p *PointG1) MultiPairAndInvertDuals(with ...*PointG2) (*GtElement, error) 
 	ppe := NewOptimalAtePPE()
 	for _, p2 := range with {
 		if err := ppe.AddAndInvG2(p, p2); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine")
+			return nil, errs.Wrap(err).WithMessage("cannot add G1 and G2 points to pairing engine")
 		}
 	}
 	return ppe.Result(), nil
@@ -402,7 +402,7 @@ func (p *PointG1) MarshalBinary() (data []byte, err error) {
 func (p *PointG1) UnmarshalBinary(data []byte) error {
 	pp, err := NewG1().FromCompressed(data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil

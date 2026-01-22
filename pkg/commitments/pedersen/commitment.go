@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
@@ -69,7 +69,7 @@ func (c *Commitment[E, S]) ReRandomiseWithWitness(key *Key[E, S], r *Witness[S])
 	}
 	newCom, err := NewCommitment(c.v.Op(key.h.ScalarOp(r.v)))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot re-randomise commitment")
+		return nil, errs.Wrap(err).WithMessage("cannot re-randomise commitment")
 	}
 	return newCom, nil
 }
@@ -87,15 +87,15 @@ func (c *Commitment[E, S]) ReRandomise(key *Key[E, S], prng io.Reader) (*Commitm
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	wv, err := algebrautils.RandomNonIdentity(field, prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot generate random witness")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random witness")
 	}
 	witness, err := NewWitness(wv)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create witness")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create witness")
 	}
 	commitment, err := c.ReRandomiseWithWitness(key, witness)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot re-randomise commitment with witness")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot re-randomise commitment with witness")
 	}
 	return commitment, witness, nil
 }
@@ -125,7 +125,7 @@ func (c *Commitment[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Pedersen commitment")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Pedersen commitment")
 	}
 	return data, nil
 }
@@ -134,7 +134,7 @@ func (c *Commitment[E, S]) MarshalCBOR() ([]byte, error) {
 func (c *Commitment[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*commitmentDTO[E, S]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("failed to unmarshal Pedersen commitment")
+		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen commitment")
 	}
 	c2, err := NewCommitment(dto.V)
 	if err != nil {

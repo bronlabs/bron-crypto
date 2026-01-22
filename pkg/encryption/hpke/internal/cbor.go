@@ -3,7 +3,7 @@ package internal
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
@@ -22,7 +22,7 @@ func (sk *PrivateKey[S]) MarshalCBOR() ([]byte, error) {
 func (sk *PrivateKey[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[privateKeyDTO[S]](data)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	sk.ExtendedPrivateKey = dto.SK
 	return nil
@@ -42,7 +42,7 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[publicKeyDTO[P, B, S]](data)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	pk.PublicKey = dto.PK
 	return nil
@@ -66,7 +66,7 @@ func (c *CipherSuite) MarshalCBOR() ([]byte, error) {
 func (c *CipherSuite) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[cipherSuiteDTO](data)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	if dto.KDF == KDF_HKDF_RESERVED {
 		return ErrNotSupported.WithMessage("invalid cipher suite: reserved KDF")

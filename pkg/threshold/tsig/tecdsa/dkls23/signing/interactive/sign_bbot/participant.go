@@ -9,7 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -84,12 +84,12 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	var err error
 	c.state.zeroSetup, err = przsSetup.NewParticipant(sessionID, shard.Share().ID(), quorum, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't initialise zero setup protocol")
+		return nil, errs.Wrap(err).WithMessage("couldn't initialise zero setup protocol")
 	}
 
 	mulSuite, err := rvole_bbot.NewSuite(2, suite.Curve())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create mul suite")
+		return nil, errs.Wrap(err).WithMessage("cannot create mul suite")
 	}
 	c.state.aliceMul = make(map[sharing.ID]*rvole_bbot.Alice[P, S])
 	c.state.bobMul = make(map[sharing.ID]*rvole_bbot.Bob[P, S])
@@ -98,14 +98,14 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		c.state.aliceMul[id], err = rvole_bbot.NewAlice(c.sessionID, mulSuite, prng, aliceTape)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("couldn't initialise alice")
+			return nil, errs.Wrap(err).WithMessage("couldn't initialise alice")
 		}
 
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
 		c.state.bobMul[id], err = rvole_bbot.NewBob(c.sessionID, mulSuite, prng, bobTape)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("couldn't initialise bob")
+			return nil, errs.Wrap(err).WithMessage("couldn't initialise bob")
 		}
 	}
 

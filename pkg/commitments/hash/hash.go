@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -59,7 +59,7 @@ func (w Witness) Bytes() []byte {
 func (k Key) hmacInit() hash.Hash {
 	hmac, err := HmacFunc(k[:])
 	if err != nil {
-		panic(errs2.Wrap(err).WithMessage("cannot create HMAC hash function"))
+		panic(errs.Wrap(err).WithMessage("cannot create HMAC hash function"))
 	}
 	return hmac
 }
@@ -74,12 +74,12 @@ func NewKeyFromCRSBytes(sid network.SID, dst string, crs ...[]byte) (Key, error)
 	}
 	hasher, err := blake2b.New256(sid[:])
 	if err != nil {
-		return Key{}, errs2.Wrap(err).WithMessage("cannot create hash")
+		return Key{}, errs.Wrap(err).WithMessage("cannot create hash")
 	}
 	h := func() hash.Hash { return hasher }
 	out, err := hashing.HashPrefixedLength(h, append(crs, []byte(dst))...)
 	if err != nil {
-		return Key{}, errs2.Wrap(err).WithMessage("cannot hash CRS")
+		return Key{}, errs.Wrap(err).WithMessage("cannot hash CRS")
 	}
 	var key Key
 	copy(key[:], out)
@@ -109,7 +109,7 @@ func (s *Scheme) Committer(opts ...CommitterOption) (*Committer, error) {
 	committer := &Committer{s.key.hmacInit()}
 	for _, opt := range opts {
 		if err := opt(committer); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot apply committer option")
+			return nil, errs.Wrap(err).WithMessage("cannot apply committer option")
 		}
 	}
 	return committer, nil
@@ -122,7 +122,7 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	out := &Verifier{GenericVerifier: *generic}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot apply verifier option")
+			return nil, errs.Wrap(err).WithMessage("cannot apply verifier option")
 		}
 	}
 	return out, nil
@@ -157,12 +157,12 @@ func (c *Committer) CommitWithWitness(message Message, witness Witness) (commitm
 // Commit samples fresh witness randomness and computes a commitment to the message.
 func (c *Committer) Commit(message Message, prng io.Reader) (commitment Commitment, witness Witness, err error) {
 	if _, err = io.ReadFull(prng, witness[:]); err != nil {
-		return commitment, witness, errs2.Wrap(err).WithMessage("cannot sample witness")
+		return commitment, witness, errs.Wrap(err).WithMessage("cannot sample witness")
 	}
 
 	commitment, err = c.CommitWithWitness(message, witness)
 	if err != nil {
-		return Commitment{}, Witness{}, errs2.Wrap(err).WithMessage("cannot compute commitment")
+		return Commitment{}, Witness{}, errs.Wrap(err).WithMessage("cannot compute commitment")
 	}
 
 	return commitment, witness, nil

@@ -4,7 +4,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
@@ -38,7 +38,7 @@ func (m *SimpleModulus) MarshalCBOR() ([]byte, error) {
 	dto := &simpleDTO{Modulus: m.m}
 	data, err := serde.MarshalCBORTagged(dto, SimpleModulusTag)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal SimpleModulus")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal SimpleModulus")
 	}
 	return data, nil
 }
@@ -64,7 +64,7 @@ func (m *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBORTagged(dto, OddPrimeFactorsTag)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal OddPrimeFactors")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal OddPrimeFactors")
 	}
 	return data, nil
 }
@@ -89,7 +89,7 @@ func (m *OddPrimeSquareFactors) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBORTagged(dto, OddPrimeSquareFactorsTag)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal OddPrimeSquareFactors")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal OddPrimeSquareFactors")
 	}
 	return data, nil
 }
@@ -108,5 +108,5 @@ func (m *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
 }
 
 var (
-	ErrFailed = errs2.New("failed")
+	ErrFailed = errs.New("failed")
 )

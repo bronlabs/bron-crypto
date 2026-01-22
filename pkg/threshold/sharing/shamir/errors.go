@@ -1,11 +1,11 @@
 package shamir
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrIsNil      = errs2.New("is nil")
-	ErrValue      = errs2.New("invalid value")
-	ErrMembership = errs2.New("membership error")
-	ErrType       = errs2.New("type error")
-	ErrFailed     = errs2.New("failed")
+	ErrIsNil      = errs.New("is nil")
+	ErrValue      = errs.New("invalid value")
+	ErrMembership = errs.New("membership error")
+	ErrType       = errs.New("type error")
+	ErrFailed     = errs.New("failed")
 )

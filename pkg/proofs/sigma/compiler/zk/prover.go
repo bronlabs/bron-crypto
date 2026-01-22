@@ -1,7 +1,7 @@
 package zk
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -28,7 +28,7 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 	}
 	p, err := newParticipant(sessionID, tape, sigmaProtocol, statement)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
+		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}
 	p.round = 2 // Prover starts at round 2 (receives verifier's challenge commitment first)
 	return &Prover[X, W, A, S, Z]{
@@ -53,7 +53,7 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 
 	commitment, state, err := p.protocol.ComputeProverCommitment(p.statement, p.witness)
 	if err != nil {
-		return zero, errs2.Wrap(err).WithMessage("cannot create commitment")
+		return zero, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
 
 	transcripts.Append(p.tape, commitmentLabel, commitment)
@@ -74,15 +74,15 @@ func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash
 	}
 	verifier, err := p.comm.Verifier()
 	if err != nil {
-		return zero, errs2.Wrap(err).WithMessage("cannot create verifier")
+		return zero, errs.Wrap(err).WithMessage("cannot create verifier")
 	}
 	if err := verifier.Verify(p.challengeCommitment, challenge, witness); err != nil {
-		return zero, errs2.Wrap(err).WithMessage("invalid challenge")
+		return zero, errs.Wrap(err).WithMessage("invalid challenge")
 	}
 
 	response, err := p.protocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, sigma.ChallengeBytes(challenge))
 	if err != nil {
-		return zero, errs2.Wrap(err).WithMessage("cannot generate response")
+		return zero, errs.Wrap(err).WithMessage("cannot generate response")
 	}
 	transcripts.Append(p.tape, responseLabel, response)
 

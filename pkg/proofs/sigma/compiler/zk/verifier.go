@@ -3,7 +3,7 @@ package zk
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -30,7 +30,7 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 	}
 	p, err := newParticipant(sessionID, tape, sigmaProtocol, statement)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
+		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}
 	return &Verifier[X, W, A, S, Z]{
 		participant:    *p,
@@ -50,16 +50,16 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 	v.challengeBytes = make([]byte, v.protocol.GetChallengeBytesLength())
 	_, err := io.ReadFull(v.prng, v.challengeBytes)
 	if err != nil {
-		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't sample challenge")
+		return hash_comm.Commitment{}, errs.Wrap(err).WithMessage("couldn't sample challenge")
 	}
 
 	committer, err := v.comm.Committer()
 	if err != nil {
-		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't create committer")
+		return hash_comm.Commitment{}, errs.Wrap(err).WithMessage("couldn't create committer")
 	}
 	eCommitment, eWitness, err := committer.Commit(v.challengeBytes, v.prng)
 	if err != nil {
-		return hash_comm.Commitment{}, errs2.Wrap(err).WithMessage("couldn't commit to challenge")
+		return hash_comm.Commitment{}, errs.Wrap(err).WithMessage("couldn't commit to challenge")
 	}
 	v.eWitness = eWitness
 
@@ -94,7 +94,7 @@ func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 
 	err := v.protocol.Verify(v.statement, v.commitment, v.challengeBytes, response)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("verification failed")
+		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	return nil

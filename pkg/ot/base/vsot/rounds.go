@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	dlogschnorr "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
@@ -21,17 +21,17 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 
 	s.state.b, err = s.suite.Field().Random(s.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("generating b")
+		return nil, errs.Wrap(err).WithMessage("generating b")
 	}
 	s.state.bigB = s.suite.Curve().ScalarBaseMul(s.state.b)
 
 	dlogProtocol, err := dlogschnorr.NewProtocol(s.suite.Curve().Generator(), s.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog protocol")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog protocol")
 	}
 	dlogProtocolCompiler, err := fiatshamir.NewCompiler(dlogProtocol)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog protocol compiler")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog protocol compiler")
 	}
 	// TODO: would be nice to have dlogschnorr.NewStatement(G, P)
 	dlogStatement := &dlogschnorr.Statement[P, S]{
@@ -43,11 +43,11 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	}
 	dlogProver, err := dlogProtocolCompiler.NewProver(s.sessionID, s.tape)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog prover")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
 	dlogProof, err := dlogProver.Prove(dlogStatement, dlogWitness)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create dlog proof")
+		return nil, errs.Wrap(err).WithMessage("cannot create dlog proof")
 	}
 	// TODO: a lot of lines (~24) just to do PoK :(
 
@@ -65,7 +65,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
 	if err := r1.Validate(); err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("invalid message")
+		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 	if len(choices)*8 != r.suite.Xi() {
 		return nil, nil, ot.ErrInvalidArgument.WithMessage("invalid choices length")
@@ -73,11 +73,11 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 
 	dlogProtocol, err := dlogschnorr.NewProtocol(r.suite.curve.Generator(), r.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog protocol")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog protocol")
 	}
 	dlogProtocolCompiler, err := fiatshamir.NewCompiler(dlogProtocol)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog protocol compiler")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog protocol compiler")
 	}
 	// TODO: would be nice to have dlogschnorr.NewStatement(G, P)
 	dlogStatement := &dlogschnorr.Statement[P, S]{
@@ -85,11 +85,11 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	}
 	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.sessionID, r.tape)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog verifier")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}
 	err = dlogVerifier.Verify(dlogStatement, r1.Proof)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("verification failed")
+		return nil, nil, errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	r.state.omegaRaw = make([]uint64, r.suite.Xi()*r.suite.L())
@@ -110,14 +110,14 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 			idx := i*r.suite.L() + j
 			a, err := r.suite.field.Random(r.prng)
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("generating a")
+				return nil, nil, errs.Wrap(err).WithMessage("generating a")
 			}
 			r.state.omegaRaw[idx] = c
 			r.state.omega[idx] = r.suite.field.FromUint64(r.state.omegaRaw[idx])
 			r.state.bigA[idx] = r.suite.curve.ScalarBaseMul(a).Add(r.state.bigB.ScalarMul(r.state.omega[idx]))
 			r.state.rhoOmega[idx], err = r.hash(idx, r.state.bigB, r.state.bigA[idx], r.state.bigB.ScalarMul(a).ToCompressed())
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot hash B * a_i")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot hash B * a_i")
 			}
 			receiverOutput.Messages[i][j] = r.state.rhoOmega[idx]
 
@@ -139,7 +139,7 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
 	if err := r2.Validate(s.suite.Xi(), s.suite.L()); err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("invalid message")
+		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
 	rho0 := make([][]byte, s.suite.Xi()*s.suite.L())
@@ -162,30 +162,30 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 
 			rho0[idx], err = s.hash(idx, s.state.bigB, bigA, bigA.ScalarMul(s.state.b).ToCompressed())
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot hash A * b_i")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot hash A * b_i")
 			}
 			rho1[idx], err = s.hash(idx, s.state.bigB, bigA, (bigA.Sub(s.state.bigB)).ScalarMul(s.state.b).ToCompressed())
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot hash (A - B_i) * b_i")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot hash (A - B_i) * b_i")
 			}
 			senderOutput.Messages[i][0][j] = rho0[idx]
 			senderOutput.Messages[i][1][j] = rho1[idx]
 
 			s.state.rho0Digest[idx], err = s.hash(idx, s.state.bigB, bigA, rho0[idx])
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot hash rho_0")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot hash rho_0")
 			}
 			s.state.rho0DigestDigest[idx], err = s.hash(idx, s.state.bigB, bigA, s.state.rho0Digest[idx])
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot hash rho_0 digest")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot hash rho_0 digest")
 			}
 			s.state.rho1Digest[idx], err = s.hash(idx, s.state.bigB, bigA, rho1[idx])
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot hash rho_1")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot hash rho_1")
 			}
 			rho1DigestDigest, err := s.hash(idx, s.state.bigB, bigA, s.state.rho1Digest[idx])
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot hash rho_1 digest")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot hash rho_1 digest")
 			}
 			xi[idx] = make([]byte, len(s.state.rho0DigestDigest[idx]))
 			subtle.XORBytes(xi[idx], s.state.rho0DigestDigest[idx], rho1DigestDigest)
@@ -208,7 +208,7 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
 	if err := r3.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid message")
+		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
 	r.state.xi = r3.Xi
@@ -223,11 +223,11 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 
 			r.state.rhoOmegaDigest[idx], err = r.hash(idx, r.state.bigB, r.state.bigA[idx], r.state.rhoOmega[idx])
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot hash rho_omega")
+				return nil, errs.Wrap(err).WithMessage("cannot hash rho_omega")
 			}
 			rhoPrime[idx], err = r.hash(idx, r.state.bigB, r.state.bigA[idx], r.state.rhoOmegaDigest[idx])
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot hash rho_omega digest")
+				return nil, errs.Wrap(err).WithMessage("cannot hash rho_omega digest")
 			}
 			xi := ct.CSelectInts(ct.Choice(r.state.omegaRaw[idx]), make([]byte, len(r3.Xi[idx])), r3.Xi[idx])
 			subtle.XORBytes(rhoPrime[idx], rhoPrime[idx], xi)
@@ -247,7 +247,7 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
 	if err := r4.Validate(s.suite.Xi(), s.suite.L(), s.suite.hashFunc().Size()); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid message")
+		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
 	for i := range s.suite.Xi() {
@@ -277,7 +277,7 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 		return ot.ErrRound.WithMessage("invalid round")
 	}
 	if err := r5.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()); err != nil {
-		return errs2.Wrap(err).WithMessage("invalid message")
+		return errs.Wrap(err).WithMessage("invalid message")
 	}
 
 	for i := range r.suite.Xi() {
@@ -304,11 +304,11 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 
 			rho0DigestDigest, err := r.hash(idx, r.state.bigB, r.state.bigA[idx], rho0Digest)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("cannot hash rho_0 digest")
+				return errs.Wrap(err).WithMessage("cannot hash rho_0 digest")
 			}
 			rho1DigestDigest, err := r.hash(idx, r.state.bigB, r.state.bigA[idx], rho1Digest)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("cannot hash rho_1 digest")
+				return errs.Wrap(err).WithMessage("cannot hash rho_1 digest")
 			}
 			xi := make([]byte, len(rho0DigestDigest))
 			subtle.XORBytes(xi, rho0DigestDigest, rho1DigestDigest)

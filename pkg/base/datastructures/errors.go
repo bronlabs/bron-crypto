@@ -1,6 +1,6 @@
 package datastructures
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 // ErrInvalidSize is returned when an operation encounters a size mismatch or invalid size constraint.
-var ErrInvalidSize = errs2.New("invalid size")
+var ErrInvalidSize = errs.New("invalid size")

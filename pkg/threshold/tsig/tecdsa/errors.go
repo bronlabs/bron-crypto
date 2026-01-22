@@ -1,10 +1,10 @@
 package tecdsa
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
 	// ErrFailed represents failed.
-	ErrFailed = errs2.New("failed")
+	ErrFailed = errs.New("failed")
 	// ErrNil represents nil.
-	ErrNil = errs2.New("nil")
+	ErrNil = errs.New("nil")
 )

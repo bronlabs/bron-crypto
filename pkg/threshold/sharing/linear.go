@@ -3,7 +3,7 @@ package sharing
 import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -56,7 +56,7 @@ func (a *MinimalQualifiedAccessStructure) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return data, nil
 }
@@ -64,7 +64,7 @@ func (a *MinimalQualifiedAccessStructure) MarshalCBOR() ([]byte, error) {
 func (a *MinimalQualifiedAccessStructure) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[minimalQualifiedAccessStructureDTO](data)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	ps := hashset.NewComparable[ID]()
 	for id := range dto.Ps {

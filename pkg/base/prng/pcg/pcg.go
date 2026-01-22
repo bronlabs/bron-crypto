@@ -4,13 +4,13 @@ import (
 	"encoding/binary"
 	mrand "math/rand/v2"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 )
 
 var (
-	ErrInvalidSeedLength = errs2.New("seed length is not 8 bytes")
-	ErrInvalidSaltLength = errs2.New("salt length is not 8 bytes")
+	ErrInvalidSeedLength = errs.New("seed length is not 8 bytes")
+	ErrInvalidSaltLength = errs.New("salt length is not 8 bytes")
 )
 
 type seededReader struct {
@@ -38,7 +38,7 @@ func (r *seededReader) Read(p []byte) (int, error) {
 // Seed resets the internal state of the PRNG with the provided seed and salt.
 func (r *seededReader) Seed(seed, salt []byte) error {
 	if err := r.validateSeedInputs(seed, salt); err != nil {
-		return errs2.Wrap(err).WithMessage("invalid inputs")
+		return errs.Wrap(err).WithMessage("invalid inputs")
 	}
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)
@@ -54,7 +54,7 @@ func (*seededReader) validateSeedInputs(seed, salt []byte) error {
 	if len(salt) != 8 {
 		validationErrs = append(validationErrs, ErrInvalidSaltLength)
 	}
-	return errs2.Join(validationErrs...)
+	return errs.Join(validationErrs...)
 }
 
 // New generates a new PRNG of the same type with the provided seed and salt.

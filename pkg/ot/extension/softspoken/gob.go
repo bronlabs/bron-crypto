@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 type challengeResponseDTO struct {
@@ -30,7 +30,7 @@ func (r1 *Round1P2P) GobEncode() ([]byte, error) {
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot serialise Round1P2P message")
+		return nil, errs.Wrap(err).WithMessage("cannot serialise Round1P2P message")
 	}
 	return buf.Bytes(), nil
 }
@@ -40,7 +40,7 @@ func (r1 *Round1P2P) GobDecode(data []byte) error {
 	dec := gob.NewDecoder(bytes.NewReader(data))
 	err := dec.Decode(&out)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize Round1P2P message")
+		return errs.Wrap(err).WithMessage("cannot deserialize Round1P2P message")
 	}
 
 	r1.U = out.U

@@ -8,7 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -49,7 +49,7 @@ func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 	digest, err := hashing.Hash(s.suite.hashFunc, message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("hashing failed")
+		return nil, errs.Wrap(err).WithMessage("hashing failed")
 	}
 	nativeSk := s.sk.ToElliptic()
 
@@ -57,7 +57,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 	if s.suite.IsDeterministic() {
 		asn1Sig, err := nativeSk.Sign(nil, digest, s.suite.hashID)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("signing failed")
+			return nil, errs.Wrap(err).WithMessage("signing failed")
 		}
 
 		// Parse ASN.1 DER-encoded signature to extract r and s
@@ -66,34 +66,34 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 		}
 		_, err = asn1.Unmarshal(asn1Sig, &nativeEcdsaSig)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to parse ASN.1 signature")
+			return nil, errs.Wrap(err).WithMessage("failed to parse ASN.1 signature")
 		}
 		nativeR, nativeS = nativeEcdsaSig.R, nativeEcdsaSig.S
 	} else {
 		nativeR, nativeS, err = nativeEcdsa.Sign(s.prng, nativeSk, digest)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("signing failed")
+			return nil, errs.Wrap(err).WithMessage("signing failed")
 		}
 	}
 
 	rr, err := s.suite.scalarField.FromWideBytes(nativeR.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert r")
+		return nil, errs.Wrap(err).WithMessage("cannot convert r")
 	}
 	ss, err := s.suite.scalarField.FromWideBytes(nativeS.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert s")
+		return nil, errs.Wrap(err).WithMessage("cannot convert s")
 	}
 
 	for i := range 5 {
 		v := i
 		signature, err := NewSignature(rr, ss, &v)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create signature")
+			return nil, errs.Wrap(err).WithMessage("cannot create signature")
 		}
 		recoveredPk, err := RecoverPublicKey(s.suite, signature, message)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot recover public key")
+			return nil, errs.Wrap(err).WithMessage("cannot recover public key")
 		}
 		if recoveredPk.Equal(s.sk.pk) {
 			return signature, nil

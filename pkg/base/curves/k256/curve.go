@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
@@ -312,7 +312,7 @@ func (p *Point) MarshalBinary() (data []byte, err error) {
 func (p *Point) UnmarshalBinary(data []byte) error {
 	pp, err := NewCurve().FromCompressed(data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 
 	p.V.Set(&pp.V)

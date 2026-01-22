@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
@@ -376,7 +376,7 @@ func (p *PallasPoint) MarshalBinary() ([]byte, error) {
 func (p *PallasPoint) UnmarshalBinary(data []byte) error {
 	pp, err := NewPallasCurve().FromCompressed(data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil

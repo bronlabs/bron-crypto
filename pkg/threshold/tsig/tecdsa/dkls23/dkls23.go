@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
@@ -47,40 +47,40 @@ func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 
 	uInv, err := u.TryInv()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute w/u")
+		return nil, errs.Wrap(err).WithMessage("cannot compute w/u")
 	}
 	s := w.Mul(uInv)
 
 	rxi, err := r.AffineX()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute affine x")
+		return nil, errs.Wrap(err).WithMessage("cannot compute affine x")
 	}
 	rx, err := suite.ScalarField().FromWideBytes(rxi.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert to scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot convert to scalar")
 	}
 
 	v, err := ecdsa.ComputeRecoveryID(r)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not compute recovery id")
+		return nil, errs.Wrap(err).WithMessage("could not compute recovery id")
 	}
 
 	signature, err := ecdsa.NewSignature(rx, s, &v)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create signature")
+		return nil, errs.Wrap(err).WithMessage("could not create signature")
 	}
 	signature.Normalise()
 
 	scheme, err := ecdsa.NewScheme(suite, crand.Reader)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create scheme")
 	}
 	verifier, err := scheme.Verifier()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create verifier")
+		return nil, errs.Wrap(err).WithMessage("could not create verifier")
 	}
 	if err := verifier.Verify(signature, publicKey, message); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("signature is invalid")
+		return nil, errs.Wrap(err).WithMessage("signature is invalid")
 	}
 
 	return signature, nil

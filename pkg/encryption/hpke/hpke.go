@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
 )
@@ -177,15 +177,15 @@ func NewScheme[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	}
 	kdf, err := internal.NewKDF(cipherSuite.KDFID())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	dhkem, err := internal.NewDHKEM(curve, kdf)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	aead, err := internal.NewAEAD(cipherSuite.AEADID())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Scheme[P, B, S]{
 		curve:       curve,
@@ -225,7 +225,7 @@ func (s *Scheme[P, B, S]) KEM(opts ...encryption.KEMOption[*KEM[P, B, S], *Publi
 
 	for _, opt := range opts {
 		if err := opt(kem); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 
@@ -248,7 +248,7 @@ func (s *Scheme[P, B, S]) DEM(receiverPrivateKey *PrivateKey[S], opts ...encrypt
 	}
 	for _, opt := range opts {
 		if err := opt(dem); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	return dem, nil
@@ -263,7 +263,7 @@ func (s *Scheme[P, B, S]) AEAD(key *encryption.SymmetricKey) (cipher.AEAD, error
 	}
 	out, err := s.aead.New(key.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -284,7 +284,7 @@ func (s *Scheme[P, B, S]) Keygen(opts ...KeyGeneratorOption[P, B, S]) (*KeyGener
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	return kg, nil
@@ -308,7 +308,7 @@ func (s *Scheme[P, B, S]) Encrypter(opts ...encryption.EncrypterOption[*Encrypte
 	}
 	for _, opt := range opts {
 		if err := opt(encrypter); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	return encrypter, nil
@@ -338,11 +338,11 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 	}
 	for _, opt := range opts {
 		if err := opt(decrypter); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	if decrypter.ephemeralPublicKey == nil {
-		return nil, errs2.New("capsule (ephemeral public key) must be provided")
+		return nil, errs.New("capsule (ephemeral public key) must be provided")
 	}
 	var ctx *ReceiverContext[P, B, S]
 	var err error
@@ -359,7 +359,7 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 		return nil, ErrNotSupported.WithMessage("HPKE mode")
 	}
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	decrypter.ctx = ctx
 	return decrypter, nil

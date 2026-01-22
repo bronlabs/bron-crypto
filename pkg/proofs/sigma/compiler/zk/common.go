@@ -19,7 +19,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -77,12 +77,12 @@ func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S si
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, dst)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create hash commitment key")
+		return nil, errs.Wrap(err).WithMessage("couldn't create hash commitment key")
 	}
 
 	comm, err := hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("couldn't create commitment scheme")
 	}
 
 	return &participant[X, W, A, S, Z]{

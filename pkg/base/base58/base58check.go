@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 const (
@@ -14,8 +14,8 @@ const (
 )
 
 var (
-	ErrChecksumMismatch = errs2.New("checksum mismatch")
-	ErrInvalidLength    = errs2.New("decoded input too short for Base58")
+	ErrChecksumMismatch = errs.New("checksum mismatch")
+	ErrInvalidLength    = errs.New("decoded input too short for Base58")
 )
 
 type (

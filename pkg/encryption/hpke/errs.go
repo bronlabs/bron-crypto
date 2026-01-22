@@ -1,9 +1,9 @@
 package hpke
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrInvalidArgument = errs2.New("invalid argument")
-	ErrInvalidLength   = errs2.New("invalid length")
-	ErrNotSupported    = errs2.New("not supported")
+	ErrInvalidArgument = errs.New("invalid argument")
+	ErrInvalidLength   = errs.New("invalid length")
+	ErrNotSupported    = errs.New("not supported")
 )

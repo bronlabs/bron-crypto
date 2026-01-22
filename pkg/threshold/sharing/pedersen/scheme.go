@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
@@ -25,13 +25,13 @@ import (
 func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[E, S], error) {
 	pedcomScheme, err := pedcom.NewScheme(key)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create pedersen scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create pedersen scheme")
 	}
 	module := algebra.StructureMustBeAs[algebra.Module[E, S]](key.G().Structure())
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](module.ScalarStructure())
 	shamirSSS, err := shamir.NewScheme(field, threshold, shareholders)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create shamir scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create shamir scheme")
 	}
 	return &Scheme[E, S]{
 		key:              key,
@@ -73,7 +73,7 @@ func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (
 			shamirShares, secret, secretPoly, err = s.shamirSSS.DealRandomAndRevealDealerFunc(prng)
 		}
 		if err != nil {
-			return nil, nil, nil, errs2.Wrap(err).WithMessage("could not deal shares")
+			return nil, nil, nil, errs.Wrap(err).WithMessage("could not deal shares")
 		}
 	}
 	return shamirShares, secret, secretPoly, nil
@@ -89,17 +89,17 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 	// Deal secret shares (can be zero)
 	shamirShares, secretPoly, err := s.shamirSSS.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not deal secret shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal secret shares")
 	}
 	// Deal blinding shares (must be non-zero for witness creation)
 	blindingShares, _, blindingPoly, err := s.dealAllNonZeroShares(nil, prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not deal blinding shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal blinding shares")
 	}
 	dealerFunc := NewDealerFunc(secretPoly, blindingPoly)
 	dealerFuncInTheExponent, err := liftDealerFuncToExp(dealerFunc, s.key.G(), s.key.H())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not lift direct sum of polynomials to exponent")
+		return nil, nil, errs.Wrap(err).WithMessage("could not lift direct sum of polynomials to exponent")
 	}
 	verificationVector := dealerFuncInTheExponent.VerificationVector()
 	shares := hashmap.NewComparableFromNativeLike(
@@ -126,7 +126,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 func (s *Scheme[E, S]) Deal(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], error) {
 	shares, _, err := s.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not deal shares")
+		return nil, errs.Wrap(err).WithMessage("could not deal shares")
 	}
 	return shares, nil
 }
@@ -139,12 +139,12 @@ func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOut
 	}
 	value, err := s.shamirSSS.Field().Random(prng)
 	if err != nil {
-		return nil, nil, nil, errs2.Wrap(err).WithMessage("could not sample random field element")
+		return nil, nil, nil, errs.Wrap(err).WithMessage("could not sample random field element")
 	}
 	secret := NewSecret(value)
 	shares, poly, err := s.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, nil, nil, errs2.Wrap(err).WithMessage("could not create shares")
+		return nil, nil, nil, errs.Wrap(err).WithMessage("could not create shares")
 	}
 	return shares, secret, poly, nil
 }
@@ -156,7 +156,7 @@ func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *Secret[
 	}
 	shares, secret, _, err := s.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not deal random shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal random shares")
 	}
 	return shares, secret, nil
 }
@@ -167,7 +167,7 @@ func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
 	shamirShares, _ := sliceutils.MapOrError(shares, func(sh *Share[S]) (*shamir.Share[S], error) { return shamir.NewShare(sh.ID(), sh.secret.Value(), nil) })
 	secret, err := s.shamirSSS.Reconstruct(shamirShares...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not reconstruct secret from shares")
+		return nil, errs.Wrap(err).WithMessage("could not reconstruct secret from shares")
 	}
 	return secret, nil
 }
@@ -181,7 +181,7 @@ func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], sha
 	}
 	for i, share := range shares {
 		if err := s.Verify(share, vector); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("verification failed for share %d", i)
+			return nil, errs.Wrap(err).WithMessage("verification failed for share %d", i)
 		}
 	}
 	return reconstructed, nil
@@ -198,14 +198,14 @@ func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) 
 	}
 	commitment, err := pedcom.NewCommitment(vector.Eval(s.shamirSSS.SharingIDToLagrangeNode(share.ID())))
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("could not create commitment from recomputed value")
+		return errs.Wrap(err).WithMessage("could not create commitment from recomputed value")
 	}
 	verifier, err := s.commitmentScheme.Verifier()
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("could not create verifier")
+		return errs.Wrap(err).WithMessage("could not create verifier")
 	}
 	if err := verifier.Verify(commitment, share.secret, share.blinding); err != nil {
-		return errs2.Wrap(err).WithMessage("could not verify commitment")
+		return errs.Wrap(err).WithMessage("could not verify commitment")
 	}
 	return nil
 }

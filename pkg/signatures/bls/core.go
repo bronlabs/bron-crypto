@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -38,7 +38,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#choosesalt
 	salt, err := hashing.Hash(RandomOracleHashFunction, []byte(HKDFKeyGenSalt))
 	if err != nil {
-		return *new(S), *new(K), errs2.Wrap(err)
+		return *new(S), *new(K), errs.Wrap(err)
 	}
 	// step 2.3.1
 	for d.IsZero() {
@@ -48,17 +48,17 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 		// step 2.3.3
 		okm := make([]byte, bls12381Impl.FpBytes)
 		if _, err := io.ReadFull(kdf, okm); err != nil {
-			return *new(S), *new(K), errs2.Wrap(err)
+			return *new(S), *new(K), errs.Wrap(err)
 		}
 
 		// step 2.3.4
 		d, err = sf.FromWideBytes(okm)
 		if err != nil {
-			return *new(S), *new(K), errs2.Wrap(err)
+			return *new(S), *new(K), errs.Wrap(err)
 		}
 		salt, err = hashing.Hash(RandomOracleHashFunction, salt)
 		if err != nil {
-			return *new(S), *new(K), errs2.Wrap(err)
+			return *new(S), *new(K), errs.Wrap(err)
 		}
 	}
 	// 2.4: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sktopk
@@ -80,7 +80,7 @@ func coreSign[
 	// step 2.6.1
 	Hm, err := signatureSubGroup.HashWithDst(dst, message)
 	if err != nil {
-		return *new(Sig), errs2.Wrap(err)
+		return *new(Sig), errs.Wrap(err)
 	}
 	// step 2.6.2
 	result := Hm.ScalarMul(privateKey)
@@ -104,7 +104,7 @@ func coreAggregateSign[
 	for i, message := range messages {
 		Hms[i], err = signatureSubGroup.HashWithDst(dst, message)
 		if err != nil {
-			return *new(Sig), errs2.Wrap(err)
+			return *new(Sig), errs.Wrap(err)
 		}
 	}
 	scs := sliceutils.Repeat[[]S](privateKey, len(messages))
@@ -128,13 +128,13 @@ func coreBatchSign[
 		errGroup.Go(func() error {
 			batch[i], err = coreSign(signatureSubGroup, privateKey, message, dst)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("could not sign message %s", message)
+				return errs.Wrap(err).WithMessage("could not sign message %s", message)
 			}
 			return nil
 		})
 	}
 	if err := errGroup.Wait(); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return batch, nil
 }
@@ -175,7 +175,7 @@ func coreVerify[
 	// step 2.7.6
 	Hm, err := signatureSubGroup.HashWithDst(dst, message)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 
 	out, err := signatureSubGroup.MultiPair(
@@ -183,7 +183,7 @@ func coreVerify[
 		[]PK{publicKey.Neg(), signatureSubGroup.DualStructure().Generator()},
 	)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	if !out.IsOpIdentity() {
 		return ErrVerificationFailed.WithMessage("incorrect multipairing result")
@@ -232,7 +232,7 @@ func coreAggregateVerify[
 		keySubGroupInputs[i] = pk
 		signatureSubGroupInputs[i], err = signatureSubGroup.HashWithDst(dst, message)
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("could not hash message %d", i)
+			return errs.Wrap(err).WithMessage("could not hash message %d", i)
 		}
 		// step 2.9.6
 		if pk.IsOpIdentity() {
@@ -247,7 +247,7 @@ func coreAggregateVerify[
 
 	out, err := signatureSubGroup.MultiPair(signatureSubGroupInputs, keySubGroupInputs)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("could not compute multipairing")
+		return errs.Wrap(err).WithMessage("could not compute multipairing")
 	}
 	if !out.IsOpIdentity() {
 		return ErrVerificationFailed.WithMessage("incorrect multipairing result")
@@ -265,7 +265,7 @@ func popProve[
 	message := publicKey.Bytes()
 	pop, err := coreSign(signatureSubGroup, privateKey, message, dst)
 	if err != nil {
-		return *new(Sig), errs2.Wrap(err).WithMessage("could not produce pop")
+		return *new(Sig), errs.Wrap(err).WithMessage("could not produce pop")
 	}
 	return pop, nil
 }

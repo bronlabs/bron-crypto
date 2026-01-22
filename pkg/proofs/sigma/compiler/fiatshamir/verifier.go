@@ -1,7 +1,7 @@
 package fiatshamir
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
@@ -24,7 +24,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 
 	fsProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize proof")
+		return errs.Wrap(err).WithMessage("cannot deserialize proof")
 	}
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
 
@@ -33,12 +33,12 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 
 	e, err := v.transcript.ExtractBytes(challengeLabel, uint(v.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot extract bytes from transcript")
+		return errs.Wrap(err).WithMessage("cannot extract bytes from transcript")
 	}
 
 	z := fsProof.z
 	if err := v.sigmaProtocol.Verify(statement, a, e, z); err != nil {
-		return errs2.Wrap(err).WithMessage("verification failed")
+		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	return nil

@@ -1,10 +1,10 @@
 package fiatshamir
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrNil          = errs2.New("nil")
-	ErrInvalid      = errs2.New("invalid")
-	ErrFailed       = errs2.New("failed")
-	ErrVerification = errs2.New("verification failed")
+	ErrNil          = errs.New("nil")
+	ErrInvalid      = errs.New("invalid")
+	ErrFailed       = errs.New("failed")
+	ErrVerification = errs.New("verification failed")
 )

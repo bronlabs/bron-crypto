@@ -13,7 +13,7 @@ package compiler
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
@@ -65,5 +65,5 @@ func IsSupported(name Name) bool {
 }
 
 var (
-	ErrUnsupportedType = errs2.New("unsupported type")
+	ErrUnsupportedType = errs.New("unsupported type")
 )

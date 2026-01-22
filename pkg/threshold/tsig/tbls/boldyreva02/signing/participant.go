@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -114,15 +114,15 @@ func NewShortKeyCosigner[
 	tape.AppendDomainSeparator(dst)
 	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create BLS short key scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
 	}
 	shareAsPrivateKey, err := shard.AsBLSPrivateKey()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to convert shard to BLS private key")
+		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
 	}
 	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.ShortKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
+		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
 	return &Cosigner[P1, FE1, P2, FE2, E, S]{
 		sid:               sid,
@@ -177,15 +177,15 @@ func NewLongKeyCosigner[
 	tape.AppendDomainSeparator(dst)
 	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create BLS long key scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS long key scheme")
 	}
 	shareAsPrivateKey, err := shard.AsBLSPrivateKey()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to convert shard to BLS private key")
+		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
 	}
 	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.LongKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
+		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
 	return &Cosigner[P2, FE2, P1, FE1, E, S]{
 		sid:               sid,
@@ -218,29 +218,29 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) ProducePartialSignature(message []b
 	case bls.MessageAugmentation:
 		message, err = bls.AugmentMessage(message, c.shard.PublicKey().Value())
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to augment message")
+			return nil, errs.Wrap(err).WithMessage("failed to augment message")
 		}
 	case bls.POP:
 		popMsg := c.Shard().PublicKey().Bytes()
 		popDst := c.scheme.CipherSuite().GetPopDst(c.Variant())
 		popSigner, err := c.scheme.Signer(c.shareAsPrivateKey, bls.SignWithCustomDST[PK](popDst))
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to create signer for POP")
+			return nil, errs.Wrap(err).WithMessage("failed to create signer for POP")
 		}
 		sigmaPopI, err = popSigner.Sign(popMsg)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to sign POP message")
+			return nil, errs.Wrap(err).WithMessage("failed to sign POP message")
 		}
 	default:
 		return nil, ErrInvalidArgument.WithMessage("unsupported rogue key prevention algorithm: %d", c.targetRogueKeyAlg)
 	}
 	signer, err := c.scheme.Signer(c.shareAsPrivateKey, bls.SignWithCustomDST[PK](c.targetDst))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create signer")
+		return nil, errs.Wrap(err).WithMessage("failed to create signer")
 	}
 	sigmaI, err := signer.Sign(message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to sign message")
+		return nil, errs.Wrap(err).WithMessage("failed to sign message")
 	}
 	c.round++
 	return &boldyreva02.PartialSignature[SG, SGFE, PK, PKFE, E, S]{

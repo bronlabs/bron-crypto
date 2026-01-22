@@ -20,7 +20,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -137,13 +137,13 @@ func (p protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X],
 			var err error
 			a[i], s[i], err = sigmai.ComputeProverCommitment(statement[i], witness[i])
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("failed to compute prover commitment")
+				return errs.Wrap(err).WithMessage("failed to compute prover commitment")
 			}
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute commitments")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitments")
 	}
 	return a, s, nil
 }
@@ -171,13 +171,13 @@ func (p protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], w
 			var err error
 			z[i], err = sigmai.ComputeProverResponse(statement[i], witness[i], commitment[i], state[i], challengeBytes)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("failed to compute prover response")
+				return errs.Wrap(err).WithMessage("failed to compute prover response")
 			}
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute responses")
+		return nil, errs.Wrap(err).WithMessage("cannot compute responses")
 	}
 	return z, nil
 }
@@ -202,7 +202,7 @@ func (p protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commi
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return errs2.Wrap(err).WithMessage("verification failed")
+		return errs.Wrap(err).WithMessage("verification failed")
 	}
 	return nil
 }
@@ -222,13 +222,13 @@ func (p protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeB
 			var err error
 			a[i], s[i], err = sigmai.RunSimulator(statement[i], challengeBytes)
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("failed to run simulator")
+				return errs.Wrap(err).WithMessage("failed to run simulator")
 			}
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 	}
 	return a, s, nil
 }
@@ -259,7 +259,7 @@ func (p protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witne
 	}
 	for i := range p {
 		if err := p[i].ValidateStatement(statement[i], witness[i]); err != nil {
-			return errs2.Wrap(err).WithMessage("invalid statement/witness at index %d", i)
+			return errs.Wrap(err).WithMessage("invalid statement/witness at index %d", i)
 		}
 	}
 	return nil
@@ -273,9 +273,9 @@ func (p protocol[X, W, A, S, Z]) Name() sigma.Name {
 // Sentinel errors for the sigand package.
 var (
 	// ErrIsNil indicates a nil argument was provided where a non-nil value was required.
-	ErrIsNil = errs2.New("is nil")
+	ErrIsNil = errs.New("is nil")
 	// ErrInvalidArgument indicates an invalid argument value was provided.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 	// ErrInvalidLength indicates a slice has incorrect length for the operation.
-	ErrInvalidLength = errs2.New("invalid length")
+	ErrInvalidLength = errs.New("invalid length")
 )

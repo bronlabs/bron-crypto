@@ -1,7 +1,7 @@
 package exchange
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/echo"
 )
@@ -10,11 +10,11 @@ import (
 func Exchange[B any, U any](rt *network.Router, correlationID string, broadcastMessageOut B, unicastMessagesOut network.RoundMessages[U]) (broadcastMessagesIn network.RoundMessages[B], unicastMessagesIn network.RoundMessages[U], err error) {
 	broadcastMessagesIn, err = echo.ExchangeEchoBroadcastSimple(rt, correlationID+":BROADCAST", broadcastMessageOut)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
 	unicastMessagesIn, err = network.ExchangeUnicastSimple(rt, correlationID+":UNICAST", unicastMessagesOut)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot exchange unicast")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot exchange unicast")
 	}
 	return broadcastMessagesIn, unicastMessagesIn, nil
 }
@@ -23,7 +23,7 @@ func Exchange[B any, U any](rt *network.Router, correlationID string, broadcastM
 func Broadcast[B any](rt *network.Router, correlationID string, broadcastMessageOut B) (broadcastMessagesIn network.RoundMessages[B], err error) {
 	broadcastMessagesIn, err = echo.ExchangeEchoBroadcastSimple(rt, correlationID+":BROADCAST", broadcastMessageOut)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
+		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
 	return broadcastMessagesIn, nil
 }
@@ -32,7 +32,7 @@ func Broadcast[B any](rt *network.Router, correlationID string, broadcastMessage
 func Unicast[U any](rt *network.Router, correlationID string, unicastMessagesOut network.RoundMessages[U]) (unicastMessagesIn network.RoundMessages[U], err error) {
 	unicastMessagesIn, err = network.ExchangeUnicastSimple(rt, correlationID+":UNICAST", unicastMessagesOut)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot exchange unicast")
+		return nil, errs.Wrap(err).WithMessage("cannot exchange unicast")
 	}
 	return unicastMessagesIn, nil
 }

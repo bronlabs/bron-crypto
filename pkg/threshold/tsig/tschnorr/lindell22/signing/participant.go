@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -18,13 +18,13 @@ import (
 
 var (
 	// ErrNilArgument is returned when a required argument is nil.
-	ErrNilArgument = errs2.New("nil argument")
+	ErrNilArgument = errs.New("nil argument")
 	// ErrInvalidRound is returned when an operation is attempted in the wrong round.
-	ErrInvalidRound = errs2.New("invalid round")
+	ErrInvalidRound = errs.New("invalid round")
 	// ErrInvalidType is returned when a type assertion or check fails.
-	ErrInvalidType = errs2.New("invalid type")
+	ErrInvalidType = errs.New("invalid type")
 	// ErrInvalidMembership is returned when a party is not authorized for an operation.
-	ErrInvalidMembership = errs2.New("invalid membership")
+	ErrInvalidMembership = errs.New("invalid membership")
 )
 
 const (
@@ -108,24 +108,24 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	// step 3.7.1: compute additive share d_i'
 	mqac, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.quorum)
+		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.quorum)
 	}
 	ashare, err := c.shard.Share().ToAdditive(mqac)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert share %d to additive share", c.shard.Share().ID())
+		return nil, errs.Wrap(err).WithMessage("cannot convert share %d to additive share", c.shard.Share().ID())
 	}
 	myAdditiveShare, err := c.variant.CorrectAdditiveSecretShareParity(c.shard.PublicKey(), ashare)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot correct share %d parity", c.shard.Share().ID())
+		return nil, errs.Wrap(err).WithMessage("cannot correct share %d parity", c.shard.Share().ID())
 	}
 	// step 3.7.3 & 3.8: compute s'_i and set s_i <- s'_i + ζ_i
 	correctedR, correctedK, err := c.variant.CorrectPartialNonceParity(aggregatedNonceCommitment, c.state.k)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot correct nonce parity")
+		return nil, errs.Wrap(err).WithMessage("cannot correct nonce parity")
 	}
 	s, err := c.variant.ComputeResponse(myAdditiveShare.Value(), correctedK, challenge)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute response")
+		return nil, errs.Wrap(err).WithMessage("cannot compute response")
 	}
 	return &lindell22.PartialSignature[GE, S]{
 		Sig: schnorrlike.Signature[GE, S]{
@@ -179,11 +179,11 @@ func NewCosigner[
 	}
 	schnorrProtocol, err := schnorrpok.NewProtocol(group.Generator(), prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create schnorr protocol")
+		return nil, errs.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}
 	niDlogScheme, err := compiler.Compile(niCompilerName, schnorrProtocol, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compile niDlogProver")
+		return nil, errs.Wrap(err).WithMessage("failed to compile niDlogProver")
 	}
 
 	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())

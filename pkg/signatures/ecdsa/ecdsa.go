@@ -24,7 +24,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
@@ -63,11 +63,11 @@ type Curve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 func ComputeRecoveryID[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](bigR P) (int, error) {
 	rx, err := bigR.AffineX()
 	if err != nil {
-		return -1, errs2.Wrap(err).WithMessage("cannot compute x")
+		return -1, errs.Wrap(err).WithMessage("cannot compute x")
 	}
 	ry, err := bigR.AffineY()
 	if err != nil {
-		return -1, errs2.Wrap(err).WithMessage("cannot compute y")
+		return -1, errs.Wrap(err).WithMessage("cannot compute y")
 	}
 
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](bigR.Structure())
@@ -111,39 +111,39 @@ func RecoverPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
 	rx, err := suite.baseField.FromWideBytes(signature.r.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot calculate r_x")
+		return nil, errs.Wrap(err).WithMessage("cannot calculate r_x")
 	}
 	if (*signature.v & 0b10) != 0 {
 		n, err := suite.baseField.FromWideBytes(suite.curve.Order().Bytes())
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot calculate n")
+			return nil, errs.Wrap(err).WithMessage("cannot calculate n")
 		}
 		rx = rx.Add(n)
 	}
 	r, err := suite.curve.FromAffineX(rx, (*signature.v&0b1) != 0)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot calculate r")
+		return nil, errs.Wrap(err).WithMessage("cannot calculate r")
 	}
 
 	// Calculate point Q (public key)
 	//  Q = r^(-1)(sR - zG)
 	digest, err := hashing.Hash(suite.hashFunc, message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot hash message")
+		return nil, errs.Wrap(err).WithMessage("cannot hash message")
 	}
 	z, err := DigestToScalar(suite.scalarField, digest)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot calculate z")
+		return nil, errs.Wrap(err).WithMessage("cannot calculate z")
 	}
 
 	rInv, err := signature.r.TryInv()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot calculate inverse of r")
+		return nil, errs.Wrap(err).WithMessage("cannot calculate inverse of r")
 	}
 	pkValue := (r.ScalarMul(signature.s).Sub(suite.curve.ScalarBaseMul(z))).ScalarMul(rInv)
 	pk, err := NewPublicKey(pkValue)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot calculate public key")
+		return nil, errs.Wrap(err).WithMessage("cannot calculate public key")
 	}
 
 	return pk, nil
@@ -171,13 +171,13 @@ func DigestToScalar[S algebra.PrimeFieldElement[S]](field algebra.PrimeField[S],
 			var err error
 			digest, err = rightShift(digest, excess)
 			if err != nil {
-				return nilS, errs2.Wrap(err).WithMessage("internal error")
+				return nilS, errs.Wrap(err).WithMessage("internal error")
 			}
 		}
 	}
 	s, err := field.FromWideBytes(digest)
 	if err != nil {
-		return nilS, errs2.Wrap(err).WithMessage("truncated digest is too long")
+		return nilS, errs.Wrap(err).WithMessage("truncated digest is too long")
 	}
 	return s, nil
 }

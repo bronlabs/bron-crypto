@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -23,25 +23,25 @@ func ExchangeUnicastSimple[U any](rt *Router, correlationID string, messages Rou
 		}
 		messageSerialized, err := serde.MarshalCBOR(message)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to marshal message")
+			return nil, errs.Wrap(err).WithMessage("failed to marshal message")
 		}
 		messagesSerialized[id] = messageSerialized
 	}
 	err := rt.SendTo(correlationID, messagesSerialized)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to send messages")
+		return nil, errs.Wrap(err).WithMessage("failed to send messages")
 	}
 
 	coparties := slices.Collect(maps.Keys(messagesSerialized))
 	receivedMessagesSerialized, err := rt.ReceiveFrom(correlationID, coparties...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to exchange messages")
+		return nil, errs.Wrap(err).WithMessage("failed to exchange messages")
 	}
 	receivedMessages := make(map[sharing.ID]U)
 	for id, m := range receivedMessagesSerialized {
 		msg, err := serde.UnmarshalCBOR[U](m)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to unmarshal message")
+			return nil, errs.Wrap(err).WithMessage("failed to unmarshal message")
 		}
 		receivedMessages[id] = msg
 	}

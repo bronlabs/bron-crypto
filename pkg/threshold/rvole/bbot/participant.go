@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
@@ -76,19 +76,19 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 func NewAlice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Alice[G, S], error) {
 	p, err := newParticipant(sessionID, suite, prng, tape, 2)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
 	otSuite, err := ecbbot.NewSuite(p.xi, p.suite.l+p.rho, p.suite.Group())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create ecbbot suite")
+		return nil, errs.Wrap(err).WithMessage("could not create ecbbot suite")
 	}
 	sender, err := ecbbot.NewSender(p.sessionID, otSuite, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create sender")
+		return nil, errs.Wrap(err).WithMessage("could not create sender")
 	}
 	gadget, err := p.generateGadgetVector()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create gadget vector")
 	}
 
 	//nolint:exhaustruct // lazy initialisation
@@ -105,19 +105,19 @@ func NewAlice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 func NewBob[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Bob[G, S], error) {
 	p, err := newParticipant(sessionID, suite, prng, tape, 1)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
 	otSuite, err := ecbbot.NewSuite(p.xi, p.suite.l+p.rho, p.suite.group)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create ecbbot suite")
+		return nil, errs.Wrap(err).WithMessage("could not create ecbbot suite")
 	}
 	receiver, err := ecbbot.NewReceiver(p.sessionID, otSuite, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create receiver")
+		return nil, errs.Wrap(err).WithMessage("could not create receiver")
 	}
 	gadget, err := p.generateGadgetVector()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create gadget vector")
 	}
 
 	//nolint:exhaustruct // lazy initialisation
@@ -135,11 +135,11 @@ func (p *participant[G, S]) generateGadgetVector() ([]S, error) {
 	for i := range gadget {
 		bytes, err := p.tape.ExtractBytes(gadgetLabel, uint(p.suite.field.WideElementSize()))
 		if err != nil {
-			return gadget, errs2.Wrap(err).WithMessage("extracting bytes from transcript")
+			return gadget, errs.Wrap(err).WithMessage("extracting bytes from transcript")
 		}
 		gadget[i], err = p.suite.field.FromWideBytes(bytes)
 		if err != nil {
-			return gadget, errs2.Wrap(err).WithMessage("creating gadget scalar from bytes")
+			return gadget, errs.Wrap(err).WithMessage("creating gadget scalar from bytes")
 		}
 	}
 	return gadget, nil

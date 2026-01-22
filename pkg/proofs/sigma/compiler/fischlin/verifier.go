@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -35,7 +35,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	fischlinProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize proof")
+		return errs.Wrap(err).WithMessage("cannot deserialize proof")
 	}
 
 	// 2. If m, e, and z do not each have ρ elements, then output 'reject'
@@ -55,7 +55,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
 	commonHKey, err := v.transcript.ExtractBytes(commonHLabel, 32)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot extract h")
+		return errs.Wrap(err).WithMessage("cannot extract h")
 	}
 
 	commitmentSerialized := make([][]byte, 0)
@@ -73,14 +73,14 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	// 3. common-h ← H(x, m, sid)
 	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionID[:])
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot serialise statement")
+		return errs.Wrap(err).WithMessage("cannot serialise statement")
 	}
 
 	// 4. For i ∈ {1, ..., ρ}
 	for i := range fischlinProof.Rho {
 		digest, err := hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i].Bytes())
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("cannot compute digest")
+			return errs.Wrap(err).WithMessage("cannot compute digest")
 		}
 
 		// 4.b. Halt and output 'reject' if Hb(common-h, i, e_i, z_i) != 0
@@ -97,7 +97,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 		copy(eBytes[len(eBytes)-len(fischlinProof.E[i]):], fischlinProof.E[i])
 		err = v.sigmaProtocol.Verify(statement, fischlinProof.A[i], eBytes, fischlinProof.Z[i])
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("verification failed")
+			return errs.Wrap(err).WithMessage("verification failed")
 		}
 	}
 

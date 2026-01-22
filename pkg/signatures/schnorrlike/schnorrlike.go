@@ -44,7 +44,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
@@ -189,7 +189,7 @@ func (pk *PublicKey[PKV, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal schnorrlike PublicKey")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal schnorrlike PublicKey")
 	}
 	return data, nil
 }
@@ -338,16 +338,16 @@ func (kg *KeyGeneratorTrait[GE, S]) Generate(prng io.Reader) (*PrivateKey[GE, S]
 	}
 	sc, err := algebrautils.RandomNonIdentity(kg.SF, prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("scalar")
+		return nil, nil, errs.Wrap(err).WithMessage("scalar")
 	}
 	pkv := kg.Grp.ScalarBaseOp(sc)
 	pk, err := NewPublicKey(pkv)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("public key")
+		return nil, nil, errs.Wrap(err).WithMessage("public key")
 	}
 	sk, err := NewPrivateKey(sc, pk)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("private key")
+		return nil, nil, errs.Wrap(err).WithMessage("private key")
 	}
 	return sk, pk, nil
 }
@@ -373,15 +373,15 @@ type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Me
 func (sg *SignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) {
 	R, k, err := sg.V.ComputeNonceCommitment()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("R")
+		return nil, errs.Wrap(err).WithMessage("R")
 	}
 	e, err := sg.V.ComputeChallenge(R, sg.Sk.PublicKey().Value(), message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("e")
+		return nil, errs.Wrap(err).WithMessage("e")
 	}
 	s, err := sg.V.ComputeResponse(sg.Sk.Value(), k, e)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not compute response")
+		return nil, errs.Wrap(err).WithMessage("could not compute response")
 	}
 	sigma := &Signature[GE, S]{
 		E: e,
@@ -390,7 +390,7 @@ func (sg *SignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) 
 	}
 
 	if err := sg.Verifier.Verify(sigma, sg.Sk.PublicKey(), message); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("signature verification failed")
+		return nil, errs.Wrap(err).WithMessage("signature verification failed")
 	}
 	return sigma, nil
 }
@@ -443,7 +443,7 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 		var err error
 		e, err = v.V.ComputeChallenge(sigma.R, challengePublicKey.V, message)
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("e")
+			return errs.Wrap(err).WithMessage("e")
 		}
 	}
 	generator := publicKey.Group().Generator()
@@ -468,7 +468,7 @@ func (v *VerifierTrait[VR, GE, S, M]) BatchVerify(sigs []*Signature[GE, S], publ
 	}
 	for i := range sigs {
 		if err := v.Verify(sigs[i], publicKeys[i], messages[i]); err != nil {
-			return errs2.Wrap(err).WithMessage("batch verification failed")
+			return errs.Wrap(err).WithMessage("batch verification failed")
 		}
 	}
 	return nil

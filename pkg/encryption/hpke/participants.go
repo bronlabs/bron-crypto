@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
 )
@@ -36,7 +36,7 @@ func (kg *KeyGenerator[P, B, S]) Generate(prng io.Reader) (sk *PrivateKey[S], pk
 	}
 	sk, pk, err = kg.dhkem.GenerateKeyPair(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return sk, pk, nil
 }
@@ -52,7 +52,7 @@ func (kg *KeyGenerator[P, B, S]) GenerateWithSeed(ikm []byte) (sk *PrivateKey[S]
 	}
 	sk, pk, err = kg.dhkem.DeriveKeyPair(ikm)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return sk, pk, nil
 }
@@ -206,7 +206,7 @@ func (e *Encrypter[P, B, S]) Seal(plaintext Message, receiver *PublicKey[P, B, S
 		return nil, nil, ErrNotSupported.WithStackFrame().WithMessage("unsupported mode")
 	}
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	if e.shouldCacheCtx {
 		e.cachedCtx = ctx
@@ -214,7 +214,7 @@ func (e *Encrypter[P, B, S]) Seal(plaintext Message, receiver *PublicKey[P, B, S
 
 	ct, err := ctx.Seal(plaintext, aad)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return Ciphertext(ct), ctx.Capsule, nil
 }
@@ -231,15 +231,15 @@ func (e *Encrypter[P, B, S]) Export(context []byte, length uint) (*encryption.Sy
 		return nil, ErrInvalidLength.WithStackFrame()
 	}
 	if !e.shouldCacheCtx || e.cachedCtx == nil {
-		return nil, errs2.New("cannot export key without cached context")
+		return nil, errs.New("cannot export key without cached context")
 	}
 	k, err := e.cachedCtx.Export(context, int(length))
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	out, err := encryption.NewSymmetricKey(k)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -359,7 +359,7 @@ func (e *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, e
 	}
 	pt, err := e.ctx.Open([]byte(ciphertext), aad)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return pt, nil
 }
@@ -377,11 +377,11 @@ func (e *Decrypter[P, B, S]) Export(context []byte, length uint) (*encryption.Sy
 	}
 	k, err := e.ctx.Export(context, int(length))
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	out, err := encryption.NewSymmetricKey(k)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }

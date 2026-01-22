@@ -5,7 +5,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 const (
@@ -21,8 +21,8 @@ var (
 	// Global TagSet for type registration.
 	tags = cbor.NewTagSet()
 
-	ErrSerialisation   = errs2.New("serialisation error")
-	ErrDeserialisation = errs2.New("deserialisation error")
+	ErrSerialisation   = errs.New("serialisation error")
+	ErrDeserialisation = errs.New("deserialisation error")
 )
 
 // Register registers the concrete type parameter T with a fixed CBOR tag.

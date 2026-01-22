@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -78,11 +78,11 @@ func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	}
 	bs, err := tsig.NewBaseShard(share, fv, accessStructure)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create base shard")
+		return nil, errs.Wrap(err).WithMessage("could not create base shard")
 	}
 	pk, err := ecdsa.NewPublicKey(fv.Coefficients()[0])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create public key from verification vector")
+		return nil, errs.Wrap(err).WithMessage("could not create public key from verification vector")
 	}
 
 	//nolint:exhaustruct // lazy initialisation

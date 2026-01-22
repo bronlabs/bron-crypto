@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 var (
@@ -170,11 +170,11 @@ func fromPallasAffine(x *big.Int, y *big.Int) (*PallasPoint, error) {
 
 	xFp, err := NewPallasBaseField().FromBytes(xBytes[:])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid x")
+		return nil, errs.Wrap(err).WithMessage("invalid x")
 	}
 	yFp, err := NewPallasBaseField().FromBytes(yBytes[:])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid y")
+		return nil, errs.Wrap(err).WithMessage("invalid y")
 	}
 
 	var p PallasPoint
@@ -206,11 +206,11 @@ func fromVestaAffine(x *big.Int, y *big.Int) (*VestaPoint, error) {
 
 	xFp, err := NewVestaBaseField().FromBytes(xBytes[:])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid x")
+		return nil, errs.Wrap(err).WithMessage("invalid x")
 	}
 	yFp, err := NewVestaBaseField().FromBytes(yBytes[:])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid y")
+		return nil, errs.Wrap(err).WithMessage("invalid y")
 	}
 
 	var p VestaPoint

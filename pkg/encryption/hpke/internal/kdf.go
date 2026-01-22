@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -76,7 +76,7 @@ func (s *KDFScheme) ID() KDFID {
 func (s *KDFScheme) Hash(messages ...[]byte) ([]byte, error) {
 	digest, err := hashing.Hash(s.hash.New, messages...)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return digest, nil

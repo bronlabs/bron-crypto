@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
@@ -67,7 +67,7 @@ func (*Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
 func (*Rationals) FromBytes(data []byte) (*Rat, error) {
 	var r Rat
 	if err := r.UnmarshalCBOR(data); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &r, nil
 }
@@ -139,7 +139,7 @@ func (*Rationals) FromBig(n *big.Int) (*Rat, error) {
 	}
 	a, err := Z().FromBig(n)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Rat{
 		a: a,
@@ -154,11 +154,11 @@ func (*Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	}
 	a, err := Z().FromBig(n.Num())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	b, err := NPlus().FromBig(n.Denom())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Rat{
 		a: a,
@@ -176,7 +176,7 @@ func (*Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat
 		return nil, ErrOutOfRange.WithStackFrame().WithMessage("lowInclusive is greater than highExclusive")
 	}
 	if lowInclusive.Equal(highExclusive) {
-		return nil, errs2.New("interval is empty")
+		return nil, errs.New("interval is empty")
 	}
 
 	// Sample on the lattice with common denominator D = b1*b2.
@@ -187,7 +187,7 @@ func (*Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat
 
 	n, err := Z().Random(lowN, highN, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return (&Rat{a: n, b: D}).Canonical(), nil
@@ -213,11 +213,11 @@ func (*Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) (*
 	// the half-open interval [ceil(lowInclusive), ceil(highExclusive)).
 	lowInt, err := lowInclusive.Ceil()
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	highIntExclusive, err := highExclusive.Ceil()
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	// If ceil(low) >= ceil(high), there is no integer n with low <= n < high.
@@ -282,7 +282,7 @@ func (r *Rat) Denominator() *NatPlus {
 func (r *Rat) Ceil() (*Int, error) {
 	quot, rem, err := r.a.EuclideanDiv(r.b.Lift())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	if rem.IsZero() {
 		return quot, nil
@@ -294,7 +294,7 @@ func (r *Rat) Ceil() (*Int, error) {
 func (r *Rat) Floor() (*Int, error) {
 	quot, _, err := r.a.EuclideanDiv(r.b.Lift())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return quot, nil
 }
@@ -357,7 +357,7 @@ func (r *Rat) Square() *Rat {
 func (r *Rat) EuclideanDiv(rhs *Rat) (quo, rem *Rat, err error) {
 	quo, err = r.TryDiv(rhs)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return quo, Q().Zero(), nil
 }
@@ -373,7 +373,7 @@ func (r *Rat) EuclideanValuation() cardinal.Cardinal {
 // TryDiv performs division of two Rat elements.
 func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
 	if rhs.IsZero() {
-		return nil, errs2.New("division by zero")
+		return nil, errs.New("division by zero")
 	}
 	numerator := r.a.Mul(rhs.b.Lift())
 	// Handle sign: if rhs.a is negative, negate the numerator
@@ -384,7 +384,7 @@ func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
 	}
 	rhsANP, err := NPlus().FromInt(absRhsA)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Rat{
 		a: numerator,
@@ -418,7 +418,7 @@ func (r *Rat) Neg() *Rat {
 // TryInv returns the multiplicative inverse of the Rat element.
 func (r *Rat) TryInv() (*Rat, error) {
 	if r.IsZero() {
-		return nil, errs2.New("inversion of zero")
+		return nil, errs.New("inversion of zero")
 	}
 	// Swap numerator and denominator: a/b becomes b/a
 	// Handle sign: if a is negative, result should have negative numerator
@@ -430,7 +430,7 @@ func (r *Rat) TryInv() (*Rat, error) {
 	}
 	bAsNP, err := NPlus().FromInt(absA)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	numerator := r.b.Lift()
 	if sign {
@@ -480,7 +480,7 @@ func (r *Rat) Canonical() *Rat {
 	}
 	den2, err := NPlus().FromInt(den)
 	if err != nil {
-		panic(errs2.Wrap(err))
+		panic(errs.Wrap(err))
 	}
 	return &Rat{a: num, b: den2}
 }
@@ -530,7 +530,7 @@ func (r *Rat) Equal(rhs *Rat) bool {
 func (r *Rat) Bytes() []byte {
 	out, err := r.MarshalCBOR()
 	if err != nil {
-		panic(errs2.Wrap(err))
+		panic(errs.Wrap(err))
 	}
 	return out
 }

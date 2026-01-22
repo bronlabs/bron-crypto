@@ -4,7 +4,7 @@ import (
 	"hash"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
@@ -33,7 +33,7 @@ type Suite struct {
 func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create default OT suite")
+		return nil, errs.Wrap(err).WithMessage("failed to create default OT suite")
 	}
 	if (xi % 8) != 0 {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid xi")

@@ -7,7 +7,7 @@ import (
 	"math/bits"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
@@ -78,7 +78,7 @@ func (ctrDrbg *CtrDRBG) SetKey(key []byte) (err error) {
 	}
 	ctrDrbg.aesBlockCipher, err = aes.NewCipher(ctrDrbg.key)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	return nil
 }
@@ -116,7 +116,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	}
 	// 5. Key = leftmost(temp, keylen).
 	if err = ctrDrbg.SetKey(temp[:ctrDrbg.keySize]); err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	// 6. V = rightmost (temp, blocklen).
 	vBytes := temp[ctrDrbg.keySize:]
@@ -139,18 +139,18 @@ func (ctrDrbg *CtrDRBG) Instantiate(entropyInput, nonce, personalizationString [
 	// 2. seed_material = df(seed_material, seedlen).
 	seedMaterial, err = ctrDrbg.BlockCipherDF(seedMaterial, ctrDrbg.SeedSize())
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	// 3. Key = 0^keylen.
 	if err = ctrDrbg.SetKey(nil); err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	// 4. V = 0^blocklen.
 	ctrDrbg.vLo = 0
 	ctrDrbg.vHi = 0
 	// 5. (Key, V) = CTR_DRBG_Update(seed_material, Key, V).
 	if err = ctrDrbg.Update(seedMaterial); err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	// 6. reseed_counter = 1.
 	ctrDrbg.reseedCounter = 1
@@ -167,11 +167,11 @@ func (ctrDrbg *CtrDRBG) Reseed(entropyInput, additionalInput []byte) (err error)
 	// 2. seed_material = Block_Cipher_df(seed_material, seedlen).
 	seedMaterial, err = ctrDrbg.BlockCipherDF(seedMaterial, ctrDrbg.SeedSize())
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	// 3. (Key, V) = CTR_DRBG_Update (seed_material, Key, V).
 	if err = ctrDrbg.Update(seedMaterial); err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	// 4. reseed_counter = 1.
 	ctrDrbg.reseedCounter = 1
@@ -194,11 +194,11 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 		// 2.1. additional_input = Block_Cipher_df(additional_input, seedlen).
 		additionalInput, err = ctrDrbg.BlockCipherDF(additionalInput, ctrDrbg.SeedSize())
 		if err != nil {
-			return errs2.Wrap(err)
+			return errs.Wrap(err)
 		}
 		// 2.2. (Key, V) = CTR_DRBG_Update(additional_input, Key, V).
 		if err = ctrDrbg.Update(additionalInput); err != nil {
-			return errs2.Wrap(err)
+			return errs.Wrap(err)
 		}
 	} else { // ELSE additional_input = 0^seedlen. (Implicit, set to nil instead)
 		additionalInput = nil
@@ -222,7 +222,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 	copy(outputBuffer, temp[:requestedNumberOfBytes])
 	// 6. (Key, V) = CTR_DRBG_Update(additional_input, Key, V).
 	if err = ctrDrbg.Update(additionalInput); err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	// 7. reseed_counter = reseed_counter + 1.
 	ctrDrbg.reseedCounter++
@@ -260,7 +260,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	// 8. K = leftmost(0x00010203...1D1E1F, keylen).
 	aesCipher, err := aes.NewCipher([]byte(ivKey)[:ctrDrbg.keySize])
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	// 9. WHILE (len(temp) < keylen + outlen), DO
 	// +. Copy the `S` in the BCC input only once. It remains static.
@@ -279,7 +279,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	// 10. K = leftmost(temp, keylen).
 	aesCipher, err = aes.NewCipher(temp[:ctrDrbg.keySize])
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	// 11. X = select (temp, keylen+1, keylen+outlen).
 	var x, xOut []byte

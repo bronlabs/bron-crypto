@@ -1,12 +1,12 @@
 package num
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrInexactDivision = errs2.New("inexact division")
-	ErrUndefined       = errs2.New("operation is undefined")
-	ErrOutOfRange      = errs2.New("value is out of range")
-	ErrUnequalModuli   = errs2.New("moduli are unequal")
-	ErrIsNil           = errs2.New("value must not be nil")
-	ErrDivisionByZero  = errs2.New("division by zero")
+	ErrInexactDivision = errs.New("inexact division")
+	ErrUndefined       = errs.New("operation is undefined")
+	ErrOutOfRange      = errs.New("value is out of range")
+	ErrUnequalModuli   = errs.New("moduli are unequal")
+	ErrIsNil           = errs.New("value must not be nil")
+	ErrDivisionByZero  = errs.New("division by zero")
 )

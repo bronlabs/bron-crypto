@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -72,7 +72,7 @@ func (p *Prover) Prove() (proof *Proof, statement *paillier.PublicKey, err error
 	crtModN := p.PrivateKey().Arithmetic().CrtModN
 	rhos, err := extractRhos(p.tape, crtModN.N)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create a proof")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create a proof")
 	}
 
 	var nInv numct.Nat
@@ -107,7 +107,7 @@ func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paill
 
 	rhos, err := extractRhos(tape, statement.N())
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot verify a proof")
+		return errs.Wrap(err).WithMessage("cannot verify a proof")
 	}
 
 	// (a) check that N is a positive integer and is not divisible by all the primes less than α.
@@ -152,7 +152,7 @@ func extractRhos(transcript transcripts.Transcript, n *numct.Modulus) ([]*numct.
 			label := fmt.Sprintf("rho_%d_%d", i, k)
 			candidateBytes, err := transcript.ExtractBytes(label, byteSize)
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot extract rho")
+				return nil, errs.Wrap(err).WithMessage("cannot extract rho")
 			}
 
 			candidateBytes[0] &= (1 << excessBits) - 1 // candidateBytes[0] is the highest byte (big endian)

@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Round1 executes protocol round 1.
@@ -16,7 +16,7 @@ func (alice *Alice[G, S]) Round1() (r1Out *Round1P2P[G, S], err error) {
 
 	r1Out, err = alice.sender.Round1()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to call OT round 1")
+		return nil, errs.Wrap(err).WithMessage("failed to call OT round 1")
 	}
 
 	alice.round += 2
@@ -32,12 +32,12 @@ func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b 
 
 	beta := make([]byte, bob.xi/8)
 	if _, err := io.ReadFull(bob.prng, beta); err != nil {
-		return nil, nilSE, errs2.Wrap(err).WithMessage("cannot sample choices")
+		return nil, nilSE, errs.Wrap(err).WithMessage("cannot sample choices")
 	}
 
 	r2Out, receiverOutput, err := bob.receiver.Round2(r1Out, beta)
 	if err != nil {
-		return nil, nilSE, errs2.Wrap(err).WithMessage("cannot run round 2 of receiver")
+		return nil, nilSE, errs.Wrap(err).WithMessage("cannot run round 2 of receiver")
 	}
 	bob.beta = receiverOutput.Choices
 	bob.gamma = receiverOutput.Messages
@@ -64,7 +64,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 
 	senderOutput, err := alice.sender.Round3(r2Out)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot send round 3 of receiver")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot send round 3 of receiver")
 	}
 	alice.alpha = senderOutput.Messages
 
@@ -80,7 +80,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 	for i := range alice.rho {
 		aHat[i], err = alice.suite.field.Random(alice.prng)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot get random scalar")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot get random scalar")
 		}
 	}
 
@@ -97,7 +97,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 
 	theta, err := alice.roTheta(aTilde)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot get theta")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot get theta")
 	}
 
 	eta := make([]S, alice.rho)
@@ -121,7 +121,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 
 	mu, err := alice.roMu(muBold)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot get mu")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot get mu")
 	}
 
 	r3Out = &Round3P2P[S]{
@@ -139,12 +139,12 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}
 	// if err := r3Out.Validate(bob.Protocol); err != nil {
-	//	return nil, errs2.Wrap(err).WithMessage("invalid message")
+	//	return nil, errs.Wrap(err).WithMessage("invalid message")
 	//}
 
 	theta, err := bob.roTheta(r3Out.ATilde)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get theta")
+		return nil, errs.Wrap(err).WithMessage("cannot get theta")
 	}
 
 	dDot := make([][]S, bob.xi)
@@ -191,7 +191,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 
 	mu, err := bob.roMu(muPrimeBold)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get mu")
+		return nil, errs.Wrap(err).WithMessage("cannot get mu")
 	}
 	if !bytes.Equal(r3Out.Mu, mu) {
 		return nil, base.ErrAbort.WithMessage("consistency check failed")
@@ -222,11 +222,11 @@ func (p *participant[G, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 		for j := range theta[i] {
 			thetaBytes, err := p.tape.ExtractBytes(thetaLabel, uint(p.suite.field.WideElementSize()))
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot extract theta")
+				return nil, errs.Wrap(err).WithMessage("cannot extract theta")
 			}
 			theta[i][j], err = p.suite.field.FromWideBytes(thetaBytes)
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot set theta")
+				return nil, errs.Wrap(err).WithMessage("cannot set theta")
 			}
 		}
 	}
@@ -242,7 +242,7 @@ func (p *participant[G, S]) roMu(muBold [][]S) (mu []byte, err error) {
 	}
 	mu, err = p.tape.ExtractBytes(muLabel, uint(base.CollisionResistanceBytesCeil))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot extract mu")
+		return nil, errs.Wrap(err).WithMessage("cannot extract mu")
 	}
 	return mu, nil
 }

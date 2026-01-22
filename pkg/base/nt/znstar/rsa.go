@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -21,7 +21,7 @@ func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	}
 	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to generate prime pair")
+		return nil, errs.Wrap(err).WithMessage("failed to generate prime pair")
 	}
 	return NewRSAGroup(p, q)
 }
@@ -46,7 +46,7 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	n := p.Mul(q)
 	zMod, err := num.NewZMod(n)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
+		return nil, errs.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	arith, ok := modular.NewOddPrimeFactors(p.Value(), q.Value())
 	if ok == ct.False {
@@ -68,7 +68,7 @@ func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (*RSAGroupUnknownOrder, error) {
 	}
 	zMod, err := num.NewZMod(m)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
+		return nil, errs.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	arith, ok := modular.NewSimple(zMod.Modulus().ModulusCT())
 	if ok == ct.False {

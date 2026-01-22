@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 const (
@@ -16,10 +16,10 @@ const (
 )
 
 // ErrInvalidKeyLength is returned when the key length does not meet the security strength requirements.
-var ErrInvalidKeyLength = errs2.New("invalid key length")
+var ErrInvalidKeyLength = errs.New("invalid key length")
 
 // ErrInvalidTagSize is returned when the tag size is smaller than the minimum allowed.
-var ErrInvalidTagSize = errs2.New("invalid tag size")
+var ErrInvalidTagSize = errs.New("invalid tag size")
 
 var _ hash.Hash = (*kmac)(nil)
 

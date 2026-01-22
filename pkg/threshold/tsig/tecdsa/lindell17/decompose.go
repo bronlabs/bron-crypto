@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
@@ -17,37 +17,37 @@ func DecomposeTwoThirds[S algebra.PrimeFieldElement[S]](scalar S, prng io.Reader
 	case inEighteenth(0, 3, scalar):
 		xPrime, err = randomInEighteenth(9, 10, field, prng)
 		if err != nil {
-			return nilS, nilS, errs2.Wrap(err).WithMessage("could not construct xPrime")
+			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(3, 6, scalar):
 		xPrime, err = randomInEighteenth(10, 11, field, prng)
 		if err != nil {
-			return nilS, nilS, errs2.Wrap(err).WithMessage("could not construct xPrime")
+			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(6, 9, scalar):
 		xPrime, err = randomInEighteenth(11, 12, field, prng)
 		if err != nil {
-			return nilS, nilS, errs2.Wrap(err).WithMessage("could not construct xPrime")
+			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(9, 12, scalar):
 		xPrime, err = randomInEighteenth(6, 7, field, prng)
 		if err != nil {
-			return nilS, nilS, errs2.Wrap(err).WithMessage("could not construct xPrime")
+			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(12, 15, scalar):
 		xPrime, err = randomInEighteenth(7, 8, field, prng)
 		if err != nil {
-			return nilS, nilS, errs2.Wrap(err).WithMessage("could not construct xPrime")
+			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(15, 18, scalar):
 		xPrime, err = randomInEighteenth(8, 9, field, prng)
 		if err != nil {
-			return nilS, nilS, errs2.Wrap(err).WithMessage("could not construct xPrime")
+			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	default:
@@ -102,19 +102,19 @@ func randomInEighteenth[S algebra.PrimeFieldElement[S]](lowBoundInclusive, highB
 	h18 := order.Mul(num.Z().FromUint64(highBoundExclusive))
 	l, _, err := l18.Add(num.Z().FromUint64(17)).EuclideanDivVarTime(num.Z().FromUint64(18))
 	if err != nil {
-		return nilS, errs2.Wrap(err).WithMessage("could not compute lower bound")
+		return nilS, errs.Wrap(err).WithMessage("could not compute lower bound")
 	}
 	h, _, err := h18.EuclideanDivVarTime(num.Z().FromUint64(18))
 	if err != nil {
-		return nilS, errs2.Wrap(err).WithMessage("could not compute upper bound")
+		return nilS, errs.Wrap(err).WithMessage("could not compute upper bound")
 	}
 	x, err := num.Z().Random(l, h, prng)
 	if err != nil {
-		return nilS, errs2.Wrap(err).WithMessage("could not generate random rational")
+		return nilS, errs.Wrap(err).WithMessage("could not generate random rational")
 	}
 	s, err := field.FromWideBytes(x.Bytes())
 	if err != nil {
-		return nilS, errs2.Wrap(err).WithMessage("could not convert to scalar")
+		return nilS, errs.Wrap(err).WithMessage("could not convert to scalar")
 	}
 	return s, nil
 }

@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
@@ -55,7 +55,7 @@ func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
 	challengeBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
 	_, err := io.ReadFull(v.prng, challengeBytes)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot read PRNG")
+		return nil, errs.Wrap(err).WithMessage("cannot read PRNG")
 	}
 
 	v.transcript.AppendBytes(challengeLabel, challengeBytes)
@@ -76,7 +76,7 @@ func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 
 	err := v.sigmaProtocol.Verify(v.statement, v.commitment, v.challengeBytes, response)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("verification failed")
+		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	return nil

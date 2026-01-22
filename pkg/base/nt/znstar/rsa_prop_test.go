@@ -6,14 +6,14 @@ import (
 	"pgregory.net/rapid"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func RSAUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.RSAGroupElementUnknownOrder], *znstar.RSAGroupUnknownOrder) {
 	t.Helper()
-	group := errs2.Must1(znstar.SampleRSAGroup(znstar.RSAKeyLen, pcg.NewRandomised()))
+	group := errs.Must1(znstar.SampleRSAGroup(znstar.RSAKeyLen, pcg.NewRandomised()))
 	return UnitGenerator(t, group.ForgetOrder()), group.ForgetOrder()
 }
 

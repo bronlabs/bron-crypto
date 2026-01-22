@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -159,7 +159,7 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 func (p *Protocol[I, P]) ComputeProverCommitment(_ *Statement[I], _ *Witness[P]) (*Commitment[I], *State[P], error) {
 	s, err := p.preImageGroup.Random(p.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample element group")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample element group")
 	}
 	a := p.oneWayHomomorphism(s)
 
@@ -185,7 +185,7 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes sigma.ChallengeBytes) (*Commitment[I], *Response[P], error) {
 	z, err := p.preImageGroup.Random(p.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample element group")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample element group")
 	}
 	a := p.oneWayHomomorphism(z).Op(p.imageScalarMul(statement.X.OpInv(), challengeBytes))
 
@@ -198,10 +198,10 @@ func (p *Protocol[I, P]) Extract(x *Statement[I], a *Commitment[I], ei []sigma.C
 		return nil, ErrInvalidArgument.WithMessage("invalid number of challenge bytes")
 	}
 	if err := p.Verify(x, a, ei[0], zi[0]); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("verification failed")
+		return nil, errs.Wrap(err).WithMessage("verification failed")
 	}
 	if err := p.Verify(x, a, ei[1], zi[1]); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("verification failed")
+		return nil, errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	u := p.anchor.PreImage(x.X)

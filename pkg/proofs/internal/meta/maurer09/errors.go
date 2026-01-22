@@ -1,14 +1,14 @@
 package maurer09
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
 	// ErrInvalidArgument indicates missing or inconsistent inputs.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 	// ErrValidationFails indicates malformed or invalid data.
-	ErrValidationFails = errs2.New("validation failed")
+	ErrValidationFails = errs.New("validation failed")
 	// ErrFailed signals unrecoverable error.
-	ErrFailed = errs2.New("validation failed")
+	ErrFailed = errs.New("validation failed")
 	// ErrVerificationFailed signals failed proof verification.
-	ErrVerificationFailed = errs2.New("verification failed")
+	ErrVerificationFailed = errs.New("verification failed")
 )

@@ -37,7 +37,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -84,7 +84,7 @@ var (
 func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 	pk, err := schnorrlike.NewPublicKey(point)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create Mina public key")
+		return nil, errs.Wrap(err).WithMessage("failed to create Mina public key")
 	}
 	return pk, nil
 }
@@ -101,11 +101,11 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	pkv := group.ScalarBaseMul(scalar)
 	pk, err := schnorrlike.NewPublicKey(pkv)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create public key")
+		return nil, errs.Wrap(err).WithMessage("cannot create public key")
 	}
 	sk, err := schnorrlike.NewPrivateKey(scalar, pk)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create Mina private key")
+		return nil, errs.Wrap(err).WithMessage("failed to create Mina private key")
 	}
 	return sk, nil
 }
@@ -116,7 +116,7 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 	vr, err := NewDeterministicVariant(nid, privateKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create variant")
+		return nil, errs.Wrap(err).WithMessage("cannot create variant")
 	}
 	return &Scheme{
 		vr: vr,
@@ -129,7 +129,7 @@ func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 func NewRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
 	vr, err := NewRandomisedVariant(nid, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create variant")
+		return nil, errs.Wrap(err).WithMessage("cannot create variant")
 	}
 	return &Scheme{
 		vr: vr,
@@ -162,7 +162,7 @@ func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to apply key generator option")
+			return nil, errs.Wrap(err).WithMessage("failed to apply key generator option")
 		}
 	}
 	return kg, nil
@@ -175,7 +175,7 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 	}
 	verifier, err := s.Verifier()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
+		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
 	}
 	signer := &Signer{
 		schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, *Message]{
@@ -186,7 +186,7 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 	}
 	for _, opt := range opts {
 		if err := opt(signer); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to apply signer option")
+			return nil, errs.Wrap(err).WithMessage("failed to apply signer option")
 		}
 	}
 	return signer, nil
@@ -204,7 +204,7 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	}
 	for _, opt := range opts {
 		if err := opt(verifier); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to apply verifier option")
+			return nil, errs.Wrap(err).WithMessage("failed to apply verifier option")
 		}
 	}
 	return verifier, nil
@@ -217,7 +217,7 @@ func (s *Scheme) PartialSignatureVerifier(publicKey *PublicKey, opts ...signatur
 	}
 	verifier, err := s.Verifier(opts...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
+		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
 	}
 	verifier.ChallengePublicKey = publicKey
 	return verifier, nil
@@ -247,7 +247,7 @@ func (s *Signer) Sign(message *Message) (*Signature, error) {
 	s.V.msg = message
 	sig, err := s.SignerTrait.Sign(message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to sign message")
+		return nil, errs.Wrap(err).WithMessage("failed to sign message")
 	}
 	return sig, nil
 }
@@ -283,7 +283,7 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 	// Mina uses LITTLE-ENDIAN for field elements
 	rx, err := signature.R.AffineX()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to serialise signature")
+		return nil, errs.Wrap(err).WithMessage("failed to serialise signature")
 	}
 
 	// Convert R.x from big-endian to little-endian
@@ -328,14 +328,14 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 	// Parse R.x as a base field element
 	rx, err := group.BaseField().FromBytes(rxBytesBE)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to parse R.x")
+		return nil, errs.Wrap(err).WithMessage("failed to parse R.x")
 	}
 
 	// Reconstruct R from x-coordinate
 	// Mina signatures always have R with even y-coordinate (parity=0)
 	R, err := group.FromAffineX(rx, false)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to reconstruct R from x-coordinate")
+		return nil, errs.Wrap(err).WithMessage("failed to reconstruct R from x-coordinate")
 	}
 
 	// Convert S from little-endian to big-endian
@@ -346,7 +346,7 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 
 	s, err := sf.FromBytes(sBytesBE)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
+		return nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
 
 	return &Signature{

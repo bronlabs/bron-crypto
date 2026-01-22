@@ -1,12 +1,12 @@
 package polynomials
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrValidation            = errs2.New("invalid")
-	ErrDivisionByZero        = errs2.New("division by zero")
-	ErrOperationNotSupported = errs2.New("operation not supported")
-	ErrLengthMismatch        = errs2.New("input length mismatch")
-	ErrFailed                = errs2.New("internal error")
-	ErrSerialisationFailed   = errs2.New("serialisation failed")
+	ErrValidation            = errs.New("invalid")
+	ErrDivisionByZero        = errs.New("division by zero")
+	ErrOperationNotSupported = errs.New("operation not supported")
+	ErrLengthMismatch        = errs.New("input length mismatch")
+	ErrFailed                = errs.New("internal error")
+	ErrSerialisationFailed   = errs.New("serialisation failed")
 )

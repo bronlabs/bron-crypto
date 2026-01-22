@@ -1,6 +1,6 @@
 package mina
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 // Helper functions to create payment and delegation messages
 // Reference: https://github.com/o1-labs/o1js/blob/188cf3faf6442e1e1ca8e4b3212a459b917c4ed4/src/mina-signer/src/sign-legacy.ts#L96
@@ -20,7 +20,7 @@ func NewPaymentMessage(source, receiver *PublicKey, amount, fee uint64, nonce, v
 	// 3. Fee payer public key (x as field, isOdd as 1 bit)
 	// In payments, the fee payer is the source
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	// 4. Nonce (32 bits, LSB-first)
@@ -41,12 +41,12 @@ func NewPaymentMessage(source, receiver *PublicKey, amount, fee uint64, nonce, v
 
 	// 2. Source public key
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	// 3. Receiver public key
 	if err := addPublicKeyToInput(msg, receiver); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	// 4. Legacy token ID again
@@ -76,7 +76,7 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 
 	// 3. Fee payer public key (x as field, isOdd as 1 bit)
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	// 4. Nonce (32 bits, LSB-first)
@@ -97,11 +97,11 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 
 	// 2. Source public key
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	// 3. Receiver public key (the delegate)
 	if err := addPublicKeyToInput(msg, newDelegate); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	// 4. Legacy token ID again
@@ -187,15 +187,15 @@ func tagToBits(tag int) []bool {
 // Reference: https://github.com/o1-labs/o1js/blob/main/src/mina-signer/src/curve-bigint.ts
 func addPublicKeyToInput(msg *ROInput, pk *PublicKey) error {
 	if pk == nil {
-		return errs2.New("public key is nil")
+		return errs.New("public key is nil")
 	}
 	x, err := pk.V.AffineX()
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	y, err := pk.V.AffineY()
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	msg.AddFields(x)
 	msg.AddBits(y.IsOdd())

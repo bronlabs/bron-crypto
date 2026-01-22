@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
@@ -55,13 +55,13 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 
 	zeroSetup, err := przsSetup.NewParticipant(sessionID, sharingID, baseShard.AccessStructure().Shareholders(), tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("error creating zero setup for participant")
+		return nil, errs.Wrap(err).WithMessage("error creating zero setup for participant")
 	}
 
 	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](baseShard.PublicKey().Value().Structure())
 	otSuite, err := vsot.NewSuite(softspoken.Kappa, 1, curve, sha256.New)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("error creating vsot suite for participant")
+		return nil, errs.Wrap(err).WithMessage("error creating vsot suite for participant")
 	}
 	otSenders := make(map[sharing.ID]*vsot.Sender[P, B, S])
 	otReceivers := make(map[sharing.ID]*vsot.Receiver[P, B, S])
@@ -74,14 +74,14 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingID)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		otSender, err := vsot.NewSender(sessionID, otSuite, otTape, prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("error creating vsot sender")
+			return nil, errs.Wrap(err).WithMessage("error creating vsot sender")
 		}
 
 		otTape = tape.Clone()
 		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingID)))
 		otReceiver, err := vsot.NewReceiver(sessionID, otSuite, otTape, prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("error creating vsot receiver")
+			return nil, errs.Wrap(err).WithMessage("error creating vsot receiver")
 		}
 
 		otSenders[id] = otSender

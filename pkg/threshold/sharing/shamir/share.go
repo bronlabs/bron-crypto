@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
@@ -45,7 +45,7 @@ func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStruc
 	}
 	lambdas, err := LagrangeCoefficients(field, qualifiedSet.Shareholders().List()...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
+		return nil, errs.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
 	lambdaI, exists := lambdas.Get(s.id)
 	if !exists {
@@ -54,7 +54,7 @@ func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStruc
 	converted := lambdaI.Mul(s.v)
 	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to convert Shamir share to additive")
+		return nil, errs.Wrap(err).WithMessage("failed to convert Shamir share to additive")
 	}
 	return additiveShare, nil
 }
@@ -142,7 +142,7 @@ func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Shamir Share")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Shamir Share")
 	}
 	return data, nil
 }

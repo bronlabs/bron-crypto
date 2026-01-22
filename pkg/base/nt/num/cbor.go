@@ -4,7 +4,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
@@ -33,7 +33,7 @@ func (np *NatPlus) MarshalCBOR() ([]byte, error) {
 	dto := &natPlusDTO{NatPlus: np.v}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return data, nil
 }
@@ -58,7 +58,7 @@ func (n *Nat) MarshalCBOR() ([]byte, error) {
 	dto := &natDTO{Nat: n.v}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return data, nil
 }
@@ -80,7 +80,7 @@ func (i *Int) MarshalCBOR() ([]byte, error) {
 	dto := &intDTO{Int: i.v}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return data, nil
 }
@@ -106,7 +106,7 @@ func (u *Uint) MarshalCBOR() ([]byte, error) {
 	}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -144,7 +144,7 @@ func (r *Rat) MarshalCBOR() ([]byte, error) {
 	}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -152,7 +152,7 @@ func (r *Rat) MarshalCBOR() ([]byte, error) {
 func (r *Rat) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*ratDTO](data)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	if dto.A == nil {
 		return ErrIsNil.WithStackFrame().WithMessage("numerator")
@@ -173,7 +173,7 @@ func (z *ZMod) MarshalCBOR() ([]byte, error) {
 	dto := &zmodDTO{Modulus: z.n}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }

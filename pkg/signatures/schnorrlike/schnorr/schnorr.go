@@ -30,7 +30,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -56,7 +56,7 @@ const VariantType schnorrlike.VariantType = "Schnorr"
 func NewPublicKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](point GE) (*PublicKey[GE, S], error) {
 	pk, err := schnorrlike.NewPublicKey(point)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create Schnorr public key")
+		return nil, errs.Wrap(err).WithMessage("failed to create Schnorr public key")
 	}
 	return pk, nil
 }
@@ -65,7 +65,7 @@ func NewPublicKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEleme
 func NewPrivateKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](scalar S, pk *PublicKey[GE, S]) (*PrivateKey[GE, S], error) {
 	sk, err := schnorrlike.NewPrivateKey(scalar, pk)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create Schnorr private key")
+		return nil, errs.Wrap(err).WithMessage("failed to create Schnorr private key")
 	}
 	return sk, nil
 }
@@ -139,7 +139,7 @@ func (s *Scheme[GE, S]) Keygen(opts ...KeyGeneratorOption[GE, S]) (*KeyGenerator
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("key generator option failed")
+			return nil, errs.Wrap(err).WithMessage("key generator option failed")
 		}
 	}
 	return out, nil
@@ -152,7 +152,7 @@ func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOpti
 	}
 	verifier, err := s.Verifier()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
+		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
 	}
 	out := &Signer[GE, S]{
 		schnorrlike.SignerTrait[*Variant[GE, S], GE, S, Message]{
@@ -163,7 +163,7 @@ func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOpti
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("signer option failed")
+			return nil, errs.Wrap(err).WithMessage("signer option failed")
 		}
 	}
 	return out, nil
@@ -180,7 +180,7 @@ func (s *Scheme[GE, S]) Verifier(opts ...VerifierOption[GE, S]) (*Verifier[GE, S
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("verifier option failed")
+			return nil, errs.Wrap(err).WithMessage("verifier option failed")
 		}
 	}
 	return out, nil
@@ -196,7 +196,7 @@ func (s *Scheme[GE, S]) PartialSignatureVerifier(
 	}
 	verifier, err := s.Verifier(opts...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
+		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
 	}
 	verifier.ChallengePublicKey = publicKey
 	return verifier, nil
@@ -275,7 +275,7 @@ func (v *Variant[GE, S]) ComputeNonceCommitment() (R GE, k S, err error) {
 	}
 	ge, s, err := schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng, v.shouldNegateNonce)
 	if err != nil {
-		return *new(GE), *new(S), errs2.Wrap(err).WithMessage("failed to compute nonce commitment")
+		return *new(GE), *new(S), errs.Wrap(err).WithMessage("failed to compute nonce commitment")
 	}
 	return ge, s, nil
 }
@@ -297,7 +297,7 @@ func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment, publicKeyValue GE, me
 	}
 	challenge, err := schnorrlike.MakeGenericChallenge(v.sf, v.h, v.challengeElementsAreLittleEndian, nonceCommitment.Bytes(), publicKeyValue.Bytes(), message)
 	if err != nil {
-		return *new(S), errs2.Wrap(err).WithMessage("failed to compute Schnorr challenge")
+		return *new(S), errs.Wrap(err).WithMessage("failed to compute Schnorr challenge")
 	}
 	return challenge, nil
 }
@@ -319,7 +319,7 @@ func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S
 	}
 	response, err := schnorrlike.ComputeGenericResponse(privateKeyValue, nonce, challenge, v.responseOperatorIsNegative)
 	if err != nil {
-		return *new(S), errs2.Wrap(err).WithMessage("failed to compute Schnorr response")
+		return *new(S), errs.Wrap(err).WithMessage("failed to compute Schnorr response")
 	}
 	return response, nil
 }

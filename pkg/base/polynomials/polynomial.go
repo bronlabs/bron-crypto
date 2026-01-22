@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
@@ -21,11 +21,11 @@ type PolynomialRing[RE algebra.RingElement[RE]] struct {
 func (r *PolynomialRing[RE]) RandomPolynomial(degree int, prng io.Reader) (*Polynomial[RE], error) {
 	constantTerm, err := r.ring.Random(prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to sample random constant term")
+		return nil, errs.Wrap(err).WithMessage("failed to sample random constant term")
 	}
 	poly, err := r.RandomPolynomialWithConstantTerm(degree, constantTerm, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create random polynomial with constant term")
+		return nil, errs.Wrap(err).WithMessage("could not create random polynomial with constant term")
 	}
 	return poly, nil
 }
@@ -41,12 +41,12 @@ func (r *PolynomialRing[RE]) RandomPolynomialWithConstantTerm(degree int, consta
 	for i := 1; i < degree; i++ {
 		coeffs[i], err = r.ring.Random(prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to sample random coefficient")
+			return nil, errs.Wrap(err).WithMessage("failed to sample random coefficient")
 		}
 	}
 	coeffs[degree], err = algebrautils.RandomNonIdentity(r.ring, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to sample random leading coefficient")
+		return nil, errs.Wrap(err).WithMessage("failed to sample random leading coefficient")
 	}
 	p := &Polynomial[RE]{
 		coeffs: coeffs,
@@ -94,12 +94,12 @@ func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) 
 		var err error
 		coeffs[i], err = r.ring.FromBytes(inBytes[start:end])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not parse coefficient")
+			return nil, errs.Wrap(err).WithMessage("could not parse coefficient")
 		}
 	}
 	poly, err := r.New(coeffs...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create polynomial")
+		return nil, errs.Wrap(err).WithMessage("could not create polynomial")
 	}
 	return poly, nil
 }
@@ -394,7 +394,7 @@ func (p *Polynomial[RE]) Derivative() *Polynomial[RE] {
 func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot, rem *Polynomial[RE], err error) {
 	coeffField, err := algebra.StructureAs[crtp.Field[RE]](p.coeffs[0].Structure())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("coefficients ring is not a field")
+		return nil, nil, errs.Wrap(err).WithMessage("coefficients ring is not a field")
 	}
 	if q.IsZero() {
 		return nil, nil, ErrDivisionByZero.WithStackFrame()
@@ -421,7 +421,7 @@ func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot, rem *Polynomial[
 		lcR := rem.coeffs[degR]
 		factor, err := lcR.TryDiv(lcQ)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("failed to divide leading coefficients")
+			return nil, nil, errs.Wrap(err).WithMessage("failed to divide leading coefficients")
 		}
 
 		shift := degR - degQ

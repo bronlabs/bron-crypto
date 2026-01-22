@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
@@ -210,7 +210,7 @@ func (ge *GtElement) MarshalBinary() ([]byte, error) {
 func (ge *GtElement) UnmarshalBinary(data []byte) error {
 	pp, err := NewGt().FromBytes(data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot decode element")
+		return errs.Wrap(err).WithMessage("cannot decode element")
 	}
 	ge.V.Set(&pp.V.Fp12)
 	return nil

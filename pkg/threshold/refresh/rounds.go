@@ -1,7 +1,7 @@
 package refresh
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 )
@@ -10,7 +10,7 @@ import (
 func (p *Participant[G, S]) Round1() (broadcast *Round1Broadcast[G, S], unicasts network.OutgoingUnicasts[*Round1P2P[G, S]], err error) {
 	bc, uu, err := p.zeroParticipant.Round1()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("failed to execute zero sharing Round1")
+		return nil, nil, errs.Wrap(err).WithMessage("failed to execute zero sharing Round1")
 	}
 	return bc, uu, nil
 }
@@ -19,7 +19,7 @@ func (p *Participant[G, S]) Round1() (broadcast *Round1Broadcast[G, S], unicasts
 func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S]], r2u network.RoundMessages[*Round1P2P[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
 	share, verification, err = p.zeroParticipant.Round2(r2b, r2u)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("failed to run round 2 of zero participant")
+		return nil, nil, errs.Wrap(err).WithMessage("failed to run round 2 of zero participant")
 	}
 
 	share = share.Add(p.shard.Share())

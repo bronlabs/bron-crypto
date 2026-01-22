@@ -1,7 +1,7 @@
 package numct
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
-var ErrInvalidArgument = errs2.New("invalid argument")
+var ErrInvalidArgument = errs.New("invalid argument")

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -33,7 +33,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	p.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(p.sessionID[:])))
 	crs, err := p.transcript.ExtractBytes(crsLabel, 32)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot extract crs")
+		return nil, errs.Wrap(err).WithMessage("cannot extract crs")
 	}
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
 
@@ -46,7 +46,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 		var err error
 		aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot generate commitment")
+			return nil, errs.Wrap(err).WithMessage("cannot generate commitment")
 		}
 
 		// step 2. set a = (a_i) for i in [r]
@@ -66,17 +66,17 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 			// step 3.b sample e_i...
 			e, err := sample(eSet, p.sigmaProtocol.GetChallengeBytesLength(), p.prng)
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot sample challenge bytes")
+				return nil, errs.Wrap(err).WithMessage("cannot sample challenge bytes")
 			}
 
 			// ...and compute z_i = SigmaP_z(state_i, e_i)
 			z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, aI[i], stateI[i], e)
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot generate response")
+				return nil, errs.Wrap(err).WithMessage("cannot generate response")
 			}
 			digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, z.Bytes())
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("cannot compute digest")
+				return nil, errs.Wrap(err).WithMessage("cannot compute digest")
 			}
 
 			// step 3.c if hash(a, i, e_i, z_i) != 0 append e_i to e and repeat step 3.b
@@ -104,7 +104,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	}
 	proofBytes, err = serde.MarshalCBOR(proof)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot serialise proof")
+		return nil, errs.Wrap(err).WithMessage("cannot serialise proof")
 	}
 
 	return proofBytes, nil

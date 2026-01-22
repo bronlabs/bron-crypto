@@ -8,9 +8,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // NatZero returns a new Nat representing zero.
@@ -527,21 +527,21 @@ func (n *Nat) Abs(i *Int) {
 
 // SetRandomRangeLH sets n to a random value in the range [lowInclusive, highExclusive).
 func (n *Nat) SetRandomRangeLH(lowInclusive, highExclusive *Nat, prng io.Reader) error {
-	var errs []error
+	var validationErrs []error
 	if lowInclusive == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
 	}
 	if highExclusive == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("highExclusive must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("highExclusive must not be nil"))
 	}
 	if prng == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("prng must not be nil"))
 	}
 	if lt, _, _ := lowInclusive.Compare(highExclusive); lt == ct.False {
-		errs = append(errs, ErrInvalidArgument.WithMessage("max must be greater than low"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("max must be greater than low"))
 	}
-	if len(errs) > 0 {
-		return errs2.Join(errs...)
+	if len(validationErrs) > 0 {
+		return errs.Join(validationErrs...)
 	}
 
 	var interval Nat
@@ -549,7 +549,7 @@ func (n *Nat) SetRandomRangeLH(lowInclusive, highExclusive *Nat, prng io.Reader)
 	var r Nat
 	err := r.SetRandomRangeH(&interval, prng)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 
 	var result Nat
@@ -563,18 +563,18 @@ func (n *Nat) SetRandomRangeLH(lowInclusive, highExclusive *Nat, prng io.Reader)
 // but masks out bits that are too high to be in the range so sampling rejection happens with
 // relatively low probability (~0.5).
 func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
-	var errs []error
+	var validationErrs []error
 	if prng == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("prng must not be nil"))
 	}
 	if highExclusive == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("high bound must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("high bound must not be nil"))
 	}
 	if zero := highExclusive.IsZero(); zero != ct.False {
-		errs = append(errs, ErrInvalidArgument.WithMessage("high bound must be non-zero"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("high bound must be non-zero"))
 	}
-	if len(errs) > 0 {
-		return errs2.Join(errs...)
+	if len(validationErrs) > 0 {
+		return errs.Join(validationErrs...)
 	}
 
 	var mask Nat
@@ -591,7 +591,7 @@ func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
 		data := make([]byte, (highExclusive.AnnouncedLen()+7)/8)
 		_, err := io.ReadFull(prng, data)
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("failed to read random bytes")
+			return errs.Wrap(err).WithMessage("failed to read random bytes")
 		}
 		dataNat.SetBytes(data)
 		dataNat.Resize(highExclusive.AnnouncedLen())

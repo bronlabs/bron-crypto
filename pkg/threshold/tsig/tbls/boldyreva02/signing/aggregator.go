@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -59,11 +59,11 @@ func NewShortKeyAggregator[
 	}
 	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create BLS short key scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
 	}
 	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.ShortKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
+		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
 	return &Aggregator[P1, FE1, P2, FE2, E, S]{
 		scheme:            scheme,
@@ -99,11 +99,11 @@ func NewLongKeyAggregator[
 	}
 	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create BLS long key scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS long key scheme")
 	}
 	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.LongKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
+		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
 	return &Aggregator[P2, FE2, P1, FE1, E, S]{
 		scheme:            scheme,
@@ -138,7 +138,7 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 	}
 	partialSignatureVerifier, err := A.scheme.Verifier(bls.VerifyWithCustomDST[PK](A.targetDst))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create verifier for partial signature")
+		return nil, errs.Wrap(err).WithMessage("failed to create verifier for partial signature")
 	}
 	sigShares := feldman.SharesInExponent[SG, S]{}
 	popShares := feldman.SharesInExponent[SG, S]{}
@@ -155,7 +155,7 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		case bls.MessageAugmentation:
 			internalMessage, err = bls.AugmentMessage(message, A.publicMaterial.PublicKey().Value())
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("failed to augment message for sender %d", sender)
+				return nil, errs.Wrap(err).WithMessage("failed to augment message for sender %d", sender)
 			}
 		case bls.POP:
 			internalMessage = message
@@ -163,26 +163,26 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 			popDst := A.scheme.CipherSuite().GetPopDst(A.scheme.Variant())
 			popVerifier, err := A.scheme.Verifier(bls.VerifyWithCustomDST[PK](popDst))
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("failed to create verifier for POP")
+				return nil, errs.Wrap(err).WithMessage("failed to create verifier for POP")
 			}
 			if err := popVerifier.Verify(psig.SigmaPopI, partialPublicKey, internalPopMessage); err != nil {
-				return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify POP signature")
+				return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify POP signature")
 			}
 		default:
 			return nil, ErrInvalidArgument.WithMessage("unsupported rogue key prevention algorithm: %d", A.scheme.RogueKeyPreventionAlgorithm())
 		}
 		if err := partialSignatureVerifier.Verify(psig.SigmaI, partialPublicKey, internalMessage); err != nil {
-			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature")
 		}
 		shareInExponent, err := feldman.NewLiftedShare(sender, psig.SigmaI.Value())
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to create additive share for sender %d", sender)
+			return nil, errs.Wrap(err).WithMessage("failed to create additive share for sender %d", sender)
 		}
 		sigShares = append(sigShares, shareInExponent)
 		if A.targetRogueKeyAlg == bls.POP {
 			popShareInExponent, err := feldman.NewLiftedShare(sender, psig.SigmaPopI.Value())
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("failed to create additive share for POP signature for sender %d", sender)
+				return nil, errs.Wrap(err).WithMessage("failed to create additive share for POP signature for sender %d", sender)
 			}
 			popShares = append(popShares, popShareInExponent)
 		}
@@ -190,22 +190,22 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 
 	reconstructedSignatureValue, err := sigShares.ReconstructAsAdditive()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to reconstruct signature value from shares")
+		return nil, errs.Wrap(err).WithMessage("failed to reconstruct signature value from shares")
 	}
 	var pop *bls.ProofOfPossession[SG, SGFE, PK, PKFE, E, S]
 	if A.targetRogueKeyAlg == bls.POP {
 		reconstructedPopValue, err := popShares.ReconstructAsAdditive()
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to reconstruct POP value from shares")
+			return nil, errs.Wrap(err).WithMessage("failed to reconstruct POP value from shares")
 		}
 		pop, err = bls.NewProofOfPossession(reconstructedPopValue)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to create POP from reconstructed value")
+			return nil, errs.Wrap(err).WithMessage("failed to create POP from reconstructed value")
 		}
 	}
 	aggregatedSignature, err := bls.NewSignature(reconstructedSignatureValue, pop)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create signature from reconstructed value")
+		return nil, errs.Wrap(err).WithMessage("failed to create signature from reconstructed value")
 	}
 	return aggregatedSignature, nil
 }

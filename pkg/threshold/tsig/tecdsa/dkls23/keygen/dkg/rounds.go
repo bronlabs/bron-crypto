@@ -5,7 +5,7 @@ import (
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
@@ -18,7 +18,7 @@ import (
 func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], ds.Map[sharing.ID, *Round1P2P[P, B, S]], error) {
 	zeroR1b, err := p.zeroSetup.Round1()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run round 1 of Gennaro DKG party")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run round 1 of Gennaro DKG party")
 	}
 
 	r1b := &Round1Broadcast[P, B, S]{
@@ -29,7 +29,7 @@ func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], ds.Map[shari
 		var err error
 		u.OtR1, err = p.baseOTSenders[id].Round1()
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot run round 1 of VSOT party")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot run round 1 of VSOT party")
 		}
 	}
 
@@ -43,7 +43,7 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 	otR1 := hashmap.NewComparable[sharing.ID, *vsot.Round1P2P[P, B, S]]()
 	in, err := incomingMessages(p, 2, r1b, r1u)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid messages or round mismatch")
+		return nil, errs.Wrap(err).WithMessage("invalid messages or round mismatch")
 	}
 	for id, m := range in {
 		zeroR1.Put(id, m.broadcast.ZeroR1)
@@ -52,7 +52,7 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 
 	zeroR2u, err := p.zeroSetup.Round2(zeroR1.Freeze())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot run round 2 of PRZS setup party")
+		return nil, errs.Wrap(err).WithMessage("cannot run round 2 of PRZS setup party")
 	}
 
 	p.state.receiverSeeds = hashmap.NewComparable[sharing.ID, *vsot.ReceiverOutput]()
@@ -73,11 +73,11 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 		choices := make([]byte, (softspoken.Kappa+7)/8)
 		_, err = io.ReadFull(p.prng, choices)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot sample choices")
+			return nil, errs.Wrap(err).WithMessage("cannot sample choices")
 		}
 		u.OtR2, seed, err = p.baseOTReceivers[id].Round2(otR1u, choices)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 2 of VSOT party")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 2 of VSOT party")
 		}
 		p.state.receiverSeeds.Put(id, seed)
 	}
@@ -101,7 +101,7 @@ func (p *Participant[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B,
 
 	p.state.zeroSeeds, err = p.zeroSetup.Round3(zeroR2u.Freeze())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot run round 3 of PRZS setup party")
+		return nil, errs.Wrap(err).WithMessage("cannot run round 3 of PRZS setup party")
 	}
 
 	p.state.senderSeeds = hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
@@ -114,7 +114,7 @@ func (p *Participant[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B,
 		var seed *vsot.SenderOutput
 		u.OtR3, seed, err = p.baseOTSenders[id].Round3(otR2)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 3 of VSOT party")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 3 of VSOT party")
 		}
 		p.state.senderSeeds.Put(id, seed)
 	}
@@ -143,7 +143,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P]) (ne
 		var err error
 		u.OtR4, err = p.baseOTReceivers[id].Round4(otR3)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 4 of VSOT party")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 4 of VSOT party")
 		}
 	}
 
@@ -171,7 +171,7 @@ func (p *Participant[P, B, S]) Round5(r4u network.RoundMessages[*Round4P2P]) (ne
 		var err error
 		u.OtR5, err = p.baseOTSenders[id].Round5(otR4)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 5 of VSOT part")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 5 of VSOT part")
 		}
 	}
 
@@ -188,17 +188,17 @@ func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*d
 	for id, p2p := range in {
 		err := p.baseOTReceivers[id].Round6(p2p.OtR5)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run round 6 of VSOT party")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 6 of VSOT party")
 		}
 	}
 
 	auxInfo, err := dkls23.NewAuxiliaryInfo(p.state.zeroSeeds, p.state.senderSeeds.Freeze(), p.state.receiverSeeds.Freeze())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create auxiliary info")
+		return nil, errs.Wrap(err).WithMessage("cannot create auxiliary info")
 	}
 	shard, err := dkls23.NewShard(p.baseShard, auxInfo)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create tECDSA DKLSS23 shard")
+		return nil, errs.Wrap(err).WithMessage("cannot create tECDSA DKLSS23 shard")
 	}
 
 	p.round++

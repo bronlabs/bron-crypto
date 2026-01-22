@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
@@ -42,7 +42,7 @@ func (s *Scheme[SK, PK, M, C, N, KG, ENC, DEC]) Name() commitments.Name {
 func (s *Scheme[SK, PK, M, C, N, KG, ENC, DEC]) Committer(opts ...CommitterOption[N, M, C, PK]) (*Committer[N, M, C, PK], error) {
 	enc, err := s.encScheme.Encrypter()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create encrypter for IND-CPA commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("cannot create encrypter for IND-CPA commitment scheme")
 	}
 	lenc, ok := any(enc).(encryption.LinearlyRandomisedEncrypter[PK, M, C, N])
 	if !ok {
@@ -51,7 +51,7 @@ func (s *Scheme[SK, PK, M, C, N, KG, ENC, DEC]) Committer(opts ...CommitterOptio
 	out := &Committer[N, M, C, PK]{enc: lenc, key: s.key}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot apply committer option")
+			return nil, errs.Wrap(err).WithMessage("cannot apply committer option")
 		}
 	}
 	return out, nil
@@ -66,7 +66,7 @@ func (s *Scheme[SK, PK, M, C, N, KG, ENC, DEC]) Verifier(opts ...VerifierOption[
 	out := &Verifier[N, M, C, PK]{commitments.NewGenericVerifier(committer)}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot apply verifier option")
+			return nil, errs.Wrap(err).WithMessage("cannot apply verifier option")
 		}
 	}
 	return out, nil

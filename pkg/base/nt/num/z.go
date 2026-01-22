@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
@@ -125,7 +125,7 @@ func (*Integers) FromInt64(value int64) *Int {
 func (zs *Integers) FromCardinal(value cardinal.Cardinal) (*Int, error) {
 	n, err := N().FromCardinal(value)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return zs.FromNat(n)
 }
@@ -172,7 +172,7 @@ func (*Integers) FromUintSymmetric(input *Uint) (*Int, error) {
 func (*Integers) Random(lowInclusive, highExclusive *Int, prng io.Reader) (*Int, error) {
 	var v numct.Int
 	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Int{v: &v}, nil
 }
@@ -231,7 +231,7 @@ func (i *Int) OtherOp(other *Int) *Int {
 
 // Add performs addition of two integers.
 func (i *Int) Add(other *Int) *Int {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 	v := new(numct.Int)
 	v.Add(i.v, other.v)
 	return &Int{v: v}
@@ -244,7 +244,7 @@ func (i *Int) TrySub(other *Int) (*Int, error) {
 
 // Sub performs subtraction of two integers.
 func (i *Int) Sub(other *Int) *Int {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 	v := new(numct.Int)
 	v.Sub(i.v, other.v)
 	return &Int{v: v}
@@ -252,7 +252,7 @@ func (i *Int) Sub(other *Int) *Int {
 
 // Mul performs multiplication of two integers.
 func (i *Int) Mul(other *Int) *Int {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 	v := new(numct.Int)
 	v.Mul(i.v, other.v)
 	return &Int{v: v}
@@ -305,7 +305,7 @@ func (i *Int) IsPositive() bool {
 
 // Coprime checks if two integers are coprime.
 func (i *Int) Coprime(other *Int) bool {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 	return i.v.Coprime(other.v) == ct.True
 }
 
@@ -316,7 +316,7 @@ func (i *Int) IsProbablyPrime() bool {
 
 // EuclideanDiv performs Euclidean division of the integer by another integer.
 func (i *Int) EuclideanDiv(other *Int) (quot, rem *Int, err error) {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 
 	var q numct.Int
 	var r numct.Nat
@@ -333,7 +333,7 @@ func (i *Int) EuclideanDiv(other *Int) (quot, rem *Int, err error) {
 // EuclideanDivVarTime performs Euclidean division of the integer by another integer.
 // It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
 func (i *Int) EuclideanDivVarTime(other *Int) (quot, rem *Int, err error) {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 
 	var q numct.Int
 	var r numct.Nat
@@ -369,7 +369,7 @@ func (i *Int) IsUnit(modulus *NatPlus) bool {
 	}
 	m, ok := numct.NewModulus(modulus.v)
 	if ok == ct.False {
-		panic(errs2.New("modulus is not valid"))
+		panic(errs.New("modulus is not valid"))
 	}
 	return m.IsUnit(i.Mod(modulus).v) == ct.True
 }
@@ -377,7 +377,7 @@ func (i *Int) IsUnit(modulus *NatPlus) bool {
 // TryDiv performs the exact division of the integer by another integer.
 func (i *Int) TryDiv(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q, r numct.Int
@@ -395,7 +395,7 @@ func (i *Int) TryDiv(other *Int) (*Int, error) {
 // It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
 func (i *Int) TryDivVarTime(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q, r numct.Int
@@ -412,7 +412,7 @@ func (i *Int) TryDivVarTime(other *Int) (*Int, error) {
 // DivRound performs the division of the integer by another integer returning the quotient rounded towards zero.
 func (i *Int) DivRound(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q numct.Int
@@ -427,7 +427,7 @@ func (i *Int) DivRound(other *Int) (*Int, error) {
 // It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
 func (i *Int) DivRoundVarTime(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q numct.Int
@@ -470,21 +470,21 @@ func (i *Int) Square() *Int {
 
 // Compare compares the integer with another integer.
 func (i *Int) Compare(other *Int) base.Ordering {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 	lt, eq, gt := i.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
 
 // IsLessThanOrEqual checks if the integer is less than or equal to another integer.
 func (i *Int) IsLessThanOrEqual(other *Int) bool {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 	lt, eq, _ := i.v.Compare(other.v)
 	return lt|eq == ct.True
 }
 
 // Equal checks if the integer is equal to another integer.
 func (i *Int) Equal(other *Int) bool {
-	errs2.Must1(i.isValid(other))
+	errs.Must1(i.isValid(other))
 	return i.v.Equal(other.v) == ct.True
 }
 

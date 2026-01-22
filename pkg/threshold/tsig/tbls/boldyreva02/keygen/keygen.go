@@ -3,7 +3,7 @@ package keygen
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls"
@@ -29,11 +29,11 @@ func NewShortKeyShard[
 ) (*tbls.Shard[PK, PKFE, SG, SGFE, E, S], error) {
 	pk, err := bls.NewPublicKey(output.PublicKeyValue())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create BLS public key")
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS public key")
 	}
 	shard, err := tbls.NewShortKeyShard(output.Share(), pk, output.VerificationVector(), output.AccessStructure())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create tBLS short key shard")
+		return nil, errs.Wrap(err).WithMessage("failed to create tBLS short key shard")
 	}
 	return shard, nil
 }
@@ -50,11 +50,11 @@ func NewLongKeyShard[
 ) (*tbls.Shard[PK, PKFE, SG, SGFE, E, S], error) {
 	pk, err := bls.NewPublicKey(output.PublicKeyValue())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create BLS public key")
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS public key")
 	}
 	shard, err := tbls.NewLongKeyShard(output.Share(), pk, output.VerificationVector(), output.AccessStructure())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create tBLS long key shard")
+		return nil, errs.Wrap(err).WithMessage("failed to create tBLS long key shard")
 	}
 	return shard, nil
 }

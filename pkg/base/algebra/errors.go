@@ -1,7 +1,7 @@
 package algebra
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrInvalidType = errs2.New("invalid type")
+	ErrInvalidType = errs.New("invalid type")
 )

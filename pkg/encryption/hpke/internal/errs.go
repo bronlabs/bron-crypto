@@ -1,11 +1,11 @@
 package internal
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrNotSupported     = errs2.New("not supported")
-	ErrInvalidLength    = errs2.New("invalid length")
-	ErrInvalidArgument  = errs2.New("invalid argument")
-	ErrInvalidPublicKey = errs2.New("invalid public key")
-	ErrInvalidNonce     = errs2.New("invalid nonce")
+	ErrNotSupported     = errs.New("not supported")
+	ErrInvalidLength    = errs.New("invalid length")
+	ErrInvalidArgument  = errs.New("invalid argument")
+	ErrInvalidPublicKey = errs.New("invalid public key")
+	ErrInvalidNonce     = errs.New("invalid nonce")
 )

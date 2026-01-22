@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
@@ -33,7 +33,7 @@ type KeyGenerator struct {
 func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error) {
 	group, err := znstar.SamplePaillierGroup(kg.bits, prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	sk, err := NewPrivateKey(group)
 	if err != nil {
@@ -41,7 +41,7 @@ func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error
 	}
 	pk, err := NewPublicKey(group.ForgetOrder())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return sk, pk, nil
 }
@@ -57,11 +57,11 @@ type Encrypter struct{}
 func (e *Encrypter) Encrypt(plaintext *Plaintext, receiver *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
 	nonce, err := receiver.NonceSpace().Sample(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	ciphertext, err := e.EncryptWithNonce(plaintext, receiver, nonce)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return ciphertext, nonce, nil
 }
@@ -71,15 +71,15 @@ func (e *Encrypter) Encrypt(plaintext *Plaintext, receiver *PublicKey, prng io.R
 func (*Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, nonce *Nonce) (*Ciphertext, error) {
 	embeddedNonce, err := receiver.group.EmbedRSA(nonce.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	rn, err := receiver.group.NthResidue(embeddedNonce)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	gm, err := receiver.group.Representative(plaintext.ValueCT())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Ciphertext{u: rn.Mul(gm)}, nil
 }
@@ -97,11 +97,11 @@ func (e *Encrypter) EncryptMany(plaintexts []*Plaintext, receiver *PublicKey, pr
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	cts, err := e.EncryptManyWithNonces(plaintexts, receiver, nonces)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return cts, nonces, nil
 }
@@ -119,7 +119,7 @@ func (e *Encrypter) EncryptManyWithNonces(plaintexts []*Plaintext, receiver *Pub
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return cts, nil
 }
@@ -144,11 +144,11 @@ func (se *SelfEncrypter) PrivateKey() *PrivateKey {
 func (se *SelfEncrypter) SelfEncrypt(plaintext *Plaintext, prng io.Reader) (*Ciphertext, *Nonce, error) {
 	nonce, err := se.pk.NonceSpace().Sample(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	ciphertext, err := se.SelfEncryptWithNonce(plaintext, nonce)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return ciphertext, nonce, nil
 }
@@ -158,15 +158,15 @@ func (se *SelfEncrypter) SelfEncrypt(plaintext *Plaintext, prng io.Reader) (*Cip
 func (se *SelfEncrypter) SelfEncryptWithNonce(plaintext *Plaintext, nonce *Nonce) (*Ciphertext, error) {
 	embeddedNonce, err := se.pk.group.EmbedRSA(nonce.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	rn, err := se.sk.group.NthResidue(embeddedNonce)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	gm, err := se.sk.group.Representative(plaintext.ValueCT())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Ciphertext{u: rn.Mul(gm).ForgetOrder()}, nil
 }
@@ -184,11 +184,11 @@ func (se *SelfEncrypter) SelfEncryptMany(plaintexts []*Plaintext, prng io.Reader
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	cts, err := se.SelfEncryptManyWithNonces(plaintexts, nonces)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return cts, nonces, nil
 }
@@ -206,7 +206,7 @@ func (se *SelfEncrypter) SelfEncryptManyWithNonces(plaintexts []*Plaintext, nonc
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return cts, nil
 }
@@ -241,7 +241,7 @@ func (d *Decrypter) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 	wg.Wait()
 	out, err := d.sk.PublicKey().PlaintextSpace().FromNat(d.sk.Arithmetic().CrtModN.Params.Recombine(&mp, &mq))
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }

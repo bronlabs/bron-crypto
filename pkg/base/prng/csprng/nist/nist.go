@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
@@ -74,7 +74,7 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	case entropyInputLen == 0: // Sample entropyInput if not provided
 		entropyInput = make([]byte, securityStrength)
 		if _, err := io.ReadFull(NistPrng.entropySource, entropyInput); err != nil {
-			errors = append(errors, errs2.Wrap(err))
+			errors = append(errors, errs.Wrap(err))
 		}
 	case entropyInputLen < securityStrength:
 		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too small"))
@@ -86,20 +86,20 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, securityStrength/2)
 		if _, err = io.ReadFull(NistPrng.entropySource, nonce); err != nil {
-			errors = append(errors, errs2.Wrap(err))
+			errors = append(errors, errs.Wrap(err))
 		}
 	case nonceLen < securityStrength/2:
 		errors = append(errors, ErrInvalidNonce.WithMessage("nonce too small"))
 	}
 	// Join errors if any
 	if len(errors) > 0 {
-		return nil, errs2.Join(errors...)
+		return nil, errs.Join(errors...)
 	}
 	// 9. initial_working_state = Instantiate_algorithm(entropy_input, nonce,
 	// personalization_string, security_strength).
 	NistPrng.ctrDrbg = NewCtrDRBG(keySize)
 	if err = NistPrng.ctrDrbg.Instantiate(entropyInput, nonce, personalization); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return NistPrng, nil
 }
@@ -129,7 +129,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 			errors = append(errors, ErrInvalidEntropy.WithMessage("cannot reseed without external entropy"))
 		}
 		if _, err := io.ReadFull(prg.entropySource, entropyInput); err != nil {
-			errors = append(errors, errs2.Wrap(err))
+			errors = append(errors, errs.Wrap(err))
 		}
 	case entropyInputLen < prg.SecurityStrength():
 		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too small"))
@@ -138,12 +138,12 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 	}
 	// Join errors if any
 	if len(errors) > 0 {
-		return errs2.Join(errors...)
+		return errs.Join(errors...)
 	}
 	// 6. new_working_state = Reseed_algorithm(working_state, entropy_input,
 	// additional_input).
 	if err = prg.ctrDrbg.Reseed(entropyInput, additionalInput); err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	return nil
 }
@@ -171,7 +171,7 @@ func (prg *PrngNist) Generate(buffer, additionalInput []byte) error {
 		errors = append(errors, ErrInvalidArgument.WithMessage("additionalInput too large"))
 	}
 	if len(errors) > 0 {
-		return errs2.Join(errors...)
+		return errs.Join(errors...)
 	}
 	// 5. If prediction_resistance_request is set... --> implicit.
 	// 6. Clear the reseed_required_flag.
@@ -187,7 +187,7 @@ dataGeneration:
 		// 9.3. Go to step 7.
 		reseedRequired = true
 	case err != nil:
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	default: // no errors
 		reseedRequired = false
 	}
@@ -196,7 +196,7 @@ dataGeneration:
 		// 7.1. status = Reseed_function(state_handle, ..., additional_input).
 		if err := prg.Reseed(nil, additionalInput); err != nil {
 			// 7.2. IF (status != SUCCESS), then return (status, Nil).
-			return errs2.Wrap(err)
+			return errs.Wrap(err)
 		}
 		// 7.3 Using state_handle... --> implicit.
 		// 7.4. additional_input = Nil.
@@ -219,7 +219,7 @@ func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
 		end := min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]
 		if err := prg.Generate(requestBuffer, nil); err != nil {
-			return n, errs2.Wrap(err)
+			return n, errs.Wrap(err)
 		}
 	}
 	return len(buffer), nil
@@ -245,18 +245,18 @@ func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, prg.SecurityStrength()/2)
 		if _, err = io.ReadFull(prg.entropySource, nonce); err != nil {
-			errors = append(errors, errs2.Wrap(err))
+			errors = append(errors, errs.Wrap(err))
 		}
 	case nonceLen < prg.SecurityStrength()/2:
 		errors = append(errors, ErrInvalidNonce.WithMessage("nonce too small"))
 	}
 	// Join errors if any
 	if len(errors) > 0 {
-		return errs2.Join(errors...)
+		return errs.Join(errors...)
 	}
 	// Re-instantiate
 	if err = prg.ctrDrbg.Instantiate(entropyInput, nonce, nil); err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 	return nil
 }

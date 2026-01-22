@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
@@ -84,7 +84,7 @@ func NewSuite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create default suite")
+		return nil, errs.Wrap(err).WithMessage("failed to create default suite")
 	}
 	s := &Suite[P, B, S]{
 		DefaultSuite: *defaultSuite,

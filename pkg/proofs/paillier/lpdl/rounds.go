@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
@@ -17,16 +17,16 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 
 	verifier.state.a, err = verifier.state.zModQ.Random(verifier.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot generate random integer")
+		return nil, errs.Wrap(err).WithMessage("cannot generate random integer")
 	}
 	verifier.state.b, err = verifier.state.zModQ2.Random(verifier.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot generate random integer")
+		return nil, errs.Wrap(err).WithMessage("cannot generate random integer")
 	}
 
 	bAsPlaintext, err := verifier.pk.PlaintextSpace().FromNat(verifier.state.b.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create plaintext from nat")
+		return nil, errs.Wrap(err).WithMessage("cannot create plaintext from nat")
 	}
 
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
@@ -34,18 +34,18 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 	acEnc := verifier.c.ScalarMul(verifier.state.a.Nat())
 	bEnc, _, err := verifier.paillierEncrypter.Encrypt(bAsPlaintext, verifier.pk, verifier.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot encrypt value")
+		return nil, errs.Wrap(err).WithMessage("cannot encrypt value")
 	}
 	cPrime := acEnc.HomAdd(bEnc)
 
 	// 1.ii. compute c'' = commit(a, b)
 	committer, err := verifier.commitmentScheme.Committer()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+		return nil, errs.Wrap(err).WithMessage("cannot create committer")
 	}
 	cDoublePrimeCommitment, cDoublePrimeWitness, err := committer.Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot commit to a and b")
+		return nil, errs.Wrap(err).WithMessage("cannot commit to a and b")
 	}
 	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
@@ -53,18 +53,18 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 	// TODO: add SetNatCT to ScalarField etc.
 	aScalar, err := verifier.state.curve.ScalarField().FromBytesBEReduce(verifier.state.a.BytesBE())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert a to scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot convert a to scalar")
 	}
 	bScalar, err := verifier.state.curve.ScalarField().FromBytesBEReduce(verifier.state.b.BytesBE())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert b to scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot convert b to scalar")
 	}
 	verifier.state.bigQPrime = verifier.bigQ.ScalarMul(aScalar).Add(verifier.state.curve.ScalarBaseMul(bScalar))
 
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierOutput, err := verifier.rangeVerifier.Round1()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("range verifier round 1")
+		return nil, errs.Wrap(err).WithMessage("range verifier round 1")
 	}
 
 	// 1.iv sends c' and c'' to P
@@ -83,7 +83,7 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output) (r2out *Round2Output,
 		return nil, ErrRound.WithMessage("%d != 2", prover.round)
 	}
 	if err := r1out.Validate(); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid round 2 input")
+		return nil, errs.Wrap(err).WithMessage("invalid round 2 input")
 	}
 
 	prover.state.cDoublePrimeCommitment = r1out.CDoublePrimeCommitment
@@ -91,30 +91,30 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output) (r2out *Round2Output,
 	// 2.i. decrypt c' to obtain alpha, compute Q^ = alpha * G
 	prover.state.alpha, err = prover.paillierDecrypter.Decrypt(r1out.CPrime)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot decrypt cipher text")
+		return nil, errs.Wrap(err).WithMessage("cannot decrypt cipher text")
 	}
 
 	alphaScalar, err := prover.state.curve.ScalarField().FromBytesBEReduce(prover.state.alpha.Normalise().BytesBE())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert alpha to scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot convert alpha to scalar")
 	}
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMul(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
 	committer, err := prover.commitmentScheme.Committer()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+		return nil, errs.Wrap(err).WithMessage("cannot create committer")
 	}
 	bigQHatCommitment, bigQHatWitness, err := committer.Commit(prover.state.bigQHat.ToCompressed(), prover.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot commit to Q hat")
+		return nil, errs.Wrap(err).WithMessage("cannot commit to Q hat")
 	}
 	prover.state.bigQHatWitness = bigQHatWitness
 
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeProverOutput, err := prover.rangeProver.Round2(r1out.RangeVerifierOutput)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("range prover round 2")
+		return nil, errs.Wrap(err).WithMessage("range prover round 2")
 	}
 
 	prover.round += 2
@@ -131,7 +131,7 @@ func (verifier *Verifier[P, B, S]) Round3(r2out *Round2Output) (r3out *Round3Out
 		return nil, ErrRound.WithMessage("%d != 3", verifier.round)
 	}
 	if err := r2out.Validate(); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid round 3 input")
+		return nil, errs.Wrap(err).WithMessage("invalid round 3 input")
 	}
 
 	verifier.state.cHat = r2out.CHat
@@ -139,7 +139,7 @@ func (verifier *Verifier[P, B, S]) Round3(r2out *Round2Output) (r3out *Round3Out
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierMessage, rangeVerifierWitness, err := verifier.rangeVerifier.Round3(r2out.RangeProverOutput)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("range verifier round 3")
+		return nil, errs.Wrap(err).WithMessage("range verifier round 3")
 	}
 
 	// 3. decommit c'' revealing a, b
@@ -160,21 +160,21 @@ func (prover *Prover[P, B, S]) Round4(r4In *Round3Output) (r4out *Round4Output[P
 		return nil, ErrRound.WithMessage("%d != 4", prover.round)
 	}
 	if err := r4In.Validate(); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid round 4 input")
+		return nil, errs.Wrap(err).WithMessage("invalid round 4 input")
 	}
 
 	verifier, err := prover.commitmentScheme.Verifier()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create verifier")
+		return nil, errs.Wrap(err).WithMessage("cannot create verifier")
 	}
 	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, slices.Concat(r4In.A.Bytes(), r4In.B.Bytes()), r4In.CDoublePrimeWitness); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot open R commitment")
+		return nil, errs.Wrap(err).WithMessage("cannot open R commitment")
 	}
 
 	// 4. check that alpha == ax + b (over integers), if not aborts
 	x, err := num.Z().FromCardinal(prover.x.Cardinal())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert x to nat")
+		return nil, errs.Wrap(err).WithMessage("cannot convert x to nat")
 	}
 	if !prover.state.alpha.Value().Equal(r4In.A.Lift().Mul(x).Add(r4In.B.Lift())) {
 		return nil, base.ErrAbort.WithMessage("verifier is misbehaving")
@@ -182,7 +182,7 @@ func (prover *Prover[P, B, S]) Round4(r4In *Round3Output) (r4out *Round4Output[P
 
 	rangeProverOutput, err := prover.rangeProver.Round4(r4In.RangeVerifierMessage, r4In.RangeVerifierWitness)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("range prover round 4")
+		return nil, errs.Wrap(err).WithMessage("range prover round 4")
 	}
 
 	// 4. decommit c^ revealing Q^
@@ -201,15 +201,15 @@ func (verifier *Verifier[P, B, S]) Round5(input *Round4Output[P, B, S]) (err err
 		return ErrRound.WithMessage("%d != 5", verifier.round)
 	}
 	if err := input.Validate(); err != nil {
-		return errs2.Wrap(err).WithMessage("invalid round 5 input")
+		return errs.Wrap(err).WithMessage("invalid round 5 input")
 	}
 
 	v, err := verifier.commitmentScheme.Verifier()
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create verifier")
+		return errs.Wrap(err).WithMessage("cannot create verifier")
 	}
 	if err := v.Verify(verifier.state.cHat, input.BigQHat.ToCompressed(), input.BigQHatWitness); err != nil {
-		return errs2.Wrap(err).WithMessage("cannot decommit Q hat")
+		return errs.Wrap(err).WithMessage("cannot decommit Q hat")
 	}
 
 	// 5. accepts if and only if it accepts the range proof and Q^ == Q'
@@ -218,7 +218,7 @@ func (verifier *Verifier[P, B, S]) Round5(input *Round4Output[P, B, S]) (err err
 	}
 	err = verifier.rangeVerifier.Verify(input.RangeProverOutput)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("range verifier round 5")
+		return errs.Wrap(err).WithMessage("range verifier round 5")
 	}
 
 	verifier.round += 2

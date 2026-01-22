@@ -1,3 +1,5 @@
+github.com/bronlabs/errs-go v0.1.0 h1:Gs1FNy7iGNHOr0MLO1MvCAwuuUyPC1cC+LZUc1S/54c=
+github.com/bronlabs/errs-go v0.1.0/go.mod h1:rNDg651g6jj3WyJQOFJFAEvWSX5TdZERdmVJn2LrHLo=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/cronokirby/saferith v0.33.0 h1:TgoQlfsD4LIwx71+ChfRcIpjkw+RPOapDEVxa+LhwLo=
 github.com/cronokirby/saferith v0.33.0/go.mod h1:QKJhjoqUtBsXCAVEjw38mFqoi7DebT7kthcD7UzbnoA=

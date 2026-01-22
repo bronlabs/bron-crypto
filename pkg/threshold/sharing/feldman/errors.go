@@ -1,11 +1,11 @@
 package feldman
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/pkg/errs"
 
 var (
-	ErrIsNil        = errs2.New("is nil")
-	ErrMembership   = errs2.New("membership error")
-	ErrFailed       = errs2.New("failed")
-	ErrArgument     = errs2.New("invalid argument")
-	ErrVerification = errs2.New("verification failed")
+	ErrIsNil        = errs.New("is nil")
+	ErrMembership   = errs.New("membership error")
+	ErrFailed       = errs.New("failed")
+	ErrArgument     = errs.New("invalid argument")
+	ErrVerification = errs.New("verification failed")
 )
