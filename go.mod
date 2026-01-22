@@ -3,9 +3,9 @@ module github.com/bronlabs/bron-crypto
 go 1.25.3
 
 require (
+	github.com/bronlabs/errs-go v0.1.0
 	github.com/cronokirby/saferith v0.33.0
 	github.com/fxamacker/cbor/v2 v2.9.0
-	github.com/bronlabs/errs-go v0.1.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.47.0
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
