@@ -37,11 +37,11 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 type (

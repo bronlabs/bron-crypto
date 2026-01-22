@@ -6,12 +6,12 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // VariantType identifies this as the BIP-340 Schnorr variant.

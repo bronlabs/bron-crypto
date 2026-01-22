@@ -3,9 +3,9 @@ package chacha20
 import (
 	"encoding/binary"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/internal/alias"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 var (

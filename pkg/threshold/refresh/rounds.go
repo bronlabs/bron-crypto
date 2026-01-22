@@ -1,9 +1,9 @@
 package refresh
 
 import (
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Round1 runs the zero-sharing subprotocol to derive a refresh offset.

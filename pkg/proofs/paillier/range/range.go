@@ -7,10 +7,10 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Name identifies the Paillier range proof protocol.

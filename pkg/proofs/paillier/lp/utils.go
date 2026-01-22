@@ -1,10 +1,10 @@
 package lp
 
 import (
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 func nthRootStatementLearnOrder[A znstar.ArithmeticPaillier](x *nthroot.Statement[A], g *znstar.PaillierGroupKnownOrder) (*nthroot.Statement[*modular.OddPrimeSquareFactors], error) {

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 func isAllZeros(data []byte) bool {

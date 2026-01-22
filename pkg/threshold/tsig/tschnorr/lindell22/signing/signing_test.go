@@ -17,7 +17,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -32,6 +31,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
 	ltu "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // TestLindell22DKGAndSign tests the complete DKG and signing flow for all variants

@@ -3,9 +3,9 @@ package echo
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // ExchangeEchoBroadcastSimple runs an echo broadcast: send, echo, and verify consistent payloads for all parties.

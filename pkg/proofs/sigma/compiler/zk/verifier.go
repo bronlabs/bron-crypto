@@ -3,11 +3,11 @@ package zk
 import (
 	"io"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Verifier is the verifier in the zero-knowledge compiled protocol.

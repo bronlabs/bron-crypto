@@ -3,9 +3,9 @@ package fischlin
 import (
 	"encoding/binary"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 func hash(b uint64, commonH []byte, i uint64, challenge sigma.ChallengeBytes, serializedResponse []byte) ([]byte, error) {

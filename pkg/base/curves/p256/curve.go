@@ -14,8 +14,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 const (

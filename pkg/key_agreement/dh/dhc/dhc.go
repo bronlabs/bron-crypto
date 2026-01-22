@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Type is the type identifier for the ECSVDP-DHC key agreement scheme.

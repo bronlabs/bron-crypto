@@ -4,10 +4,10 @@
 package paillier
 
 import (
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Name is the identifier for the Paillier encryption scheme.

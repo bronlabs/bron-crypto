@@ -20,9 +20,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Statement represents an n-way AND-composed statement as a slice of individual statements.

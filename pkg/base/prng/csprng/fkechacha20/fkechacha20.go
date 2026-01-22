@@ -1,9 +1,9 @@
 package fkechacha20
 
 import (
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/chacha20"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Prng uses a fast-erasure version of `chacha20` stream cipher as a Prng.

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -14,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 const (

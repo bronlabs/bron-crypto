@@ -4,8 +4,8 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Key holds the generators defining a Pedersen commitment CRS.

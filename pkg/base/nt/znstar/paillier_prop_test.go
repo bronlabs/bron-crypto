@@ -8,10 +8,10 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 func PaillierUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.PaillierGroupElementUnknownOrder], *znstar.PaillierGroupUnknownOrder) {

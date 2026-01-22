@@ -12,9 +12,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 func Test_Sanity(t *testing.T) {

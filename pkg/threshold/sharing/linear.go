@@ -3,8 +3,8 @@ package sharing
 import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // MinimalQualifiedAccessStructure represents an n-of-n access structure where

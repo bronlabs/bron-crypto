@@ -5,9 +5,9 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 const (

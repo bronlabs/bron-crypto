@@ -6,9 +6,9 @@ import (
 	"pgregory.net/rapid"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 func RSAUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.RSAGroupElementUnknownOrder], *znstar.RSAGroupUnknownOrder) {

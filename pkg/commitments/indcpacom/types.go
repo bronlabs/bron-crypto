@@ -4,9 +4,9 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Commitment represents an IND-CPA commitment, which is the ciphertext resulting

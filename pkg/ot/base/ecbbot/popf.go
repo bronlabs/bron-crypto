@@ -6,8 +6,8 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 type Popf[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {

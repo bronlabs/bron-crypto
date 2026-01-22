@@ -5,9 +5,9 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // ExchangeUnicastSimple sends messages to all participants and receives the same messages back from them.

@@ -7,10 +7,10 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // Round1 samples a random value, commits to it, and broadcasts the commitment.

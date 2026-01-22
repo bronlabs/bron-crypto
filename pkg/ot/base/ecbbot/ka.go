@@ -5,8 +5,8 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/errs-go/pkg/errs"
 )
 
 // TaggedKeyAgreement performs simple DH-style key agreement with domain-separated hashing.
