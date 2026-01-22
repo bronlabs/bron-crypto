@@ -5,12 +5,12 @@ Thanks for your interest in contributing to this project.
 ## Before you start
 
 - By submitting a contribution, you agree that it will be licensed under the
-  Apache 2.0 License (see `LICENSE`).
-- For security issues, do not open public issues (see `SECURITY.md`).
+  Apache 2.0 License (see [LICENSE](./LICENSE)).
+- For security issues, do not open public issues (see [SECURITY.md](./SECURITY.md)).
 
 ## Getting set up
 
-- Follow the development setup in `README.md`.
+- Follow the development setup in [DEVELOPMENT.md](./DEVELOPMENT.md).
 - BoringSSL is required for CGO builds; the Makefile handles this via
   `make build-boringssl`.
 
@@ -41,7 +41,7 @@ If you modify files that use `//go:generate`, regenerate code where relevant:
 make generate
 ```
 
-Some generators use Docker (see `README.md` for details).
+Some generators use Docker (see [DEVELOPMENT.md](./DEVELOPMENT.md) for details).
 
 ## Pull request guidelines
 
