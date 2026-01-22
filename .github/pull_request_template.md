@@ -1,5 +1,3 @@
-## Summary
-
 ## Description
 
 ## Pull Request Checklist
