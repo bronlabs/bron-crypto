@@ -50,12 +50,6 @@ lint: build-boringssl
 lint-fix: build-boringssl
 	CGO_CFLAGS="-I$(abspath ${BORINGSSL_INCLUDE})" CGO_LDFLAGS="-L$(abspath ${BORINGSSL_LIB}) -lcrypto" golangci-lint run "${BRON_CRYPTO_HOME}/..." --fix
 
-sbom.json:
-	syft "${BRON_CRYPTO_HOME}/" -o cyclonedx-json=$@
-
-.PHONY: sbom
-sbom: sbom.json
-
 .PHONY: clean
 clean:
 	go clean -cache
