@@ -276,7 +276,7 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) String() string {
 	for i, comp := range fe.ComponentsBytes() {
 		ni, err := num.N().FromBytesBE(comp)
 		if err != nil {
-			panic(errs2.Wrap(err).WithMessage("cannot convert field component %d to number", i))
+			panic(errs.Wrap(err).WithMessage("cannot convert field component %d to number", i))
 		}
 		comps[i] = ni.String()
 	}
