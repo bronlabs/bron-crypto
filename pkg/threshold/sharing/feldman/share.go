@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Share is a Feldman VSS share, which is identical to a Shamir share.

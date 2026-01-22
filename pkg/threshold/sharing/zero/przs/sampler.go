@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Sampler deterministically derives zero-sharing scalars from pairwise seeds.

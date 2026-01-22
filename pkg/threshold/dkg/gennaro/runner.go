@@ -4,12 +4,12 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type gennaroDkgRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {

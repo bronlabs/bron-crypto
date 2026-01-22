@@ -5,7 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewShortKeyScheme creates a BLS signature scheme with minimal public key size.

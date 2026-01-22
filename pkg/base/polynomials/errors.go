@@ -1,6 +1,6 @@
 package polynomials
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	ErrValidation            = errs.New("invalid")

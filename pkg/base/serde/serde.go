@@ -5,7 +5,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

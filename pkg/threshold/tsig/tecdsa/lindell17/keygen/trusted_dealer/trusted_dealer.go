@@ -8,13 +8,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // DealRandom creates Lindell17 shards using a trusted dealer.

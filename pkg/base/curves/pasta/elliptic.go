@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

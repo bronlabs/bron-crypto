@@ -1,6 +1,6 @@
 package dkg
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrRound represents invalid round.

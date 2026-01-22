@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // PrivateKey represents an ECDSA private key as a scalar value d in [1, n-1],

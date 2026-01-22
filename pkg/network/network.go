@@ -5,7 +5,7 @@ import (
 	"hash"
 
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var sidHasher = func() hash.Hash { return sha3.New256() }

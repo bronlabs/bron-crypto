@@ -9,7 +9,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	dlogschnorr "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -24,6 +23,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/keygen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // DoLindell22DKG runs a complete DKG process and returns Lindell22 shards.

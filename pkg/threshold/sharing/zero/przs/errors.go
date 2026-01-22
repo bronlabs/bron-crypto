@@ -1,6 +1,6 @@
 package przs
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrInvalidArgument indicates missing or inconsistent inputs.

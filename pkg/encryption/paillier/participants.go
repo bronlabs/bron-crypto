@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // KeyGeneratorOption is a functional option for configuring the key generator.

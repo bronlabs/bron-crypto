@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng/nist"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

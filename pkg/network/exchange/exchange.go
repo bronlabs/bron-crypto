@@ -3,7 +3,7 @@ package exchange
 import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/echo"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Exchange performs a combined broadcast and unicast exchange under a shared correlation ID.

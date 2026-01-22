@@ -18,7 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name is the identifier for a compiler implementation.

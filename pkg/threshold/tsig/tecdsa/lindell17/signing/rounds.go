@@ -17,7 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

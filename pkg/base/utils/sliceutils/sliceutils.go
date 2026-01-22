@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // MapOrError applies the function f to each element of the input slice in,.

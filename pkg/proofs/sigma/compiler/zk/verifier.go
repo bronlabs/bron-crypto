@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Verifier is the verifier in the zero-knowledge compiled protocol.

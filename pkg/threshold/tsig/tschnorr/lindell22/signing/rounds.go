@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const transcriptDLogSLabel = "Lindell2022SignDLogS-"

@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

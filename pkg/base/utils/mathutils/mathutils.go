@@ -5,7 +5,7 @@ import (
 	"io"
 	"math/bits"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // RandomUint64 samples a random uint64 from the provided PRNG.

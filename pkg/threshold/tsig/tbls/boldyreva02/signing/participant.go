@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const transcriptLabel = "BRON_CRYPTO_TBLS_BOLDYREVA-"

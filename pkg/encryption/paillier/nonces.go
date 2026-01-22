@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewNonceSpace creates a new nonce space (Z/nZ)* for Paillier encryption.

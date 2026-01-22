@@ -3,7 +3,7 @@ package lagrange
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func InterpolateAt[FE algebra.FiniteFieldElement[FE]](nodes, values []FE, at FE) (FE, error) {

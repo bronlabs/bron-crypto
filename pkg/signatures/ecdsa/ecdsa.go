@@ -26,7 +26,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name is the canonical identifier for this signature scheme.

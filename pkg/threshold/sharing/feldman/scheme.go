@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Scheme implements Feldman's verifiable secret sharing.

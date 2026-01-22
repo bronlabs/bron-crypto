@@ -4,7 +4,7 @@ import (
 	"hash"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // ErrInvalidDataLength is returned when the input data length is not a multiple of 32 bytes.

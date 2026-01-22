@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 executes protocol round 1.

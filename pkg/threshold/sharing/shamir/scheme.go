@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Scheme implements Shamir's (t,n) threshold secret sharing over a prime field.

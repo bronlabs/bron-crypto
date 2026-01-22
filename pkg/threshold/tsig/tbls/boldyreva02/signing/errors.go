@@ -1,6 +1,6 @@
 package signing
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrInvalidArgument indicates an invalid argument was provided.

@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/bron-crypto/pkg/hashing/kmac"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type (

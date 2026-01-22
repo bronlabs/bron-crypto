@@ -1,6 +1,6 @@
 package mina
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 // Helper functions to create payment and delegation messages
 // Reference: https://github.com/o1-labs/o1js/blob/188cf3faf6442e1e1ca8e4b3212a459b917c4ed4/src/mina-signer/src/sign-legacy.ts#L96

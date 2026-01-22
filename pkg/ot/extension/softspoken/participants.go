@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

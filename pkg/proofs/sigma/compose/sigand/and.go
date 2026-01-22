@@ -22,7 +22,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Statement represents an n-way AND-composed statement as a slice of individual statements.

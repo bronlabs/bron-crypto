@@ -1,7 +1,7 @@
 package commitments
 
 import (
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

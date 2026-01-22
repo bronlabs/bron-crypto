@@ -5,13 +5,13 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 runs the dealer step and broadcasts the Pedersen verification vector.

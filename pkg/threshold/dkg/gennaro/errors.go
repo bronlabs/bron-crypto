@@ -1,6 +1,6 @@
 package gennaro
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrInvalidArgument indicates incorrect or missing inputs.

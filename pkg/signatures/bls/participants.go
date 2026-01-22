@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // KeyGeneratorOption is a functional option for configuring a KeyGenerator.

@@ -9,7 +9,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
@@ -19,6 +18,7 @@ import (
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

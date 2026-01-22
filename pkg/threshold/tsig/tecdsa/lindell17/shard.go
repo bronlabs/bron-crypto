@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // AuxiliaryInfo holds Paillier keys and encrypted shares for Lindell17.

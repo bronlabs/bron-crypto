@@ -13,7 +13,7 @@ import (
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewScheme creates a new Pedersen VSS scheme.

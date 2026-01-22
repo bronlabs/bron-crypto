@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

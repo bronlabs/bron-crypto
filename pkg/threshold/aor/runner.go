@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewAgreeOnRandomRunner constructs a runner that executes the Agree-on-Random protocol.

@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/bitvec"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

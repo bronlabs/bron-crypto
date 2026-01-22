@@ -2,7 +2,7 @@ package properties
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 	"pgregory.net/rapid"
 )
 

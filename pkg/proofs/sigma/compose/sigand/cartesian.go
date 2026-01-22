@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // StatementCartesian represents a binary AND-composed statement with two potentially

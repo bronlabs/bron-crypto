@@ -10,7 +10,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
@@ -19,6 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

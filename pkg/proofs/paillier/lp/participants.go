@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

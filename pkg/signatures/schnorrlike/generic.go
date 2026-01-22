@@ -5,10 +5,10 @@ import (
 	"io"
 	"slices"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // ComputeGenericNonceCommitment generates a random nonce k and commitment R = k·G.

@@ -1,6 +1,6 @@
 package sign
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrFailed represents failed.

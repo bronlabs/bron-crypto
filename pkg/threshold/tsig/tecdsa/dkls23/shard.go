@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // AuxiliaryInfo holds auxiliary key material.

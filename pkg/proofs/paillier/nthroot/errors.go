@@ -1,6 +1,6 @@
 package nthroot
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrFailed indicates a general failure during protocol execution.

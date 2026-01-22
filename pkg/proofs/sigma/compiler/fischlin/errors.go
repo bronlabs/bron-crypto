@@ -1,6 +1,6 @@
 package fischlin
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	ErrNil          = errs.New("nil")

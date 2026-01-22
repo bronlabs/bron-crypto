@@ -31,7 +31,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
 	ltu "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // TestLindell22DKGAndSign tests the complete DKG and signing flow for all variants

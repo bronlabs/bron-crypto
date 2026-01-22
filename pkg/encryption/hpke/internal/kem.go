@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	dh "github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type KEMID uint16

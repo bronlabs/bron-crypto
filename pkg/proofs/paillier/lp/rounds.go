@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 executes the verifier's first round.

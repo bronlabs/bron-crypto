@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const RSAKeyLen = base.IFCKeyLength

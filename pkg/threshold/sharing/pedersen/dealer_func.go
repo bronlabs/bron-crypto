@@ -3,7 +3,7 @@ package pedersen
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // DealerFunc represents the pair of polynomials (f, r) used for Pedersen VSS.

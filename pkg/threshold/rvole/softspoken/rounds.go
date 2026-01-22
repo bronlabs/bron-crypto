@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 executes protocol round 1.

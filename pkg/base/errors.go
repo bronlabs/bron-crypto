@@ -3,7 +3,7 @@ package base
 import (
 	"golang.org/x/exp/constraints"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // IdentifiableAbortPartyIDTag is the tag used to identify parties responsible for an identifiable abort.

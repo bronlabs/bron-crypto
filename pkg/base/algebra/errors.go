@@ -1,6 +1,6 @@
 package algebra
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	ErrInvalidType = errs.New("invalid type")

@@ -3,7 +3,7 @@ package key_agreement
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type privateKeyDTO[V algebra.UintLike[V]] struct {

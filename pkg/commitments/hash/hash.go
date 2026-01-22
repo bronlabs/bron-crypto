@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

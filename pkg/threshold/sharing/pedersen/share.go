@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Share represents a Pedersen VSS share consisting of a secret component f(i)

@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // MPCFriendlyVariant extends schnorrlike.Variant with methods needed for threshold signing.

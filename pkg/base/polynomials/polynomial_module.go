@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], baseElem algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {

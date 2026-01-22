@@ -5,13 +5,13 @@ import (
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 executes protocol round 1.

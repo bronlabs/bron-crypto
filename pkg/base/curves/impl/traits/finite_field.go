@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // FiniteFieldElementWrapper exposes the underlying finite field element.

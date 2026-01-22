@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Aggregator combines partial signatures into a complete threshold signature.

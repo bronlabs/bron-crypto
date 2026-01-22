@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/errs-go/pkg/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	gentu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
@@ -17,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/keygen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/signing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Type aliases for convenience.

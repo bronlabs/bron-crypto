@@ -18,7 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func Test_HappyPath(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NetworkID identifies a Mina network for domain separation in signatures.

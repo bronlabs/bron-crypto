@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/crypto/chacha20poly1305"
 
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type AEADID uint16

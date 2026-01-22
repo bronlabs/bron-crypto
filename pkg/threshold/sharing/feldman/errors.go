@@ -1,6 +1,6 @@
 package feldman
 
-import "github.com/bronlabs/errs-go/pkg/errs"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	ErrIsNil        = errs.New("is nil")

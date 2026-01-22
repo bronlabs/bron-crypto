@@ -5,7 +5,7 @@ import (
 	mrand "math/rand/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
-	"github.com/bronlabs/errs-go/pkg/errs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
