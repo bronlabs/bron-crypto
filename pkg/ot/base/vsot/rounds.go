@@ -33,14 +33,8 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create dlog protocol compiler")
 	}
-	// TODO: would be nice to have dlogschnorr.NewStatement(G, P)
-	dlogStatement := &dlogschnorr.Statement[P, S]{
-		X: s.state.bigB,
-	}
-	// TODO: would be nice to have dlogschnorr.NewWitness(s)
-	dlogWitness := &dlogschnorr.Witness[S]{
-		W: s.state.b,
-	}
+	dlogStatement := dlogschnorr.NewStatement(s.state.bigB)
+	dlogWitness := dlogschnorr.NewWitness(s.state.b)
 	dlogProver, err := dlogProtocolCompiler.NewProver(s.sessionID, s.tape)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create dlog prover")
@@ -49,7 +43,6 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create dlog proof")
 	}
-	// TODO: a lot of lines (~24) just to do PoK :(
 
 	r1 := &Round1P2P[P, B, S]{
 		BigB:  s.state.bigB,
@@ -79,10 +72,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog protocol compiler")
 	}
-	// TODO: would be nice to have dlogschnorr.NewStatement(G, P)
-	dlogStatement := &dlogschnorr.Statement[P, S]{
-		X: r1.BigB,
-	}
+	dlogStatement := dlogschnorr.NewStatement(r1.BigB)
 	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.sessionID, r.tape)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create dlog verifier")

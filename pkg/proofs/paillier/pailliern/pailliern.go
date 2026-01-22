@@ -7,16 +7,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
-	appTranscriptLabel       = "BRON_CRYPTO_NIZK_PAILLIER_N"
-	sessionIDTranscriptLabel = "BRON_CRYPTO_NIZK_PAILLIER_N_SESSION_ID"
-	nTranscriptLabel         = "BRON_CRYPTO_NIZK_PAILLIER_N_N"
+	appTranscriptLabel = "BRON_CRYPTO_NIZK_PAILLIER_N"
+	nTranscriptLabel   = "BRON_CRYPTO_NIZK_PAILLIER_N_N"
 
 	// Alpha ɑ.
 	Alpha = 6370
@@ -37,21 +35,20 @@ type Proof struct {
 
 // Prover generates a Paillier N proof.
 type Prover struct {
-	sid network.SID
-	// TODO: replace with concrete type
-	enc  encryption.SelfEncrypter[*paillier.PrivateKey, *paillier.Plaintext, *paillier.Ciphertext, *paillier.Nonce]
+	sid  network.SID
+	enc  *paillier.SelfEncrypter
 	tape transcripts.Transcript
 }
 
 // NewProver constructs a prover for the Paillier N proof.
-func NewProver(sessionID network.SID, enc encryption.SelfEncrypter[*paillier.PrivateKey, *paillier.Plaintext, *paillier.Ciphertext, *paillier.Nonce], tape transcripts.Transcript) (prover *Prover, err error) {
+func NewProver(sessionID network.SID, enc *paillier.SelfEncrypter, tape transcripts.Transcript) (prover *Prover, err error) {
 	if enc == nil {
 		return nil, ErrInvalidArgument.WithMessage("encrypter is nil")
 	}
 	if tape == nil {
 		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
+	dst := fmt.Sprintf("%s-%d", appTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 	tape.AppendBytes(nTranscriptLabel, enc.PrivateKey().PublicKey().Modulus().BytesBE())
 
@@ -101,7 +98,7 @@ func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paill
 	if tape == nil {
 		return ErrInvalidArgument.WithMessage("transcript is nil")
 	}
-	dst := fmt.Sprintf("%s-%d", sessionIDTranscriptLabel, sessionID)
+	dst := fmt.Sprintf("%s-%d", appTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
 	tape.AppendBytes(nTranscriptLabel, statement.Modulus().BytesBE())
 

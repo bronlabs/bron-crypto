@@ -6,7 +6,6 @@ import (
 )
 
 // Round is the sequential identifier of a protocol step.
-// TODO: rename to fmt.Stringer
 type Round = uint64
 
 // RoundMessages maps sender IDs to their round messages.

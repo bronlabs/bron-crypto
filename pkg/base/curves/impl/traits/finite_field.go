@@ -2,16 +2,19 @@ package traits
 
 import (
 	"encoding/binary"
+	"fmt"
 	"hash/fnv"
 	"io"
 	"iter"
 	"slices"
+	"strings"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
@@ -264,12 +267,18 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanValuation() cardinal.C
 
 // IsProbablyPrime is unimplemented for finite fields.
 func (*FiniteFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {
-	//TODO implement me
-	panic("implement me")
+	panic("not supported")
 }
 
 // String is unimplemented for finite fields.
-func (*FiniteFieldElementTrait[FP, F, WP, W]) String() string {
-	//TODO implement me
-	panic("implement me")
+func (fe *FiniteFieldElementTrait[FP, F, WP, W]) String() string {
+	comps := make([]string, len(fe.ComponentsBytes()))
+	for i, comp := range fe.ComponentsBytes() {
+		ni, err := num.N().FromBytesBE(comp)
+		if err != nil {
+			panic(errs2.Wrap(err).WithMessage("cannot convert field component %d to number", i))
+		}
+		comps[i] = ni.String()
+	}
+	return fmt.Sprintf("FiniteFieldElement(%s)", strings.Join(comps, ", "))
 }

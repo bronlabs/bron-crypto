@@ -40,7 +40,7 @@ type Prefix []byte
 //
 // Reference: https://github.com/o1-labs/o1js-bindings/blob/df8c87ed6804465f79196fdff84e5147ae71e92d/lib/binable.ts#L317
 func (p Prefix) ToBaseFieldElement() (*pasta.PallasBaseFieldElement, error) {
-	fieldSize := pasta.NewPallasBaseField().ElementSize() // TODO: ensure this is correct size
+	fieldSize := pasta.NewPallasBaseField().ElementSize()
 	if len(p) > fieldSize {
 		return nil, ErrSerialization.WithMessage("prefix too long")
 	}

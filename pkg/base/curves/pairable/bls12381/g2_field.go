@@ -98,8 +98,7 @@ func (f *BaseFieldG2) FromBytes(data []byte) (*BaseFieldElementG2, error) {
 
 // FromWideBytes decodes an element from wide bytes.
 func (*BaseFieldG2) FromWideBytes(data []byte) (*BaseFieldElementG2, error) {
-	// TODO
-	panic("implement me")
+	return nil, curves.ErrFailed.WithMessage("wide bytes not supported for field extensions")
 }
 
 // ElementSize returns the element size in bytes.
@@ -109,7 +108,7 @@ func (*BaseFieldG2) ElementSize() int {
 
 // WideElementSize returns the wide element size in bytes.
 func (*BaseFieldG2) WideElementSize() int {
-	return 2 * bls12381Impl.FpWideBytes
+	return -1
 }
 
 // BaseFieldElementG2 represents an element of the G2 base field.

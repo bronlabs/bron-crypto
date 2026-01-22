@@ -36,7 +36,19 @@ type State struct {
 
 // NewParticipant initialises the seed setup for a given session.
 func NewParticipant(sessionID network.SID, mySharingID sharing.ID, quorum network.Quorum, tape ts.Transcript, prng io.Reader) (*Participant, error) {
-	// TODO: add validation
+	if quorum == nil {
+		return nil, ErrInvalidArgument.WithMessage("quorum cannot be nil")
+	}
+	if !quorum.Contains(mySharingID) {
+		return nil, ErrInvalidArgument.WithMessage("participant ID not in quorum")
+	}
+	if tape == nil {
+		return nil, ErrInvalidArgument.WithMessage("transcript tape cannot be nil")
+	}
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("prng cannot be nil")
+	}
+
 	p := &Participant{
 		mySharingID: mySharingID,
 		quorum:      quorum,

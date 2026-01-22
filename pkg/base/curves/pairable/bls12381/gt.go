@@ -2,9 +2,9 @@ package bls12381
 
 import (
 	"encoding"
+	"encoding/hex"
 	"hash/fnv"
 	"io"
-	"iter"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -53,23 +53,18 @@ func (*Gt) ElementSize() int {
 
 // Order returns the group or field order.
 func (*Gt) Order() cardinal.Cardinal {
-	//TODO implement me
-	panic("implement me")
+	// GT has the same order as the scalar field (r)
+	return NewScalarField().Order()
 }
 
 // Hash maps input bytes to an element or point.
 func (*Gt) Hash(bytes []byte) (*GtElement, error) {
-	panic("Hashing not implemented for Gt")
+	return nil, curves.ErrFailed.WithMessage("Hashing not implemented for Gt")
 }
 
 // Random samples a random element.
 func (*Gt) Random(prng io.Reader) (*GtElement, error) {
-	panic("Random sampling not implemented for Gt")
-}
-
-// Iter returns an iterator over elements.
-func (*Gt) Iter() iter.Seq[*GtElement] {
-	panic("implement me")
+	return nil, curves.ErrFailed.WithMessage("Random sampling not implemented for Gt")
 }
 
 // One returns the multiplicative identity.
@@ -196,9 +191,8 @@ func (ge *GtElement) OpInv() *GtElement {
 }
 
 // String returns the string form of the receiver.
-func (*GtElement) String() string {
-	//TODO implement me
-	panic("implement me")
+func (ge *GtElement) String() string {
+	return "0x" + hex.EncodeToString(ge.V.Bytes())
 }
 
 // MarshalBinary implements encoding.BinaryMarshaler.

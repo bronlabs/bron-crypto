@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
 func Test_BaseScalarMul(t *testing.T) {
@@ -152,21 +153,35 @@ func doGoDH(tb testing.TB, alice, bob *ecdh.PrivateKey) (sharedKey []byte) {
 	return aliceShared
 }
 
-// TODO: change to dhc package Diffie-Hellman when ready
 func doBronDH(tb testing.TB, alice, bob *ecdh.PrivateKey) (sharedKey []byte) {
 	tb.Helper()
 
-	aliceSk, err := curve25519.NewScalarField().FromClampedBytes(alice.Bytes())
+	c := curve25519.NewPrimeSubGroup()
+
+	// Create Alice's key pair using dhc
+	alicePrivSeed, err := dhc.NewPrivateKey(alice.Bytes())
 	require.NoError(tb, err)
-	alicePk := curve25519.NewCurve().PrimeSubGroupGenerator().ScalarMul(aliceSk)
-
-	bobSk, err := curve25519.NewScalarField().FromClampedBytes(bob.Bytes())
+	alicePrivKey, err := dhc.ExtendPrivateKey(alicePrivSeed, c.ScalarField())
 	require.NoError(tb, err)
-	bobPk := curve25519.NewCurve().PrimeSubGroupGenerator().ScalarMul(bobSk)
+	alicePubKeyPoint := c.ScalarBaseMul(alicePrivKey.Value())
+	alicePubKey, err := dhc.NewPublicKey(alicePubKeyPoint)
+	require.NoError(tb, err)
 
-	aliceShared := alicePk.ScalarMul(bobSk).ToCompressed()
-	bobShared := bobPk.ScalarMul(aliceSk).ToCompressed()
+	// Create Bob's key pair using dhc
+	bobPrivSeed, err := dhc.NewPrivateKey(bob.Bytes())
+	require.NoError(tb, err)
+	bobPrivKey, err := dhc.ExtendPrivateKey(bobPrivSeed, c.ScalarField())
+	require.NoError(tb, err)
+	bobPubKeyPoint := c.ScalarBaseMul(bobPrivKey.Value())
+	bobPubKey, err := dhc.NewPublicKey(bobPubKeyPoint)
+	require.NoError(tb, err)
 
-	require.True(tb, bytes.Equal(aliceShared, bobShared))
-	return aliceShared
+	// Derive shared secrets
+	aliceShared, err := dhc.DeriveSharedSecret(alicePrivKey, bobPubKey)
+	require.NoError(tb, err)
+	bobShared, err := dhc.DeriveSharedSecret(bobPrivKey, alicePubKey)
+	require.NoError(tb, err)
+
+	require.True(tb, bytes.Equal(aliceShared.Bytes(), bobShared.Bytes()))
+	return aliceShared.Bytes()
 }

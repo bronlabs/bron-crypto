@@ -50,7 +50,6 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
 	// 1.iii. compute Q' = aQ + bQ
-	// TODO: add SetNatCT to ScalarField etc.
 	aScalar, err := verifier.state.curve.ScalarField().FromBytesBEReduce(verifier.state.a.BytesBE())
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot convert a to scalar")

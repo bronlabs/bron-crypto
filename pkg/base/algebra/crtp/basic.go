@@ -20,7 +20,6 @@ type Element[E any] interface {
 type Structure[E any] interface {
 	Name() string
 	Order() Cardinal
-	// TODO: remove
 	base.BytesLikeFactory[E]
 }
 

@@ -17,7 +17,6 @@ type (
 		IsPrimeSubGroupDesignatedGenerator() bool
 	}
 
-	// TODO: add scalar field (prime field)
 	Curve[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] interface {
 		EllipticCurve[P, F, S]
 		algebra.PrimeOrderEllipticCurve[P, F, S]
@@ -72,7 +71,6 @@ type (
 	] = algebra.PairingProductEvaluator[P1, F1, P2, F2, E, S]
 )
 
-// TODO: remove
 const (
 	// TypeI is a symmetric pairing type.
 	TypeI = algebra.TypeI

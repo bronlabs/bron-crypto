@@ -20,7 +20,6 @@ const (
 	// collision resistance (birthday paradox).
 	CollisionResistance = 2 * ComputationalSecurityBits
 
-	// TODO: rename the value to something that Mateusz will send later
 	// Hash2CurveAppTag is the application tag for hash-to-curve operations.
 	Hash2CurveAppTag = "bron_crypto_with-"
 )
