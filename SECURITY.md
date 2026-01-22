@@ -1,4 +1,8 @@
-# Security Policy
+# Security Notice
+
+This library is not designed to be fully side-channel resistant. We build higher-level protocols on top of a side-channel resistant foundation of elliptic curve and big integer operations.
+
+**Important**: This library is intended for use by experienced cryptographers and developers who understand the security implications of the protocols involved. If you are not familiar with the underlying cryptographic primitives, please consult with a cryptography expert before using this library in production.
 
 ## Supported Versions
 
@@ -12,9 +16,10 @@ please report it privately using one of the methods below. **Do not disclose it 
 
 ### How to Report
 
-**Preferred Method: GitHub Security Advisories**
+#### Preferred Method: GitHub Security Advisories
 
 We use GitHub's private vulnerability reporting feature for coordinated disclosure. This allows us to:
+
 - Privately discuss the vulnerability with you
 - Collaborate on fixes in a temporary private fork (visible only to you and our security team)
 - Prepare a patch before public disclosure
@@ -22,14 +27,13 @@ We use GitHub's private vulnerability reporting feature for coordinated disclosu
 Please report vulnerabilities using GitHub Security Advisories:
 **[Report a Security Vulnerability](https://github.com/bronlabs/bron-crypto/security/advisories/new)**
 
-**Alternative Method: Email**
+#### Alternative Method: Email
 
 If you cannot use GitHub Security Advisories, you can email us directly at:
-**bugbounty@bron.org**
+**[bugbounty@bron.org](mailto:bugbounty@bron.org)**
 
 Please use the [Vulnerability Report Template](https://bugbounty.bron.org/report) when submitting your report.
-The template includes the required format for email subject and body, ensuring all necessary information is included 
-for efficient triage.
+The template includes the required format for email subject and body, ensuring all necessary information is included for efficient triage.
 
 ### What Happens Next
 
@@ -59,6 +63,7 @@ channels may be eligible for rewards.
 ### Eligibility
 
 To be eligible for bug bounty rewards:
+
 - You must be the first to report the vulnerability
 - You must follow responsible disclosure practices (no public disclosure before patch release)
 - The vulnerability must be in scope (see below)
@@ -69,6 +74,7 @@ To be eligible for bug bounty rewards:
 ### In Scope
 
 The bug bounty program covers security vulnerabilities in:
+
 - Threshold signature schemes and their direct or indirect dependencies
 - Cryptographic implementation flaws in production code
 - Memory safety issues
@@ -88,6 +94,7 @@ to clearly define the scope of our bug bounty program.
 
 - Vulnerabilities in third-party dependencies (unless they create a bron-crypto-specific security issue)
 - Issues that require physical access to the device
+- Remote timing attacks
 - Social engineering attacks
 - Denial of service (DDoS) attacks that do not compromise security
 - Issues in example code or documentation that do not affect the core library
