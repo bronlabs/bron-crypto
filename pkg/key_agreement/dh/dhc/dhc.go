@@ -144,7 +144,7 @@ func ExtendPrivateKey[S algebra.PrimeFieldElement[S]](sk *PrivateKey, sf algebra
 	}
 	var s S
 	var err error
-	if isFromCurve25519(sf.Name()) {
+	if isFromCurve25519(sf.Name()) || isFromEdwards25519(sf.Name()) {
 		sf := algebra.StructureMustBeAs[interface {
 			algebra.PrimeField[S]
 			FromClampedBytes([]byte) (S, error)

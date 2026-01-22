@@ -266,7 +266,7 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanValuation() cardinal.C
 }
 
 // IsProbablyPrime is unimplemented for finite fields.
-func (fe *FiniteFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {
+func (*FiniteFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {
 	panic("not supported")
 }
 
@@ -279,7 +279,6 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) String() string {
 			panic(errs2.Wrap(err).WithMessage("cannot convert field component %d to number", i))
 		}
 		comps[i] = ni.String()
-
 	}
 	return fmt.Sprintf("FiniteFieldElement(%s)", strings.Join(comps, ", "))
 }

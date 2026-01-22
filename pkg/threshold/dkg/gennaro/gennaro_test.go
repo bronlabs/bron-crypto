@@ -7,6 +7,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/stretchr/testify/require"
 
@@ -1009,6 +1010,10 @@ func TestMaliciousParticipants(t *testing.T) {
 			if participant.SharingID() == victimID {
 				require.Error(t, err)
 				require.ErrorIs(t, err, feldman.ErrVerification)
+				require.True(t, base.IsIdentifiableAbortError(err))
+				culprits := base.GetMaliciousIdentities[sharing.ID](err)
+				require.Len(t, culprits, 1)
+				require.Contains(t, culprits, maliciousID)
 				require.Nil(t, output)
 			} else if participant.SharingID() != maliciousID {
 				// Other honest participants should succeed
