@@ -8,11 +8,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -31,7 +31,7 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
 	digest, err := hashing.HashPrefixedLength(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute hash")
+		return nil, errs.Wrap(err).WithMessage("cannot compute hash")
 	}
 	return digest, nil
 }

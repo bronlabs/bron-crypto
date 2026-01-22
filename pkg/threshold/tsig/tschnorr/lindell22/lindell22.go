@@ -6,11 +6,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const commitmentDomainRLabel = "Lindell2022SignR-"
@@ -46,7 +46,7 @@ func NewCommitmentKey(sid network.SID, pid sharing.ID, quorumBytes [][]byte) (Co
 	pidBytes := binary.BigEndian.AppendUint64(nil, uint64(pid))
 	key, err := hash_comm.NewKeyFromCRSBytes(sid, commitmentDomainRLabel, append([][]byte{pidBytes}, quorumBytes...)...)
 	if err != nil {
-		return CommitmentKey{}, errs2.Wrap(err).WithMessage("cannot create key for commitment scheme")
+		return CommitmentKey{}, errs.Wrap(err).WithMessage("cannot create key for commitment scheme")
 	}
 	return key, nil
 }

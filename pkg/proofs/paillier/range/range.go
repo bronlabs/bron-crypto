@@ -7,10 +7,10 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name identifies the Paillier range proof protocol.
@@ -233,20 +233,20 @@ func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witnes
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create new plaintext")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create new plaintext")
 	}
 	highBound := lowBound.Add(lowBound)
 	swaps := make([]byte, (p.t+7)/8)
 	_, err = io.ReadFull(p.prng, swaps)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot generate randomness")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot generate randomness")
 	}
 
 	w := make([]*paillier.Plaintext, 2*p.t)
 	for i := range p.t {
 		w1i, err := ps.Sample(lowBound, highBound, p.prng)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot compute w1i")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
 		}
 		w2i := w1i.Sub(lowBound)
 		swapBit := (swaps[i/8] >> (i % 8)) % 2
@@ -259,11 +259,11 @@ func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witnes
 	}
 	senc, err := paillier.NewScheme().SelfEncrypter(witness.Sk)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create self encrypter")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create self encrypter")
 	}
 	c, r, err := senc.SelfEncryptMany(w, p.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot encrypt state")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt state")
 	}
 
 	a := &Commitment{
@@ -289,7 +289,7 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create new plaintext")
+		return nil, errs.Wrap(err).WithMessage("cannot create new plaintext")
 	}
 	highBound := lowBound.Add(lowBound)
 
@@ -354,7 +354,7 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create new plaintext")
+		return errs.Wrap(err).WithMessage("cannot create new plaintext")
 	}
 	highBound := lowBound.Add(lowBound)
 
@@ -405,11 +405,11 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 
 	enc, err := paillier.NewScheme().Encrypter()
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create encrypter")
+		return errs.Wrap(err).WithMessage("cannot create encrypter")
 	}
 	cCheck, err := enc.EncryptManyWithNonces(w, statement.Pk, r)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot compute encrypted ciphertext")
+		return errs.Wrap(err).WithMessage("cannot compute encrypted ciphertext")
 	}
 	for i, ci := range c {
 		if !cCheck[i].Equal(ci) {
@@ -425,7 +425,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create new plaintext")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create new plaintext")
 	}
 	highBound := lowBound.Add(lowBound)
 
@@ -441,7 +441,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 
 	enc, err := paillier.NewScheme().Encrypter()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create encrypter")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create encrypter")
 	}
 
 	toBeEncrypted := make([]*paillier.Plaintext, p.t*2)
@@ -451,7 +451,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 		case 0:
 			w1[i], err = ps.Sample(lowBound, highBound, p.prng)
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot compute w1i")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
 			}
 			w2[i] = w1[i].Sub(lowBound)
 			toBeEncrypted[i] = w1[i]
@@ -459,7 +459,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 		case 1:
 			wj[i], err = ps.Sample(lowBound, highBound, p.prng)
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot compute w1i")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
 			}
 			toBeEncrypted[i] = wj[i]
 			toBeEncrypted[i+p.t] = ps.Zero()
@@ -470,7 +470,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 
 	ctxs, rs, err := enc.EncryptMany(toBeEncrypted, statement.Pk, p.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot encrypt many")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt many")
 	}
 
 	for i := range p.t {
@@ -489,7 +489,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 			var ji [1]byte
 			_, err = io.ReadFull(p.prng, ji[:])
 			if err != nil {
-				return nil, nil, errs2.Wrap(err).WithMessage("cannot sample j")
+				return nil, nil, errs.Wrap(err).WithMessage("cannot sample j")
 			}
 			j[i] = uint(1 + (ji[0] % 2))
 			switch j[i] {
@@ -537,7 +537,7 @@ func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error
 	}
 	senc, err := paillier.NewScheme().SelfEncrypter(witness.Sk)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("failed to create self encrypter")
+		return errs.Wrap(err).WithMessage("failed to create self encrypter")
 	}
 	cCheck, err := senc.SelfEncryptWithNonce(witness.X, witness.R)
 	if err != nil || !statement.C.Equal(cCheck) {

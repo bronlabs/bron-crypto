@@ -1,9 +1,9 @@
 package ot
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
-	ErrInvalidArgument = errs2.New("invalid argument")
-	ErrFailed          = errs2.New("failed")
-	ErrRound           = errs2.New("invalid round")
+	ErrInvalidArgument = errs.New("invalid argument")
+	ErrFailed          = errs.New("failed")
+	ErrRound           = errs.New("invalid round")
 )

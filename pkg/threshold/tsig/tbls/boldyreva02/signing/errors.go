@@ -1,17 +1,17 @@
 package signing
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrInvalidArgument indicates an invalid argument was provided.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 
 	// ErrFailed indicates a general operation failure.
-	ErrFailed = errs2.New("failed")
+	ErrFailed = errs.New("failed")
 
 	// ErrRound indicates an operation was called in the wrong protocol round.
-	ErrRound = errs2.New("invalid round")
+	ErrRound = errs.New("invalid round")
 
 	// ErrVerificationFailed indicates signature or proof verification failed.
-	ErrVerificationFailed = errs2.New("verification failed")
+	ErrVerificationFailed = errs.New("verification failed")
 )

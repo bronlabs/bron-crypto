@@ -4,11 +4,11 @@ import (
 	"hash"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // ErrInvalidDataLength is returned when the input data length is not a multiple of 32 bytes.
-var ErrInvalidDataLength = errs2.New("invalid data length")
+var ErrInvalidDataLength = errs.New("invalid data length")
 
 var (
 	_ hash.Hash = (*Poseidon)(nil)
@@ -90,7 +90,7 @@ func (p *Poseidon) Write(data []byte) (n int, err error) {
 		bytes := data[32*i : 32*(i+1)]
 		fe, err := pasta.NewPallasBaseField().FromBytes(bytes)
 		if err != nil {
-			return 0, errs2.Wrap(err).WithMessage("cannot create Pallas base field element")
+			return 0, errs.Wrap(err).WithMessage("cannot create Pallas base field element")
 		}
 		elems = append(elems, fe)
 	}

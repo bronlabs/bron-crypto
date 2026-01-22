@@ -1,9 +1,9 @@
 package sharing
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
-	ErrIsNil      = errs2.New("is nil")
-	ErrValue      = errs2.New("invalid value")
-	ErrMembership = errs2.New("membership error")
+	ErrIsNil      = errs.New("is nil")
+	ErrValue      = errs.New("invalid value")
+	ErrMembership = errs.New("membership error")
 )

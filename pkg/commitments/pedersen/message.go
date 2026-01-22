@@ -3,8 +3,8 @@ package pedersen
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Message wraps a scalar plaintext committed with Pedersen commitments.
@@ -93,7 +93,7 @@ func (m *Message[S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Pedersen message")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Pedersen message")
 	}
 	return data, nil
 }
@@ -102,7 +102,7 @@ func (m *Message[S]) MarshalCBOR() ([]byte, error) {
 func (m *Message[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*messageDTO[S]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("failed to unmarshal Pedersen message")
+		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen message")
 	}
 
 	m2 := NewMessage(dto.V)

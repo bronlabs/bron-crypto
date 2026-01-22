@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/kmac"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type (
@@ -22,7 +22,7 @@ func Hash[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
 	h := hashFunc()
 	for i, x := range xs {
 		if _, err := h.Write(x); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not write to hash for input %d", i)
+			return nil, errs.Wrap(err).WithMessage("could not write to hash for input %d", i)
 		}
 	}
 	digest := h.Sum(nil)
@@ -35,7 +35,7 @@ func HashPrefixedLength[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, e
 	h := hashFunc()
 	_, err := h.Write(encodePrefixedLength(xs...))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not hash input")
+		return nil, errs.Wrap(err).WithMessage("could not hash input")
 	}
 
 	digest := h.Sum(nil)
@@ -51,7 +51,7 @@ func HashChain[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
 	for i, x := range xs {
 		out, err = Hash(hashFunc, out, x)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not compute hash for input %d", i)
+			return nil, errs.Wrap(err).WithMessage("could not compute hash for input %d", i)
 		}
 	}
 	return out, nil
@@ -62,7 +62,7 @@ func Hmac[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, err
 	hmacFunc := func() hash.Hash { return hmac.New(HashFuncTypeErase(hashFunc), key) }
 	out, err := Hash(hmacFunc, xs...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("computing hmac")
+		return nil, errs.Wrap(err).WithMessage("computing hmac")
 	}
 	return out, nil
 }
@@ -72,7 +72,7 @@ func HmacPrefixedLength[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte
 	hmacFunc := func() hash.Hash { return hmac.New(HashFuncTypeErase(hashFunc), key) }
 	out, err := HashPrefixedLength(hmacFunc, xs...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("computing hmac")
+		return nil, errs.Wrap(err).WithMessage("computing hmac")
 	}
 	return out, nil
 }
@@ -89,7 +89,7 @@ func Kmac(key, customizationString []byte, h func(n, s []byte) sha3.ShakeHash, x
 	for _, x := range xs {
 		_, err := k.Write(x)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not write into internal state")
+			return nil, errs.Wrap(err).WithMessage("could not write into internal state")
 		}
 	}
 	return k.Sum(nil), nil
@@ -104,7 +104,7 @@ func KmacPrefixedLength(key, customizationString []byte, h func(n, s []byte) sha
 	k := kmac.AbsorbPaddedKey(key, cShake.Size(), cShake)
 	_, err := k.Write(encodePrefixedLength(xs...))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not write into internal state")
+		return nil, errs.Wrap(err).WithMessage("could not write into internal state")
 	}
 	return k.Sum(nil), nil
 }

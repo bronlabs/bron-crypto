@@ -5,13 +5,13 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Share is a Feldman VSS share, which is identical to a Shamir share.
@@ -23,7 +23,7 @@ type Share[FE algebra.PrimeFieldElement[FE]] = shamir.Share[FE]
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *sharing.ThresholdAccessStructure) (*Share[FE], error) {
 	s, err := shamir.NewShare(id, v, ac)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create Feldman share")
+		return nil, errs.Wrap(err).WithMessage("failed to create Feldman share")
 	}
 	return s, nil
 }
@@ -78,7 +78,7 @@ func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAc
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[FE]](group.ScalarStructure())
 	lambdas, err := shamir.LagrangeCoefficients(sf, qualifiedSet.Shareholders().List()...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
+		return nil, errs.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
 	lambdaI, exists := lambdas.Get(s.id)
 	if !exists {
@@ -87,7 +87,7 @@ func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAc
 	converted := s.v.ScalarOp(lambdaI)
 	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to convert Feldman share to additive")
+		return nil, errs.Wrap(err).WithMessage("failed to convert Feldman share to additive")
 	}
 	return additiveShare, nil
 }
@@ -99,7 +99,7 @@ func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Feldman LiftedShare")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Feldman LiftedShare")
 	}
 	return data, nil
 }
@@ -143,11 +143,11 @@ func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 		).Freeze(),
 	)
 	if err != nil {
-		return *new(E), errs2.Wrap(err).WithMessage("could not create qualified set from shares")
+		return *new(E), errs.Wrap(err).WithMessage("could not create qualified set from shares")
 	}
 	lambdas, err := shamir.LagrangeCoefficients(sf, qualifiedSet.Shareholders().List()...)
 	if err != nil {
-		return *new(E), errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
+		return *new(E), errs.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
 	converted := make([]*additive.Share[E], 0, len(s))
 	for _, share := range s {
@@ -157,17 +157,17 @@ func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 		}
 		si, err := additive.NewShare(share.ID(), share.v.ScalarOp(lambdaI), nil)
 		if err != nil {
-			return *new(E), errs2.Wrap(err).WithMessage("could not create additive share from share in exponent")
+			return *new(E), errs.Wrap(err).WithMessage("could not create additive share from share in exponent")
 		}
 		converted = append(converted, si)
 	}
 	additiveScheme, err := additive.NewScheme(group, qualifiedSet.Shareholders())
 	if err != nil {
-		return *new(E), errs2.Wrap(err).WithMessage("could not create additive scheme")
+		return *new(E), errs.Wrap(err).WithMessage("could not create additive scheme")
 	}
 	reconstructed, err := additiveScheme.Reconstruct(converted...)
 	if err != nil {
-		return *new(E), errs2.Wrap(err).WithMessage("could not reconstruct additive share")
+		return *new(E), errs.Wrap(err).WithMessage("could not reconstruct additive share")
 	}
 	return reconstructed.Value(), nil
 }

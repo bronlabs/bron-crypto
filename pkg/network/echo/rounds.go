@@ -4,17 +4,17 @@ import (
 	"bytes"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 broadcasts the sender's message to all other parties.
 func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P], error) {
 	serializedMessage, err := serde.MarshalCBOR(message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal message")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal message")
 	}
 
 	r1 := hashmap.NewComparable[sharing.ID, *Round1P2P]()
@@ -91,7 +91,7 @@ func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.R
 		}
 		message, err := serde.UnmarshalCBOR[B](received[id])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to unmarshal message")
+			return nil, errs.Wrap(err).WithMessage("failed to unmarshal message")
 		}
 		r3.Put(id, message)
 	}

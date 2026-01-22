@@ -5,9 +5,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // WithSenderPrivateKey returns an option that enables authenticated encapsulation
@@ -54,11 +54,11 @@ func (k *KEM[P, B, S]) Encapsulate(receiver *PublicKey[P, B, S], prng io.Reader)
 		kv, ephemeralPublicKey, err = k.v.Encap(receiver, prng)
 	}
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	out, err := encryption.NewSymmetricKey(kv)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return out, ephemeralPublicKey, nil
 }
@@ -111,11 +111,11 @@ func (d *DEM[P, B, S]) Decapsulate(capsule *Capsule[P, B, S]) (*encryption.Symme
 		kv, err = d.v.Decap(d.receiverPrivateKey, capsule)
 	}
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	out, err := encryption.NewSymmetricKey(kv)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }

@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Type is the type identifier for the ECSVDP-DHC key agreement scheme.
@@ -54,11 +54,11 @@ func DeriveSharedSecret[
 	// step 1
 	k, err := curve.ScalarField().FromCardinal(curve.Cofactor())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get cofactor")
+		return nil, errs.Wrap(err).WithMessage("cannot get cofactor")
 	}
 	kInv, err := k.TryInv()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get inverse")
+		return nil, errs.Wrap(err).WithMessage("cannot get inverse")
 	}
 	t := kInv.Mul(myPrivateKey.Value())
 	// step 2
@@ -70,7 +70,7 @@ func DeriveSharedSecret[
 	// step 4
 	x, err := bigP.AffineX()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get affine x coordinate")
+		return nil, errs.Wrap(err).WithMessage("cannot get affine x coordinate")
 	}
 	// step 5
 	return NewSharedKey(x)
@@ -154,7 +154,7 @@ func ExtendPrivateKey[S algebra.PrimeFieldElement[S]](sk *PrivateKey, sf algebra
 		s, err = sf.FromBytes(sk.Value())
 	}
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not derive extended private key")
+		return nil, errs.Wrap(err).WithMessage("could not derive extended private key")
 	}
 	if s.IsZero() {
 		return nil, ErrInvalidSubGroup.WithMessage("invalid private key scalar")
@@ -184,7 +184,7 @@ func (esk *ExtendedPrivateKey[S]) Equal(other *ExtendedPrivateKey[S]) bool {
 func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
 	out, err := key_agreement.NewPublicKey(v, Type)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create public key")
+		return nil, errs.Wrap(err).WithMessage("could not create public key")
 	}
 	return out, nil
 }
@@ -199,7 +199,7 @@ func NewSharedKey[B algebra.FiniteFieldElement[B]](v B) (*SharedKey[B], error) {
 	}
 	out, err := key_agreement.NewSharedKey(b, Type)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create shared key")
+		return nil, errs.Wrap(err).WithMessage("could not create shared key")
 	}
 	return out, nil
 }
@@ -223,7 +223,7 @@ func isFromEdwards25519(name string) bool {
 }
 
 var (
-	ErrInvalidArgument = errs2.New("invalid argument")
-	ErrInvalidSubGroup = errs2.New("element not in correct subgroup")
-	ErrValidation      = errs2.New("validation error")
+	ErrInvalidArgument = errs.New("invalid argument")
+	ErrInvalidSubGroup = errs.New("element not in correct subgroup")
+	ErrValidation      = errs.New("validation error")
 )

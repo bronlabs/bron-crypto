@@ -10,7 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // ModulusBasic is a modulus implementation based on saferith.Modulus.
@@ -31,7 +31,7 @@ func (m *ModulusBasic) HashCode() base.HashCode {
 func (m *ModulusBasic) Random(prng io.Reader) (*Nat, error) {
 	randBig, err := crand.Int(prng, m.Big())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return NewNatFromBig(randBig, m.BitLen()), nil
 }

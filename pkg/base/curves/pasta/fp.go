@@ -10,10 +10,10 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type (
@@ -112,7 +112,7 @@ func (f *FpField) FromBytesBEReduce(input []byte) (*FpFieldElement, error) {
 	vBytes := v.Bytes()
 	out, err := f.FromBytesBE(vBytes)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to convert reduced bytes into field element")
+		return nil, errs.Wrap(err).WithMessage("failed to convert reduced bytes into field element")
 	}
 	return out, nil
 }

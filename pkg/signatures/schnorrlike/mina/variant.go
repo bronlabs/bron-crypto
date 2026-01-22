@@ -7,11 +7,11 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // VariantType identifies this as the Mina Schnorr variant.
@@ -124,11 +124,11 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 
 	pkx, err := v.sk.PublicKey().V.AffineX()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to get public key X coordinate")
+		return nil, errs.Wrap(err).WithMessage("failed to get public key X coordinate")
 	}
 	pky, err := v.sk.PublicKey().V.AffineY()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to get public key Y coordinate")
+		return nil, errs.Wrap(err).WithMessage("failed to get public key Y coordinate")
 	}
 
 	// Convert private key to bits using Scalar.toBits()
@@ -187,7 +187,7 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	digestBE := reversedBytes(digest[:])
 	k, err := sf.FromBytes(digestBE)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
+		return nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
 	return k, nil
 }
@@ -215,14 +215,14 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 		k, err = algebrautils.RandomNonIdentity(sf, v.prng)
 	}
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
+		return nil, nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
 	R = group.ScalarBaseMul(k)
 
 	// Ensure R has an even y-coordinate (same as BIP340)
 	ry, err := R.AffineY()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot get y coordinate")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot get y coordinate")
 	}
 	if ry.IsOdd() {
 		// Negate k to flip the y-coordinate parity
@@ -245,21 +245,21 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	input := message.Clone()
 	pkx, err := publicKeyValue.AffineX()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get x")
+		return nil, errs.Wrap(err).WithMessage("cannot get x")
 	}
 	pky, err := publicKeyValue.AffineY()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get y")
+		return nil, errs.Wrap(err).WithMessage("cannot get y")
 	}
 	ncx, err := nonceCommitment.AffineX()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot get x")
+		return nil, errs.Wrap(err).WithMessage("cannot get x")
 	}
 	input.AddFields(pkx, pky, ncx)
 	prefix := SignaturePrefix(v.nid)
 	e, err := hashWithPrefix(prefix, input.PackToFields()...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compute challenge")
+		return nil, errs.Wrap(err).WithMessage("failed to compute challenge")
 	}
 	return e, nil
 }
@@ -299,7 +299,7 @@ func (*Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupEleme
 	correctedK = localNonce.Clone()
 	ancy, err := aggregatedNonceCommitments.AffineY()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot get y")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot get y")
 	}
 	if ancy.IsOdd() {
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.

@@ -5,8 +5,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Verifier validates ECDSA signatures against public keys.
@@ -50,7 +50,7 @@ func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []
 	if s.v != nil {
 		recoveredPublicKey, err := RecoverPublicKey(v.suite, s, m)
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("cannot recover public key")
+			return errs.Wrap(err).WithMessage("cannot recover public key")
 		}
 		if !recoveredPublicKey.Equal(pk) {
 			return ErrVerificationFailed.WithMessage("recovered public key does not match")
@@ -59,7 +59,7 @@ func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []
 
 	digest, err := hashing.Hash(v.suite.hashFunc, m)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot hash message")
+		return errs.Wrap(err).WithMessage("cannot hash message")
 	}
 
 	nativePk := pk.ToElliptic()

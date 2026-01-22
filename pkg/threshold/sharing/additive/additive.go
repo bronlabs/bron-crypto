@@ -18,9 +18,9 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type (
@@ -47,7 +47,7 @@ func NewScheme[E GroupElement[E]](g Group[E], shareholders ds.Set[sharing.ID]) (
 	}
 	accessStructure, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create access structure")
+		return nil, errs.Wrap(err).WithMessage("could not create access structure")
 	}
 	return &Scheme[E]{
 		g:  g,
@@ -78,12 +78,12 @@ func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *Secret[E], er
 	}
 	value, err := d.g.Random(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not sample group element")
+		return nil, nil, errs.Wrap(err).WithMessage("could not sample group element")
 	}
 	secret := NewSecret(value)
 	shares, err := d.Deal(secret, prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not create shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not create shares")
 	}
 	return shares, secret, nil
 }
@@ -104,7 +104,7 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 	for _, id := range participantsList[1:] {
 		v, err := d.g.Random(prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not sample group element")
+			return nil, errs.Wrap(err).WithMessage("could not sample group element")
 		}
 		partialSum = partialSum.Op(v)
 		shares.Put(id, &Share[E]{
@@ -128,7 +128,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	// First check for nil shares before creating hashset
 	ids, err := sharing.CollectIDs(shares...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not collect IDs from shares")
+		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
 
 	// Filter out nil shares

@@ -1,11 +1,11 @@
 package fiatshamir
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // prover implements the NIProver interface for Fiat-Shamir proofs.
@@ -22,18 +22,18 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 
 	a, s, err := p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot generate commitment")
+		return nil, errs.Wrap(err).WithMessage("cannot generate commitment")
 	}
 	p.transcript.AppendBytes(commitmentLabel, a.Bytes())
 
 	e, err := p.transcript.ExtractBytes(challengeLabel, uint(p.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot extract bytes from transcript")
+		return nil, errs.Wrap(err).WithMessage("cannot extract bytes from transcript")
 	}
 
 	z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, a, s, e)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot generate response")
+		return nil, errs.Wrap(err).WithMessage("cannot generate response")
 	}
 
 	proof := &Proof[A, Z]{
@@ -43,7 +43,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 
 	proofBytes, err := serde.MarshalCBOR(proof)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot serialise proof")
+		return nil, errs.Wrap(err).WithMessage("cannot serialise proof")
 	}
 	return proofBytes, nil
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	gentu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
@@ -17,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/keygen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/signing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Type aliases for convenience.
@@ -39,7 +39,7 @@ func DoBoldyrevaDKG[
 	// Run Gennaro DKG
 	dkgOutputs, err := gentu.DoGennaroDKG(tb, participants)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to run Gennaro DKG")
+		return nil, errs.Wrap(err).WithMessage("failed to run Gennaro DKG")
 	}
 
 	// Convert DKG outputs to BLS shards
@@ -52,7 +52,7 @@ func DoBoldyrevaDKG[
 			shard, err = keygen.NewLongKeyShard(output)
 		}
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to create shard for participant %d", id)
+			return nil, errs.Wrap(err).WithMessage("failed to create shard for participant %d", id)
 		}
 		shards.Put(id, shard)
 	}
@@ -74,7 +74,7 @@ func ProducePartialSignatures[
 	for _, cosigner := range cosigners {
 		partialSigs[cosigner.SharingID()], err = cosigner.ProducePartialSignature(message)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("%d could not produce partial signature", cosigner.SharingID())
+			return nil, errs.Wrap(err).WithMessage("%d could not produce partial signature", cosigner.SharingID())
 		}
 	}
 	return partialSigs, nil
@@ -99,7 +99,7 @@ func DoThresholdSign[
 	// Produce partial signatures
 	partialSigs, err := ProducePartialSignatures(cosigners, message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not produce partial signatures")
+		return nil, errs.Wrap(err).WithMessage("could not produce partial signatures")
 	}
 
 	// Convert map to RoundMessages
@@ -112,7 +112,7 @@ func DoThresholdSign[
 	// Aggregate partial signatures using the provided aggregator
 	signature, err = aggregator.Aggregate(roundMessages, message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not aggregate partial signatures")
+		return nil, errs.Wrap(err).WithMessage("could not aggregate partial signatures")
 	}
 
 	return signature, nil
@@ -135,7 +135,7 @@ func VerifyPartialSignatures[
 	for id, psig := range partialSigs {
 		partialPK, exists := publicMaterial.PartialPublicKeys().Get(id)
 		if !exists {
-			return errs2.New("partial public key for participant %d", id)
+			return errs.New("partial public key for participant %d", id)
 		}
 
 		// Determine the message to verify based on rogue key prevention algorithm
@@ -147,7 +147,7 @@ func VerifyPartialSignatures[
 		case bls.MessageAugmentation:
 			verifyMessage, err = bls.AugmentMessage(message, publicMaterial.PublicKey().Value())
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("failed to augment message for participant %d", id)
+				return errs.Wrap(err).WithMessage("failed to augment message for participant %d", id)
 			}
 		case bls.POP:
 			verifyMessage = message
@@ -156,13 +156,13 @@ func VerifyPartialSignatures[
 		// Create verifier
 		verifier, err := scheme.Verifier()
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("failed to create verifier")
+			return errs.Wrap(err).WithMessage("failed to create verifier")
 		}
 
 		// Verify the partial signature
 		if psig.SigmaI != nil {
 			if err := verifier.Verify(psig.SigmaI, partialPK, verifyMessage); err != nil {
-				return errs2.Wrap(err).WithMessage("failed to verify partial signature from participant %d", id)
+				return errs.Wrap(err).WithMessage("failed to verify partial signature from participant %d", id)
 			}
 		}
 
@@ -172,10 +172,10 @@ func VerifyPartialSignatures[
 			popDst := scheme.CipherSuite().GetPopDst(scheme.Variant())
 			popVerifier, err := scheme.Verifier(bls.VerifyWithCustomDST[PK](popDst))
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("failed to create POP verifier")
+				return errs.Wrap(err).WithMessage("failed to create POP verifier")
 			}
 			if err := popVerifier.Verify(psig.SigmaPopI, partialPK, popMessage); err != nil {
-				return errs2.Wrap(err).WithMessage("failed to verify proof of possession from participant %d", id)
+				return errs.Wrap(err).WithMessage("failed to verify proof of possession from participant %d", id)
 			}
 		}
 	}

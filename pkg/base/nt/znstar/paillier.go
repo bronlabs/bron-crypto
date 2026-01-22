@@ -6,11 +6,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const PaillierKeyLen = base.IFCKeyLength
@@ -22,7 +22,7 @@ func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder,
 	}
 	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to generate prime pair")
+		return nil, errs.Wrap(err).WithMessage("failed to generate prime pair")
 	}
 	return NewPaillierGroup(p, q)
 }
@@ -47,7 +47,7 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	n := p.Mul(q)
 	zMod, err := num.NewZMod(n.Square())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
+		return nil, errs.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	exp, ok := modular.NewOddPrimeSquareFactors(p.Value(), q.Value())
 	if ok == ct.False {
@@ -72,7 +72,7 @@ func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOr
 	}
 	zMod, err := num.NewZMod(n2)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
+		return nil, errs.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	arith, ok := modular.NewSimple(zMod.Modulus().ModulusCT())
 	if ok == ct.False {
@@ -132,7 +132,7 @@ func (g *PaillierGroup[X]) EmbedRSA(u *RSAGroupElementUnknownOrder) (*PaillierGr
 	}
 	v, err := num.NewUintGivenModulus(u.Value().Value(), g.ModulusCT())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to embed RSA unit into Paillier unit")
+		return nil, errs.Wrap(err).WithMessage("failed to embed RSA unit into Paillier unit")
 	}
 	return &PaillierGroupElement[X]{
 		UnitTrait: UnitTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
@@ -153,7 +153,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 	}
 	pu, err := g.FromNatCT(u.Value().Value())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to lift rsaUnit to Paillier group")
+		return nil, errs.Wrap(err).WithMessage("failed to lift rsaUnit to Paillier group")
 	}
 	lift, ok := any(g.arith).(interface {
 		ExpToN(out, base *numct.Nat) //nolint:revive // base shadows an import but here it's clearer.
@@ -165,7 +165,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 	lift.ExpToN(&out, pu.Value().Value())
 	v, err := num.NewUintGivenModulus(&out, g.ModulusCT())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create unit from lifted value")
+		return nil, errs.Wrap(err).WithMessage("failed to create unit from lifted value")
 	}
 	return &PaillierGroupElement[X]{
 		UnitTrait: UnitTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{

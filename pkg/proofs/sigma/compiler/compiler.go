@@ -13,12 +13,12 @@ package compiler
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name is the identifier for a compiler implementation.
@@ -65,5 +65,5 @@ func IsSupported(name Name) bool {
 }
 
 var (
-	ErrUnsupportedType = errs2.New("unsupported type")
+	ErrUnsupportedType = errs.New("unsupported type")
 )

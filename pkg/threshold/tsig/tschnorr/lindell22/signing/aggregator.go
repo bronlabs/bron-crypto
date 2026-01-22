@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -15,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Aggregator combines partial signatures into a complete threshold signature.
@@ -57,11 +57,11 @@ func NewAggregator[
 	}
 	verifier, err := scheme.Verifier()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create verifier for scheme %s", scheme.Name())
+		return nil, errs.Wrap(err).WithMessage("failed to create verifier for scheme %s", scheme.Name())
 	}
 	psigVerifier, err := scheme.PartialSignatureVerifier(pk.PublicKey())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create partial signature verifier for scheme %s", scheme.Name())
+		return nil, errs.Wrap(err).WithMessage("failed to create partial signature verifier for scheme %s", scheme.Name())
 	}
 	return &Aggregator[VR, GE, S, M]{pkm: pk, group: group, sf: sf, variant: scheme.Variant(), verifier: verifier, psigVerifier: psigVerifier}, nil
 }
@@ -90,7 +90,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	)
 	e, err := a.variant.ComputeChallenge(R, a.pkm.PublicKey().Value(), message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compute challenge")
+		return nil, errs.Wrap(err).WithMessage("failed to compute challenge")
 	}
 	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
 		return x == nil || !x.Sig.E.Equal(e)
@@ -100,7 +100,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	}
 	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create aggregated signature")
+		return nil, errs.Wrap(err).WithMessage("failed to create aggregated signature")
 	}
 
 	if err := a.verifier.Verify(aggregatedSignature, a.pkm.PublicKey(), message); err == nil {
@@ -112,7 +112,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	identityAborts := []error{}
 	quorumAsMinimalQualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(quorum)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create minimal qualified access structure")
+		return nil, errs.Wrap(err).WithMessage("failed to create minimal qualified access structure")
 	}
 	for sender, psig := range partialSignatures.Iter() {
 		if psig == nil {
@@ -121,22 +121,22 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		senderPartialPublicKey, _ := a.pkm.PartialPublicKeys().Get(sender)
 		senderPKShare, err := feldman.NewLiftedShare(sender, senderPartialPublicKey.Value())
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to create lifted share for sender %d", sender)
+			return nil, errs.Wrap(err).WithMessage("failed to create lifted share for sender %d", sender)
 		}
 		senderAdditivePKShare, err := senderPKShare.ToAdditive(quorumAsMinimalQualifiedSet)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
+			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
 		}
 		senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShare.Value())
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
+			return nil, errs.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
 		}
 		if err := a.psigVerifier.Verify(&psig.Sig, senderAdditivePK, message); err != nil {
-			identityAborts = append(identityAborts, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature"))
+			identityAborts = append(identityAborts, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature"))
 		}
 	}
 	if len(identityAborts) != 0 {
-		return nil, errs2.Join(identityAborts...).WithMessage("verification failed")
+		return nil, errs.Join(identityAborts...).WithMessage("verification failed")
 	}
 
 	panic("should not reach here: not all partial signatures should have been valid")

@@ -12,8 +12,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -41,7 +41,7 @@ func (f *Field) Random(prng io.Reader) (*FieldElement, error) {
 	var data [16]byte
 	_, err := io.ReadFull(prng, data[:])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to read random bytes")
+		return nil, errs.Wrap(err).WithMessage("failed to read random bytes")
 	}
 	return f.FromBytes(data[:])
 }
@@ -49,12 +49,12 @@ func (f *Field) Random(prng io.Reader) (*FieldElement, error) {
 func (f *Field) RandomNonZero(prng io.Reader) (*FieldElement, error) {
 	e, err := f.Random(prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to generate random element")
+		return nil, errs.Wrap(err).WithMessage("failed to generate random element")
 	}
 	for e.IsZero() {
 		e, err = f.Random(prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to generate random element")
+			return nil, errs.Wrap(err).WithMessage("failed to generate random element")
 		}
 	}
 	return e, nil
@@ -63,11 +63,11 @@ func (f *Field) RandomNonZero(prng io.Reader) (*FieldElement, error) {
 func (f *Field) Hash(data []byte) (*FieldElement, error) {
 	h, err := blake2b.New(FieldElementSize, nil)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create hasher")
+		return nil, errs.Wrap(err).WithMessage("failed to create hasher")
 	}
 	_, err = h.Write(data)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to write to hasher")
+		return nil, errs.Wrap(err).WithMessage("failed to write to hasher")
 	}
 	return f.FromBytes(h.Sum(nil))
 }
@@ -213,7 +213,7 @@ func (el *FieldElement) TryInv() (*FieldElement, error) {
 func (el *FieldElement) TryDiv(e *FieldElement) (*FieldElement, error) {
 	eInv, err := e.TryInv()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot invert element")
+		return nil, errs.Wrap(err).WithMessage("cannot invert element")
 	}
 	return el.Mul(eInv), nil
 }
@@ -249,7 +249,7 @@ func (*FieldElement) IsProbablyPrime() bool {
 func (el *FieldElement) EuclideanDiv(rhs *FieldElement) (quot, rem *FieldElement, err error) {
 	quot, err = el.TryDiv(rhs)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("division by zero")
+		return nil, nil, errs.Wrap(err).WithMessage("division by zero")
 	}
 	return quot, NewField().Zero(), nil
 }
@@ -341,6 +341,6 @@ func (el *FieldElement) degree() int {
 }
 
 var (
-	ErrDivisionByZero = errs2.New("division by zero")
-	ErrInvalidLength  = errs2.New("invalid length")
+	ErrDivisionByZero = errs.New("division by zero")
+	ErrInvalidLength  = errs.New("invalid length")
 )

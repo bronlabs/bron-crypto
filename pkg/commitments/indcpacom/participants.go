@@ -4,9 +4,9 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // CommitterOption is a functional option for configuring a Committer.
@@ -42,7 +42,7 @@ func (c *Committer[N, P, CX, PK]) Commit(
 	}
 	ciphertext, nonce, err := c.enc.Encrypt(message.Value(), c.key.Value(), prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot encrypt message for commitment")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt message for commitment")
 	}
 	return &Commitment[CX, N, PK]{v: ciphertext}, &Witness[N]{v: nonce}, nil
 }
@@ -59,7 +59,7 @@ func (c *Committer[N, P, CX, PK]) CommitWithWitness(
 	}
 	ciphertext, err := c.enc.EncryptWithNonce(message.Value(), c.key.Value(), witness.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot encrypt message for commitment with witness")
+		return nil, errs.Wrap(err).WithMessage("cannot encrypt message for commitment with witness")
 	}
 	return &Commitment[CX, N, PK]{v: ciphertext}, nil
 }
@@ -100,7 +100,7 @@ func (v *Verifier[N, P, CX, PK]) Verify(
 	witness *Witness[N],
 ) error {
 	if err := v.c.Verify(commitment, message, witness); err != nil {
-		return errs2.Wrap(err).WithMessage("IND-CPA commitment verification failed")
+		return errs.Wrap(err).WithMessage("IND-CPA commitment verification failed")
 	}
 	return nil
 }

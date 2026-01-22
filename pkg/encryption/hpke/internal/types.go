@@ -13,8 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const version = "HPKE-v1"
@@ -31,7 +31,7 @@ type (
 func (sk *PrivateKey[S]) Bytes() []byte {
 	out, err := dhc.SerialiseExtendedPrivateKey(&sk.ExtendedPrivateKey)
 	if err != nil {
-		panic(errs2.Wrap(err))
+		panic(errs.Wrap(err))
 	}
 	return out
 }
@@ -46,7 +46,7 @@ func (sk *PrivateKey[S]) Equal(other *PrivateKey[S]) bool {
 func (pk *PublicKey[P, B, S]) Bytes() []byte {
 	out, err := dhc.SerialisePublicKey(&pk.PublicKey)
 	if err != nil {
-		panic(errs2.Wrap(err))
+		panic(errs.Wrap(err))
 	}
 	return out
 }
@@ -65,11 +65,11 @@ func (pk *PublicKey[P, B, S]) Equal(other *PublicKey[P, B, S]) bool {
 func NewPrivateKey[S algebra.PrimeFieldElement[S]](sf algebra.PrimeField[S], ikm []byte) (*PrivateKey[S], error) {
 	seed, err := dhc.NewPrivateKey(ikm)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	sk, err := dhc.ExtendPrivateKey(seed, sf)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &PrivateKey[S]{ExtendedPrivateKey: *sk}, nil
 }
@@ -77,7 +77,7 @@ func NewPrivateKey[S algebra.PrimeFieldElement[S]](sf algebra.PrimeField[S], ikm
 func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
 	out, err := dhc.NewPublicKey(v)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &PublicKey[P, B, S]{PublicKey: *out}, nil
 }
@@ -225,7 +225,7 @@ func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con
 func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, sharedSecret, info, psk, pskID []byte) (*context, *KeyScheduleContext, error) {
 	if err := verifyPSKInputs(mode, psk, pskID); err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	var err error
@@ -258,7 +258,7 @@ func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, shared
 
 		ctx.aead, err = aead.New(ctx.key)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err)
+			return nil, nil, errs.Wrap(err)
 		}
 	}
 
@@ -294,11 +294,11 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](receiverPublicKey.Value().Structure())
 	kdf, err := NewKDF(suite.kdf)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	kem, err := NewDHKEM(curve, kdf)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	var sharedSecret []byte
 	var ephemeralPublicKey *PublicKey[P, B, S]
@@ -312,12 +312,12 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 		sharedSecret, ephemeralPublicKey, err = kem.Encap(receiverPublicKey, prng)
 	}
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	ctx, _, err := keySchedule(SenderRole, suite, mode, sharedSecret, info, psk, pskID)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return &SenderContext[P, B, S]{
@@ -329,12 +329,12 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 func (s *SenderContext[P, B, S]) Seal(plaintext, additionalData []byte) (ciphertext []byte, err error) {
 	nonce, err := s.ctx.computeNonce()
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	ciphertext = s.ctx.aead.Seal(nil, nonce, plaintext, additionalData)
 	if err := s.ctx.incrementSeq(); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return ciphertext, nil
@@ -359,11 +359,11 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](ephemeralPublicKey.Value().Structure())
 	kdf, err := NewKDF(suite.kdf)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	kem, err := NewDHKEM(curve, kdf)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var sharedSecret []byte
@@ -377,12 +377,12 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 		sharedSecret, err = kem.Decap(receiverPrivatekey, ephemeralPublicKey)
 	}
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	ctx, _, err := keySchedule(ReceiverRole, suite, mode, sharedSecret, info, psk, pskID)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return &ReceiverContext[P, B, S]{
@@ -394,16 +394,16 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 func (r *ReceiverContext[P, B, S]) Open(ciphertext, additionalData []byte) (plaintext []byte, err error) {
 	nonce, err := r.ctx.computeNonce()
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	plaintext, err = r.ctx.aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	if err := r.ctx.incrementSeq(); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return plaintext, nil

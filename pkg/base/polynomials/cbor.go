@@ -2,8 +2,8 @@ package polynomials
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type moduleValuedPolynomialDTO[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
@@ -16,7 +16,7 @@ func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal polynomial")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal polynomial")
 	}
 	return data, nil
 }
@@ -43,7 +43,7 @@ func (p *Polynomial[RE]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal polynomial")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal polynomial")
 	}
 	return data, nil
 }

@@ -20,9 +20,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Statement represents an OR-composed statement consisting of n sub-statements.
@@ -174,7 +174,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 	var err error
 	s.B, err = p.getB(statement, witness)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot determine valid statement index")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot determine valid statement index")
 	}
 
 	// Sample random challenges for all false branches
@@ -186,7 +186,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 				var err error
 				a[i], s.S[i], err = p.sigma.ComputeProverCommitment(statement[i], witness.v)
 				if err != nil {
-					return errs2.Wrap(err)
+					return errs.Wrap(err)
 				}
 				return nil
 			})
@@ -196,12 +196,12 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 				s.E[i] = make([]byte, p.GetChallengeBytesLength())
 				_, err := io.ReadFull(p.prng, s.E[i])
 				if err != nil {
-					return errs2.Wrap(err)
+					return errs.Wrap(err)
 				}
 				var simErr error
 				a[i], s.Z[i], simErr = p.sigma.RunSimulator(statement[i], s.E[i])
 				if simErr != nil {
-					return errs2.Wrap(simErr)
+					return errs.Wrap(simErr)
 				}
 				return nil
 			})
@@ -209,7 +209,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 	}
 
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 
 	return a, s, nil
@@ -258,7 +258,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], 
 		z.E[state.B],
 	)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return z, nil
@@ -302,7 +302,7 @@ func (p *protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Comm
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return errs2.Wrap(err).WithMessage("verification failed")
+		return errs.Wrap(err).WithMessage("verification failed")
 	}
 	return nil
 }
@@ -331,13 +331,13 @@ func (p *protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge
 		eg.Go(func() error {
 			z.E[i] = make([]byte, p.GetChallengeBytesLength())
 			if _, err := io.ReadFull(p.prng, z.E[i]); err != nil {
-				return errs2.Wrap(err).WithMessage("cannot sample challenge")
+				return errs.Wrap(err).WithMessage("cannot sample challenge")
 			}
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample challenges")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample challenges")
 	}
 	// Compute last challenge so that XOR of all challenges equals the verifier's challenge:
 	// e_{n-1} = challenge XOR e_0 XOR e_1 XOR ... XOR e_{n-2}
@@ -353,13 +353,13 @@ func (p *protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge
 			var err error
 			a[i], z.Z[i], err = p.sigma.RunSimulator(statement[i], z.E[i])
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("cannot run simulator")
+				return errs.Wrap(err).WithMessage("cannot run simulator")
 			}
 			return nil
 		})
 	}
 	if err := eg2.Wait(); err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute responses")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot compute responses")
 	}
 	return a, z, nil
 }
@@ -409,13 +409,13 @@ func (p *protocol[X, W, A, S, Z]) Name() sigma.Name {
 // Sentinel errors for the sigor package.
 var (
 	// ErrIsNil is returned when a required argument is nil.
-	ErrIsNil = errs2.New("is nil")
+	ErrIsNil = errs.New("is nil")
 	// ErrNotAtLeastOneOutOfN is returned when no valid statement/witness pair is found.
-	ErrNotAtLeastOneOutOfN = errs2.New("not at least one statement out of n is valid")
+	ErrNotAtLeastOneOutOfN = errs.New("not at least one statement out of n is valid")
 	// ErrInvalidLength is returned when input slices have incorrect lengths.
-	ErrInvalidLength = errs2.New("invalid length")
+	ErrInvalidLength = errs.New("invalid length")
 	// ErrInvalidArgument is returned when an argument has an invalid value.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 	// ErrVerification is returned when proof verification fails.
-	ErrVerification = errs2.New("verification failed")
+	ErrVerification = errs.New("verification failed")
 )

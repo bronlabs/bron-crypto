@@ -5,12 +5,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
@@ -34,7 +34,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 
 	rfProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("input proof")
+		return errs.Wrap(err).WithMessage("input proof")
 	}
 
 	if len(rfProof.A) != R || len(rfProof.E) != R || len(rfProof.Z) != R {
@@ -44,7 +44,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 	v.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(v.sessionID[:])))
 	crs, err := v.transcript.ExtractBytes(crsLabel, 32)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot extract crs")
+		return errs.Wrap(err).WithMessage("cannot extract crs")
 	}
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
 
@@ -65,14 +65,14 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 	for i := range R {
 		digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), rfProof.E[i], rfProof.Z[i].Bytes())
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("cannot hash")
+			return errs.Wrap(err).WithMessage("cannot hash")
 		}
 		if !isAllZeros(digest) {
 			return ErrVerification.WithMessage("invalid challenge")
 		}
 		err = v.sigmaProtocol.Verify(statement, rfProof.A[i], rfProof.E[i], rfProof.Z[i])
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("verification failed")
+			return errs.Wrap(err).WithMessage("verification failed")
 		}
 	}
 

@@ -5,10 +5,10 @@ import (
 	"io"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // ComputeGenericNonceCommitment generates a random nonce k and commitment R = k·G.
@@ -31,7 +31,7 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
 	}
 	k, err = algebrautils.RandomNonIdentity(sf, prng)
 	if err != nil {
-		return *new(GE), *new(S), errs2.Wrap(err).WithMessage("scalar")
+		return *new(GE), *new(S), errs.Wrap(err).WithMessage("scalar")
 	}
 	if shouldNegateNonce != nil && shouldNegateNonce(group.ScalarBaseOp(k)) {
 		k = k.Neg()
@@ -88,14 +88,14 @@ func MakeGenericChallenge[S Scalar[S]](scalarField ScalarField[S], hashFunc func
 	}
 	digest, err := hashing.Hash(hashFunc, xs...)
 	if err != nil {
-		return *new(S), errs2.Wrap(err).WithMessage("could not compute fiat shamir hash")
+		return *new(S), errs.Wrap(err).WithMessage("could not compute fiat shamir hash")
 	}
 	if challengeElementsAreLittleEndian {
 		slices.Reverse(digest)
 	}
 	challenge, err := scalarField.FromWideBytes(digest)
 	if err != nil {
-		return *new(S), errs2.Wrap(err).WithMessage("could not compute fiat shamir challenge")
+		return *new(S), errs.Wrap(err).WithMessage("could not compute fiat shamir challenge")
 	}
 	return challenge, nil
 }

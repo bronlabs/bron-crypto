@@ -4,12 +4,12 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type gennaroDkgRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
@@ -20,7 +20,7 @@ type gennaroDkgRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 func NewGennaroDKGRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], sessionID network.SID, sharingID sharing.ID, accessStructure *sharing.ThresholdAccessStructure, niCompilerName compiler.Name, tape ts.Transcript, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
 	party, err := NewParticipant(sessionID, group, sharingID, accessStructure, niCompilerName, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
+		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}
 	return &gennaroDkgRunner[G, S]{party}, nil
 }
@@ -30,27 +30,27 @@ func (r *gennaroDkgRunner[G, S]) Run(rt *network.Router) (*DKGOutput[G, S], erro
 	// r1
 	r1OutB, err := r.party.Round1()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot run round 1")
+		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
 	r2InB, err := exchange.Broadcast(rt, "GennaroDKGRound1", r1OutB)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
+		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
 
 	// r2
 	r2OutB, r2OutU, err := r.party.Round2(r2InB)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot run round 2")
+		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
 	r3InB, r3InU, err := exchange.Exchange(rt, "GennaroDKGRound2", r2OutB, r2OutU)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot exchange broadcast")
+		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
 
 	// r3
 	dkgOutput, err := r.party.Round3(r3InB, r3InU)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot run round 3")
+		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
 
 	return dkgOutput, nil

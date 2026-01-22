@@ -6,7 +6,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -17,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 executes protocol round 1.
@@ -28,38 +28,38 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 	var ck [hash_comm.KeySize]byte
 	ckBytes, err := c.tape.ExtractBytes(ckLabel, uint(len(ck)))
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("failed to extract commitment key")
+		return nil, nil, errs.Wrap(err).WithMessage("failed to extract commitment key")
 	}
 	copy(ck[:], ckBytes)
 	c.state.ck, err = hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create commitment scheme")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create commitment scheme")
 	}
 
 	c.state.r, err = c.suite.ScalarField().Random(c.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample r")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample r")
 	}
 	c.state.bigR = make(map[sharing.ID]P)
 	c.state.bigR[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.r)
 	c.state.bigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
 	committer, err := c.state.ck.Committer()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create committer")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create committer")
 	}
 	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = committer.Commit(c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot commit to r")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot commit to r")
 	}
 
 	c.state.phi, err = c.suite.ScalarField().Random(c.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample phi")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample phi")
 	}
 
 	zeroR1, err := c.state.zeroSetup.Round1()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot round 1 of zero setup")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot round 1 of zero setup")
 	}
 
 	bOut := &Round1Broadcast{
@@ -70,7 +70,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 	for id, message := range outgoingP2PMessages(c, uOut) {
 		message.MulR1, err = c.state.aliceMul[id].Round1()
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot run Alice mul round1")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot run Alice mul round1")
 		}
 	}
 
@@ -95,7 +95,7 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 
 	zeroR2, err := c.state.zeroSetup.Round2(zeroR1.Freeze())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run zero setup round2")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round2")
 	}
 
 	c.state.chi = make(map[sharing.ID]S)
@@ -107,7 +107,7 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 	for id, message := range outgoingP2PMessages(c, uOut) {
 		message.MulR2, c.state.chi[id], err = c.state.bobMul[id].Round2(mulR1[id])
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot run bob mul round2")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot run bob mul round2")
 		}
 		message.ZeroSetupR2, _ = zeroR2.Get(id)
 	}
@@ -127,11 +127,11 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 	mulR2 := make(map[sharing.ID]*rvole_bbot.Round2P2P[P, S])
 	verifier, err := c.state.ck.Verifier()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create verifier")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create verifier")
 	}
 	for id, message := range incomingMessages {
 		if err := verifier.Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
-			return nil, nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
+			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
 		c.state.bigR[id] = message.broadcast.BigR
 		zeroR2.Put(id, message.p2p.ZeroSetupR2)
@@ -140,15 +140,15 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 
 	zeroSeeds, err := c.state.zeroSetup.Round3(zeroR2.Freeze())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run zero setup round3")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 	c.state.zeroSampler, err = przs.NewSampler(c.shard.Share().ID(), c.quorum, zeroSeeds, c.suite.ScalarField())
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run zero setup round3")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 	zeta, err := c.state.zeroSampler.Sample()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run zero setup round3")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
 	quorum2, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
@@ -158,7 +158,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 
 	sk, err := c.shard.Share().ToAdditive(quorum2)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("to additive share failed")
+		return nil, nil, errs.Wrap(err).WithMessage("to additive share failed")
 	}
 
 	c.state.sk = sk.Value().Add(zeta)
@@ -171,7 +171,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 	for id, message := range outgoingP2PMessages(c, uOut) {
 		message.MulR3, c.state.c[id], err = c.state.aliceMul[id].Round3(mulR2[id], []S{c.state.r, c.state.sk})
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot run alice mul round3")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot run alice mul round3")
 		}
 		message.GammaU = c.suite.Curve().ScalarBaseMul(c.state.c[id][0])
 		message.GammaV = c.suite.Curve().ScalarBaseMul(c.state.c[id][1])
@@ -186,7 +186,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast[P, B, S]], r3uOut network.RoundMessages[*Round3P2P[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 4, r3bOut, r3uOut)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid input or round mismatch")
+		return nil, errs.Wrap(err).WithMessage("invalid input or round mismatch")
 	}
 
 	psi := c.suite.ScalarField().Zero()
@@ -195,10 +195,10 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	for id, message := range incomingMessages {
 		d, err := c.state.bobMul[id].Round4(message.p2p.MulR3)
 		if err != nil {
-			if errs2.Is(err, base.ErrAbort) {
-				return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot run Bob mul round4")
+			if errs.Is(err, base.ErrAbort) {
+				return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot run Bob mul round4")
 			}
-			return nil, errs2.Wrap(err).WithMessage("cannot run Bob mul round4")
+			return nil, errs.Wrap(err).WithMessage("cannot run Bob mul round4")
 		}
 		c.state.pk[id] = message.broadcast.Pk
 
@@ -224,25 +224,25 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	v := c.state.sk.Mul(c.state.phi.Add(psi)).Add(cvdv)
 	digest, err := hashing.Hash(c.suite.HashFunc(), message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot hash message")
+		return nil, errs.Wrap(err).WithMessage("cannot hash message")
 	}
 	m, err := ecdsa.DigestToScalar(c.suite.ScalarField(), digest)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert digest to scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot convert digest to scalar")
 	}
 	rxi, err := bigR.AffineX()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert to affine x")
+		return nil, errs.Wrap(err).WithMessage("cannot convert to affine x")
 	}
 	rx, err := c.suite.ScalarField().FromWideBytes(rxi.Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert to scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot convert to scalar")
 	}
 	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
 	partialSignature, err = dkls23.NewPartialSignature(bigR, u, w)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create partial signature")
+		return nil, errs.Wrap(err).WithMessage("cannot create partial signature")
 	}
 	return partialSignature, nil
 }

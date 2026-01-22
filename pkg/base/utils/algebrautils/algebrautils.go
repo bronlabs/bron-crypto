@@ -6,9 +6,9 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // RandomNonIdentity samples a random element from the given finite monoid that is not the identity element.
@@ -24,14 +24,14 @@ func RandomNonIdentity[M interface {
 		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("prng"))
 	}
 	if len(validationErrors) > 0 {
-		return *new(E), errs2.Join(validationErrors...)
+		return *new(E), errs.Join(validationErrors...)
 	}
 	var err error
 	out := m.OpIdentity()
 	for out.IsOpIdentity() {
 		out, err = m.Random(prng)
 		if err != nil {
-			return *new(E), errs2.Wrap(err)
+			return *new(E), errs.Wrap(err)
 		}
 	}
 	return out, nil
@@ -215,4 +215,4 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 	return acc
 }
 
-var ErrArgumentIsNil = errs2.New("argument is nil")
+var ErrArgumentIsNil = errs.New("argument is nil")

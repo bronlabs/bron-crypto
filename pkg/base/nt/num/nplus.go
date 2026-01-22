@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
@@ -80,7 +80,7 @@ func (*PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) *NatPlus {
 func (nps *PositiveNaturalNumbers) FromRat(v *Rat) (*NatPlus, error) {
 	vInt, err := Z().FromRat(v)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return nps.FromInt(vInt)
 }
@@ -145,7 +145,7 @@ func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
 	out, err := nps.FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return out, nil
 }
@@ -157,7 +157,7 @@ func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, 
 	}
 	var v numct.Nat
 	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &NatPlus{v: &v, m: nil}, nil
 }
@@ -200,7 +200,7 @@ func (np *NatPlus) cacheMont(m *numct.Modulus) *NatPlus {
 		if m == nil {
 			m, ok = numct.NewModulus(np.v)
 			if ok == ct.False {
-				panic(errs2.New("modulus is not valid"))
+				panic(errs.New("modulus is not valid"))
 			}
 		}
 		np.m = m
@@ -233,19 +233,19 @@ func (np *NatPlus) OtherOp(other *NatPlus) *NatPlus {
 
 // Add performs addition of two NatPlus elements.
 func (np *NatPlus) Add(other *NatPlus) *NatPlus {
-	errs2.Must1(np.isValid(other))
+	errs.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Add(np.v, other.v)
-	return errs2.Must1(np.isValid(&NatPlus{v: v, m: nil}))
+	return errs.Must1(np.isValid(&NatPlus{v: v, m: nil}))
 }
 
 // Mul performs multiplication of two NatPlus elements.
 func (np *NatPlus) Mul(other *NatPlus) *NatPlus {
-	errs2.Must1(np.isValid(other))
+	errs.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Mul(np.v, other.v)
 	out := &NatPlus{v: v, m: nil}
-	return errs2.Must1(np.isValid(out))
+	return errs.Must1(np.isValid(out))
 }
 
 // Lsh performs a left shift operation on the NatPlus.
@@ -253,7 +253,7 @@ func (np *NatPlus) Lsh(shift uint) *NatPlus {
 	v := new(numct.Nat)
 	v.Lsh(np.v, shift)
 	out := &NatPlus{v: v, m: nil}
-	return errs2.Must1(np.isValid(out))
+	return errs.Must1(np.isValid(out))
 }
 
 // TryRsh attempts to right shift the NatPlus, returning an error if the result would be zero.
@@ -267,7 +267,7 @@ func (np *NatPlus) TryRsh(shift uint) (*NatPlus, error) {
 // Rsh performs a right shift operation on the NatPlus.
 // Panics if the result would be zero.
 func (np *NatPlus) Rsh(shift uint) *NatPlus {
-	return errs2.Must1(np.TryRsh(shift))
+	return errs.Must1(np.TryRsh(shift))
 }
 
 // Double returns the result of multiplying the NatPlus by 2.
@@ -292,7 +292,7 @@ func (np *NatPlus) IsOpIdentity() bool {
 
 // Compare compares the NatPlus with another NatPlus, returning the ordering result.
 func (np *NatPlus) Compare(other *NatPlus) base.Ordering {
-	errs2.Must1(np.isValid(other))
+	errs.Must1(np.isValid(other))
 	lt, eq, gt := np.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
@@ -313,7 +313,7 @@ func (np *NatPlus) TryOpInv() (*NatPlus, error) {
 // TryDiv attempts to divide the NatPlus by another NatPlus, returning an error if the division is not exact.
 func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q, r numct.Nat
@@ -330,7 +330,7 @@ func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 // TrySub attempts to subtract another NatPlus from the NatPlus, returning an error if the result is not a positive natural number.
 func (np *NatPlus) TrySub(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	if np.IsLessThanOrEqual(other) {
 		return nil, ErrOutOfRange.WithStackFrame().WithMessage("result of subtraction is not a positive natural number")
@@ -343,20 +343,20 @@ func (np *NatPlus) TrySub(other *NatPlus) (*NatPlus, error) {
 
 // IsLessThanOrEqual checks if the NatPlus is less than or equal to another NatPlus.
 func (np *NatPlus) IsLessThanOrEqual(other *NatPlus) bool {
-	errs2.Must1(np.isValid(other))
+	errs.Must1(np.isValid(other))
 	lt, eq, _ := np.v.Compare(other.v)
 	return lt|eq == ct.True
 }
 
 // IsUnit checks if the NatPlus is a unit with respect to the given modulus.
 func (np *NatPlus) IsUnit(modulus *NatPlus) bool {
-	errs2.Must1(np.isValid(modulus))
+	errs.Must1(np.isValid(modulus))
 	return np.v.Coprime(modulus.v) == ct.True
 }
 
 // Equal checks if the NatPlus is equal to another NatPlus.
 func (np *NatPlus) Equal(other *NatPlus) bool {
-	errs2.Must1(np.isValid(other))
+	errs.Must1(np.isValid(other))
 	return np.v.Equal(other.v) == ct.True
 }
 

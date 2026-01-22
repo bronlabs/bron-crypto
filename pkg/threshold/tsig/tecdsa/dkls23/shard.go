@@ -7,12 +7,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // AuxiliaryInfo holds auxiliary key material.
@@ -106,7 +106,7 @@ func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal dkls23 auxiliary info")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal dkls23 auxiliary info")
 	}
 	return data, nil
 }
@@ -173,7 +173,7 @@ func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal dkls23 Shard")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal dkls23 Shard")
 	}
 	return data, nil
 }

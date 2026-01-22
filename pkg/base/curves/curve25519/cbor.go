@@ -3,8 +3,8 @@ package curve25519
 import (
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
@@ -34,7 +34,7 @@ func (p *Point) UnmarshalCBOR(data []byte) error {
 
 	pp, err := NewCurve().FromUncompressed(dto.AffineUnompressedBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil
@@ -55,7 +55,7 @@ func (p *PrimeSubGroupPoint) UnmarshalCBOR(data []byte) error {
 
 	pp, err := NewPrimeSubGroup().FromUncompressed(dto.AffineUnompressedBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil

@@ -5,8 +5,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Scheme represents a configured ECDSA signature scheme instance.
@@ -48,7 +48,7 @@ func (s *Scheme[P, B, S]) Keygen(_ ...signatures.KeyGeneratorOption[*KeyGenerato
 func (s *Scheme[P, B, S]) Signer(sk *PrivateKey[P, B, S], _ ...signatures.SignerOption[*Signer[P, B, S], []byte, *Signature[S]]) (*Signer[P, B, S], error) {
 	sg, err := NewSigner(s.suite, sk, s.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("signer creation failed")
+		return nil, errs.Wrap(err).WithMessage("signer creation failed")
 	}
 	return sg, nil
 }
@@ -57,7 +57,7 @@ func (s *Scheme[P, B, S]) Signer(sk *PrivateKey[P, B, S], _ ...signatures.Signer
 func (s *Scheme[P, B, S]) Verifier(_ ...signatures.VerifierOption[*Verifier[P, B, S], *PublicKey[P, B, S], []byte, *Signature[S]]) (*Verifier[P, B, S], error) {
 	vr, err := NewVerifier(s.suite)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
+		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
 	}
 	return vr, nil
 }

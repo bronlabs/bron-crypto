@@ -7,7 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -15,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type (
@@ -118,19 +118,19 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 
 	h, err := ts.Extract(tape, secondPedersenGeneratorLabel, group)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
+		return nil, errs.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
 	}
 	key, err := pedcom.NewCommitmentKey(group.Generator(), h)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create pedersen key")
+		return nil, errs.Wrap(err).WithMessage("failed to create pedersen key")
 	}
 	pedersenVSS, err := pedersen.NewScheme(key, ac.Threshold(), ac.Shareholders())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create pedersen VSS scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create pedersen VSS scheme")
 	}
 	feldmanVSS, err := feldman.NewScheme(key.G(), ac.Threshold(), ac.Shareholders())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create feldman VSS scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create feldman VSS scheme")
 	}
 	return &Participant[E, S]{
 		sid:            sid,
@@ -173,7 +173,7 @@ func NewDKGOutput[E GroupElement[E, S], S Scalar[S]](
 	publicKeyValue := vector.Eval(sf.Zero())
 	partialPublicKeys, err := ComputePartialPublicKey(sf, share, vector, accessStructure)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compute partial public keys from share")
+		return nil, errs.Wrap(err).WithMessage("failed to compute partial public keys from share")
 	}
 	return &DKGOutput[E, S]{
 		share: share,

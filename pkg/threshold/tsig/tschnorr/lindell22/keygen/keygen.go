@@ -2,10 +2,10 @@ package keygen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // DKGOutput is the output of a distributed key generation protocol.
@@ -23,7 +23,7 @@ func NewShard[
 		output.AccessStructure(),
 	)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create tSchnorr shard from DKG output")
+		return nil, errs.Wrap(err).WithMessage("failed to create tSchnorr shard from DKG output")
 	}
 	return shard, nil
 }

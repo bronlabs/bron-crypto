@@ -4,8 +4,8 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
@@ -25,7 +25,7 @@ func (n *Nat) MarshalCBOR() ([]byte, error) {
 	dto := &natDTO{NatBytes: n.Bytes()}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Nat")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Nat")
 	}
 	return data, nil
 }
@@ -49,7 +49,7 @@ func (i *Int) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Int")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Int")
 	}
 	return data, nil
 }
@@ -71,7 +71,7 @@ func (m *Modulus) MarshalCBOR() ([]byte, error) {
 	serial := &modulusDTO{N: m.Nat()}
 	data, err := serde.MarshalCBOR(serial)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal ModulusBasic")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal ModulusBasic")
 	}
 	return data, nil
 }
@@ -95,5 +95,5 @@ func (m *Modulus) UnmarshalCBOR(data []byte) error {
 }
 
 var (
-	ErrFailed = errs2.New("failed")
+	ErrFailed = errs.New("failed")
 )

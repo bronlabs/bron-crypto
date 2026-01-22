@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type Capsule any
@@ -120,5 +120,5 @@ func (k *SymmetricKey) Clone() *SymmetricKey {
 }
 
 var (
-	ErrInvalidKey = errs2.New("invalid key")
+	ErrInvalidKey = errs.New("invalid key")
 )

@@ -1,10 +1,10 @@
 package nthroot
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrFailed indicates a general failure during protocol execution.
-	ErrFailed = errs2.New("failed")
+	ErrFailed = errs.New("failed")
 	// ErrVerificationFailed signals a failed proof verification.
-	ErrVerificationFailed = errs2.New("verification failed")
+	ErrVerificationFailed = errs.New("verification failed")
 )

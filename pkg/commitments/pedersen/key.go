@@ -4,8 +4,8 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Key holds the generators defining a Pedersen commitment CRS.
@@ -63,7 +63,7 @@ func (k *Key[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Pedersen key")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Pedersen key")
 	}
 	return data, nil
 }
@@ -72,11 +72,11 @@ func (k *Key[E, S]) MarshalCBOR() ([]byte, error) {
 func (k *Key[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*keyDTO[E, S]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("failed to unmarshal Pedersen key")
+		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen key")
 	}
 	k2, err := NewCommitmentKey(dto.G, dto.H)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create commitment key")
+		return errs.Wrap(err).WithMessage("cannot create commitment key")
 	}
 
 	*k = *k2

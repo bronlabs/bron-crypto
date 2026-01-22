@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Prover implements the interactive sigma prover.
@@ -55,7 +55,7 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 
 	commitment, state, err := p.sigmaProtocol.ComputeProverCommitment(p.statement, p.witness)
 	if err != nil {
-		return zero, errs2.Wrap(err).WithMessage("cannot create commitment")
+		return zero, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
 
 	p.transcript.AppendBytes(commitmentLabel, commitment.Bytes())
@@ -76,7 +76,7 @@ func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 
 	response, err := p.sigmaProtocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, challengeBytes)
 	if err != nil {
-		return zero, errs2.Wrap(err).WithMessage("cannot generate response")
+		return zero, errs.Wrap(err).WithMessage("cannot generate response")
 	}
 	p.transcript.AppendBytes(responseLabel, response.Bytes())
 

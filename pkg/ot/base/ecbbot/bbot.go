@@ -6,9 +6,9 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Suite configures EC batching base OTs over a prime-order group.
@@ -33,7 +33,7 @@ func NewSuite[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 	}
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create default suite")
+		return nil, errs.Wrap(err).WithMessage("failed to create default suite")
 	}
 
 	s := &Suite[G, S]{

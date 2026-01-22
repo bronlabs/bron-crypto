@@ -10,9 +10,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewZMod creates a new ZMod structure given a modulus NatPlus.
@@ -27,7 +27,7 @@ func NewZMod(modulus *NatPlus) (*ZMod, error) {
 func NewZModFromCardinal(n cardinal.Cardinal) (*ZMod, error) {
 	nn, err := NPlus().FromCardinal(n)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	nn.cacheMont(nil)
 	return &ZMod{n: nn}, nil
@@ -101,7 +101,7 @@ func (zn *ZMod) Bottom() *Uint {
 
 // FromUint64 creates a Uint element from a uint64 value.
 func (zn *ZMod) FromUint64(value uint64) *Uint {
-	return errs2.Must1(zn.FromNat(N().FromUint64(value)))
+	return errs.Must1(zn.FromNat(N().FromUint64(value)))
 }
 
 // FromInt64 creates a Uint element from an int64 value.
@@ -123,7 +123,7 @@ func (zn *ZMod) FromInt(v *Int) (*Uint, error) {
 func (zn *ZMod) FromRat(v *Rat) (*Uint, error) {
 	vInt, err := Z().FromRat(v)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return zn.FromInt(vInt)
 }
@@ -133,7 +133,7 @@ func (zn *ZMod) FromRat(v *Rat) (*Uint, error) {
 func (zn *ZMod) FromBytes(input []byte) (*Uint, error) {
 	v, err := N().FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return zn.FromNatCTReduced(v.Value())
 }
@@ -149,7 +149,7 @@ func (zn *ZMod) FromBytesBE(input []byte) (*Uint, error) {
 func (zn *ZMod) FromBytesBEReduce(input []byte) (*Uint, error) {
 	v, err := N().FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return zn.FromNatCT(v.Value())
 }
@@ -207,7 +207,7 @@ func (zn *ZMod) FromBig(v *big.Int) (*Uint, error) {
 	}
 	z, err := Z().FromBig(v)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return zn.FromInt(z)
 }
@@ -240,7 +240,7 @@ func (zn *ZMod) Top() *Uint {
 func (zn *ZMod) Random(prng io.Reader) (*Uint, error) {
 	out, err := zn.n.m.Random(prng)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Uint{v: out, m: zn.n.m}, nil
 }
@@ -249,18 +249,18 @@ func (zn *ZMod) Random(prng io.Reader) (*Uint, error) {
 func (zn *ZMod) Hash(input []byte) (*Uint, error) {
 	xof, err := blake2b.NewXOF(uint32(zn.WideElementSize()), nil)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	if _, err := xof.Write(input); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	digest := make([]byte, zn.WideElementSize())
 	if _, err = io.ReadFull(xof, digest); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	x := new(numct.Nat)
 	if ok := x.SetBytes(digest); ok == ct.False {
-		return nil, errs2.New("failed to interpret hash digest as Nat")
+		return nil, errs.New("failed to interpret hash digest as Nat")
 	}
 	v := new(numct.Nat)
 	// Perform modular reduction using the modulus from n
@@ -356,7 +356,7 @@ func (u *Uint) IsPositive() bool {
 
 // Add performs addition of two Uint elements.
 func (u *Uint) Add(other *Uint) *Uint {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	u.m.ModAdd(v, u.v, other.v)
 	return &Uint{v: v, m: u.m}
@@ -369,7 +369,7 @@ func (u *Uint) TrySub(other *Uint) (*Uint, error) {
 
 // Sub performs subtraction of two Uint elements.
 func (u *Uint) Sub(other *Uint) *Uint {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	u.m.ModSub(v, u.v, other.v)
 	return &Uint{v: v, m: u.m}
@@ -377,7 +377,7 @@ func (u *Uint) Sub(other *Uint) *Uint {
 
 // Mul performs multiplication of two Uint elements.
 func (u *Uint) Mul(other *Uint) *Uint {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	u.m.ModMul(v, u.v, other.v)
 	return &Uint{v: v, m: u.m}
@@ -446,7 +446,7 @@ func (u *Uint) IsUnit() bool {
 
 // Coprime checks if the Uint element is coprime to another Uint element.
 func (u *Uint) Coprime(other *Uint) bool {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	return u.v.Coprime(other.v) == ct.True
 }
 
@@ -457,14 +457,14 @@ func (u *Uint) IsProbablyPrime() bool {
 
 // EuclideanDiv performs Euclidean division of the Uint element by another Uint element.
 func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	if !u.Group().IsDomain() {
-		return nil, nil, errs2.New("not a euclidean domain")
+		return nil, nil, errs.New("not a euclidean domain")
 	}
 
 	var q, r numct.Nat
 	if ok := q.EuclideanDiv(&r, u.v, other.v); ok == ct.False {
-		return nil, nil, errs2.New("division failed")
+		return nil, nil, errs.New("division failed")
 	}
 	u.m.Mod(&q, &q)
 	u.m.Mod(&r, &r)
@@ -474,7 +474,7 @@ func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
 // EuclideanValuation returns the Euclidean valuation of the Uint element.
 func (u *Uint) EuclideanValuation() algebra.Cardinal {
 	if !u.Group().IsDomain() {
-		panic(errs2.New("not a euclidean domain"))
+		panic(errs.New("not a euclidean domain"))
 	}
 	return cardinal.NewFromNumeric(u.v)
 }
@@ -487,7 +487,7 @@ func (u *Uint) TryNeg() (*Uint, error) {
 // TryInv returns the multiplicative inverse of the Uint element.
 func (u *Uint) TryInv() (*Uint, error) {
 	if !u.IsUnit() {
-		return nil, errs2.New("not a unit")
+		return nil, errs.New("not a unit")
 	}
 	v := new(numct.Nat)
 	u.m.ModInv(v, u.v)
@@ -496,10 +496,10 @@ func (u *Uint) TryInv() (*Uint, error) {
 
 // TryDiv performs division of the Uint element by another Uint element.
 func (u *Uint) TryDiv(other *Uint) (*Uint, error) {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	if ok := u.m.ModDiv(v, u.v, other.v); ok == ct.False {
-		return nil, errs2.New("division failed")
+		return nil, errs.New("division failed")
 	}
 	return &Uint{v: v, m: u.m}, nil
 }
@@ -559,14 +559,14 @@ func (u *Uint) PartialCompare(other *Uint) base.PartialOrdering {
 
 // Compare performs a total comparison between two Uint elements.
 func (u *Uint) Compare(other *Uint) base.Ordering {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	lt, eq, gt := u.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
 
 // IsLessThanOrEqual checks if the Uint element is less than or equal to another Uint element.
 func (u *Uint) IsLessThanOrEqual(other *Uint) bool {
-	errs2.Must1(u.isValid(other))
+	errs.Must1(u.isValid(other))
 	lt, eq, _ := u.v.Compare(other.v)
 	return lt|eq == ct.True
 }
@@ -593,7 +593,7 @@ func (u *Uint) IsQuadraticResidue() bool {
 func (u *Uint) Sqrt() (*Uint, error) {
 	v := new(numct.Nat)
 	if ok := u.m.ModSqrt(v, u.v); ok == ct.False {
-		return nil, errs2.New("square root failed")
+		return nil, errs.New("square root failed")
 	}
 	return &Uint{v: v, m: u.m}, nil
 }

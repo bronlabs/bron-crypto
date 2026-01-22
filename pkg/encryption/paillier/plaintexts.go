@@ -5,9 +5,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewPlaintextSpace creates a new plaintext space Z_n for Paillier encryption.
@@ -15,7 +15,7 @@ import (
 func NewPlaintextSpace(n *num.NatPlus) (*PlaintextSpace, error) {
 	out, err := num.NewZMod(n)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return (*PlaintextSpace)(out), nil
 }
@@ -44,11 +44,11 @@ func (pts *PlaintextSpace) Sample(lowInclusive, highExclusive *Plaintext, prng i
 	if lowInclusive == nil && highExclusive == nil {
 		sampled, err := (*num.ZMod)(pts).Random(prng)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 		v, err := num.Z().FromUintSymmetric(sampled)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 		return &Plaintext{
 			v: v,
@@ -58,7 +58,7 @@ func (pts *PlaintextSpace) Sample(lowInclusive, highExclusive *Plaintext, prng i
 	if lowInclusive != nil && highExclusive != nil {
 		v, err := num.Z().Random(lowInclusive.Value(), highExclusive.Value(), prng)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 		return &Plaintext{
 			v: v,
@@ -78,11 +78,11 @@ func (pts *PlaintextSpace) Contains(m *Plaintext) bool {
 func (pts *PlaintextSpace) FromNat(x *numct.Nat) (*Plaintext, error) {
 	y, err := num.NewUintGivenModulus(x, pts.N().ModulusCT())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	z, err := num.Z().FromUintSymmetric(y)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Plaintext{
 		v: z,
@@ -95,7 +95,7 @@ func (pts *PlaintextSpace) FromNat(x *numct.Nat) (*Plaintext, error) {
 func (pts *PlaintextSpace) FromBytes(b []byte) (*Plaintext, error) {
 	var x numct.Nat
 	if ok := x.SetBytes(b); ok == ct.False {
-		return nil, errs2.New("failed to create nat from bytes")
+		return nil, errs.New("failed to create nat from bytes")
 	}
 	return pts.FromNat(&x)
 }
@@ -105,7 +105,7 @@ func (pts *PlaintextSpace) FromBytes(b []byte) (*Plaintext, error) {
 func (pts *PlaintextSpace) FromInt(x *numct.Int) (*Plaintext, error) {
 	y, err := num.Z().FromIntCT(x)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	if !y.IsInRangeSymmetric(pts.N()) {
 		return nil, ErrInvalidRange.WithMessage("int is out of range for plaintext space")

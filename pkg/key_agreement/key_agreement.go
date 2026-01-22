@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Type represents the type of key agreement algorithm.
@@ -119,5 +119,5 @@ func (k *SharedKey) Equal(other *SharedKey) bool {
 }
 
 var (
-	ErrInvalidKey = errs2.New("invalid key")
+	ErrInvalidKey = errs.New("invalid key")
 )

@@ -6,12 +6,12 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // VariantType identifies this as the BIP-340 Schnorr variant.
@@ -71,7 +71,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 	d := dPrime
 	py, err := bigP.AffineY()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot compute y")
 	}
 	if py.IsOdd() {
 		d = dPrime.Neg()
@@ -81,7 +81,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
 	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, v.Aux[:])
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("hash failed")
+		return nil, nil, errs.Wrap(err).WithMessage("hash failed")
 	}
 	t := make([]byte, len(auxDigest))
 	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
@@ -92,13 +92,13 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 		bip340.NewBip340HashNonce, t, encodePoint(bigP), v.msg,
 	)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("hash failed")
+		return nil, nil, errs.Wrap(err).WithMessage("hash failed")
 	}
 
 	// 7. Let k' = int(rand) mod n.
 	kPrime, err := f.FromWideBytes(rand)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot set k'")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot set k'")
 	}
 
 	// 8. Fail if k' = 0
@@ -112,7 +112,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 	k = kPrime
 	ry, err := bigR.AffineY()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot compute y")
 	}
 	if ry.IsOdd() {
 		k = kPrime.Neg()
@@ -136,7 +136,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 
 	e, err := schnorrlike.MakeGenericChallenge(k256.NewScalarField(), v.HashFunc(), false, roinput)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("hash failed")
+		return nil, errs.Wrap(err).WithMessage("hash failed")
 	}
 	return e, nil
 }
@@ -155,7 +155,7 @@ func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*S
 	}
 	s, err := schnorrlike.ComputeGenericResponse(adjustedPrivateKey, nonce, challenge, false)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compute BIP340 response")
+		return nil, errs.Wrap(err).WithMessage("failed to compute BIP340 response")
 	}
 	// 12. Let sig = (R, (k + ed) mod n)).
 	return s, nil
@@ -207,7 +207,7 @@ func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *ad
 	out := share.Clone()
 	pky, err := publicKey.Value().AffineY()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute y")
+		return nil, errs.Wrap(err).WithMessage("cannot compute y")
 	}
 	if pky.IsOdd() {
 		// If the public key is odd, we need to negate the additive share
@@ -227,7 +227,7 @@ func (*Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share
 	}
 	pky, err := aggregatePublicKey.Value().AffineY()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute y")
+		return nil, errs.Wrap(err).WithMessage("cannot compute y")
 	}
 	if pky.IsOdd() {
 		// If the aggregate public key has odd Y, negate the share to match
@@ -250,7 +250,7 @@ func (*Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.S
 	correctedK := k.Clone()
 	y, err := nonceCommitment.AffineY()
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot compute y")
 	}
 	if y.IsOdd() {
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.

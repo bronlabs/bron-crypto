@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/crypto/chacha20poly1305"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type AEADID uint16
@@ -87,12 +87,12 @@ func (s *AEADScheme) New(key []byte) (cipher.AEAD, error) {
 	if s.isAES() {
 		block, err := aes.NewCipher(key)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 
 		gcm, err := cipher.NewGCM(block)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 
 		return gcm, nil
@@ -100,7 +100,7 @@ func (s *AEADScheme) New(key []byte) (cipher.AEAD, error) {
 
 	chacha, err := chacha20poly1305.New(key)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return chacha, nil

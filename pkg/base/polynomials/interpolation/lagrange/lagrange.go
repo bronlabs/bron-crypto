@@ -2,8 +2,8 @@ package lagrange
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func InterpolateAt[FE algebra.FiniteFieldElement[FE]](nodes, values []FE, at FE) (FE, error) {
@@ -17,7 +17,7 @@ func InterpolateAt[FE algebra.FiniteFieldElement[FE]](nodes, values []FE, at FE)
 	}
 	basis, err := BasisAt(nodes, at)
 	if err != nil {
-		return *new(FE), errs2.Wrap(err).WithMessage("could not create basis set")
+		return *new(FE), errs.Wrap(err).WithMessage("could not create basis set")
 	}
 	out := field.Zero()
 	for i, yi := range values {
@@ -41,7 +41,7 @@ func InterpolateInExponentAt[C algebra.ModuleElement[C, S], S algebra.FiniteFiel
 
 	basisCoeffs, err := BasisAt(nodes, at)
 	if err != nil {
-		return *new(C), errs2.Wrap(err).WithMessage("could not compute basis at point")
+		return *new(C), errs.Wrap(err).WithMessage("could not compute basis at point")
 	}
 
 	out := module.OpIdentity()
@@ -68,16 +68,16 @@ func BasisAt[FE algebra.FiniteFieldElement[FE]](xs []FE, at FE) (*polynomials.Po
 		}
 		terms[i], err = num.TryDiv(den)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not divide numerator by denominator")
+			return nil, errs.Wrap(err).WithMessage("could not divide numerator by denominator")
 		}
 	}
 	polyRing, err := polynomials.NewPolynomialRing(coeffField)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create polynomial ring")
+		return nil, errs.Wrap(err).WithMessage("could not create polynomial ring")
 	}
 	poly, err := polyRing.New(terms...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create polynomial")
+		return nil, errs.Wrap(err).WithMessage("could not create polynomial")
 	}
 	return poly, nil
 }

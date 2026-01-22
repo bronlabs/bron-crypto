@@ -1,12 +1,12 @@
 package hjky
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrInvalidArgument indicates missing or inconsistent inputs.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 	// ErrFailed captures non-recoverable protocol failures.
-	ErrFailed = errs2.New("failed")
+	ErrFailed = errs.New("failed")
 	// ErrRound is returned when rounds are invoked out of order.
-	ErrRound = errs2.New("invalid round")
+	ErrRound = errs.New("invalid round")
 )

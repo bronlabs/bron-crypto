@@ -7,10 +7,10 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], baseElem algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {
@@ -62,11 +62,11 @@ func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng 
 	finiteModule := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](m.module)
 	constantTerm, err := finiteModule.Random(prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to sample random constant term")
+		return nil, errs.Wrap(err).WithMessage("failed to sample random constant term")
 	}
 	poly, err := m.RandomModuleValuedPolynomialWithConstantTerm(degree, constantTerm, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create random polynomial with constant term")
+		return nil, errs.Wrap(err).WithMessage("could not create random polynomial with constant term")
 	}
 	return poly, nil
 }
@@ -86,12 +86,12 @@ func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(d
 		var err error
 		coeffs[i], err = finiteModule.Random(prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to sample random coefficient")
+			return nil, errs.Wrap(err).WithMessage("failed to sample random coefficient")
 		}
 	}
 	leading, err := algebrautils.RandomNonIdentity(finiteModule, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to sample random leading coefficient")
+		return nil, errs.Wrap(err).WithMessage("failed to sample random leading coefficient")
 	}
 	coeffs[degree] = leading
 
@@ -120,13 +120,13 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 		end := start + coeffSize
 		c, err := m.module.FromBytes(bytes[start:end])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to deserialize coefficient")
+			return nil, errs.Wrap(err).WithMessage("failed to deserialize coefficient")
 		}
 		coeffs[i] = c
 	}
 	poly, err := m.New(coeffs...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create polynomial from deserialized coefficients")
+		return nil, errs.Wrap(err).WithMessage("could not create polynomial from deserialized coefficients")
 	}
 	return poly, nil
 }

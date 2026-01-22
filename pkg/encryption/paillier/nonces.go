@@ -3,10 +3,10 @@ package paillier
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewNonceSpace creates a new nonce space (Z/nZ)* for Paillier encryption.
@@ -14,7 +14,7 @@ import (
 func NewNonceSpace(n *num.NatPlus) (*NonceSpace, error) {
 	g, err := znstar.NewRSAGroupOfUnknownOrder(n)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &NonceSpace{g: g}, nil
 }
@@ -36,7 +36,7 @@ func (ns *NonceSpace) Sample(prng io.Reader) (*Nonce, error) {
 	for {
 		u, err := ns.g.Random(prng)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 		if u.Value().IsUnit() {
 			return &Nonce{u: u}, nil
@@ -49,11 +49,11 @@ func (ns *NonceSpace) Sample(prng io.Reader) (*Nonce, error) {
 func (ns *NonceSpace) New(x *numct.Nat) (*Nonce, error) {
 	y, err := num.NewUintGivenModulus(x, ns.N().ModulusCT())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	u, err := ns.g.FromUint(y)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Nonce{u: u}, nil
 }

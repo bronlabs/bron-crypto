@@ -7,8 +7,8 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // StatementCartesian represents a binary OR-composed statement with two potentially
@@ -163,7 +163,7 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 	s.E = make([]byte, p.challengeBytesLength)
 	_, err = io.ReadFull(p.prng, s.E)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot generate challenge")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot generate challenge")
 	}
 
 	if invalid := p.sigma0.ValidateStatement(statement.X0, witness.W0); invalid == nil {
@@ -171,24 +171,24 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 
 		a.A0, s.S0, err = p.sigma0.ComputeProverCommitment(statement.X0, witness.W0)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot compute commitment")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitment")
 		}
 
 		a.A1, s.Z1, err = p.sigma1.RunSimulator(statement.X1, s.E[:p.sigma1.GetChallengeBytesLength()])
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 		}
 	} else {
 		s.B = 1
 
 		a.A1, s.S1, err = p.sigma1.ComputeProverCommitment(statement.X1, witness.W1)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot compute commitment")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitment")
 		}
 
 		a.A0, s.Z0, err = p.sigma0.RunSimulator(statement.X0, s.E[:p.sigma0.GetChallengeBytesLength()])
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 		}
 	}
 
@@ -215,7 +215,7 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 		subtle.XORBytes(z.E0, state.E, challengeBytes)
 		z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, z.E0[:p.sigma0.GetChallengeBytesLength()])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot compute response")
+			return nil, errs.Wrap(err).WithMessage("cannot compute response")
 		}
 
 		z.E1 = state.E
@@ -226,7 +226,7 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 		subtle.XORBytes(z.E1, state.E, challengeBytes)
 		z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, z.E1[:p.sigma1.GetChallengeBytesLength()])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot compute response")
+			return nil, errs.Wrap(err).WithMessage("cannot compute response")
 		}
 
 		z.E0 = state.E
@@ -259,12 +259,12 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(state
 
 	// check that conversation (a_0, e_0, z_0) are accepting in Protocol on input x_0
 	if err := p.sigma0.Verify(statement.X0, commitment.A0, response.E0[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
-		return errs2.Wrap(err).WithMessage("verification failed")
+		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	// check that conversation (a_1, e_1, z_1) are accepting in Protocol on input x_1
 	if err := p.sigma1.Verify(statement.X1, commitment.A1, response.E1[:p.sigma1.GetChallengeBytesLength()], response.Z1); err != nil {
-		return errs2.Wrap(err).WithMessage("verification failed")
+		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	return nil
@@ -288,18 +288,18 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator
 	z.E0 = make([]byte, p.challengeBytesLength)
 	_, err := io.ReadFull(p.prng, z.E0)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("prng failed")
+		return nil, nil, errs.Wrap(err).WithMessage("prng failed")
 	}
 	z.E1 = make([]byte, p.challengeBytesLength)
 	subtle.XORBytes(z.E1, challengeBytes, z.E0)
 
 	a.A0, z.Z0, err = p.sigma0.RunSimulator(statement.X0, z.E0)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 	}
 	a.A1, z.Z1, err = p.sigma1.RunSimulator(statement.X1, z.E1)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 	}
 
 	return a, z, nil

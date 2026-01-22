@@ -8,12 +8,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -79,20 +79,20 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader, tape transcripts.Transcript) (*Alice[P, B, S], error) {
 	p, err := newParticipant(sessionID, suite, prng, tape, 2)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
 	softspokenSuite, err := softspoken.NewSuite(p.xi, suite.l+p.rho, suite.hashFunc)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create softspoken suite")
+		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
 	}
 
 	sender, err := softspoken.NewSender(sessionID, seeds, softspokenSuite, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create sender")
+		return nil, errs.Wrap(err).WithMessage("could not create sender")
 	}
 	gadget, err := p.generateGadgetVector()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create gadget vector")
 	}
 
 	//nolint:exhaustruct // lazy initialisation
@@ -108,20 +108,20 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader, tape transcripts.Transcript) (*Bob[P, B, S], error) {
 	p, err := newParticipant(sessionID, suite, prng, tape, 1)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create participant / gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
 	softspokenSuite, err := softspoken.NewSuite(p.xi, suite.l+p.rho, suite.hashFunc)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create softspoken suite")
+		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
 	}
 
 	receiver, err := softspoken.NewReceiver(sessionID, seeds, softspokenSuite, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create receiver")
+		return nil, errs.Wrap(err).WithMessage("could not create receiver")
 	}
 	gadget, err := p.generateGadgetVector()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create gadget vector")
+		return nil, errs.Wrap(err).WithMessage("could not create gadget vector")
 	}
 
 	//nolint:exhaustruct // lazy initialisation
@@ -138,11 +138,11 @@ func (p *participant[P, B, S]) generateGadgetVector() ([]S, error) {
 	for i := range gadget {
 		bytes, err := p.tape.ExtractBytes(gadgetLabel, uint(p.suite.field.WideElementSize()))
 		if err != nil {
-			return gadget, errs2.Wrap(err).WithMessage("extracting bytes from transcript")
+			return gadget, errs.Wrap(err).WithMessage("extracting bytes from transcript")
 		}
 		gadget[i], err = p.suite.field.FromWideBytes(bytes)
 		if err != nil {
-			return gadget, errs2.Wrap(err).WithMessage("creating gadget scalar from bytes")
+			return gadget, errs.Wrap(err).WithMessage("creating gadget scalar from bytes")
 		}
 	}
 	return gadget, nil

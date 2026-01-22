@@ -12,9 +12,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func Test_Sanity(t *testing.T) {
@@ -242,40 +242,40 @@ func Test_BIP340TestVectors(t *testing.T) {
 func doTestSign(privateKeyString string, messageString string, auxString string) ([]byte, error) {
 	privateKeyBin, err := hex.DecodeString(privateKeyString)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot decode private key")
+		return nil, errs.Wrap(err).WithMessage("cannot decode private key")
 	}
 
 	bip340PrivateKey, err := unmarshalPrivateKey(privateKeyBin)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot unmarshal private key")
+		return nil, errs.Wrap(err).WithMessage("cannot unmarshal private key")
 	}
 
 	message, err := hex.DecodeString(messageString)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot decode message")
+		return nil, errs.Wrap(err).WithMessage("cannot decode message")
 	}
 
 	auxBytes, err := hex.DecodeString(auxString)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot decode aux")
+		return nil, errs.Wrap(err).WithMessage("cannot decode aux")
 	}
 	aux := [32]byte{}
 	copy(aux[:], auxBytes)
 	scheme := bip340.NewSchemeWithAux(aux)
 	signer, err := scheme.Signer(bip340PrivateKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create signer")
+		return nil, errs.Wrap(err).WithMessage("cannot create signer")
 	}
 
 	signature, err := signer.Sign(message)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot sign")
+		return nil, errs.Wrap(err).WithMessage("cannot sign")
 	}
 
 	marshalledSignature, err := bip340.SerializeSignature(signature)
 	// marshalling the signature
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot marshal signature")
+		return nil, errs.Wrap(err).WithMessage("cannot marshal signature")
 	}
 	return marshalledSignature, nil
 }
@@ -283,38 +283,38 @@ func doTestSign(privateKeyString string, messageString string, auxString string)
 func doTestVerify(publicKeyString string, signatureString string, messageString string) error {
 	publicKeyBin, err := hex.DecodeString(publicKeyString)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot decode public key")
+		return errs.Wrap(err).WithMessage("cannot decode public key")
 	}
 	pkv, err := decodePoint(publicKeyBin)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot decode public key")
+		return errs.Wrap(err).WithMessage("cannot decode public key")
 	}
 	publicKey, err := bip340.NewPublicKey(pkv)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create public key")
+		return errs.Wrap(err).WithMessage("cannot create public key")
 	}
 
 	signatureBin, err := hex.DecodeString(signatureString)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot decode signature")
+		return errs.Wrap(err).WithMessage("cannot decode signature")
 	}
 	signature, err := bip340.NewSignatureFromBytes(signatureBin)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot unmarshal signature")
+		return errs.Wrap(err).WithMessage("cannot unmarshal signature")
 	}
 
 	message, err := hex.DecodeString(messageString)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot decode message")
+		return errs.Wrap(err).WithMessage("cannot decode message")
 	}
 
 	scheme, err := bip340.NewScheme(crand.Reader)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create bip340 scheme")
+		return errs.Wrap(err).WithMessage("cannot create bip340 scheme")
 	}
 	verifier, err := scheme.Verifier()
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create verifier")
+		return errs.Wrap(err).WithMessage("cannot create verifier")
 	}
 
 	return verifier.Verify(signature, publicKey, message)
@@ -368,36 +368,36 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 
 func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
 	if len(input) != k256Impl.FpBytes {
-		return nil, errs2.New("invalid length")
+		return nil, errs.New("invalid length")
 	}
 
 	curve := k256.NewCurve()
 	sf := k256.NewScalarField()
 	k, err := sf.FromBytes(input)
 	if err != nil {
-		return nil, errs2.New("invalid scalar")
+		return nil, errs.New("invalid scalar")
 	}
 	A := curve.Generator().ScalarMul(k)
 	publicKey, err := bip340.NewPublicKey(A)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create public key")
+		return nil, errs.Wrap(err).WithMessage("cannot create public key")
 	}
 	marshalledPublicKey, err := bip340.SerializePublicKey(publicKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot marshal public key")
+		return nil, errs.Wrap(err).WithMessage("cannot marshal public key")
 	}
 	bigP, err := decodePoint(marshalledPublicKey)
 	if err != nil {
-		return nil, errs2.New("invalid scalar")
+		return nil, errs.New("invalid scalar")
 	}
 
 	if _, err := bip340.NewPublicKey(bigP); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create public key")
+		return nil, errs.Wrap(err).WithMessage("cannot create public key")
 	}
 
 	sk, err := bip340.NewPrivateKey(k)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create private key")
+		return nil, errs.Wrap(err).WithMessage("cannot create private key")
 	}
 	return sk, nil
 }
@@ -406,7 +406,7 @@ func decodePoint(data []byte) (*k256.Point, error) {
 	curve := k256.NewCurve()
 	p, err := curve.FromCompressed(slices.Concat([]byte{0x02}, data))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot decode point")
+		return nil, errs.Wrap(err).WithMessage("cannot decode point")
 	}
 
 	return p, nil

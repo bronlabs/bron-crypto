@@ -3,8 +3,8 @@ package pedersen
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Witness holds the randomness used to hide the committed message.
@@ -92,7 +92,7 @@ func (w *Witness[S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Pedersen witness")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Pedersen witness")
 	}
 	return data, nil
 }
@@ -101,7 +101,7 @@ func (w *Witness[S]) MarshalCBOR() ([]byte, error) {
 func (w *Witness[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*witnessDTO[S]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot unmarshal witness")
+		return errs.Wrap(err).WithMessage("cannot unmarshal witness")
 	}
 
 	w2, err := NewWitness(dto.V)

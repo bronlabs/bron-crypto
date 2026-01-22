@@ -7,7 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -18,6 +17,7 @@ import (
 	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -90,7 +90,7 @@ type Prover[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.
 func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier[P, B, S], err error) {
 	err = validateVerifierInputs(publicKey, bigQ, xEncrypted, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
+		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](bigQ.Structure())
@@ -104,7 +104,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	rangeProofTranscript := tape.Clone()
 	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't initialise range protocol")
+		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
 	}
 
 	// Create Phi(q/3) for homomorphic division
@@ -112,7 +112,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	qThirdInt.SetNat(qThirdNat)
 	qThirdUnit, err := publicKey.Group().Representative(&qThirdInt)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot compute Phi(q/3)")
+		return nil, errs.Wrap(err).WithMessage("cannot compute Phi(q/3)")
 	}
 	qThird := paillier.NewCiphertextFromUnit(qThirdUnit)
 
@@ -123,21 +123,21 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
 	rangeVerifier, err := zkcompiler.NewVerifier(sessionID, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create Paillier range verifier")
+		return nil, errs.Wrap(err).WithMessage("cannot create Paillier range verifier")
 	}
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, appTranscriptLabel)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot instantiate committer")
+		return nil, errs.Wrap(err).WithMessage("cannot instantiate committer")
 	}
 	commitmentScheme, err := hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot instantiate commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("cannot instantiate commitment scheme")
 	}
 
 	paillierEncrypter, err := paillier.NewScheme().Encrypter()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create paillier encrypter")
+		return nil, errs.Wrap(err).WithMessage("cannot create paillier encrypter")
 	}
 
 	return &Verifier[P, B, S]{
@@ -190,7 +190,7 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 // NewProver constructs a prover instance for the LPDL protocol.
 func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, tape transcripts.Transcript, prng io.Reader) (verifier *Prover[P, B, S], err error) {
 	if err = validateProverInputs(sessionID, curve, secretKey, x, r, prng); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
+		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	if tape == nil {
@@ -202,49 +202,49 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	rangeProofTranscript := tape.Clone()
 	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't initialise range protocol")
+		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
 	}
 
 	qThirdAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().FromNat(qThirdNat)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't convert q/3 to plaintext")
+		return nil, errs.Wrap(err).WithMessage("couldn't convert q/3 to plaintext")
 	}
 
 	xNat := numct.NewNatFromBytes(x.Bytes())
 	xAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().FromNat(xNat)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't convert x to plaintext")
+		return nil, errs.Wrap(err).WithMessage("couldn't convert x to plaintext")
 	}
 	rangePlainText := xAsPlaintext.Sub(qThirdAsPlaintext)
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, appTranscriptLabel)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot instantiate committer")
+		return nil, errs.Wrap(err).WithMessage("cannot instantiate committer")
 	}
 	commitmentScheme, err := hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot instantiate commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("cannot instantiate commitment scheme")
 	}
 
 	senc, err := paillier.NewScheme().SelfEncrypter(secretKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create self-encrypter")
+		return nil, errs.Wrap(err).WithMessage("couldn't create self-encrypter")
 	}
 
 	rangeCipherText, err := senc.SelfEncryptWithNonce(rangePlainText, r)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create range statement")
+		return nil, errs.Wrap(err).WithMessage("couldn't create range statement")
 	}
 	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
 	rangeStatement := paillierrange.NewStatement(secretKey.PublicKey(), rangeCipherText, qThirdNat)
 	rangeProver, err := zkcompiler.NewProver(sessionID, rangeProofTranscript, rangeProtocol, rangeStatement, rangeWitness)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't initialise prover")
+		return nil, errs.Wrap(err).WithMessage("couldn't initialise prover")
 	}
 
 	dec, err := paillier.NewScheme().Decrypter(secretKey)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create paillier decrypter")
+		return nil, errs.Wrap(err).WithMessage("cannot create paillier decrypter")
 	}
 
 	return &Prover[P, B, S]{
@@ -312,11 +312,11 @@ func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B],
 
 	zModQ, err = num.NewZModFromCardinal(q)
 	if err != nil {
-		return nil, nil, nil, nil, errs2.Wrap(err).WithMessage("cannot create ZMod from q")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot create ZMod from q")
 	}
 	zModQ2, err = num.NewZModFromCardinal(q2)
 	if err != nil {
-		return nil, nil, nil, nil, errs2.Wrap(err).WithMessage("cannot create ZMod from q^2")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot create ZMod from q^2")
 	}
 
 	three := numct.NewNat(3)
@@ -326,7 +326,7 @@ func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B],
 
 	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
 	if err != nil {
-		return nil, nil, nil, nil, errs2.Wrap(err).WithMessage("couldn't create range protocol")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("couldn't create range protocol")
 	}
 	return rangeProtocol, zModQ, zModQ2, qThird, nil
 }

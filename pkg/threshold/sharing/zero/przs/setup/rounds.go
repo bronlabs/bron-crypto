@@ -7,11 +7,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 samples pairwise seed contributions and commits to them.
@@ -26,16 +26,16 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 
 		var seedContribution [przs.SeedLength]byte
 		if _, err := io.ReadFull(p.prng, seedContribution[:]); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot sample seed contribution")
+			return nil, errs.Wrap(err).WithMessage("cannot sample seed contribution")
 		}
 
 		committer, err := p.state.commitmentScheme.Committer()
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create committer")
+			return nil, errs.Wrap(err).WithMessage("cannot create committer")
 		}
 		seedContributionCommitment, seedContributionWitness, err := committer.Commit(seedContribution[:], p.prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot commit seed contribution")
+			return nil, errs.Wrap(err).WithMessage("cannot commit seed contribution")
 		}
 
 		seedContributions.Put(sharingID, seedContribution)
@@ -114,7 +114,7 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 		}
 		verifier, err := p.state.commitmentScheme.Verifier()
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot create verifier")
 		}
 		if verifier.Verify(theirCommitment, theirSeedContribution[:], theirWitness) != nil {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, sharingID).WithMessage("invalid seed contribution")

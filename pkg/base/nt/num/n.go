@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
@@ -90,7 +90,7 @@ func (ns *NaturalNumbers) FromBig(value *big.Int) (*Nat, error) {
 func (ns *NaturalNumbers) FromRat(value *Rat) (*Nat, error) {
 	vInt, err := Z().FromRat(value)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return ns.FromInt(vInt)
 }
@@ -151,7 +151,7 @@ func (ns *NaturalNumbers) Random(lowInclusive, highExclusive *Nat, prng io.Reade
 	}
 	var v numct.Nat
 	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Nat{v: &v}, nil
 }
@@ -208,7 +208,7 @@ func (n *Nat) OtherOp(other *Nat) *Nat {
 
 // Add performs the addition of two Nat values.
 func (n *Nat) Add(other *Nat) *Nat {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 	v := new(numct.Nat)
 	v.Add(n.v, other.v)
 	return &Nat{v: v}
@@ -216,7 +216,7 @@ func (n *Nat) Add(other *Nat) *Nat {
 
 // Mul performs the multiplication of two Nat values.
 func (n *Nat) Mul(other *Nat) *Nat {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 	v := new(numct.Nat)
 	v.Mul(n.v, other.v)
 	return &Nat{v: v}
@@ -249,7 +249,7 @@ func (*Nat) TryNeg() (*Nat, error) {
 // TrySub attempts to subtract another Nat from the current Nat. It returns an error if the result would not be a natural number.
 func (n *Nat) TrySub(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	if n.Compare(other).IsLessThan() {
 		return nil, ErrUndefined.WithStackFrame()
@@ -274,7 +274,7 @@ func (n *Nat) IsUnit(modulus *NatPlus) bool {
 	}
 	m, ok := numct.NewModulus(modulus.v)
 	if ok == ct.False {
-		panic(errs2.New("modulus is not valid"))
+		panic(errs.New("modulus is not valid"))
 	}
 	return m.IsUnit(n.v) == ct.True
 }
@@ -295,7 +295,7 @@ func (n *Nat) Cardinal() cardinal.Cardinal {
 // It returns an error if the division is not exact.
 func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q, r numct.Nat
@@ -314,7 +314,7 @@ func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
 // It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
 func (n *Nat) TryDivVarTime(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q, r numct.Nat
@@ -332,7 +332,7 @@ func (n *Nat) TryDivVarTime(other *Nat) (*Nat, error) {
 // It returns an error if the division is not exact.
 func (n *Nat) DivRound(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q numct.Nat
@@ -348,7 +348,7 @@ func (n *Nat) DivRound(other *Nat) (*Nat, error) {
 // It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
 func (n *Nat) DivRoundVarTime(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	var q numct.Nat
@@ -396,7 +396,7 @@ func (n *Nat) IsOne() bool {
 
 // Coprime checks if the Nat is coprime with another Nat.
 func (n *Nat) Coprime(other *Nat) bool {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 	return n.v.Coprime(other.v) == ct.True
 }
 
@@ -407,10 +407,10 @@ func (n *Nat) IsProbablyPrime() bool {
 
 // EuclideanDiv performs Euclidean division of the Nat by another Nat, returning the quotient and remainder.
 func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 	var vq, vr numct.Nat
 	if ok := vq.EuclideanDiv(&vr, n.v, other.v); ok == ct.False {
-		return nil, nil, errs2.New("division failed")
+		return nil, nil, errs.New("division failed")
 	}
 	return &Nat{v: &vq}, &Nat{v: &vr}, nil
 }
@@ -418,11 +418,11 @@ func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
 // EuclideanDivVarTime performs Euclidean division of the Nat by another Nat, returning the quotient and remainder.
 // It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
 func (n *Nat) EuclideanDivVarTime(other *Nat) (quot, rem *Nat, err error) {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 
 	var vq, vr numct.Nat
 	if ok := vq.EuclideanDivVarTime(&vr, n.v, other.v); ok == ct.False {
-		return nil, nil, errs2.New("division failed")
+		return nil, nil, errs.New("division failed")
 	}
 	return &Nat{v: &vq}, &Nat{v: &vr}, nil
 }
@@ -449,14 +449,14 @@ func (n *Nat) Sqrt() (*Nat, error) {
 
 // Compare compares the Nat with another Nat, returning an ordering result.
 func (n *Nat) Compare(other *Nat) base.Ordering {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 	lt, eq, gt := n.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
 
 // IsLessThanOrEqual checks if the Nat is less than or equal to another Nat.
 func (n *Nat) IsLessThanOrEqual(other *Nat) bool {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 	lt, eq, _ := n.v.Compare(other.v)
 	return lt|eq == ct.True
 }
@@ -468,7 +468,7 @@ func (n *Nat) Lift() *Int {
 
 // Equal checks if the Nat is equal to another Nat.
 func (n *Nat) Equal(other *Nat) bool {
-	errs2.Must1(n.isValid(other))
+	errs.Must1(n.isValid(other))
 	return n.v.Equal(other.v) == ct.True
 }
 

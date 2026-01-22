@@ -2,10 +2,10 @@ package recovery
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Mislayer represents the party whose share is being reconstructed.
@@ -25,7 +25,7 @@ func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	scheme, err := feldman.NewScheme(group.Generator(), as.Threshold(), as.Shareholders())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create feldman scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create feldman scheme")
 	}
 
 	m := &Mislayer[G, S]{

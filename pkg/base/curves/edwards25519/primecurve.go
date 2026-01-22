@@ -9,8 +9,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -65,7 +65,7 @@ func (*PrimeSubGroup) Order() cardinal.Cardinal {
 func (*PrimeSubGroup) FromCompressed(inBytes []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromCompressed(inBytes)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return nil, errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	return p.AsPrimeSubGroupPoint()
 }
@@ -74,7 +74,7 @@ func (*PrimeSubGroup) FromCompressed(inBytes []byte) (*PrimeSubGroupPoint, error
 func (*PrimeSubGroup) FromBytes(inBytes []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromBytes(inBytes)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return nil, errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	return p.AsPrimeSubGroupPoint()
 }
@@ -83,7 +83,7 @@ func (*PrimeSubGroup) FromBytes(inBytes []byte) (*PrimeSubGroupPoint, error) {
 func (*PrimeSubGroup) FromUncompressed(inBytes []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromUncompressed(inBytes)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return nil, errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	return p.AsPrimeSubGroupPoint()
 }
@@ -92,7 +92,7 @@ func (*PrimeSubGroup) FromUncompressed(inBytes []byte) (*PrimeSubGroupPoint, err
 func (*PrimeSubGroup) FromAffine(x, y *BaseFieldElement) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().FromAffine(x, y)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot set coordinates")
+		return nil, errs.Wrap(err).WithMessage("cannot set coordinates")
 	}
 	return p.AsPrimeSubGroupPoint()
 }
@@ -101,7 +101,7 @@ func (*PrimeSubGroup) FromAffine(x, y *BaseFieldElement) (*PrimeSubGroupPoint, e
 func (*PrimeSubGroup) Hash(bytes []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().Hash(bytes)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot hash to curve")
+		return nil, errs.Wrap(err).WithMessage("cannot hash to curve")
 	}
 	return p.AsPrimeSubGroupPoint()
 }
@@ -110,7 +110,7 @@ func (*PrimeSubGroup) Hash(bytes []byte) (*PrimeSubGroupPoint, error) {
 func (*PrimeSubGroup) HashWithDst(dst string, bytes []byte) (*PrimeSubGroupPoint, error) {
 	p, err := NewCurve().HashWithDst(dst, bytes)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot hash to curve")
+		return nil, errs.Wrap(err).WithMessage("cannot hash to curve")
 	}
 	return p.AsPrimeSubGroupPoint()
 }

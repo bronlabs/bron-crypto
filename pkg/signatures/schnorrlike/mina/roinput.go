@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/bitvec"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
@@ -40,7 +40,7 @@ func (r *ROInput) MarshalJSON() ([]byte, error) {
 
 	b, err := json.Marshal(fields)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot serialise input")
+		return nil, errs.Wrap(err).WithMessage("cannot serialise input")
 	}
 	return b, nil
 }

@@ -3,14 +3,14 @@ package base
 import (
 	"golang.org/x/exp/constraints"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // IdentifiableAbortPartyIDTag is the tag used to identify parties responsible for an identifiable abort.
 const IdentifiableAbortPartyIDTag = "identifiable_abort_party_id"
 
 // ErrAbort indicates that an operation was aborted due to malicious behaviour.
-var ErrAbort = errs2.New("ABORT")
+var ErrAbort = errs.New("ABORT")
 
 // IdentifiableAbortID represents the type used for party identifiers in identifiable abort errors.
 type IdentifiableAbortID interface {
@@ -19,18 +19,18 @@ type IdentifiableAbortID interface {
 
 // ShouldAbort checks if the given error indicates that an operation should be aborted.
 func ShouldAbort(err error) bool {
-	return errs2.Is(err, ErrAbort) || IsIdentifiableAbortError(err)
+	return errs.Is(err, ErrAbort) || IsIdentifiableAbortError(err)
 }
 
 // IsIdentifiableAbortError checks if the given error is an identifiable abort error.
 func IsIdentifiableAbortError(err error) bool {
-	_, is := errs2.HasTag(err, IdentifiableAbortPartyIDTag)
+	_, is := errs.HasTag(err, IdentifiableAbortPartyIDTag)
 	return is
 }
 
 // GetMaliciousIdentities extracts the party IDs responsible for an identifiable abort from the given error.
 func GetMaliciousIdentities[ID IdentifiableAbortID](err error) []ID {
-	culprits := errs2.HasTagAll(err, IdentifiableAbortPartyIDTag)
+	culprits := errs.HasTagAll(err, IdentifiableAbortPartyIDTag)
 	ids := make([]ID, len(culprits))
 	for i, culprit := range culprits {
 		id, ok := culprit.(ID)

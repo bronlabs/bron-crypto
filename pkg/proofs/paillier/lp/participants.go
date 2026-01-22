@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -14,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -83,7 +83,7 @@ type Prover struct {
 // NewVerifier constructs a verifier instance for the LP protocol.
 func NewVerifier(sessionID network.SID, k int, pk *paillier.PublicKey, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if err := validateVerifierInputs(k, pk, prng); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
+		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	if tape == nil {
@@ -94,15 +94,15 @@ func NewVerifier(sessionID network.SID, k int, pk *paillier.PublicKey, tape tran
 
 	nthRootsSigmaProtocol, err := nthroot.NewProtocol(pk.Group(), prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create Nth root protocol")
+		return nil, errs.Wrap(err).WithMessage("cannot create Nth root protocol")
 	}
 	multiNthRootsProtocol, err := sigand.Compose(nthRootsSigmaProtocol, uint(k))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create multi Nth root protocol")
+		return nil, errs.Wrap(err).WithMessage("cannot create multi Nth root protocol")
 	}
 	enc, err := paillier.NewScheme().Encrypter()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create paillier encrypter")
+		return nil, errs.Wrap(err).WithMessage("cannot create paillier encrypter")
 	}
 
 	return &Verifier{
@@ -140,7 +140,7 @@ func validateVerifierInputs(k int, pk *paillier.PublicKey, prng io.Reader) error
 // NewProver constructs a prover instance for the LP protocol.
 func NewProver(sessionID network.SID, k int, sk *paillier.PrivateKey, tape transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
 	if err := validateProverInputs(k, sk, prng); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
+		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	if tape == nil {
@@ -151,11 +151,11 @@ func NewProver(sessionID network.SID, k int, sk *paillier.PrivateKey, tape trans
 
 	nthRootsSigmaProtocol, err := nthroot.NewProtocol(sk.Group(), prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create Nth root protocol")
+		return nil, errs.Wrap(err).WithMessage("cannot create Nth root protocol")
 	}
 	multiNthRootsProtocol, err := sigand.Compose(nthRootsSigmaProtocol, uint(k))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create multi Nth root protocol")
+		return nil, errs.Wrap(err).WithMessage("cannot create multi Nth root protocol")
 	}
 
 	return &Prover{

@@ -7,10 +7,10 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 samples a random value, commits to it, and broadcasts the commitment.
@@ -24,18 +24,18 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	p.state.r = make([]byte, p.size)
 	_, err := io.ReadFull(p.prng, p.state.r)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not sample random message")
+		return nil, errs.Wrap(err).WithMessage("could not sample random message")
 	}
 
 	// step 1.2: commit your sample
 	p.state.rCommitments = make(map[sharing.ID]hash_comm.Commitment)
 	committer, err := p.commitmentScheme.Committer()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create committer")
+		return nil, errs.Wrap(err).WithMessage("could not create committer")
 	}
 	p.state.rCommitments[p.id], p.state.rWitness, err = committer.Commit(p.state.r, p.prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not commit to the seed")
+		return nil, errs.Wrap(err).WithMessage("could not commit to the seed")
 	}
 
 	// step 1.3: broadcast your commitment
@@ -50,7 +50,7 @@ func (p *Participant) Round2(r1 network.RoundMessages[*Round1Broadcast]) (*Round
 	// validation
 	incomingMessages, err := validateIncomingBroadcastMessages(p, 2, r1)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid incoming messages or round mismatch")
+		return nil, errs.Wrap(err).WithMessage("invalid incoming messages or round mismatch")
 	}
 
 	// step 2.0: store all commitments
@@ -72,13 +72,13 @@ func (p *Participant) Round3(r2 network.RoundMessages[*Round2Broadcast]) ([]byte
 	// validation
 	incomingMessages, err := validateIncomingBroadcastMessages(p, 3, r2)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid incoming messages or round mismatch")
+		return nil, errs.Wrap(err).WithMessage("invalid incoming messages or round mismatch")
 	}
 
 	r := p.state.r
 	verifier, err := p.commitmentScheme.Verifier()
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create verifier")
+		return nil, errs.Wrap(err).WithMessage("could not create verifier")
 	}
 	for id, m := range incomingMessages {
 		if err := verifier.Verify(p.state.rCommitments[id], m.Message, m.Witness); err != nil {

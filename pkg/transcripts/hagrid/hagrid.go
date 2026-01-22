@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Keep the tag at constant length.
@@ -67,7 +67,7 @@ func (t *transcript) ExtractBytes(label string, outLen uint) ([]byte, error) {
 
 	buf := make([]byte, outLen)
 	if _, err := io.ReadFull(hClone, buf); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not read from SHAKE hash")
+		return nil, errs.Wrap(err).WithMessage("could not read from SHAKE hash")
 	}
 
 	return buf, nil

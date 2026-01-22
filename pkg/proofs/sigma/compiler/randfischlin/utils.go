@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func isAllZeros(data []byte) bool {
@@ -19,7 +19,7 @@ func isAllZeros(data []byte) bool {
 func hash(data ...[]byte) ([]byte, error) {
 	result, err := hashing.HashPrefixedLength(randomOracle, data...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot hash values")
+		return nil, errs.Wrap(err).WithMessage("cannot hash values")
 	}
 
 	return result[:LBytes], nil
@@ -31,7 +31,7 @@ outer:
 		ei := make([]byte, length)
 		_, err := io.ReadFull(prng, ei[:TBytes])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot read from PRNG")
+			return nil, errs.Wrap(err).WithMessage("cannot read from PRNG")
 		}
 
 		for _, e := range existing {

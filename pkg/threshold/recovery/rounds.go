@@ -3,18 +3,18 @@ package recovery
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 blinds the dealer polynomial and distributes blinded shares.
 func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S]], error) {
 	blindOutput, _, err := r.scheme.DealRandom(r.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot deal blind")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot deal blind")
 	}
 
 	shift, ok := blindOutput.Shares().Get(r.mislayerID)
@@ -74,7 +74,7 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 		share := u.BlindShare
 		err := r.scheme.Verify(share, verificationVector)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify share")
+			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify share")
 		}
 
 		blindedShare = blindedShare.Add(share)

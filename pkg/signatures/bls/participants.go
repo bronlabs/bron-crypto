@@ -7,10 +7,10 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // KeyGeneratorOption is a functional option for configuring a KeyGenerator.
@@ -65,11 +65,11 @@ type KeyGenerator[
 func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (*PrivateKey[PK, FE, Sig, SigFE, E, S], *PublicKey[PK, FE, Sig, SigFE, E, S], error) {
 	skv, _, err := generateWithSeed(kg.group, ikm)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not generate key pair")
+		return nil, nil, errs.Wrap(err).WithMessage("could not generate key pair")
 	}
 	sk, err := NewPrivateKey(kg.group, skv)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not create private key")
+		return nil, nil, errs.Wrap(err).WithMessage("could not create private key")
 	}
 	pk := sk.PublicKey()
 	return sk, pk, nil
@@ -84,7 +84,7 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) Generate(prng io.Reader) (*Pri
 		sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](kg.group.ScalarStructure())
 		kg.seed = make([]byte, sf.ElementSize())
 		if _, err := io.ReadFull(prng, kg.seed); err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("could not read from PRNG")
+			return nil, nil, errs.Wrap(err).WithMessage("could not read from PRNG")
 		}
 	}
 	return kg.GenerateWithSeed(kg.seed)
@@ -156,7 +156,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, 
 	if s.dst == "" {
 		s.dst, err = s.cipherSuite.GetDst(s.rogueKeyAlg, s.variant)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not get domain separation tag")
+			return nil, errs.Wrap(err).WithMessage("could not get domain separation tag")
 		}
 	}
 	pop := ProofOfPossession[SG, SGFE, PK, PKFE, E, S]{}
@@ -168,13 +168,13 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, 
 		// step 3.2.1.2 (namely, the pk || message portion)
 		message, err = AugmentMessage(message, s.privateKey.PublicKey().Value())
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not augment message")
+			return nil, errs.Wrap(err).WithMessage("could not augment message")
 		}
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
 	case POP:
 		popv, err := popProve(s.privateKey.Value(), s.privateKey.PublicKey().Value(), s.signatureSubGroup, s.cipherSuite.GetPopDst(s.variant))
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not produce proof of possession")
+			return nil, errs.Wrap(err).WithMessage("could not produce proof of possession")
 		}
 		pop.v = popv
 	default:
@@ -183,7 +183,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, 
 
 	sgv, err := coreSign(s.signatureSubGroup, s.privateKey.Value(), message, s.dst)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not sign")
+		return nil, errs.Wrap(err).WithMessage("could not sign")
 	}
 	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv, pop: nil}
 	if s.rogueKeyAlg == POP {
@@ -205,7 +205,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 	if s.dst == "" {
 		s.dst, err = s.cipherSuite.GetDst(s.rogueKeyAlg, s.variant)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not get domain separation tag")
+			return nil, errs.Wrap(err).WithMessage("could not get domain separation tag")
 		}
 	}
 
@@ -216,13 +216,13 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 		for i, message := range messages {
 			messages[i], err = AugmentMessage(message, s.privateKey.PublicKey().Value())
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("could not augment message")
+				return nil, errs.Wrap(err).WithMessage("could not augment message")
 			}
 		}
 	case POP:
 		popv, err := popProve(s.privateKey.Value(), s.privateKey.PublicKey().Value(), s.signatureSubGroup, s.cipherSuite.GetPopDst(s.variant))
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not produce proof of possession")
+			return nil, errs.Wrap(err).WithMessage("could not produce proof of possession")
 		}
 		pop.v = popv
 	default:
@@ -231,7 +231,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 
 	sgv, err := coreAggregateSign(s.signatureSubGroup, s.privateKey.Value(), messages, s.dst)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not sign")
+		return nil, errs.Wrap(err).WithMessage("could not sign")
 	}
 	out := &Signature[SG, SGFE, PK, PKFE, E, S]{v: sgv, pop: nil}
 	if s.rogueKeyAlg == POP {
@@ -254,7 +254,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 	if s.dst == "" {
 		s.dst, err = s.cipherSuite.GetDst(s.rogueKeyAlg, s.variant)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not get domain separation tag")
+			return nil, errs.Wrap(err).WithMessage("could not get domain separation tag")
 		}
 	}
 
@@ -265,13 +265,13 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 		for i, message := range messages {
 			messages[i], err = AugmentMessage(message, s.privateKey.PublicKey().Value())
 			if err != nil {
-				return nil, errs2.Wrap(err).WithMessage("could not augment message")
+				return nil, errs.Wrap(err).WithMessage("could not augment message")
 			}
 		}
 	case POP:
 		popv, err := popProve(s.privateKey.Value(), s.privateKey.PublicKey().Value(), s.signatureSubGroup, s.cipherSuite.GetPopDst(s.variant))
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not produce proof of possession")
+			return nil, errs.Wrap(err).WithMessage("could not produce proof of possession")
 		}
 		pop.v = popv
 	default:
@@ -284,7 +284,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 		s.signatureSubGroup, s.privateKey.Value(), messages, s.dst,
 	)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not batch sign")
+		return nil, errs.Wrap(err).WithMessage("could not batch sign")
 	}
 
 	for i, v := range batchValues {
@@ -402,7 +402,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) Verify(signature *Signature[SG, SGF
 	if v.dst == "" {
 		v.dst, err = v.cipherSuite.GetDst(v.rogueKeyAlg, v.variant)
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("could not get domain separation tag")
+			return errs.Wrap(err).WithMessage("could not get domain separation tag")
 		}
 	}
 
@@ -414,7 +414,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) Verify(signature *Signature[SG, SGF
 		// step 3.2.1.2 (namely, the pk || message portion)
 		message, err = AugmentMessage(message, publicKey.Value())
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("could not augment message")
+			return errs.Wrap(err).WithMessage("could not augment message")
 		}
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
 	case POP:
@@ -468,7 +468,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 	if v.dst == "" {
 		v.dst, err = v.cipherSuite.GetDst(v.rogueKeyAlg, v.variant)
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("could not get domain separation tag")
+			return errs.Wrap(err).WithMessage("could not get domain separation tag")
 		}
 	}
 
@@ -503,7 +503,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 			// step 3.2.3.2
 			augmentedMessage, err := AugmentMessage(messages[i], publicKey.Value())
 			if err != nil {
-				return errs2.Wrap(err).WithMessage("could not augment message")
+				return errs.Wrap(err).WithMessage("could not augment message")
 			}
 			messages[i] = augmentedMessage
 		}
@@ -519,7 +519,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 	if canRunFastAggregateVerify {
 		aggregatedPublicKey, err := AggregateAll[PK](publicKeys)
 		if err != nil {
-			return errs2.Wrap(err).WithMessage("could not aggregate public keys")
+			return errs.Wrap(err).WithMessage("could not aggregate public keys")
 		}
 		if err := coreVerify(aggregatedPublicKey.Value(), messages[0], signature.Value(), v.dst, v.signatureSubGroup); err != nil {
 			return ErrVerificationFailed.WithMessage("could not verify fast aggregate signature")

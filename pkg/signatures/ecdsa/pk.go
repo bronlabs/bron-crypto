@@ -6,8 +6,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // PublicKey represents an ECDSA public key as a point on an elliptic curve.
@@ -28,7 +28,7 @@ func NewPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 		return nil, ErrFailed.WithMessage("public key is zero")
 	}
 	if _, err := algebra.StructureAs[Curve[P, B, S]](pk.Structure()); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("curve structure is not supported")
+		return nil, errs.Wrap(err).WithMessage("curve structure is not supported")
 	}
 
 	key := &PublicKey[P, B, S]{
@@ -73,8 +73,8 @@ func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
 func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())
 	nativeCurve := curve.ToElliptic()
-	nativeX := errs2.Must1(pk.Value().AffineX()).Cardinal().Big()
-	nativeY := errs2.Must1(pk.Value().AffineY()).Cardinal().Big()
+	nativeX := errs.Must1(pk.Value().AffineX()).Cardinal().Big()
+	nativeY := errs.Must1(pk.Value().AffineY()).Cardinal().Big()
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
 		X:     nativeX,
@@ -90,7 +90,7 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal ECDSA PublicKey")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal ECDSA PublicKey")
 	}
 	return data, nil
 }

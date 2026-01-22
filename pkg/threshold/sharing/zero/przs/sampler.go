@@ -7,9 +7,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Sampler deterministically derives zero-sharing scalars from pairwise seeds.
@@ -51,7 +51,7 @@ func (s *Sampler[FE]) Sample() (FE, error) {
 	for id, prng := range s.seededPrngs.Iter() {
 		sample, err := s.field.Random(prng)
 		if err != nil {
-			return nilFE, errs2.Wrap(err).WithMessage("could not sample scalar")
+			return nilFE, errs.Wrap(err).WithMessage("could not sample scalar")
 		}
 
 		if id < s.mySharingID {

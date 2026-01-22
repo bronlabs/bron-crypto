@@ -9,11 +9,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type unitWrapper[A modular.Arithmetic] interface {
@@ -57,7 +57,7 @@ func (g *UnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
 	for {
 		r, err := g.zMod.Random(prng)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 		var u WT
 		W(&u).set(r, g.arith, g.n)
@@ -70,16 +70,16 @@ func (g *UnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
 func (g *UnitGroupTrait[A, W, WT]) Hash(input []byte) (W, error) {
 	xof, err := blake2b.NewXOF(uint32(g.WideElementSize()), nil)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	if _, err := xof.Write(input); err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	digest := make([]byte, g.WideElementSize())
 	var x, v numct.Nat
 	for {
 		if _, err = io.ReadFull(xof, digest); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 		if ok := x.SetBytes(digest); ok == ct.False {
 			return nil, ErrFailed.WithMessage("failed to interpret hash digest as Nat")
@@ -89,13 +89,13 @@ func (g *UnitGroupTrait[A, W, WT]) Hash(input []byte) (W, error) {
 
 		vNat, err := num.N().FromNatCT(&v)
 		if err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 
 		if g.zMod.Modulus().Nat().Coprime(vNat) {
 			uv, err := g.zMod.FromNat(vNat)
 			if err != nil {
-				return nil, errs2.Wrap(err)
+				return nil, errs.Wrap(err)
 			}
 			var zn WT
 			W(&zn).set(uv, g.arith, g.n)
@@ -126,7 +126,7 @@ func (g *UnitGroupTrait[A, W, WT]) FromNatCT(input *numct.Nat) (W, error) {
 	}
 	elem, err := g.zMod.FromNatCT(input)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create element from nat")
+		return nil, errs.Wrap(err).WithMessage("failed to create element from nat")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
@@ -157,7 +157,7 @@ func (g *UnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
 	}
 	v, err := g.zMod.FromBytes(input)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create unit from bytes")
+		return nil, errs.Wrap(err).WithMessage("failed to create unit from bytes")
 	}
 	var out WT
 	W(&out).set(v, g.arith, g.n)
@@ -170,7 +170,7 @@ func (g *UnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
 func (g *UnitGroupTrait[A, W, WT]) FromCardinal(input cardinal.Cardinal) (W, error) {
 	elem, err := g.zMod.FromCardinal(input)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create element from cardinal")
+		return nil, errs.Wrap(err).WithMessage("failed to create element from cardinal")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
@@ -183,7 +183,7 @@ func (g *UnitGroupTrait[A, W, WT]) FromCardinal(input cardinal.Cardinal) (W, err
 func (g *UnitGroupTrait[A, W, WT]) FromUint64(input uint64) (W, error) {
 	elem, err := g.zMod.FromCardinal(cardinal.New(input))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create element from uint64")
+		return nil, errs.Wrap(err).WithMessage("failed to create element from uint64")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)

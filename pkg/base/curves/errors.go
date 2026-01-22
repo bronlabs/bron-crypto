@@ -1,20 +1,20 @@
 package curves
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs2"
+import "github.com/bronlabs/errs-go/errs"
 
 var (
 	// ErrFailed represents a generic failure.
-	ErrFailed = errs2.New("failed")
+	ErrFailed = errs.New("failed")
 	// ErrInvalidLength reports invalid length inputs.
-	ErrInvalidLength = errs2.New("invalid length")
+	ErrInvalidLength = errs.New("invalid length")
 	// ErrInvalidCoordinates reports invalid curve coordinates.
-	ErrInvalidCoordinates = errs2.New("invalid coordinates")
+	ErrInvalidCoordinates = errs.New("invalid coordinates")
 	// ErrInvalidArgument reports invalid arguments.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 	// ErrSerialisation reports serialisation or deserialisation errors.
-	ErrSerialisation = errs2.New("serialisation error")
+	ErrSerialisation = errs.New("serialisation error")
 	// ErrNil reports nil arguments.
-	ErrNil = errs2.New("nil")
+	ErrNil = errs.New("nil")
 	// ErrRandomSample reports random sampling failures.
-	ErrRandomSample = errs2.New("random sample failed")
+	ErrRandomSample = errs.New("random sample failed")
 )

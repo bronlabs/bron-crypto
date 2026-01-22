@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -46,13 +46,13 @@ func NewParticipant(id sharing.ID, quorum network.Quorum, size int, tape transcr
 	tape.AppendBytes(sizeLabel, binary.LittleEndian.AppendUint64(nil, uint64(size)))
 	keyBytes, err := tape.ExtractBytes(commitmentKeyLabel, hash_comm.KeySize)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot extract commitment key")
+		return nil, errs.Wrap(err).WithMessage("cannot extract commitment key")
 	}
 	var key hash_comm.Key
 	copy(key[:], keyBytes)
 	commitmentScheme, err := hash_comm.NewScheme(key)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("cannot create commitment scheme")
 	}
 
 	return &Participant{

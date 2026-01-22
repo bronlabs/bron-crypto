@@ -15,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
@@ -26,6 +25,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -82,11 +82,11 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't randomise zero seeds")
+		return nil, errs.Wrap(err).WithMessage("couldn't randomise zero seeds")
 	}
 	otSenderSeeds, otReceiverSeeds, err := randomizeOTSeeds(shard.OTSenderSeeds(), shard.OTReceiverSeeds(), tape)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't randomise OT seeds")
+		return nil, errs.Wrap(err).WithMessage("couldn't randomise OT seeds")
 	}
 
 	//nolint:exhaustruct // lazy initialisation
@@ -103,7 +103,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	c.state.bobMul = make(map[sharing.ID]*rvole_softspoken.Bob[P, B, S])
 	mulSuite, err := rvole_softspoken.NewSuite(2, suite.Curve(), sha256.New)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create mul suite")
+		return nil, errs.Wrap(err).WithMessage("cannot create mul suite")
 	}
 	for id := range c.otherCosigners() {
 		aliceSeed, ok := otReceiverSeeds.Get(id)
@@ -114,7 +114,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(c.sessionID, mulSuite, aliceSeed, prng, aliceTape)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("couldn't initialise Alice")
+			return nil, errs.Wrap(err).WithMessage("couldn't initialise Alice")
 		}
 
 		bobSeed, ok := otSenderSeeds.Get(id)
@@ -125,7 +125,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
 		c.state.bobMul[id], err = rvole_softspoken.NewBob(c.sessionID, mulSuite, bobSeed, prng, bobTape)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("couldn't initialise Bob")
+			return nil, errs.Wrap(err).WithMessage("couldn't initialise Bob")
 		}
 	}
 
@@ -159,18 +159,18 @@ func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
 func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.Seeds, error) {
 	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurityBits+7)/8)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot extract randomizer")
+		return nil, errs.Wrap(err).WithMessage("cannot extract randomizer")
 	}
 
 	randomizedSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	for id, seed := range seeds.Iter() {
 		hasher, err := blake2b.New(przs.SeedLength, randomizerKey)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create hasher")
+			return nil, errs.Wrap(err).WithMessage("cannot create hasher")
 		}
 		_, err = hasher.Write(seed[:])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot hash seed")
+			return nil, errs.Wrap(err).WithMessage("cannot hash seed")
 		}
 		randomizedSeedBytes := hasher.Sum(nil)
 		var randomizedSeed [przs.SeedLength]byte
@@ -183,7 +183,7 @@ func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.See
 func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput], tape transcripts.Transcript) (rss ds.Map[sharing.ID, *vsot.SenderOutput], rrs ds.Map[sharing.ID, *vsot.ReceiverOutput], err error) {
 	randomizerKey, err := tape.ExtractBytes(otRandomizerLabel, (2*base.ComputationalSecurityBits+7)/8)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot extract randomizer")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot extract randomizer")
 	}
 
 	randomizedSenderSeeds := hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
@@ -195,21 +195,21 @@ func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiv
 			for l := range seed.InferredL() {
 				hasher, err := blake2b.New(len(seed.Messages[xi][0][l]), randomizerKey)
 				if err != nil {
-					return nil, nil, errs2.Wrap(err).WithMessage("cannot create hasher")
+					return nil, nil, errs.Wrap(err).WithMessage("cannot create hasher")
 				}
 				_, err = hasher.Write(seed.Messages[xi][0][l])
 				if err != nil {
-					return nil, nil, errs2.Wrap(err).WithMessage("cannot hash seed")
+					return nil, nil, errs.Wrap(err).WithMessage("cannot hash seed")
 				}
 				randomizedSenderMessagePairs[xi][0][l] = hasher.Sum(nil)
 
 				hasher, err = blake2b.New(len(seed.Messages[xi][1][l]), randomizerKey)
 				if err != nil {
-					return nil, nil, errs2.Wrap(err).WithMessage("cannot create hasher")
+					return nil, nil, errs.Wrap(err).WithMessage("cannot create hasher")
 				}
 				_, err = hasher.Write(seed.Messages[xi][1][l])
 				if err != nil {
-					return nil, nil, errs2.Wrap(err).WithMessage("cannot hash seed")
+					return nil, nil, errs.Wrap(err).WithMessage("cannot hash seed")
 				}
 				randomizedSenderMessagePairs[xi][1][l] = hasher.Sum(nil)
 			}
@@ -230,11 +230,11 @@ func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiv
 			for l := range seed.InferredL() {
 				hasher, err := blake2b.New(len(seed.Messages[xi][l]), randomizerKey)
 				if err != nil {
-					return nil, nil, errs2.Wrap(err).WithMessage("cannot create hasher")
+					return nil, nil, errs.Wrap(err).WithMessage("cannot create hasher")
 				}
 				_, err = hasher.Write(seed.Messages[xi][l])
 				if err != nil {
-					return nil, nil, errs2.Wrap(err).WithMessage("cannot hash seed")
+					return nil, nil, errs.Wrap(err).WithMessage("cannot hash seed")
 				}
 				randomizedReceiverMessages[xi][l] = hasher.Sum(nil)
 			}

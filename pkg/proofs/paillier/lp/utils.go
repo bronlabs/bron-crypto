@@ -1,10 +1,10 @@
 package lp
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 func nthRootStatementLearnOrder[A znstar.ArithmeticPaillier](x *nthroot.Statement[A], g *znstar.PaillierGroupKnownOrder) (*nthroot.Statement[*modular.OddPrimeSquareFactors], error) {
@@ -13,7 +13,7 @@ func nthRootStatementLearnOrder[A znstar.ArithmeticPaillier](x *nthroot.Statemen
 	}
 	learnedX, err := x.Value().LearnOrder(g)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to learn order of x")
+		return nil, errs.Wrap(err).WithMessage("failed to learn order of x")
 	}
 	return &nthroot.Statement[*modular.OddPrimeSquareFactors]{
 		X: learnedX,
@@ -26,7 +26,7 @@ func nthRootCommitmentLearnOrder[A znstar.ArithmeticPaillier](a *nthroot.Commitm
 	}
 	learnedA, err := a.Value().LearnOrder(g)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to learn order of c")
+		return nil, errs.Wrap(err).WithMessage("failed to learn order of c")
 	}
 	return &nthroot.Commitment[*modular.OddPrimeSquareFactors]{
 		A: learnedA,
@@ -39,7 +39,7 @@ func nthRootResponseLearnOrder[A znstar.ArithmeticPaillier](z *nthroot.Response[
 	}
 	learnedZ, err := z.Value().LearnOrder(g)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to learn order of r")
+		return nil, errs.Wrap(err).WithMessage("failed to learn order of r")
 	}
 	return &nthroot.Response[*modular.OddPrimeSquareFactors]{
 		Z: learnedZ,

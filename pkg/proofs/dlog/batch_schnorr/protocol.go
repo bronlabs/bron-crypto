@@ -6,11 +6,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name is the protocol identifier for batch Schnorr discrete log proof.
@@ -20,11 +20,11 @@ const (
 
 var (
 	// ErrInvalidArgument is returned when a function receives an invalid argument.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 	// ErrValidationFailed is returned when statement-witness validation fails.
-	ErrValidationFailed = errs2.New("validation failed")
+	ErrValidationFailed = errs.New("validation failed")
 	// ErrVerificationFailed is returned when proof verification fails.
-	ErrVerificationFailed = errs2.New("verification failed")
+	ErrVerificationFailed = errs.New("verification failed")
 )
 
 // Statement contains the generator and public group elements X_i being proven.
@@ -175,7 +175,7 @@ func (p *Protocol[G, S]) ComputeProverCommitment(statement *Statement[G, S], _ *
 
 	s, err := p.scalarField.Random(p.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot generate random scalar")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random scalar")
 	}
 	a := statement.Gen.ScalarOp(s)
 
@@ -205,17 +205,17 @@ func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witn
 
 	polyRing, err := polynomials.NewPolynomialRing(p.scalarField)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create polynomial ring")
+		return nil, errs.Wrap(err).WithMessage("cannot create polynomial ring")
 	}
 	coefficients := append([]S{state.S}, witness.Ws...)
 	poly, err := polyRing.New(coefficients...)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create polynomial")
+		return nil, errs.Wrap(err).WithMessage("cannot create polynomial")
 	}
 
 	e, err := p.scalarField.FromWideBytes(challenge)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot convert challenge to scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot convert challenge to scalar")
 	}
 
 	z := poly.Eval(e)
@@ -245,17 +245,17 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 
 	polyModule, err := polynomials.NewPolynomialModule(p.group)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create polynomial module")
+		return errs.Wrap(err).WithMessage("cannot create polynomial module")
 	}
 	coefficients := append([]G{commitment.A}, statement.Xs...)
 	poly, err := polyModule.New(coefficients...)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot create polynomial")
+		return errs.Wrap(err).WithMessage("cannot create polynomial")
 	}
 
 	e, err := p.scalarField.FromWideBytes(challenge)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot convert challenge to scalar")
+		return errs.Wrap(err).WithMessage("cannot convert challenge to scalar")
 	}
 
 	rCheck := poly.Eval(e)
@@ -270,22 +270,22 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigma.ChallengeBytes) (*Commitment[G, S], *Response[S], error) {
 	z, err := p.scalarField.Random(p.prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample random scalar")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample random scalar")
 	}
 
 	e, err := p.scalarField.FromWideBytes(challenge)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot convert challenge to scalar")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot convert challenge to scalar")
 	}
 
 	polyModule, err := polynomials.NewPolynomialModule(p.group)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create polynomial module")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create polynomial module")
 	}
 	coefficients := append([]G{p.group.OpIdentity()}, statement.Xs...)
 	poly, err := polyModule.New(coefficients...)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create polynomial")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create polynomial")
 	}
 	a := statement.Gen.ScalarOp(z).Op(poly.Eval(e).OpInv())
 

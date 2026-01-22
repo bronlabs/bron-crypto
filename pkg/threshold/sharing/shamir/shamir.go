@@ -11,10 +11,10 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // DealerFunc is the polynomial used by the dealer to generate shares.
@@ -49,7 +49,7 @@ func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeF
 
 	basisPolynomialAtZero, err := lagrange.BasisAt(sharingIDsScalar, field.Zero())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not compute all basis polynomials at x=0")
+		return nil, errs.Wrap(err).WithMessage("could not compute all basis polynomials at x=0")
 	}
 
 	result := hashmap.NewComparable[sharing.ID, FE]()

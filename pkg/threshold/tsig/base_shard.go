@@ -5,12 +5,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // BasePublicMaterial contains the public information for threshold signature verification,
@@ -99,7 +99,7 @@ func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal tSchnorr BasePublicMaterial")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal tSchnorr BasePublicMaterial")
 	}
 	return data, nil
 }
@@ -169,7 +169,7 @@ func (sh *BaseShard[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal tSchnorr BaseShard")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal tSchnorr BaseShard")
 	}
 	return data, nil
 }
@@ -205,13 +205,13 @@ func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement
 	}
 	partialPublicKeyValues, err := gennaro.ComputePartialPublicKey(sf, share, fv, accessStructure)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compute partial public keys from share")
+		return nil, errs.Wrap(err).WithMessage("failed to compute partial public keys from share")
 	}
 	partialPublicKeys := hashmap.NewComparable[sharing.ID, *schnorrlike.PublicKey[E, S]]()
 	for id, value := range partialPublicKeyValues.Iter() {
 		pk, err := schnorrlike.NewPublicKey(value)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("failed to create public key for party %d", id)
+			return nil, errs.Wrap(err).WithMessage("failed to create public key for party %d", id)
 		}
 		partialPublicKeys.Put(id, pk)
 	}
@@ -228,5 +228,5 @@ func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement
 
 var (
 	// ErrInvalidArgument is returned when a function receives an invalid argument.
-	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidArgument = errs.New("invalid argument")
 )

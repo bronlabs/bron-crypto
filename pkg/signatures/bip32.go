@@ -12,9 +12,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type AdditivelyDerivablePublicKey[
@@ -46,7 +46,7 @@ func DeriveChildKeys[
 	if publicKey.Value().Structure().Name() == k256.NewCurve().Name() {
 		shift, childChainCode, err := bip32(any(publicKey.Value()).(*k256.Point), chainCode, i) //nolint:errcheck // false positive
 		if err != nil {
-			return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot derive child key")
+			return *new(SH), nil, errs.Wrap(err).WithMessage("cannot derive child key")
 		}
 		return any(shift).(SH), childChainCode, nil //nolint:errcheck // false positive
 	} else {
@@ -57,14 +57,14 @@ func DeriveChildKeys[
 func bip32(publicKey *k256.Point, chainCode []byte, i uint32) (*k256.Scalar, []byte, error) {
 	digest, err := hashing.Hmac(chainCode, sha512.New, publicKey.ToCompressed(), binary.BigEndian.AppendUint32(nil, i))
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot hash public key")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot hash public key")
 	}
 
 	childChainCode := digest[32:]
 	sf := k256.NewScalarField()
 	shift, err := sf.FromBytes(digest[:32])
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create scalar from bytes")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create scalar from bytes")
 	}
 	// make sure it wasn't reduced
 	if !bytes.Equal(digest[:32], shift.Bytes()) {
@@ -93,27 +93,27 @@ func bip32Like[
 
 	xof, err := blake2b.NewXOF(uint32(digestLen), chainCode)
 	if err != nil {
-		return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot create blake2b xof")
+		return *new(SH), nil, errs.Wrap(err).WithMessage("cannot create blake2b xof")
 	}
 
 	if _, err := xof.Write(slices.Concat(publicKey.Value().Bytes(), binary.BigEndian.AppendUint32(nil, i))); err != nil {
-		return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot hash public key")
+		return *new(SH), nil, errs.Wrap(err).WithMessage("cannot hash public key")
 	}
 	digest := make([]byte, digestLen)
 	if _, err := io.ReadFull(xof, digest); err != nil {
-		return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot read digest")
+		return *new(SH), nil, errs.Wrap(err).WithMessage("cannot read digest")
 	}
 
 	childChainCode = digest[scalarWideLen:]
 	shift, err = sf.FromWideBytes(digest[:scalarWideLen])
 	if err != nil {
-		return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot create scalar from bytes")
+		return *new(SH), nil, errs.Wrap(err).WithMessage("cannot create scalar from bytes")
 	}
 
 	return shift, childChainCode, nil
 }
 
 var (
-	ErrInvalidDerivation = errs2.New("invalid derivation")
-	ErrInvalidArgument   = errs2.New("invalid argument")
+	ErrInvalidDerivation = errs.New("invalid derivation")
+	ErrInvalidArgument   = errs.New("invalid argument")
 )

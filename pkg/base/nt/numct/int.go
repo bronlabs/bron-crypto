@@ -9,9 +9,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // IntOne returns a new Int set to 1.
@@ -401,7 +401,7 @@ func (i *Int) Square(x *Int) {
 //	b[0] = 0 if i >= 0, 1 if i < 0
 //	b[1:] = big-endian |i|
 func (i *Int) Bytes() []byte {
-	return errs2.Must1((*saferith.Int)(i).MarshalBinary())
+	return errs.Must1((*saferith.Int)(i).MarshalBinary())
 }
 
 // SetBytes expects the sign-magnitude encoding produced by Bytes/BytesBE:
@@ -750,21 +750,21 @@ func (i *Int) NotCap(x *Int, capacity int) {
 
 // SetRandomRangeLH sets i to a random integer in [lowInclusive, highExclusive).
 func (i *Int) SetRandomRangeLH(lowInclusive, highExclusive *Int, prng io.Reader) error {
-	var errs []error
+	var validationErrs []error
 	if lowInclusive == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
 	}
 	if highExclusive == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("highExclusive must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("highExclusive must not be nil"))
 	}
 	if prng == nil {
-		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("prng must not be nil"))
 	}
 	if lt, _, _ := lowInclusive.Compare(highExclusive); lt == ct.False {
-		errs = append(errs, ErrInvalidArgument.WithMessage("highExclusive must be greater than lowInclusive"))
+		validationErrs = append(validationErrs, ErrInvalidArgument.WithMessage("highExclusive must be greater than lowInclusive"))
 	}
-	if len(errs) > 0 {
-		return errs2.Join(errs...)
+	if len(validationErrs) > 0 {
+		return errs.Join(validationErrs...)
 	}
 
 	// Compute interval = highExclusive - lowInclusive (always positive since low < high)
@@ -776,7 +776,7 @@ func (i *Int) SetRandomRangeLH(lowInclusive, highExclusive *Int, prng io.Reader)
 	intervalAbs.Abs(&interval)
 	err := r.SetRandomRangeH(&intervalAbs, prng)
 	if err != nil {
-		return errs2.Wrap(err)
+		return errs.Wrap(err)
 	}
 
 	// Result = lowInclusive + r

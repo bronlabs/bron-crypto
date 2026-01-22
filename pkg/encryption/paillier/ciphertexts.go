@@ -4,10 +4,10 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewCiphertextSpace creates a new ciphertext space for Paillier encryption.
@@ -15,7 +15,7 @@ import (
 func NewCiphertextSpace(n2, n *num.NatPlus) (*CiphertextSpace, error) {
 	g, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &CiphertextSpace{g: g}, nil
 }
@@ -39,7 +39,7 @@ func (cts *CiphertextSpace) N2() *num.NatPlus {
 func (cts *CiphertextSpace) Sample(prng io.Reader) (*Ciphertext, error) {
 	u, err := cts.g.Random(prng)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Ciphertext{u: u}, nil
 }
@@ -48,11 +48,11 @@ func (cts *CiphertextSpace) Sample(prng io.Reader) (*Ciphertext, error) {
 func (cts *CiphertextSpace) New(x *numct.Nat) (*Ciphertext, error) {
 	y, err := num.NewUintGivenModulus(x, cts.N2().ModulusCT())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	u, err := cts.g.FromUint(y)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Ciphertext{u: u}, nil
 }
@@ -147,11 +147,11 @@ func (ct *Ciphertext) ScalarMulBounded(scalar *num.Nat, bits uint) *Ciphertext {
 func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
 	nonce, err := pk.NonceSpace().Sample(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	ciphertext, err := ct.ReRandomiseWithNonce(pk, nonce)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err)
+		return nil, nil, errs.Wrap(err)
 	}
 	return ciphertext, nonce, nil
 }
@@ -162,11 +162,11 @@ func (ct *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Cipher
 	g := pk.CiphertextSpace().g
 	embeddedNonce, err := g.EmbedRSA(nonce.Value())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	rn, err := g.NthResidue(embeddedNonce)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	// c' = c * r^n mod n^2
 	return &Ciphertext{u: ct.Value().Mul(rn)}, nil
@@ -182,7 +182,7 @@ func (ct *Ciphertext) Equal(other *Ciphertext) bool {
 func (ct *Ciphertext) Shift(pk *PublicKey, message *Plaintext) (*Ciphertext, error) {
 	gDeltaM, err := pk.group.Representative(message.ValueCT())
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 	return &Ciphertext{u: ct.u.Mul(gDeltaM)}, nil
 }

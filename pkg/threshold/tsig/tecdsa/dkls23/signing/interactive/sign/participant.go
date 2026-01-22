@@ -12,7 +12,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
@@ -24,6 +23,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -93,12 +93,12 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't randomise zero seeds")
+		return nil, errs.Wrap(err).WithMessage("couldn't randomise zero seeds")
 	}
 
 	otSuite, err := ecbbot.NewSuite(softspoken.Kappa, 1, suite.Curve())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("error creating vsot suite for participant")
+		return nil, errs.Wrap(err).WithMessage("error creating vsot suite for participant")
 	}
 	otSenders := make(map[sharing.ID]*ecbbot.Sender[P, S])
 	otReceivers := make(map[sharing.ID]*ecbbot.Receiver[P, S])
@@ -112,14 +112,14 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingID)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		otSender, err := ecbbot.NewSender(sessionID, otSuite, otTape, prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("error creating bbot sender")
+			return nil, errs.Wrap(err).WithMessage("error creating bbot sender")
 		}
 
 		otTape = tape.Clone()
 		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingID)))
 		otReceiver, err := ecbbot.NewReceiver(sessionID, otSuite, otTape, prng)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("error creating bbot receiver")
+			return nil, errs.Wrap(err).WithMessage("error creating bbot receiver")
 		}
 
 		otSenders[id] = otSender
@@ -163,18 +163,18 @@ func (c *Cosigner[P, B, S]) Quorum() network.Quorum {
 func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.Seeds, error) {
 	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurityBits+7)/8)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot extract randomizer")
+		return nil, errs.Wrap(err).WithMessage("cannot extract randomizer")
 	}
 
 	randomizedSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	for id, seed := range seeds.Iter() {
 		hasher, err := blake2b.New(przs.SeedLength, randomizerKey)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot create hasher")
+			return nil, errs.Wrap(err).WithMessage("cannot create hasher")
 		}
 		_, err = hasher.Write(seed[:])
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot hash seed")
+			return nil, errs.Wrap(err).WithMessage("cannot hash seed")
 		}
 		randomizedSeedBytes := hasher.Sum(nil)
 		var randomizedSeed [przs.SeedLength]byte

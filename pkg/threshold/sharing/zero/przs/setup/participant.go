@@ -4,12 +4,12 @@ import (
 	"io"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -66,12 +66,12 @@ func NewParticipant(sessionID network.SID, mySharingID sharing.ID, quorum networ
 	var ck hash_comm.Key
 	ckBytes, err := p.tape.ExtractBytes("ck", uint(len(ck)))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to extract commitment key")
+		return nil, errs.Wrap(err).WithMessage("failed to extract commitment key")
 	}
 	copy(ck[:], ckBytes)
 	p.state.commitmentScheme, err = hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create commitment scheme")
 	}
 
 	return p, nil

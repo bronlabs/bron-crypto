@@ -17,7 +17,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -32,6 +31,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
 	ltu "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // TestLindell22DKGAndSign tests the complete DKG and signing flow for all variants
@@ -433,7 +433,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	require.Error(t, err)
 
 	// Check that the aggregator detected the bad signature
-	culprit, ok := errs2.HasTag(err, base.IdentifiableAbortPartyIDTag)
+	culprit, ok := errs.HasTag(err, base.IdentifiableAbortPartyIDTag)
 	require.True(t, ok)
 	require.Equal(t, corruptedID, culprit.(sharing.ID))
 	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with BIP340")
@@ -550,7 +550,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	require.Error(t, err)
 
 	// Check that the aggregator detected the bad signature
-	culprits := errs2.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
+	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
 	require.Len(t, culprits, 2)
 	require.Contains(t, culprits, corruptedID1)
 	require.Contains(t, culprits, corruptedID2)
@@ -1290,7 +1290,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 		// Round 3 should detect the bad proof
 		_, err = ltu.DoLindell22Round3(cosigners, r3bi, message)
-		culprit, ok := errs2.HasTag(err, base.IdentifiableAbortPartyIDTag)
+		culprit, ok := errs.HasTag(err, base.IdentifiableAbortPartyIDTag)
 		require.True(t, ok)
 		require.Equal(t, corruptedID, culprit.(sharing.ID))
 

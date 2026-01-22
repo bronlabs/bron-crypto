@@ -5,8 +5,8 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // TaggedKeyAgreement performs simple DH-style key agreement with domain-separated hashing.
@@ -35,7 +35,7 @@ func (ka *TaggedKeyAgreement[GE, SE]) R(prng io.Reader) (SE, error) {
 	}
 	a, err := ka.scalarField.Random(prng)
 	if err != nil {
-		return nilSE, errs2.Wrap(err).WithMessage("random scalar")
+		return nilSE, errs.Wrap(err).WithMessage("random scalar")
 	}
 
 	return a, nil
@@ -60,7 +60,7 @@ func (ka *TaggedKeyAgreement[GE, SE]) Key1(a SE, mr GE, tag []byte) (SE, error) 
 	raw := mr.ScalarOp(a)
 	k, err := ka.scalarField.Hash(slices.Concat(tag, raw.Bytes()))
 	if err != nil {
-		return nilSE, errs2.Wrap(err).WithMessage("hash to scalar")
+		return nilSE, errs.Wrap(err).WithMessage("hash to scalar")
 	}
 	return k, nil
 }

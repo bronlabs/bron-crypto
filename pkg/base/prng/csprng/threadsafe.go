@@ -3,15 +3,15 @@ package csprng
 import (
 	"sync"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
-	ErrConstructionFailed = errs2.New("failed to construct new prng")
-	ErrReadFailed         = errs2.New("failed to read from prng")
-	ErrGenerateFailed     = errs2.New("failed to generate from prng")
-	ErrSeedFailed         = errs2.New("failed to seed prng")
-	ErrReseedFailed       = errs2.New("failed to reseed prng")
+	ErrConstructionFailed = errs.New("failed to construct new prng")
+	ErrReadFailed         = errs.New("failed to read from prng")
+	ErrGenerateFailed     = errs.New("failed to generate from prng")
+	ErrSeedFailed         = errs.New("failed to seed prng")
+	ErrReseedFailed       = errs.New("failed to reseed prng")
 )
 
 // Provide a thread-safe version for PRNGs.

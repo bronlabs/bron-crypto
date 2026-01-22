@@ -7,7 +7,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -20,6 +19,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -103,22 +103,22 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 			sid, dst, binary.BigEndian.AppendUint64(nil, uint64(id)),
 		)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not create commitment key from CRS")
+			return nil, errs.Wrap(err).WithMessage("could not create commitment key from CRS")
 		}
 		scheme, err := hash_comm.NewScheme(ck)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("could not create commitment scheme")
+			return nil, errs.Wrap(err).WithMessage("could not create commitment scheme")
 		}
 		commitmentSchemes[id] = scheme
 	}
 
 	schnorrProtocol, err := schnorrpok.NewProtocol(curve.Generator(), prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create schnorr protocol")
+		return nil, errs.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}
 	niDlogScheme, err := compiler.Compile(nic, schnorrProtocol, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compile niDlogProver")
+		return nil, errs.Wrap(err).WithMessage("failed to compile niDlogProver")
 	}
 
 	//nolint:exhaustruct // partially initialised

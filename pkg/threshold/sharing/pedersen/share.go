@@ -5,12 +5,12 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Share represents a Pedersen VSS share consisting of a secret component f(i)
@@ -144,11 +144,11 @@ func (s *Share[S]) Bytes() []byte {
 func (s *Share[S]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[S], error) {
 	ss, err := shamir.NewShare(s.id, s.secret.Value(), nil)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create shamir share from share")
+		return nil, errs.Wrap(err).WithMessage("could not create shamir share from share")
 	}
 	additiveShare, err := ss.ToAdditive(qualifiedSet)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to convert Pedersen share to additive")
+		return nil, errs.Wrap(err).WithMessage("failed to convert Pedersen share to additive")
 	}
 	return additiveShare, nil
 }
@@ -161,7 +161,7 @@ func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal Pedersen Share")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Pedersen Share")
 	}
 	return data, nil
 }

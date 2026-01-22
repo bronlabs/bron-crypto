@@ -6,7 +6,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -15,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -77,7 +77,7 @@ func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
 func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], err error) {
 	err = validateInputs(suite, hisSharingID, myShard, niCompiler, tape, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
+		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sessionID, niCompiler, suite.Curve().Name())
@@ -85,20 +85,20 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, dst, myShard.PublicKey().Value().ToCompressed())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create commitment key from CRS")
+		return nil, errs.Wrap(err).WithMessage("could not create commitment key from CRS")
 	}
 	commitmentScheme, err := hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create commitment scheme")
 	}
 	schnorrProtocol, err := schnorrpok.NewProtocol(suite.Curve().Generator(), prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create schnorr protocol")
+		return nil, errs.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}
 
 	niDlogScheme, err := compiler.Compile(niCompiler, schnorrProtocol, prng)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to compile niDlogProver")
+		return nil, errs.Wrap(err).WithMessage("failed to compile niDlogProver")
 	}
 
 	return &Cosigner[P, B, S]{
@@ -117,7 +117,7 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
 	cosigner, err := newCosigner(sessionID, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not construct primary cosigner")
+		return nil, errs.Wrap(err).WithMessage("could not construct primary cosigner")
 	}
 	primaryCosigner = &PrimaryCosigner[P, B, S]{
 		Cosigner:           *cosigner,
@@ -132,7 +132,7 @@ func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B],
 func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
 	cosigner, err := newCosigner(sessionID, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not construct secondary cosigner")
+		return nil, errs.Wrap(err).WithMessage("could not construct secondary cosigner")
 	}
 
 	//nolint:exhaustruct // partially initialised

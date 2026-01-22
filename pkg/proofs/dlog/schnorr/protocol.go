@@ -4,11 +4,11 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name is the protocol identifier for Schnorr's discrete log proof.
@@ -52,7 +52,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	homomorphism := func(s S) G { return generator.ScalarOp(s) }
 	l, err := num.N().FromBytes(group.Order().Bytes())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create anchor")
+		return nil, errs.Wrap(err).WithMessage("cannot create anchor")
 	}
 	anc := &anchor[G, S]{l, scalarField.Zero()}
 
@@ -67,7 +67,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		prng,
 	)
 	if err != nil {
-		return nil, errs2.Wrap(err)
+		return nil, errs.Wrap(err)
 	}
 
 	return &Protocol[G, S]{*maurerProto}, nil

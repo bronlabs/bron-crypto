@@ -10,9 +10,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // hashFunc implies L = 32 bytes.
@@ -67,10 +67,10 @@ func (r *WrappedReader) Read(p []byte) (n int, err error) {
 }
 
 var (
-	ErrSignerDeterminism       = errs2.New("signer must be deterministic")
-	ErrUniqueDeviceIDSignature = errs2.New("could not sign unique device id")
-	ErrHashingUniqueDeviceID   = errs2.New("could not hash signed unique device id")
-	ErrRandomSample            = errs2.New("could not read from wrapped reader")
-	ErrExtractKey              = errs2.New("could not extract key")
-	ErrExpandKey               = errs2.New("could not expand key")
+	ErrSignerDeterminism       = errs.New("signer must be deterministic")
+	ErrUniqueDeviceIDSignature = errs.New("could not sign unique device id")
+	ErrHashingUniqueDeviceID   = errs.New("could not hash signed unique device id")
+	ErrRandomSample            = errs.New("could not read from wrapped reader")
+	ErrExtractKey              = errs.New("could not extract key")
+	ErrExpandKey               = errs.New("could not expand key")
 )

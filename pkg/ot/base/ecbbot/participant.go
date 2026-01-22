@@ -6,10 +6,10 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const transcriptLabel = "BRON_CRYPTO_BBOT-"
@@ -47,7 +47,7 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create tagged key agreement")
+		return nil, errs.Wrap(err).WithMessage("cannot create tagged key agreement")
 	}
 
 	s := &Sender[G, S]{
@@ -73,7 +73,7 @@ func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create tagged key agreement")
+		return nil, errs.Wrap(err).WithMessage("cannot create tagged key agreement")
 	}
 
 	r := &Receiver[G, S]{

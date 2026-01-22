@@ -4,10 +4,10 @@
 package paillier
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name is the identifier for the Paillier encryption scheme.
@@ -37,7 +37,7 @@ func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	return kg, nil
@@ -48,7 +48,7 @@ func (*Scheme) Encrypter(opts ...EncrypterOption) (*Encrypter, error) {
 	e := &Encrypter{}
 	for _, opt := range opts {
 		if err := opt(e); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	return e, nil
@@ -65,7 +65,7 @@ func (*Scheme) SelfEncrypter(sk *PrivateKey, opts ...SelfEncrypterOption) (*Self
 	se.pk.cacheSpaces()
 	for _, opt := range opts {
 		if err := opt(se); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	return se, nil
@@ -79,7 +79,7 @@ func (*Scheme) Decrypter(sk *PrivateKey, opts ...DecrypterOption) (*Decrypter, e
 	d := &Decrypter{sk: sk}
 	for _, opt := range opts {
 		if err := opt(d); err != nil {
-			return nil, errs2.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 	}
 	return d, nil
@@ -96,6 +96,6 @@ func lq(sk *PrivateKey, x *numct.Nat) {
 }
 
 var (
-	ErrInvalidArgument = errs2.New("invalid argument")
-	ErrInvalidRange    = errs2.New("invalid range")
+	ErrInvalidArgument = errs.New("invalid argument")
+	ErrInvalidRange    = errs.New("invalid range")
 )

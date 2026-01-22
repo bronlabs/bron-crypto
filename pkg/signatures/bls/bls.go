@@ -4,8 +4,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewShortKeyScheme creates a BLS signature scheme with minimal public key size.
@@ -25,7 +25,7 @@ func NewShortKeyScheme[
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*Scheme[P1, FE1, P2, FE2, E, S], error) {
 	cipherSuite, err := newScheme(curveFamily, rogueKeyAlg)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create cipher suite")
+		return nil, errs.Wrap(err).WithMessage("failed to create cipher suite")
 	}
 	keySubGroup := curveFamily.SourceSubGroup()
 	signatureSubGroup := curveFamily.TwistedSubGroup()
@@ -55,7 +55,7 @@ func NewLongKeyScheme[
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*Scheme[P2, FE2, P1, FE1, E, S], error) {
 	cipherSuite, err := newScheme(curveFamily, rogueKeyAlg)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to create cipher suite")
+		return nil, errs.Wrap(err).WithMessage("failed to create cipher suite")
 	}
 	keySubGroup := curveFamily.TwistedSubGroup()
 	signatureSubGroup := curveFamily.SourceSubGroup()
@@ -162,7 +162,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK,
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("key generator option failed")
+			return nil, errs.Wrap(err).WithMessage("key generator option failed")
 		}
 	}
 	return kg, nil
@@ -186,7 +186,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKF
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("signer option failed")
+			return nil, errs.Wrap(err).WithMessage("signer option failed")
 		}
 	}
 	return out, nil
@@ -207,7 +207,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, P
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("verifier option failed")
+			return nil, errs.Wrap(err).WithMessage("verifier option failed")
 		}
 	}
 	return out, nil

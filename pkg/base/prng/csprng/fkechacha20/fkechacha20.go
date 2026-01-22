@@ -1,9 +1,9 @@
 package fkechacha20
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/chacha20"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Prng uses a fast-erasure version of `chacha20` stream cipher as a Prng.
@@ -17,7 +17,7 @@ type Prng struct {
 func NewPrng(seed, salt []byte) (*Prng, error) {
 	chachaPrng := new(Prng)
 	if err := chachaPrng.Reseed(seed, salt); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("Could not create ChachaPRNG")
+		return nil, errs.Wrap(err).WithMessage("Could not create ChachaPRNG")
 	}
 	return chachaPrng, nil
 }
@@ -40,7 +40,7 @@ func (c *Prng) Generate(buffer, salt []byte) error {
 // Read fills the buffer with pseudo-random bytes.
 func (c *Prng) Read(buffer []byte) (n int, err error) {
 	if err = c.Generate(buffer, nil); err != nil {
-		return 0, errs2.Wrap(err).WithMessage("Could not Generate bytes on ChachaPRNG")
+		return 0, errs.Wrap(err).WithMessage("Could not Generate bytes on ChachaPRNG")
 	}
 	return len(buffer), nil
 }
@@ -57,7 +57,7 @@ func (c *Prng) Reseed(seed, salt []byte) (err error) {
 	copy(nonce[:], salt)
 	c.chacha, err = chacha20.NewFastErasureCipher(key[:], nonce[:])
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("Could not create ChachaPRNG")
+		return errs.Wrap(err).WithMessage("Could not create ChachaPRNG")
 	}
 	c.seeded = true
 	return nil
@@ -67,7 +67,7 @@ func (c *Prng) Reseed(seed, salt []byte) (err error) {
 func (c *Prng) Seed(seed, salt []byte) error {
 	err := c.Reseed(seed, salt)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("Could not re-initialise ChachaPRNG")
+		return errs.Wrap(err).WithMessage("Could not re-initialise ChachaPRNG")
 	}
 	return nil
 }
@@ -77,6 +77,6 @@ func (*Prng) SecurityStrength() int {
 }
 
 var (
-	ErrInvalidArgument = errs2.New("ChachaPRNG invalid argument")
-	ErrRandomSample    = errs2.New("ChachaPRNG random sample error")
+	ErrInvalidArgument = errs.New("ChachaPRNG invalid argument")
+	ErrRandomSample    = errs.New("ChachaPRNG random sample error")
 )

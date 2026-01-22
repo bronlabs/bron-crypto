@@ -4,7 +4,7 @@ import (
 	"golang.org/x/exp/constraints"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type (
@@ -176,5 +176,5 @@ func ParseOrderingFromMasks[F constraints.Integer](lt, eq, gt F) PartialOrdering
 }
 
 var (
-	ErrIsIncomparable = errs2.New("elements are incomparable")
+	ErrIsIncomparable = errs.New("elements are incomparable")
 )

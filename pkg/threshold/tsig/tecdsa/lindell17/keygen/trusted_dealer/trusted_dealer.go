@@ -8,13 +8,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // DealRandom creates Lindell17 shards using a trusted dealer.
@@ -24,16 +24,16 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	}
 	feldmanDealer, err := feldman.NewScheme(curve.Generator(), 2, shareholder)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not create shamir scheme")
+		return nil, nil, errs.Wrap(err).WithMessage("could not create shamir scheme")
 	}
 
 	feldmanOutput, secret, err := feldmanDealer.DealRandom(prng)
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("could not deal shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal shares")
 	}
 	publicKey, err := ecdsa.NewPublicKey(curve.ScalarBaseMul(secret.Value()))
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create ecdsa public key")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create ecdsa public key")
 	}
 
 	scheme := paillier.NewScheme()
@@ -44,27 +44,27 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 
 	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	if err != nil {
-		return nil, nil, errs2.Wrap(err).WithMessage("cannot create paillier key generator")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create paillier key generator")
 	}
 
 	for id, share := range feldmanOutput.Shares().Iter() {
 		paillierPrivateKeys[id], paillierPublicKeys[id], err = keyGenerator.Generate(prng)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot generate paillier keypair")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot generate paillier keypair")
 		}
 		sharePlaintext, err := paillierPublicKeys[id].PlaintextSpace().FromBytes(share.Bytes())
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot create paillier plaintext from share bytes")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create paillier plaintext from share bytes")
 		}
 
 		encrypter, err := scheme.SelfEncrypter(paillierPrivateKeys[id])
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot create paillier encrypter")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create paillier encrypter")
 		}
 
 		shareCiphertexts[id], _, err = encrypter.SelfEncrypt(sharePlaintext, prng)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot encrypt share under paillier public key")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt share under paillier public key")
 		}
 	}
 
@@ -81,21 +81,21 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 			hashmap.NewComparableFromNativeLike(encs).Freeze(),
 		)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot create auxiliary info")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create auxiliary info")
 		}
 
 		share, exists := feldmanOutput.Shares().Get(id)
 		if !exists {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot get share for shareholder %d", id)
+			return nil, nil, errs.Wrap(err).WithMessage("cannot get share for shareholder %d", id)
 		}
 		baseShard, err := tecdsa.NewShard(share, feldmanOutput.VerificationMaterial(), feldmanDealer.AccessStructure())
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot create tECDSA Lindell17 shard")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create tECDSA Lindell17 shard")
 		}
 
 		shards[id], err = lindell17.NewShard(baseShard, auxInfo)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithMessage("cannot create lindell17 shard")
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create lindell17 shard")
 		}
 	}
 	return hashmap.NewComparableFromNativeLike(shards).Freeze(), publicKey, nil

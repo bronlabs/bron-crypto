@@ -2,8 +2,8 @@ package pedersen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Scheme wires together the Pedersen CRS with its committer and verifier.
@@ -35,7 +35,7 @@ func (s *Scheme[E, S]) Committer(opts ...CommitterOption[E, S]) (*Committer[E, S
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot apply committer option")
+			return nil, errs.Wrap(err).WithMessage("cannot apply committer option")
 		}
 	}
 	return out, nil
@@ -52,7 +52,7 @@ func (s *Scheme[E, S]) Verifier(opts ...VerifierOption[E, S]) (*Verifier[E, S], 
 	}
 	for _, opt := range opts {
 		if err := opt(v); err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot apply verifier option")
+			return nil, errs.Wrap(err).WithMessage("cannot apply verifier option")
 		}
 	}
 	return v, nil

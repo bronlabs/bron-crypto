@@ -3,11 +3,11 @@ package nthroot
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Name identifies the Paillier nth-root sigma protocol.
@@ -75,7 +75,7 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 		maurer09.WithPreImageScalarMul[*znstar.PaillierGroupElement[A]](scalarMul),
 	)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create underlying Maurer09 protocol")
+		return nil, errs.Wrap(err).WithMessage("cannot create underlying Maurer09 protocol")
 	}
 	return &Protocol[A]{*proto}, nil
 }

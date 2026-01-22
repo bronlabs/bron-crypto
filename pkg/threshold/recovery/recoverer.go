@@ -5,11 +5,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Recoverer orchestrates recovery of a missing party's share.
@@ -41,7 +41,7 @@ func NewRecoverer[
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](shard.Share().Value().Structure())
 	scheme, err := feldman.NewScheme(group.Generator(), shard.AccessStructure().Threshold(), shard.AccessStructure().Shareholders())
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("could not create feldman scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create feldman scheme")
 	}
 
 	r := &Recoverer[G, S]{

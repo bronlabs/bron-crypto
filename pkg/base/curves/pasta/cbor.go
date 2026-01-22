@@ -3,8 +3,8 @@ package pasta
 import (
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
@@ -42,7 +42,7 @@ func (fe *FpFieldElement) UnmarshalCBOR(data []byte) error {
 
 	bfe, err := newFpField().FromBytes(dto.FieldBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize base field element")
+		return errs.Wrap(err).WithMessage("cannot deserialize base field element")
 	}
 	fe.V.Set(&bfe.V)
 	return nil
@@ -67,7 +67,7 @@ func (fe *FqFieldElement) UnmarshalCBOR(data []byte) error {
 
 	s, err := newFqField().FromBytes(dto.FieldBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize scalar")
+		return errs.Wrap(err).WithMessage("cannot deserialize scalar")
 	}
 	fe.V.Set(&s.V)
 	return nil
@@ -92,7 +92,7 @@ func (p *PallasPoint) UnmarshalCBOR(data []byte) error {
 
 	pp, err := NewPallasCurve().FromCompressed(dto.AffineCompressedBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil
@@ -117,7 +117,7 @@ func (p *VestaPoint) UnmarshalCBOR(data []byte) error {
 
 	pp, err := NewVestaCurve().FromCompressed(dto.AffineCompressedBytes)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("cannot deserialize point")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil

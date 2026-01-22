@@ -9,12 +9,12 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -101,7 +101,7 @@ func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
 	}
 	out, err := hashing.Hash(p.suite.hashFunc, preimage)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot hash data")
+		return nil, errs.Wrap(err).WithMessage("cannot hash data")
 	}
 	return out, nil
 }
@@ -110,15 +110,15 @@ func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
 func (p *participant) expand(outputLen, idx int, message []byte, choice int) ([]byte, error) {
 	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, p.sessionID[:])
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot create blake2b XOF")
+		return nil, errs.Wrap(err).WithMessage("cannot create blake2b XOF")
 	}
 	_, err = xof.Write(slices.Concat(binary.LittleEndian.AppendUint64(nil, uint64(idx)), binary.LittleEndian.AppendUint64(nil, uint64(choice)), message))
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot write to blake2b XOF")
+		return nil, errs.Wrap(err).WithMessage("cannot write to blake2b XOF")
 	}
 	digest := make([]byte, outputLen)
 	if _, err = io.ReadFull(xof, digest); err != nil {
-		return nil, errs2.Wrap(err).WithMessage("cannot read digest")
+		return nil, errs.Wrap(err).WithMessage("cannot read digest")
 	}
 	return digest, nil
 }
