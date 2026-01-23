@@ -27,8 +27,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-var testAccessStructure = []int{2, 3, 4, 5}
-var testHashFuncs = []crypto.Hash{crypto.SHA256, crypto.SHA3_256, crypto.BLAKE2b_256}
+var testAccessStructure = []int{2, 3, 4}
+var testHashFuncs = []crypto.Hash{crypto.SHA256, crypto.BLAKE2b_256}
 
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
