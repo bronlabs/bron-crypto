@@ -24,7 +24,21 @@ This library is not designed to be fully side-channel resistant. We build higher
 
 **Important**: This library is intended for use by experienced cryptographers and developers who understand the security implications of the protocols involved. If you are not familiar with the underlying cryptographic primitives, please consult with a cryptography expert before using this library in production.
 
+**Audit**: The threshold signing packages of this library and all their direct and indirect dependencies have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory.
+
 For the full Security Notice, including how to submit bugs, see [SECURITY.md](./SECURITY.md)
+
+## Documentation
+
+Public documentations can be found at [https://pkg.go.dev/github.com/bronlabs/bron-crypto](https://pkg.go.dev/github.com/bronlabs/bron-crypto)
+
+To access the documentation of the local version, run godoc -http=:6060 and open the following url in your browser.
+
+[http://localhost:6060/pkg/github.com/bronlabs/bron-crypto](http://localhost:6060/pkg/github.com/bronlabs/bron-crypto)
+
+### Specification
+
+A draft of our formal specification can be found in [docs](./docs/bron_spec.pdf). However, based on our experience, LaTeX-based specification tends always be trailing the code. We are experimenting with new kinds of specifications and will update the repo in time.
 
 ## Installation
 
