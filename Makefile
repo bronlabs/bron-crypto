@@ -53,5 +53,5 @@ lint-fix: build-boringssl
 .PHONY: clean
 clean:
 	go clean -cache
-	rm -rf "${BRON_CRYPTO_HOME}/sbom.json" "${BORINGSSL_HOME}"
+	rm -rf "${BORINGSSL_HOME}"
 

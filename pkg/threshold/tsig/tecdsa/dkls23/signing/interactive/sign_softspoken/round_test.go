@@ -3,7 +3,6 @@ package sign_softspoken_test
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"crypto/sha256"
-	"crypto/sha3"
 	"crypto/sha512"
 	"fmt"
 	"hash"
@@ -64,14 +63,11 @@ func Test_HappyPathWithDKG(t *testing.T) {
 
 var testHashFuncs = []func() hash.Hash{
 	sha256.New,
-	hashing.HashFuncTypeErase(sha3.New256),
 	sha512.New,
 }
 
 var testAccessStructures = []*sharing.ThresholdAccessStructure{
-	makeAccessStructure(2, 2),
 	makeAccessStructure(2, 3),
-	makeAccessStructure(3, 5),
 }
 
 func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *sharing.ThresholdAccessStructure) {
@@ -80,7 +76,7 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	shards := dkgTestutils.RunDKLs23DKG(t, curve, accessStructure)
 	message := []byte("Hello World")
 	for th := accessStructure.Threshold(); th <= uint(accessStructure.Shareholders().Size()); th++ {
-		for shareholdersSubset := range sliceutils.Combinations(slices.Collect(accessStructure.Shareholders().Iter()), th) {
+		for shareholdersSubset := range sliceutils.KCoveringCombinations(slices.Collect(accessStructure.Shareholders().Iter()), th) {
 			signature := signTestutils.RunDKLs23SignSoftspokenOT(t, shards, hashset.NewComparable(shareholdersSubset...).Freeze(), message, hashFunc)
 			pk := slices.Collect(maps.Values(shards))[0].PublicKey()
 

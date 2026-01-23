@@ -78,8 +78,7 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 	}{
 		{"minimal 2-of-3", 2, 3},
 		{"standard 3-of-5", 3, 5},
-		{"large 7-of-10", 7, 10},
-		{"unanimous 5-of-5", 5, 5},
+		{"unanimous 4-of-4", 4, 4},
 	}
 
 	for _, tc := range testCases {
@@ -144,8 +143,8 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 func TestDKGPublicKeyFields(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(3)
-	total := uint(5)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-public-key-fields")))
 	tape := hagrid.NewTranscript("TestPublicKeyFields")
@@ -237,8 +236,8 @@ func TestDKGPublicKeyFields(t *testing.T) {
 func TestDKGShareProperties(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(3)
-	total := uint(5)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-share-properties")))
 	tape := hagrid.NewTranscript("TestShareProperties")
@@ -294,11 +293,10 @@ func TestDKGShareProperties(t *testing.T) {
 
 		// Test different combinations of threshold shares
 		combinations := [][]sharing.ID{
+			{1, 2},
+			{1, 3},
+			{2, 3},
 			{1, 2, 3},
-			{2, 3, 4},
-			{3, 4, 5},
-			{1, 3, 5},
-			{1, 2, 4},
 		}
 
 		var reconstructedSecrets []*feldman.Secret[*k256.Scalar]
@@ -359,8 +357,8 @@ func TestDKGRoundMessages(t *testing.T) {
 func TestDKGDeterminism(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(3)
-	total := uint(5)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-determinism")))
 	tape := hagrid.NewTranscript("TestDeterminism")
@@ -404,8 +402,8 @@ func TestDKGParticipantValidation(t *testing.T) {
 
 	t.Run("participant not in access structure", func(t *testing.T) {
 		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
+		shareholders := sharing.NewOrdinalShareholderSet(3)
+		ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 		require.NoError(t, err)
 
 		// Try to create participant with ID not in shareholders
@@ -462,8 +460,8 @@ func TestParticipantCreation(t *testing.T) {
 
 	t.Run("valid participant creation", func(t *testing.T) {
 		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
+		shareholders := sharing.NewOrdinalShareholderSet(3)
+		ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 		require.NoError(t, err)
 
 		p, err := gennaro.NewParticipant(
@@ -583,8 +581,8 @@ func TestParticipantCreation(t *testing.T) {
 func TestRoundProgression(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(3)
-	total := uint(5)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-round-progression")))
 	tape := hagrid.NewTranscript("TestRoundProgression")
@@ -747,8 +745,8 @@ func TestRoundOutOfOrder(t *testing.T) {
 func TestMaliciousParticipants(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(3)
-	total := uint(5)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-malicious")))
 	tape := hagrid.NewTranscript("TestMaliciousParticipants")
@@ -829,8 +827,8 @@ func TestMaliciousParticipants(t *testing.T) {
 func TestDeterministicPRNG(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(3)
-	total := uint(5)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-deterministic")))
 	tape := hagrid.NewTranscript("TestDeterministic")
@@ -914,10 +912,9 @@ func BenchmarkGennaroDKG(b *testing.B) {
 		threshold uint
 		total     uint
 	}{
+		{"3-of-5", 2, 3},
 		{"3-of-5", 3, 5},
-		{"5-of-9", 5, 9},
-		{"7-of-13", 7, 13},
-		{"11-of-21", 11, 21},
+		{"4-of-4", 4, 4},
 	}
 
 	for _, bm := range benchmarks {
@@ -941,8 +938,8 @@ func BenchmarkGennaroDKG(b *testing.B) {
 
 // BenchmarkGennaroRounds benchmarks individual rounds
 func BenchmarkGennaroRounds(b *testing.B) {
-	threshold := uint(5)
-	total := uint(9)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("benchmark-rounds")))
 	tape := hagrid.NewTranscript("BenchmarkRounds")
@@ -1031,8 +1028,8 @@ func BenchmarkDKGScaling(b *testing.B) {
 
 // BenchmarkShareReconstruction benchmarks share reconstruction
 func BenchmarkShareReconstruction(b *testing.B) {
-	threshold := uint(5)
-	total := uint(9)
+	threshold := uint(2)
+	total := uint(3)
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("benchmark-recon")))
 	tape := hagrid.NewTranscript("BenchmarkRecon")

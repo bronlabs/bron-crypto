@@ -20,7 +20,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-var primeLen = znstar.PaillierKeyLen / 2
+var primeLen = 512
 
 func Test_HappyPathInteractive(t *testing.T) {
 	t.Parallel()

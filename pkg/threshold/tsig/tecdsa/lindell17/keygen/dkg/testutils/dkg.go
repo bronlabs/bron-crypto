@@ -26,6 +26,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
+const paillierKeyLen = 1536
+
 // RunLindell17DKG runs a complete Lindell17 DKG protocol and returns the resulting shards.
 // It verifies that all participants produce consistent outputs.
 func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
@@ -63,6 +65,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 		participants[id], err = dkg.NewParticipant(
 			sessionID,
 			shard,
+			paillierKeyLen,
 			curve,
 			prng,
 			fiatshamir.Name,

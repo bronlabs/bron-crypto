@@ -3,7 +3,6 @@ package znstar
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
@@ -12,8 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/errs-go/errs"
 )
-
-const PaillierKeyLen = base.IFCKeyLength
 
 // SamplePaillierGroup generates a Paillier group with modulus of given bitlen.
 func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
@@ -34,9 +31,6 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	}
 	if p.TrueLen() != q.TrueLen() {
 		return nil, ErrValue.WithMessage("p and q must have the same length")
-	}
-	if p.TrueLen() < PaillierKeyLen/2 {
-		return nil, ErrValue.WithMessage("p and q must be at least %d bits each", PaillierKeyLen/2)
 	}
 	if !p.IsProbablyPrime() {
 		return nil, ErrValue.WithMessage("p must be prime")
@@ -64,9 +58,6 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 
 // NewPaillierGroupOfUnknownOrder creates a Paillier group with unknown order from the given modulus n^2 and n.
 func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOrder, error) {
-	if n.TrueLen() < PaillierKeyLen-1 {
-		return nil, ErrValue.WithMessage("modulus n must be at least %d bits", PaillierKeyLen-1)
-	}
 	if !n.Mul(n).Equal(n2) {
 		return nil, ErrValue.WithMessage("n isn't sqrt of n")
 	}

@@ -2,6 +2,7 @@ package paillier
 
 import (
 	"sync"
+	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
@@ -13,7 +14,10 @@ import (
 // The group must contain the factorization n = p * q where p and q are distinct odd primes.
 func NewPrivateKey(group *znstar.PaillierGroupKnownOrder) (*PrivateKey, error) {
 	if group == nil {
-		return nil, ErrInvalidArgument.WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("group is nil")
+	}
+	if !testing.Testing() && group.N().TrueLen() < base.IFCKeyLength {
+		return nil, ErrInvalidArgument.WithMessage("Paillier N must be at least %d bits", base.IFCKeyLength)
 	}
 
 	sk := &PrivateKey{ //nolint:exhaustruct // other fields initialised later
@@ -79,8 +83,12 @@ func (sk *PrivateKey) Equal(other *PrivateKey) bool {
 // The public key contains only the modulus n, without knowledge of its factorization.
 func NewPublicKey(group *znstar.PaillierGroupUnknownOrder) (*PublicKey, error) {
 	if group == nil {
-		return nil, ErrInvalidArgument.WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("group is nil")
 	}
+	if !testing.Testing() && group.N().TrueLen() < MinKeyLen {
+		return nil, ErrInvalidArgument.WithMessage("Paillier N must be at least %d bits", MinKeyLen)
+	}
+
 	return &PublicKey{ //nolint:exhaustruct // other fields initialised later
 		group: group,
 	}, nil

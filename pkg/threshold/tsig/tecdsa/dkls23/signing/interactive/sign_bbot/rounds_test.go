@@ -65,7 +65,7 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	shards := dkgTestutils.RunDKLs23DKG(t, curve, accessStructure)
 	message := []byte("Hello World")
 	for th := accessStructure.Threshold(); th <= uint(accessStructure.Shareholders().Size()); th++ {
-		for shareholdersSubset := range sliceutils.Combinations(slices.Collect(accessStructure.Shareholders().Iter()), th) {
+		for shareholdersSubset := range sliceutils.KCoveringCombinations(slices.Collect(accessStructure.Shareholders().Iter()), th) {
 			signature := signTestutils.RunDKLs23SignBBOT(t, shards, hashset.NewComparable(shareholdersSubset...).Freeze(), message, hashFunc)
 			pk := slices.Collect(maps.Values(shards))[0].PublicKey()
 

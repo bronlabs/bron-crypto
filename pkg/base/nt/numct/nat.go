@@ -424,7 +424,7 @@ func (n *Nat) FillBytes(buf []byte) []byte {
 
 // HashCode returns a hash code for n.
 func (n *Nat) HashCode() base.HashCode {
-	return base.DeriveHashCode(n.Bytes())
+	return base.DeriveHashCode(n.Big().Bytes())
 }
 
 // Big returns the big.Int representation of n.

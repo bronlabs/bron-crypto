@@ -21,6 +21,8 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+const paillierGroupNLen = 2048
+
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -70,7 +72,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillierGroupNLen))
 	require.NoError(t, err)
 
 	sk, pk, err := keygen.Generate(prng)
@@ -112,7 +114,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillierGroupNLen))
 	require.NoError(t, err)
 
 	sk, pk, err := keygen.Generate(prng)

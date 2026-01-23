@@ -15,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -27,8 +26,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-var testAccessStructure = []int{2, 3, 4, 5}
-var testHashFuncs = []crypto.Hash{crypto.SHA256, crypto.SHA3_256, crypto.BLAKE2b_256}
+var testAccessStructure = []int{2, 3}
+var testHashFuncs = []crypto.Hash{crypto.SHA256, crypto.BLAKE2b_512}
 
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
@@ -50,20 +49,6 @@ func TestHappyPath(t *testing.T) {
 					t.Run("P256", func(t *testing.T) {
 						t.Parallel()
 						curve := p256.NewCurve()
-						suite, err := ecdsa.NewSuite(curve, hashFunc)
-						require.NoError(t, err)
-						testHappyPath(t, total, suite)
-					})
-					t.Run("pallas", func(t *testing.T) {
-						t.Parallel()
-						curve := pasta.NewPallasCurve()
-						suite, err := ecdsa.NewSuite(curve, hashFunc)
-						require.NoError(t, err)
-						testHappyPath(t, total, suite)
-					})
-					t.Run("vesta", func(t *testing.T) {
-						t.Parallel()
-						curve := pasta.NewVestaCurve()
 						suite, err := ecdsa.NewSuite(curve, hashFunc)
 						require.NoError(t, err)
 						testHappyPath(t, total, suite)

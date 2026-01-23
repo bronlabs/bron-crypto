@@ -172,9 +172,6 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 	if publicKey == nil {
 		return ErrInvalidArgument.WithMessage("public key is nil")
 	}
-	if publicKey.N().BitLen() < paillier.KeyLen {
-		return ErrInvalidArgument.WithMessage("invalid paillier public key: modulus is too small")
-	}
 	if xEncrypted == nil {
 		return ErrInvalidArgument.WithMessage("xEncrypted is nil")
 	}
@@ -283,9 +280,6 @@ func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[
 	}
 	if secretKey == nil {
 		return ErrInvalidArgument.WithMessage("secret key is nil")
-	}
-	if secretKey.Group().N().AnnouncedLen() < base.IFCKeyLength {
-		return ErrInvalidArgument.WithMessage("invalid paillier public key: modulus is too small")
 	}
 	if curve == nil {
 		return ErrInvalidArgument.WithMessage("curve is nil")

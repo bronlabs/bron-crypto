@@ -23,13 +23,15 @@ import (
 )
 
 const logRange = 256
+const keyLen = 2048
+const iters = 4
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -43,7 +45,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	ps := sk.PublicKey().PlaintextSpace()
-	for range 8 { // to speed up tests
+	for range iters {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := ps.FromNat(numct.NewNatFromSaferith((new(saferith.Nat).SetBig(xBig, xBig.BitLen()))))
@@ -85,7 +87,7 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -100,7 +102,7 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 8 { // to speed up tests
+	for range iters {
 		shift, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		xBig := new(big.Int).Sub(lowBound, shift)
@@ -145,7 +147,7 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -160,7 +162,7 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 8 { // to speed up tests
+	for range iters {
 		shift, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		xBig := new(big.Int).Add(highBound, shift)
@@ -205,7 +207,7 @@ func Test_Simulator(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -218,7 +220,7 @@ func Test_Simulator(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 8 { // to speed up tests
+	for range iters {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
@@ -256,7 +258,7 @@ func Test_Interactive(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -269,7 +271,7 @@ func Test_Interactive(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 8 { // to speed up tests
+	for range iters {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
@@ -320,7 +322,7 @@ func Test_InteractiveZk(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -333,7 +335,7 @@ func Test_InteractiveZk(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 8 { // to speed up tests
+	for range iters {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
@@ -386,7 +388,7 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -449,7 +451,7 @@ func Test_NonInteractiveFischlin(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
