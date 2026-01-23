@@ -1,13 +1,13 @@
 package compiler_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -37,7 +37,7 @@ func TestCompile_UsagePattern(t *testing.T) {
 func testUsagePattern(t *testing.T, compilerName compiler.Name) {
 	t.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
 	// Setup: create sigma protocol, statement, and witness
@@ -80,7 +80,7 @@ func testUsagePattern(t *testing.T, compilerName compiler.Name) {
 func TestCompile_UnsupportedCompiler(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
 	sigmaProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)

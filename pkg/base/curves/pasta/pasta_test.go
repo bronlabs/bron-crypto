@@ -1,18 +1,18 @@
 package pasta_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func Test_PallasBaseElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := pasta.NewPallasBaseField().Random(prng)
 	require.NoError(t, err)
@@ -26,7 +26,7 @@ func Test_PallasBaseElementCBORRoundTrip(t *testing.T) {
 
 func Test_PallasScalarCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := pasta.NewPallasScalarField().Random(prng)
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func Test_PallasScalarCBORRoundTrip(t *testing.T) {
 
 func Test_PallasPointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := pasta.NewPallasCurve().Random(prng)
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func Test_PallasPointCBORRoundTrip(t *testing.T) {
 
 func Test_VestaBaseElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := pasta.NewVestaBaseField().Random(prng)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func Test_VestaBaseElementCBORRoundTrip(t *testing.T) {
 
 func Test_VestaScalarCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := pasta.NewVestaScalarField().Random(prng)
 	require.NoError(t, err)
@@ -82,7 +82,7 @@ func Test_VestaScalarCBORRoundTrip(t *testing.T) {
 
 func Test_VestaPointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := pasta.NewVestaCurve().Random(prng)
 	require.NoError(t, err)

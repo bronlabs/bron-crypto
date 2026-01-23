@@ -1,7 +1,6 @@
 package sigor_test
 
 import (
-	crand "crypto/rand"
 	"crypto/subtle"
 	"io"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigor"
 )
@@ -83,24 +83,24 @@ func Test_Or_InvalidInputs(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	base, err := curve.Random(crand.Reader)
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
-	protocol, err := schnorr.NewProtocol(base, crand.Reader)
+	protocol, err := schnorr.NewProtocol(base, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	t.Run("nil_protocol", func(t *testing.T) {
 		t.Parallel()
-		_, err := sigor.Compose[*schnorr.Statement[*k256.Point, *k256.Scalar], *schnorr.Witness[*k256.Scalar], *schnorr.Commitment[*k256.Point, *k256.Scalar], *schnorr.State[*k256.Scalar], *schnorr.Response[*k256.Scalar]](nil, 2, crand.Reader)
+		_, err := sigor.Compose[*schnorr.Statement[*k256.Point, *k256.Scalar], *schnorr.Witness[*k256.Scalar], *schnorr.Commitment[*k256.Point, *k256.Scalar], *schnorr.State[*k256.Scalar], *schnorr.Response[*k256.Scalar]](nil, 2, pcg.NewRandomised())
 		require.Error(t, err)
 	})
 
 	t.Run("count_less_than_2", func(t *testing.T) {
 		t.Parallel()
-		_, err := sigor.Compose(protocol, 1, crand.Reader)
+		_, err := sigor.Compose(protocol, 1, pcg.NewRandomised())
 		require.Error(t, err)
 
-		_, err = sigor.Compose(protocol, 0, crand.Reader)
+		_, err = sigor.Compose(protocol, 0, pcg.NewRandomised())
 		require.Error(t, err)
 	})
 
@@ -116,8 +116,8 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 ) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -134,14 +134,14 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 	for i := range count {
 		if i == 0 {
 			// Valid witness: x = g^w
-			w, err := sf.Random(crand.Reader)
+			w, err := sf.Random(pcg.NewRandomised())
 			require.NoError(tb, err)
 			x := base.ScalarMul(w)
 			statements[i] = schnorr.NewStatement(x)
 			witness = sigor.NewWitness(schnorr.NewWitness(w))
 		} else {
 			// Invalid statement: random x with no known witness
-			x, err := curve.Random(crand.Reader)
+			x, err := curve.Random(pcg.NewRandomised())
 			require.NoError(tb, err)
 			statements[i] = schnorr.NewStatement(x)
 		}
@@ -161,7 +161,7 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 
 	// Round 2: Verifier challenge
 	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// Round 3: Prover response
@@ -178,8 +178,8 @@ func testOrSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 ) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -188,7 +188,7 @@ func testOrSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 	// Create random statements (no valid witnesses)
 	statements := make(sigor.Statement[*schnorr.Statement[P, S]], count)
 	for i := range count {
-		x, err := curve.Random(crand.Reader)
+		x, err := curve.Random(pcg.NewRandomised())
 		require.NoError(tb, err)
 		statements[i] = schnorr.NewStatement(x)
 	}
@@ -199,7 +199,7 @@ func testOrSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 
 	// Generate random challenge
 	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// Run simulator
@@ -216,8 +216,8 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 ) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -232,13 +232,13 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 
 	for i := range count {
 		if i == 0 {
-			w, err := sf.Random(crand.Reader)
+			w, err := sf.Random(pcg.NewRandomised())
 			require.NoError(tb, err)
 			x := base.ScalarMul(w)
 			statements[i] = schnorr.NewStatement(x)
 			witness = sigor.NewWitness(schnorr.NewWitness(w))
 		} else {
-			x, err := curve.Random(crand.Reader)
+			x, err := curve.Random(pcg.NewRandomised())
 			require.NoError(tb, err)
 			statements[i] = schnorr.NewStatement(x)
 		}
@@ -253,7 +253,7 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	require.NoError(tb, err)
 
 	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	response, err := orProtocol.ComputeProverResponse(statements, witness, commitment, state, challenge)

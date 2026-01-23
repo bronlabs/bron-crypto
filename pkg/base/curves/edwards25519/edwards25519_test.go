@@ -1,18 +1,18 @@
 package edwards25519_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := edwards25519.NewBaseField().Random(prng)
 	require.NoError(t, err)
@@ -26,7 +26,7 @@ func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 
 func Test_ScalarCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := edwards25519.NewScalarField().Random(prng)
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func Test_ScalarCBORRoundTrip(t *testing.T) {
 
 func Test_PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := edwards25519.NewCurve().Random(prng)
 	require.NoError(t, err)

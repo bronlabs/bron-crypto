@@ -2,7 +2,6 @@ package pedersen_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"io"
 	mrand "math/rand/v2"
 	"testing"
@@ -122,7 +121,7 @@ func TestSanity(t *testing.T) {
 	require.NoError(t, err, "could not create scheme")
 
 	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err, "could not create shares")
 	require.Equal(t, total, uint(shares.Shares().Size()), "number of shares should match total")
 
@@ -168,35 +167,35 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 		{
 			name:         "valid secret with constant 42",
 			secret:       fortyTwoSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 1",
 			secret:       oneSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 0",
 			secret:       zeroSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with random value",
 			secret:       randomSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:        "nil secret",
 			secret:      nil,
-			prng:        crand.Reader,
+			prng:        pcg.NewRandomised(),
 			expectError: true,
 			errorIs:     pedersen.ErrIsNil,
 		},
@@ -310,14 +309,14 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	}{
 		{
 			name:             "valid random generation",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       1,
 		},
 		{
 			name:             "multiple random generations",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       5,
@@ -552,7 +551,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 
 	// Create valid shares
 	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Get reference verification vector
@@ -664,7 +663,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		t.Parallel()
 		// Create shares with different secret to get different verification vector
 		secret2 := pedersen.NewSecret(field.FromUint64(100))
-		shares2, err := scheme.Deal(secret2, crand.Reader)
+		shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		differentReference := shares2.VerificationVector()
@@ -773,9 +772,9 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 	secret1 := pedersen.NewSecret(field.FromUint64(10))
 	secret2 := pedersen.NewSecret(field.FromUint64(20))
 
-	shares1, err := scheme.Deal(secret1, crand.Reader)
+	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
 	require.NoError(t, err)
-	shares2, err := scheme.Deal(secret2, crand.Reader)
+	shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Test cases for Add operation
@@ -1063,7 +1062,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 	// Create test secrets and their shares
 	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Get all shareholder IDs for creating qualified sets
@@ -1277,7 +1276,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		require.NoError(t, err)
 
 		secret := pedersen.NewSecret(field.FromUint64(42))
-		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, crand.Reader)
+		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, shares)
 		require.NotNil(t, dealerFunc)
@@ -1312,7 +1311,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		scheme, err := pedersen.NewScheme(key, 2, shareholders)
 		require.NoError(t, err)
 
-		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, crand.Reader)
+		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, pcg.NewRandomised())
 		require.Error(t, err)
 		require.ErrorIs(t, err, pedersen.ErrIsNil)
 		require.Nil(t, shares)
@@ -1326,7 +1325,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		require.NoError(t, err)
 
 		secret := pedersen.NewSecret(field.FromUint64(100))
-		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, crand.Reader)
+		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Verify each share matches the dealer function evaluation
@@ -1362,7 +1361,7 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 		scheme, err := pedersen.NewScheme(key, 2, shareholders)
 		require.NoError(t, err)
 
-		shares, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(crand.Reader)
+		shares, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, shares)
 		require.NotNil(t, secret)
@@ -1587,10 +1586,10 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 		// Same secret, different blinding factors should produce different commitments
 		secret := pedersen.NewSecret(field.FromUint64(42))
 
-		shares1, _, err := scheme.DealAndRevealDealerFunc(secret, crand.Reader)
+		shares1, _, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		shares2, _, err := scheme.DealAndRevealDealerFunc(secret, crand.Reader)
+		shares2, _, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Check that shares have different blinding factors
@@ -1612,7 +1611,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 	t.Run("commitment binding property", func(t *testing.T) {
 		t.Parallel()
 		// Once committed, changing the value should fail verification
-		shares, _, err := scheme.DealAndRevealDealerFunc(pedersen.NewSecret(field.FromUint64(42)), crand.Reader)
+		shares, _, err := scheme.DealAndRevealDealerFunc(pedersen.NewSecret(field.FromUint64(42)), pcg.NewRandomised())
 		require.NoError(t, err)
 
 		reference := shares.VerificationVector()
@@ -1641,10 +1640,10 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 		secret1 := pedersen.NewSecret(field.FromUint64(10))
 		secret2 := pedersen.NewSecret(field.FromUint64(20))
 
-		shares1, _, err := scheme.DealAndRevealDealerFunc(secret1, crand.Reader)
+		shares1, _, err := scheme.DealAndRevealDealerFunc(secret1, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		shares2, _, err := scheme.DealAndRevealDealerFunc(secret2, crand.Reader)
+		shares2, _, err := scheme.DealAndRevealDealerFunc(secret2, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Add shares
@@ -1697,7 +1696,7 @@ func BenchmarkDeal(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, err := scheme.Deal(secret, crand.Reader)
+				_, err := scheme.Deal(secret, pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -1734,7 +1733,7 @@ func BenchmarkDealRandom(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, _, err := scheme.DealRandom(crand.Reader)
+				_, _, err := scheme.DealRandom(pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -1771,7 +1770,7 @@ func BenchmarkReconstruct(b *testing.B) {
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, crand.Reader)
+			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
 			shareSlice := shares.Shares().Values()[:config.threshold]
@@ -1815,7 +1814,7 @@ func BenchmarkVerification(b *testing.B) {
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, crand.Reader)
+			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
 			share := shares.Shares().Values()[0]
@@ -1848,7 +1847,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 
 	// Create shares
 	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(b, err)
 
 	share1, _ := shares.Shares().Get(sharing.ID(1))
@@ -1902,7 +1901,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, crand.Reader)
+			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
 			qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())

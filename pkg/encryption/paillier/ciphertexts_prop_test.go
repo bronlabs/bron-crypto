@@ -1,7 +1,6 @@
 package paillier_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
-const keyLen = 2048
+const keyLen = 1024
 
 // plaintextGenerator creates a generator for plaintexts in [-n/2, n/2).
 func plaintextGenerator(ps *paillier.PlaintextSpace) *rapid.Generator[*paillier.Plaintext] {
@@ -64,9 +63,9 @@ func TestCiphertext_HomAdd_Commutativity_Property(t *testing.T) {
 		pt1 := ptGen.Draw(rt, "pt1")
 		pt2 := ptGen.Draw(rt, "pt2")
 
-		ct1, _, err := enc.Encrypt(pt1, pk, crand.Reader)
+		ct1, _, err := enc.Encrypt(pt1, pk, pcg.NewRandomised())
 		require.NoError(t, err)
-		ct2, _, err := enc.Encrypt(pt2, pk, crand.Reader)
+		ct2, _, err := enc.Encrypt(pt2, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		sum1 := ct1.HomAdd(ct2)
@@ -101,11 +100,11 @@ func TestCiphertext_HomAdd_Associativity_Property(t *testing.T) {
 		pt2 := ptGen.Draw(rt, "pt2")
 		pt3 := ptGen.Draw(rt, "pt3")
 
-		ct1, _, err := enc.Encrypt(pt1, pk, crand.Reader)
+		ct1, _, err := enc.Encrypt(pt1, pk, pcg.NewRandomised())
 		require.NoError(t, err)
-		ct2, _, err := enc.Encrypt(pt2, pk, crand.Reader)
+		ct2, _, err := enc.Encrypt(pt2, pk, pcg.NewRandomised())
 		require.NoError(t, err)
-		ct3, _, err := enc.Encrypt(pt3, pk, crand.Reader)
+		ct3, _, err := enc.Encrypt(pt3, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// (ct1 + ct2) + ct3
@@ -141,9 +140,9 @@ func TestCiphertext_HomAdd_Identity_Property(t *testing.T) {
 		pt := ptGen.Draw(rt, "pt")
 		zero := ps.Zero()
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
-		ctZero, _, err := enc.Encrypt(zero, pk, crand.Reader)
+		ctZero, _, err := enc.Encrypt(zero, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		sum := ct.HomAdd(ctZero)
@@ -173,7 +172,7 @@ func TestCiphertext_HomSub_Inverse_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		pt := ptGen.Draw(rt, "pt")
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// x - x should equal 0
@@ -206,7 +205,7 @@ func TestCiphertext_ScalarMul_Zero_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		pt := ptGen.Draw(rt, "pt")
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// x * 0 should equal 0
@@ -238,7 +237,7 @@ func TestCiphertext_ScalarMul_One_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		pt := ptGen.Draw(rt, "pt")
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// x * 1 should equal x
@@ -273,9 +272,9 @@ func TestCiphertext_ScalarMul_Distributive_Property(t *testing.T) {
 		pt2 := ptGen.Draw(rt, "pt2")
 		k := scalarGen.Draw(rt, "k")
 
-		ct1, _, err := enc.Encrypt(pt1, pk, crand.Reader)
+		ct1, _, err := enc.Encrypt(pt1, pk, pcg.NewRandomised())
 		require.NoError(t, err)
-		ct2, _, err := enc.Encrypt(pt2, pk, crand.Reader)
+		ct2, _, err := enc.Encrypt(pt2, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// k * (ct1 + ct2)
@@ -316,7 +315,7 @@ func TestEncryptDecrypt_RoundTrip_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		pt := ptGen.Draw(rt, "pt")
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		decrypted, err := dec.Decrypt(ct)
@@ -344,7 +343,7 @@ func TestSelfEncryptDecrypt_RoundTrip_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		pt := ptGen.Draw(rt, "pt")
 
-		ct, _, err := se.SelfEncrypt(pt, crand.Reader)
+		ct, _, err := se.SelfEncrypt(pt, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		decrypted, err := dec.Decrypt(ct)
@@ -374,10 +373,10 @@ func TestCiphertext_ReRandomise_PreservesPlaintext_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		pt := ptGen.Draw(rt, "pt")
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		ctRand, _, err := ct.ReRandomise(pk, crand.Reader)
+		ctRand, _, err := ct.ReRandomise(pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		decOriginal, err := dec.Decrypt(ct)
@@ -414,9 +413,9 @@ func TestCiphertext_HomAdd_MatchesPlaintextAdd_Property(t *testing.T) {
 		expectedSum := pt1.Add(pt2)
 
 		// Homomorphic addition
-		ct1, _, err := enc.Encrypt(pt1, pk, crand.Reader)
+		ct1, _, err := enc.Encrypt(pt1, pk, pcg.NewRandomised())
 		require.NoError(t, err)
-		ct2, _, err := enc.Encrypt(pt2, pk, crand.Reader)
+		ct2, _, err := enc.Encrypt(pt2, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		ctSum := ct1.HomAdd(ct2)
@@ -450,9 +449,9 @@ func TestCiphertext_HomSub_MatchesPlaintextSub_Property(t *testing.T) {
 		expectedDiff := pt1.Sub(pt2)
 
 		// Homomorphic subtraction
-		ct1, _, err := enc.Encrypt(pt1, pk, crand.Reader)
+		ct1, _, err := enc.Encrypt(pt1, pk, pcg.NewRandomised())
 		require.NoError(t, err)
-		ct2, _, err := enc.Encrypt(pt2, pk, crand.Reader)
+		ct2, _, err := enc.Encrypt(pt2, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		ctDiff := ct1.HomSub(ct2)

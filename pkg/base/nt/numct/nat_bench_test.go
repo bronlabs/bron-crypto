@@ -9,11 +9,12 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func Benchmark_NatGCD(b *testing.B) {
 	const bits = 4096
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	boundBig := new(big.Int)
 	boundBig.SetBit(boundBig, bits, 1)

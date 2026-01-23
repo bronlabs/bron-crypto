@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -24,7 +25,7 @@ var primeLen = 512
 
 func Test_HappyPathInteractive(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	pNatCt := numct.NewNatFromBig(pBig, pBig.BitLen())
@@ -52,7 +53,7 @@ func Test_HappyPathInteractive(t *testing.T) {
 
 func Test_InvalidRootInteractive(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	pNatCt := numct.NewNatFromBig(pBig, primeLen)
@@ -94,7 +95,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	sessionID, err := network.NewSID([]byte("nthRootSession"))
 	require.NoError(t, err)
 	appLabel := "NthRoot"
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	pNatCt := numct.NewNatFromBig(pBig, primeLen)
@@ -149,7 +150,7 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	sessionID, err := network.NewSID([]byte("nthRootSession"))
 	require.NoError(t, err)
 	appLabel := "NthRoot"
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	pNatCt := numct.NewNatFromBig(pBig, primeLen)
@@ -236,7 +237,7 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 
 func Test_Simulator(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	pNatCt := numct.NewNatFromBig(pBig, primeLen)
@@ -278,7 +279,7 @@ func Test_Simulator(t *testing.T) {
 
 func Test_Extractor(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	pNatCt := numct.NewNatFromBig(pBig, primeLen)

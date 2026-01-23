@@ -2,7 +2,6 @@ package randfischlin_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"io"
 	"testing"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
@@ -64,7 +64,7 @@ func Test_HappyPathSchnorr(t *testing.T) {
 func testSchnorrHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, B, S]) {
 	tb.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)
@@ -114,7 +114,7 @@ func testSchnorrHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 func TestRandFischlin_WrongWitness(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
 	var sessionID network.SID
@@ -157,7 +157,7 @@ func TestRandFischlin_WrongWitness(t *testing.T) {
 func TestRandFischlin_TamperedProof(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
 	var sessionID network.SID
@@ -200,7 +200,7 @@ func TestRandFischlin_TamperedProof(t *testing.T) {
 func TestRandFischlin_EmptyProof(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
 	var sessionID network.SID
@@ -233,7 +233,7 @@ func TestRandFischlin_EmptyProof(t *testing.T) {
 func TestRandFischlin_WrongSessionID(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
 	var proverSessionID, verifierSessionID network.SID
@@ -274,7 +274,7 @@ func TestRandFischlin_WrongSessionID(t *testing.T) {
 func TestRandFischlin_NilCompilerInput(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
@@ -311,7 +311,7 @@ func TestRandFischlin_TranscriptsMatch(t *testing.T) {
 func testRandFischlinTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, B, S]) {
 	tb.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)

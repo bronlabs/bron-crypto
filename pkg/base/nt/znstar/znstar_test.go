@@ -1,7 +1,6 @@
 package znstar_test
 
 import (
-	crand "crypto/rand"
 	"fmt"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -19,7 +19,7 @@ func TestRSAGroup_KnownOrder_Creation(t *testing.T) {
 	t.Parallel()
 
 	// Generate prime pair (512-bit primes for 1024-bit modulus)
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create RSA group with known order
@@ -37,7 +37,7 @@ func TestRSAGroup_UnknownOrder_Creation(t *testing.T) {
 	t.Parallel()
 
 	// Create modulus (need 1024-bit primes for 2048-bit modulus)
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 
@@ -54,7 +54,7 @@ func TestRSAGroup_UnknownOrder_Creation(t *testing.T) {
 func TestRSAGroup_Operations(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewRSAGroup(p, q)
@@ -62,11 +62,11 @@ func TestRSAGroup_Operations(t *testing.T) {
 
 	t.Run("Random", func(t *testing.T) {
 		t.Parallel()
-		u1, err := group.Random(crand.Reader)
+		u1, err := group.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, u1)
 
-		u2, err := group.Random(crand.Reader)
+		u2, err := group.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, u2)
 
@@ -83,8 +83,8 @@ func TestRSAGroup_Operations(t *testing.T) {
 
 	t.Run("Multiplication", func(t *testing.T) {
 		t.Parallel()
-		u1, _ := group.Random(crand.Reader)
-		u2, _ := group.Random(crand.Reader)
+		u1, _ := group.Random(pcg.NewRandomised())
+		u2, _ := group.Random(pcg.NewRandomised())
 
 		product := u1.Mul(u2)
 		require.NotNil(t, product)
@@ -96,7 +96,7 @@ func TestRSAGroup_Operations(t *testing.T) {
 
 	t.Run("Inversion", func(t *testing.T) {
 		t.Parallel()
-		u, _ := group.Random(crand.Reader)
+		u, _ := group.Random(pcg.NewRandomised())
 
 		inv := u.Inv()
 		require.NotNil(t, inv)
@@ -108,7 +108,7 @@ func TestRSAGroup_Operations(t *testing.T) {
 
 	t.Run("Exponentiation", func(t *testing.T) {
 		t.Parallel()
-		u, _ := group.Random(crand.Reader)
+		u, _ := group.Random(pcg.NewRandomised())
 
 		// u^0 = 1
 		exp0 := u.Exp(num.N().Zero())
@@ -127,14 +127,14 @@ func TestRSAGroup_Operations(t *testing.T) {
 func TestRSAGroup_ForgetLearnOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	knownGroup, err := znstar.NewRSAGroup(p, q)
 	require.NoError(t, err)
 
 	// Create element with known order
-	u, err := knownGroup.Random(crand.Reader)
+	u, err := knownGroup.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, u.IsUnknownOrder())
 
@@ -156,7 +156,7 @@ func TestRSAGroup_ForgetLearnOrder(t *testing.T) {
 func TestPaillierGroup_KnownOrder_Creation(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
@@ -174,7 +174,7 @@ func TestPaillierGroup_KnownOrder_Creation(t *testing.T) {
 func TestPaillierGroup_UnknownOrder_Creation(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 	n2 := n.Square()
@@ -191,7 +191,7 @@ func TestPaillierGroup_UnknownOrder_Creation(t *testing.T) {
 func TestPaillierGroup_Operations(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
@@ -199,18 +199,18 @@ func TestPaillierGroup_Operations(t *testing.T) {
 
 	t.Run("Random", func(t *testing.T) {
 		t.Parallel()
-		u1, err := group.Random(crand.Reader)
+		u1, err := group.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, u1)
 
-		u2, err := group.Random(crand.Reader)
+		u2, err := group.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.False(t, u1.Equal(u2))
 	})
 
 	t.Run("Operations", func(t *testing.T) {
 		t.Parallel()
-		u, _ := group.Random(crand.Reader)
+		u, _ := group.Random(pcg.NewRandomised())
 		one := group.One()
 
 		// u * 1 = u
@@ -229,7 +229,7 @@ func TestPaillierGroup_Operations(t *testing.T) {
 func TestPaillierGroup_EmbedRSA(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create RSA group
@@ -242,7 +242,7 @@ func TestPaillierGroup_EmbedRSA(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create RSA element
-	rsaElement, err := rsaGroup.Random(crand.Reader)
+	rsaElement, err := rsaGroup.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Embed into Paillier group
@@ -254,7 +254,7 @@ func TestPaillierGroup_EmbedRSA(t *testing.T) {
 func TestPaillierGroup_NthResidue(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create Paillier group with known order
@@ -268,7 +268,7 @@ func TestPaillierGroup_NthResidue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Sample element from unknown order group
-	u, err := paillierUnknown.Random(crand.Reader)
+	u, err := paillierUnknown.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Lift to n-th residues using known order group
@@ -280,7 +280,7 @@ func TestPaillierGroup_NthResidue(t *testing.T) {
 func TestPaillierGroup_Representative(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
@@ -298,7 +298,7 @@ func TestPaillierGroup_Representative(t *testing.T) {
 func TestRSAGroup_RandomSampling_Performance(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewRSAGroup(p, q)
@@ -306,7 +306,7 @@ func TestRSAGroup_RandomSampling_Performance(t *testing.T) {
 
 	// Sample 100 random elements quickly (should be fast with dense sampling)
 	for range 100 {
-		u, err := group.Random(crand.Reader)
+		u, err := group.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, u)
 	}
@@ -315,7 +315,7 @@ func TestRSAGroup_RandomSampling_Performance(t *testing.T) {
 func TestPaillierGroup_RandomSampling_Performance(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
@@ -323,7 +323,7 @@ func TestPaillierGroup_RandomSampling_Performance(t *testing.T) {
 
 	// Sample 100 random elements quickly (no GCD checks!)
 	for range 100 {
-		u, err := group.Random(crand.Reader)
+		u, err := group.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, u)
 	}
@@ -334,7 +334,7 @@ func TestPaillierGroup_RandomSampling_Performance(t *testing.T) {
 func TestRSAGroup_CBOR_KnownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	original, err := znstar.NewRSAGroup(p, q)
@@ -359,7 +359,7 @@ func TestRSAGroup_CBOR_KnownOrder(t *testing.T) {
 func TestRSAGroup_CBOR_UnknownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 
@@ -386,13 +386,13 @@ func TestRSAGroup_CBOR_UnknownOrder(t *testing.T) {
 func TestRSAGroupElement_CBOR_KnownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewRSAGroup(p, q)
 	require.NoError(t, err)
 
-	original, err := group.Random(crand.Reader)
+	original, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -412,14 +412,14 @@ func TestRSAGroupElement_CBOR_KnownOrder(t *testing.T) {
 func TestRSAGroupElement_CBOR_UnknownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 
 	group, err := znstar.NewRSAGroupOfUnknownOrder(n)
 	require.NoError(t, err)
 
-	original, err := group.Random(crand.Reader)
+	original, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -439,7 +439,7 @@ func TestRSAGroupElement_CBOR_UnknownOrder(t *testing.T) {
 func TestPaillierGroup_CBOR_KnownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	original, err := znstar.NewPaillierGroup(p, q)
@@ -464,7 +464,7 @@ func TestPaillierGroup_CBOR_KnownOrder(t *testing.T) {
 func TestPaillierGroup_CBOR_UnknownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 	n2 := n.Square()
@@ -490,13 +490,13 @@ func TestPaillierGroup_CBOR_UnknownOrder(t *testing.T) {
 func TestPaillierGroupElement_CBOR_KnownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
 	require.NoError(t, err)
 
-	original, err := group.Random(crand.Reader)
+	original, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -516,7 +516,7 @@ func TestPaillierGroupElement_CBOR_KnownOrder(t *testing.T) {
 func TestPaillierGroupElement_CBOR_UnknownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 	n2 := n.Square()
@@ -524,7 +524,7 @@ func TestPaillierGroupElement_CBOR_UnknownOrder(t *testing.T) {
 	group, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
 	require.NoError(t, err)
 
-	original, err := group.Random(crand.Reader)
+	original, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -544,7 +544,7 @@ func TestPaillierGroupElement_CBOR_UnknownOrder(t *testing.T) {
 func TestPaillierGroup_Operations_AfterCBOR(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	original, err := znstar.NewPaillierGroup(p, q)
@@ -557,10 +557,10 @@ func TestPaillierGroup_Operations_AfterCBOR(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test operations on deserialized group
-	u1, err := group.Random(crand.Reader)
+	u1, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
-	u2, err := group.Random(crand.Reader)
+	u2, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Multiplication should work
@@ -577,9 +577,9 @@ func TestPaillierGroup_Operations_AfterCBOR(t *testing.T) {
 func TestRSAElement_MultiplicationWithDifferentGroups_ShouldPanic(t *testing.T) {
 	t.Parallel()
 
-	p1, q1, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p1, q1, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
-	p2, q2, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p2, q2, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group1, err := znstar.NewRSAGroup(p1, q1)
@@ -587,9 +587,9 @@ func TestRSAElement_MultiplicationWithDifferentGroups_ShouldPanic(t *testing.T) 
 	group2, err := znstar.NewRSAGroup(p2, q2)
 	require.NoError(t, err)
 
-	u1, err := group1.Random(crand.Reader)
+	u1, err := group1.Random(pcg.NewRandomised())
 	require.NoError(t, err)
-	u2, err := group2.Random(crand.Reader)
+	u2, err := group2.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Multiplying elements from different groups should panic
@@ -601,14 +601,14 @@ func TestRSAElement_MultiplicationWithDifferentGroups_ShouldPanic(t *testing.T) 
 func TestPaillierElement_OperationsPreserveGroup(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
 	require.NoError(t, err)
 
-	u1, _ := group.Random(crand.Reader)
-	u2, _ := group.Random(crand.Reader)
+	u1, _ := group.Random(pcg.NewRandomised())
+	u2, _ := group.Random(pcg.NewRandomised())
 
 	// After operations, elements should still belong to the same group
 	product := u1.Mul(u2)
@@ -627,7 +627,7 @@ func TestPaillierGroup_InvalidNSquared_ShouldFail(t *testing.T) {
 	t.Parallel()
 
 	// Create valid n but invalid n² (not actually n²)
-	p, q, _ := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, _ := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	n := p.Mul(q)
 	one, _ := num.NPlus().FromUint64(1)
 	notNSquared := n.Add(one) // n + 1 is not n²
@@ -641,9 +641,9 @@ func TestRSAGroup_CompositeFactors_ShouldFail(t *testing.T) {
 
 	// Generate valid primes and create composites from them
 	// We need RSAKeyLen/2-bit composites to pass the size check, then fail on primality
-	p1, q1, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p1, q1, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
-	p2, q2, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p2, q2, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create RSAKeyLen/2-bit composite numbers (products of two RSAKeyLen/4-bit primes)
@@ -660,7 +660,7 @@ func TestRSAGroup_CompositeFactors_ShouldFail(t *testing.T) {
 func TestRSAGroup_Hash_Coprimality(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewRSAGroup(p, q)
@@ -693,7 +693,7 @@ func TestRSAGroup_Hash_Coprimality(t *testing.T) {
 func TestRSAGroup_Hash_CollisionResistance(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewRSAGroup(p, q)
@@ -736,7 +736,7 @@ func TestRSAGroup_Hash_CollisionResistance(t *testing.T) {
 func TestRSAGroup_Hash_UnknownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 
@@ -757,7 +757,7 @@ func TestRSAGroup_Hash_UnknownOrder(t *testing.T) {
 func TestPaillierGroup_Hash_Coprimality(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
@@ -790,7 +790,7 @@ func TestPaillierGroup_Hash_Coprimality(t *testing.T) {
 func TestPaillierGroup_Hash_CollisionResistance(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
@@ -833,7 +833,7 @@ func TestPaillierGroup_Hash_CollisionResistance(t *testing.T) {
 func TestPaillierGroup_Hash_UnknownOrder(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 	n := p.Mul(q)
 	n2 := n.Square()
@@ -857,7 +857,7 @@ func TestPaillierGroup_Hash_UnknownOrder(t *testing.T) {
 func TestRSAGroup_FromUint_NonCoprime_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewRSAGroup(p, q)
@@ -878,14 +878,14 @@ func TestRSAGroup_FromUint_NonCoprime_ShouldFail(t *testing.T) {
 func TestRSAGroup_CBOR_NonCoprimeElement_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewRSAGroup(p, q)
 	require.NoError(t, err)
 
 	// Get a valid element to extract its arithmetic
-	validElem, err := group.Random(crand.Reader)
+	validElem, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Serialise the valid element
@@ -926,7 +926,7 @@ func TestRSAGroup_CBOR_NonCoprimeElement_ShouldFail(t *testing.T) {
 func TestPaillierGroup_FromUint_NonCoprime_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
@@ -948,14 +948,14 @@ func TestPaillierGroup_FromUint_NonCoprime_ShouldFail(t *testing.T) {
 func TestPaillierGroup_CBOR_NonCoprimeElement_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	group, err := znstar.NewPaillierGroup(p, q)
 	require.NoError(t, err)
 
 	// Get a valid element to extract its arithmetic
-	validElem, err := group.Random(crand.Reader)
+	validElem, err := group.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Serialise the valid element
@@ -997,7 +997,7 @@ func TestPaillierGroup_CBOR_NonCoprimeElement_ShouldFail(t *testing.T) {
 // This should use optimised ExpToN from OddPrimeSquareFactors.
 func BenchmarkPaillierGroup_NthResidue_KnownOrder(b *testing.B) {
 	// Generate prime pair
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1019,7 +1019,7 @@ func BenchmarkPaillierGroup_NthResidue_KnownOrder(b *testing.B) {
 	// Pre-generate random nonces to lift
 	nonces := make([]*znstar.PaillierGroupElementUnknownOrder, b.N)
 	for i := range b.N {
-		nonces[i], err = paillierUnknown.Random(crand.Reader)
+		nonces[i], err = paillierUnknown.Random(pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1038,7 +1038,7 @@ func BenchmarkPaillierGroup_NthResidue_KnownOrder(b *testing.B) {
 // This cannot use ExpToN and falls back to regular exponentiation.
 func BenchmarkPaillierGroup_NthResidue_UnknownOrder(b *testing.B) {
 	// Generate prime pair
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1054,7 +1054,7 @@ func BenchmarkPaillierGroup_NthResidue_UnknownOrder(b *testing.B) {
 	// Pre-generate random nonces to lift
 	nonces := make([]*znstar.PaillierGroupElementUnknownOrder, b.N)
 	for i := range b.N {
-		nonces[i], err = paillierUnknown.Random(crand.Reader)
+		nonces[i], err = paillierUnknown.Random(pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1071,7 +1071,7 @@ func BenchmarkPaillierGroup_NthResidue_UnknownOrder(b *testing.B) {
 
 // BenchmarkPaillierGroup_RandomSampling_KnownOrder benchmarks random sampling with known order.
 func BenchmarkPaillierGroup_RandomSampling_KnownOrder(b *testing.B) {
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1083,7 +1083,7 @@ func BenchmarkPaillierGroup_RandomSampling_KnownOrder(b *testing.B) {
 
 	b.ResetTimer()
 	for range b.N {
-		_, err := group.Random(crand.Reader)
+		_, err := group.Random(pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1092,7 +1092,7 @@ func BenchmarkPaillierGroup_RandomSampling_KnownOrder(b *testing.B) {
 
 // BenchmarkPaillierGroup_RandomSampling_UnknownOrder benchmarks random sampling with unknown order.
 func BenchmarkPaillierGroup_RandomSampling_UnknownOrder(b *testing.B) {
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1106,7 +1106,7 @@ func BenchmarkPaillierGroup_RandomSampling_UnknownOrder(b *testing.B) {
 
 	b.ResetTimer()
 	for range b.N {
-		_, err := group.Random(crand.Reader)
+		_, err := group.Random(pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1115,7 +1115,7 @@ func BenchmarkPaillierGroup_RandomSampling_UnknownOrder(b *testing.B) {
 
 // BenchmarkPaillierGroup_Multiplication_KnownOrder benchmarks multiplication with known order.
 func BenchmarkPaillierGroup_Multiplication_KnownOrder(b *testing.B) {
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1125,8 +1125,8 @@ func BenchmarkPaillierGroup_Multiplication_KnownOrder(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	u1, _ := group.Random(crand.Reader)
-	u2, _ := group.Random(crand.Reader)
+	u1, _ := group.Random(pcg.NewRandomised())
+	u2, _ := group.Random(pcg.NewRandomised())
 
 	b.ResetTimer()
 	for range b.N {
@@ -1136,7 +1136,7 @@ func BenchmarkPaillierGroup_Multiplication_KnownOrder(b *testing.B) {
 
 // BenchmarkPaillierGroup_Exponentiation_KnownOrder benchmarks exponentiation with known order.
 func BenchmarkPaillierGroup_Exponentiation_KnownOrder(b *testing.B) {
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1146,7 +1146,7 @@ func BenchmarkPaillierGroup_Exponentiation_KnownOrder(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	u, _ := group.Random(crand.Reader)
+	u, _ := group.Random(pcg.NewRandomised())
 	exp := num.N().FromUint64(12345)
 
 	b.ResetTimer()
@@ -1157,7 +1157,7 @@ func BenchmarkPaillierGroup_Exponentiation_KnownOrder(b *testing.B) {
 
 // BenchmarkPaillierGroup_Phi benchmarks the Phi function.
 func BenchmarkPaillierGroup_Phi(b *testing.B) {
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1180,7 +1180,7 @@ func BenchmarkPaillierGroup_Phi(b *testing.B) {
 
 // BenchmarkRSAGroup_RandomSampling_KnownOrder benchmarks RSA random sampling.
 func BenchmarkRSAGroup_RandomSampling_KnownOrder(b *testing.B) {
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1192,7 +1192,7 @@ func BenchmarkRSAGroup_RandomSampling_KnownOrder(b *testing.B) {
 
 	b.ResetTimer()
 	for range b.N {
-		_, err := group.Random(crand.Reader)
+		_, err := group.Random(pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1201,7 +1201,7 @@ func BenchmarkRSAGroup_RandomSampling_KnownOrder(b *testing.B) {
 
 // BenchmarkRSAGroup_Multiplication_KnownOrder benchmarks RSA multiplication.
 func BenchmarkRSAGroup_Multiplication_KnownOrder(b *testing.B) {
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, crand.Reader)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1211,8 +1211,8 @@ func BenchmarkRSAGroup_Multiplication_KnownOrder(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	u1, _ := group.Random(crand.Reader)
-	u2, _ := group.Random(crand.Reader)
+	u1, _ := group.Random(pcg.NewRandomised())
+	u2, _ := group.Random(pcg.NewRandomised())
 
 	b.ResetTimer()
 	for range b.N {

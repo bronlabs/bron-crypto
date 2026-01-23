@@ -1,13 +1,13 @@
 package paillier_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
@@ -18,7 +18,7 @@ func TestPlaintext_CBOR(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	_, pk, err := kg.Generate(crand.Reader)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	ps := pk.PlaintextSpace()
@@ -37,7 +37,7 @@ func TestPlaintext_CBOR(t *testing.T) {
 		{
 			name: "random",
 			createPt: func() *paillier.Plaintext {
-				pt, _ := ps.Sample(nil, nil, crand.Reader)
+				pt, _ := ps.Sample(nil, nil, pcg.NewRandomised())
 				return pt
 			},
 		},
@@ -79,13 +79,13 @@ func TestNonce_CBOR(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	_, pk, err := kg.Generate(crand.Reader)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	ns := pk.NonceSpace()
 
 	// Sample a random nonce
-	original, err := ns.Sample(crand.Reader)
+	original, err := ns.Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -108,17 +108,17 @@ func TestCiphertext_CBOR(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create a plaintext and encrypt it
 	ps := pk.PlaintextSpace()
-	plaintext, err := ps.Sample(nil, nil, crand.Reader)
+	plaintext, err := ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
-	original, nonce, err := enc.Encrypt(plaintext, pk, crand.Reader)
+	original, nonce, err := enc.Encrypt(plaintext, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -153,7 +153,7 @@ func TestPublicKey_CBOR(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	_, original, err := kg.Generate(crand.Reader)
+	_, original, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -175,7 +175,7 @@ func TestPublicKey_CBOR(t *testing.T) {
 	require.NoError(t, err)
 
 	plaintext := decoded.PlaintextSpace().Zero()
-	_, _, err = enc.Encrypt(plaintext, decoded, crand.Reader)
+	_, _, err = enc.Encrypt(plaintext, decoded, pcg.NewRandomised())
 	require.NoError(t, err)
 }
 
@@ -185,7 +185,7 @@ func TestPrivateKey_CBOR(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	original, _, err := kg.Generate(crand.Reader)
+	original, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Marshal
@@ -203,12 +203,12 @@ func TestPrivateKey_CBOR(t *testing.T) {
 
 	// Verify we can use the decoded key for decryption
 	ps := decoded.PublicKey().PlaintextSpace()
-	plaintext, err := ps.Sample(nil, nil, crand.Reader)
+	plaintext, err := ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
-	ciphertext, _, err := enc.Encrypt(plaintext, decoded.PublicKey(), crand.Reader)
+	ciphertext, _, err := enc.Encrypt(plaintext, decoded.PublicKey(), pcg.NewRandomised())
 	require.NoError(t, err)
 
 	dec, err := scheme.Decrypter(decoded)
@@ -225,17 +225,17 @@ func TestRoundTrip_EncryptDecrypt_WithSerialization(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create and encrypt a plaintext
 	ps := pk.PlaintextSpace()
-	original, err := ps.Sample(nil, nil, crand.Reader)
+	original, err := ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
-	ciphertext, nonce, err := enc.Encrypt(original, pk, crand.Reader)
+	ciphertext, nonce, err := enc.Encrypt(original, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Serialise plaintext
@@ -324,7 +324,7 @@ func TestHomomorphicOperations_AfterDeserialization(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	ps := pk.PlaintextSpace()
@@ -338,9 +338,9 @@ func TestHomomorphicOperations_AfterDeserialization(t *testing.T) {
 	// Encrypt both
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
-	ct1, _, err := enc.Encrypt(pt1, pk, crand.Reader)
+	ct1, _, err := enc.Encrypt(pt1, pk, pcg.NewRandomised())
 	require.NoError(t, err)
-	ct2, _, err := enc.Encrypt(pt2, pk, crand.Reader)
+	ct2, _, err := enc.Encrypt(pt2, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Serialise the ciphertexts
@@ -376,11 +376,11 @@ func TestSelfEncryption_AfterDeserialization(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk, _, err := kg.Generate(crand.Reader)
+	sk, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	ps := sk.PublicKey().PlaintextSpace()
-	plaintext, err := ps.Sample(nil, nil, crand.Reader)
+	plaintext, err := ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Serialise the private key
@@ -394,7 +394,7 @@ func TestSelfEncryption_AfterDeserialization(t *testing.T) {
 	// Use deserialized key for self-encryption
 	senc, err := scheme.SelfEncrypter(decodedSk)
 	require.NoError(t, err)
-	ciphertext, nonce, err := senc.SelfEncrypt(plaintext, crand.Reader)
+	ciphertext, nonce, err := senc.SelfEncrypt(plaintext, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, nonce)
 
@@ -412,7 +412,7 @@ func TestPublicKey_DerivedFields_AfterDeserialization(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	_, original, err := kg.Generate(crand.Reader)
+	_, original, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Access spaces to trigger caching
@@ -440,15 +440,15 @@ func TestPublicKey_DerivedFields_AfterDeserialization(t *testing.T) {
 	require.NotNil(t, cs)
 
 	// Verify we can create values in each space
-	pt, err := ps.Sample(nil, nil, crand.Reader)
+	pt, err := ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, pt)
 
-	n, err := ns.Sample(crand.Reader)
+	n, err := ns.Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, n)
 
-	c, err := cs.Sample(crand.Reader)
+	c, err := cs.Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, c)
 }
@@ -459,7 +459,7 @@ func TestPrivateKey_Precomputation_AfterDeserialization(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	original, _, err := kg.Generate(crand.Reader)
+	original, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Serialise
@@ -472,12 +472,12 @@ func TestPrivateKey_Precomputation_AfterDeserialization(t *testing.T) {
 
 	// Verify precomputation happened (by checking we can decrypt)
 	ps := decoded.PublicKey().PlaintextSpace()
-	plaintext, err := ps.Sample(nil, nil, crand.Reader)
+	plaintext, err := ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
-	ciphertext, _, err := enc.Encrypt(plaintext, decoded.PublicKey(), crand.Reader)
+	ciphertext, _, err := enc.Encrypt(plaintext, decoded.PublicKey(), pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Decryption requires hp and hq to be precomputed

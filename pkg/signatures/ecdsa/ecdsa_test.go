@@ -2,7 +2,6 @@ package ecdsa_test
 
 import (
 	"crypto"
-	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha3"
 	"encoding/hex"
@@ -14,12 +13,13 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
 	suite, err := ecdsa.NewSuite(curve, hashFunc)
@@ -55,7 +55,7 @@ func Test_HappyPath(t *testing.T) {
 
 func Test_HappyPathSha3(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 	hashFunc := sha3.New256
 	suite, err := ecdsa.NewSuite(curve, hashFunc)
@@ -91,7 +91,7 @@ func Test_HappyPathSha3(t *testing.T) {
 
 func Test_DeterministicHappyPath(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	hashId := crypto.SHA256
 	curve := p256.NewCurve()
 	suite, err := ecdsa.NewDeterministicSuite(curve, hashId)

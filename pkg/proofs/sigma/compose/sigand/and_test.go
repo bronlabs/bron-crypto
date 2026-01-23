@@ -1,7 +1,6 @@
 package sigand_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 )
@@ -70,10 +70,10 @@ func Test_And_InvalidInputs(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	base, err := curve.Random(crand.Reader)
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
-	protocol, err := schnorr.NewProtocol(base, crand.Reader)
+	protocol, err := schnorr.NewProtocol(base, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	t.Run("nil_protocol", func(t *testing.T) {
@@ -94,8 +94,8 @@ func testAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 ) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -109,7 +109,7 @@ func testAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 	witnesses := make(sigand.Witness[*schnorr.Witness[S]], count)
 
 	for i := range count {
-		w, err := sf.Random(crand.Reader)
+		w, err := sf.Random(pcg.NewRandomised())
 		require.NoError(tb, err)
 
 		x := base.ScalarMul(w)
@@ -131,7 +131,7 @@ func testAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 
 	// Round 2: Verifier challenge
 	challenge := make([]byte, andProtocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// Round 3: Prover response
@@ -148,8 +148,8 @@ func testAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 ) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -158,7 +158,7 @@ func testAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 	// Create random statements (no valid witnesses needed for simulator)
 	statements := make(sigand.Statement[*schnorr.Statement[P, S]], count)
 	for i := range count {
-		x, err := curve.Random(crand.Reader)
+		x, err := curve.Random(pcg.NewRandomised())
 		require.NoError(tb, err)
 		statements[i] = schnorr.NewStatement(x)
 	}
@@ -169,7 +169,7 @@ func testAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S alge
 
 	// Generate random challenge
 	challenge := make([]byte, andProtocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// Run simulator

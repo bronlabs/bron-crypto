@@ -1,13 +1,13 @@
 package aor_test
 
 import (
-	crand "crypto/rand"
 	"maps"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/aor"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/aor/testutils"
@@ -21,7 +21,7 @@ func Test_HappyPath(t *testing.T) {
 	const total = 4
 	const sampleLength = 64
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	quorum := ntu.MakeRandomQuorum(t, prng, total)
 	tapes := ttu.MakeRandomTapes(t, prng, quorum)
 	participants := slices.Collect(maps.Values(tu.MakeAgreeOnRandomParticipants(t, quorum, tapes, sampleLength)))

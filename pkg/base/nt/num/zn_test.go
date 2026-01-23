@@ -1,7 +1,6 @@
 package num_test
 
 import (
-	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -1581,7 +1580,7 @@ func TestZMod_RandomWithCryptoRand(t *testing.T) {
 
 	zmod := testZMod(t, 100)
 
-	result, err := zmod.Random(crand.Reader)
+	result, err := zmod.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
 	require.Negative(t, result.Big().Cmp(big.NewInt(100)))

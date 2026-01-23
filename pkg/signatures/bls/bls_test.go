@@ -1,7 +1,6 @@
 package bls_test
 
 import (
-	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"io"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 
@@ -27,7 +27,7 @@ func Test_BasicSignature(t *testing.T) {
 
 	sf := bls12381.NewScalarField()
 	seed := make([]byte, sf.ElementSize())
-	_, err = io.ReadFull(crand.Reader, seed)
+	_, err = io.ReadFull(pcg.NewRandomised(), seed)
 	require.NoError(t, err)
 
 	keyGenerator, err := scheme.Keygen(bls.GenerateWithSeed[*bls12381.PointG1](seed))
@@ -531,7 +531,7 @@ func TestBatchSign(t *testing.T) {
 			keyGen, err := scheme.Keygen()
 			require.NoError(t, err)
 
-			sk, pk, err := keyGen.Generate(crand.Reader)
+			sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 			require.NoError(t, err)
 
 			// Create signer
@@ -617,7 +617,7 @@ func TestAggregateSign(t *testing.T) {
 			require.NoError(t, err)
 
 			for range tc.messages {
-				sk, pk, err := keyGen.Generate(crand.Reader)
+				sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 				require.NoError(t, err)
 				privateKeys = append(privateKeys, sk)
 				publicKeys = append(publicKeys, pk)
@@ -742,7 +742,7 @@ func TestLongKeyVariant(t *testing.T) {
 			keyGen, err := scheme.Keygen()
 			require.NoError(t, err)
 
-			sk, pk, err := keyGen.Generate(crand.Reader)
+			sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 			require.NoError(t, err)
 
 			// Test message
@@ -803,7 +803,7 @@ func TestMessageAugmentationScheme(t *testing.T) {
 	var publicKeys []*bls.PublicKey[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 
 	for range 3 {
-		sk, pk, err := keyGen.Generate(crand.Reader)
+		sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 		privateKeys = append(privateKeys, sk)
 		publicKeys = append(publicKeys, pk)
@@ -858,7 +858,7 @@ func TestPOPScheme(t *testing.T) {
 	keyGen, err := scheme.Keygen()
 	require.NoError(t, err)
 
-	sk, pk, err := keyGen.Generate(crand.Reader)
+	sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Sign a message
@@ -888,7 +888,7 @@ func TestPOPScheme(t *testing.T) {
 	var pops []*bls.ProofOfPossession[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]
 
 	for range 3 {
-		sk, pk, err := keyGen.Generate(crand.Reader)
+		sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 		privateKeys = append(privateKeys, sk)
 		publicKeys = append(publicKeys, pk)
@@ -942,13 +942,13 @@ func TestPublicKeyOperations(t *testing.T) {
 	// Generate first key pair
 	keyGen1, err := scheme.Keygen()
 	require.NoError(t, err)
-	_, pk1, err := keyGen1.Generate(crand.Reader)
+	_, pk1, err := keyGen1.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Generate second key pair with new generator
 	keyGen2, err := scheme.Keygen()
 	require.NoError(t, err)
-	_, pk2, err := keyGen2.Generate(crand.Reader)
+	_, pk2, err := keyGen2.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Test Equal
@@ -1008,13 +1008,13 @@ func TestPrivateKeyOperations(t *testing.T) {
 	// Generate first key pair
 	keyGen1, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk1, pk1, err := keyGen1.Generate(crand.Reader)
+	sk1, pk1, err := keyGen1.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Generate second key pair with new generator
 	keyGen2, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk2, _, err := keyGen2.Generate(crand.Reader)
+	sk2, _, err := keyGen2.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Test Equal
@@ -1058,13 +1058,13 @@ func TestSignatureOperations(t *testing.T) {
 	// Generate first key pair
 	keyGen1, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk1, _, err := keyGen1.Generate(crand.Reader)
+	sk1, _, err := keyGen1.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Generate second key pair with new generator
 	keyGen2, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk2, _, err := keyGen2.Generate(crand.Reader)
+	sk2, _, err := keyGen2.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	signer1, err := scheme.Signer(sk1)
@@ -1174,7 +1174,7 @@ func TestErrorCases(t *testing.T) {
 		keyGen, err := scheme.Keygen()
 		require.NoError(t, err)
 
-		sk, pk, err := keyGen.Generate(crand.Reader)
+		sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(sk)
@@ -1206,7 +1206,7 @@ func TestCustomDST(t *testing.T) {
 	keyGen, err := scheme.Keygen()
 	require.NoError(t, err)
 
-	sk, pk, err := keyGen.Generate(crand.Reader)
+	sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	message := []byte("test message")
@@ -1248,7 +1248,7 @@ func TestEdgeCases(t *testing.T) {
 		keyGen, err := scheme.Keygen()
 		require.NoError(t, err)
 
-		sk, _, err := keyGen.Generate(crand.Reader)
+		sk, _, err := keyGen.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(sk)
@@ -1273,7 +1273,7 @@ func TestEdgeCases(t *testing.T) {
 		keyGen, err := scheme.Keygen()
 		require.NoError(t, err)
 
-		sk, pk, err := keyGen.Generate(crand.Reader)
+		sk, pk, err := keyGen.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(sk)
@@ -1328,13 +1328,13 @@ func TestProofOfPossessionOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate first key pair
-	sk1, _, err := keyGen.Generate(crand.Reader)
+	sk1, _, err := keyGen.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Generate second key pair with new generator
 	keyGen2, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk2, _, err := keyGen2.Generate(crand.Reader)
+	sk2, _, err := keyGen2.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Get POPs from signatures

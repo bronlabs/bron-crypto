@@ -1,7 +1,6 @@
 package hpke_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
@@ -22,7 +22,7 @@ func generateKeyPair[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S
 	require.NoError(t, err)
 	dhkem, err := internal.NewDHKEM(curve, kdf)
 	require.NoError(t, err)
-	sk, pk, err := dhkem.GenerateKeyPair(crand.Reader)
+	sk, pk, err := dhkem.GenerateKeyPair(pcg.NewRandomised())
 	require.NoError(t, err)
 	return sk, pk
 }
@@ -79,7 +79,7 @@ func TestHPKE_BaseMode_Roundtrip(t *testing.T) {
 				info := []byte("test info")
 
 				// Sender: Setup and encrypt
-				senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+				senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, pcg.NewRandomised())
 				require.NoError(t, err)
 				ciphertext, err := senderCtx.Seal(plaintext, nil)
 				require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestHPKE_BaseMode_Roundtrip(t *testing.T) {
 				info := []byte("test info")
 
 				// Sender: Setup and encrypt
-				senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+				senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, pcg.NewRandomised())
 				require.NoError(t, err)
 				ciphertext, err := senderCtx.Seal(plaintext, nil)
 				require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestHPKE_AuthMode_Roundtrip(t *testing.T) {
 	info := []byte("auth test")
 
 	// Sender: Setup with authentication and encrypt
-	senderCtx, err := hpke.SetupAuthS(suite, receiverPk, senderSk, info, crand.Reader)
+	senderCtx, err := hpke.SetupAuthS(suite, receiverPk, senderSk, info, pcg.NewRandomised())
 	require.NoError(t, err)
 	ciphertext, err := senderCtx.Seal(plaintext, nil)
 	require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestHPKE_PSKMode_Roundtrip(t *testing.T) {
 
 	// Pre-shared key
 	psk := make([]byte, 32)
-	_, err = crand.Read(psk)
+	_, err = pcg.NewRandomised().Read(psk)
 	require.NoError(t, err)
 	pskID := []byte("test-psk-id")
 	info := []byte("psk test")
@@ -177,7 +177,7 @@ func TestHPKE_PSKMode_Roundtrip(t *testing.T) {
 	plaintext := []byte("PSK encrypted message")
 
 	// Sender: Setup with PSK and encrypt
-	senderCtx, err := hpke.SetupPSKS(suite, receiverPk, psk, pskID, info, crand.Reader)
+	senderCtx, err := hpke.SetupPSKS(suite, receiverPk, psk, pskID, info, pcg.NewRandomised())
 	require.NoError(t, err)
 	ciphertext, err := senderCtx.Seal(plaintext, nil)
 	require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestHPKE_AuthPSKMode_Roundtrip(t *testing.T) {
 
 	// Pre-shared key
 	psk := make([]byte, 32)
-	_, err = crand.Read(psk)
+	_, err = pcg.NewRandomised().Read(psk)
 	require.NoError(t, err)
 	pskID := []byte("test-authpsk-id")
 	info := []byte("authpsk test")
@@ -216,7 +216,7 @@ func TestHPKE_AuthPSKMode_Roundtrip(t *testing.T) {
 	plaintext := []byte("AuthPSK encrypted message")
 
 	// Sender: Setup with Auth+PSK and encrypt
-	senderCtx, err := hpke.SetupAuthPSKS(suite, receiverPk, senderSk, psk, pskID, info, crand.Reader)
+	senderCtx, err := hpke.SetupAuthPSKS(suite, receiverPk, senderSk, psk, pskID, info, pcg.NewRandomised())
 	require.NoError(t, err)
 	ciphertext, err := senderCtx.Seal(plaintext, nil)
 	require.NoError(t, err)
@@ -244,7 +244,7 @@ func TestHPKE_MultipleMessages(t *testing.T) {
 	info := []byte("multi message test")
 
 	// Setup contexts
-	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, pcg.NewRandomised())
 	require.NoError(t, err)
 	receiverCtx, err := hpke.SetupBaseR(suite, receiverSk, senderCtx.Capsule, info)
 	require.NoError(t, err)
@@ -282,7 +282,7 @@ func TestHPKE_WithAAD(t *testing.T) {
 	info := []byte("aad test")
 
 	// Setup and encrypt with AAD
-	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, pcg.NewRandomised())
 	require.NoError(t, err)
 	ciphertext, err := senderCtx.Seal(plaintext, aad)
 	require.NoError(t, err)
@@ -320,7 +320,7 @@ func TestHPKE_Encrypter_API(t *testing.T) {
 	plaintext := []byte("Test message")
 
 	// Encrypt
-	ciphertext, capsule, err := encrypter.Encrypt(plaintext, receiverPk, crand.Reader)
+	ciphertext, capsule, err := encrypter.Encrypt(plaintext, receiverPk, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotEmpty(t, ciphertext)
 	require.NotNil(t, capsule)
@@ -348,7 +348,7 @@ func TestHPKE_Export(t *testing.T) {
 	info := []byte("export test")
 
 	// Setup contexts
-	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, pcg.NewRandomised())
 	require.NoError(t, err)
 	receiverCtx, err := hpke.SetupBaseR(suite, receiverSk, senderCtx.Capsule, info)
 	require.NoError(t, err)
@@ -414,7 +414,7 @@ func TestHPKE_SymmetricKey(t *testing.T) {
 	t.Parallel()
 
 	keyBytes := make([]byte, 16)
-	_, err := crand.Read(keyBytes)
+	_, err := pcg.NewRandomised().Read(keyBytes)
 	require.NoError(t, err)
 
 	key, err := encryption.NewSymmetricKey(keyBytes)
@@ -441,7 +441,7 @@ func TestHPKE_Keygen(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, kg)
 
-		sk, pk, err := kg.Generate(crand.Reader)
+		sk, pk, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, sk)
 		require.NotNil(t, pk)
@@ -450,7 +450,7 @@ func TestHPKE_Keygen(t *testing.T) {
 		plaintext := []byte("Hello from keygen test!")
 		info := []byte("test info")
 
-		senderCtx, err := hpke.SetupBaseS(suite, pk, info, crand.Reader)
+		senderCtx, err := hpke.SetupBaseS(suite, pk, info, pcg.NewRandomised())
 		require.NoError(t, err)
 		ciphertext, err := senderCtx.Seal(plaintext, nil)
 		require.NoError(t, err)
@@ -476,7 +476,7 @@ func TestHPKE_Keygen(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, kg)
 
-		sk, pk, err := kg.Generate(crand.Reader)
+		sk, pk, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, sk)
 		require.NotNil(t, pk)
@@ -485,7 +485,7 @@ func TestHPKE_Keygen(t *testing.T) {
 		plaintext := []byte("Hello from X25519 keygen test!")
 		info := []byte("test info")
 
-		senderCtx, err := hpke.SetupBaseS(suite, pk, info, crand.Reader)
+		senderCtx, err := hpke.SetupBaseS(suite, pk, info, pcg.NewRandomised())
 		require.NoError(t, err)
 		ciphertext, err := senderCtx.Seal(plaintext, nil)
 		require.NoError(t, err)
@@ -512,7 +512,7 @@ func TestHPKE_Keygen(t *testing.T) {
 
 		// Generate deterministic keys from seed
 		seed := make([]byte, 32)
-		_, err = crand.Read(seed)
+		_, err = pcg.NewRandomised().Read(seed)
 		require.NoError(t, err)
 
 		sk1, pk1, err := kg.GenerateWithSeed(seed)

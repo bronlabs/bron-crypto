@@ -1,13 +1,13 @@
 package internal
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 // TestDHKEM_Encap_Decap_Roundtrip tests basic encapsulation/decapsulation
@@ -19,11 +19,11 @@ func TestDHKEM_Encap_Decap_Roundtrip(t *testing.T) {
 		kem := NewP256HKDFSha256KEM()
 
 		// Generate receiver key pair
-		receiverSk, receiverPk, err := kem.GenerateKeyPair(crand.Reader)
+		receiverSk, receiverPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Encapsulate
-		sharedSecretEncap, ephemeralPk, err := kem.Encap(receiverPk, crand.Reader)
+		sharedSecretEncap, ephemeralPk, err := kem.Encap(receiverPk, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotEmpty(t, sharedSecretEncap)
 		require.NotNil(t, ephemeralPk)
@@ -42,11 +42,11 @@ func TestDHKEM_Encap_Decap_Roundtrip(t *testing.T) {
 		kem := NewX25519HKDFSha256KEM()
 
 		// Generate receiver key pair
-		receiverSk, receiverPk, err := kem.GenerateKeyPair(crand.Reader)
+		receiverSk, receiverPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Encapsulate
-		sharedSecretEncap, ephemeralPk, err := kem.Encap(receiverPk, crand.Reader)
+		sharedSecretEncap, ephemeralPk, err := kem.Encap(receiverPk, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotEmpty(t, sharedSecretEncap)
 		require.NotNil(t, ephemeralPk)
@@ -70,13 +70,13 @@ func TestDHKEM_AuthEncap_AuthDecap_Roundtrip(t *testing.T) {
 		kem := NewP256HKDFSha256KEM()
 
 		// Generate keys
-		receiverSk, receiverPk, err := kem.GenerateKeyPair(crand.Reader)
+		receiverSk, receiverPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
-		senderSk, senderPk, err := kem.GenerateKeyPair(crand.Reader)
+		senderSk, senderPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Authenticated encapsulation
-		sharedSecretEncap, ephemeralPk, err := kem.AuthEncap(receiverPk, senderSk, crand.Reader)
+		sharedSecretEncap, ephemeralPk, err := kem.AuthEncap(receiverPk, senderSk, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotEmpty(t, sharedSecretEncap)
 
@@ -94,13 +94,13 @@ func TestDHKEM_AuthEncap_AuthDecap_Roundtrip(t *testing.T) {
 		kem := NewX25519HKDFSha256KEM()
 
 		// Generate keys
-		receiverSk, receiverPk, err := kem.GenerateKeyPair(crand.Reader)
+		receiverSk, receiverPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
-		senderSk, senderPk, err := kem.GenerateKeyPair(crand.Reader)
+		senderSk, senderPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Authenticated encapsulation
-		sharedSecretEncap, ephemeralPk, err := kem.AuthEncap(receiverPk, senderSk, crand.Reader)
+		sharedSecretEncap, ephemeralPk, err := kem.AuthEncap(receiverPk, senderSk, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotEmpty(t, sharedSecretEncap)
 
@@ -123,7 +123,7 @@ func TestDHKEM_DeriveKeyPair_Deterministic(t *testing.T) {
 		kem := NewP256HKDFSha256KEM()
 
 		ikm := make([]byte, 32)
-		_, err := crand.Read(ikm)
+		_, err := pcg.NewRandomised().Read(ikm)
 		require.NoError(t, err)
 
 		// Derive key pair twice with same IKM
@@ -143,7 +143,7 @@ func TestDHKEM_DeriveKeyPair_Deterministic(t *testing.T) {
 		kem := NewX25519HKDFSha256KEM()
 
 		ikm := make([]byte, 32)
-		_, err := crand.Read(ikm)
+		_, err := pcg.NewRandomised().Read(ikm)
 		require.NoError(t, err)
 
 		// Derive key pair twice with same IKM
@@ -261,13 +261,13 @@ func TestContexts_SequenceNumber(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate receiver key pair
-	receiverSk, receiverPk, err := kem.GenerateKeyPair(crand.Reader)
+	receiverSk, receiverPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	info := []byte("sequence test")
 
 	// Setup contexts
-	senderCtx, err := NewSenderContext(Base, suite, receiverPk, nil, info, nil, nil, crand.Reader)
+	senderCtx, err := NewSenderContext(Base, suite, receiverPk, nil, info, nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 	receiverCtx, err := NewReceiverContext(Base, suite, receiverSk, senderCtx.Capsule, nil, info, nil, nil)
 	require.NoError(t, err)
@@ -333,7 +333,7 @@ func TestKDF_LabeledExpand(t *testing.T) {
 
 	suiteID := []byte("KEM")
 	prk := make([]byte, kdf.Nh())
-	_, err := crand.Read(prk)
+	_, err := pcg.NewRandomised().Read(prk)
 	require.NoError(t, err)
 
 	label := []byte("test label")
@@ -377,7 +377,7 @@ func TestAEAD_Encryption(t *testing.T) {
 
 			// Generate random key
 			key := make([]byte, tc.keyLen)
-			_, err = crand.Read(key)
+			_, err = pcg.NewRandomised().Read(key)
 			require.NoError(t, err)
 
 			aead, err := scheme.New(key)
@@ -385,7 +385,7 @@ func TestAEAD_Encryption(t *testing.T) {
 
 			// Test encryption/decryption
 			nonce := make([]byte, aead.NonceSize())
-			_, err = crand.Read(nonce)
+			_, err = pcg.NewRandomised().Read(nonce)
 			require.NoError(t, err)
 
 			plaintext := []byte("Test message for AEAD")
@@ -413,7 +413,7 @@ func TestPrivateKey_PublicKey_Creation(t *testing.T) {
 	t.Run("P256_Keys", func(t *testing.T) {
 		t.Parallel()
 		curve := p256.NewCurve()
-		scalar, err := curve.ScalarField().Random(crand.Reader)
+		scalar, err := curve.ScalarField().Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		ikm := scalar.Bytes()
@@ -431,7 +431,7 @@ func TestPrivateKey_PublicKey_Creation(t *testing.T) {
 	t.Run("X25519_Keys", func(t *testing.T) {
 		t.Parallel()
 		curve := curve25519.NewPrimeSubGroup()
-		scalar, err := curve.ScalarField().Random(crand.Reader)
+		scalar, err := curve.ScalarField().Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		ikm := scalar.Bytes()
@@ -455,13 +455,13 @@ func TestContext_NonceReuse(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate receiver key pair
-	_, receiverPk, err := kem.GenerateKeyPair(crand.Reader)
+	_, receiverPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	info := []byte("nonce reuse test")
 
 	// Setup sender context
-	senderCtx, err := NewSenderContext(Base, suite, receiverPk, nil, info, nil, nil, crand.Reader)
+	senderCtx, err := NewSenderContext(Base, suite, receiverPk, nil, info, nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Encrypt a message
@@ -490,7 +490,7 @@ func TestDHKEM_InvalidInputs(t *testing.T) {
 		kem := NewP256HKDFSha256KEM()
 
 		// Nil PRNG
-		_, receiverPk, err := kem.GenerateKeyPair(crand.Reader)
+		_, receiverPk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		_, _, err = kem.Encap(receiverPk, nil)
@@ -534,7 +534,7 @@ func TestDHKEM_ExtractAndExpand(t *testing.T) {
 	kem := NewP256HKDFSha256KEM()
 
 	dhBytes := make([]byte, 32)
-	_, err := crand.Read(dhBytes)
+	_, err := pcg.NewRandomised().Read(dhBytes)
 	require.NoError(t, err)
 
 	kemContext := []byte("kem context")

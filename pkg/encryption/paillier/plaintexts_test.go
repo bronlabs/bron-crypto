@@ -1,13 +1,13 @@
 package paillier_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
@@ -23,7 +23,7 @@ func newPlaintextTestContext(tb testing.TB) *plaintextTestContext {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(tb, err)
-	_, pk, err := kg.Generate(crand.Reader)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(tb, err)
 	return &plaintextTestContext{
 		pk: pk,
@@ -63,11 +63,11 @@ func TestPlaintextSpace_Sample(t *testing.T) {
 	t.Parallel()
 	tc := newPlaintextTestContext(t)
 
-	pt1, err := tc.ps.Sample(nil, nil, crand.Reader)
+	pt1, err := tc.ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, pt1)
 
-	pt2, err := tc.ps.Sample(nil, nil, crand.Reader)
+	pt2, err := tc.ps.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, pt2)
 
@@ -83,7 +83,7 @@ func TestPlaintextSpace_Sample_WithBounds(t *testing.T) {
 	high := tc.fromInt64(t, 100)
 
 	for range 10 {
-		pt, err := tc.ps.Sample(low, high, crand.Reader)
+		pt, err := tc.ps.Sample(low, high, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.True(t, low.IsLessThanOrEqual(pt), "sampled value should be >= low")
 		require.True(t, pt.IsLessThanOrEqual(high), "sampled value should be <= high")

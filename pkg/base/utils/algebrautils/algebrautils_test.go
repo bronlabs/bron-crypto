@@ -2,7 +2,6 @@ package algebrautils_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
@@ -147,9 +147,9 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 
 	t.Run("all zero scalars returns identity", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		zero := scalarField.Zero()
@@ -162,11 +162,11 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 
 	t.Run("all one scalars returns sum of points", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p3, err := curve.Random(crand.Reader)
+		p3, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		one := scalarField.One()
@@ -195,11 +195,11 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 
 	t.Run("mixed zero and non-zero scalars", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p3, err := curve.Random(crand.Reader)
+		p3, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		zero := scalarField.Zero()
@@ -216,7 +216,7 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	t.Run("identity point in input", func(t *testing.T) {
 		t.Parallel()
 		identity := curve.OpIdentity()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		two := scalarField.FromUint64(2)
@@ -237,11 +237,11 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 		scalars := make([]*k256.Scalar, n)
 
 		for i := range n {
-			p, err := curve.Random(crand.Reader)
+			p, err := curve.Random(pcg.NewRandomised())
 			require.NoError(t, err)
 			points[i] = p
 
-			s, err := scalarField.Random(crand.Reader)
+			s, err := scalarField.Random(pcg.NewRandomised())
 			require.NoError(t, err)
 			scalars[i] = s
 		}
@@ -259,9 +259,9 @@ func TestPippengerMultiScalarMul_K256(t *testing.T) {
 
 	t.Run("consistency - same inputs same output", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		s1 := scalarField.FromUint64(12345)
@@ -313,9 +313,9 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 
 	t.Run("all zero scalars returns identity", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		zero := scalarField.Zero()
@@ -328,11 +328,11 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 
 	t.Run("all one scalars returns sum of points", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p3, err := curve.Random(crand.Reader)
+		p3, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		one := scalarField.One()
@@ -361,11 +361,11 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 
 	t.Run("mixed zero and non-zero scalars", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p3, err := curve.Random(crand.Reader)
+		p3, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		zero := scalarField.Zero()
@@ -382,7 +382,7 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 	t.Run("identity point in input", func(t *testing.T) {
 		t.Parallel()
 		identity := curve.OpIdentity()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		two := scalarField.FromUint64(2)
@@ -403,11 +403,11 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 		scalars := make([]*edwards25519.Scalar, n)
 
 		for i := range n {
-			p, err := curve.Random(crand.Reader)
+			p, err := curve.Random(pcg.NewRandomised())
 			require.NoError(t, err)
 			points[i] = p
 
-			s, err := scalarField.Random(crand.Reader)
+			s, err := scalarField.Random(pcg.NewRandomised())
 			require.NoError(t, err)
 			scalars[i] = s
 		}
@@ -425,9 +425,9 @@ func TestPippengerMultiScalarMul_Edwards25519(t *testing.T) {
 
 	t.Run("consistency - same inputs same output", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		s1 := scalarField.FromUint64(12345)

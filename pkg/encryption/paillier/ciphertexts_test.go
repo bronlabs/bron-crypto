@@ -1,13 +1,13 @@
 package paillier_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
@@ -27,7 +27,7 @@ func newCiphertextTestContext(tb testing.TB) *ciphertextTestContext {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(tb, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(tb, err)
 	enc, err := scheme.Encrypter()
 	require.NoError(tb, err)
@@ -59,7 +59,7 @@ func (tc *ciphertextTestContext) plaintextFromInt64(tb testing.TB, val int64) *p
 
 func (tc *ciphertextTestContext) encrypt(tb testing.TB, pt *paillier.Plaintext) *paillier.Ciphertext {
 	tb.Helper()
-	ct, _, err := tc.enc.Encrypt(pt, tc.pk, crand.Reader)
+	ct, _, err := tc.enc.Encrypt(pt, tc.pk, pcg.NewRandomised())
 	require.NoError(tb, err)
 	return ct
 }
@@ -440,10 +440,10 @@ func TestCiphertext_ReRandomise_PreservesPlaintext(t *testing.T) {
 	tc := newCiphertextTestContext(t)
 
 	pt := tc.plaintextFromInt64(t, 42)
-	ct, _, err := tc.enc.Encrypt(pt, tc.pk, crand.Reader)
+	ct, _, err := tc.enc.Encrypt(pt, tc.pk, pcg.NewRandomised())
 	require.NoError(t, err)
 
-	ctRand, nonce, err := ct.ReRandomise(tc.pk, crand.Reader)
+	ctRand, nonce, err := ct.ReRandomise(tc.pk, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, nonce)
 
@@ -464,7 +464,7 @@ func TestCiphertext_ReRandomiseWithNonce_Deterministic(t *testing.T) {
 	ct := tc.encrypt(t, pt)
 
 	// Sample a nonce
-	nonce, err := tc.pk.NonceSpace().Sample(crand.Reader)
+	nonce, err := tc.pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Re-randomise twice with same nonce
@@ -517,7 +517,7 @@ func TestCiphertext_Equal(t *testing.T) {
 	tc := newCiphertextTestContext(t)
 
 	pt := tc.plaintextFromInt64(t, 42)
-	nonce, err := tc.pk.NonceSpace().Sample(crand.Reader)
+	nonce, err := tc.pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Encrypt with same nonce twice
@@ -541,11 +541,11 @@ func TestCiphertextSpace_Sample(t *testing.T) {
 
 	cs := tc.pk.CiphertextSpace()
 
-	ct1, err := cs.Sample(crand.Reader)
+	ct1, err := cs.Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, ct1)
 
-	ct2, err := cs.Sample(crand.Reader)
+	ct2, err := cs.Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, ct2)
 
