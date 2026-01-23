@@ -34,7 +34,7 @@ func TestHappyPath(t *testing.T) {
 
 	const iters = 1
 	testAccessStructures := []struct{ threshold, total int }{
-		{2, 2},
+		{2, 3},
 		{3, 5},
 		{6, 6},
 	}
