@@ -638,7 +638,7 @@ func (i *Int) String() string {
 
 // HashCode returns a hash code for i.
 func (i *Int) HashCode() base.HashCode {
-	return base.DeriveHashCode(i.Bytes())
+	return base.DeriveHashCode(append([]byte{byte(i.Big().Sign())}, i.Big().Bytes()...))
 }
 
 // Big returns a big.Int representation of i.
