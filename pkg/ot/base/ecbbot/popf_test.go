@@ -1,7 +1,6 @@
 package ecbbot_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 )
 
@@ -27,7 +27,7 @@ func Test_PopfHappyPath(t *testing.T) {
 
 func popfHappyHapy[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](tb testing.TB, curve algebra.PrimeGroup[GE, SE]) {
 	tb.Helper()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	tag0 := []byte("tag0")
 	tag1 := []byte("tag1")
 

@@ -1,7 +1,6 @@
 package przs_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
@@ -9,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -19,7 +19,7 @@ import (
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)

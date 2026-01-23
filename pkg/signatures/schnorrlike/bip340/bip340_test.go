@@ -2,7 +2,6 @@ package bip340_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"slices"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
 	"github.com/bronlabs/errs-go/errs"
@@ -308,7 +308,7 @@ func doTestVerify(publicKeyString string, signatureString string, messageString 
 		return errs.Wrap(err).WithMessage("cannot decode message")
 	}
 
-	scheme, err := bip340.NewScheme(crand.Reader)
+	scheme, err := bip340.NewScheme(pcg.NewRandomised())
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create bip340 scheme")
 	}
@@ -326,20 +326,20 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 	message2 := []byte("bitcointranscation")
 	curve := k256.NewCurve()
 	sf := k256.NewScalarField()
-	scheme, err := bip340.NewScheme(crand.Reader)
+	scheme, err := bip340.NewScheme(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	t.Run(fmt.Sprintf("running the test for curve %s", curve.Name()), func(t *testing.T) {
 		t.Parallel()
 
-		sk1, err := sf.Random(crand.Reader)
+		sk1, err := sf.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		aliceKey, err := bip340.NewPrivateKey(sk1)
 		require.NoError(t, err)
 		alice, _ := scheme.Signer(aliceKey)
 		require.NotNil(t, alice)
 
-		sk2, err := sf.Random(crand.Reader)
+		sk2, err := sf.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		bobKey, err := bip340.NewPrivateKey(sk2)
 		require.NoError(t, err)
@@ -351,7 +351,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 		signatureBob, err := bob.Sign(message2)
 		require.NoError(t, err)
 
-		verifier, err := scheme.Verifier(bip340.VerifyWithPRNG(crand.Reader))
+		verifier, err := scheme.Verifier(bip340.VerifyWithPRNG(pcg.NewRandomised()))
 		require.NoError(t, err)
 
 		err = verifier.BatchVerify(

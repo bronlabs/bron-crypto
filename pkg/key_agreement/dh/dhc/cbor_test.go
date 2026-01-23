@@ -1,13 +1,13 @@
 package dhc_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
@@ -84,7 +84,7 @@ func TestExtendedPrivateKey_CBOR_X25519(t *testing.T) {
 	sf := curve25519.NewScalarField()
 
 	// Generate a random scalar
-	scalar, err := sf.Random(crand.Reader)
+	scalar, err := sf.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create extended private key
@@ -116,7 +116,7 @@ func TestExtendedPrivateKey_CBOR_P256(t *testing.T) {
 	curve := p256.NewCurve()
 
 	// Generate a random scalar
-	scalar, err := curve.ScalarField().Random(crand.Reader)
+	scalar, err := curve.ScalarField().Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create extended private key
@@ -150,7 +150,7 @@ func TestExtendedPrivateKey_CBOR_Roundtrip(t *testing.T) {
 		sf := curve25519.NewScalarField()
 
 		for range 10 {
-			scalar, err := sf.Random(crand.Reader)
+			scalar, err := sf.Random(pcg.NewRandomised())
 			require.NoError(t, err)
 
 			privSeed, err := dhc.NewPrivateKey(scalar.Bytes())
@@ -186,7 +186,7 @@ func TestExtendedPrivateKey_CBOR_Roundtrip(t *testing.T) {
 		curve := p256.NewCurve()
 
 		for range 10 {
-			scalar, err := curve.ScalarField().Random(crand.Reader)
+			scalar, err := curve.ScalarField().Random(pcg.NewRandomised())
 			require.NoError(t, err)
 
 			privSeed, err := dhc.NewPrivateKey(scalar.Bytes())

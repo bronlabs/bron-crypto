@@ -32,7 +32,7 @@ func decodeHex_or_panic(s string) []byte {
 // of "[AES-256 UseDF]" with PR false, COUNT=0, as part of the DRBGVS spec.
 func Test_AES256_ApiUsage(t *testing.T) {
 	t.Parallel()
-	entropySource := io.Reader(nil) // Set to nil to force crypto/rand.Reader by default
+	entropySource := io.Reader(nil) // Set to nil to force crypto/pcg.NewRandomised() by default
 	keySize := 32                   // 256 bits
 
 	entropyInput := decodeHex_or_panic("e2f75cf553035b3cb4d21e567ca5c203623d4a4b5885326f63ea61a020a4984e")
@@ -65,7 +65,7 @@ func Test_AES256_ApiUsage(t *testing.T) {
 // of "[AES-128 UseDF]" with PR false, COUNT=0, as part of the DRBGVS spec.
 func Test_AES128_ApiUsage(t *testing.T) {
 	t.Parallel()
-	entropySource := io.Reader(nil) // Use crypto/rand.Reader by default
+	entropySource := io.Reader(nil) // Use crypto/pcg.NewRandomised() by default
 	keySize := 16                   // 128 bits
 
 	entropyInput := decodeHex_or_panic("e796b728ec69cf79f97eaa2c06e7187f")
@@ -97,7 +97,7 @@ func Test_AES128_ApiUsage(t *testing.T) {
 // case of "[AES-256 UseDF]" no reseed, COUNT=0, as part of the DRBGVS spec.
 func Test_AES256_ReadnResetState(t *testing.T) {
 	t.Parallel()
-	entropySource := io.Reader(nil) // Set to nil to force crypto/rand.Reader by default
+	entropySource := io.Reader(nil) // Set to nil to force crypto/pcg.NewRandomised() by default
 	keySize := 32                   // 256 bits
 
 	entropyInput := decodeHex_or_panic("36401940fa8b1fba91a1661f211d78a0b9389a74e5bccfece8d766af1a6d3b14")

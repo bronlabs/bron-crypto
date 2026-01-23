@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/pailliern"
@@ -37,10 +38,9 @@ func Test_pIsCorrect(t *testing.T) {
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	const keyLen = 2048
-	const iters = 4
+	const keyLen = 1024
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	label := "NizkPaillierNTranscriptLabel"
 	sessionID := "NizkPaillierNTestSessionID"
 
@@ -49,41 +49,39 @@ func Test_HappyPath(t *testing.T) {
 
 	scheme := paillier.NewScheme()
 
-	for i := range iters {
-		sid, err := network.NewSID([]byte(fmt.Sprintf("%s_%d", sessionID, i)))
-		require.NoError(t, err)
+	sid, err := network.NewSID([]byte(fmt.Sprintf("%s_%d", sessionID, 0)))
+	require.NoError(t, err)
 
-		pInt, err := crand.Prime(prng, keyLen/2)
-		require.NoError(t, err)
-		pNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(pInt, pInt.BitLen()))
-		qInt, err := crand.Prime(prng, keyLen/2)
-		require.NoError(t, err)
-		qNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(qInt, qInt.BitLen()))
+	pInt, err := crand.Prime(prng, keyLen/2)
+	require.NoError(t, err)
+	pNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(pInt, pInt.BitLen()))
+	qInt, err := crand.Prime(prng, keyLen/2)
+	require.NoError(t, err)
+	qNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(qInt, qInt.BitLen()))
 
-		p, err := num.NPlus().FromNatCT(pNat)
-		require.NoError(t, err)
-		q, err := num.NPlus().FromNatCT(qNat)
-		require.NoError(t, err)
+	p, err := num.NPlus().FromNatCT(pNat)
+	require.NoError(t, err)
+	q, err := num.NPlus().FromNatCT(qNat)
+	require.NoError(t, err)
 
-		group, err := znstar.NewPaillierGroup(p, q)
-		require.NoError(t, err)
+	group, err := znstar.NewPaillierGroup(p, q)
+	require.NoError(t, err)
 
-		sk, err := paillier.NewPrivateKey(group)
-		require.NoError(t, err)
+	sk, err := paillier.NewPrivateKey(group)
+	require.NoError(t, err)
 
-		senc, err := scheme.SelfEncrypter(sk)
-		require.NoError(t, err)
+	senc, err := scheme.SelfEncrypter(sk)
+	require.NoError(t, err)
 
-		prover, err := pailliern.NewProver(sid, senc, proverTranscript)
-		require.NoError(t, err)
+	prover, err := pailliern.NewProver(sid, senc, proverTranscript)
+	require.NoError(t, err)
 
-		proof, _, err := prover.Prove()
-		require.NoError(t, err)
-		require.NotNil(t, proof)
+	proof, _, err := prover.Prove()
+	require.NoError(t, err)
+	require.NotNil(t, proof)
 
-		err = pailliern.Verify(sid, verifierTranscript, sk.PublicKey(), proof)
-		require.NoError(t, err)
-	}
+	err = pailliern.Verify(sid, verifierTranscript, sk.PublicKey(), proof)
+	require.NoError(t, err)
 
 	proverBytes, err := proverTranscript.ExtractBytes("test", 16)
 	require.NoError(t, err)

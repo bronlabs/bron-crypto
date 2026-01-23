@@ -1,18 +1,18 @@
 package p256_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := p256.NewBaseField().Random(prng)
 	require.NoError(t, err)
@@ -26,7 +26,7 @@ func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 
 func Test_ScalarCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := p256.NewScalarField().Random(prng)
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func Test_ScalarCBORRoundTrip(t *testing.T) {
 
 func Test_PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := p256.NewCurve().Random(prng)
 	require.NoError(t, err)

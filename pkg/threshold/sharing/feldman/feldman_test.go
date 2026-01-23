@@ -2,7 +2,6 @@ package feldman_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"fmt"
 	"io"
 	mrand "math/rand/v2"
@@ -36,7 +35,7 @@ func TestSanity(t *testing.T) {
 
 	secret := feldman.NewSecret(field.FromUint64(42))
 	require.NoError(t, err)
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err, "could not create shares")
 	require.Equal(t, total, uint(shares.Shares().Size()), "number of shares should match total")
 
@@ -83,35 +82,35 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 		{
 			name:         "valid secret with constant 42",
 			secret:       fortyTwoSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 1",
 			secret:       oneSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 0",
 			secret:       zeroSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with random value",
 			secret:       randomSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:        "nil secret",
 			secret:      nil,
-			prng:        crand.Reader,
+			prng:        pcg.NewRandomised(),
 			expectError: true,
 			errorIs:     shamir.ErrIsNil,
 		},
@@ -227,14 +226,14 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 	}{
 		{
 			name:             "valid random generation",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       1,
 		},
 		{
 			name:             "multiple random generations",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       5,
@@ -473,7 +472,7 @@ func BenchmarkDeal(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, err := scheme.Deal(secret, crand.Reader)
+				_, err := scheme.Deal(secret, pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -506,7 +505,7 @@ func BenchmarkDealRandom(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, _, err := scheme.DealRandom(crand.Reader)
+				_, _, err := scheme.DealRandom(pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -567,7 +566,7 @@ func TestDealRandomDistribution(t *testing.T) {
 	secrets := make(map[string]int)
 
 	for range iterations {
-		_, secret, err := scheme.DealRandom(crand.Reader)
+		_, secret, err := scheme.DealRandom(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Use first few bytes of secret as key for distribution analysis
@@ -591,7 +590,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 
 	// Create valid shares
 	secret := feldman.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Get reference verification vector
@@ -679,7 +678,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 		t.Parallel()
 		// Create shares with different secret to get different verification vector
 		secret2 := feldman.NewSecret(field.FromUint64(100))
-		shares2, err := scheme.Deal(secret2, crand.Reader)
+		shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		differentReference := shares2.VerificationMaterial()
@@ -747,9 +746,9 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 	secret1 := feldman.NewSecret(field.FromUint64(10))
 	secret2 := feldman.NewSecret(field.FromUint64(20))
 
-	shares1, err := scheme.Deal(secret1, crand.Reader)
+	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
 	require.NoError(t, err)
-	shares2, err := scheme.Deal(secret2, crand.Reader)
+	shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Test cases for Add operation
@@ -1020,7 +1019,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 
 	// Create shares
 	secret := feldman.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(b, err)
 
 	share1, _ := shares.Shares().Get(sharing.ID(1))
@@ -1052,7 +1051,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 	// Create test secrets and their shares
 	secret := feldman.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Get all shareholder IDs for creating qualified sets
@@ -1252,7 +1251,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 
 		// Deal shares for zero secret
 		zeroSecret := feldman.NewSecret(field.Zero())
-		shares, err := scheme.Deal(zeroSecret, crand.Reader)
+		shares, err := scheme.Deal(zeroSecret, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())
@@ -1293,7 +1292,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 
 		secret := feldman.NewSecret(field.FromUint64(100))
-		shares, err := scheme.Deal(secret, crand.Reader)
+		shares, err := scheme.Deal(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())
@@ -1350,7 +1349,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, crand.Reader)
+			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
 			qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())
@@ -1641,7 +1640,7 @@ func BenchmarkVerification(b *testing.B) {
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, crand.Reader)
+			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
 			share := shares.Shares().Values()[0]

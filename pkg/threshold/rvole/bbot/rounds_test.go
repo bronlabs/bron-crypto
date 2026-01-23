@@ -2,13 +2,13 @@ package rvole_bbot_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -18,7 +18,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	const L = 8
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])

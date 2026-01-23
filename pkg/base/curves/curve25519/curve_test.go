@@ -3,7 +3,6 @@ package curve25519_test
 import (
 	"bytes"
 	"crypto/ecdh"
-	crand "crypto/rand"
 	"encoding/hex"
 	"io"
 	"testing"
@@ -11,12 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
 func Test_BaseScalarMul(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	for range 128 {
 		key, err := ecdh.X25519().GenerateKey(prng)
@@ -38,7 +38,7 @@ func Test_BaseScalarMul(t *testing.T) {
 
 func Test_UncompressedRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	for range 128 {
 		p, err := curve25519.NewCurve().Random(prng)
@@ -52,7 +52,7 @@ func Test_UncompressedRoundTrip(t *testing.T) {
 
 func Test_CompressedRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	for range 128 {
 		p, err := curve25519.NewCurve().Random(prng)
@@ -71,7 +71,7 @@ func Test_CompressedRoundTrip(t *testing.T) {
 
 func Test_X25519(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	for range 128 {
 		alice, bob := genKeyPair(t, prng)

@@ -1,19 +1,19 @@
 package hash_comm_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 )
 
 func Test_ValidCommitment(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	ck := randomCk(t, prng)
 	m := randomMessage(t, prng)
@@ -31,7 +31,7 @@ func Test_ValidCommitment(t *testing.T) {
 
 func Test_InvalidCommitment(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	scheme := randomCk(t, prng)
 	m := randomMessage(t, prng)

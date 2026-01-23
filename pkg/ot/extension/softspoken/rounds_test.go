@@ -1,13 +1,13 @@
 package softspoken_test
 
 import (
-	crand "crypto/rand"
 	"crypto/sha256"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
@@ -21,7 +21,7 @@ func Test_HappyPath(t *testing.T) {
 	const KAPPA = softspoken.Kappa
 	const XI = 2048
 	const L = 16
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	// generate seeds
 	receiverSeeds := &vsot.ReceiverOutput{

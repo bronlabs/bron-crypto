@@ -1,26 +1,26 @@
 package mina_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/mina"
 )
 
 func TestEncodeDecodeRoundTrip(t *testing.T) {
 	t.Parallel()
 	// Generate a new key pair
-	scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
+	scheme, err := mina.NewRandomisedScheme(mina.TestNet, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
 
-	privateKey, publicKey, err := kg.Generate(crand.Reader)
+	privateKey, publicKey, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Encode private key
@@ -57,13 +57,13 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 func TestSchnorrSignatureLogic(t *testing.T) {
 	t.Parallel()
 	// Create a random scheme
-	scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
+	scheme, err := mina.NewRandomisedScheme(mina.TestNet, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Generate a key pair
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	privateKey, publicKey, err := kg.Generate(crand.Reader)
+	privateKey, publicKey, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Create a simple message
@@ -148,12 +148,12 @@ func TestSchnorrParityCorrection(t *testing.T) {
 	t.Parallel()
 	// Create multiple random schemes and verify R parity
 	for range 10 {
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, publicKey, err := kg.Generate(crand.Reader)
+		privateKey, publicKey, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)

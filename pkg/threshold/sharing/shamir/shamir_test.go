@@ -2,7 +2,6 @@ package shamir_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"fmt"
 	"io"
 	mrand "math/rand/v2"
@@ -32,7 +31,7 @@ func TestSanity(t *testing.T) {
 
 	secret := shamir.NewSecret(field.FromUint64(42))
 	require.NoError(t, err)
-	out, err := scheme.Deal(secret, crand.Reader)
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err, "could not create shares")
 	require.NotNil(t, out)
 	shares := out.Shares()
@@ -68,35 +67,35 @@ func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Sc
 		{
 			name:         "valid secret with constant 42",
 			secret:       fortyTwoSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 1",
 			secret:       oneSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 0",
 			secret:       zeroSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with random value",
 			secret:       randomSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:        "nil secret",
 			secret:      nil,
-			prng:        crand.Reader,
+			prng:        pcg.NewRandomised(),
 			expectError: true,
 			errorIs:     shamir.ErrIsNil,
 		},
@@ -201,14 +200,14 @@ func dealRandomCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	}{
 		{
 			name:             "valid random generation",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       1,
 		},
 		{
 			name:             "multiple random generations",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       5,
@@ -429,7 +428,7 @@ func BenchmarkDeal(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, err := scheme.Deal(secret, crand.Reader)
+				_, err := scheme.Deal(secret, pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -461,7 +460,7 @@ func BenchmarkDealRandom(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, _, err := scheme.DealRandom(crand.Reader)
+				_, _, err := scheme.DealRandom(pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -519,7 +518,7 @@ func TestDealRandomDistribution(t *testing.T) {
 	secrets := make(map[string]int)
 
 	for range iterations {
-		_, secret, err := scheme.DealRandom(crand.Reader)
+		_, secret, err := scheme.DealRandom(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Use first few bytes of secret as key for distribution analysis
@@ -545,10 +544,10 @@ func homomorphicOpsCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme 
 	secret1 := shamir.NewSecret(field.FromUint64(10))
 	secret2 := shamir.NewSecret(field.FromUint64(20))
 
-	out1, err := scheme.Deal(secret1, crand.Reader)
+	out1, err := scheme.Deal(secret1, pcg.NewRandomised())
 	require.NoError(t, err)
 	shares1 := out1.Shares()
-	out2, err := scheme.Deal(secret2, crand.Reader)
+	out2, err := scheme.Deal(secret2, pcg.NewRandomised())
 	require.NoError(t, err)
 	shares2 := out2.Shares()
 
@@ -801,7 +800,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 
 	// Create shares
 	secret := shamir.NewSecret(field.FromUint64(42))
-	out, err := scheme.Deal(secret, crand.Reader)
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(b, err)
 	shares := out.Shares()
 
@@ -834,7 +833,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 
 	// Create test secrets and their shares
 	secret := shamir.NewSecret(field.FromUint64(42))
-	out, err := scheme.Deal(secret, crand.Reader)
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Get all shareholder IDs for creating qualified sets
@@ -1036,7 +1035,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 
 		// Deal shares for zero secret
 		zeroSecret := shamir.NewSecret(field.Zero())
-		shares, err := scheme.Deal(zeroSecret, crand.Reader)
+		shares, err := scheme.Deal(zeroSecret, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
@@ -1081,7 +1080,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 
 		secret := shamir.NewSecret(field.FromUint64(100))
-		out, err := scheme.Deal(secret, crand.Reader)
+		out, err := scheme.Deal(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
@@ -1138,7 +1137,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			require.NoError(b, err)
 
 			secret := shamir.NewSecret(field.FromUint64(42))
-			out, err := scheme.Deal(secret, crand.Reader)
+			out, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
 			qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(

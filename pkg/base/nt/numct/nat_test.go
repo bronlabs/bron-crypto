@@ -2,7 +2,6 @@ package numct_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestNatSetRandomRangeH(t *testing.T) {
 	bound := numct.NewNatFromBig(b, 4096)
 
 	var r numct.Nat
-	err := r.SetRandomRangeH(bound, crand.Reader)
+	err := r.SetRandomRangeH(bound, pcg.NewRandomised())
 	require.NoError(t, err)
 	lt, _, _ := r.Compare(bound)
 	require.True(t, lt != ct.False)

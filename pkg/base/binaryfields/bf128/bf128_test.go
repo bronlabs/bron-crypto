@@ -1,19 +1,19 @@
 package bf128_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/binaryfields/bf128"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 const reps = 128
 
 func TestZero(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	zero := bf128.NewField().Zero()
 	require.True(t, zero.IsZero())
@@ -30,7 +30,7 @@ func TestZero(t *testing.T) {
 
 func TestOne(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	one := bf128.NewField().One()
 	require.False(t, one.IsZero())
@@ -44,7 +44,7 @@ func TestOne(t *testing.T) {
 
 func TestInv(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	for range reps {
 		x, err := bf128.NewField().RandomNonZero(prng)

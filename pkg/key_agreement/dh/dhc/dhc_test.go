@@ -1,7 +1,6 @@
 package dhc_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
@@ -54,7 +54,7 @@ func testRoundtrip[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 
 	// Alice generates a key pair from random seed
 	aliceSeed := make([]byte, 32)
-	_, err := crand.Read(aliceSeed)
+	_, err := pcg.NewRandomised().Read(aliceSeed)
 	require.NoError(t, err)
 	alicePrivateKeySeed, err := dhc.NewPrivateKey(aliceSeed)
 	require.NoError(t, err)
@@ -66,7 +66,7 @@ func testRoundtrip[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 
 	// Bob generates a key pair from random seed
 	bobSeed := make([]byte, 32)
-	_, err = crand.Read(bobSeed)
+	_, err = pcg.NewRandomised().Read(bobSeed)
 	require.NoError(t, err)
 	bobPrivateKeySeed, err := dhc.NewPrivateKey(bobSeed)
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func testRoundtripCurve25519[P curves.Point[P, B, S], B algebra.FiniteFieldEleme
 
 	// Alice generates a key pair from random seed
 	aliceSeed := make([]byte, 32)
-	_, err := crand.Read(aliceSeed)
+	_, err := pcg.NewRandomised().Read(aliceSeed)
 	require.NoError(t, err)
 	alicePrivateKeySeed, err := dhc.NewPrivateKey(aliceSeed)
 	require.NoError(t, err)
@@ -107,7 +107,7 @@ func testRoundtripCurve25519[P curves.Point[P, B, S], B algebra.FiniteFieldEleme
 
 	// Bob generates a key pair from random seed
 	bobSeed := make([]byte, 32)
-	_, err = crand.Read(bobSeed)
+	_, err = pcg.NewRandomised().Read(bobSeed)
 	require.NoError(t, err)
 	bobPrivateKeySeed, err := dhc.NewPrivateKey(bobSeed)
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestDHC_SerializationRoundtrip(t *testing.T) {
 		curve := curve25519.NewPrimeSubGroup()
 
 		// Generate a random scalar
-		scalar, err := sf.Random(crand.Reader)
+		scalar, err := sf.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Create extended private key
@@ -172,7 +172,7 @@ func TestDHC_SerializationRoundtrip(t *testing.T) {
 		curve := p256.NewCurve()
 
 		// Generate a random scalar
-		scalar, err := curve.ScalarField().Random(crand.Reader)
+		scalar, err := curve.ScalarField().Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Create extended private key
@@ -209,7 +209,7 @@ func TestDHC_ExtendPrivateKey(t *testing.T) {
 
 		// Create a private key from random bytes
 		privBytes := make([]byte, 32)
-		_, err := crand.Read(privBytes)
+		_, err := pcg.NewRandomised().Read(privBytes)
 		require.NoError(t, err)
 
 		pk, err := dhc.NewPrivateKey(privBytes)
@@ -229,7 +229,7 @@ func TestDHC_ExtendPrivateKey(t *testing.T) {
 
 		// Create a private key from random bytes
 		privBytes := make([]byte, 32)
-		_, err := crand.Read(privBytes)
+		_, err := pcg.NewRandomised().Read(privBytes)
 		require.NoError(t, err)
 
 		pk, err := dhc.NewPrivateKey(privBytes)
@@ -305,7 +305,7 @@ func TestDHC_Equality(t *testing.T) {
 	t.Run("ExtendedPrivateKeyEquality", func(t *testing.T) {
 		t.Parallel()
 		sf := curve25519.NewScalarField()
-		scalar1, err := sf.Random(crand.Reader)
+		scalar1, err := sf.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		privSeed1, err := dhc.NewPrivateKey(scalar1.Bytes())
@@ -320,7 +320,7 @@ func TestDHC_Equality(t *testing.T) {
 
 		require.True(t, extPk1.Equal(extPk2))
 
-		scalar2, err := sf.Random(crand.Reader)
+		scalar2, err := sf.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		privSeed3, err := dhc.NewPrivateKey(scalar2.Bytes())
 		require.NoError(t, err)

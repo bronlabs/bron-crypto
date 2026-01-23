@@ -2,13 +2,13 @@ package pedersen_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 )
 
@@ -36,7 +36,7 @@ func TestBasicCommitment(t *testing.T) {
 	// Commit to the message
 	committer, err := scheme.Committer()
 	require.NoError(t, err, "could not create committer")
-	commitment, witness, err := committer.Commit(message, crand.Reader)
+	commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err, "could not commit")
 	require.NotNil(t, commitment)
 	require.NotNil(t, witness)
@@ -144,7 +144,7 @@ func TestCommitmentCreation(t *testing.T) {
 
 	t.Run("nil message", func(t *testing.T) {
 		t.Parallel()
-		_, _, err := committer.Commit(nil, crand.Reader)
+		_, _, err := committer.Commit(nil, pcg.NewRandomised())
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "message cannot be nil")
 	})
@@ -359,9 +359,9 @@ func TestHomomorphicProperties(t *testing.T) {
 		m2 := pedersen.NewMessage(field.FromUint64(20))
 
 		// Commit to each message
-		c1, w1, err := committer.Commit(m1, crand.Reader)
+		c1, w1, err := committer.Commit(m1, pcg.NewRandomised())
 		require.NoError(t, err)
-		c2, w2, err := committer.Commit(m2, crand.Reader)
+		c2, w2, err := committer.Commit(m2, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Add commitments: C(m1) + C(m2)
@@ -388,7 +388,7 @@ func TestHomomorphicProperties(t *testing.T) {
 		scalar := pedersen.NewMessage(field.FromUint64(3))
 
 		// Commit to the message
-		c, w, err := committer.Commit(m, crand.Reader)
+		c, w, err := committer.Commit(m, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Multiply commitment by scalar: scalar * C(m)
@@ -413,9 +413,9 @@ func TestHomomorphicProperties(t *testing.T) {
 		m1 := pedersen.NewMessage(field.FromUint64(10))
 		m2 := pedersen.NewMessage(field.FromUint64(20))
 
-		c1, w1, err := committer.Commit(m1, crand.Reader)
+		c1, w1, err := committer.Commit(m1, pcg.NewRandomised())
 		require.NoError(t, err)
-		c2, w2, err := committer.Commit(m2, crand.Reader)
+		c2, w2, err := committer.Commit(m2, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Scale commitments
@@ -467,11 +467,11 @@ func TestReRandomization(t *testing.T) {
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Initial commitment
-		c1, w1, err := committer.Commit(message, crand.Reader)
+		c1, w1, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Re-randomise
-		c2, r, err := c1.ReRandomise(key, crand.Reader)
+		c2, r, err := c1.ReRandomise(key, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, c2)
 		require.NotNil(t, r)
@@ -494,7 +494,7 @@ func TestReRandomization(t *testing.T) {
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Initial commitment
-		c1, w1, err := committer.Commit(message, crand.Reader)
+		c1, w1, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Create specific re-randomization witness
@@ -516,11 +516,11 @@ func TestReRandomization(t *testing.T) {
 	t.Run("re-randomization errors", func(t *testing.T) {
 		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
-		c, _, err := committer.Commit(message, crand.Reader)
+		c, _, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Nil key
-		_, _, err = c.ReRandomise(nil, crand.Reader)
+		_, _, err = c.ReRandomise(nil, pcg.NewRandomised())
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "key cannot be nil")
 
@@ -547,15 +547,15 @@ func TestReRandomization(t *testing.T) {
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Initial commitment
-		c0, w0, err := committer.Commit(message, crand.Reader)
+		c0, w0, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Re-randomise multiple times
-		c1, r1, err := c0.ReRandomise(key, crand.Reader)
+		c1, r1, err := c0.ReRandomise(key, pcg.NewRandomised())
 		require.NoError(t, err)
-		c2, r2, err := c1.ReRandomise(key, crand.Reader)
+		c2, r2, err := c1.ReRandomise(key, pcg.NewRandomised())
 		require.NoError(t, err)
-		c3, r3, err := c2.ReRandomise(key, crand.Reader)
+		c3, r3, err := c2.ReRandomise(key, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// All commitments should be different
@@ -607,9 +607,9 @@ func TestCommitmentOperations(t *testing.T) {
 		m1 := pedersen.NewMessage(field.FromUint64(10))
 		m2 := pedersen.NewMessage(field.FromUint64(20))
 
-		c1, _, err := committer.Commit(m1, crand.Reader)
+		c1, _, err := committer.Commit(m1, pcg.NewRandomised())
 		require.NoError(t, err)
-		c2, _, err := committer.Commit(m2, crand.Reader)
+		c2, _, err := committer.Commit(m2, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Op (group operation)
@@ -645,7 +645,7 @@ func TestCommitmentOperations(t *testing.T) {
 	t.Run("scalar operation", func(t *testing.T) {
 		t.Parallel()
 		m := pedersen.NewMessage(field.FromUint64(10))
-		c, _, err := committer.Commit(m, crand.Reader)
+		c, _, err := committer.Commit(m, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		scalar := pedersen.NewMessage(field.FromUint64(3))
@@ -701,7 +701,7 @@ func TestEdgeCases(t *testing.T) {
 
 		// Commitment to zero is valid
 		zeroMessage := pedersen.NewMessage(field.Zero())
-		c, w, err := committer.Commit(zeroMessage, crand.Reader)
+		c, w, err := committer.Commit(zeroMessage, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Should verify
@@ -734,7 +734,7 @@ func TestMultipleCurves(t *testing.T) {
 		require.NoError(t, err)
 
 		message := pedersen.NewMessage(field.FromUint64(42))
-		commitment, witness, err := committer.Commit(message, crand.Reader)
+		commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		err = verifier.Verify(commitment, message, witness)
@@ -763,7 +763,7 @@ func TestMultipleCurves(t *testing.T) {
 		require.NoError(t, err)
 
 		message := pedersen.NewMessage(field.FromUint64(42))
-		commitment, witness, err := committer.Commit(message, crand.Reader)
+		commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		err = verifier.Verify(commitment, message, witness)
@@ -792,7 +792,7 @@ func BenchmarkCommit(b *testing.B) {
 
 	b.ResetTimer()
 	for range b.N {
-		_, _, err := committer.Commit(message, crand.Reader)
+		_, _, err := committer.Commit(message, pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -816,7 +816,7 @@ func BenchmarkVerify(b *testing.B) {
 	require.NoError(b, err)
 
 	message := pedersen.NewMessage(field.FromUint64(42))
-	commitment, witness, err := committer.Commit(message, crand.Reader)
+	commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(b, err)
 
 	b.ResetTimer()
@@ -843,12 +843,12 @@ func BenchmarkReRandomise(b *testing.B) {
 	require.NoError(b, err)
 
 	message := pedersen.NewMessage(field.FromUint64(42))
-	commitment, _, err := committer.Commit(message, crand.Reader)
+	commitment, _, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(b, err)
 
 	b.ResetTimer()
 	for range b.N {
-		_, _, err := commitment.ReRandomise(key, crand.Reader)
+		_, _, err := commitment.ReRandomise(key, pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -871,9 +871,9 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 
 	m1 := pedersen.NewMessage(field.FromUint64(10))
 	m2 := pedersen.NewMessage(field.FromUint64(20))
-	c1, _, err := committer.Commit(m1, crand.Reader)
+	c1, _, err := committer.Commit(m1, pcg.NewRandomised())
 	require.NoError(b, err)
-	c2, _, err := committer.Commit(m2, crand.Reader)
+	c2, _, err := committer.Commit(m2, pcg.NewRandomised())
 	require.NoError(b, err)
 
 	b.Run("Add", func(b *testing.B) {

@@ -1,7 +1,6 @@
 package vsot_test
 
 import (
-	crand "crypto/rand"
 	"crypto/sha256"
 	"io"
 	"testing"
@@ -9,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -19,7 +19,7 @@ func Test_HappyPath(t *testing.T) {
 
 	const XI = 128
 	const L = 1
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)

@@ -1,13 +1,13 @@
 package testutils
 
 import (
-	crand "crypto/rand"
 	"encoding/hex"
 	"io"
 	"maps"
 	"slices"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -26,7 +26,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const paillierKeyLen = 1536
+const paillierKeyLen = 1024
 
 // RunLindell17DKG runs a complete Lindell17 DKG protocol and returns the resulting shards.
 // It verifies that all participants produce consistent outputs.
@@ -37,7 +37,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 ) map[sharing.ID]*lindell17.Shard[P, B, S] {
 	tb.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)

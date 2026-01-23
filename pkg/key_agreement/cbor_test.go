@@ -1,13 +1,13 @@
 package key_agreement_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	ka "github.com/bronlabs/bron-crypto/pkg/key_agreement"
 )
 
@@ -16,7 +16,7 @@ func TestPrivateKeyCBOR_P256(t *testing.T) {
 	curve := p256.NewCurve()
 
 	// Generate a random private key
-	sk, err := curve.ScalarField().Random(crand.Reader)
+	sk, err := curve.ScalarField().Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	originalKey, err := ka.NewPrivateKey(sk, "ECSVDP-DHC")
@@ -43,7 +43,7 @@ func TestPrivateKeyCBOR_X25519(t *testing.T) {
 	curve := curve25519.NewPrimeSubGroup()
 
 	// Generate a random private key
-	sk, err := curve.ScalarField().Random(crand.Reader)
+	sk, err := curve.ScalarField().Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	originalKey, err := ka.NewPrivateKey(sk, "X25519")
@@ -70,7 +70,7 @@ func TestPublicKeyCBOR_P256(t *testing.T) {
 	curve := p256.NewCurve()
 
 	// Generate a key pair
-	sk, err := curve.ScalarField().Random(crand.Reader)
+	sk, err := curve.ScalarField().Random(pcg.NewRandomised())
 	require.NoError(t, err)
 	pk := curve.ScalarBaseMul(sk)
 
@@ -98,7 +98,7 @@ func TestPublicKeyCBOR_X25519(t *testing.T) {
 	curve := curve25519.NewPrimeSubGroup()
 
 	// Generate a key pair
-	sk, err := curve.ScalarField().Random(crand.Reader)
+	sk, err := curve.ScalarField().Random(pcg.NewRandomised())
 	require.NoError(t, err)
 	pk := curve.ScalarBaseMul(sk)
 
@@ -239,7 +239,7 @@ func TestPrivateKeyCBOR_RoundTrip(t *testing.T) {
 	curve := p256.NewCurve()
 
 	for range 10 {
-		sk, err := curve.ScalarField().Random(crand.Reader)
+		sk, err := curve.ScalarField().Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		originalKey, err := ka.NewPrivateKey(sk, "ECSVDP-DHC")
@@ -277,7 +277,7 @@ func TestPublicKeyCBOR_RoundTrip(t *testing.T) {
 	curve := curve25519.NewPrimeSubGroup()
 
 	for range 10 {
-		sk, err := curve.ScalarField().Random(crand.Reader)
+		sk, err := curve.ScalarField().Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		pk := curve.ScalarBaseMul(sk)
 
@@ -315,7 +315,7 @@ func TestSharedKeyCBOR_RoundTrip(t *testing.T) {
 	// Test with multiple iterations to ensure consistency
 	for range 10 {
 		keyBytes := make([]byte, 32)
-		_, err := crand.Read(keyBytes)
+		_, err := pcg.NewRandomised().Read(keyBytes)
 		require.NoError(t, err)
 
 		originalKey, err := ka.NewSharedKey(keyBytes, "X25519")

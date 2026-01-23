@@ -1,7 +1,6 @@
 package sigand_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 )
@@ -66,8 +66,8 @@ func testCartesianAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F
 ) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -77,9 +77,9 @@ func testCartesianAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F
 	require.True(tb, ok)
 
 	// Create two valid witnesses - BOTH must be valid for AND composition
-	w0, err := sf.Random(crand.Reader)
+	w0, err := sf.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
-	w1, err := sf.Random(crand.Reader)
+	w1, err := sf.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	x0 := base.ScalarMul(w0)
@@ -101,7 +101,7 @@ func testCartesianAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F
 
 	// Round 2: Verifier challenge
 	challenge := make([]byte, andProtocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// Round 3: Prover response
@@ -118,17 +118,17 @@ func testCartesianAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F
 ) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
 	require.NoError(tb, err)
 
 	// Create random statements (no valid witnesses needed for simulator)
-	x0, err := curve.Random(crand.Reader)
+	x0, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
-	x1, err := curve.Random(crand.Reader)
+	x1, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	statement := sigand.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
@@ -138,7 +138,7 @@ func testCartesianAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F
 
 	// Generate random challenge
 	challenge := make([]byte, andProtocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// Run simulator

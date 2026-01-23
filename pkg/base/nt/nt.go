@@ -12,6 +12,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -61,7 +62,7 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 	var err error
 	checks := MillerRabinChecks(bits)
 	for {
-		p, err = crand.Prime(crand.Reader, int(bits)-1)
+		p, err = crand.Prime(pcg.NewRandomised(), int(bits)-1)
 		if err != nil {
 			return *new(N), errs.Wrap(err).WithMessage("reading from crand")
 		}

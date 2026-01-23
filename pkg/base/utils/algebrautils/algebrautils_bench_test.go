@@ -1,13 +1,13 @@
 package algebrautils_test
 
 import (
-	crand "crypto/rand"
 	"fmt"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
@@ -34,9 +34,9 @@ func BenchmarkMultiScalarMul_K256(b *testing.B) {
 		scalars := make([]*k256.Scalar, n)
 
 		for i := range n {
-			p, _ := curve.Random(crand.Reader)
+			p, _ := curve.Random(pcg.NewRandomised())
 			points[i] = p
-			s, _ := scalarField.Random(crand.Reader)
+			s, _ := scalarField.Random(pcg.NewRandomised())
 			scalars[i] = s
 		}
 
@@ -63,9 +63,9 @@ func BenchmarkMultiScalarMul_Edwards25519(b *testing.B) {
 		scalars := make([]*edwards25519.Scalar, n)
 
 		for i := range n {
-			p, _ := curve.Random(crand.Reader)
+			p, _ := curve.Random(pcg.NewRandomised())
 			points[i] = p
-			s, _ := scalarField.Random(crand.Reader)
+			s, _ := scalarField.Random(pcg.NewRandomised())
 			scalars[i] = s
 		}
 

@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
@@ -29,7 +30,7 @@ func Test_HappyPath(t *testing.T) {
 		t.Skip("Skipping test in short mode")
 	}
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	scheme := paillier.NewScheme()
 	keygen, err := scheme.Keygen()
 	require.NoError(t, err)
@@ -70,7 +71,7 @@ func Test_HappyPath(t *testing.T) {
 func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	scheme := paillier.NewScheme()
 	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillierGroupNLen))
 	require.NoError(t, err)
@@ -112,7 +113,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	scheme := paillier.NewScheme()
 	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillierGroupNLen))
 	require.NoError(t, err)
