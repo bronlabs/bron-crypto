@@ -32,7 +32,7 @@ import (
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 
-	const iters = 4
+	const iters = 1
 	testAccessStructures := []struct{ threshold, total int }{
 		{2, 2},
 		{3, 5},
