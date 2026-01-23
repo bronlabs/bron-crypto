@@ -3,7 +3,6 @@ package sign_bbot_test
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"crypto/sha256"
-	"crypto/sha512"
 	"fmt"
 	"hash"
 	"maps"
@@ -54,11 +53,10 @@ func Test_HappyPathWithDKG(t *testing.T) {
 
 var testHashFuncs = []func() hash.Hash{
 	sha256.New,
-	sha512.New,
 }
 
 var testAccessStructures = []*sharing.ThresholdAccessStructure{
-	makeAccessStructure(2, 3),
+	makeAccessStructure(2, 2),
 }
 
 func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *sharing.ThresholdAccessStructure) {

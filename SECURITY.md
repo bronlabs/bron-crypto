@@ -4,6 +4,8 @@ This library is not designed to be fully side-channel resistant. We build higher
 
 **Important**: This library is intended for use by experienced cryptographers and developers who understand the security implications of the protocols involved. If you are not familiar with the underlying cryptographic primitives, please consult with a cryptography expert before using this library in production.
 
+**Audit**: The threshold signing packages of this library and all their direct and indirect dependencies have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory.
+
 ## Supported Versions
 
 Security updates are applied only to the most recent release. We recommend always using the latest version

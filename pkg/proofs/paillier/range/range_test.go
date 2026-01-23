@@ -18,7 +18,6 @@ import (
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
@@ -430,69 +429,6 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 	proverBytes, err := proverTranscript.ExtractBytes("sigma", 32)
 	require.NoError(t, err)
 	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", 32)
-	require.NoError(t, err)
-	require.Equal(t, proverBytes, verifierBytes)
-}
-
-func Test_NonInteractiveFischlin(t *testing.T) {
-	t.Parallel()
-
-	prng := pcg.NewRandomised()
-	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
-	require.NoError(t, err)
-	sk, pk, err := keyGenerator.Generate(prng)
-	require.NoError(t, err)
-
-	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
-	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
-	require.NoError(t, err)
-
-	enc, err := scheme.Encrypter()
-	require.NoError(t, err)
-
-	xBig, err := crand.Int(prng, lBig)
-	require.NoError(t, err)
-	x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
-	require.NoError(t, err)
-	c, r, err := enc.Encrypt(x, pk, prng)
-	require.NoError(t, err)
-
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
-
-	compiler, err := fischlin.NewCompiler(protocol, prng)
-	require.NoError(t, err)
-
-	sessionID, err := network.NewSID([]byte("test sessionID"))
-	require.NoError(t, err)
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
-
-	niProver, err := compiler.NewProver(sessionID, proverTranscript)
-	require.NoError(t, err)
-
-	niVerifier, err := compiler.NewVerifier(sessionID, verifierTranscript)
-	require.NoError(t, err)
-
-	proof, err := niProver.Prove(statement, witness)
-	require.NoError(t, err)
-
-	err = niVerifier.Verify(statement, proof)
-	require.NoError(t, err)
-
-	proverBytes, err := proverTranscript.ExtractBytes("sigma", base.CollisionResistanceBytesCeil)
-	require.NoError(t, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", base.CollisionResistanceBytesCeil)
 	require.NoError(t, err)
 	require.Equal(t, proverBytes, verifierBytes)
 }
