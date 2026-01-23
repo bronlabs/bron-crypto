@@ -1,12 +1,12 @@
 package paillier_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
@@ -19,7 +19,7 @@ func TestKeyGenerator_Generate(t *testing.T) {
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
 
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, sk)
 	require.NotNil(t, pk)
@@ -34,7 +34,7 @@ func TestKeyGenerator_WithKeyLength(t *testing.T) {
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, sk)
 	require.NotNil(t, pk)
@@ -47,7 +47,7 @@ func TestKeyGenerator_KeysMatch(t *testing.T) {
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// The public key derived from private key should match
@@ -62,14 +62,14 @@ func TestEncrypter_Encrypt(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	_, pk, err := kg.Generate(crand.Reader)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
 	pt := pk.PlaintextSpace().Zero()
-	ct, nonce, err := enc.Encrypt(pt, pk, crand.Reader)
+	ct, nonce, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, ct)
 	require.NotNil(t, nonce)
@@ -81,14 +81,14 @@ func TestEncrypter_EncryptWithNonce_Deterministic(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	_, pk, err := kg.Generate(crand.Reader)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
 	pt := pk.PlaintextSpace().Zero()
-	nonce, err := pk.NonceSpace().Sample(crand.Reader)
+	nonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	ct1, err := enc.EncryptWithNonce(pt, pk, nonce)
@@ -105,7 +105,7 @@ func TestEncrypter_EncryptMany(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -121,7 +121,7 @@ func TestEncrypter_EncryptMany(t *testing.T) {
 		plaintexts[i] = pt
 	}
 
-	cts, nonces, err := enc.EncryptMany(plaintexts, pk, crand.Reader)
+	cts, nonces, err := enc.EncryptMany(plaintexts, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.Len(t, cts, len(plaintexts))
 	require.Len(t, nonces, len(plaintexts))
@@ -142,7 +142,7 @@ func TestEncrypter_EncryptManyWithNonces(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	_, pk, err := kg.Generate(crand.Reader)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -153,7 +153,7 @@ func TestEncrypter_EncryptManyWithNonces(t *testing.T) {
 	nonces := make([]*paillier.Nonce, 3)
 	for i := range plaintexts {
 		plaintexts[i] = ps.Zero()
-		nonces[i], err = pk.NonceSpace().Sample(crand.Reader)
+		nonces[i], err = pk.NonceSpace().Sample(pcg.NewRandomised())
 		require.NoError(t, err)
 	}
 
@@ -176,14 +176,14 @@ func TestSelfEncrypter_SelfEncrypt(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, _, err := kg.Generate(crand.Reader)
+	sk, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	se, err := scheme.SelfEncrypter(sk)
 	require.NoError(t, err)
 
 	pt := sk.PublicKey().PlaintextSpace().Zero()
-	ct, nonce, err := se.SelfEncrypt(pt, crand.Reader)
+	ct, nonce, err := se.SelfEncrypt(pt, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, ct)
 	require.NotNil(t, nonce)
@@ -195,7 +195,7 @@ func TestSelfEncrypter_MatchesRegularEncrypt(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	se, err := scheme.SelfEncrypter(sk)
@@ -210,7 +210,7 @@ func TestSelfEncrypter_MatchesRegularEncrypt(t *testing.T) {
 	require.NoError(t, err)
 
 	// Self-encrypt
-	ctSelf, nonce, err := se.SelfEncrypt(pt, crand.Reader)
+	ctSelf, nonce, err := se.SelfEncrypt(pt, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Regular encrypt with same nonce
@@ -227,14 +227,14 @@ func TestSelfEncrypter_SelfEncryptWithNonce(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, _, err := kg.Generate(crand.Reader)
+	sk, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	se, err := scheme.SelfEncrypter(sk)
 	require.NoError(t, err)
 
 	pt := sk.PublicKey().PlaintextSpace().Zero()
-	nonce, err := sk.PublicKey().NonceSpace().Sample(crand.Reader)
+	nonce, err := sk.PublicKey().NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	ct1, err := se.SelfEncryptWithNonce(pt, nonce)
@@ -251,7 +251,7 @@ func TestSelfEncrypter_SelfEncryptMany(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, _, err := kg.Generate(crand.Reader)
+	sk, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	se, err := scheme.SelfEncrypter(sk)
@@ -267,7 +267,7 @@ func TestSelfEncrypter_SelfEncryptMany(t *testing.T) {
 		plaintexts[i] = pt
 	}
 
-	cts, nonces, err := se.SelfEncryptMany(plaintexts, crand.Reader)
+	cts, nonces, err := se.SelfEncryptMany(plaintexts, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.Len(t, cts, len(plaintexts))
 	require.Len(t, nonces, len(plaintexts))
@@ -288,7 +288,7 @@ func TestSelfEncrypter_PrivateKey(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, _, err := kg.Generate(crand.Reader)
+	sk, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	se, err := scheme.SelfEncrypter(sk)
@@ -313,7 +313,7 @@ func TestDecrypter_Decrypt(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -327,7 +327,7 @@ func TestDecrypter_Decrypt(t *testing.T) {
 	pt, err := ps.FromInt(&n)
 	require.NoError(t, err)
 
-	ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+	ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	decrypted, err := dec.Decrypt(ct)
@@ -349,7 +349,7 @@ func TestDecrypter_RoundTrip_RandomPlaintexts(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -360,10 +360,10 @@ func TestDecrypter_RoundTrip_RandomPlaintexts(t *testing.T) {
 	ps := pk.PlaintextSpace()
 
 	for i := range 10 {
-		pt, err := ps.Sample(nil, nil, crand.Reader)
+		pt, err := ps.Sample(nil, nil, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		decrypted, err := dec.Decrypt(ct)
@@ -379,7 +379,7 @@ func TestDecrypter_RoundTrip_NegativePlaintexts(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -397,7 +397,7 @@ func TestDecrypter_RoundTrip_NegativePlaintexts(t *testing.T) {
 		pt, err := ps.FromInt(&n)
 		require.NoError(t, err)
 
-		ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+		ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		decrypted, err := dec.Decrypt(ct)
@@ -413,7 +413,7 @@ func TestDecrypter_RoundTrip_Zero(t *testing.T) {
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
+	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -423,7 +423,7 @@ func TestDecrypter_RoundTrip_Zero(t *testing.T) {
 
 	pt := pk.PlaintextSpace().Zero()
 
-	ct, _, err := enc.Encrypt(pt, pk, crand.Reader)
+	ct, _, err := enc.Encrypt(pt, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	decrypted, err := dec.Decrypt(ct)

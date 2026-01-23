@@ -1,13 +1,13 @@
 package ecbbot_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ecbbottestutils "github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -17,7 +17,7 @@ func Test_HappyPathRandomOT(t *testing.T) {
 	t.Parallel()
 	const CHI = 128
 	const L = 1
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
@@ -38,10 +38,10 @@ func Test_HappyPathRandomOT(t *testing.T) {
 //	require.NoError(b, err)
 //	senderKey, receiverKey := authKeys[0], authKeys[1]
 //	uniqueSessionID := [32]byte{}
-//	_, err = crand.Read(uniqueSessionID[:])
+//	_, err = pcg.NewRandomised().Read(uniqueSessionID[:])
 //	require.NoError(b, err)
 //	for _, curve := range curveInstances {
-//		_, _, err := ecbbottestutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionID[:], crand.Reader)
+//		_, _, err := ecbbottestutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionID[:], pcg.NewRandomised())
 //		require.NoError(b, err)
 //	}
 //}

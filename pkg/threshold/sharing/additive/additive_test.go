@@ -2,7 +2,6 @@ package additive_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"io"
 	mrand "math/rand/v2"
 	"testing"
@@ -27,7 +26,7 @@ func TestSanity(t *testing.T) {
 	require.NoError(t, err, "could not create scheme")
 
 	secret := additive.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err, "could not create shares")
 	require.Equal(t, int(total), shares.Shares().Size(), "number of shares should match total")
 
@@ -48,7 +47,7 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 	zeroSecret := additive.NewSecret(field.OpIdentity())
 	oneSecret := additive.NewSecret(field.One())
 	fortyTwoSecret := additive.NewSecret(field.FromUint64(42))
-	randomValue, err := field.Random(crand.Reader)
+	randomValue, err := field.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 	randomSecret := additive.NewSecret(randomValue)
 
@@ -66,35 +65,35 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 		{
 			name:         "valid secret with constant 42",
 			secret:       fortyTwoSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 1",
 			secret:       oneSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with value 0",
 			secret:       zeroSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:         "valid secret with random value",
 			secret:       randomSecret,
-			prng:         crand.Reader,
+			prng:         pcg.NewRandomised(),
 			expectError:  false,
 			verifyShares: true,
 		},
 		{
 			name:        "nil secret",
 			secret:      nil,
-			prng:        crand.Reader,
+			prng:        pcg.NewRandomised(),
 			expectError: true,
 			errorIs:     additive.ErrIsNil,
 		},
@@ -184,14 +183,14 @@ func dealRandomCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.
 	}{
 		{
 			name:             "valid random generation",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       1,
 		},
 		{
 			name:             "multiple random generations",
-			prng:             crand.Reader,
+			prng:             pcg.NewRandomised(),
 			expectError:      false,
 			verifyUniqueness: true,
 			iterations:       5,
@@ -289,7 +288,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 
 	// Deal shares for testing
 	secret := additive.NewSecret(field.FromUint64(100))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	allShares := shares.Shares().Values()
@@ -409,9 +408,9 @@ func homomorphicOpsCases[E additive.GroupElement[E]](t *testing.T, scheme *addit
 	secret1 := additive.NewSecret(field.FromUint64(10))
 	secret2 := additive.NewSecret(field.FromUint64(20))
 
-	shares1, err := scheme.Deal(secret1, crand.Reader)
+	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
 	require.NoError(t, err)
-	shares2, err := scheme.Deal(secret2, crand.Reader)
+	shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	t.Run("add shares", func(t *testing.T) {
@@ -492,7 +491,7 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 
 	// Create a valid share for testing
 	secret := additive.NewSecret(field.FromUint64(50))
-	shares, err := scheme.Deal(secret, crand.Reader)
+	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 	validShare, _ := shares.Shares().Get(1)
 
@@ -847,7 +846,7 @@ func BenchmarkDeal(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, err := scheme.Deal(secret, crand.Reader)
+				_, err := scheme.Deal(secret, pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -878,7 +877,7 @@ func BenchmarkDealRandom(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, _, err := scheme.DealRandom(crand.Reader)
+				_, _, err := scheme.DealRandom(pcg.NewRandomised())
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -908,7 +907,7 @@ func BenchmarkReconstruct(b *testing.B) {
 			require.NoError(b, err)
 
 			secret := additive.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, crand.Reader)
+			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 			shareSlice := shares.Shares().Values()
 

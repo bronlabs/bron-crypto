@@ -1,7 +1,6 @@
 package hjky_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"maps"
 	"slices"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -25,7 +25,7 @@ func Test_HappyPath(t *testing.T) {
 
 	as, err := sharing.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
 	require.NoError(t, err)
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err = io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)

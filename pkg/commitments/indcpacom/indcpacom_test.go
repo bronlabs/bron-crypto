@@ -1,12 +1,12 @@
 package indcpacom_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
@@ -24,7 +24,7 @@ func TestBasicCommitmentAndVerification(t *testing.T) {
 	// Commit to the message
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
-	commitment, witness, err := committer.Commit(message, crand.Reader)
+	commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, commitment)
 	require.NotNil(t, witness)
@@ -47,7 +47,7 @@ func TestCommitWithWitness(t *testing.T) {
 	require.NoError(t, err)
 
 	// Sample a nonce and create a witness directly
-	nonce, err := pk.NonceSpace().Sample(crand.Reader)
+	nonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	witness, err := indcpacom.NewWitness(nonce)
 	require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestVerificationFailsWithWrongMessage(t *testing.T) {
 	// Commit to the first message
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
-	commitment, witness, err := committer.Commit(message1, crand.Reader)
+	commitment, witness, err := committer.Commit(message1, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Verification should fail with wrong message
@@ -111,9 +111,9 @@ func TestVerificationFailsWithWrongWitness(t *testing.T) {
 	// Commit to the message twice with different witnesses
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
-	commitment1, witness1, err := committer.Commit(message, crand.Reader)
+	commitment1, witness1, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
-	_, witness2, err := committer.Commit(message, crand.Reader)
+	_, witness2, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Verification should fail with wrong witness
@@ -141,11 +141,11 @@ func TestReRandomization(t *testing.T) {
 
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
-	commitment1, witness1, err := committer.Commit(message, crand.Reader)
+	commitment1, witness1, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Re-randomise the commitment
-	commitment2, rerandWitness, err := commitment1.ReRandomise(key, crand.Reader)
+	commitment2, rerandWitness, err := commitment1.ReRandomise(key, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, commitment2)
 	require.NotNil(t, rerandWitness)
@@ -179,11 +179,11 @@ func TestReRandomizationWithWitness(t *testing.T) {
 
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
-	commitment1, _, err := committer.Commit(message, crand.Reader)
+	commitment1, _, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Sample a specific nonce for re-randomization and create witness directly
-	rerandNonce, err := pk.NonceSpace().Sample(crand.Reader)
+	rerandNonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	rerandWitness, err := indcpacom.NewWitness(rerandNonce)
 	require.NoError(t, err)
@@ -213,15 +213,15 @@ func TestMultipleReRandomizations(t *testing.T) {
 
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
-	commitment0, witness0, err := committer.Commit(message, crand.Reader)
+	commitment0, witness0, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Re-randomise multiple times, tracking witnesses
-	commitment1, rerandWitness1, err := commitment0.ReRandomise(key, crand.Reader)
+	commitment1, rerandWitness1, err := commitment0.ReRandomise(key, pcg.NewRandomised())
 	require.NoError(t, err)
-	commitment2, rerandWitness2, err := commitment1.ReRandomise(key, crand.Reader)
+	commitment2, rerandWitness2, err := commitment1.ReRandomise(key, pcg.NewRandomised())
 	require.NoError(t, err)
-	commitment3, rerandWitness3, err := commitment2.ReRandomise(key, crand.Reader)
+	commitment3, rerandWitness3, err := commitment2.ReRandomise(key, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// All commitments should be different
@@ -268,7 +268,7 @@ func TestNilInputErrors(t *testing.T) {
 
 	t.Run("commit with nil message", func(t *testing.T) {
 		t.Parallel()
-		_, _, err := committer.Commit(nil, crand.Reader)
+		_, _, err := committer.Commit(nil, pcg.NewRandomised())
 		require.Error(t, err)
 	})
 
@@ -280,7 +280,7 @@ func TestNilInputErrors(t *testing.T) {
 
 	t.Run("commit with witness nil message", func(t *testing.T) {
 		t.Parallel()
-		_, witness, err := committer.Commit(message, crand.Reader)
+		_, witness, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 		_, err = committer.CommitWithWitness(nil, witness)
 		require.Error(t, err)
@@ -324,12 +324,12 @@ func TestReRandomizeNilInputErrors(t *testing.T) {
 
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
-	commitment, witness, err := committer.Commit(message, crand.Reader)
+	commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	t.Run("re-randomise with nil key", func(t *testing.T) {
 		t.Parallel()
-		_, _, err := commitment.ReRandomise(nil, crand.Reader)
+		_, _, err := commitment.ReRandomise(nil, pcg.NewRandomised())
 		require.Error(t, err)
 	})
 
@@ -374,7 +374,7 @@ func TestCommitmentEquality(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get a commitment and its witness
-	commitment1, witness1, err := committer.Commit(message, crand.Reader)
+	commitment1, witness1, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Same commitment should be equal to itself
@@ -386,7 +386,7 @@ func TestCommitmentEquality(t *testing.T) {
 	require.True(t, commitment1.Equal(commitment2))
 
 	// Different commitment should not be equal
-	commitment3, _, err := committer.Commit(message, crand.Reader)
+	commitment3, _, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, commitment1.Equal(commitment3))
 }
@@ -403,7 +403,7 @@ func TestCommitmentValue(t *testing.T) {
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
 
-	commitment, _, err := committer.Commit(message, crand.Reader)
+	commitment, _, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Value() should return the underlying ciphertext
@@ -445,7 +445,7 @@ func TestWitnessValue(t *testing.T) {
 	_, pk := setupScheme(t)
 
 	// Sample a nonce and create a witness
-	nonce, err := pk.NonceSpace().Sample(crand.Reader)
+	nonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	witness, err := indcpacom.NewWitness(nonce)
 	require.NoError(t, err)
@@ -462,12 +462,12 @@ func TestWitnessOp(t *testing.T) {
 	_, pk := setupScheme(t)
 
 	// Sample two nonces and create witnesses
-	nonce1, err := pk.NonceSpace().Sample(crand.Reader)
+	nonce1, err := pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	witness1, err := indcpacom.NewWitness(nonce1)
 	require.NoError(t, err)
 
-	nonce2, err := pk.NonceSpace().Sample(crand.Reader)
+	nonce2, err := pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(t, err)
 	witness2, err := indcpacom.NewWitness(nonce2)
 	require.NoError(t, err)
@@ -494,7 +494,7 @@ func setupScheme(tb testing.TB) (
 	tb.Helper()
 
 	paillierScheme := paillier.NewScheme()
-	_, pk := sampleKeys(tb, crand.Reader)
+	_, pk := sampleKeys(tb, pcg.NewRandomised())
 
 	key, err := indcpacom.NewKey(pk)
 	require.NoError(tb, err)
@@ -518,7 +518,7 @@ func sampleKeys(tb testing.TB, prng io.Reader) (*paillier.PrivateKey, *paillier.
 func sampleMessage(tb testing.TB, pk *paillier.PublicKey) *paillier.Plaintext {
 	tb.Helper()
 	pts := pk.PlaintextSpace()
-	pt, err := pts.Sample(nil, nil, crand.Reader)
+	pt, err := pts.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(tb, err)
 	return pt
 }

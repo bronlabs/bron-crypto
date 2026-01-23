@@ -1,7 +1,6 @@
 package impl_test
 
 import (
-	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"io"
@@ -13,6 +12,7 @@ import (
 	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields/testutils"
 	pointsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points/testutils"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 
 	_ "embed"
 )
@@ -96,7 +96,7 @@ func TestMultiPairing(t *testing.T) {
 		g2s[i] = new(bls12381Impl.G2Point)
 		g2s[i].SetGenerator()
 		sc[i] = make([]byte, 32)
-		_, err := io.ReadFull(crand.Reader, sc[i])
+		_, err := io.ReadFull(pcg.NewRandomised(), sc[i])
 		require.NoError(t, err)
 
 		if i&1 == 0 {

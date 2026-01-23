@@ -3,7 +3,6 @@ package signing_test
 import (
 	"bytes"
 	"crypto"
-	crand "crypto/rand"
 	"fmt"
 	"io"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
@@ -62,7 +62,7 @@ func TestHappyPath(t *testing.T) {
 func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, total int, suite *ecdsa.Suite[P, B, S]) {
 	t.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	shareholders := []sharing.ID{}
 	for i := sharing.ID(1); i <= sharing.ID(total); i++ {
 		shareholders = append(shareholders, i)

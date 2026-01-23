@@ -9,11 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func Benchmark_GCD(b *testing.B) {
 	const bits = 4096
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	boundBig := new(big.Int)
 	boundBig.SetBit(boundBig, bits, 1)

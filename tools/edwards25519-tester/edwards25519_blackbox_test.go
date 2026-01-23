@@ -1,9 +1,9 @@
 package edwards25519_tester_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	filippo "filippo.io/edwards25519"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
@@ -14,10 +14,10 @@ func Test_PointAdd(t *testing.T) {
 	t.Parallel()
 
 	for range 1 << 20 {
-		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointA, primitivesPointA)
 
-		filippoPointB, primitivesPointB := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointB, primitivesPointB := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointB, primitivesPointB)
 
 		filippoPointC := new(filippo.Point).Add(filippoPointA, filippoPointB)
@@ -31,10 +31,10 @@ func Test_PointSub(t *testing.T) {
 	t.Parallel()
 
 	for range 1 << 20 {
-		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointA, primitivesPointA)
 
-		filippoPointB, primitivesPointB := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointB, primitivesPointB := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointB, primitivesPointB)
 
 		filippoPointC := new(filippo.Point).Subtract(filippoPointA, filippoPointB)
@@ -48,7 +48,7 @@ func Test_PointNeg(t *testing.T) {
 	t.Parallel()
 
 	for range 1 << 21 {
-		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointA, primitivesPointA)
 
 		filippoPointC := new(filippo.Point).Negate(filippoPointA)
@@ -62,7 +62,7 @@ func Test_PointDouble(t *testing.T) {
 	t.Parallel()
 
 	for range 1 << 21 {
-		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointA, primitivesPointA)
 
 		filippoPointC := new(filippo.Point).Add(filippoPointA, filippoPointA)
@@ -76,7 +76,7 @@ func Test_PointClearCofactor(t *testing.T) {
 	t.Parallel()
 
 	for range 1 << 21 {
-		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointA, primitivesPointA)
 
 		filippoPointC := new(filippo.Point).MultByCofactor(filippoPointA)
@@ -90,7 +90,7 @@ func Test_PointScalarBaseMul(t *testing.T) {
 	t.Parallel()
 
 	for range 1 << 20 {
-		filippoScalar, primitivesScalar := edwards25519Tester.GenerateRandomScalars(t, crand.Reader)
+		filippoScalar, primitivesScalar := edwards25519Tester.GenerateRandomScalars(t, pcg.NewRandomised())
 		edwards25519Tester.RequireScalarsEqual(t, filippoScalar, primitivesScalar)
 
 		filippoPointC := new(filippo.Point).ScalarBaseMult(filippoScalar)
@@ -106,10 +106,10 @@ func Test_PointScalarMul(t *testing.T) {
 	t.Parallel()
 
 	for range 1 << 18 {
-		filippoScalar, primitivesScalar := edwards25519Tester.GenerateRandomScalars(t, crand.Reader)
+		filippoScalar, primitivesScalar := edwards25519Tester.GenerateRandomScalars(t, pcg.NewRandomised())
 		edwards25519Tester.RequireScalarsEqual(t, filippoScalar, primitivesScalar)
 
-		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, crand.Reader)
+		filippoPointA, primitivesPointA := edwards25519Tester.GenerateRandomPoints(t, pcg.NewRandomised())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointA, primitivesPointA)
 
 		filippoPointC := new(filippo.Point).ScalarMult(filippoScalar, filippoPointA)

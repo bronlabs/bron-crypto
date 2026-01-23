@@ -1,7 +1,6 @@
 package k256_test
 
 import (
-	crand "crypto/rand"
 	"fmt"
 	"testing"
 
@@ -9,12 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := k256.NewBaseField().Random(prng)
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 
 func Test_ScalarCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := k256.NewScalarField().Random(prng)
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func Test_ScalarCBORRoundTrip(t *testing.T) {
 
 func Test_PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := k256.NewCurve().Random(prng)
 	require.NoError(t, err)
@@ -85,9 +85,9 @@ func TestMultiScalarMul(t *testing.T) {
 
 	t.Run("all zero scalars returns identity", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		zero := scalarField.Zero()
@@ -102,11 +102,11 @@ func TestMultiScalarMul(t *testing.T) {
 
 	t.Run("all one scalars returns sum of points", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p3, err := curve.Random(crand.Reader)
+		p3, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		one := scalarField.One()
@@ -138,11 +138,11 @@ func TestMultiScalarMul(t *testing.T) {
 
 	t.Run("mixed zero and non-zero scalars", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p3, err := curve.Random(crand.Reader)
+		p3, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		zero := scalarField.Zero()
@@ -160,7 +160,7 @@ func TestMultiScalarMul(t *testing.T) {
 	t.Run("identity point in input", func(t *testing.T) {
 		t.Parallel()
 		identity := curve.OpIdentity()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		two := scalarField.FromUint64(2)
@@ -182,11 +182,11 @@ func TestMultiScalarMul(t *testing.T) {
 		scalars := make([]*k256.Scalar, n)
 
 		for i := range n {
-			p, err := curve.Random(crand.Reader)
+			p, err := curve.Random(pcg.NewRandomised())
 			require.NoError(t, err)
 			points[i] = p
 
-			s, err := scalarField.Random(crand.Reader)
+			s, err := scalarField.Random(pcg.NewRandomised())
 			require.NoError(t, err)
 			scalars[i] = s
 		}
@@ -200,9 +200,9 @@ func TestMultiScalarMul(t *testing.T) {
 
 	t.Run("consistency - same inputs same output", func(t *testing.T) {
 		t.Parallel()
-		p1, err := curve.Random(crand.Reader)
+		p1, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
-		p2, err := curve.Random(crand.Reader)
+		p2, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		s1 := scalarField.FromUint64(12345)
@@ -230,9 +230,9 @@ func BenchmarkMultiScalarMul(b *testing.B) {
 		scalars := make([]*k256.Scalar, n)
 
 		for i := range n {
-			p, _ := curve.Random(crand.Reader)
+			p, _ := curve.Random(pcg.NewRandomised())
 			points[i] = p
-			s, _ := scalarField.Random(crand.Reader)
+			s, _ := scalarField.Random(pcg.NewRandomised())
 			scalars[i] = s
 		}
 

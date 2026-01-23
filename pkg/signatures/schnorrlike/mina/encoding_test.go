@@ -1,12 +1,12 @@
 package mina_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/mina"
 )
 
@@ -66,12 +66,12 @@ func TestDecodePublicKey(t *testing.T) {
 	t.Run("round trip", func(t *testing.T) {
 		t.Parallel()
 		// Generate a new key pair
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		_, publicKey, err := kg.Generate(crand.Reader)
+		_, publicKey, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Encode
@@ -138,12 +138,12 @@ func TestDecodePrivateKey(t *testing.T) {
 	t.Run("round trip", func(t *testing.T) {
 		t.Parallel()
 		// Generate a new key pair
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, _, err := kg.Generate(crand.Reader)
+		privateKey, _, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Encode
@@ -171,12 +171,12 @@ func TestEncodeSignature(t *testing.T) {
 
 	t.Run("valid signature", func(t *testing.T) {
 		t.Parallel()
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, _, err := kg.Generate(crand.Reader)
+		privateKey, _, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)
@@ -214,12 +214,12 @@ func TestDecodeSignature(t *testing.T) {
 
 	t.Run("round trip", func(t *testing.T) {
 		t.Parallel()
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, publicKey, err := kg.Generate(crand.Reader)
+		privateKey, publicKey, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)

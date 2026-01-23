@@ -2,7 +2,6 @@ package signing_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha3"
 	"io"
@@ -934,7 +933,7 @@ func TestLindell22EdgeCases(t *testing.T) {
 	}
 
 	// Fill large message with random data
-	crand.Read(testCases[4].message)
+	pcg.NewRandomised().Read(testCases[4].message)
 
 	t.Run("BIP340", func(t *testing.T) {
 		t.Parallel()

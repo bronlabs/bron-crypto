@@ -1,7 +1,6 @@
 package batch_schnorr_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 )
@@ -111,12 +111,12 @@ func Test_Simulator(t *testing.T) {
 func testHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[G, S]) {
 	tb.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	k, err := mathutils.RandomUint64(prng)
 	require.NoError(tb, err)
 	k = k%128 + 2
 
-	generator, err := group.Random(crand.Reader)
+	generator, err := group.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := batch_schnorr.NewProtocol(int(k), group, prng)
@@ -127,7 +127,7 @@ func testHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 
 	ws := make([]S, k)
 	for i := range k {
-		ws[i], err = sf.Random(crand.Reader)
+		ws[i], err = sf.Random(pcg.NewRandomised())
 		require.NoError(tb, err)
 	}
 	xs := make([]G, k)
@@ -144,7 +144,7 @@ func testHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 
 	// round 2
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// round 3
@@ -159,15 +159,15 @@ func testHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 func testSimulator[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[G, S]) {
 	tb.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	k, err := mathutils.RandomUint64(prng)
 	require.NoError(tb, err)
 	k = k%128 + 2
 
-	generator, err := group.Random(crand.Reader)
+	generator, err := group.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
-	protocol, err := batch_schnorr.NewProtocol(int(k), group, crand.Reader)
+	protocol, err := batch_schnorr.NewProtocol(int(k), group, pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	xs := make([]G, k)
@@ -179,7 +179,7 @@ func testSimulator[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 
 	// simulate
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 	commitment, response, err := protocol.RunSimulator(statement, challenge)
 	require.NoError(tb, err)

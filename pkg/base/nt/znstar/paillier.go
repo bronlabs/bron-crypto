@@ -147,7 +147,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 		return nil, errs.Wrap(err).WithMessage("failed to lift rsaUnit to Paillier group")
 	}
 	lift, ok := any(g.arith).(interface {
-		ExpToN(out, base *numct.Nat) //nolint:revive // base shadows an import but here it's clearer.
+		ExpToN(out, base *numct.Nat)
 	})
 	if !ok {
 		return pu.Exp(g.n.Nat()), nil

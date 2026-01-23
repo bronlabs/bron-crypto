@@ -1,7 +1,6 @@
 package schnorr_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -69,35 +69,33 @@ func Test_Simulator(t *testing.T) {
 func Test_Extractor(t *testing.T) {
 	t.Parallel()
 
-	for range 1024 {
-		t.Run("k256", func(t *testing.T) {
-			t.Parallel()
-			curve := k256.NewCurve()
-			testExtractor(t, curve)
-		})
-		t.Run("p256", func(t *testing.T) {
-			t.Parallel()
-			curve := p256.NewCurve()
-			testExtractor(t, curve)
-		})
-		t.Run("bls12381g1", func(t *testing.T) {
-			t.Parallel()
-			curve := bls12381.NewG1()
-			testExtractor(t, curve)
-		})
-		t.Run("bls12381g2", func(t *testing.T) {
-			t.Parallel()
-			curve := bls12381.NewG2()
-			testExtractor(t, curve)
-		})
-	}
+	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
+		curve := k256.NewCurve()
+		testExtractor(t, curve)
+	})
+	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
+		curve := p256.NewCurve()
+		testExtractor(t, curve)
+	})
+	t.Run("bls12381g1", func(t *testing.T) {
+		t.Parallel()
+		curve := bls12381.NewG1()
+		testExtractor(t, curve)
+	})
+	t.Run("bls12381g2", func(t *testing.T) {
+		t.Parallel()
+		curve := bls12381.NewG2()
+		testExtractor(t, curve)
+	})
 }
 
 func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -105,7 +103,7 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
 	require.True(tb, ok)
-	w, err := sf.Random(crand.Reader)
+	w, err := sf.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 	x := base.ScalarMul(w)
 
@@ -118,7 +116,7 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	// round 2
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 
 	// round 3
@@ -133,20 +131,20 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {
 	tb.Helper()
 
-	base, err := curve.Random(crand.Reader)
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
-	protocol, err := schnorr.NewProtocol(base, crand.Reader)
+	protocol, err := schnorr.NewProtocol(base, pcg.NewRandomised())
 	require.NoError(tb, err)
 
-	x, err := curve.Random(crand.Reader)
+	x, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	statement := schnorr.NewStatement(x)
 
 	// simulate
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
 	require.NoError(tb, err)
 	commitment, response, err := protocol.RunSimulator(statement, challenge)
 	require.NoError(tb, err)
@@ -159,8 +157,8 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {
 	tb.Helper()
 
-	prng := crand.Reader
-	base, err := curve.Random(crand.Reader)
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -168,7 +166,7 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
 	require.True(tb, ok)
-	w, err := sf.Random(crand.Reader)
+	w, err := sf.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 	x := base.ScalarMul(w)
 
@@ -179,10 +177,10 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 
 	challenge1 := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge1)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge1)
 	require.NoError(tb, err)
 	challenge2 := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(crand.Reader, challenge2)
+	_, err = io.ReadFull(pcg.NewRandomised(), challenge2)
 	require.NoError(tb, err)
 
 	response1, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge1)

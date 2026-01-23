@@ -1,25 +1,25 @@
 package paillier_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
 func Test_Sanity(t *testing.T) {
 	t.Parallel()
-	sk, pk := sampleKeys(t, crand.Reader)
+	sk, pk := sampleKeys(t, pcg.NewRandomised())
 	plaintext := sampleMessage(t, pk)
 
 	scheme := paillier.NewScheme()
 
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
-	ciphertext, nonce, err := enc.Encrypt(plaintext, pk, crand.Reader)
+	ciphertext, nonce, err := enc.Encrypt(plaintext, pk, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, nonce)
 
@@ -32,9 +32,9 @@ func Test_Sanity(t *testing.T) {
 }
 
 func Benchmark_Encrypt4k(b *testing.B) {
-	_, pk := sampleKeys(b, crand.Reader)
+	_, pk := sampleKeys(b, pcg.NewRandomised())
 	plaintext := sampleMessage(b, pk)
-	nonce, err := pk.NonceSpace().Sample(crand.Reader)
+	nonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(b, err)
 	scheme := paillier.NewScheme()
 	enc, err := scheme.Encrypter()
@@ -48,9 +48,9 @@ func Benchmark_Encrypt4k(b *testing.B) {
 }
 
 func Benchmark_EncryptWithSecret(b *testing.B) {
-	sk, _ := sampleKeys(b, crand.Reader)
+	sk, _ := sampleKeys(b, pcg.NewRandomised())
 	plaintext := sampleMessage(b, sk.PublicKey())
-	nonce, err := sk.PublicKey().NonceSpace().Sample(crand.Reader)
+	nonce, err := sk.PublicKey().NonceSpace().Sample(pcg.NewRandomised())
 	require.NoError(b, err)
 	scheme := paillier.NewScheme()
 	enc, err := scheme.SelfEncrypter(sk)
@@ -64,8 +64,8 @@ func Benchmark_EncryptWithSecret(b *testing.B) {
 }
 
 func Benchmark_Decrypt4k(b *testing.B) {
-	sk, pk := sampleKeys(b, crand.Reader)
-	ciphertext, err := pk.CiphertextSpace().Sample(crand.Reader)
+	sk, pk := sampleKeys(b, pcg.NewRandomised())
+	ciphertext, err := pk.CiphertextSpace().Sample(pcg.NewRandomised())
 	require.NoError(b, err)
 	scheme := paillier.NewScheme()
 	dec, err := scheme.Decrypter(sk)
@@ -90,7 +90,7 @@ func sampleKeys(tb testing.TB, prng io.Reader) (*paillier.PrivateKey, *paillier.
 func sampleMessage(tb testing.TB, pk *paillier.PublicKey) *paillier.Plaintext {
 	tb.Helper()
 	pts := pk.PlaintextSpace()
-	pt, err := pts.Sample(nil, nil, crand.Reader)
+	pt, err := pts.Sample(nil, nil, pcg.NewRandomised())
 	require.NoError(tb, err)
 	return pt
 }

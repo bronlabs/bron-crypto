@@ -1,18 +1,18 @@
 package bls12381_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func Test_G1BaseFieldElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := bls12381.NewG1BaseField().Random(prng)
 	require.NoError(t, err)
@@ -26,7 +26,7 @@ func Test_G1BaseFieldElementCBORRoundTrip(t *testing.T) {
 
 func Test_ScalarCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := bls12381.NewScalarField().Random(prng)
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func Test_ScalarCBORRoundTrip(t *testing.T) {
 
 func Test_G1PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := bls12381.NewG1().Random(prng)
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func Test_G1PointCBORRoundTrip(t *testing.T) {
 
 func Test_G2BaseFieldElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := bls12381.NewG2BaseField().Random(prng)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func Test_G2BaseFieldElementCBORRoundTrip(t *testing.T) {
 
 func Test_G2PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	e, err := bls12381.NewG2().Random(prng)
 	require.NoError(t, err)

@@ -2,7 +2,6 @@ package testutils
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"encoding/hex"
 	"hash"
 	"io"
@@ -13,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -28,7 +28,7 @@ import (
 func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, shards map[sharing.ID]*dkls23.Shard[P, B, S], quorum ds.Set[sharing.ID], message []byte, hashFunc func() hash.Hash) *ecdsa.Signature[S] {
 	tb.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)

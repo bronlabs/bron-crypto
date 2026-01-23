@@ -2,11 +2,12 @@ package mina //nolint:testpackage // to test unexported identifiers
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func TestNewDeterministicVariant(t *testing.T) {
@@ -45,7 +46,7 @@ func TestNewRandomisedVariant(t *testing.T) {
 
 	t.Run("valid prng", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewRandomisedVariant(TestNet, crand.Reader)
+		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.False(t, v.IsDeterministic())
@@ -212,7 +213,7 @@ func TestComputeNonceCommitment(t *testing.T) {
 
 	t.Run("randomised mode", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewRandomisedVariant(TestNet, crand.Reader)
+		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		R, k, err := v.ComputeNonceCommitment()
@@ -328,7 +329,7 @@ func TestSerializeSignature(t *testing.T) {
 
 	t.Run("nil signature via variant method", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewRandomisedVariant(TestNet, crand.Reader)
+		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		data, err := v.SerializeSignature(nil)
@@ -338,12 +339,12 @@ func TestSerializeSignature(t *testing.T) {
 
 	t.Run("valid signature via variant method", func(t *testing.T) {
 		t.Parallel()
-		scheme, err := NewRandomisedScheme(TestNet, crand.Reader)
+		scheme, err := NewRandomisedScheme(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, _, err := kg.Generate(crand.Reader)
+		privateKey, _, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)
@@ -355,7 +356,7 @@ func TestSerializeSignature(t *testing.T) {
 		sig, err := signer.Sign(msg)
 		require.NoError(t, err)
 
-		v, err := NewRandomisedVariant(TestNet, crand.Reader)
+		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		data, err := v.SerializeSignature(sig)
@@ -366,12 +367,12 @@ func TestSerializeSignature(t *testing.T) {
 	t.Run("valid signature", func(t *testing.T) {
 		t.Parallel()
 		// Create a valid signature
-		scheme, err := NewRandomisedScheme(TestNet, crand.Reader)
+		scheme, err := NewRandomisedScheme(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, _, err := kg.Generate(crand.Reader)
+		privateKey, _, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)
@@ -402,12 +403,12 @@ func TestDeserializeSignature(t *testing.T) {
 	t.Run("round trip", func(t *testing.T) {
 		t.Parallel()
 		// Create a valid signature
-		scheme, err := NewRandomisedScheme(TestNet, crand.Reader)
+		scheme, err := NewRandomisedScheme(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, publicKey, err := kg.Generate(crand.Reader)
+		privateKey, publicKey, err := kg.Generate(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)
@@ -445,7 +446,7 @@ func TestDeserializeSignature(t *testing.T) {
 func TestCorrectAdditiveSecretShareParity(t *testing.T) {
 	t.Parallel()
 
-	v, err := NewRandomisedVariant(TestNet, crand.Reader)
+	v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// This should be a no-op for Mina
@@ -458,7 +459,7 @@ func TestCorrectAdditiveSecretShareParity(t *testing.T) {
 func TestCorrectPartialNonceParity(t *testing.T) {
 	t.Parallel()
 
-	v, err := NewRandomisedVariant(TestNet, crand.Reader)
+	v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	t.Run("nil nonce commitment", func(t *testing.T) {

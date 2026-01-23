@@ -1,7 +1,6 @@
 package refresh_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"maps"
 	"slices"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/refresh"
@@ -24,7 +24,7 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	ids := []sharing.ID{1, 2, 3}
 	sharingIDs := hashset.NewComparable(ids...).Freeze()
 	as, err := sharing.NewThresholdAccessStructure(2, sharingIDs)

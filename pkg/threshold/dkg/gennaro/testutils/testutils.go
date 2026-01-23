@@ -1,12 +1,12 @@
 package testutils
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -22,7 +22,7 @@ func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 
 	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])
 	for id := range accessStructure.Shareholders().Iter() {
-		runner, err := gennaro.NewGennaroDKGRunner(group, sessionID, id, accessStructure, niCompiler, tapes[id], crand.Reader)
+		runner, err := gennaro.NewGennaroDKGRunner(group, sessionID, id, accessStructure, niCompiler, tapes[id], pcg.NewRandomised())
 		require.NoError(tb, err)
 		runners[id] = runner
 	}

@@ -1,7 +1,6 @@
 package internal_test
 
 import (
-	crand "crypto/rand"
 	"io"
 	"math/big"
 	"testing"
@@ -10,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func Test_GCD(t *testing.T) {
@@ -17,7 +17,7 @@ func Test_GCD(t *testing.T) {
 
 	const iters = 128
 	const bits = 4096
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 
 	for range iters {
 		var xBytes, yBytes [bits / 8]byte

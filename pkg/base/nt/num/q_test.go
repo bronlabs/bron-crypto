@@ -1,7 +1,6 @@
 package num_test
 
 import (
-	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -1325,7 +1324,7 @@ func TestRat_RandomWithCryptoRand(t *testing.T) {
 	high := q.FromInt64(100)
 
 	// Test with crypto/rand
-	result, err := q.Random(low, high, crand.Reader)
+	result, err := q.Random(low, high, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, low.IsLessThanOrEqual(result))
 	require.True(t, result.IsLessThanOrEqual(high) && !result.Equal(high))

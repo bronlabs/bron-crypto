@@ -2,13 +2,13 @@ package gennaro_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"fmt"
 	"maps"
 	"slices"
 	"strconv"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
@@ -106,7 +106,7 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 
 	for i := range iters {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			prng := crand.Reader
+			prng := pcg.NewRandomised()
 			sessionID := ntu.MakeRandomSessionID(t, prng)
 			quorum := ntu.MakeRandomQuorum(t, prng, total)
 			accessStructure, err := sharing.NewThresholdAccessStructure(uint(threshold), quorum)

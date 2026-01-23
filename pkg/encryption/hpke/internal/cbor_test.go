@@ -1,13 +1,13 @@
 package internal //nolint:testpackage // to test unexported identifiers
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 // TestPrivateKey_CBOR tests CBOR marshalling of private keys
@@ -18,7 +18,7 @@ func TestPrivateKey_CBOR(t *testing.T) {
 		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
-		sk, _, err := kem.GenerateKeyPair(crand.Reader)
+		sk, _, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Marshal
@@ -40,7 +40,7 @@ func TestPrivateKey_CBOR(t *testing.T) {
 		t.Parallel()
 		kem := NewX25519HKDFSha256KEM()
 
-		sk, _, err := kem.GenerateKeyPair(crand.Reader)
+		sk, _, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Marshal
@@ -67,7 +67,7 @@ func TestPublicKey_CBOR(t *testing.T) {
 		t.Parallel()
 		kem := NewP256HKDFSha256KEM()
 
-		_, pk, err := kem.GenerateKeyPair(crand.Reader)
+		_, pk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Marshal
@@ -89,7 +89,7 @@ func TestPublicKey_CBOR(t *testing.T) {
 		t.Parallel()
 		kem := NewX25519HKDFSha256KEM()
 
-		_, pk, err := kem.GenerateKeyPair(crand.Reader)
+		_, pk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 		require.NoError(t, err)
 
 		// Marshal
@@ -230,7 +230,7 @@ func TestKeyPair_CBOR_Roundtrip(t *testing.T) {
 		kem := NewP256HKDFSha256KEM()
 
 		for range 5 {
-			sk, pk, err := kem.GenerateKeyPair(crand.Reader)
+			sk, pk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 			require.NoError(t, err)
 
 			// Private key roundtrip
@@ -265,7 +265,7 @@ func TestKeyPair_CBOR_Roundtrip(t *testing.T) {
 		kem := NewX25519HKDFSha256KEM()
 
 		for range 5 {
-			sk, pk, err := kem.GenerateKeyPair(crand.Reader)
+			sk, pk, err := kem.GenerateKeyPair(pcg.NewRandomised())
 			require.NoError(t, err)
 
 			// Private key roundtrip

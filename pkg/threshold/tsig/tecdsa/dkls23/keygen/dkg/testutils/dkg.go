@@ -2,7 +2,6 @@ package testutils
 
 import (
 	"bytes"
-	crand "crypto/rand"
 	"encoding/hex"
 	"io"
 	"maps"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/maputils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -32,7 +32,7 @@ import (
 func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *sharing.ThresholdAccessStructure) map[sharing.ID]*dkls23.Shard[P, B, S] {
 	tb.Helper()
 
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	var sessionID network.SID
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)

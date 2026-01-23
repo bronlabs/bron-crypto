@@ -3,7 +3,6 @@ package rfc8937
 
 import (
 	"crypto"
-	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"testing"
@@ -11,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
@@ -22,7 +22,7 @@ func TestUniqueOutputs(t *testing.T) {
 	require.NoError(t, err)
 	keygen, err := scheme.Keygen()
 	require.NoError(t, err)
-	sk, _, err := keygen.Generate(crand.Reader)
+	sk, _, err := keygen.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
 	signer, err := scheme.Signer(sk)
 	require.NoError(t, err)
@@ -34,7 +34,7 @@ func TestUniqueOutputs(t *testing.T) {
 			t.Run(fmt.Sprintf("checkign uniqueness of %d samples of size [%d]byte", boundedTrialCount, boundedN), func(t *testing.T) {
 				t.Parallel()
 
-				wr, err := Wrap(crand.Reader, signer, []byte("unique-key-id"))
+				wr, err := Wrap(pcg.NewRandomised(), signer, []byte("unique-key-id"))
 				require.NoError(t, err)
 
 				seen := map[string]bool{}

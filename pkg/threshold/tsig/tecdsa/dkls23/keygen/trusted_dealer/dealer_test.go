@@ -1,11 +1,11 @@
 package trusted_dealer_test
 
 import (
-	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -20,7 +20,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	const THRESHOLD = 3
 	const TOTAL = 5
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 	shareholders := hashset.NewComparable[sharing.ID]()
 	for i := range TOTAL {

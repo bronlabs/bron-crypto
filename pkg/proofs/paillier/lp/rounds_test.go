@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
@@ -21,7 +22,7 @@ const paillierGroupNLen = 2048
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	pInt, err := crand.Prime(prng, paillierGroupNLen/2)
 	require.NoError(t, err)
 	pNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(pInt, pInt.BitLen()))
@@ -45,7 +46,7 @@ func Test_HappyPath(t *testing.T) {
 }
 
 func doProof(k int, pk *paillier.PublicKey, sk *paillier.PrivateKey) (err error) {
-	prng := crand.Reader
+	prng := pcg.NewRandomised()
 	sessionID, err := network.NewSID([]byte("lpSession"))
 	if err != nil {
 		return err
