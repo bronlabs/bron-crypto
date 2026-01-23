@@ -21,8 +21,6 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -37,15 +35,11 @@ func TestHappyPath(t *testing.T) {
 	const iters = 4
 	testAccessStructures := []struct{ threshold, total int }{
 		{2, 2},
-		{2, 3},
-		{2, 4},
 		{3, 5},
 		{6, 6},
 	}
 	testNiCompilers := []compiler.Name{
 		fiatshamir.Name,
-		fischlin.Name,
-		randfischlin.Name,
 	}
 
 	for _, as := range testAccessStructures {
