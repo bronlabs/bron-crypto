@@ -1,10 +1,12 @@
 package paillier
 
 import (
+	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/errs-go/errs"
@@ -130,7 +132,16 @@ func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
-	pk.group = dto.Group
+	pkPtr, err := NewPublicKey(dto.Group)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create public key")
+	}
+	pk.group = pkPtr.Group()
+	pk.nonceSpace = nil
+	pk.plaintextSpace = nil
+	pk.ciphertextSpace = nil
+	pk.once = sync.Once{}
+
 	// Spaces will be lazily initialised via cacheSpaces when accessed
 	return nil
 }
@@ -158,10 +169,17 @@ func (sk *PrivateKey) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
-	sk.group = dto.Group
-	// Initialise hp and hq before calling precompute
+
+	skPtr, err := NewPrivateKey(dto.Group)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create private key")
+	}
+
+	sk.group = skPtr.Group()
 	sk.hp = numct.NewNat(0)
 	sk.hq = numct.NewNat(0)
+	sk.pk = nil
+	sk.once = sync.Once{}
 	sk.precompute()
 	return nil
 }

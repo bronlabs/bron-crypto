@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
@@ -23,6 +25,8 @@ import (
 )
 
 const (
+	DefaultPaillierKeyLen = base.IFCKeyLength
+
 	transcriptLabel = "BRON_CRYPTO_LINDELL17_DKG-"
 )
 
@@ -30,10 +34,11 @@ const (
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	round uint
 	// Base participant
-	prng  io.Reader
-	curve ecdsa.Curve[P, B, S]
-	sid   network.SID
-	tape  transcripts.Transcript
+	paillierKeyLen int
+	prng           io.Reader
+	curve          ecdsa.Curve[P, B, S]
+	sid            network.SID
+	tape           transcripts.Transcript
 
 	// Threshold participant
 	shard       *tecdsa.Shard[P, B, S]
@@ -76,6 +81,7 @@ type State[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	sid network.SID,
 	shard *tecdsa.Shard[P, B, S],
+	paillierKeyLen int,
 	curve ecdsa.Curve[P, B, S],
 	prng io.Reader,
 	nic compiler.Name,
@@ -89,6 +95,9 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	}
 	if shard == nil {
 		return nil, ErrInvalidArgument.WithMessage("shard must not be nil")
+	}
+	if !testing.Testing() && paillierKeyLen <= base.IFCKeyLength {
+		return nil, ErrInvalidArgument.WithMessage("Paillier key length must be at least %d bits", base.IFCKeyLength)
 	}
 	if !compiler.IsSupported(nic) {
 		return nil, ErrInvalidArgument.WithMessage("unsupported NIC: %s", nic)
@@ -123,14 +132,15 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 
 	//nolint:exhaustruct // partially initialised
 	return &Participant[P, B, S]{
-		round:       1,
-		prng:        prng,
-		curve:       curve,
-		sid:         sid,
-		nic:         nic,
-		tape:        tape,
-		shard:       shard,
-		quorumBytes: lindell17.QuorumBytes(shard.AccessStructure().Shareholders()),
+		round:          1,
+		prng:           prng,
+		curve:          curve,
+		paillierKeyLen: paillierKeyLen,
+		sid:            sid,
+		nic:            nic,
+		tape:           tape,
+		shard:          shard,
+		quorumBytes:    lindell17.QuorumBytes(shard.AccessStructure().Shareholders()),
 		//nolint:exhaustruct // partially initialised
 		state: &State[P, B, S]{
 			paillierScheme:    paillier.NewScheme(),

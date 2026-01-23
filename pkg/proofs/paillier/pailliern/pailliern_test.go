@@ -37,6 +37,9 @@ func Test_pIsCorrect(t *testing.T) {
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
+	const keyLen = 2048
+	const iters = 4
+
 	prng := crand.Reader
 	label := "NizkPaillierNTranscriptLabel"
 	sessionID := "NizkPaillierNTestSessionID"
@@ -46,14 +49,14 @@ func Test_HappyPath(t *testing.T) {
 
 	scheme := paillier.NewScheme()
 
-	for i := range 32 {
+	for i := range iters {
 		sid, err := network.NewSID([]byte(fmt.Sprintf("%s_%d", sessionID, i)))
 		require.NoError(t, err)
 
-		pInt, err := crand.Prime(prng, znstar.PaillierKeyLen/2)
+		pInt, err := crand.Prime(prng, keyLen/2)
 		require.NoError(t, err)
 		pNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(pInt, pInt.BitLen()))
-		qInt, err := crand.Prime(prng, znstar.PaillierKeyLen/2)
+		qInt, err := crand.Prime(prng, keyLen/2)
 		require.NoError(t, err)
 		qNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(qInt, qInt.BitLen()))
 

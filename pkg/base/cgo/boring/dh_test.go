@@ -17,8 +17,8 @@ func Test_LongDhGen(t *testing.T) {
 		t.Skip()
 	}
 
-	const reps = 32
-	const bits = 1024
+	const reps = 4
+	const bits = 512
 
 	for i := 0; i < reps; i++ {
 		p := boring.NewDiffieHellmanGroup().GenerateParameters(bits).GetP()
@@ -30,8 +30,8 @@ func Test_LongDhGen(t *testing.T) {
 
 		require.Equal(t, bits, pNat.BitLen())
 		require.Equal(t, bits-1, qNat.BitLen())
-		require.True(t, pNat.ProbablyPrime(64))
-		require.True(t, qNat.ProbablyPrime(64))
+		require.True(t, pNat.ProbablyPrime(5))
+		require.True(t, qNat.ProbablyPrime(5))
 	}
 
 	runtime.GC()

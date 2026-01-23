@@ -31,7 +31,7 @@ func TestKeyGenerator_WithKeyLength(t *testing.T) {
 	scheme := paillier.NewScheme()
 
 	// Test with custom bit length
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 
 	sk, pk, err := kg.Generate(crand.Reader)
@@ -44,7 +44,7 @@ func TestKeyGenerator_KeysMatch(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 
 	sk, pk, err := kg.Generate(crand.Reader)
@@ -60,7 +60,7 @@ func TestEncrypter_Encrypt(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	_, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -79,7 +79,7 @@ func TestEncrypter_EncryptWithNonce_Deterministic(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	_, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestEncrypter_EncryptMany(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -140,7 +140,7 @@ func TestEncrypter_EncryptManyWithNonces(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	_, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -174,7 +174,7 @@ func TestSelfEncrypter_SelfEncrypt(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, _, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -193,7 +193,7 @@ func TestSelfEncrypter_MatchesRegularEncrypt(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestSelfEncrypter_SelfEncryptWithNonce(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, _, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -249,7 +249,7 @@ func TestSelfEncrypter_SelfEncryptMany(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, _, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -286,7 +286,7 @@ func TestSelfEncrypter_PrivateKey(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, _, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -311,7 +311,7 @@ func TestDecrypter_Decrypt(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -347,7 +347,7 @@ func TestDecrypter_RoundTrip_RandomPlaintexts(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -377,7 +377,7 @@ func TestDecrypter_RoundTrip_NegativePlaintexts(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
@@ -411,7 +411,7 @@ func TestDecrypter_RoundTrip_Zero(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)

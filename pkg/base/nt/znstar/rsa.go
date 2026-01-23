@@ -3,7 +3,6 @@ package znstar
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
@@ -11,8 +10,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/errs-go/errs"
 )
-
-const RSAKeyLen = base.IFCKeyLength
 
 // SampleRSAGroup generates an RSA group with keyLen of the given bit length.
 func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
@@ -26,16 +23,13 @@ func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	return NewRSAGroup(p, q)
 }
 
-// SampleRSAGroup generates an RSA group with random primes of the given bit length.
+// NewRSAGroup generates an RSA group with random primes of the given bit length.
 func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if p == nil || q == nil {
 		return nil, ErrValue.WithMessage("p and q must not be nil")
 	}
 	if p.TrueLen() != q.TrueLen() {
 		return nil, ErrValue.WithMessage("p and q must have the same length")
-	}
-	if p.TrueLen() < RSAKeyLen/2 {
-		return nil, ErrValue.WithMessage("p and q must be at least %d bits each", RSAKeyLen/2)
 	}
 	if !p.IsProbablyPrime() {
 		return nil, ErrValue.WithMessage("p must be prime")
@@ -63,9 +57,6 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 
 // NewRSAGroupOfUnknownOrder creates an RSA group with unknown order from the given modulus m.
 func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (*RSAGroupUnknownOrder, error) {
-	if m.TrueLen() < RSAKeyLen {
-		return nil, ErrValue.WithMessage("modulus must be at least %d bits", RSAKeyLen)
-	}
 	zMod, err := num.NewZMod(m)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create ZMod")
