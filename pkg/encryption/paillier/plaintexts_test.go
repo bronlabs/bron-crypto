@@ -21,7 +21,7 @@ type plaintextTestContext struct {
 func newPlaintextTestContext(tb testing.TB) *plaintextTestContext {
 	tb.Helper()
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(tb, err)
 	_, pk, err := kg.Generate(crand.Reader)
 	require.NoError(tb, err)

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -162,7 +163,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	}
 
 	// 3.iii. generate a Paillier key pair
-	keyGenerator, err := p.state.paillierScheme.Keygen()
+	keyGenerator, err := p.state.paillierScheme.Keygen(paillier.WithKeyLen(uint(p.paillierKeyLen)))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot generate Paillier key generator")
 	}

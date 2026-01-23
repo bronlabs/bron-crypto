@@ -37,7 +37,7 @@ func Test_pIsCorrect(t *testing.T) {
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	const keyLen = paillier.KeyLen
+	const keyLen = 2048
 	const iters = 4
 
 	prng := crand.Reader

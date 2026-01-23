@@ -25,7 +25,7 @@ type ciphertextTestContext struct {
 func newCiphertextTestContext(tb testing.TB) *ciphertextTestContext {
 	tb.Helper()
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	require.NoError(tb, err)
 	sk, pk, err := kg.Generate(crand.Reader)
 	require.NoError(tb, err)

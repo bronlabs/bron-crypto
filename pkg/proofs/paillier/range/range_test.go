@@ -23,7 +23,7 @@ import (
 )
 
 const logRange = 256
-const keyLen = paillier.KeyLen
+const keyLen = 2048
 const iters = 4
 
 func Test_HappyPath(t *testing.T) {

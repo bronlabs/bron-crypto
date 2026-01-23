@@ -14,9 +14,11 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+const paillierGroupNLen = 1024
+
 func PaillierUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.PaillierGroupElementUnknownOrder], *znstar.PaillierGroupUnknownOrder) {
 	t.Helper()
-	group := errs.Must1(znstar.SamplePaillierGroup(znstar.PaillierKeyLen, pcg.NewRandomised()))
+	group := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, pcg.NewRandomised()))
 	return UnitGenerator(t, group.ForgetOrder()), group.ForgetOrder()
 }
 
@@ -25,7 +27,7 @@ func PaillierPlaintextGenerator(group *znstar.PaillierGroupKnownOrder) *rapid.Ge
 		nHalf := group.N().Value().Clone()
 		nHalf.Rsh(nHalf, 1)
 
-		bytes := rapid.SliceOfN(rapid.Byte(), 1, int(nHalf.AnnouncedLen()/8)).Draw(t, "bytes")
+		bytes := rapid.SliceOfN(rapid.Byte(), 1, nHalf.AnnouncedLen()/8).Draw(t, "bytes")
 		var nat numct.Nat
 		nat.SetBytes(bytes)
 
@@ -66,7 +68,7 @@ func TestMultiplicativeGroup_Properties(t *testing.T) {
 func TestPaillierGroup_Representative_Property(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
-	group := errs.Must1(znstar.SamplePaillierGroup(znstar.PaillierKeyLen, prng))
+	group := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, prng))
 
 	rapid.Check(t, func(t *rapid.T) {
 		plaintext := PaillierPlaintextGenerator(group).Draw(t, "plaintext")
@@ -84,7 +86,7 @@ func TestPaillierGroup_Representative_Property(t *testing.T) {
 func TestPaillierGroup_Representative_Homomorphism_Property(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
-	group := errs.Must1(znstar.SamplePaillierGroup(znstar.PaillierKeyLen, prng))
+	group := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, prng))
 
 	rapid.Check(t, func(t *rapid.T) {
 		bytes1 := rapid.SliceOfN(rapid.Byte(), 1, 32).Draw(t, "bytes1")
@@ -127,7 +129,7 @@ func TestPaillierGroup_Representative_Homomorphism_Property(t *testing.T) {
 func TestPaillierGroup_NthResidue_Property(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
-	group := errs.Must1(znstar.SamplePaillierGroup(znstar.PaillierKeyLen, prng))
+	group := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, prng))
 	unknownOrderGroup := group.ForgetOrder()
 	gen := UnitGenerator(t, unknownOrderGroup)
 
@@ -150,7 +152,7 @@ func TestPaillierGroup_NthResidue_Property(t *testing.T) {
 func TestPaillierGroup_EmbedRSA_Property_Property(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
-	paillierGroup := errs.Must1(znstar.SamplePaillierGroup(znstar.PaillierKeyLen, prng))
+	paillierGroup := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, prng))
 
 	rsaGroup := errs.Must1(znstar.NewRSAGroupOfUnknownOrder(paillierGroup.N()))
 	gen := UnitGenerator(t, rsaGroup)
@@ -173,7 +175,7 @@ func TestPaillierGroup_EmbedRSA_Property_Property(t *testing.T) {
 func TestPaillierGroup_NthResidue_OfEmbeddedRSA_Property(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
-	paillierGroup := errs.Must1(znstar.SamplePaillierGroup(znstar.PaillierKeyLen, prng))
+	paillierGroup := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, prng))
 
 	rsaGroup := errs.Must1(znstar.NewRSAGroupOfUnknownOrder(paillierGroup.N()))
 	gen := UnitGenerator(t, rsaGroup)
