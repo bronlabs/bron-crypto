@@ -1,13 +1,13 @@
 package expanders_test
 
 import (
+	"crypto/sha3"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 
@@ -35,7 +35,7 @@ func Test_ExpandMessageXOFShake128(t *testing.T) {
 		t.Run(fmt.Sprintf("%d:%s", vector.LenInBytes, vector.Msg), func(t *testing.T) {
 			t.Parallel()
 
-			messageExpander := h2c.NewXOFMessageExpander(sha3.NewShake128(), testCases.K)
+			messageExpander := h2c.NewXOFMessageExpander(sha3.NewSHAKE128(), testCases.K)
 			expectedUniformBytes, err := hex.DecodeString(vector.UniformBytes)
 			require.NoError(t, err)
 			uniformBytes := messageExpander.ExpandMessage([]byte(dst), []byte(vector.Msg), vector.LenInBytes)
@@ -56,7 +56,7 @@ func Test_ExpandMessageXOFShake128LongDST(t *testing.T) {
 		t.Run(fmt.Sprintf("%d:%s", vector.LenInBytes, vector.Msg), func(t *testing.T) {
 			t.Parallel()
 
-			messageExpander := h2c.NewXOFMessageExpander(sha3.NewShake128(), testCases.K)
+			messageExpander := h2c.NewXOFMessageExpander(sha3.NewSHAKE128(), testCases.K)
 			expectedUniformBytes, err := hex.DecodeString(vector.UniformBytes)
 			require.NoError(t, err)
 			uniformBytes := messageExpander.ExpandMessage([]byte(dst), []byte(vector.Msg), vector.LenInBytes)
@@ -77,7 +77,7 @@ func Test_ExpandMessageXOFShake256(t *testing.T) {
 		t.Run(fmt.Sprintf("%d:%s", vector.LenInBytes, vector.Msg), func(t *testing.T) {
 			t.Parallel()
 
-			messageExpander := h2c.NewXOFMessageExpander(sha3.NewShake256(), testCases.K)
+			messageExpander := h2c.NewXOFMessageExpander(sha3.NewSHAKE256(), testCases.K)
 			expectedUniformBytes, err := hex.DecodeString(vector.UniformBytes)
 			require.NoError(t, err)
 			uniformBytes := messageExpander.ExpandMessage([]byte(dst), []byte(vector.Msg), vector.LenInBytes)

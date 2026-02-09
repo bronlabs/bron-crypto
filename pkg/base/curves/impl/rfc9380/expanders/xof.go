@@ -2,6 +2,7 @@ package expanders
 
 import (
 	"hash"
+	"io"
 	"slices"
 )
 
@@ -18,9 +19,9 @@ func (e *Xof) ExpandMessage(dst, msg []byte, lenInBytes uint) []byte {
 	if len(dst) > 255 {
 		// 0. DST = H("H2C-OVERSIZE-DST-" || a_very_long_DST, ceil(2 * k / 8))
 		h.Reset()
-		h.Write(slices.Concat([]byte("H2C-OVERSIZE-DST-"), dst))
+		_, _ = h.Write(slices.Concat([]byte("H2C-OVERSIZE-DST-"), dst))
 		dst = make([]byte, (2*e.K+7)/8)
-		h.Read(dst)
+		_, _ = io.ReadFull(h, dst)
 	}
 
 	// 1. ABORT if len_in_bytes > 65535
@@ -33,9 +34,9 @@ func (e *Xof) ExpandMessage(dst, msg []byte, lenInBytes uint) []byte {
 	msgPrime := slices.Concat(msg, i2osp(uint64(lenInBytes), 2), dstPrime)
 	// 4. uniform_bytes = H(msg_prime, len_in_bytes)
 	h.Reset()
-	h.Write(msgPrime)
+	_, _ = h.Write(msgPrime)
 	uniformBytes := make([]byte, lenInBytes)
-	h.Read(uniformBytes)
+	_, _ = io.ReadFull(h, uniformBytes)
 	// 5. return uniform_bytes
 	return uniformBytes[:lenInBytes]
 }
