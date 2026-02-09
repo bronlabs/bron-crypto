@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// WriteConcat writes each byte slice in order to writer and returns the total bytes written.
+// WriteConcat writes each byte slice to a writer and returns the total bytes written.
 func WriteConcat(writer io.Writer, data ...[]byte) (int, error) {
 	n := 0
 	for _, d := range data {
