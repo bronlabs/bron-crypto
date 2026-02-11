@@ -1,8 +1,8 @@
 module github.com/bronlabs/bron-crypto/tools/secparams-codegen
 
-go 1.25.3
+go 1.26
 
-require github.com/testcontainers/testcontainers-go v0.36.0
+require github.com/testcontainers/testcontainers-go v0.40.0
 
 require (
 	dario.cat/mergo v1.0.1 // indirect

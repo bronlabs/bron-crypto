@@ -1,16 +1,16 @@
 module github.com/bronlabs/bron-crypto
 
-go 1.25.3
+go 1.26
 
 require (
 	github.com/bronlabs/errs-go v0.2.1
 	github.com/cronokirby/saferith v0.33.0
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/crypto v0.47.0
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
+	golang.org/x/crypto v0.48.0
+	golang.org/x/exp v0.0.0-20260209203927-2842357ff358
 	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.40.0
+	golang.org/x/sys v0.41.0
 	pgregory.net/rapid v1.2.0
 )
 

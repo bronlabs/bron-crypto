@@ -1,10 +1,10 @@
 module github.com/bronlabs/bron-crypto/tools/field-codegen
 
-go 1.25.3
+go 1.26
 
 require (
 	github.com/mmcloughlin/addchain v0.4.0
-	github.com/testcontainers/testcontainers-go v0.36.0
+	github.com/testcontainers/testcontainers-go v0.40.0
 	golang.org/x/text v0.33.0
 )
 
