@@ -29,7 +29,7 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 }
 
 func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
-	digest, err := hashing.HashPrefixedLength(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
+	digest, err := hashing.HashIndexLengthPrefixed(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute hash")
 	}

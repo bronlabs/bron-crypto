@@ -1,11 +1,10 @@
 package kmac
 
 import (
+	"crypto/sha3"
 	"encoding/binary"
 	"hash"
 	"slices"
-
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -16,38 +15,96 @@ const (
 )
 
 // ErrInvalidKeyLength is returned when the key length does not meet the security strength requirements.
-var ErrInvalidKeyLength = errs.New("invalid key length")
+var (
+	ErrInvalidKeyLength = errs.New("invalid key length")
+	ErrInvalidTagSize   = errs.New("invalid tag size")
+)
 
-// ErrInvalidTagSize is returned when the tag size is smaller than the minimum allowed.
-var ErrInvalidTagSize = errs.New("invalid tag size")
+var _ hash.Hash = (*Kmac)(nil)
 
-var _ hash.Hash = (*kmac)(nil)
-
-type kmac struct {
-	sha3.ShakeHash // cSHAKE context and Read/Write operations
+type Kmac struct {
+	h *sha3.SHAKE // cSHAKE context and Read/Write operations
 
 	tagSize int // tag size
 
-	// initBlock is the KMAC specific initialization set of bytes. It is initialised
-	// by newKMAC function and stores the key, encoded by the method specified in 3.3 of [1].
+	// initBlock is the KMAC-specific initialization set of bytes. It is initialised
+	// by a newKMAC function and stores the key, encoded by the method specified in 3.3 of [1].
 	// It is stored here in order for Reset() to be able to put context into
-	// initial state.
+	//  the initial state.
 	initBlock []byte
 }
 
-// Bytepad pads the input to a multiple of w bytes as specified in NIST SP 800-185.
-func Bytepad(input []byte, w int) []byte {
-	buf := LeftEncode(uint64(w))
-	buf = slices.Concat(buf, input)
-	padlen := w - (len(buf) % w)
-	return slices.Concat(buf, make([]byte, padlen))
+// NewKMAC128 creates a new KMAC providing 128 bits of security.
+func NewKMAC128(key []byte, tagSize int, customizationString []byte) (*Kmac, error) {
+	if len(key) < 16 {
+		return nil, ErrInvalidKeyLength.WithMessage("key length must not be smaller than 128-bit security strength")
+	}
+	if tagSize < minimumTagSize {
+		return nil, ErrInvalidTagSize.WithMessage("tag size must be at least %d bytes", minimumTagSize)
+	}
+
+	c := sha3.NewCSHAKE128([]byte("KMAC"), customizationString)
+	return absorbPaddedKey(key, tagSize, c), nil
 }
 
-// LeftEncode encodes a non-negative integer with the length prefix on the left as specified in NIST SP 800-185.
-func LeftEncode(value uint64) []byte {
+// NewKMAC256 creates a new KMAC providing 256 bits of security.
+func NewKMAC256(key []byte, tagSize int, customizationString []byte) (*Kmac, error) {
+	if len(key) < 32 {
+		return nil, ErrInvalidKeyLength.WithMessage("key length must not be smaller than 256-bit security strength")
+	}
+	if tagSize < minimumTagSize {
+		return nil, ErrInvalidTagSize.WithMessage("tag size must be at least %d bytes", minimumTagSize)
+	}
+
+	c := sha3.NewCSHAKE256([]byte("KMAC"), customizationString)
+	return absorbPaddedKey(key, tagSize, c), nil
+}
+
+func (k *Kmac) Reset() {
+	k.h.Reset()
+	_, _ = k.h.Write(bytePad(k.initBlock, k.h.BlockSize()))
+}
+
+func (k *Kmac) Size() int {
+	return k.tagSize
+}
+
+func (k *Kmac) Write(p []byte) (n int, err error) {
+	//nolint:wrapcheck // intentional
+	return k.h.Write(p)
+}
+
+func (k *Kmac) BlockSize() int {
+	return k.h.BlockSize()
+}
+
+func (k *Kmac) Sum(b []byte) []byte {
+	clone := *k.h
+	// absorb right_encode(L)
+	_, _ = clone.Write(rightEncode(uint64(k.tagSize * 8)))
+
+	// squeeze tagSize bytes
+	tag := make([]byte, k.tagSize)
+	if _, err := clone.Read(tag); err != nil {
+		return nil
+	}
+
+	return slices.Concat(b, tag)
+}
+
+// bytePad pads the input to a multiple of w bytes as specified in NIST SP 800-185.
+func bytePad(input []byte, w int) []byte {
+	buf := leftEncode(uint64(w))
+	buf = slices.Concat(buf, input)
+	padLen := w - (len(buf) % w)
+	return slices.Concat(buf, make([]byte, padLen))
+}
+
+// leftEncode encodes a non-negative integer with the length prefix on the left as specified in NIST SP 800-185.
+func leftEncode(value uint64) []byte {
 	var b [9]byte
 	binary.BigEndian.PutUint64(b[1:], value)
-	// Trim all but last leading zero bytes
+	// Trim all but the last leading zero bytes
 	i := byte(1)
 	for i < 8 && b[i] == 0 {
 		i++
@@ -57,11 +114,11 @@ func LeftEncode(value uint64) []byte {
 	return b[i-1:]
 }
 
-// RightEncode encodes a non-negative integer with the length suffix on the right as specified in NIST SP 800-185.
-func RightEncode(value uint64) []byte {
+// rightEncode encodes a non-negative integer with the length suffix on the right as specified in NIST SP 800-185.
+func rightEncode(value uint64) []byte {
 	var b [9]byte
 	binary.BigEndian.PutUint64(b[:8], value)
-	// Trim all but last leading zero bytes
+	// Trim all but the last leading zero bytes
 	i := byte(0)
 	for i < 7 && b[i] == 0 {
 		i++
@@ -71,60 +128,11 @@ func RightEncode(value uint64) []byte {
 	return b[i:]
 }
 
-// AbsorbPaddedKey creates a KMAC instance by absorbing the padded key into the cSHAKE state.
-func AbsorbPaddedKey(key []byte, tagSize int, c sha3.ShakeHash) hash.Hash {
+// absorbPaddedKey creates a KMAC instance by absorbing the padded key into the cSHAKE state.
+func absorbPaddedKey(key []byte, tagSize int, c *sha3.SHAKE) *Kmac {
 	// absorb bytepad(encode_string(K), rate) into the internal state
-	initBlock := slices.Concat(LeftEncode(uint64(len(key)*8)), key)
-	k := &kmac{ShakeHash: c, tagSize: tagSize, initBlock: initBlock}
-	k.Write(Bytepad(k.initBlock, k.BlockSize()))
+	initBlock := slices.Concat(leftEncode(uint64(len(key)*8)), key)
+	k := &Kmac{h: c, tagSize: tagSize, initBlock: initBlock}
+	_, _ = k.Write(bytePad(k.initBlock, k.BlockSize()))
 	return k
-}
-
-// NewKMAC128 creates a new KMAC providing 128 bits of security.
-func NewKMAC128(key []byte, tagSize int, customizationString []byte) (hash.Hash, error) {
-	if len(key) < 16 {
-		return nil, ErrInvalidKeyLength.WithMessage("key length must not be smaller than 128-bit security strength")
-	}
-	if tagSize < minimumTagSize {
-		return nil, ErrInvalidTagSize.WithMessage("tag size must be at least %d bytes", minimumTagSize)
-	}
-
-	c := sha3.NewCShake128([]byte("KMAC"), customizationString)
-	return AbsorbPaddedKey(key, tagSize, c), nil
-}
-
-// NewKMAC256 creates a new KMAC providing 256 bits of security.
-func NewKMAC256(key []byte, tagSize int, customizationString []byte) (hash.Hash, error) {
-	if len(key) < 32 {
-		return nil, ErrInvalidKeyLength.WithMessage("key length must not be smaller than 256-bit security strength")
-	}
-	if tagSize < minimumTagSize {
-		return nil, ErrInvalidTagSize.WithMessage("tag size must be at least %d bytes", minimumTagSize)
-	}
-
-	c := sha3.NewCShake256([]byte("KMAC"), customizationString)
-	return AbsorbPaddedKey(key, tagSize, c), nil
-}
-
-func (k *kmac) Reset() {
-	k.ShakeHash.Reset()
-	k.Write(Bytepad(k.initBlock, k.BlockSize()))
-}
-
-func (k *kmac) Size() int {
-	return k.tagSize
-}
-
-func (k *kmac) Sum(b []byte) []byte {
-	clone := k.Clone()
-	// absorb right_encode(L)
-	clone.Write(RightEncode(uint64(k.tagSize * 8)))
-
-	// squeeze tagSize bytes
-	tag := make([]byte, k.tagSize)
-	if _, err := clone.Read(tag); err != nil {
-		return nil
-	}
-
-	return slices.Concat(b, tag)
 }

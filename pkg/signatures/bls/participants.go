@@ -58,7 +58,7 @@ type KeyGenerator[
 // This implements the KeyGen algorithm:
 //  1. Hash the salt to get initial HKDF salt
 //  2. Use HKDF-Extract and HKDF-Expand to derive key material
-//  3. Convert to scalar, re-hash salt if result is zero
+//  3. Convert to scalar, re-hash salt if a result is zero
 //  4. Compute public key as sk * G
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.3
@@ -76,7 +76,7 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (
 }
 
 // Generate creates a new BLS key pair using random bytes from the provided reader.
-// If a seed was previously set via GenerateWithSeed option, that seed is used instead.
+// If a seed was previously set via the GenerateWithSeed option, that seed is used instead.
 //
 // The prng should be a cryptographically secure random source (e.g., crypto/rand.Reader).
 func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) Generate(prng io.Reader) (*PrivateKey[PK, FE, Sig, SigFE, E, S], *PublicKey[PK, FE, Sig, SigFE, E, S], error) {
@@ -123,7 +123,7 @@ func SignWithCustomDST[
 // depends on the configured rogue key prevention algorithm:
 //   - Basic: signs the message directly
 //   - MessageAugmentation: signs pk || message
-//   - POP: signs message and attaches a proof of possession
+//   - POP: signs the message and attaches a proof of possession
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 type Signer[

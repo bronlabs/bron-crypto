@@ -1,10 +1,9 @@
 package hagrid
 
 import (
+	"crypto/sha3"
 	"encoding/binary"
 	"io"
-
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
@@ -24,12 +23,12 @@ const (
 )
 
 type transcript struct {
-	h sha3.ShakeHash
+	h *sha3.SHAKE
 }
 
 // NewTranscript returns a transcript instance bound to the provided protocol name.
 func NewTranscript(name string) transcripts.Transcript {
-	t := &transcript{h: sha3.NewCShake256(nil, []byte(customizedShakeName+name))}
+	t := &transcript{h: sha3.NewCSHAKE256(nil, []byte(customizedShakeName+name))}
 	return t
 }
 
@@ -58,7 +57,7 @@ func (t *transcript) ExtractBytes(label string, outLen uint) ([]byte, error) {
 	_, _ = t.h.Write(binary.BigEndian.AppendUint64(nil, uint64(len(label))))
 	_, _ = t.h.Write([]byte(label))
 	_, _ = t.h.Write(binary.BigEndian.AppendUint64(nil, uint64(outLen)))
-	hClone := t.h.Clone()
+	hClone := cloneShake(t.h)
 
 	// Explicitly fork these transcripts to prevent length extension attacks from being possible
 	// (at least, without the additional ability to remove a byte from a finalised hash).
@@ -75,6 +74,11 @@ func (t *transcript) ExtractBytes(label string, outLen uint) ([]byte, error) {
 
 // Clone returns a copy of the transcript in its current state.
 func (t *transcript) Clone() transcripts.Transcript {
-	h := t.h.Clone()
+	h := cloneShake(t.h)
 	return &transcript{h}
+}
+
+func cloneShake(h *sha3.SHAKE) *sha3.SHAKE {
+	clone := *h
+	return &clone
 }

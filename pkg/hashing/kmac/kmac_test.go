@@ -7,9 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/kmac"
 )
 
@@ -79,11 +77,17 @@ func TestHappyPathKMAC(t *testing.T) {
 		var localTag []byte
 
 		if test.security == 128 {
-			localTag, err = hashing.Kmac(key, []byte(test.customization), sha3.NewCShake128, data)
+			h, err := kmac.NewKMAC128(key, 32, []byte(test.customization))
 			require.NoError(t, err)
+			_, err = h.Write(data)
+			require.NoError(t, err)
+			localTag = h.Sum(nil)
 		} else {
-			localTag, err = hashing.Kmac(key, []byte(test.customization), sha3.NewCShake256, data)
+			h, err := kmac.NewKMAC256(key, 64, []byte(test.customization))
 			require.NoError(t, err)
+			_, err = h.Write(data)
+			require.NoError(t, err)
+			localTag = h.Sum(nil)
 		}
 		require.NoError(t, err)
 		require.NotNil(t, localTag)

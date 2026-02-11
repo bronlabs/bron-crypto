@@ -77,7 +77,7 @@ func NewKeyFromCRSBytes(sid network.SID, dst string, crs ...[]byte) (Key, error)
 		return Key{}, errs.Wrap(err).WithMessage("cannot create hash")
 	}
 	h := func() hash.Hash { return hasher }
-	out, err := hashing.HashPrefixedLength(h, append(crs, []byte(dst))...)
+	out, err := hashing.HashIndexLengthPrefixed(h, append(crs, []byte(dst))...)
 	if err != nil {
 		return Key{}, errs.Wrap(err).WithMessage("cannot hash CRS")
 	}

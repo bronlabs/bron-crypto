@@ -2,39 +2,29 @@ package hashing
 
 import (
 	"crypto/hmac"
-	"encoding/binary"
 	"hash"
-	"slices"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/ioutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/kmac"
 	"github.com/bronlabs/errs-go/errs"
-)
-
-type (
-	// KMACCustomizationString is a byte slice used as a domain separation string for KMAC operations.
-	KMACCustomizationString = []byte
 )
 
 // Hash iteratively writes all the inputs to the given hash function and returns the result.
 func Hash[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
 	h := hashFunc()
-	for i, x := range xs {
-		if _, err := h.Write(x); err != nil {
-			return nil, errs.Wrap(err).WithMessage("could not write to hash for input %d", i)
-		}
+	if _, err := ioutils.WriteConcat(h, xs...); err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not hash input")
 	}
+
 	digest := h.Sum(nil)
 	return digest, nil
 }
 
-// HashPrefixedLength hashes the inputs after encoding each with its index and length prefix.
+// HashIndexLengthPrefixed hashes the inputs after encoding each with its index and length prefix.
 // This encoding ensures that different input sequences produce distinct hash inputs.
-func HashPrefixedLength[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
+func HashIndexLengthPrefixed[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
 	h := hashFunc()
-	_, err := h.Write(encodePrefixedLength(xs...))
-	if err != nil {
+	if _, err := ioutils.WriteIndexLengthPrefixed(h, xs...); err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not hash input")
 	}
 
@@ -67,10 +57,10 @@ func Hmac[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, err
 	return out, nil
 }
 
-// HmacPrefixedLength computes an HMAC over the inputs after encoding each with its index and length prefix.
-func HmacPrefixedLength[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, error) {
+// HmacIndexLengthPrefixed computes an HMAC over the inputs after encoding each with its index and length prefix.
+func HmacIndexLengthPrefixed[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, error) {
 	hmacFunc := func() hash.Hash { return hmac.New(HashFuncTypeErase(hashFunc), key) }
-	out, err := HashPrefixedLength(hmacFunc, xs...)
+	out, err := HashIndexLengthPrefixed(hmacFunc, xs...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("computing hmac")
 	}
@@ -78,32 +68,33 @@ func HmacPrefixedLength[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte
 }
 
 // Kmac computes a KMAC (Keccak Message Authentication Code) over the inputs using a cSHAKE function.
-// Tag sizes are 32 and 64 bytes when instantiated with cSHAKE128 and cSHAKE256, respectively.
 // The key must be at least half the output size to meet the security level requirements.
-func Kmac(key, customizationString []byte, h func(n, s []byte) sha3.ShakeHash, xs ...[]byte) ([]byte, error) {
-	cShake := h([]byte("KMAC"), customizationString)
-	if len(key) < cShake.Size()/2 {
-		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", cShake.Size()*4)
+func Kmac(key, customizationString []byte, tagSize int, h func(key []byte, tagSize int, customizationString []byte) (*kmac.Kmac, error), xs ...[]byte) ([]byte, error) {
+	k, err := h(key, tagSize, customizationString)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("error creating KMAC instance")
 	}
-	k := kmac.AbsorbPaddedKey(key, cShake.Size(), cShake)
-	for _, x := range xs {
-		_, err := k.Write(x)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("could not write into internal state")
-		}
+	if len(key) < k.Size()/2 {
+		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", k.Size()*4)
+	}
+
+	if _, err := ioutils.WriteConcat(k, xs...); err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not write inputs into internal state")
 	}
 	return k.Sum(nil), nil
 }
 
-// KmacPrefixedLength computes a KMAC over the inputs after encoding each with its index and length prefix.
-func KmacPrefixedLength(key, customizationString []byte, h func(n, s []byte) sha3.ShakeHash, xs ...[]byte) ([]byte, error) {
-	cShake := h([]byte("KMAC"), customizationString)
-	if len(key) < cShake.Size()/2 {
-		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", cShake.Size()*4)
-	}
-	k := kmac.AbsorbPaddedKey(key, cShake.Size(), cShake)
-	_, err := k.Write(encodePrefixedLength(xs...))
+// KmacIndexLengthPrefixed computes a KMAC over the inputs after encoding each with its index and length prefix.
+func KmacIndexLengthPrefixed(key, customizationString []byte, tagSize int, h func(key []byte, tagSize int, customizationString []byte) (*kmac.Kmac, error), xs ...[]byte) ([]byte, error) {
+	k, err := h(key, tagSize, customizationString)
 	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("error creating KMAC instance")
+	}
+	if len(key) < k.Size()/2 {
+		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", k.Size()*4)
+	}
+
+	if _, err = ioutils.WriteIndexLengthPrefixed(k, xs...); err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not write into internal state")
 	}
 	return k.Sum(nil), nil
@@ -115,19 +106,4 @@ func HashFuncTypeErase[H hash.Hash](hashFunc func() H) func() hash.Hash {
 	return func() hash.Hash {
 		return hashFunc()
 	}
-}
-
-func encodePrefixedLength(messages ...[]byte) []byte {
-	output := []byte{}
-	for i, message := range messages {
-		encodedMessage := slices.Concat(toBytes32LE(int32(i)), toBytes32LE(int32(len(message))), message)
-		output = slices.Concat(output, encodedMessage)
-	}
-	return output
-}
-
-func toBytes32LE(i int32) []byte {
-	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(i))
-	return b
 }
