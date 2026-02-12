@@ -11,13 +11,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -91,7 +91,7 @@ func (p *Participant[P, B, S]) Round2(input network.RoundMessages[*Round1Broadca
 	}
 
 	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
-	dlogTranscript := p.tape.Clone()
+	dlogTranscript := p.ctx.Transcript().Clone()
 	bigQPrimeProof, err := dlogProve(p, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.state.myXPrime, dlogTranscript)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog proof of Q'")
@@ -141,7 +141,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot open (Q', Q'') commitment")
 		}
 
-		dlogTranscript := p.tape.Clone()
+		dlogTranscript := p.ctx.Transcript().Clone()
 		if err := dlogVerify(p, id, message.BigQPrimeProof, message.BigQPrime, message.BigQDoublePrime, dlogTranscript); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify dlog proof of Q'")
 		}
@@ -199,20 +199,20 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	// 3.vi. prove pairwise iz ZK that pk was generated correctly (LP)
 	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
 	// Note: Share single transcript clone across all proofs to preserve state
-	paillierProofsTranscript := p.tape.Clone()
+	paillierProofsTranscript := p.ctx.Transcript().Clone()
 	for id := range p.shard.AccessStructure().Shareholders().Iter() {
 		if id == p.shard.Share().ID() {
 			continue
 		}
-		p.state.lpProvers[id], err = lp.NewProver(p.sid, base.ComputationalSecurityBits, p.state.myPaillierSk, paillierProofsTranscript, p.prng)
+		p.state.lpProvers[id], err = lp.NewProver(p.ctx.SessionID(), base.ComputationalSecurityBits, p.state.myPaillierSk, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create LP prover")
 		}
-		p.state.lpdlPrimeProvers[id], err = lpdl.NewProver(p.sid, p.curve, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeProvers[id], err = lpdl.NewProver(p.ctx.SessionID(), p.curve, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL prover")
 		}
-		p.state.lpdlDoublePrimeProvers[id], err = lpdl.NewProver(p.sid, p.curve, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeProvers[id], err = lpdl.NewProver(p.ctx.SessionID(), p.curve, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL prover")
 		}
@@ -253,16 +253,16 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 
 		// 4.ii. LP and LPDL continue
 		// Share single transcript clone across all verifiers to preserve state
-		paillierProofsTranscript := p.tape.Clone()
-		p.state.lpVerifiers[id], err = lp.NewVerifier(p.sid, base.ComputationalSecurityBits, theirPaillierPublicKey, paillierProofsTranscript, p.prng)
+		paillierProofsTranscript := p.ctx.Transcript().Clone()
+		p.state.lpVerifiers[id], err = lp.NewVerifier(p.ctx.SessionID(), base.ComputationalSecurityBits, theirPaillierPublicKey, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create P verifier")
 		}
-		p.state.lpdlPrimeVerifiers[id], err = lpdl.NewVerifier(p.sid, theirPaillierPublicKey, p.state.theirBigQPrime[id], theirCKeyPrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeVerifiers[id], err = lpdl.NewVerifier(p.ctx.SessionID(), theirPaillierPublicKey, p.state.theirBigQPrime[id], theirCKeyPrime, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL verifier")
 		}
-		p.state.lpdlDoublePrimeVerifiers[id], err = lpdl.NewVerifier(p.sid, theirPaillierPublicKey, p.state.theirBigQDoublePrime[id], theirCKeyDoublePrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeVerifiers[id], err = lpdl.NewVerifier(p.ctx.SessionID(), theirPaillierPublicKey, p.state.theirBigQDoublePrime[id], theirCKeyDoublePrime, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL verifier")
 		}
@@ -464,7 +464,7 @@ func dlogProve[
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)
 	tape.AppendBytes(proverLabel, proverIDBytes)
 	tape.AppendBytes(bigQTwinLabel, bigQTwin.ToCompressed())
-	prover, err := c.state.niDlogScheme.NewProver(c.sid, tape)
+	prover, err := c.state.niDlogScheme.NewProver(c.ctx.SessionID(), tape)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
@@ -488,7 +488,7 @@ func dlogVerify[
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)
 	tape.AppendBytes(proverLabel, proverIDBytes)
 	tape.AppendBytes(bigQTwinLabel, bigQTwin.ToCompressed())
-	verifier, err := c.state.niDlogScheme.NewVerifier(c.sid, tape)
+	verifier, err := c.state.niDlogScheme.NewVerifier(c.ctx.SessionID(), tape)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}

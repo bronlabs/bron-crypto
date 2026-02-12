@@ -7,13 +7,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -35,16 +35,15 @@ type secondaryRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 }
 
 func NewPrimaryRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
-	sessionID network.SID,
+	ctx *session.Context,
 	suite *ecdsa.Suite[P, B, S],
 	secondarySharingID sharing.ID,
 	myShard *lindell17.Shard[P, B, S],
 	niCompiler compiler.Name,
-	tape transcripts.Transcript,
 	prng io.Reader,
 	message []byte,
 ) (network.Runner[*ecdsa.Signature[S]], error) {
-	cosigner, err := NewPrimaryCosigner(sessionID, suite, secondarySharingID, myShard, niCompiler, tape, prng)
+	cosigner, err := NewPrimaryCosigner(ctx, suite, secondarySharingID, myShard, niCompiler, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create primary cosigner")
 	}
@@ -55,16 +54,15 @@ func NewPrimaryRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 }
 
 func NewSecondaryRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
-	sessionID network.SID,
+	ctx *session.Context,
 	suite *ecdsa.Suite[P, B, S],
 	primarySharingID sharing.ID,
 	myShard *lindell17.Shard[P, B, S],
 	niCompiler compiler.Name,
-	tape transcripts.Transcript,
 	prng io.Reader,
 	message []byte,
 ) (network.Runner[*ecdsa.Signature[S]], error) {
-	cosigner, err := NewSecondaryCosigner(sessionID, suite, primarySharingID, myShard, niCompiler, tape, prng)
+	cosigner, err := NewSecondaryCosigner(ctx, suite, primarySharingID, myShard, niCompiler, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create secondary cosigner")
 	}

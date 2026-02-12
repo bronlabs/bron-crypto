@@ -1,43 +1,36 @@
 package dkg_test
 
 import (
-	"encoding/hex"
 	"maps"
 	"slices"
 	"testing"
 
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/dkg"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
 
 func TestRunnerHappyPath_K256_2of3(t *testing.T) {
 	t.Parallel()
 
-	const (
-		threshold      = uint(2)
-		total          = 3
-		paillierKeyLen = 1024
-	)
+	const threshold = 2
+	const total = 3
+	const paillierKeyLen = 1024
 
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
-	sessionID := ntu.MakeRandomSessionID(t, prng)
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
-
 	shareholders := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
 	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
@@ -48,20 +41,18 @@ func TestRunnerHappyPath_K256_2of3(t *testing.T) {
 	require.NoError(t, err)
 
 	runners := make(map[sharing.ID]network.Runner[*lindell17.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
-	tapes := make(map[sharing.ID]transcripts.Transcript)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 	for id, share := range feldmanOutput.Shares().Iter() {
 		baseShard, err := tecdsa.NewShard(share, feldmanOutput.VerificationMaterial(), accessStructure)
 		require.NoError(t, err)
-		tapes[id] = tape.Clone()
 
 		runner, err := dkg.NewRunner(
-			sessionID,
+			ctxs[id],
 			baseShard,
 			paillierKeyLen,
 			curve,
 			pcg.NewRandomised(),
 			fiatshamir.Name,
-			tapes[id],
 		)
 		require.NoError(t, err)
 		runners[id] = runner
@@ -107,10 +98,10 @@ func TestRunnerHappyPath_K256_2of3(t *testing.T) {
 		}
 	}
 
-	firstTapeBytes, err := tapes[ids[0]].ExtractBytes("test", 32)
+	firstTapeBytes, err := ctxs[ids[0]].Transcript().ExtractBytes("test", 32)
 	require.NoError(t, err)
 	for _, id := range ids[1:] {
-		b, err := tapes[id].ExtractBytes("test", 32)
+		b, err := ctxs[id].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.True(t, slices.Equal(firstTapeBytes, b))
 	}

@@ -4,10 +4,10 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -19,8 +19,8 @@ type refreshRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 	participant *Participant[G, S]
 }
 
-func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sid network.SID, shard *tsig.BaseShard[G, S], tape transcripts.Transcript, prng io.Reader) (network.Runner[*Output[G, S]], error) {
-	participant, err := NewParticipant(sid, shard, tape, prng)
+func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, shard *tsig.BaseShard[G, S], prng io.Reader) (network.Runner[*Output[G, S]], error) {
+	participant, err := NewParticipant(ctx, shard, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}

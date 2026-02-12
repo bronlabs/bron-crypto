@@ -5,14 +5,15 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -26,7 +27,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 	}
 
 	var ck [hash_comm.KeySize]byte
-	ckBytes, err := c.tape.ExtractBytes(ckLabel, uint(len(ck)))
+	ckBytes, err := c.ctx.Transcript().ExtractBytes(ckLabel, uint(len(ck)))
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to extract commitment key")
 	}
@@ -86,24 +87,21 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		mulR1[id] = message.p2p.MulR1
 	}
 
-	c.state.zeroSampler, err = przs.NewSampler(c.shard.Share().ID(), c.quorum, c.zeroSeeds, c.suite.ScalarField())
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
-	}
-	zeta, err := c.state.zeroSampler.Sample()
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
-	}
-
-	quorum, err := accessstructures.NewUnanimityAccessStructure(c.quorum)
+	quorum, err := accessstructures.NewUnanimityAccessStructure(c.ctx.Quorum())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}
+	f := algebra.StructureMustBeAs[algebra.PrimeField[S]](c.shard.Share().Value().Structure())
+	zeta, err := session.SampleZeroShare(c.ctx, f)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample zero share")
+	}
+
 	sk, err := c.shard.Share().ToAdditive(quorum)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("to additive share failed")
 	}
-	c.state.sk = sk.Value().Add(zeta)
+	c.state.sk = sk.Add(zeta).Value()
 	c.state.pk = make(map[sharing.ID]P)
 	c.state.pk[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.sk)
 	c.state.c = make(map[sharing.ID][]S)

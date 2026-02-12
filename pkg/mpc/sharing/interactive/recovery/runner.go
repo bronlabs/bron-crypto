@@ -2,8 +2,11 @@ package recovery
 
 import (
 	"io"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
@@ -25,8 +28,8 @@ type mislayerRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	party *Mislayer[G, S]
 }
 
-func NewRecovererRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](mislayerID sharing.ID, quorum network.Quorum, baseShard *tsig.BaseShard[G, S], prng io.Reader) (network.Runner[any], error) {
-	party, err := NewRecoverer(mislayerID, quorum, baseShard, prng)
+func NewRecovererRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, mislayerID sharing.ID, baseShard *tsig.BaseShard[G, S], prng io.Reader) (network.Runner[any], error) {
+	party, err := NewRecoverer(ctx, mislayerID, baseShard, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create recoverer")
 	}
@@ -37,8 +40,8 @@ func NewRecovererRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldE
 }
 
 // NewMislayerRunner constructs a network runner that drives the three DKG rounds.
-func NewMislayerRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](id sharing.ID, quorum network.Quorum, as *accessstructures.Threshold, group algebra.PrimeGroup[G, S]) (network.Runner[*Output[G, S]], error) {
-	party, err := NewMislayer(id, quorum, as, group)
+func NewMislayerRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *accessstructures.Threshold, group algebra.PrimeGroup[G, S]) (network.Runner[*Output[G, S]], error) {
+	party, err := NewMislayer(ctx, as, group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create mislayer")
 	}
@@ -49,14 +52,11 @@ func NewMislayerRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEl
 }
 
 func (r *recovererRunner[G, S]) Run(rt *network.Router) (any, error) {
-	recoverers := r.party.quorum.Clone().Unfreeze()
-	recoverers.Remove(r.party.mislayerID)
-
 	r1bOut, r1uOut, err := r.party.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r1bIn, r2uIn, err := exchange.Exchange(rt, r1CorrelationID, recoverers.Freeze(), r1bOut, r1uOut)
+	r1bIn, r2uIn, err := exchange.Exchange(rt, r1CorrelationID, r.party.recoverersCtx.Quorum(), r1bOut, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange r1 messages")
 	}
@@ -76,7 +76,8 @@ func (r *recovererRunner[G, S]) Run(rt *network.Router) (any, error) {
 
 // Run executes the DKG rounds using the provided router and returns the final output.
 func (r *mislayerRunner[G, S]) Run(rt *network.Router) (*Output[G, S], error) {
-	r2, err := exchange.UnicastReceive[*Round2P2P[G, S]](rt, r2CorrelationID, r.party.quorum)
+	quorum := hashset.NewComparable(slices.Collect(r.party.ctx.AllPartiesOrdered())...).Freeze()
+	r2, err := exchange.UnicastReceive[*Round2P2P[G, S]](rt, r2CorrelationID, quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot receive round 2")
 	}

@@ -8,7 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/signing"
@@ -16,7 +18,6 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func TestRunnerHappyPath_K256_2P(t *testing.T) {
@@ -38,30 +39,26 @@ func TestRunnerHappyPath_K256_2P(t *testing.T) {
 	secondaryShard, ok := shards.Get(secondaryID)
 	require.True(t, ok)
 
-	sessionID := ntu.MakeRandomSessionID(t, prng)
-	primaryTape := hagrid.NewTranscript("test")
-	secondaryTape := primaryTape.Clone()
+	ctxs := session_testutils.MakeRandomContexts(t, hashset.NewComparable(primaryID, secondaryID).Freeze(), prng)
 	message := []byte("hello from lindell17 runner")
 
 	primaryRunner, err := signing.NewPrimaryRunner(
-		sessionID,
+		ctxs[primaryID],
 		suite,
 		secondaryID,
 		primaryShard,
 		fiatshamir.Name,
-		primaryTape,
 		pcg.NewRandomised(),
 		message,
 	)
 	require.NoError(t, err)
 
 	secondaryRunner, err := signing.NewSecondaryRunner(
-		sessionID,
+		ctxs[secondaryID],
 		suite,
 		primaryID,
 		secondaryShard,
 		fiatshamir.Name,
-		secondaryTape,
 		pcg.NewRandomised(),
 		message,
 	)
@@ -87,9 +84,9 @@ func TestRunnerHappyPath_K256_2P(t *testing.T) {
 	err = verifier.Verify(signature, publicKey, message)
 	require.NoError(t, err)
 
-	primaryTapeCheck, err := primaryTape.ExtractBytes("test", 32)
+	primaryTapeCheck, err := ctxs[primaryID].Transcript().ExtractBytes("test", 32)
 	require.NoError(t, err)
-	secondaryTapeCheck, err := secondaryTape.ExtractBytes("test", 32)
+	secondaryTapeCheck, err := ctxs[secondaryID].Transcript().ExtractBytes("test", 32)
 	require.NoError(t, err)
 	require.True(t, bytes.Equal(primaryTapeCheck, secondaryTapeCheck))
 }

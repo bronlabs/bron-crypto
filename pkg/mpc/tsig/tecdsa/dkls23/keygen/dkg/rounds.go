@@ -3,56 +3,39 @@ package dkg
 import (
 	"io"
 
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs/setup"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 executes protocol round 1.
-func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], ds.Map[sharing.ID, *Round1P2P[P, B, S]], error) {
-	zeroR1b, err := p.zeroSetup.Round1()
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot run round 1 of Gennaro DKG party")
-	}
-
-	r1b := &Round1Broadcast[P, B, S]{
-		ZeroR1: zeroR1b,
-	}
+func (p *Participant[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S]], error) {
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(p, r1u) {
 		var err error
 		u.OtR1, err = p.baseOTSenders[id].Round1()
 		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("cannot run round 1 of VSOT party")
+			return nil, errs.Wrap(err).WithMessage("cannot run round 1 of VSOT party")
 		}
 	}
 
 	p.round++
-	return r1b, r1u.Freeze(), nil
+	return r1u.Freeze(), nil
 }
 
 // Round2 executes protocol round 2.
-func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[P, B, S]], r1u network.RoundMessages[*Round1P2P[P, B, S]]) (network.RoundMessages[*Round2P2P[P, B, S]], error) {
-	zeroR1 := hashmap.NewComparable[sharing.ID, *przsSetup.Round1Broadcast]()
+func (p *Participant[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]]) (network.RoundMessages[*Round2P2P[P, B, S]], error) {
 	otR1 := hashmap.NewComparable[sharing.ID, *vsot.Round1P2P[P, B, S]]()
-	in, err := incomingMessages(p, 2, r1b, r1u)
+	in, err := incomingP2PMessages(p, 2, r1u)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid messages or round mismatch")
 	}
 	for id, m := range in {
-		zeroR1.Put(id, m.broadcast.ZeroR1)
-		otR1.Put(id, m.p2p.OtR1)
-	}
-
-	zeroR2u, err := p.zeroSetup.Round2(zeroR1.Freeze())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot run round 2 of PRZS setup party")
+		otR1.Put(id, m.OtR1)
 	}
 
 	p.state.receiverSeeds = hashmap.NewComparable[sharing.ID, *vsot.ReceiverOutput]()
@@ -62,10 +45,6 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 		var err error
 		var seed *vsot.ReceiverOutput
 
-		u.ZeroR2, ok = zeroR2u.Get(id)
-		if !ok {
-			return nil, ErrFailed.WithMessage("cannot run round 2 of PRZS setup party")
-		}
 		otR1u, ok := otR1.Get(id)
 		if !ok {
 			return nil, ErrFailed.WithMessage("cannot run round 2 of VSOT setup party")
@@ -88,20 +67,13 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 
 // Round3 executes protocol round 3.
 func (p *Participant[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]]) (network.RoundMessages[*Round3P2P], error) {
-	zeroR2u := hashmap.NewComparable[sharing.ID, *przsSetup.Round2P2P]()
 	otR2u := hashmap.NewComparable[sharing.ID, *vsot.Round2P2P[P, B, S]]()
 	in, err := incomingP2PMessages(p, 3, r2u)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("invalid messages or round mismatch")
 	}
 	for id, m := range in {
-		zeroR2u.Put(id, m.ZeroR2)
 		otR2u.Put(id, m.OtR2)
-	}
-
-	p.state.zeroSeeds, err = p.zeroSetup.Round3(zeroR2u.Freeze())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot run round 3 of PRZS setup party")
 	}
 
 	p.state.senderSeeds = hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
@@ -192,7 +164,7 @@ func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*d
 		}
 	}
 
-	auxInfo, err := dkls23.NewAuxiliaryInfo(p.state.zeroSeeds, p.state.senderSeeds.Freeze(), p.state.receiverSeeds.Freeze())
+	auxInfo, err := dkls23.NewAuxiliaryInfo(p.state.senderSeeds.Freeze(), p.state.receiverSeeds.Freeze())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create auxiliary info")
 	}

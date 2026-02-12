@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/refresh"
@@ -17,18 +17,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func TestRunner_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	prng := pcg.NewRandomised()
-	ids := []sharing.ID{1, 2, 3}
-	sharingIDs := hashset.NewComparable(ids...).Freeze()
-	as, err := accessstructures.NewThresholdAccessStructure(2, sharingIDs)
+	quorum := ntu.MakeRandomQuorum(t, prng, 3)
+	as, err := accessstructures.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
 	curve := k256.NewCurve()
 	scheme, err := feldman.NewScheme(curve.Generator(), as)
@@ -40,16 +38,8 @@ func TestRunner_HappyPath(t *testing.T) {
 	dealerOut, err := scheme.Deal(secret, prng)
 	require.NoError(t, err)
 
-	sid := ntu.MakeRandomSessionID(t, prng)
-
-	tapes := map[sharing.ID]transcripts.Transcript{
-		1: hagrid.NewTranscript("test"),
-		2: hagrid.NewTranscript("test"),
-		3: hagrid.NewTranscript("test"),
-	}
-
 	runners := make(map[sharing.ID]network.Runner[*refresh.Output[*k256.Point, *k256.Scalar]])
-	for _, id := range ids {
+	for id, ctx := range ctxs {
 		share, ok := dealerOut.Shares().Get(id)
 		require.True(t, ok)
 
@@ -57,13 +47,13 @@ func TestRunner_HappyPath(t *testing.T) {
 		require.NoError(t, err)
 
 		// Use independent PRNGs because runners execute concurrently.
-		runner, err := refresh.NewRunner(sid, shard, tapes[id], pcg.NewRandomised())
+		runner, err := refresh.NewRunner(ctx, shard, pcg.NewRandomised())
 		require.NoError(t, err)
 		runners[id] = runner
 	}
 
 	outputs := ntu.TestExecuteRunners(t, runners)
-	require.Len(t, outputs, len(ids))
+	require.Len(t, outputs, len(ctxs))
 
 	shares := make(map[sharing.ID]*feldman.Share[*k256.Scalar], len(outputs))
 	verificationVectors := make(map[sharing.ID]feldman.VerificationVector[*k256.Point, *k256.Scalar], len(outputs))
@@ -97,13 +87,17 @@ func TestRunner_HappyPath(t *testing.T) {
 
 	t.Run("should generate valid transcripts", func(t *testing.T) {
 		t.Parallel()
-		firstBytes, err := tapes[ids[0]].ExtractBytes("test", 32)
-		require.NoError(t, err)
 
-		for _, id := range ids[1:] {
-			b, err := tapes[id].ExtractBytes("test", 32)
+		samples := make(map[sharing.ID][]byte)
+		for id, ctx := range ctxs {
+			samples[id], err = ctx.Transcript().ExtractBytes("sample", 32)
 			require.NoError(t, err)
-			require.True(t, slices.Equal(firstBytes, b))
+		}
+		samplesList := slices.Collect(maps.Values(samples))
+		for i := range samplesList {
+			if i > 0 {
+				require.True(t, slices.Equal(samplesList[i-1], samplesList[i]))
+			}
 		}
 	})
 }

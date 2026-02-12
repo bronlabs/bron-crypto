@@ -14,7 +14,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
@@ -32,13 +35,12 @@ const (
 
 // Participant runs the Lindell17 DKG protocol.
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	ctx   *session.Context
 	round uint
 	// Base participant
 	paillierKeyLen int
 	prng           io.Reader
 	curve          ecdsa.Curve[P, B, S]
-	sid            network.SID
-	tape           transcripts.Transcript
 
 	// Threshold participant
 	shard       *tecdsa.Shard[P, B, S]
@@ -79,22 +81,24 @@ type State[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 
 // NewParticipant constructs a DKG participant.
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
-	sid network.SID,
+	ctx *session.Context,
 	shard *tecdsa.Shard[P, B, S],
 	paillierKeyLen int,
 	curve ecdsa.Curve[P, B, S],
 	prng io.Reader,
 	nic compiler.Name,
-	tape transcripts.Transcript,
 ) (*Participant[P, B, S], error) {
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng must not be nil")
 	}
-	if tape == nil {
-		return nil, ErrInvalidArgument.WithMessage("tape must not be nil")
+	if ctx == nil {
+		return nil, ErrInvalidArgument.WithMessage("context must not be nil")
 	}
 	if shard == nil {
 		return nil, ErrInvalidArgument.WithMessage("shard must not be nil")
+	}
+	if shard.Share().ID() != ctx.HolderID() {
+		return nil, ErrInvalidArgument.WithMessage("sharing id must match context id")
 	}
 	if !testing.Testing() && paillierKeyLen < base.IFCKeyLength {
 		return nil, ErrInvalidArgument.WithMessage("Paillier key length must be at least %d bits", base.IFCKeyLength)
@@ -103,8 +107,9 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		return nil, ErrInvalidArgument.WithMessage("unsupported NIC: %s", nic)
 	}
 
+	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sid, nic, curve.Name())
-	tape.AppendDomainSeparator(dst)
+	ctx.Transcript().AppendDomainSeparator(dst)
 
 	commitmentSchemes := make(map[sharing.ID]*hash_comm.Scheme)
 	for id := range shard.AccessStructure().Shareholders().Iter() {
@@ -132,13 +137,12 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 
 	//nolint:exhaustruct // partially initialised
 	return &Participant[P, B, S]{
+		ctx:            ctx,
 		round:          1,
 		prng:           prng,
 		curve:          curve,
 		paillierKeyLen: paillierKeyLen,
-		sid:            sid,
 		nic:            nic,
-		tape:           tape,
 		shard:          shard,
 		quorumBytes:    lindell17.QuorumBytes(shard.AccessStructure().Shareholders()),
 		//nolint:exhaustruct // partially initialised
@@ -165,5 +169,5 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 
 // SharingID returns the participant sharing identifier.
 func (p *Participant[P, B, S]) SharingID() sharing.ID {
-	return p.shard.Share().ID()
+	return p.ctx.HolderID()
 }

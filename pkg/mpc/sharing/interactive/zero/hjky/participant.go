@@ -6,11 +6,11 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -21,15 +21,13 @@ const (
 
 // Participant executes the HJKY zero-sharing protocol.
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	sessionID       network.SID
-	sharingID       sharing.ID
+	ctx             *session.Context
 	accessStructure *accessstructures.Threshold
 	group           algebra.PrimeGroup[G, S]
 	field           algebra.PrimeField[S]
 	scheme          *feldman.Scheme[G, S]
 	round           network.Round
 	prng            io.Reader
-	tape            transcripts.Transcript
 	state           State[G, S]
 }
 
@@ -40,9 +38,12 @@ type State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 }
 
 // NewParticipant creates a zero-sharing participant bound to the given session and access structure.
-func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sid network.SID, id sharing.ID, as *accessstructures.Threshold, g algebra.PrimeGroup[G, S], tape transcripts.Transcript, prng io.Reader) (*Participant[G, S], error) {
-	if tape == nil || prng == nil || !as.Shareholders().Contains(id) {
+func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *accessstructures.Threshold, g algebra.PrimeGroup[G, S], prng io.Reader) (*Participant[G, S], error) {
+	if ctx == nil || prng == nil || as == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+	}
+	if !ctx.Quorum().Equal(as.Shareholders()) {
+		return nil, ErrInvalidArgument.WithMessage("access structure doesn't match context")
 	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](g.ScalarStructure())
@@ -50,18 +51,17 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create feldman scheme")
 	}
-	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
+	sid := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
 
 	return &Participant[G, S]{
-		sessionID:       sid,
-		sharingID:       id,
+		ctx:             ctx,
 		accessStructure: as,
 		group:           g,
 		field:           field,
 		scheme:          scheme,
 		round:           1,
 		prng:            prng,
-		tape:            tape,
 		state: State[G, S]{
 			verificationVectors: nil,
 			share:               nil,
@@ -71,5 +71,5 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 
 // SharingID returns the identifier for this participant within the access structure.
 func (p *Participant[G, S]) SharingID() sharing.ID {
-	return p.sharingID
+	return p.ctx.HolderID()
 }
