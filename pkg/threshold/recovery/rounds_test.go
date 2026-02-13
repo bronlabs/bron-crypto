@@ -67,19 +67,18 @@ func Test_HappyPath(t *testing.T) {
 	}
 	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
 
-	r2bo := make(map[sharing.ID]*recovery.Round2Broadcast[*k256.Point, *k256.Scalar])
 	r2uo := make(map[sharing.ID]network.RoundMessages[*recovery.Round2P2P[*k256.Point, *k256.Scalar]])
 	for _, r := range recoverers {
-		r2bo[r.SharingID()], r2uo[r.SharingID()], err = r.Round2(r2bi[r.SharingID()], r2ui[r.SharingID()])
+		r2uo[r.SharingID()], err = r.Round2(r2bi[r.SharingID()], r2ui[r.SharingID()])
 		require.NoError(t, err)
 	}
-	r3bi, r3ui := ntu.MapO2I(t, participants, r2bo, r2uo)
+	r3ui := ntu.MapUnicastO2I(t, participants, r2uo)
 
-	s, v, err := mislayer.Round3(r3bi[MISLAYER_ID], r3ui[MISLAYER_ID])
+	o, err := mislayer.Round3(r3ui[MISLAYER_ID])
 	require.NoError(t, err)
 
-	require.True(t, verificationVector.Equal(v))
+	require.True(t, verificationVector.Equal(o.Verification()))
 	lostShare, ok := dealerOutput.Shares().Get(MISLAYER_ID)
 	require.True(t, ok)
-	require.True(t, s.Equal(lostShare))
+	require.True(t, o.Share().Equal(lostShare))
 }

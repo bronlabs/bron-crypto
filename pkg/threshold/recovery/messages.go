@@ -15,12 +15,8 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	BlindShare *feldman.Share[S] `cbor:"blindShare"`
 }
 
-// Round2Broadcast exposes the original verification vector for the mislayer.
-type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	VerificationVector feldman.VerificationVector[G, S] `cbor:"verificationVector"`
-}
-
 // Round2P2P delivers the aggregated blinded share back to the mislayer.
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	BlindedShare *feldman.Share[S] `cbor:"blindedShare"`
+	BlindedShare       *feldman.Share[S]                `cbor:"blindedShare"`
+	VerificationVector feldman.VerificationVector[G, S] `cbor:"verificationVector"`
 }

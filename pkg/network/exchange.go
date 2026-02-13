@@ -1,39 +1,33 @@
 package network
 
 import (
-	"maps"
-	"slices"
-
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// ExchangeUnicastSimple sends messages to all participants and receives the same messages back from them.
-func ExchangeUnicastSimple[U any](rt *Router, correlationID string, messages RoundMessages[U]) (RoundMessages[U], error) {
+func SendUnicast[U any](rt *Router, correlationID string, messages RoundMessages[U]) error {
 	messagesSerialized := make(map[sharing.ID][]byte)
-	for _, id := range rt.Quorum() {
-		if id == rt.PartyID() {
-			continue
-		}
-		message, ok := messages.Get(id)
-		if !ok {
-			return nil, ErrFailed.WithMessage("missing message")
-		}
+	for id, message := range messages.Iter() {
 		messageSerialized, err := serde.MarshalCBOR(message)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to marshal message")
+			return errs.Wrap(err).WithMessage("failed to marshal message")
 		}
 		messagesSerialized[id] = messageSerialized
 	}
 	err := rt.SendTo(correlationID, messagesSerialized)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to send messages")
+		return errs.Wrap(err).WithMessage("failed to send messages")
 	}
+	return nil
+}
 
-	coparties := slices.Collect(maps.Keys(messagesSerialized))
-	receivedMessagesSerialized, err := rt.ReceiveFrom(correlationID, coparties...)
+func ReceiveUnicast[U any](rt *Router, correlationID string, quorum Quorum) (RoundMessages[U], error) {
+	coparties := quorum.Clone().Unfreeze()
+	coparties.Remove(rt.PartyID())
+
+	receivedMessagesSerialized, err := rt.ReceiveFrom(correlationID, coparties.List()...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to exchange messages")
 	}

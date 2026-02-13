@@ -2,15 +2,14 @@ package echo
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// ExchangeEchoBroadcastSimple runs an echo broadcast: send, echo, and verify consistent payloads for all parties.
-func ExchangeEchoBroadcastSimple[B any](rt *network.Router, correlationID string, message B) (network.RoundMessages[B], error) {
-	r, err := NewEchoBroadcastRunner(rt.PartyID(), hashset.NewComparable(rt.Quorum()...).Freeze(), correlationID, message)
+// ExchangeEchoBroadcast runs an echo broadcast: send, echo, and verify consistent payloads for selected parties.
+func ExchangeEchoBroadcast[B any](rt *network.Router, correlationID string, quorum network.Quorum, message B) (network.RoundMessages[B], error) {
+	r, err := NewEchoBroadcastRunner(rt.PartyID(), quorum, correlationID, message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create echo broadcast runner")
 	}

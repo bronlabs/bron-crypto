@@ -34,9 +34,13 @@ func (r *echoBroadcastRunner[B]) Run(rt *network.Router) (network.RoundMessages[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to run round 1")
 	}
-	r2In, err := network.ExchangeUnicastSimple(rt, r.correlationID+":EchoRound1P2P", r1Out)
+	err = network.SendUnicast(rt, r.correlationID+":EchoRound1P2P", r1Out)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to exchange unicast")
+		return nil, errs.Wrap(err).WithMessage("failed to send unicast")
+	}
+	r2In, err := network.ReceiveUnicast[*Round1P2P](rt, r.correlationID+":EchoRound1P2P", r.party.Quorum())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to receive unicast")
 	}
 
 	// r2
@@ -44,9 +48,13 @@ func (r *echoBroadcastRunner[B]) Run(rt *network.Router) (network.RoundMessages[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to run round 2")
 	}
-	r3In, err := network.ExchangeUnicastSimple(rt, r.correlationID+":EchoRound2P2P", r2Out)
+	err = network.SendUnicast(rt, r.correlationID+":EchoRound2P2P", r2Out)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to exchange broadcast")
+		return nil, errs.Wrap(err).WithMessage("failed to send unicast")
+	}
+	r3In, err := network.ReceiveUnicast[*Round2P2P](rt, r.correlationID+":EchoRound2P2P", r.party.Quorum())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to receive unicast")
 	}
 
 	// r3
