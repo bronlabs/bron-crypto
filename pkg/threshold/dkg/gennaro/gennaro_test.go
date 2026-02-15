@@ -707,8 +707,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 	_, parties := setup(t, threshold, total, group, sid, tape, prng)
 	participant := parties.Values()[0]
 
-	t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
-		t.Parallel()
+	t.Run("cannot execute round 2 before round 1", func(t *testing.T) { //nolint:paralleltest // false positive.
 		// Create dummy round 2 input
 		dummyR2Input := hashmap.NewComparable[sharing.ID, *gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]]().Freeze()
 
@@ -717,8 +716,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 		require.ErrorIs(t, err, gennaro.ErrRound)
 	})
 
-	t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) {
-		t.Parallel()
+	t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) { //nolint:paralleltest // false positive.
 		// Create dummy round 3 inputs
 		dummyR3Broadcast := hashmap.NewComparable[sharing.ID, *gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]]().Freeze()
 		dummyR3Unicast := hashmap.NewComparable[sharing.ID, *gennaro.Round2Unicast[*k256.Point, *k256.Scalar]]().Freeze()
@@ -728,8 +726,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 		require.ErrorIs(t, err, gennaro.ErrRound)
 	})
 
-	t.Run("cannot re-execute round 1", func(t *testing.T) {
-		t.Parallel()
+	t.Run("cannot re-execute round 1", func(t *testing.T) { //nolint:paralleltest // false positive.
 		// Execute round 1
 		_, err := participant.Round1()
 		require.NoError(t, err)
