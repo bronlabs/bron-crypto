@@ -1,4 +1,4 @@
-# Ito-Saito-Nishizeki secret sharing scheme
+# Ito-Saito-Nishizeki replicated secret sharing scheme
 
 Package isn implements the Ito-Saito-Nishizeki (ISN) secret sharing scheme
 for general monotone access structures.
