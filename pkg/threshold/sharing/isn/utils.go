@@ -7,6 +7,14 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+// SumToSecret takes a secret and a list of random shares, and computes the final shares such that their sum equals the secret. This is used in the dealing phase of ISN to generate shares that sum to the secret.
+//
+// Parameters:
+//   - s: The secret to be shared
+//   - prng: A cryptographically secure random number generator for sampling random shares
+//   - l: The total number of shares to generate (including the final share)
+//
+// Returns a slice of shares that sum to the secret, or an error if any input is invalid or if sampling fails.
 func SumToSecret[E algebra.GroupElement[E]](s *Secret[E], prng io.Reader, l int) ([]E, error) {
 	if s == nil {
 		return nil, ErrIsNil.WithMessage("secret is nil")
