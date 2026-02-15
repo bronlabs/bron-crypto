@@ -118,5 +118,5 @@ var (
 	ErrIsNil        = errs.New("is nil")
 	ErrMembership   = errs.New("membership error")
 	ErrFailed       = errs.New("failed")
-	ErrUnauthorized = errs.New("unauthorized")
+	ErrUnauthorized = errs.New("unauthorised")
 )

@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
@@ -217,9 +217,9 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 	// Maximal unqualified sets: {1,2} and {3,4}
 	// Authorized: sets with at least one party NOT in {1,2} AND at least one party NOT in {3,4}
 	// Authorized examples: {1,3}, {1,4}, {2,3}, {2,4}, {1,2,3}, {1,2,4}, {1,2,3,4}
-	// Unauthorized: {1,2} (contained in first maximal unqualified set)
-	// Unauthorized: {3,4} (contained in second maximal unqualified set)
-	// Unauthorized: {1}, {2}, {3}, {4} (single parties)
+	// Unauthorised: {1,2} (contained in first maximal unqualified set)
+	// Unauthorised: {3,4} (contained in second maximal unqualified set)
+	// Unauthorised: {1}, {2}, {3}, {4} (single parties)
 	ac, err := sharing.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
@@ -300,7 +300,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 		require.True(t, secret.Equal(reconstructed))
 	})
 
-	t.Run("unauthorized single party", func(t *testing.T) {
+	t.Run("unauthorised single party", func(t *testing.T) {
 		t.Parallel()
 		shares := []*isn.Share[*k256.Scalar]{sharesMap[1]}
 		_, err := scheme.Reconstruct(shares...)
@@ -308,9 +308,9 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
 
-	t.Run("unauthorized maximal unqualified set {1,2}", func(t *testing.T) {
+	t.Run("unauthorised maximal unqualified set {1,2}", func(t *testing.T) {
 		t.Parallel()
-		// {1,2} is a maximal unqualified set, so it's unauthorized
+		// {1,2} is a maximal unqualified set, so it's unauthorised
 		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[2],
@@ -320,9 +320,9 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
 
-	t.Run("unauthorized maximal unqualified set {3,4}", func(t *testing.T) {
+	t.Run("unauthorised maximal unqualified set {3,4}", func(t *testing.T) {
 		t.Parallel()
-		// {3,4} is a maximal unqualified set, so it's unauthorized
+		// {3,4} is a maximal unqualified set, so it's unauthorised
 		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[3],
 			sharesMap[4],
@@ -451,6 +451,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 	}
 
 	t.Run("authorized minimal {1,3,5}", func(t *testing.T) {
+		t.Parallel()
 		// 1 not in {3,4}, 3 not in {1,2}, 5 not in {5,6} - wait that's wrong
 		// 1 not in {3,4} ✓, 1 not in {5,6} ✓, but 1 IS in {1,2}
 		// 3 not in {1,2} ✓, 3 IS in {3,4}, 3 not in {5,6} ✓
@@ -471,6 +472,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 	})
 
 	t.Run("authorized minimal {2,4,6}", func(t *testing.T) {
+		t.Parallel()
 		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[2],
 			sharesMap[4],
@@ -481,7 +483,8 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		require.True(t, secret.Equal(reconstructed))
 	})
 
-	t.Run("unauthorized {1,2,3}", func(t *testing.T) {
+	t.Run("unauthorised {1,2,3}", func(t *testing.T) {
+		t.Parallel()
 		// This set is contained in maximal unqualified {5,6}'s complement? No wait...
 		// Actually {1,2,3} has 3 outside {1,2}, 1 outside {3,4}, but NO ONE outside {5,6}
 		// Wait, let me reconsider. The parties are 1,2,3,4,5,6.
@@ -491,11 +494,11 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		// - Has 1,2 which are outside {3,4} ✓
 		// - Has 1,2,3 which are all outside {5,6} ✓
 		// So {1,2,3} should be AUTHORIZED!
-		// Let me think again about what's unauthorized...
-		// {1,2} is unauthorized (contained in maximal unqualified {1,2})
-		// {3,4} is unauthorized (contained in maximal unqualified {3,4})
-		// {5,6} is unauthorized (contained in maximal unqualified {5,6})
-		// {1,2,5} might be unauthorized? Let's check:
+		// Let me think again about what's unauthorised...
+		// {1,2} is unauthorised (contained in maximal unqualified {1,2})
+		// {3,4} is unauthorised (contained in maximal unqualified {3,4})
+		// {5,6} is unauthorised (contained in maximal unqualified {5,6})
+		// {1,2,5} might be unauthorised? Let's check:
 		// - Has 5 outside {1,2} ✓
 		// - Has 1,2,5 outside {3,4} ✓
 		// - Has 1,2 outside {5,6} ✓
@@ -510,7 +513,8 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
 
-	t.Run("unauthorized {3,4}", func(t *testing.T) {
+	t.Run("unauthorised {3,4}", func(t *testing.T) {
+		t.Parallel()
 		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[3],
 			sharesMap[4],
@@ -520,7 +524,8 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
 
-	t.Run("unauthorized {5,6}", func(t *testing.T) {
+	t.Run("unauthorised {5,6}", func(t *testing.T) {
+		t.Parallel()
 		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[5],
 			sharesMap[6],

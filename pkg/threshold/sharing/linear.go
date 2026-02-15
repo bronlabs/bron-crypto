@@ -15,11 +15,11 @@ type (
 )
 
 type dnfAccessStructureDTO struct {
-	ps []map[ID]bool `cbor:"authorizedSubsets"`
+	Ps []map[ID]bool `cbor:"authorizedSubsets"`
 }
 
 type cnfAccessStructureDTO struct {
-	ps []map[ID]bool `cbor:"unauthorizedSubsets"`
+	Ps []map[ID]bool `cbor:"unauthorizedSubsets"`
 }
 
 // NewDNFAccessStructure creates a new DNF access structure from the given minimal qualified subsets.
@@ -64,7 +64,6 @@ func validateISNAccessStructure(minimalQualifiedOrMaximalUnqualifiedSets ...ds.S
 			if sj.IsSubSet(si) {
 				return ErrValue.WithMessage("set at index %d is a subset of set at index %d", j, i)
 			}
-
 		}
 	}
 	return nil
@@ -118,12 +117,12 @@ func (c CNFAccessStructure) IsAuthorized(ids ...ID) bool {
 
 func (d DNFAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := dnfAccessStructureDTO{
-		ps: make([]map[ID]bool, len(d)),
+		Ps: make([]map[ID]bool, len(d)),
 	}
 	for i, subset := range d {
-		dto.ps[i] = make(map[ID]bool)
+		dto.Ps[i] = make(map[ID]bool)
 		for id := range subset.Iter() {
-			dto.ps[i][id] = true
+			dto.Ps[i][id] = true
 		}
 	}
 	data, err := serde.MarshalCBOR(dto)
@@ -138,8 +137,8 @@ func (d *DNFAccessStructure) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
-	ps := make([]ds.Set[ID], len(dto.ps))
-	for i, subsetMap := range dto.ps {
+	ps := make([]ds.Set[ID], len(dto.Ps))
+	for i, subsetMap := range dto.Ps {
 		subset := hashset.NewComparable[ID]()
 		for id := range subsetMap {
 			subset.Add(id)
@@ -152,12 +151,12 @@ func (d *DNFAccessStructure) UnmarshalCBOR(data []byte) error {
 
 func (c CNFAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := cnfAccessStructureDTO{
-		ps: make([]map[ID]bool, len(c)),
+		Ps: make([]map[ID]bool, len(c)),
 	}
 	for i, subset := range c {
-		dto.ps[i] = make(map[ID]bool)
+		dto.Ps[i] = make(map[ID]bool)
 		for id := range subset.Iter() {
-			dto.ps[i][id] = true
+			dto.Ps[i][id] = true
 		}
 	}
 	data, err := serde.MarshalCBOR(dto)
@@ -172,8 +171,8 @@ func (c *CNFAccessStructure) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
-	ps := make([]ds.Set[ID], len(dto.ps))
-	for i, subsetMap := range dto.ps {
+	ps := make([]ds.Set[ID], len(dto.Ps))
+	for i, subsetMap := range dto.Ps {
 		subset := hashset.NewComparable[ID]()
 		for id := range subsetMap {
 			subset.Add(id)

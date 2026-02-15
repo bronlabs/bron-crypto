@@ -29,7 +29,7 @@ type DNFScheme[E algebra.GroupElement[E]] struct {
 //   - g: The finite group over which secrets and shares are defined
 //   - ac: The DNF access structure specifying minimal qualified sets
 //
-// Returns the initialized scheme.
+// Returns the initialised scheme.
 func NewDNFScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
 	ac sharing.DNFAccessStructure,
@@ -144,7 +144,7 @@ func (d *DNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 // Parameters:
 //   - shares: Variable number of shares from different shareholders
 //
-// Returns the reconstructed secret, or an error if the shares are unauthorized,
+// Returns the reconstructed secret, or an error if the shares are unauthorised,
 // incomplete, or invalid.
 func (d *DNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	ids, err := sharing.CollectIDs(shares...)

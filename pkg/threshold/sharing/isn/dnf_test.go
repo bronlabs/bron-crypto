@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
@@ -183,7 +183,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 
 	// Access structure: {1,2} OR {2,3,4}
 	// Authorized: {1,2}, {2,3,4}, {1,2,3}, {1,2,4}, {1,2,3,4}, etc.
-	// Unauthorized: {1}, {2}, {3}, {1,3}, {1,4}, {3,4}, etc.
+	// Unauthorised: {1}, {2}, {3}, {1,3}, {1,4}, {3,4}, etc.
 	ac, err := sharing.NewDNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](2, 3, 4).Freeze(),
@@ -234,18 +234,18 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 		require.True(t, secret.Equal(reconstructed))
 	})
 
-	t.Run("unauthorized single party", func(t *testing.T) {
+	t.Run("unauthorised single party", func(t *testing.T) {
 		t.Parallel()
-		// {1} is unauthorized
+		// {1} is unauthorised
 		shares := []*isn.Share[*k256.Scalar]{sharesMap[1]}
 		_, err := scheme.Reconstruct(shares...)
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
 
-	t.Run("unauthorized subset", func(t *testing.T) {
+	t.Run("unauthorised subset", func(t *testing.T) {
 		t.Parallel()
-		// {3,4} is unauthorized (subset of {2,3,4} but not qualified)
+		// {3,4} is unauthorised (subset of {2,3,4} but not qualified)
 		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[3],
 			sharesMap[4],
@@ -255,9 +255,9 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
 
-	t.Run("unauthorized disjoint set", func(t *testing.T) {
+	t.Run("unauthorised disjoint set", func(t *testing.T) {
 		t.Parallel()
-		// {1,3} is unauthorized
+		// {1,3} is unauthorised
 		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[3],

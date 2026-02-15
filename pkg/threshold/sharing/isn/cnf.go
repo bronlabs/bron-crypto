@@ -29,7 +29,7 @@ type CNFScheme[E algebra.GroupElement[E]] struct {
 //   - g: The finite group over which secrets and shares are defined
 //   - ac: The CNF access structure specifying maximal unqualified sets
 //
-// Returns the initialized scheme.
+// Returns the initialised scheme.
 func NewCNFScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
 	ac sharing.CNFAccessStructure,
@@ -98,7 +98,7 @@ func (c *CNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 
 	shares := make(map[sharing.ID]*Share[E])
 
-	// step 1: initialize each shareholder share vector with identity
+	// step 1: initialise each shareholder share vector with identity
 	for p := range c.ac.Shareholders().Iter() {
 		// step 1.1
 		shares[p] = &Share[E]{
@@ -146,7 +146,7 @@ func (c *CNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 // Parameters:
 //   - shares: Variable number of shares from different shareholders
 //
-// Returns the reconstructed secret, or an error if the shares are unauthorized,
+// Returns the reconstructed secret, or an error if the shares are unauthorised,
 // incomplete, or invalid.
 func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	ids, err := sharing.CollectIDs(shares...)
