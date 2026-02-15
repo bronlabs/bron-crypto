@@ -45,26 +45,26 @@ group without requiring field arithmetic.
 
 We use the following notation:
 
-- Parties: \(P = \{p_1, \cdots, p_n\}\)
-- Secret's domain is a finite group \(s \in G\)
-- Access Structure \(\Gamma \subseteq 2^P\) is monotone: if \(A \in \Gamma\) and \(A \subseteq \bar{A}\) then \(\bar{A} \in \Gamma\)
-- Minimal qualified sets: \(\min(\Gamma) = \{B_1, \cdots, B_m\}\) where each \(B_i \in \Gamma\) and no proper subset of \(B_i\) is in \(\Gamma\)
-- Maximal unqualified sets: \(\max(\overline{\Gamma}) = \{T_1, \cdots, T_\ell\}\) where each \(T_j \notin \Gamma\) and no proper superset of \(T_j\) is outside \(\Gamma\)
+- Parties: $P = \{p_1, \cdots, p_n\}$
+- Secret's domain is a finite group $s \in G$
+- Access Structure $\Gamma \subseteq 2^P$ is monotone: if $A \in \Gamma$ and $A \subseteq \bar{A}$ then $\bar{A} \in \Gamma$
+- Minimal qualified sets: $\min(\Gamma) = \{B_1, \cdots, B_m\}$ where each $B_i \in \Gamma$ and no proper subset of $B_i$ is in $\Gamma$
+- Maximal unqualified sets: $\max(\overline{\Gamma}) = \{T_1, \cdots, T_\ell\}$ where each $T_j \notin \Gamma$ and no proper superset of $T_j$ is outside $\Gamma$
 
 ### DNF variant
 
-Effectively, for each minimal qualified set \(B\), we create a fresh \(|B|\)-out-of-\(|B|\) sharing of the same secret among the
-parties in \(B\); any qualified coalition contains some \(B\), so it can reconstruct from that clause alone.
+Effectively, for each minimal qualified set $B$, we create a fresh $|B|$-out-of-$|B|$ sharing of the same secret among the
+parties in $B$; any qualified coalition contains some $B$, so it can reconstruct from that clause alone.
 
 #### DNF.Deal
 
 - Inputs:
-  - Access Structure \(\Gamma\) via its minimal qualified sets \(\min(\Gamma) = \{B_1, \cdots, B_m\}\)
-  - Secret \(s \in G\)
+  - Access Structure $\Gamma$ via its minimal qualified sets $\min(\Gamma) = \{B_1, \cdots, B_m\}$
+  - Secret $s \in G$
   - PRNG
 - Output:
-  - For each party \(p \in P\), a share vector of length \(m\) where component \(k\) is that party’s piece for clause \(B_k\) if \(p\in B_k\),
-    and \(\bot\) / identity otherwise.
+  - For each party $p \in P$, a share vector of length $m$ where component $k$ is that party’s piece for clause $B_k$ if $p\in B_k$,
+    and $\bot$ / identity otherwise.
 
 Algorithm:
 
@@ -91,10 +91,10 @@ DNF.Deal(Γ_min = [B1..Bm], secret s):
 ### DNF.Reconstruct
 
 - Inputs:
-  - A set of parties \(A \subseteq P\) and their shares
-  - Access Structure \(\Gamma\) via its minimal qualified sets \(\min(\Gamma) = \{B_1, \cdots, B_m\}\)
+  - A set of parties $A \subseteq P$ and their shares
+  - Access Structure $\Gamma$ via its minimal qualified sets $\min(\Gamma) = \{B_1, \cdots, B_m\}$
 - Output:
-  - Reconstructed secret \(s\) if \(A \in \Gamma\) else fail.
+  - Reconstructed secret $s$ if $A \in \Gamma$ else fail.
 
 Algorithm:
 
@@ -115,20 +115,20 @@ DNF.Reconstruct(Γ_min = [B1..Bm], provided coalition A, shares share[p]):
 ### CNF variant
 
 In the CNF variant, the access structure is specified by the maximal unqualified (a.k.a. maximal unauthorized) sets
-\(\max(\overline{\Gamma}) = \{T_1, \dots, T_\ell\}\). Intuitively, we first split the secret \(s\) into \(\ell\)
-independent pieces \(r_1,\dots,r_\ell\) such that \(r_1 + \cdots + r_\ell = s\). Then, for each \(j\), we give piece
-\(r_j\) to every party not in \(T_j\). A qualified coalition \(A\in\Gamma\) is not contained in any unqualified set,
-so for every \(j\) it contains some party outside \(T_j\) and can therefore collect all \(r_j\) and reconstruct \(s\).
+$\max(\overline{\Gamma}) = \{T_1, \dots, T_\ell\}$. Intuitively, we first split the secret $s$ into $\ell$
+independent pieces $r_1,\dots,r_\ell$ such that $r_1 + \cdots + r_\ell = s$. Then, for each $j$, we give piece
+$r_j$ to every party not in $T_j$. A qualified coalition $A\in\Gamma$ is not contained in any unqualified set,
+so for every $j$ it contains some party outside $T_j$ and can therefore collect all $r_j$ and reconstruct $s$.
 
 #### CNF.Deal
 
 - Inputs:
-  - Access Structure \(\Gamma\) via its maximal unqualified sets \(\max(\overline{\Gamma}) = \{T_1, \cdots, T_\ell\}\)
-  - Secret \(s \in G\)
+  - Access Structure $\Gamma$ via its maximal unqualified sets $\max(\overline{\Gamma}) = \{T_1, \cdots, T_\ell\}$
+  - Secret $s \in G$
   - PRNG
 - Output:
-  - For each party \(p\in P\), a share vector of length \(\ell\) where component \(j\) is either \(r_j\) (if \(p\notin T_j\))
-    or \(\bot\) / identity (if \(p\in T_j\)).
+  - For each party $p\in P$, a share vector of length $\ell$ where component $j$ is either $r_j$ (if $p\notin T_j$)
+    or $\bot$ / identity (if $p\in T_j$).
 
 Algorithm:
 
@@ -155,10 +155,10 @@ CNF.Deal(Γ_max_unqual = [T1..Tℓ], secret s):
 ### CNF.Reconstruct
 
 - Inputs:
-  - A set of parties \(A \subseteq P\) and their shares
-  - Access Structure \(\Gamma\) via its maximal unqualified sets \(\max(\overline{\Gamma}) = \{T_1, \cdots, T_\ell\}\)
+  - A set of parties $A \subseteq P$ and their shares
+  - Access Structure $\Gamma$ via its maximal unqualified sets $\max(\overline{\Gamma}) = \{T_1, \cdots, T_\ell\}$
 - Output:
-  - Reconstructed secret \(s\) if \(A \in \Gamma\) else fail.
+  - Reconstructed secret $s$ if $A \in \Gamma$ else fail.
 
 Algorithm:
 
