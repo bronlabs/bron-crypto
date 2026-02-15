@@ -137,7 +137,7 @@ func TestSumToSecret_Randomness(t *testing.T) {
 		require.NoError(t, err)
 
 		// With same seed, outputs should be identical
-		require.Equal(t, len(shares1), len(shares2))
+		require.Len(t, shares2, len(shares1))
 		for i := range shares1 {
 			require.True(t, shares1[i].Equal(shares2[i]))
 		}
@@ -152,7 +152,7 @@ func TestSumToSecret_Randomness(t *testing.T) {
 		// Check that not all first 4 shares are zero or identical
 		allZero := true
 		allSame := true
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			if !shares[i].IsZero() {
 				allZero = false
 			}
@@ -293,7 +293,7 @@ func TestSumToSecret_Properties(t *testing.T) {
 
 		// Verify it's the correct last share
 		partialSum := group.Zero()
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			partialSum = partialSum.Add(shares1[i])
 		}
 		expectedLast := secret.Value().Add(partialSum.Neg())

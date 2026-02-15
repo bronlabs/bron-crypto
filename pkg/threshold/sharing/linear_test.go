@@ -336,10 +336,10 @@ func TestCNFAccessStructure_IsAuthorized(t *testing.T) {
 		{"authorized {1,2,3}", []sharing.ID{1, 2, 3}, true},
 		{"authorized {1,2,4}", []sharing.ID{1, 2, 4}, true},
 		{"authorized all", []sharing.ID{1, 2, 3, 4}, true},
-		{"unauthorized {1,2}", []sharing.ID{1, 2}, false},
-		{"unauthorized {3,4}", []sharing.ID{3, 4}, false},
-		{"unauthorized {1}", []sharing.ID{1}, false},
-		{"unauthorized empty", []sharing.ID{}, false},
+		{"unauthorised {1,2}", []sharing.ID{1, 2}, false},
+		{"unauthorised {3,4}", []sharing.ID{3, 4}, false},
+		{"unauthorised {1}", []sharing.ID{1}, false},
+		{"unauthorised empty", []sharing.ID{}, false},
 	}
 
 	for _, tt := range tests {
