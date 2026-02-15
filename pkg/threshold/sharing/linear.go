@@ -39,11 +39,8 @@ func NewCNFAccessStructure(maximalUnqualifiedSets ...ds.Set[ID]) (CNFAccessStruc
 }
 
 func validateISNAccessStructure(minimalQualifiedOrMaximalUnqualifiedSets ...ds.Set[ID]) error {
-	if minimalQualifiedOrMaximalUnqualifiedSets == nil {
-		return ErrIsNil.WithMessage("minimal qualified sets is nil")
-	}
 	if len(minimalQualifiedOrMaximalUnqualifiedSets) == 0 {
-		return ErrValue.WithMessage("must have at least one minimal qualified set")
+		return ErrValue.WithMessage("must have at least one set")
 	}
 	for i, si := range minimalQualifiedOrMaximalUnqualifiedSets {
 		if si == nil {
