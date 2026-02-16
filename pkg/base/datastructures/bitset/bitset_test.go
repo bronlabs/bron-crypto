@@ -12,10 +12,9 @@ import (
 func TestBitSet_AddAndContains(t *testing.T) {
 	t.Parallel()
 
-	s := bitset.BitSet[uint64](0)
-
 	t.Run("empty set", func(t *testing.T) {
 		t.Parallel()
+		s := bitset.BitSet[uint64](0)
 		require.False(t, s.Contains(1))
 		require.True(t, s.IsEmpty())
 		require.Equal(t, 0, s.Size())
@@ -114,14 +113,17 @@ func TestBitSet_Remove(t *testing.T) {
 func TestBitSet_Clear(t *testing.T) {
 	t.Parallel()
 
-	s := bitset.BitSet[uint64](0)
-	s.AddAll(1, 2, 3, 5, 8, 13)
-	require.Equal(t, 6, s.Size())
+	t.Run("clear removes all elements", func(t *testing.T) {
+		t.Parallel()
+		s := bitset.BitSet[uint64](0)
+		s.AddAll(1, 2, 3, 5, 8, 13)
+		require.Equal(t, 6, s.Size())
 
-	s.Clear()
-	require.True(t, s.IsEmpty())
-	require.Equal(t, 0, s.Size())
-	require.False(t, s.Contains(1))
+		s.Clear()
+		require.True(t, s.IsEmpty())
+		require.Equal(t, 0, s.Size())
+		require.False(t, s.Contains(1))
+	})
 }
 
 func TestBitSet_Iter(t *testing.T) {
@@ -155,46 +157,55 @@ func TestBitSet_Iter(t *testing.T) {
 func TestBitSet_List(t *testing.T) {
 	t.Parallel()
 
-	s := bitset.BitSet[uint64](0)
-	s.AddAll(3, 1, 4, 2)
+	t.Run("list returns sorted elements", func(t *testing.T) {
+		t.Parallel()
+		s := bitset.BitSet[uint64](0)
+		s.AddAll(3, 1, 4, 2)
 
-	list := s.List()
-	require.Len(t, list, 4)
-	require.Equal(t, []uint64{1, 2, 3, 4}, list)
+		list := s.List()
+		require.Len(t, list, 4)
+		require.Equal(t, []uint64{1, 2, 3, 4}, list)
+	})
 }
 
 func TestBitSet_Clone(t *testing.T) {
 	t.Parallel()
 
-	s := bitset.BitSet[uint64](0)
-	s.AddAll(1, 2, 3)
+	t.Run("clone creates independent copy", func(t *testing.T) {
+		t.Parallel()
+		s := bitset.BitSet[uint64](0)
+		s.AddAll(1, 2, 3)
 
-	clone := s.Clone()
-	require.NotNil(t, clone)
-	require.Equal(t, 3, clone.Size())
+		clone := s.Clone()
+		require.NotNil(t, clone)
+		require.Equal(t, 3, clone.Size())
 
-	// Modify clone
-	clone.Add(4)
-	require.True(t, clone.Contains(4))
-	require.False(t, s.Contains(4))
-	require.Equal(t, 3, s.Size())
-	require.Equal(t, 4, clone.Size())
+		// Modify clone
+		clone.Add(4)
+		require.True(t, clone.Contains(4))
+		require.False(t, s.Contains(4))
+		require.Equal(t, 3, s.Size())
+		require.Equal(t, 4, clone.Size())
+	})
 }
 
 func TestBitSet_Equal(t *testing.T) {
 	t.Parallel()
 
-	s1 := bitset.BitSet[uint64](0)
-	s1.AddAll(1, 2, 3)
+	t.Run("equal sets regardless of insertion order", func(t *testing.T) {
+		t.Parallel()
+		s1 := bitset.BitSet[uint64](0)
+		s1.AddAll(1, 2, 3)
 
-	s2 := bitset.BitSet[uint64](0)
-	s2.AddAll(3, 1, 2)
+		s2 := bitset.BitSet[uint64](0)
+		s2.AddAll(3, 1, 2)
 
-	require.True(t, s1.Equal(&s2))
-	require.True(t, s2.Equal(&s1))
+		require.True(t, s1.Equal(&s2))
+		require.True(t, s2.Equal(&s1))
 
-	s2.Add(4)
-	require.False(t, s1.Equal(&s2))
+		s2.Add(4)
+		require.False(t, s1.Equal(&s2))
+	})
 }
 
 func TestBitSet_Union(t *testing.T) {
@@ -310,10 +321,9 @@ func TestImmutableBitSet_Unfreeze(t *testing.T) {
 func TestBitSet_BoundaryValues(t *testing.T) {
 	t.Parallel()
 
-	s := bitset.BitSet[uint64](0)
-
 	t.Run("element 0 should panic", func(t *testing.T) {
 		t.Parallel()
+		s := bitset.BitSet[uint64](0)
 		require.Panics(t, func() {
 			s.Add(0)
 		})
@@ -321,6 +331,7 @@ func TestBitSet_BoundaryValues(t *testing.T) {
 
 	t.Run("element 65 should panic", func(t *testing.T) {
 		t.Parallel()
+		s := bitset.BitSet[uint64](0)
 		require.Panics(t, func() {
 			s.Add(65)
 		})
