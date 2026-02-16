@@ -1,6 +1,7 @@
 package ot
 
 import (
+	"encoding/binary"
 	"fmt"
 )
 
@@ -89,10 +90,50 @@ func (pb PackedBits) BitLen() int {
 	return len(pb) * 8
 }
 
+// Parse converts a binary string into PackedBits.
+func Parse(v string) (PackedBits, error) {
+	if v == "" {
+		return nil, ErrInvalidArgument.WithMessage("input string cannot be empty")
+	}
+
+	byteLen := (len(v) + 7) / 8
+	packedBits := make(PackedBits, byteLen)
+
+	for i, char := range v {
+		if char != '0' && char != '1' {
+			return nil, ErrInvalidArgument.WithMessage("invalid character in the input")
+		}
+		byteIndex := i / 8
+		bitPos := uint(i % 8)
+
+		if char == '1' {
+			packedBits[byteIndex] |= 1 << (byte(bitPos))
+		}
+	}
+
+	return packedBits, nil
+}
+
 // TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
 // groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
 // were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
 func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
+	if len(inputMatrix)%64 != 0 {
+		return transposePackedBitsSlow(inputMatrix)
+	}
+	for _, c := range inputMatrix {
+		if len(c)%8 != 0 {
+			return transposePackedBitsSlow(inputMatrix)
+		}
+	}
+
+	return transposePackedBitsFast(inputMatrix)
+}
+
+// transposePackedBitsSlow transposes a 2D matrix of "packed" bits (represented in
+// groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
+// were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
+func transposePackedBitsSlow(inputMatrix [][]byte) ([][]byte, error) {
 	// Read input sizes and allocate output
 	nRowsInput := len(inputMatrix)
 	if nRowsInput%8 != 0 || nRowsInput == 0 {
@@ -131,26 +172,72 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	return transposedMatrix, nil
 }
 
-// Parse converts a binary string into PackedBits.
-func Parse(v string) (PackedBits, error) {
-	if v == "" {
-		return nil, ErrInvalidArgument.WithMessage("input string cannot be empty")
+// transposePackedBitsFast transposes a packed bit matrix using 64x64 block transposes.
+// The number of rows and columns (in bits) must be multiples of 64.
+// The algorithm from: "Warren, Henry: Hacker's Delight" (chapter 7.3)
+func transposePackedBitsFast(inputMatrix [][]byte) ([][]byte, error) {
+	nRowsInput := len(inputMatrix)
+	if nRowsInput == 0 || nRowsInput%64 != 0 {
+		return nil, ErrInvalidArgument.WithMessage("input matrix must have a number of rows divisible by 64")
 	}
-
-	byteLen := (len(v) + 7) / 8
-	packedBits := make(PackedBits, byteLen)
-
-	for i, char := range v {
-		if char != '0' && char != '1' {
-			return nil, ErrInvalidArgument.WithMessage("invalid character in the input")
-		}
-		byteIndex := i / 8
-		bitPos := uint(i % 8)
-
-		if char == '1' {
-			packedBits[byteIndex] |= 1 << (byte(bitPos))
+	if len(inputMatrix[0]) == 0 || len(inputMatrix)%8 != 0 {
+		return nil, ErrInvalidArgument.WithMessage("input matrix must have at least one column")
+	}
+	for i := range nRowsInput {
+		if len(inputMatrix[i]) != len(inputMatrix[0]) {
+			return nil, ErrInvalidArgument.WithMessage("input matrix must be a 2D matrix")
 		}
 	}
 
-	return packedBits, nil
+	nColsInputBytes := len(inputMatrix[0])
+	nColsInputBits := nColsInputBytes * 8
+	nRowsOutput := nColsInputBits
+	nColsOutputBytes := nRowsInput / 8
+	transposedMatrix := make([][]byte, nRowsOutput)
+	for i := range nRowsOutput {
+		transposedMatrix[i] = make([]byte, nColsOutputBytes)
+	}
+
+	for rowBlock := 0; rowBlock < nRowsInput; rowBlock += 64 {
+		for colBlock := 0; colBlock < nColsInputBits; colBlock += 64 {
+			var block [64]uint64
+			colByte := colBlock / 8
+			for i := range 64 {
+				block[i] = binary.LittleEndian.Uint64(inputMatrix[rowBlock+i][colByte : colByte+8])
+			}
+			transpose64(block[:])
+			rowByte := rowBlock / 8
+			for i := range 64 {
+				binary.LittleEndian.PutUint64(transposedMatrix[colBlock+i][rowByte:rowByte+8], block[i])
+			}
+		}
+	}
+
+	return transposedMatrix, nil
+}
+
+// transpose64 see: https://eprint.iacr.org/2017/793.pdf (Fig. 2)
+func transpose64(block []uint64) {
+	masks := [6]uint64{
+		0x5555555555555555,
+		0x3333333333333333,
+		0x0f0f0f0f0f0f0f0f,
+		0x00ff00ff00ff00ff,
+		0x0000ffff0000ffff,
+		0x00000000ffffffff,
+	}
+
+	for stage := range 6 {
+		step := 1 << stage
+		mask := masks[stage]
+		shift := uint(step)
+		for base := 0; base < 64; base += 2 * step {
+			for i := range step {
+				a := block[base+i]
+				b := block[base+i+step]
+				block[base+i] = (a & mask) | ((b & mask) << shift)
+				block[base+i+step] = ((a >> shift) & mask) | (b & ^mask)
+			}
+		}
+	}
 }
