@@ -43,9 +43,14 @@ func TestCNFSanity(t *testing.T) {
 	shares := out.Shares()
 	require.Equal(t, 4, shares.Size())
 
-	// Verify each share has the correct vector length (2 components for 2 clauses)
+	// Verify shares have sparse maps (parties only have entries for clauses where they're NOT in the maximal unqualified set)
+	// Maximal unqualified sets: {1,2} and {3,4}
+	// Party 1: NOT in {3,4}, so has entry for {3,4}; IS in {1,2}, so no entry for {1,2}
+	// Party 2: NOT in {3,4}, so has entry for {3,4}; IS in {1,2}, so no entry for {1,2}
+	// Party 3: NOT in {1,2}, so has entry for {1,2}; IS in {3,4}, so no entry for {3,4}
+	// Party 4: NOT in {1,2}, so has entry for {1,2}; IS in {3,4}, so no entry for {3,4}
 	for _, share := range shares.Values() {
-		require.Len(t, share.Value(), 2)
+		require.Len(t, share.Value(), 1, "each party should have 1 entry (outside one maximal unqualified set)")
 	}
 
 	// Reconstruct with authorized set {1,3}
@@ -445,9 +450,16 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		sharesMap[id] = share
 	}
 
-	// Each share should have 3 components (one per clause)
+	// Each share should have sparse map entries only for maximal unqualified sets they're NOT in
+	// Maximal unqualified: {1,2}, {3,4}, {5,6}
+	// Party 1: in {1,2}, NOT in {3,4} and {5,6} → 2 entries
+	// Party 2: in {1,2}, NOT in {3,4} and {5,6} → 2 entries
+	// Party 3: in {3,4}, NOT in {1,2} and {5,6} → 2 entries
+	// Party 4: in {3,4}, NOT in {1,2} and {5,6} → 2 entries
+	// Party 5: in {5,6}, NOT in {1,2} and {3,4} → 2 entries
+	// Party 6: in {5,6}, NOT in {1,2} and {3,4} → 2 entries
 	for _, share := range sharesMap {
-		require.Len(t, share.Value(), 3)
+		require.Len(t, share.Value(), 2, "each party should be outside 2 of the 3 maximal unqualified sets")
 	}
 
 	t.Run("authorized minimal {1,3,5}", func(t *testing.T) {

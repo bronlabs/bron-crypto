@@ -4,17 +4,21 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/errs-go/errs"
 )
 
 // Share represents a shareholder's portion in an ISN secret sharing scheme.
-// Each share contains a vector of group elements, with one component per
-// clause in the access structure (minimal qualified set for DNF, maximal
-// unqualified set for CNF).
+// Each share contains a sparse map from clause identifiers (represented as
+// bitsets of party IDs) to group elements. The map only stores non-identity
+// values, making the representation space-efficient for large access structures.
+//
+// For DNF schemes, keys are minimal qualified sets. For CNF schemes, keys are
+// maximal unqualified sets. Missing keys implicitly have the group identity value.
 type Share[E algebra.GroupElement[E]] struct {
 	id sharing.ID
-	v  []E
+	v  map[bitset.ImmutableBitSet[sharing.ID]]E
 }
 
 // ID returns the shareholder's unique identifier.
@@ -22,14 +26,15 @@ func (s *Share[E]) ID() sharing.ID {
 	return s.id
 }
 
-// Value returns the share's component vector. The length equals the number
-// of clauses in the access structure.
-func (s *Share[E]) Value() []E {
+// Value returns the share's sparse component map. Keys are clause identifiers
+// (bitsets), and values are group elements. Missing keys implicitly represent
+// the group identity element.
+func (s *Share[E]) Value() map[bitset.ImmutableBitSet[sharing.ID]]E {
 	return s.v
 }
 
 // Equal tests whether two shares are equal by comparing their IDs and
-// all components of their value vectors.
+// all components of their value maps.
 func (s *Share[E]) Equal(other *Share[E]) bool {
 	if s == nil && other == nil {
 		return s == other
@@ -37,8 +42,9 @@ func (s *Share[E]) Equal(other *Share[E]) bool {
 	if len(s.v) != len(other.v) {
 		return false
 	}
-	for i, si := range s.v {
-		if !si.Equal(other.v[i]) {
+	for clause, si := range s.v {
+		oi, exists := other.v[clause]
+		if !exists || !si.Equal(oi) {
 			return false
 		}
 	}
@@ -46,16 +52,47 @@ func (s *Share[E]) Equal(other *Share[E]) bool {
 }
 
 // Op performs component-wise group operation on two shares, enabling
-// additive homomorphism. Both shares must have the same vector length.
-// Panics if the shares have different lengths.
+// additive homomorphism. Combines entries from both maps, treating missing
+// keys as the group identity element.
 func (s *Share[E]) Op(other *Share[E]) *Share[E] {
-	if len(s.v) != len(other.v) {
-		panic("shares must have the same length to perform group operation")
+	result := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
+
+	// Get a group instance from the first non-nil element
+	var group algebra.FiniteGroup[E]
+	for _, v := range s.v {
+		group = algebra.StructureMustBeAs[algebra.FiniteGroup[E]](v.Structure())
+		break
 	}
-	result := make([]E, len(s.v))
-	for i, si := range s.v {
-		result[i] = si.Op(other.v[i])
+	if group == nil {
+		for _, v := range other.v {
+			group = algebra.StructureMustBeAs[algebra.FiniteGroup[E]](v.Structure())
+			break
+		}
 	}
+
+	// Combine all clauses from both shares
+	allClauses := make(map[bitset.ImmutableBitSet[sharing.ID]]bool)
+	for clause := range s.v {
+		allClauses[clause] = true
+	}
+	for clause := range other.v {
+		allClauses[clause] = true
+	}
+
+	for clause := range allClauses {
+		sVal, sExists := s.v[clause]
+		oVal, oExists := other.v[clause]
+
+		if sExists && oExists {
+			result[clause] = sVal.Op(oVal)
+		} else if sExists {
+			result[clause] = sVal
+		} else if oExists {
+			result[clause] = oVal
+		}
+		// If neither exists, both are identity, so their Op is identity - don't store
+	}
+
 	return &Share[E]{
 		id: s.id,
 		v:  result,

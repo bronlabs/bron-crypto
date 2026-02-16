@@ -41,9 +41,16 @@ func TestDNFSanity(t *testing.T) {
 	shares := out.Shares()
 	require.Equal(t, 4, shares.Size())
 
-	// Verify each share has the correct vector length (2 components for 2 clauses)
-	for _, share := range shares.Values() {
-		require.Len(t, share.Value(), 2)
+	// Verify shares have sparse maps (parties only have entries for clauses they're in)
+	// Party 1 is in {1,2} only
+	// Party 2 is in both {1,2} and {2,3,4}
+	// Parties 3,4 are in {2,3,4} only
+	for id, share := range shares.Iter() {
+		if id == 2 {
+			require.Len(t, share.Value(), 2, "party 2 should have 2 entries (in both clauses)")
+		} else {
+			require.Len(t, share.Value(), 1, "parties 1,3,4 should have 1 entry (in one clause)")
+		}
 	}
 
 	// Reconstruct with all shares

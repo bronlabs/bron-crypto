@@ -1,45 +1,24 @@
 # Ito-Saito-Nishizeki replicated secret sharing scheme
 
-Package isn implements the Ito-Saito-Nishizeki (ISN) secret sharing scheme
-for general monotone access structures.
+Package isn implements the Ito-Saito-Nishizeki (ISN) secret sharing scheme for general monotone access structures.
 
-The ISN scheme generalizes threshold secret sharing to arbitrary monotone
-access structures specified in either DNF (Disjunctive Normal Form) or CNF
-(Conjunctive Normal Form). Unlike Shamir's threshold scheme which only
-supports t-of-n access structures, ISN can handle complex authorization
-policies such as "any 2 executives OR any 3 managers" (DNF) or
-"at least one from each department" (CNF).
+The ISN scheme generalizes threshold secret sharing to arbitrary monotone access structures specified in either DNF (Disjunctive Normal Form) or CNF (Conjunctive Normal Form). Unlike Shamir's threshold scheme which only supports t-of-n access structures, ISN can handle complex authorization policies such as "any 2 executives OR any 3 managers" (DNF) or "at least one from each department" (CNF).
 
 ## DNF Variant
 
-The DNF scheme represents the access structure as minimal qualified sets
-(clauses). For each minimal qualified set B, the dealer creates an
-|B|-out-of-|B| additive sharing of the secret among the parties in B.
-Any authorized coalition contains at least one minimal qualified set
-and can therefore reconstruct the secret from that clause.
+The DNF scheme represents the access structure as minimal qualified sets (clauses). For each minimal qualified set B, the dealer creates an |B|-out-of-|B| additive sharing of the secret among the parties in B. Any authorized coalition contains at least one minimal qualified set and can therefore reconstruct the secret from that clause.
 
-Example: Access structure "A = {p1,p2} OR {p2,p3,p4}" has two minimal
-qualified sets. Each party receives a share vector with two components,
-one per clause.
+**Example**: Access structure "A = {p1,p2} OR {p2,p3,p4}" has two minimal qualified sets. Each party receives a share containing a sparse map where keys are the minimal qualified sets (as bitsets) and values are group elements.
 
 ## CNF Variant
 
-The CNF scheme represents the access structure as maximal unqualified sets
-(clauses). The dealer splits the secret into ℓ pieces (where ℓ is the
-number of maximal unqualified sets) and gives piece j to every party
-not in maximal unqualified set Tj. An authorized coalition is not
-contained in any maximal unqualified set, so it contains at least one
-party outside each Tj and can collect all pieces to reconstruct.
+The CNF scheme represents the access structure as maximal unqualified sets (clauses). The dealer splits the secret into ℓ pieces (where ℓ is the number of maximal unqualified sets) and gives piece j to every party not in maximal unqualified set Tj. An authorized coalition is not contained in any maximal unqualified set, so it contains at least one party outside each Tj and can collect all pieces to reconstruct.
 
-Example: Access structure "at least one from {p1,p2} AND at least one
-from {p3,p4}" has maximal unqualified sets {{p1,p2}, {p3,p4}}.
+**Example**: Access structure "at least one from {p1,p2} AND at least one from {p3,p4}" has maximal unqualified sets {{p1,p2}, {p3,p4}}. Each party receives a sparse map where keys are the maximal unqualified sets and values are the secret pieces they hold.
 
 ## Security
 
-The ISN scheme provides information-theoretic security: any unauthorized
-coalition learns no information about the secret. Unlike polynomial-based
-schemes (Shamir, Feldman, Pedersen), ISN works directly over any finite
-group without requiring field arithmetic.
+The ISN scheme provides information-theoretic security: any unauthorized coalition learns no information about the secret. Unlike polynomial-based schemes (Shamir, Feldman, Pedersen), ISN works directly over any finite group without requiring field arithmetic.
 
 ## Spec
 
@@ -53,8 +32,7 @@ We use the following notation:
 
 ### DNF variant
 
-Effectively, for each minimal qualified set $B$, we create a fresh $|B|$-out-of-$|B|$ sharing of the same secret among the
-parties in $B$; any qualified coalition contains some $B$, so it can reconstruct from that clause alone.
+Effectively, for each minimal qualified set $B$, we create a fresh $|B|$-out-of-$|B|$ sharing of the same secret among the parties in $B$; any qualified coalition contains some $B$, so it can reconstruct from that clause alone.
 
 #### DNF.Deal
 
@@ -63,8 +41,9 @@ parties in $B$; any qualified coalition contains some $B$, so it can reconstruct
   - Secret $s \in G$
   - PRNG
 - Output:
-  - For each party $p \in P$, a share vector of length $m$ where component $k$ is that party’s piece for clause $B_k$ if $p\in B_k$,
-    and $\bot$ / identity otherwise.
+  - For each party $p \in P$, a share containing a sparse map where the key is $B_k$ (represented as a bitset)
+    and the value is that party's piece for clause $B_k$, if $p \in B_k$. If $p \notin B_k$, the clause is
+    omitted from the map (implicitly the identity element).
 
 Algorithm:
 
@@ -72,9 +51,7 @@ Algorithm:
 DNF.Deal(Γ_min = [B1..Bm], secret s):
 
 1. For each party p in P:
-1.1       share[p] := array length m
-1.2       For k = 1..m:
-1.2.1          share[p][k] := 0
+1.1       share[p] := empty map
 
 2. For k = 1..m:
 2.1       Let parties := list(Bk) = [p_i1, ..., p_iℓ]   // ℓ = |Bk|, i1..iℓ are the indices of members of Bk
@@ -83,7 +60,8 @@ DNF.Deal(Γ_min = [B1..Bm], secret s):
 2.3       Sample r1, ..., r_{ℓ-1} ← uniform in G
 2.4       Set rℓ := s - (r1 + ... + r_{ℓ-1})
 2.5       For j = 1..ℓ:
-2.5.1         share[ parties[j] ][k] := rj
+2.5.1         share[ parties[j] ][ Bk ] := rj
+              // Store non-identity values in sparse map with Bk as key
 
 3. Output all share[p].
 ```
@@ -103,12 +81,13 @@ DNF.Reconstruct(Γ_min = [B1..Bm], provided coalition A, shares share[p]):
 
 1. If A is not authorized (A ∉ Γ): FAIL
 
-2. Find an index k such that Bk ⊆ A.
+2. Find a minimal qualified set Bk such that Bk ⊆ A.
        (There must exist one because A ∈ Γ and Γ is monotone:
         every authorized set contains a minimal qualified set.)
 
 3. Compute:
-       s_hat := sum over p in Bk of share[p][k]
+       s_hat := sum over p in Bk of share[p][Bk]
+       // Retrieve value from sparse map using Bk as key
    Output s_hat.
 ```
 
@@ -127,8 +106,9 @@ so for every $j$ it contains some party outside $T_j$ and can therefore collect 
   - Secret $s \in G$
   - PRNG
 - Output:
-  - For each party $p\in P$, a share vector of length $\ell$ where component $j$ is either $r_j$ (if $p\notin T_j$)
-    or $\bot$ / identity (if $p\in T_j$).
+  - For each party $p \in P$, a share containing a sparse map where the key is $T_j$ (represented as a bitset)
+    and the value is $r_j$, if $p \notin T_j$. If $p \in T_j$, the clause is omitted from the map
+    (implicitly the identity element).
 
 Algorithm:
 
@@ -136,9 +116,7 @@ Algorithm:
 CNF.Deal(Γ_max_unqual = [T1..Tℓ], secret s):
 
 1. For each party p in P:
-1.1       share[p] := array length ℓ
-1.2       For j = 1..ℓ:
-1.2.1          share[p][j] := 0
+1.1       share[p] := empty map
 
 2. // Create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
 2.1   Sample r1, ..., r_{ℓ-1} ← uniform in G
@@ -147,7 +125,8 @@ CNF.Deal(Γ_max_unqual = [T1..Tℓ], secret s):
 3. For j = 1..ℓ:
 3.1     For each party p in P:
 3.1.1       If p ∉ Tj:
-3.1.1.1         share[p][j] := rj
+3.1.1.1         share[p][ Tj ] := rj
+                // Store in sparse map with Tj as key
 
 4. Output all share[p].
 ```
@@ -170,7 +149,8 @@ CNF.Reconstruct(Γ_max_unqual = [T1..Tℓ], provided coalition A, shares share[p
 2. For j = 1..ℓ:
 2.1     Find any party p in A such that p ∉ Tj.
         (Such p must exist, otherwise A ⊆ Tj and A would be unqualified.)
-2.2     Let rj := share[p][j]
+2.2     Let rj := share[p][ Tj ]
+        // Retrieve value from sparse map using Tj as key
 
 3. Compute:
        s_hat := r1 + r2 + ... + rℓ

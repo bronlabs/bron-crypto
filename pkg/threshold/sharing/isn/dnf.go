@@ -91,27 +91,20 @@ func (d *DNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 	if secret == nil {
 		return nil, ErrIsNil.WithMessage("secret is nil")
 	}
-	m := len(d.ac) // number of minimal qualified sets / clauses
 	shares := make(map[sharing.ID]*Share[E])
-	// step 1
+	// step 1: initialize each shareholder's share with an empty map
 	for p := range d.ac.Shareholders().Iter() {
-		// step 1.1
 		shares[p] = &Share[E]{
 			id: p,
-			v:  make([]E, m),
-		}
-		// step 1.2
-		for k := range m {
-			// step 1.2.1
-			shares[p].v[k] = d.g.OpIdentity()
+			v:  make(map[bitset.ImmutableBitSet[sharing.ID]]E),
 		}
 	}
 
-	// step 2
-	for k := range m {
+	// step 2: for each minimal qualified set, create an additive sharing
+	for _, Bk := range d.ac {
 		// step 2.1
-		Bk := d.ac[k].List()
-		l := len(Bk)
+		parties := Bk.List()
+		l := len(parties)
 		// step 2.2
 		if l < 1 {
 			return nil, ErrFailed.WithMessage("access structure has an empty minimal qualified set")
@@ -123,10 +116,10 @@ func (d *DNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 		}
-		// step 2.5
+		// step 2.5: assign each party's piece to the sparse map
 		for j := range l {
-			// step 2.5.1
-			shares[Bk[j]].v[k] = rs[j]
+			// step 2.5.1: use Bk as the map key
+			shares[parties[j]].v[Bk] = rs[j]
 		}
 	}
 	// step 3
@@ -155,37 +148,42 @@ func (d *DNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	if !d.ac.IsAuthorized(ids...) {
 		return nil, ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
-	// step 2
-	k := -1
+	// step 2: find a minimal qualified set Bk contained in the provided coalition
+	var qualifiedSet bitset.ImmutableBitSet[sharing.ID]
+	found := false
 	idSet := bitset.NewImmutableBitSet(ids...)
-	for i, Bi := range d.ac {
+	for _, Bi := range d.ac {
 		if Bi.IsSubSet(idSet) {
-			k = i
+			qualifiedSet = Bi
+			found = true
 			break
 		}
 	}
-	if k == -1 {
+	if !found {
 		return nil, ErrFailed.WithMessage("could not find a minimal qualified set contained in the provided shares")
 	}
 
-	// step 3
+	// step 3: reconstruct from the qualified set's components
 	sharesMap := make(map[sharing.ID]*Share[E])
 	for _, sh := range shares {
 		if sh == nil {
-			return nil, ErrFailed.WithMessage("nil share provided for ID %d", sh.ID())
+			return nil, ErrFailed.WithMessage("nil share provided")
 		}
 		sharesMap[sh.ID()] = sh
 	}
+
 	sHat := d.g.OpIdentity()
-	for pid := range d.ac[k].Iter() {
+	for pid := range qualifiedSet.Iter() {
 		pShare, exists := sharesMap[pid]
 		if !exists || pShare == nil {
 			return nil, ErrFailed.WithMessage("missing share for ID %d", pid)
 		}
-		if len(pShare.v) <= k {
-			return nil, ErrFailed.WithMessage("share for ID %d does not have enough components", pid)
+		// Retrieve value from sparse map; if missing, it's implicitly identity
+		val, exists := pShare.v[qualifiedSet]
+		if exists {
+			sHat = sHat.Op(val)
 		}
-		sHat = sHat.Op(pShare.v[k])
+		// If not exists, val is identity, so Op(identity) doesn't change sHat
 	}
 	return &Secret[E]{v: sHat}, nil
 }

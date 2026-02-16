@@ -98,34 +98,28 @@ func (c *CNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 
 	shares := make(map[sharing.ID]*Share[E])
 
-	// step 1: initialise each shareholder share vector with identity
+	// step 1: initialize each shareholder's share with an empty map
 	for p := range c.ac.Shareholders().Iter() {
-		// step 1.1
 		shares[p] = &Share[E]{
 			id: p,
-			v:  make([]E, l),
-		}
-		// step 1.2
-		for j := range l {
-			// step 1.2.1
-			shares[p].v[j] = c.g.OpIdentity()
+			v:  make(map[bitset.ImmutableBitSet[sharing.ID]]E),
 		}
 	}
 
-	// step 2: create an ℓ-out-of-ℓ additive sharing of s into r[0..l-1]
+	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
 	rs, err := SumToSecret(secret, prng, l)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
-	// step 3: distribute: party p gets component j iff p ∉ Tj
-	for j := range l {
-		Tj := c.ac[j]
-		// step 3.1
+
+	// step 3: distribute: party p gets piece rj (with key Tj) iff p ∉ Tj
+	for j, Tj := range c.ac {
+		// step 3.1: assign piece rj to all parties not in Tj
 		for p := range c.ac.Shareholders().Iter() {
-			// step 3.1.1
+			// step 3.1.1: if p is not in Tj, store rj in sparse map
 			if !Tj.Contains(p) {
 				// step 3.1.1.1
-				shares[p].v[j] = rs[j]
+				shares[p].v[Tj] = rs[j]
 			}
 		}
 	}
@@ -167,13 +161,11 @@ func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		sharesMap[sh.ID()] = sh
 	}
 
-	// step 2 & 3
-	l := len(c.ac)
+	// step 2 & 3: for each maximal unqualified set, find a party outside it and collect pieces
 	sHat := c.g.OpIdentity()
-	for j := range l {
-		Tj := c.ac[j]
-		found := false
-		var rj E
+	for _, Tj := range c.ac {
+		rj := c.g.OpIdentity() // default to identity if piece is missing (should not happen for authorized coalition)
+		// Find any party in the coalition that is not in Tj
 		for pid := range idSet.Iter() {
 			if Tj.Contains(pid) {
 				continue
@@ -182,15 +174,15 @@ func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 			if !ok || sh == nil {
 				return nil, ErrFailed.WithMessage("missing share for ID %d", pid)
 			}
-			if len(sh.v) <= j {
-				return nil, ErrFailed.WithMessage("share for ID %d does not have enough components", pid)
+			val, exists := sh.v[Tj]
+			if !exists {
+				return nil, ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", pid, Tj.List())
 			}
-			rj = sh.v[j]
-			found = true
+			rj = val
 			break
 		}
-		if !found {
-			return nil, ErrFailed.WithMessage("could not find a party outside maximal unqualified set at index %d", j)
+		if rj.IsOpIdentity() {
+			return nil, ErrFailed.WithMessage("could not find a party outside maximal unqualified set %v", Tj.List())
 		}
 		sHat = sHat.Op(rj)
 	}
