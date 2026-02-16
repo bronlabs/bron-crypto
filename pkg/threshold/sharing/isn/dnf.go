@@ -4,8 +4,8 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -157,8 +157,9 @@ func (d *DNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	}
 	// step 2
 	k := -1
+	idSet := bitset.NewImmutableBitSet(ids...)
 	for i, Bi := range d.ac {
-		if Bi.IsSubSet(hashset.NewComparable(ids...).Freeze()) {
+		if Bi.IsSubSet(idSet) {
 			k = i
 			break
 		}

@@ -4,8 +4,8 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -158,7 +158,7 @@ func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		return nil, ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 
-	idSet := hashset.NewComparable(ids...).Freeze()
+	idSet := bitset.NewImmutableBitSet(ids...)
 	sharesMap := make(map[sharing.ID]*Share[E])
 	for _, sh := range shares {
 		if sh == nil {

@@ -2,32 +2,33 @@ package sharing
 
 import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/errs-go/errs"
 )
 
 type (
 	// DNFAccessStructure represents an access structure in disjunctive normal form, defined by its minimal qualified subsets.
-	DNFAccessStructure []ds.Set[ID]
+	DNFAccessStructure []bitset.ImmutableBitSet[ID]
 	// CNFAccessStructure represents an access structure in conjunctive normal form, defined by its maximal unqualified subsets.
-	CNFAccessStructure []ds.Set[ID]
+	CNFAccessStructure []bitset.ImmutableBitSet[ID]
 )
-
-type dnfAccessStructureDTO struct {
-	Ps []map[ID]bool `cbor:"authorizedSubsets"`
-}
-
-type cnfAccessStructureDTO struct {
-	Ps []map[ID]bool `cbor:"unauthorizedSubsets"`
-}
 
 // NewDNFAccessStructure creates a new DNF access structure from the given minimal qualified subsets.
 func NewDNFAccessStructure(minimalQualifiedSets ...ds.Set[ID]) (DNFAccessStructure, error) {
 	if err := validateISNAccessStructure(minimalQualifiedSets...); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid minimal qualified sets")
 	}
-	return DNFAccessStructure(minimalQualifiedSets), nil
+	return DNFAccessStructure(
+		sliceutils.Map(
+			minimalQualifiedSets,
+			func(s ds.Set[ID]) bitset.ImmutableBitSet[ID] {
+				return bitset.NewImmutableBitSet(s.List()...)
+			},
+		),
+	), nil
 }
 
 // NewCNFAccessStructure creates a new CNF access structure from the given maximal unqualified subsets.
@@ -35,7 +36,14 @@ func NewCNFAccessStructure(maximalUnqualifiedSets ...ds.Set[ID]) (CNFAccessStruc
 	if err := validateISNAccessStructure(maximalUnqualifiedSets...); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid maximal unqualified sets")
 	}
-	return CNFAccessStructure(maximalUnqualifiedSets), nil
+	return CNFAccessStructure(
+		sliceutils.Map(
+			maximalUnqualifiedSets,
+			func(s ds.Set[ID]) bitset.ImmutableBitSet[ID] {
+				return bitset.NewImmutableBitSet(s.List()...)
+			},
+		),
+	), nil
 }
 
 func validateISNAccessStructure(minimalQualifiedOrMaximalUnqualifiedSets ...ds.Set[ID]) error {
@@ -91,7 +99,7 @@ func (c CNFAccessStructure) Shareholders() ds.Set[ID] {
 // IsAuthorized checks if the given IDs form an authorized coalition according to the DNF access structure.
 // A coalition is authorized if it contains at least one of the minimal qualified subsets.
 func (d DNFAccessStructure) IsAuthorized(ids ...ID) bool {
-	idSet := hashset.NewComparable(ids...).Freeze()
+	idSet := bitset.NewImmutableBitSet(ids...)
 	for _, subset := range d {
 		if subset.IsSubSet(idSet) {
 			return true
@@ -103,81 +111,13 @@ func (d DNFAccessStructure) IsAuthorized(ids ...ID) bool {
 // IsAuthorized checks if the given IDs form an authorized coalition according to the CNF access structure.
 // A coalition is authorized if it does not contain any of the maximal unqualified subsets.
 func (c CNFAccessStructure) IsAuthorized(ids ...ID) bool {
-	idSet := hashset.NewComparable(ids...).Freeze()
+	idSet := bitset.NewImmutableBitSet(ids...)
 	for _, u := range c {
 		if idSet.IsSubSet(u) {
 			return false
 		}
 	}
 	return true
-}
-
-func (d DNFAccessStructure) MarshalCBOR() ([]byte, error) {
-	dto := dnfAccessStructureDTO{
-		Ps: make([]map[ID]bool, len(d)),
-	}
-	for i, subset := range d {
-		dto.Ps[i] = make(map[ID]bool)
-		for id := range subset.Iter() {
-			dto.Ps[i][id] = true
-		}
-	}
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err)
-	}
-	return data, nil
-}
-
-func (d *DNFAccessStructure) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[dnfAccessStructureDTO](data)
-	if err != nil {
-		return errs.Wrap(err)
-	}
-	ps := make([]ds.Set[ID], len(dto.Ps))
-	for i, subsetMap := range dto.Ps {
-		subset := hashset.NewComparable[ID]()
-		for id := range subsetMap {
-			subset.Add(id)
-		}
-		ps[i] = subset.Freeze()
-	}
-	*d = DNFAccessStructure(ps)
-	return nil
-}
-
-func (c CNFAccessStructure) MarshalCBOR() ([]byte, error) {
-	dto := cnfAccessStructureDTO{
-		Ps: make([]map[ID]bool, len(c)),
-	}
-	for i, subset := range c {
-		dto.Ps[i] = make(map[ID]bool)
-		for id := range subset.Iter() {
-			dto.Ps[i][id] = true
-		}
-	}
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err)
-	}
-	return data, nil
-}
-
-func (c *CNFAccessStructure) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[cnfAccessStructureDTO](data)
-	if err != nil {
-		return errs.Wrap(err)
-	}
-	ps := make([]ds.Set[ID], len(dto.Ps))
-	for i, subsetMap := range dto.Ps {
-		subset := hashset.NewComparable[ID]()
-		for id := range subsetMap {
-			subset.Add(id)
-		}
-		ps[i] = subset.Freeze()
-	}
-	*c = CNFAccessStructure(ps)
-	return nil
 }
 
 // MinimalQualifiedAccessStructure represents an n-of-n access structure where

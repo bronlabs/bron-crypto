@@ -7,6 +7,7 @@ import (
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
@@ -179,12 +180,11 @@ func TestDNFAccessStructure_CBOR(t *testing.T) {
 		ac, err := sharing.NewDNFAccessStructure(minimalSets...)
 		require.NoError(t, err)
 
-		data, err := ac.MarshalCBOR()
+		data, err := serde.MarshalCBOR(ac)
 		require.NoError(t, err)
 		require.NotNil(t, data)
 
-		var decoded sharing.DNFAccessStructure
-		err = decoded.UnmarshalCBOR(data)
+		decoded, err := serde.UnmarshalCBOR[sharing.DNFAccessStructure](data)
 		require.NoError(t, err)
 
 		// Verify same number of sets
@@ -363,12 +363,11 @@ func TestCNFAccessStructure_CBOR(t *testing.T) {
 		ac, err := sharing.NewCNFAccessStructure(maximalUnqualifiedSets...)
 		require.NoError(t, err)
 
-		data, err := ac.MarshalCBOR()
+		data, err := serde.MarshalCBOR(ac)
 		require.NoError(t, err)
 		require.NotNil(t, data)
 
-		var decoded sharing.CNFAccessStructure
-		err = decoded.UnmarshalCBOR(data)
+		decoded, err := serde.UnmarshalCBOR[sharing.CNFAccessStructure](data)
 		require.NoError(t, err)
 
 		// Verify same number of sets
