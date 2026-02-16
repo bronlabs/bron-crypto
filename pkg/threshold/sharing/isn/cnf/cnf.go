@@ -1,4 +1,4 @@
-package isn
+package cnf
 
 import (
 	"io"
@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -63,7 +64,7 @@ func (c *CNFScheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
-	secret := NewSecret(secretValue)
+	secret := isn.NewSecret(secretValue)
 	shares, err := c.Deal(secret, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not deal shares for random secret")
@@ -84,16 +85,16 @@ func (c *CNFScheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
 //   - prng: A cryptographically secure random number generator
 //
 // Returns the dealer output containing all shares, or an error if dealing fails.
-func (c *CNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], error) {
+func (c *CNFScheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], error) {
 	if prng == nil {
-		return nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, isn.ErrIsNil.WithMessage("prng is nil")
 	}
 	if secret == nil {
-		return nil, ErrIsNil.WithMessage("secret is nil")
+		return nil, isn.ErrIsNil.WithMessage("secret is nil")
 	}
 	l := len(c.ac) // number of maximal unqualified sets / clauses
 	if l == 0 {
-		return nil, ErrFailed.WithMessage("access structure has no maximal unqualified sets")
+		return nil, isn.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
 
 	shares := make(map[sharing.ID]*Share[E])
@@ -107,7 +108,7 @@ func (c *CNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 	}
 
 	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
-	rs, err := SumToSecret(secret, prng, l)
+	rs, err := isn.SumToSecret(secret, prng, l)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
@@ -142,21 +143,21 @@ func (c *CNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 //
 // Returns the reconstructed secret, or an error if the shares are unauthorised,
 // incomplete, or invalid.
-func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
+func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
 	ids, err := sharing.CollectIDs(shares...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
 	// step 1
 	if !c.ac.IsAuthorized(ids...) {
-		return nil, ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
+		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 
 	idSet := bitset.NewImmutableBitSet(ids...)
 	sharesMap := make(map[sharing.ID]*Share[E])
 	for _, sh := range shares {
 		if sh == nil {
-			return nil, ErrFailed.WithMessage("nil share provided")
+			return nil, isn.ErrFailed.WithMessage("nil share provided")
 		}
 		sharesMap[sh.ID()] = sh
 	}
@@ -172,19 +173,19 @@ func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 			}
 			sh, ok := sharesMap[pid]
 			if !ok || sh == nil {
-				return nil, ErrFailed.WithMessage("missing share for ID %d", pid)
+				return nil, isn.ErrFailed.WithMessage("missing share for ID %d", pid)
 			}
 			val, exists := sh.v[Tj]
 			if !exists {
-				return nil, ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", pid, Tj.List())
+				return nil, isn.ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", pid, Tj.List())
 			}
 			rj = val
 			break
 		}
 		if rj.IsOpIdentity() {
-			return nil, ErrFailed.WithMessage("could not find a party outside maximal unqualified set %v", Tj.List())
+			return nil, isn.ErrFailed.WithMessage("could not find a party outside maximal unqualified set %v", Tj.List())
 		}
 		sHat = sHat.Op(rj)
 	}
-	return &Secret[E]{v: sHat}, nil
+	return isn.NewSecret(sHat), nil
 }

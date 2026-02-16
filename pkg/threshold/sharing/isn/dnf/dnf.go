@@ -1,4 +1,4 @@
-package isn
+package dnf
 
 import (
 	"io"
@@ -7,22 +7,23 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// DNFName is the human-readable name for the DNF variant of ISN.
-const DNFName sharing.Name = "DNF secret sharing scheme"
+// Name is the human-readable name for the DNF variant of ISN.
+const Name sharing.Name = "DNF secret sharing scheme"
 
-// DNFScheme implements the Ito-Saito-Nishizeki secret sharing scheme with
+// Scheme implements the Ito-Saito-Nishizeki secret sharing scheme with
 // a DNF (Disjunctive Normal Form) access structure. The access structure
 // is specified by minimal qualified sets (clauses). Each share is a vector
 // with one component per minimal qualified set.
-type DNFScheme[E algebra.GroupElement[E]] struct {
+type Scheme[E algebra.GroupElement[E]] struct {
 	g  algebra.FiniteGroup[E]
 	ac sharing.DNFAccessStructure
 }
 
-// NewDNFScheme creates a new DNF ISN scheme over the given finite group
+// NewScheme creates a new DNF ISN scheme over the given finite group
 // with the specified access structure.
 //
 // Parameters:
@@ -30,23 +31,23 @@ type DNFScheme[E algebra.GroupElement[E]] struct {
 //   - ac: The DNF access structure specifying minimal qualified sets
 //
 // Returns the initialised scheme.
-func NewDNFScheme[E algebra.GroupElement[E]](
+func NewScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
 	ac sharing.DNFAccessStructure,
-) *DNFScheme[E] {
-	return &DNFScheme[E]{
+) *Scheme[E] {
+	return &Scheme[E]{
 		g:  g,
 		ac: ac,
 	}
 }
 
 // Name returns the scheme's identifier.
-func (*DNFScheme[E]) Name() sharing.Name {
-	return DNFName
+func (*Scheme[E]) Name() sharing.Name {
+	return Name
 }
 
 // AccessStructure returns the DNF access structure (minimal qualified sets).
-func (d *DNFScheme[E]) AccessStructure() sharing.DNFAccessStructure {
+func (d *Scheme[E]) AccessStructure() sharing.DNFAccessStructure {
 	return d.ac
 }
 
@@ -58,12 +59,12 @@ func (d *DNFScheme[E]) AccessStructure() sharing.DNFAccessStructure {
 //
 // Returns the dealer output containing all shares, or an error if sampling
 // or dealing fails.
-func (d *DNFScheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
+func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
 	secretValue, err := d.g.Random(prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
-	secret := NewSecret(secretValue)
+	secret := isn.NewSecret(secretValue)
 	shares, err := d.Deal(secret, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not deal shares for random secret")
@@ -84,12 +85,12 @@ func (d *DNFScheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
 //   - prng: A cryptographically secure random number generator
 //
 // Returns the dealer output containing all shares, or an error if dealing fails.
-func (d *DNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], error) {
+func (d *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], error) {
 	if prng == nil {
-		return nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, isn.ErrIsNil.WithMessage("prng is nil")
 	}
 	if secret == nil {
-		return nil, ErrIsNil.WithMessage("secret is nil")
+		return nil, isn.ErrIsNil.WithMessage("secret is nil")
 	}
 	shares := make(map[sharing.ID]*Share[E])
 	// step 1: initialise each shareholder's share with an empty map
@@ -107,12 +108,12 @@ func (d *DNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 		l := len(parties)
 		// step 2.2
 		if l < 1 {
-			return nil, ErrFailed.WithMessage("access structure has an empty minimal qualified set")
+			return nil, isn.ErrFailed.WithMessage("access structure has an empty minimal qualified set")
 		}
 
 		// Create an ℓ-out-of-ℓ additive sharing of s over the parties in Bk
 		// step 2.3, 2.4
-		rs, err := SumToSecret(secret, prng, l)
+		rs, err := isn.SumToSecret(secret, prng, l)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 		}
@@ -139,14 +140,14 @@ func (d *DNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 //
 // Returns the reconstructed secret, or an error if the shares are unauthorised,
 // incomplete, or invalid.
-func (d *DNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
+func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
 	ids, err := sharing.CollectIDs(shares...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
 	// step 1
 	if !d.ac.IsAuthorized(ids...) {
-		return nil, ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
+		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 	// step 2: find a minimal qualified set Bk contained in the provided coalition
 	var qualifiedSet bitset.ImmutableBitSet[sharing.ID]
@@ -160,14 +161,14 @@ func (d *DNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		}
 	}
 	if !found {
-		return nil, ErrFailed.WithMessage("could not find a minimal qualified set contained in the provided shares")
+		return nil, isn.ErrFailed.WithMessage("could not find a minimal qualified set contained in the provided shares")
 	}
 
 	// step 3: reconstruct from the qualified set's components
 	sharesMap := make(map[sharing.ID]*Share[E])
 	for _, sh := range shares {
 		if sh == nil {
-			return nil, ErrFailed.WithMessage("nil share provided")
+			return nil, isn.ErrFailed.WithMessage("nil share provided")
 		}
 		sharesMap[sh.ID()] = sh
 	}
@@ -176,7 +177,7 @@ func (d *DNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	for pid := range qualifiedSet.Iter() {
 		pShare, exists := sharesMap[pid]
 		if !exists || pShare == nil {
-			return nil, ErrFailed.WithMessage("missing share for ID %d", pid)
+			return nil, isn.ErrFailed.WithMessage("missing share for ID %d", pid)
 		}
 		// Retrieve value from sparse map; if missing, it's implicitly identity
 		val, exists := pShare.v[qualifiedSet]
@@ -185,5 +186,5 @@ func (d *DNFScheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		}
 		// If not exists, val is identity, so Op(identity) doesn't change sHat
 	}
-	return &Secret[E]{v: sHat}, nil
+	return isn.NewSecret(sHat), nil
 }

@@ -1,4 +1,4 @@
-package isn_test
+package dnf_test
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn/dnf"
 )
 
 func TestDNFSanity(t *testing.T) {
@@ -29,9 +30,9 @@ func TestDNFSanity(t *testing.T) {
 	ac, err := sharing.NewDNFAccessStructure(minimalSets...)
 	require.NoError(t, err)
 
-	scheme := isn.NewDNFScheme(group, ac)
+	scheme := dnf.NewScheme(group, ac)
 	require.NotNil(t, scheme)
-	require.Equal(t, isn.DNFName, scheme.Name())
+	require.Equal(t, dnf.Name, scheme.Name())
 
 	secret := isn.NewSecret(group.FromUint64(42))
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
@@ -71,7 +72,7 @@ func TestDNFDeal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := isn.NewDNFScheme(group, ac)
+	scheme := dnf.NewScheme(group, ac)
 
 	t.Run("zero secret", func(t *testing.T) {
 		t.Parallel()
@@ -145,7 +146,7 @@ func TestDNFDealRandom(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := isn.NewDNFScheme(group, ac)
+	scheme := dnf.NewScheme(group, ac)
 
 	t.Run("valid random generation", func(t *testing.T) {
 		t.Parallel()
@@ -197,13 +198,13 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := isn.NewDNFScheme(group, ac)
+	scheme := dnf.NewScheme(group, ac)
 	secret := isn.NewSecret(group.FromUint64(12345))
 
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
-	sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
+	sharesMap := make(map[sharing.ID]*dnf.Share[*k256.Scalar])
 	for id, share := range out.Shares().Iter() {
 		sharesMap[id] = share
 	}
@@ -211,7 +212,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	t.Run("first minimal qualified set", func(t *testing.T) {
 		t.Parallel()
 		// {1,2} should reconstruct
-		shares := []*isn.Share[*k256.Scalar]{
+		shares := []*dnf.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[2],
 		}
@@ -223,7 +224,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	t.Run("second minimal qualified set", func(t *testing.T) {
 		t.Parallel()
 		// {2,3,4} should reconstruct
-		shares := []*isn.Share[*k256.Scalar]{
+		shares := []*dnf.Share[*k256.Scalar]{
 			sharesMap[2],
 			sharesMap[3],
 			sharesMap[4],
@@ -244,7 +245,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	t.Run("unauthorised single party", func(t *testing.T) {
 		t.Parallel()
 		// {1} is unauthorised
-		shares := []*isn.Share[*k256.Scalar]{sharesMap[1]}
+		shares := []*dnf.Share[*k256.Scalar]{sharesMap[1]}
 		_, err := scheme.Reconstruct(shares...)
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
@@ -253,7 +254,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	t.Run("unauthorised subset", func(t *testing.T) {
 		t.Parallel()
 		// {3,4} is unauthorised (subset of {2,3,4} but not qualified)
-		shares := []*isn.Share[*k256.Scalar]{
+		shares := []*dnf.Share[*k256.Scalar]{
 			sharesMap[3],
 			sharesMap[4],
 		}
@@ -265,7 +266,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	t.Run("unauthorised disjoint set", func(t *testing.T) {
 		t.Parallel()
 		// {1,3} is unauthorised
-		shares := []*isn.Share[*k256.Scalar]{
+		shares := []*dnf.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[3],
 		}
@@ -276,7 +277,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 
 	t.Run("nil share in authorized set", func(t *testing.T) {
 		t.Parallel()
-		shares := []*isn.Share[*k256.Scalar]{
+		shares := []*dnf.Share[*k256.Scalar]{
 			sharesMap[1],
 			nil,
 		}
@@ -295,7 +296,7 @@ func TestDNFShareHomomorphism(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := isn.NewDNFScheme(group, ac)
+	scheme := dnf.NewScheme(group, ac)
 
 	// Create two secrets
 	secret1 := isn.NewSecret(group.FromUint64(100))
@@ -311,7 +312,7 @@ func TestDNFShareHomomorphism(t *testing.T) {
 	require.NoError(t, err)
 
 	// Combine shares homomorphically
-	combinedShares := make(map[sharing.ID]*isn.Share[*k256.Scalar])
+	combinedShares := make(map[sharing.ID]*dnf.Share[*k256.Scalar])
 	for id, share1 := range out1.Shares().Iter() {
 		share2, ok := out2.Shares().Get(id)
 		require.True(t, ok)
@@ -319,7 +320,7 @@ func TestDNFShareHomomorphism(t *testing.T) {
 	}
 
 	// Reconstruct from combined shares
-	var combinedSlice []*isn.Share[*k256.Scalar]
+	var combinedSlice []*dnf.Share[*k256.Scalar]
 	for _, share := range combinedShares {
 		combinedSlice = append(combinedSlice, share)
 	}
@@ -343,19 +344,19 @@ func TestDNF_BLS12381(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := isn.NewDNFScheme(group, ac)
+	scheme := dnf.NewScheme(group, ac)
 
 	secret := isn.NewSecret(group.FromUint64(999))
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Verify reconstruction with first minimal qualified set
-	sharesMap := make(map[sharing.ID]*isn.Share[*bls12381.Scalar])
+	sharesMap := make(map[sharing.ID]*dnf.Share[*bls12381.Scalar])
 	for id, share := range out.Shares().Iter() {
 		sharesMap[id] = share
 	}
 
-	shares := []*isn.Share[*bls12381.Scalar]{
+	shares := []*dnf.Share[*bls12381.Scalar]{
 		sharesMap[1],
 		sharesMap[2],
 		sharesMap[3],
