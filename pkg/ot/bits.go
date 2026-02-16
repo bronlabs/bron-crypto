@@ -174,7 +174,7 @@ func transposePackedBitsSlow(inputMatrix [][]byte) ([][]byte, error) {
 
 // transposePackedBitsFast transposes a packed bit matrix using 64x64 block transposes.
 // The number of rows and columns (in bits) must be multiples of 64.
-// The algorithm from: "Warren, Henry: Hacker's Delight" (chapter 7.3) or
+// The algorithm from: "Warren, Henry: Hacker's Delight" (chapter 7.3)
 func transposePackedBitsFast(inputMatrix [][]byte) ([][]byte, error) {
 	nRowsInput := len(inputMatrix)
 	if nRowsInput == 0 || nRowsInput%64 != 0 {
