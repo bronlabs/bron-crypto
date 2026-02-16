@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	testRows = 128
-	testCols = 32 * 4096
+	testRows = 192
+	testCols = 32*4096 + 64
 )
 
 func Test_TransposeBitsSlow(t *testing.T) {
