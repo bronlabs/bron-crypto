@@ -19,8 +19,8 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	const KAPPA = softspoken.Kappa
-	const XI = 2048
-	const L = 16
+	const XI = 4096
+	const L = 32
 	prng := pcg.NewRandomised()
 
 	// generate seeds
