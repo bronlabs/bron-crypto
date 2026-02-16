@@ -181,7 +181,7 @@ func TestImmutableBitSet_CBOR_MarshalUnmarshal(t *testing.T) {
 		require.True(t, s.Equal(recovered))
 	})
 
-	t.Run("frozen set preserves through serialization", func(t *testing.T) {
+	t.Run("frozen set preserves through serialisation", func(t *testing.T) {
 		t.Parallel()
 		mutable := bitset.NewBitSet[uint64](2, 4, 6, 8)
 		frozen := mutable.Freeze()

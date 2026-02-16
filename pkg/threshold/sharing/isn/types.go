@@ -64,10 +64,7 @@ func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 		break
 	}
 	if group == nil {
-		for _, v := range other.v {
-			group = algebra.StructureMustBeAs[algebra.FiniteGroup[E]](v.Structure())
-			break
-		}
+		panic("cannot determine group from share components")
 	}
 
 	// Combine all clauses from both shares
@@ -85,12 +82,7 @@ func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 
 		if sExists && oExists {
 			result[clause] = sVal.Op(oVal)
-		} else if sExists {
-			result[clause] = sVal
-		} else if oExists {
-			result[clause] = oVal
 		}
-		// If neither exists, both are identity, so their Op is identity - don't store
 	}
 
 	return &Share[E]{

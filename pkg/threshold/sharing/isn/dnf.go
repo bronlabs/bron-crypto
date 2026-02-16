@@ -92,7 +92,7 @@ func (d *DNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 		return nil, ErrIsNil.WithMessage("secret is nil")
 	}
 	shares := make(map[sharing.ID]*Share[E])
-	// step 1: initialize each shareholder's share with an empty map
+	// step 1: initialise each shareholder's share with an empty map
 	for p := range d.ac.Shareholders().Iter() {
 		shares[p] = &Share[E]{
 			id: p,

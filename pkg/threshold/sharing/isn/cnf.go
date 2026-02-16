@@ -98,7 +98,7 @@ func (c *CNFScheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E]
 
 	shares := make(map[sharing.ID]*Share[E])
 
-	// step 1: initialize each shareholder's share with an empty map
+	// step 1: initialise each shareholder's share with an empty map
 	for p := range c.ac.Shareholders().Iter() {
 		shares[p] = &Share[E]{
 			id: p,

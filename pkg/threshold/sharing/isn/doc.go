@@ -1,7 +1,7 @@
 // Package isn implements the Ito-Saito-Nishizeki (ISN) secret sharing scheme
 // for general monotone access structures.
 //
-// The ISN scheme generalizes threshold secret sharing to arbitrary monotone
+// The ISN scheme generalises threshold secret sharing to arbitrary monotone
 // access structures specified in either DNF (Disjunctive Normal Form) or CNF
 // (Conjunctive Normal Form). Unlike Shamir's threshold scheme which only
 // supports t-of-n access structures, ISN can handle complex authorization
@@ -54,7 +54,7 @@
 //
 // # Security
 //
-// The ISN scheme provides information-theoretic security: any unauthorized
+// The ISN scheme provides information-theoretic security: any unauthorised
 // coalition learns no information about the secret. Unlike polynomial-based
 // schemes (Shamir, Feldman, Pedersen), ISN works directly over any finite
 // group without requiring field arithmetic.
