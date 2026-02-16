@@ -15,9 +15,12 @@ import (
 //   - l: The total number of shares to generate (including the final share)
 //
 // Returns a slice of shares that sum to the secret, or an error if any input is invalid or if sampling fails.
-func SumToSecret[E algebra.GroupElement[E]](s *Secret[E], prng io.Reader, l int) ([]E, error) {
+func SumToSecret[E algebra.GroupElement[E]](s *Secret[E], sampler func(io.Reader) (E, error), prng io.Reader, l int) ([]E, error) {
 	if s == nil {
 		return nil, ErrIsNil.WithMessage("secret is nil")
+	}
+	if sampler == nil {
+		return nil, ErrIsNil.WithMessage("sampler is nil")
 	}
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng is nil")
@@ -25,12 +28,12 @@ func SumToSecret[E algebra.GroupElement[E]](s *Secret[E], prng io.Reader, l int)
 	if l <= 0 {
 		return nil, ErrFailed.WithMessage("number of shares must be positive")
 	}
-	group := algebra.StructureMustBeAs[algebra.FiniteGroup[E]](s.v.Structure())
+	group := algebra.StructureMustBeAs[algebra.Group[E]](s.v.Structure())
 
 	rs := make([]E, l)
 	partial := group.OpIdentity()
 	for j := range l - 1 {
-		rj, err := group.Random(prng)
+		rj, err := sampler(prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not sample random group element")
 		}

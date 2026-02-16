@@ -5,7 +5,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 )
 
 // Share represents a shareholder's portion in an ISN secret sharing scheme.
@@ -88,6 +90,29 @@ func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 		id: s.id,
 		v:  result,
 	}
+}
+
+func (s *Share[E]) Add(other *Share[E]) *Share[E] {
+	return s.Op(other)
+}
+
+func (*Share[E]) ToAdditive(mqas *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
+	panic("implement me")
+}
+
+func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
+	return s.ScalarMul(scalar)
+}
+
+func (s *Share[E]) ScalarMul(scalar algebra.Numeric) *Share[E] {
+	result := &Share[E]{
+		id: s.id,
+		v:  make(map[bitset.ImmutableBitSet[sharing.ID]]E),
+	}
+	for minQualifiedSet, value := range s.v {
+		result.v[minQualifiedSet] = algebrautils.ScalarMul(value, scalar)
+	}
+	return result
 }
 
 // HashCode computes a hash combining the share ID and all value components.

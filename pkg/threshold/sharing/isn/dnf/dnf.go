@@ -19,25 +19,29 @@ const Name sharing.Name = "DNF secret sharing scheme"
 // is specified by minimal qualified sets (clauses). Each share is a vector
 // with one component per minimal qualified set.
 type Scheme[E algebra.GroupElement[E]] struct {
-	g  algebra.FiniteGroup[E]
-	ac sharing.DNFAccessStructure
+	g       algebra.Group[E]
+	ac      sharing.DNFAccessStructure
+	sampler func(io.Reader) (E, error)
 }
 
-// NewScheme creates a new DNF ISN scheme over the given finite group
+// NewScheme creates a new DNF ISN scheme over the given group
 // with the specified access structure.
 //
 // Parameters:
-//   - g: The finite group over which secrets and shares are defined
+//   - g: The group over which secrets and shares are defined
+//   - sampler: A function to sample elements from the group
 //   - ac: The DNF access structure specifying minimal qualified sets
 //
 // Returns the initialised scheme.
 func NewScheme[E algebra.GroupElement[E]](
-	g algebra.FiniteGroup[E],
+	g algebra.Group[E],
+	sampler func(io.Reader) (E, error),
 	ac sharing.DNFAccessStructure,
 ) *Scheme[E] {
 	return &Scheme[E]{
-		g:  g,
-		ac: ac,
+		g:       g,
+		sampler: sampler,
+		ac:      ac,
 	}
 }
 
@@ -60,7 +64,7 @@ func (d *Scheme[E]) AccessStructure() sharing.DNFAccessStructure {
 // Returns the dealer output containing all shares, or an error if sampling
 // or dealing fails.
 func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
-	secretValue, err := d.g.Random(prng)
+	secretValue, err := d.sampler(prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
@@ -113,7 +117,7 @@ func (d *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 
 		// Create an ℓ-out-of-ℓ additive sharing of s over the parties in Bk
 		// step 2.3, 2.4
-		rs, err := isn.SumToSecret(secret, prng, l)
+		rs, err := isn.SumToSecret(secret, d.sampler, prng, l)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 		}
@@ -151,16 +155,14 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
 	}
 	// step 2: find a minimal qualified set Bk contained in the provided coalition
 	var qualifiedSet bitset.ImmutableBitSet[sharing.ID]
-	found := false
 	idSet := bitset.NewImmutableBitSet(ids...)
 	for _, Bi := range d.ac {
 		if Bi.IsSubSet(idSet) {
 			qualifiedSet = Bi
-			found = true
 			break
 		}
 	}
-	if !found {
+	if qualifiedSet == 0 {
 		return nil, isn.ErrFailed.WithMessage("could not find a minimal qualified set contained in the provided shares")
 	}
 

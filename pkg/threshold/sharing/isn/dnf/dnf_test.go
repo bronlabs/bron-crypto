@@ -30,7 +30,7 @@ func TestDNFSanity(t *testing.T) {
 	ac, err := sharing.NewDNFAccessStructure(minimalSets...)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, ac)
+	scheme := dnf.NewScheme(group, group.Random, ac)
 	require.NotNil(t, scheme)
 	require.Equal(t, dnf.Name, scheme.Name())
 
@@ -72,7 +72,7 @@ func TestDNFDeal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, ac)
+	scheme := dnf.NewScheme(group, group.Random, ac)
 
 	t.Run("zero secret", func(t *testing.T) {
 		t.Parallel()
@@ -146,7 +146,7 @@ func TestDNFDealRandom(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, ac)
+	scheme := dnf.NewScheme(group, group.Random, ac)
 
 	t.Run("valid random generation", func(t *testing.T) {
 		t.Parallel()
@@ -198,7 +198,7 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, ac)
+	scheme := dnf.NewScheme(group, group.Random, ac)
 	secret := isn.NewSecret(group.FromUint64(12345))
 
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
@@ -296,7 +296,7 @@ func TestDNFShareHomomorphism(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, ac)
+	scheme := dnf.NewScheme(group, group.Random, ac)
 
 	// Create two secrets
 	secret1 := isn.NewSecret(group.FromUint64(100))
@@ -344,7 +344,7 @@ func TestDNF_BLS12381(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, ac)
+	scheme := dnf.NewScheme(group, group.Random, ac)
 
 	secret := isn.NewSecret(group.FromUint64(999))
 	out, err := scheme.Deal(secret, pcg.NewRandomised())

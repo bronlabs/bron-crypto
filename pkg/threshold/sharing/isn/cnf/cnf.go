@@ -11,43 +11,47 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// CNFName is the human-readable name for the CNF variant of ISN.
-const CNFName sharing.Name = "CNF secret sharing scheme"
+// Name is the human-readable name for the CNF variant of ISN.
+const Name sharing.Name = "CNF secret sharing scheme"
 
-// CNFScheme implements the Ito-Saito-Nishizeki secret sharing scheme with
+// Scheme implements the Ito-Saito-Nishizeki secret sharing scheme with
 // a CNF (Conjunctive Normal Form) access structure. The access structure
 // is specified by maximal unqualified sets (clauses). Each share is a vector
 // with one component per maximal unqualified set.
-type CNFScheme[E algebra.GroupElement[E]] struct {
-	g  algebra.FiniteGroup[E]
-	ac sharing.CNFAccessStructure
+type Scheme[E algebra.GroupElement[E]] struct {
+	g       algebra.Group[E]
+	sampler func(io.Reader) (E, error)
+	ac      sharing.CNFAccessStructure
 }
 
-// NewCNFScheme creates a new CNF ISN scheme over the given finite group
+// NewScheme creates a new CNF ISN scheme over the given finite group
 // with the specified access structure.
 //
 // Parameters:
 //   - g: The finite group over which secrets and shares are defined
+//   - sampler: A function to sample elements from the group
 //   - ac: The CNF access structure specifying maximal unqualified sets
 //
 // Returns the initialised scheme.
-func NewCNFScheme[E algebra.GroupElement[E]](
-	g algebra.FiniteGroup[E],
+func NewScheme[E algebra.GroupElement[E]](
+	g algebra.Group[E],
+	sampler func(io.Reader) (E, error),
 	ac sharing.CNFAccessStructure,
-) *CNFScheme[E] {
-	return &CNFScheme[E]{
-		g:  g,
-		ac: ac,
+) *Scheme[E] {
+	return &Scheme[E]{
+		g:       g,
+		sampler: sampler,
+		ac:      ac,
 	}
 }
 
 // Name returns the scheme's identifier.
-func (*CNFScheme[E]) Name() sharing.Name {
-	return CNFName
+func (*Scheme[E]) Name() sharing.Name {
+	return Name
 }
 
 // AccessStructure returns the CNF access structure (maximal unqualified sets).
-func (c *CNFScheme[E]) AccessStructure() sharing.CNFAccessStructure {
+func (c *Scheme[E]) AccessStructure() sharing.CNFAccessStructure {
 	return c.ac
 }
 
@@ -59,8 +63,8 @@ func (c *CNFScheme[E]) AccessStructure() sharing.CNFAccessStructure {
 //
 // Returns the dealer output containing all shares, or an error if sampling
 // or dealing fails.
-func (c *CNFScheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
-	secretValue, err := c.g.Random(prng)
+func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
+	secretValue, err := c.sampler(prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
@@ -85,7 +89,7 @@ func (c *CNFScheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
 //   - prng: A cryptographically secure random number generator
 //
 // Returns the dealer output containing all shares, or an error if dealing fails.
-func (c *CNFScheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], error) {
+func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], error) {
 	if prng == nil {
 		return nil, isn.ErrIsNil.WithMessage("prng is nil")
 	}
@@ -108,7 +112,7 @@ func (c *CNFScheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutpu
 	}
 
 	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
-	rs, err := isn.SumToSecret(secret, prng, l)
+	rs, err := isn.SumToSecret(secret, c.sampler, prng, l)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
@@ -143,7 +147,7 @@ func (c *CNFScheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutpu
 //
 // Returns the reconstructed secret, or an error if the shares are unauthorised,
 // incomplete, or invalid.
-func (c *CNFScheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
+func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
 	ids, err := sharing.CollectIDs(shares...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")

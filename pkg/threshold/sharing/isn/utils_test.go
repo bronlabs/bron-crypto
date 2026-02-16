@@ -20,7 +20,7 @@ func TestSumToSecret_ValidCases(t *testing.T) {
 	t.Run("single share (l=1)", func(t *testing.T) {
 		t.Parallel()
 		secret := isn.NewSecret(group.FromUint64(42))
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 1)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 1)
 		require.NoError(t, err)
 		require.Len(t, shares, 1)
 
@@ -31,7 +31,7 @@ func TestSumToSecret_ValidCases(t *testing.T) {
 	t.Run("two shares (l=2)", func(t *testing.T) {
 		t.Parallel()
 		secret := isn.NewSecret(group.FromUint64(100))
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 2)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 2)
 		require.NoError(t, err)
 		require.Len(t, shares, 2)
 
@@ -43,7 +43,7 @@ func TestSumToSecret_ValidCases(t *testing.T) {
 	t.Run("three shares (l=3)", func(t *testing.T) {
 		t.Parallel()
 		secret := isn.NewSecret(group.FromUint64(1000))
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 3)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 3)
 		require.NoError(t, err)
 		require.Len(t, shares, 3)
 
@@ -55,7 +55,7 @@ func TestSumToSecret_ValidCases(t *testing.T) {
 	t.Run("many shares (l=10)", func(t *testing.T) {
 		t.Parallel()
 		secret := isn.NewSecret(group.FromUint64(9999))
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 10)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 10)
 		require.NoError(t, err)
 		require.Len(t, shares, 10)
 
@@ -70,7 +70,7 @@ func TestSumToSecret_ValidCases(t *testing.T) {
 	t.Run("zero secret", func(t *testing.T) {
 		t.Parallel()
 		secret := isn.NewSecret(group.Zero())
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 5)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 5)
 		require.NoError(t, err)
 		require.Len(t, shares, 5)
 
@@ -87,7 +87,7 @@ func TestSumToSecret_ValidCases(t *testing.T) {
 		t.Parallel()
 		// Use a large value close to field order
 		secret := isn.NewSecret(group.FromUint64(0xFFFFFFFFFFFFFFFF))
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 7)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 7)
 		require.NoError(t, err)
 		require.Len(t, shares, 7)
 
@@ -109,10 +109,10 @@ func TestSumToSecret_Randomness(t *testing.T) {
 	t.Run("different outputs for different prng states", func(t *testing.T) {
 		t.Parallel()
 		// Generate two sets of shares with different randomness
-		shares1, err := isn.SumToSecret(secret, pcg.NewRandomised(), 5)
+		shares1, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 5)
 		require.NoError(t, err)
 
-		shares2, err := isn.SumToSecret(secret, pcg.NewRandomised(), 5)
+		shares2, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 5)
 		require.NoError(t, err)
 
 		// Shares should be different (extremely unlikely to be equal with random prng)
@@ -130,10 +130,10 @@ func TestSumToSecret_Randomness(t *testing.T) {
 		t.Parallel()
 		seed1, seed2 := uint64(12345), uint64(67890)
 
-		shares1, err := isn.SumToSecret(secret, pcg.New(seed1, seed2), 5)
+		shares1, err := isn.SumToSecret(secret, group.Random, pcg.New(seed1, seed2), 5)
 		require.NoError(t, err)
 
-		shares2, err := isn.SumToSecret(secret, pcg.New(seed1, seed2), 5)
+		shares2, err := isn.SumToSecret(secret, group.Random, pcg.New(seed1, seed2), 5)
 		require.NoError(t, err)
 
 		// With same seed, outputs should be identical
@@ -146,7 +146,7 @@ func TestSumToSecret_Randomness(t *testing.T) {
 	t.Run("first l-1 shares are random", func(t *testing.T) {
 		t.Parallel()
 		// For l > 1, the first l-1 shares should be random
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 5)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 5)
 		require.NoError(t, err)
 
 		// Check that not all first 4 shares are zero or identical
@@ -173,7 +173,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 
 	t.Run("nil secret", func(t *testing.T) {
 		t.Parallel()
-		shares, err := isn.SumToSecret[*k256.Scalar](nil, pcg.NewRandomised(), 3)
+		shares, err := isn.SumToSecret[*k256.Scalar](nil, group.Random, pcg.NewRandomised(), 3)
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrIsNil)
 		require.Nil(t, shares)
@@ -181,7 +181,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
-		shares, err := isn.SumToSecret(secret, nil, 3)
+		shares, err := isn.SumToSecret(secret, group.Random, nil, 3)
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrIsNil)
 		require.Nil(t, shares)
@@ -189,7 +189,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 
 	t.Run("zero shares (l=0)", func(t *testing.T) {
 		t.Parallel()
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 0)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 0)
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrFailed)
 		require.Nil(t, shares)
@@ -197,7 +197,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 
 	t.Run("negative shares (l=-1)", func(t *testing.T) {
 		t.Parallel()
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), -1)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), -1)
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrFailed)
 		require.Nil(t, shares)
@@ -207,7 +207,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 		t.Parallel()
 		// For l > 1, we need to sample l-1 random elements
 		// A reader with only 1 byte will fail
-		shares, err := isn.SumToSecret(secret, bytes.NewReader([]byte{1}), 3)
+		shares, err := isn.SumToSecret(secret, group.Random, bytes.NewReader([]byte{1}), 3)
 		require.Error(t, err)
 		require.Nil(t, shares)
 	})
@@ -221,7 +221,7 @@ func TestSumToSecret_DifferentGroups(t *testing.T) {
 		group := bls12381.NewScalarField()
 		secret := isn.NewSecret(group.FromUint64(888))
 
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 6)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 6)
 		require.NoError(t, err)
 		require.Len(t, shares, 6)
 
@@ -238,7 +238,7 @@ func TestSumToSecret_DifferentGroups(t *testing.T) {
 		group := k256.NewScalarField()
 		secret := isn.NewSecret(group.FromUint64(12345))
 
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 4)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 4)
 		require.NoError(t, err)
 		require.Len(t, shares, 4)
 
@@ -263,7 +263,7 @@ func TestSumToSecret_Properties(t *testing.T) {
 
 		for _, val := range testSecrets {
 			secret := isn.NewSecret(group.FromUint64(val))
-			shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 5)
+			shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 5)
 			require.NoError(t, err)
 
 			sum := group.Zero()
@@ -281,11 +281,11 @@ func TestSumToSecret_Properties(t *testing.T) {
 
 		// Generate shares with deterministic PRNG
 		seed1, seed2 := uint64(111), uint64(222)
-		shares1, err := isn.SumToSecret(secret, pcg.New(seed1, seed2), 4)
+		shares1, err := isn.SumToSecret(secret, group.Random, pcg.New(seed1, seed2), 4)
 		require.NoError(t, err)
 
 		// Generate again with same seed
-		shares2, err := isn.SumToSecret(secret, pcg.New(seed1, seed2), 4)
+		shares2, err := isn.SumToSecret(secret, group.Random, pcg.New(seed1, seed2), 4)
 		require.NoError(t, err)
 
 		// Last share should be identical (it's computed deterministically)
@@ -306,7 +306,7 @@ func TestSumToSecret_Properties(t *testing.T) {
 
 		// Test various values of l
 		for l := 1; l <= 20; l++ {
-			shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), l)
+			shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), l)
 			require.NoError(t, err)
 			require.Len(t, shares, l)
 
@@ -334,10 +334,10 @@ func TestSumToSecret_AdditiveHomomorphism(t *testing.T) {
 		// Use same PRNG seed for both to enable comparison
 		seed1, seed2 := uint64(42), uint64(1337)
 
-		shares1, err := isn.SumToSecret(secret1, pcg.New(seed1, seed2), 5)
+		shares1, err := isn.SumToSecret(secret1, group.Random, pcg.New(seed1, seed2), 5)
 		require.NoError(t, err)
 
-		shares2, err := isn.SumToSecret(secret2, pcg.New(seed1, seed2), 5)
+		shares2, err := isn.SumToSecret(secret2, group.Random, pcg.New(seed1, seed2), 5)
 		require.NoError(t, err)
 
 		// Add the shares component-wise
@@ -366,7 +366,7 @@ func TestSumToSecret_EdgeCaseValues(t *testing.T) {
 	t.Run("one element", func(t *testing.T) {
 		t.Parallel()
 		secret := isn.NewSecret(group.One())
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 3)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 3)
 		require.NoError(t, err)
 
 		sum := group.Zero()
@@ -380,7 +380,7 @@ func TestSumToSecret_EdgeCaseValues(t *testing.T) {
 		t.Parallel()
 		// -1 in the field
 		secret := isn.NewSecret(group.Zero().Neg())
-		shares, err := isn.SumToSecret(secret, pcg.NewRandomised(), 4)
+		shares, err := isn.SumToSecret(secret, group.Random, pcg.NewRandomised(), 4)
 		require.NoError(t, err)
 
 		sum := group.Zero()
