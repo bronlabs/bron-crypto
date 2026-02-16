@@ -15,12 +15,14 @@ func TestBitSet_AddAndContains(t *testing.T) {
 	s := bitset.BitSet[uint64](0)
 
 	t.Run("empty set", func(t *testing.T) {
+		t.Parallel()
 		require.False(t, s.Contains(1))
 		require.True(t, s.IsEmpty())
 		require.Equal(t, 0, s.Size())
 	})
 
 	t.Run("add single element", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.Add(1)
 		require.True(t, s.Contains(1))
@@ -29,6 +31,7 @@ func TestBitSet_AddAndContains(t *testing.T) {
 	})
 
 	t.Run("add multiple elements", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.Add(1)
 		s.Add(5)
@@ -41,6 +44,7 @@ func TestBitSet_AddAndContains(t *testing.T) {
 	})
 
 	t.Run("add boundary elements", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.Add(1)  // minimum
 		s.Add(64) // maximum
@@ -50,6 +54,7 @@ func TestBitSet_AddAndContains(t *testing.T) {
 	})
 
 	t.Run("add duplicate element", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.Add(5)
 		s.Add(5)
@@ -62,6 +67,7 @@ func TestBitSet_AddAll(t *testing.T) {
 	t.Parallel()
 
 	t.Run("add multiple at once", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.AddAll(1, 2, 3, 5, 8)
 		require.Equal(t, 5, s.Size())
@@ -77,6 +83,7 @@ func TestBitSet_Remove(t *testing.T) {
 	t.Parallel()
 
 	t.Run("remove existing element", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.AddAll(1, 2, 3)
 		s.Remove(2)
@@ -87,6 +94,7 @@ func TestBitSet_Remove(t *testing.T) {
 	})
 
 	t.Run("remove non-existing element", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.AddAll(1, 2)
 		s.Remove(5)
@@ -94,6 +102,7 @@ func TestBitSet_Remove(t *testing.T) {
 	})
 
 	t.Run("remove all elements", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.AddAll(1, 2, 3)
 		s.RemoveAll(1, 2, 3)
@@ -119,6 +128,7 @@ func TestBitSet_Iter(t *testing.T) {
 	t.Parallel()
 
 	t.Run("iterate over elements in order", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		s.AddAll(5, 2, 8, 1)
 
@@ -132,6 +142,7 @@ func TestBitSet_Iter(t *testing.T) {
 	})
 
 	t.Run("iterate over empty set", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		count := 0
 		for range s.Iter() {
@@ -148,7 +159,7 @@ func TestBitSet_List(t *testing.T) {
 	s.AddAll(3, 1, 4, 2)
 
 	list := s.List()
-	require.Equal(t, 4, len(list))
+	require.Len(t, list, 4)
 	require.Equal(t, []uint64{1, 2, 3, 4}, list)
 }
 
@@ -302,18 +313,21 @@ func TestBitSet_BoundaryValues(t *testing.T) {
 	s := bitset.BitSet[uint64](0)
 
 	t.Run("element 0 should panic", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			s.Add(0)
 		})
 	})
 
 	t.Run("element 65 should panic", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			s.Add(65)
 		})
 	})
 
 	t.Run("elements 1-64 should work", func(t *testing.T) {
+		t.Parallel()
 		s := bitset.BitSet[uint64](0)
 		for i := uint64(1); i <= 64; i++ {
 			s.Add(i)
@@ -355,14 +369,17 @@ func TestBitSet_Interface(t *testing.T) {
 	t.Parallel()
 
 	t.Run("mutable set interface", func(t *testing.T) {
+		t.Parallel()
 		var _ ds.MutableSet[uint64] = (*bitset.BitSet[uint64])(nil)
 	})
 
 	t.Run("immutable set interface", func(t *testing.T) {
+		t.Parallel()
 		var _ ds.Set[uint64] = (bitset.ImmutableBitSet[uint64])(0)
 	})
 
 	t.Run("use as interface", func(t *testing.T) {
+		t.Parallel()
 		var s ds.MutableSet[uint64] = new(bitset.BitSet[uint64])
 		s.Add(1)
 		s.Add(2)
@@ -642,7 +659,7 @@ func TestBitSet_IterSubSets(t *testing.T) {
 	t.Run("power set size formula", func(t *testing.T) {
 		t.Parallel()
 		// Test 2^n formula for various n
-		for n := 0; n <= 6; n++ {
+		for n := range 7 {
 			s := bitset.BitSet[uint64](0)
 			for i := 1; i <= n; i++ {
 				s.Add(uint64(i))
@@ -705,7 +722,7 @@ func TestBitSet_SubSets(t *testing.T) {
 		require.Len(t, subsets, 16)
 
 		// Check all subsets are unique
-		for i := 0; i < len(subsets); i++ {
+		for i := range subsets {
 			for j := i + 1; j < len(subsets); j++ {
 				require.False(t, subsets[i].Equal(subsets[j]),
 					"subsets at indices %d and %d should be different", i, j)
@@ -1361,4 +1378,3 @@ func TestBitSet_GenericTypes(t *testing.T) {
 		require.Equal(t, 3, bitsetPtr.Size())
 	})
 }
-

@@ -5,8 +5,9 @@ import (
 	"math/bits"
 	"slices"
 
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"golang.org/x/exp/constraints"
+
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
 // NewImmutableBitSet creates a new immutable BitSet containing the given elements.
@@ -29,122 +30,122 @@ func NewImmutableBitSet[U constraints.Unsigned](elements ...U) ImmutableBitSet[U
 type ImmutableBitSet[U constraints.Unsigned] uint64
 
 // Unfreeze returns a mutable copy of the immutable set.
-func (s ImmutableBitSet[U]) Unfreeze() ds.MutableSet[U] {
-	b := BitSet[U](s)
+func (ib ImmutableBitSet[U]) Unfreeze() ds.MutableSet[U] {
+	b := BitSet[U](ib)
 	return &b
 }
 
 // Contains returns true if the element is in the set.
 // Returns false for elements outside the valid range [1, 64].
-func (s ImmutableBitSet[U]) Contains(e U) bool {
-	b := BitSet[U](s)
+func (ib ImmutableBitSet[U]) Contains(e U) bool {
+	b := BitSet[U](ib)
 	return b.Contains(e)
 }
 
 // Iter returns an iterator over all elements in increasing order (1..64).
-func (s ImmutableBitSet[U]) Iter() iter.Seq[U] {
-	b := BitSet[U](s)
+func (ib ImmutableBitSet[U]) Iter() iter.Seq[U] {
+	b := BitSet[U](ib)
 	return b.Iter()
 }
 
 // Iter2 returns an iterator with index and element pairs.
 // Elements are yielded in increasing order with their iteration index.
-func (s ImmutableBitSet[U]) Iter2() iter.Seq2[int, U] {
-	b := BitSet[U](s)
+func (ib ImmutableBitSet[U]) Iter2() iter.Seq2[int, U] {
+	b := BitSet[U](ib)
 	return b.Iter2()
 }
 
 // Size returns the number of elements in the set (same as Cardinality).
-func (s ImmutableBitSet[U]) Size() int {
-	return bits.OnesCount64(uint64(s))
+func (ib ImmutableBitSet[U]) Size() int {
+	return bits.OnesCount64(uint64(ib))
 }
 
 // Cardinality returns the number of elements in the set.
 // This is computed using the population count (number of 1 bits).
-func (s ImmutableBitSet[U]) Cardinality() int {
-	return bits.OnesCount64(uint64(s))
+func (ib ImmutableBitSet[U]) Cardinality() int {
+	return bits.OnesCount64(uint64(ib))
 }
 
 // IsEmpty returns true if the set contains no elements.
-func (s ImmutableBitSet[U]) IsEmpty() bool {
-	return s == 0
+func (ib ImmutableBitSet[U]) IsEmpty() bool {
+	return ib == 0
 }
 
 // Union returns a new immutable set containing all elements from both sets.
 // Panics if other is not an ImmutableBitSet.
-func (s ImmutableBitSet[U]) Union(other ds.Set[U]) ds.Set[U] {
+func (ib ImmutableBitSet[U]) Union(other ds.Set[U]) ds.Set[U] {
 	o, ok := other.(ImmutableBitSet[U])
 	if !ok {
 		panic("other set is not a BitSet")
 	}
-	return s | o
+	return ib | o
 }
 
 // Intersection returns a new immutable set containing only elements present in both sets.
 // Panics if other is not an ImmutableBitSet.
-func (s ImmutableBitSet[U]) Intersection(other ds.Set[U]) ds.Set[U] {
+func (ib ImmutableBitSet[U]) Intersection(other ds.Set[U]) ds.Set[U] {
 	o, ok := other.(ImmutableBitSet[U])
 	if !ok {
 		panic("other set is not a BitSet")
 	}
-	return s & o
+	return ib & o
 }
 
 // Difference returns a new immutable set containing elements in this set but not in the other.
 // Panics if other is not an ImmutableBitSet.
-func (s ImmutableBitSet[U]) Difference(other ds.Set[U]) ds.Set[U] {
+func (ib ImmutableBitSet[U]) Difference(other ds.Set[U]) ds.Set[U] {
 	o, ok := other.(ImmutableBitSet[U])
 	if !ok {
 		panic("other set is not a BitSet")
 	}
-	return s &^ o
+	return ib &^ o
 }
 
 // SymmetricDifference returns a new immutable set containing elements in either set but not both.
 // Panics if other is not an ImmutableBitSet.
-func (s ImmutableBitSet[U]) SymmetricDifference(other ds.Set[U]) ds.Set[U] {
+func (ib ImmutableBitSet[U]) SymmetricDifference(other ds.Set[U]) ds.Set[U] {
 	o, ok := other.(ImmutableBitSet[U])
 	if !ok {
 		panic("other set is not a BitSet")
 	}
-	return s ^ o
+	return ib ^ o
 }
 
 // SubSets returns all possible subsets of this set (the power set).
 // For a set of size n, returns 2^n subsets.
-func (s ImmutableBitSet[U]) SubSets() []ds.Set[U] {
-	return slices.Collect(s.IterSubSets())
+func (ib ImmutableBitSet[U]) SubSets() []ds.Set[U] {
+	return slices.Collect(ib.IterSubSets())
 }
 
 // IsSubSet returns true if all elements of this set are in the other set.
 // Delegates to the mutable BitSet implementation for the actual check.
-func (s ImmutableBitSet[U]) IsSubSet(of ds.Set[U]) bool {
-	x := BitSet[U](s)
+func (ib ImmutableBitSet[U]) IsSubSet(of ds.Set[U]) bool {
+	x := BitSet[U](ib)
 	return (&x).IsSubSet(of.Unfreeze())
 }
 
 // IsProperSubSet returns true if this is a proper (strict) subset of the other set.
 // A proper subset is a subset that is not equal to the other set.
-func (s ImmutableBitSet[U]) IsProperSubSet(of ds.Set[U]) bool {
-	return s.IsSubSet(of) && !s.Equal(of)
+func (ib ImmutableBitSet[U]) IsProperSubSet(of ds.Set[U]) bool {
+	return ib.IsSubSet(of) && !ib.Equal(of)
 }
 
 // IsSuperSet returns true if all elements of the other set are in this set.
-func (s ImmutableBitSet[U]) IsSuperSet(of ds.Set[U]) bool {
-	return of.IsSubSet(s)
+func (ib ImmutableBitSet[U]) IsSuperSet(of ds.Set[U]) bool {
+	return of.IsSubSet(ib)
 }
 
 // IsProperSuperSet returns true if this is a proper (strict) superset of the other set.
 // A proper superset is a superset that is not equal to the other set.
-func (s ImmutableBitSet[U]) IsProperSuperSet(of ds.Set[U]) bool {
-	return of.IsProperSubSet(s)
+func (ib ImmutableBitSet[U]) IsProperSuperSet(of ds.Set[U]) bool {
+	return of.IsProperSubSet(ib)
 }
 
 // IterSubSets returns an iterator over all subsets of this set.
 // Uses the standard submask iteration algorithm, visiting all 2^n subsets.
-func (s ImmutableBitSet[U]) IterSubSets() iter.Seq[ds.Set[U]] {
+func (ib ImmutableBitSet[U]) IterSubSets() iter.Seq[ds.Set[U]] {
 	return func(yield func(ds.Set[U]) bool) {
-		sub := uint64(s)
+		sub := uint64(ib)
 		for {
 			if !yield(ImmutableBitSet[U](sub)) {
 				return
@@ -152,25 +153,25 @@ func (s ImmutableBitSet[U]) IterSubSets() iter.Seq[ds.Set[U]] {
 			if sub == 0 {
 				return
 			}
-			sub = (sub - 1) & uint64(s)
+			sub = (sub - 1) & uint64(ib)
 		}
 	}
 }
 
 // List returns all elements as a slice in increasing order.
-func (s ImmutableBitSet[U]) List() []U {
-	return slices.Collect(s.Iter())
+func (ib ImmutableBitSet[U]) List() []U {
+	return slices.Collect(ib.Iter())
 }
 
 // Equal returns true if both sets contain exactly the same elements.
 // Returns false if other is not an ImmutableBitSet.
-func (s ImmutableBitSet[U]) Equal(other ds.Set[U]) bool {
+func (ib ImmutableBitSet[U]) Equal(other ds.Set[U]) bool {
 	o, ok := other.(ImmutableBitSet[U])
-	return ok && s == o
+	return ok && ib == o
 }
 
 // Clone returns an immutable copy of this set.
 // Since ImmutableBitSet uses value semantics, this simply returns the value itself.
-func (s ImmutableBitSet[U]) Clone() ds.Set[U] {
-	return s
+func (ib ImmutableBitSet[U]) Clone() ds.Set[U] {
+	return ib
 }
