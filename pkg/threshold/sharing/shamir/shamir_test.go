@@ -1158,3 +1158,105 @@ func BenchmarkToAdditive(b *testing.B) {
 		})
 	}
 }
+
+// TestArbitraryShareholderIDs tests that Shamir secret sharing works with
+// arbitrary distinct non-zero shareholder IDs (not just sequential 1, 2, 3, ...).
+func TestArbitraryShareholderIDs(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+
+	// Create a set with arbitrary non-sequential IDs
+	arbitraryIDs := hashset.NewComparable[sharing.ID]()
+	arbitraryIDs.Add(sharing.ID(5))
+	arbitraryIDs.Add(sharing.ID(100))
+	arbitraryIDs.Add(sharing.ID(999))
+	arbitraryIDs.Add(sharing.ID(42))
+	arbitraryIDs.Add(sharing.ID(7777))
+
+	shareholders := arbitraryIDs.Freeze()
+	threshold := uint(3)
+
+	scheme, err := shamir.NewScheme(field, threshold, shareholders)
+	require.NoError(t, err)
+	require.NotNil(t, scheme)
+
+	// Test dealing and reconstruction with arbitrary IDs
+	secret := shamir.NewSecret(field.FromUint64(12345))
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(t, err)
+	require.NotNil(t, out)
+	require.Equal(t, 5, out.Shares().Size())
+
+	// Verify all arbitrary IDs have shares
+	for _, id := range []sharing.ID{5, 100, 999, 42, 7777} {
+		share, exists := out.Shares().Get(id)
+		require.True(t, exists, "share for ID %d should exist", id)
+		require.Equal(t, id, share.ID())
+	}
+
+	// Test reconstruction with all shares
+	reconstructed, err := scheme.Reconstruct(out.Shares().Values()...)
+	require.NoError(t, err)
+	require.True(t, secret.Equal(reconstructed), "reconstructed secret should match original")
+
+	// Test reconstruction with threshold shares (arbitrary subset)
+	thresholdShares := []*shamir.Share[*k256.Scalar]{
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(999)); return s }(),
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(5)); return s }(),
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(42)); return s }(),
+	}
+	reconstructed, err = scheme.Reconstruct(thresholdShares...)
+	require.NoError(t, err)
+	require.True(t, secret.Equal(reconstructed), "reconstruction with threshold shares should work")
+
+	// Test reconstruction with different threshold subset
+	differentThresholdShares := []*shamir.Share[*k256.Scalar]{
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(100)); return s }(),
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(7777)); return s }(),
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(42)); return s }(),
+	}
+	reconstructed, err = scheme.Reconstruct(differentThresholdShares...)
+	require.NoError(t, err)
+	require.True(t, secret.Equal(reconstructed), "reconstruction with different threshold subset should work")
+
+	// Test that insufficient shares fail
+	insufficientShares := []*shamir.Share[*k256.Scalar]{
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(999)); return s }(),
+		func() *shamir.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(5)); return s }(),
+	}
+	_, err = scheme.Reconstruct(insufficientShares...)
+	require.Error(t, err)
+	require.ErrorIs(t, err, shamir.ErrFailed)
+
+	// Test ToAdditive conversion with arbitrary IDs
+	qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+	require.NoError(t, err)
+
+	additiveShares := make([]*additive.Share[*k256.Scalar], 0)
+	for _, share := range out.Shares().Values() {
+		additiveShare, err := share.ToAdditive(qualifiedSet)
+		require.NoError(t, err)
+		require.NotNil(t, additiveShare)
+		additiveShares = append(additiveShares, additiveShare)
+	}
+
+	additiveScheme, err := additive.NewScheme(field, shareholders)
+	require.NoError(t, err)
+
+	reconstructedFromAdditive, err := additiveScheme.Reconstruct(additiveShares...)
+	require.NoError(t, err)
+	require.True(t, secret.Value().Equal(reconstructedFromAdditive.Value()))
+
+	// Test Lagrange coefficients with arbitrary IDs
+	lambdas, err := shamir.LagrangeCoefficients(field, 5, 100, 999, 42, 7777)
+	require.NoError(t, err)
+	require.Equal(t, 5, lambdas.Size())
+
+	// Verify Lagrange coefficients sum to 1
+	sum := field.Zero()
+	for _, lambda := range lambdas.Values() {
+		sum = sum.Add(lambda)
+	}
+	require.True(t, sum.Equal(field.One()), "Lagrange coefficients should sum to 1")
+}

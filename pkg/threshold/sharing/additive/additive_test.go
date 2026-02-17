@@ -921,3 +921,113 @@ func BenchmarkReconstruct(b *testing.B) {
 		})
 	}
 }
+
+// TestArbitraryShareholderIDs tests that additive secret sharing works with
+// arbitrary distinct non-zero shareholder IDs (not just sequential 1, 2, 3, ...).
+func TestArbitraryShareholderIDs(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+
+	// Create a set with arbitrary non-sequential IDs
+	arbitraryIDs := hashset.NewComparable[sharing.ID]()
+	arbitraryIDs.Add(sharing.ID(13))
+	arbitraryIDs.Add(sharing.ID(256))
+	arbitraryIDs.Add(sharing.ID(1000))
+	arbitraryIDs.Add(sharing.ID(99))
+
+	shareholders := arbitraryIDs.Freeze()
+
+	scheme, err := additive.NewScheme(field, shareholders)
+	require.NoError(t, err)
+	require.NotNil(t, scheme)
+	require.Equal(t, 4, scheme.AccessStructure().Shareholders().Size())
+
+	// Verify the scheme contains the arbitrary IDs
+	for _, id := range []sharing.ID{13, 256, 1000, 99} {
+		require.True(t, scheme.AccessStructure().Shareholders().Contains(id), "shareholder set should contain ID %d", id)
+	}
+
+	// Test dealing with arbitrary IDs
+	secret := additive.NewSecret(field.FromUint64(54321))
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(t, err)
+	require.NotNil(t, out)
+	require.Equal(t, 4, out.Shares().Size())
+
+	// Verify all arbitrary IDs have shares
+	for _, id := range []sharing.ID{13, 256, 1000, 99} {
+		share, exists := out.Shares().Get(id)
+		require.True(t, exists, "share for ID %d should exist", id)
+		require.Equal(t, id, share.ID())
+	}
+
+	// Verify that shares sum to secret (fundamental property of additive sharing)
+	sum := field.OpIdentity()
+	for _, share := range out.Shares().Values() {
+		sum = sum.Op(share.Value())
+	}
+	require.True(t, secret.Value().Equal(sum), "sum of shares should equal secret")
+
+	// Test reconstruction with all shares (required for additive sharing)
+	reconstructed, err := scheme.Reconstruct(out.Shares().Values()...)
+	require.NoError(t, err)
+	require.True(t, secret.Equal(reconstructed), "reconstructed secret should match original")
+
+	// Test that missing even one share fails (all shares required for additive)
+	incompleteShares := []*additive.Share[*k256.Scalar]{
+		func() *additive.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(13)); return s }(),
+		func() *additive.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(256)); return s }(),
+		func() *additive.Share[*k256.Scalar] { s, _ := out.Shares().Get(sharing.ID(1000)); return s }(),
+		// Missing ID 99
+	}
+	_, err = scheme.Reconstruct(incompleteShares...)
+	require.Error(t, err)
+	require.ErrorIs(t, err, additive.ErrFailed)
+
+	// Test DealRandom with arbitrary IDs
+	randomOut, randomSecret, err := scheme.DealRandom(pcg.NewRandomised())
+	require.NoError(t, err)
+	require.NotNil(t, randomOut)
+	require.NotNil(t, randomSecret)
+	require.Equal(t, 4, randomOut.Shares().Size())
+
+	// Verify reconstruction with random secret
+	reconstructedRandom, err := scheme.Reconstruct(randomOut.Shares().Values()...)
+	require.NoError(t, err)
+	require.True(t, randomSecret.Equal(reconstructedRandom))
+
+	// Test homomorphic operations with arbitrary IDs
+	secret1 := additive.NewSecret(field.FromUint64(100))
+	secret2 := additive.NewSecret(field.FromUint64(200))
+
+	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
+	require.NoError(t, err)
+	shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
+	require.NoError(t, err)
+
+	// Add corresponding shares
+	sumShares := make([]*additive.Share[*k256.Scalar], 0)
+	for _, id := range []sharing.ID{13, 256, 1000, 99} {
+		s1, exists1 := shares1.Shares().Get(id)
+		require.True(t, exists1)
+		s2, exists2 := shares2.Shares().Get(id)
+		require.True(t, exists2)
+
+		sumShare := s1.Add(s2)
+		require.Equal(t, id, sumShare.ID())
+		sumShares = append(sumShares, sumShare)
+	}
+
+	// Verify reconstruction of sum
+	reconstructedSum, err := scheme.Reconstruct(sumShares...)
+	require.NoError(t, err)
+	expectedSum := field.FromUint64(300) // 100 + 200
+	require.True(t, expectedSum.Equal(reconstructedSum.Value()))
+
+	// Test authorization checks with arbitrary IDs
+	require.True(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(99)))
+	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000))) // Missing one
+	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))  // Wrong IDs
+	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(999))) // One wrong ID
+}
