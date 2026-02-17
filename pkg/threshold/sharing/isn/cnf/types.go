@@ -5,6 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
@@ -30,14 +31,14 @@ func (s *Share[E]) ID() sharing.ID {
 // Value returns the share's sparse component map. Keys are clause identifiers
 // (bitsets), and values are group elements. Missing keys implicitly represent
 // the group identity element.
-func (s *Share[E]) Value() map[bitset.ImmutableBitSet[sharing.ID]]E {
-	return s.v
+func (s *Share[E]) Value() ds.Map[bitset.ImmutableBitSet[sharing.ID], E] {
+	return hashmap.NewComparableFromNativeLike(s.v).Freeze()
 }
 
 // Equal tests whether two shares are equal by comparing their IDs and
 // all components of their value maps.
 func (s *Share[E]) Equal(other *Share[E]) bool {
-	if s == nil && other == nil {
+	if s == nil || other == nil {
 		return s == other
 	}
 	if len(s.v) != len(other.v) {
@@ -95,8 +96,8 @@ func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 // HashCode computes a hash combining the share ID and all value components.
 func (s *Share[E]) HashCode() base.HashCode {
 	c := base.HashCode(s.id)
-	for _, si := range s.v {
-		c = c.Combine(si.HashCode())
+	for bi, si := range s.v {
+		c = c.Combine(base.HashCode(bi), si.HashCode())
 	}
 	return c
 }
@@ -106,10 +107,6 @@ func (*Share[E]) ToAdditive(mqas *sharing.MinimalQualifiedAccessStructure) (*add
 }
 
 func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
-	return s.ScalarMul(scalar)
-}
-
-func (s *Share[E]) ScalarMul(scalar algebra.Numeric) *Share[E] {
 	result := &Share[E]{
 		id: s.id,
 		v:  make(map[bitset.ImmutableBitSet[sharing.ID]]E),

@@ -30,7 +30,8 @@ func TestDNFSanity(t *testing.T) {
 	ac, err := sharing.NewDNFAccessStructure(minimalSets...)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, group.Random, ac)
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 	require.Equal(t, dnf.Name, scheme.Name())
 
@@ -72,7 +73,8 @@ func TestDNFDeal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, group.Random, ac)
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	t.Run("zero secret", func(t *testing.T) {
 		t.Parallel()
@@ -146,7 +148,8 @@ func TestDNFDealRandom(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, group.Random, ac)
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	t.Run("valid random generation", func(t *testing.T) {
 		t.Parallel()
@@ -198,7 +201,8 @@ func TestDNFReconstruct_Authorization(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, group.Random, ac)
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 	secret := isn.NewSecret(group.FromUint64(12345))
 
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
@@ -296,13 +300,13 @@ func TestDNFShareHomomorphism(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, group.Random, ac)
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	// Create two secrets
 	secret1 := isn.NewSecret(group.FromUint64(100))
 	secret2 := isn.NewSecret(group.FromUint64(200))
 
-	// Deal both secrets with same PRNG state for determinism
 	seed1, seed2 := mrand.Uint64(), mrand.Uint64()
 
 	out1, err := scheme.Deal(secret1, pcg.New(seed1, seed2))
@@ -344,7 +348,8 @@ func TestDNF_BLS12381(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := dnf.NewScheme(group, group.Random, ac)
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	secret := isn.NewSecret(group.FromUint64(999))
 	out, err := scheme.Deal(secret, pcg.NewRandomised())

@@ -32,7 +32,8 @@ func TestCNFSanity(t *testing.T) {
 	ac, err := sharing.NewCNFAccessStructure(maximalUnqualifiedSets...)
 	require.NoError(t, err)
 
-	scheme := cnf.NewScheme(group, group.Random, ac)
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 	require.Equal(t, cnf.Name, scheme.Name())
 
@@ -77,7 +78,8 @@ func TestCNFDeal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := cnf.NewScheme(group, group.Random, ac)
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	t.Run("zero secret", func(t *testing.T) {
 		t.Parallel()
@@ -167,7 +169,8 @@ func TestCNFDealRandom(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := cnf.NewScheme(group, group.Random, ac)
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	t.Run("valid random generation", func(t *testing.T) {
 		t.Parallel()
@@ -232,7 +235,8 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := cnf.NewScheme(group, group.Random, ac)
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 	secret := isn.NewSecret(group.FromUint64(77777))
 
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
@@ -359,7 +363,8 @@ func TestCNFShareHomomorphism(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := cnf.NewScheme(group, group.Random, ac)
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	// Create two secrets
 	secret1 := isn.NewSecret(group.FromUint64(500))
@@ -403,7 +408,8 @@ func TestCNF_BLS12381(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := cnf.NewScheme(group, group.Random, ac)
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 
 	secret := isn.NewSecret(group.FromUint64(888888))
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
@@ -440,7 +446,8 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme := cnf.NewScheme(group, group.Random, ac)
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
 	secret := isn.NewSecret(group.FromUint64(111111))
 
 	out, err := scheme.Deal(secret, pcg.NewRandomised())

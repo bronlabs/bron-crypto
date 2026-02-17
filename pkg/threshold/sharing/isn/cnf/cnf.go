@@ -20,29 +20,31 @@ const Name sharing.Name = "CNF secret sharing scheme"
 // with one component per maximal unqualified set.
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
-	sampler func(io.Reader) (E, error)
+	sampler *isn.Sampler[E]
 	ac      sharing.CNFAccessStructure
 }
 
-// NewScheme creates a new CNF ISN scheme over the given finite group
+// NewFiniteScheme creates a new CNF ISN scheme over the given finite group
 // with the specified access structure.
 //
 // Parameters:
 //   - g: The finite group over which secrets and shares are defined
-//   - sampler: A function to sample elements from the group
 //   - ac: The CNF access structure specifying maximal unqualified sets
 //
 // Returns the initialised scheme.
-func NewScheme[E algebra.GroupElement[E]](
-	g algebra.Group[E],
-	sampler func(io.Reader) (E, error),
+func NewFiniteScheme[E algebra.GroupElement[E]](
+	g algebra.FiniteGroup[E],
 	ac sharing.CNFAccessStructure,
-) *Scheme[E] {
+) (*Scheme[E], error) {
+	sampler, err := isn.NewFiniteGroupElementSampler(g)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create sampler")
+	}
 	return &Scheme[E]{
 		g:       g,
 		sampler: sampler,
 		ac:      ac,
-	}
+	}, nil
 }
 
 // Name returns the scheme's identifier.
@@ -64,7 +66,7 @@ func (c *Scheme[E]) AccessStructure() sharing.CNFAccessStructure {
 // Returns the dealer output containing all shares, or an error if sampling
 // or dealing fails.
 func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
-	secretValue, err := c.sampler(prng)
+	secretValue, err := c.sampler.Secret(prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
@@ -112,7 +114,7 @@ func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 	}
 
 	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
-	rs, err := isn.SumToSecret(secret, c.sampler, prng, l)
+	rs, err := isn.SumToSecret(secret, c.sampler.Share, prng, l)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}

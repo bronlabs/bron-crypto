@@ -21,28 +21,30 @@ const Name sharing.Name = "DNF secret sharing scheme"
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
 	ac      sharing.DNFAccessStructure
-	sampler func(io.Reader) (E, error)
+	sampler *isn.Sampler[E]
 }
 
-// NewScheme creates a new DNF ISN scheme over the given group
+// NewFiniteScheme creates a new DNF ISN scheme over the given group
 // with the specified access structure.
 //
 // Parameters:
 //   - g: The group over which secrets and shares are defined
-//   - sampler: A function to sample elements from the group
 //   - ac: The DNF access structure specifying minimal qualified sets
 //
 // Returns the initialised scheme.
-func NewScheme[E algebra.GroupElement[E]](
-	g algebra.Group[E],
-	sampler func(io.Reader) (E, error),
+func NewFiniteScheme[E algebra.GroupElement[E]](
+	g algebra.FiniteGroup[E],
 	ac sharing.DNFAccessStructure,
-) *Scheme[E] {
+) (*Scheme[E], error) {
+	sampler, err := isn.NewFiniteGroupElementSampler(g)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create sampler")
+	}
 	return &Scheme[E]{
 		g:       g,
 		sampler: sampler,
 		ac:      ac,
-	}
+	}, nil
 }
 
 // Name returns the scheme's identifier.
@@ -64,7 +66,7 @@ func (d *Scheme[E]) AccessStructure() sharing.DNFAccessStructure {
 // Returns the dealer output containing all shares, or an error if sampling
 // or dealing fails.
 func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
-	secretValue, err := d.sampler(prng)
+	secretValue, err := d.sampler.Secret(prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
@@ -117,7 +119,7 @@ func (d *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 
 		// Create an ℓ-out-of-ℓ additive sharing of s over the parties in Bk
 		// step 2.3, 2.4
-		rs, err := isn.SumToSecret(secret, d.sampler, prng, l)
+		rs, err := isn.SumToSecret(secret, d.sampler.Share, prng, l)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 		}
