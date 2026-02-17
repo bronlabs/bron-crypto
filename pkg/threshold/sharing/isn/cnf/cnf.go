@@ -2,10 +2,14 @@ package cnf
 
 import (
 	"io"
+	"maps"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/errs-go/errs"
@@ -139,59 +143,47 @@ func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 
 // Reconstruct recovers the secret from an authorized set of shares.
 //
-// The algorithm verifies that the provided shares form an authorized coalition.
-// For each maximal unqualified set Tj, it finds a party in the coalition that
-// is not in Tj and extracts piece rj from that party's share. The secret is
+// The algorithm verifies that the provided shares form an authorized coalition
+// and shares are consistent.
+// For each maximal unqualified set it finds parties in the coalition that
+// are not in the set and extracts pieces from that parties' shares checking
+// if they are the same. The secret is
 // reconstructed by summing all pieces r1 + r2 + ... + rℓ.
 //
 // Parameters:
 //   - shares: Variable number of shares from different shareholders
 //
 // Returns the reconstructed secret, or an error if the shares are unauthorised,
-// incomplete, or invalid.
+// incomplete, invalid, or inconsistent.
 func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
-	ids, err := sharing.CollectIDs(shares...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
-	}
-	// step 1
-	if !c.ac.IsAuthorized(ids...) {
-		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
-	}
-
-	idSet := bitset.NewImmutableBitSet(ids...)
-	sharesMap := make(map[sharing.ID]*Share[E])
-	for _, sh := range shares {
-		if sh == nil {
+	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
+	for _, share := range shares {
+		if share == nil {
 			return nil, isn.ErrFailed.WithMessage("nil share provided")
 		}
-		sharesMap[sh.ID()] = sh
-	}
 
-	// step 2 & 3: for each maximal unqualified set, find a party outside it and collect pieces
-	sHat := c.g.OpIdentity()
-	for _, Tj := range c.ac {
-		rj := c.g.OpIdentity() // default to identity if piece is missing (should not happen for authorized coalition)
-		// Find any party in the coalition that is not in Tj
-		for pid := range idSet.Iter() {
-			if Tj.Contains(pid) {
+		for _, maxUnqualifiedSet := range c.ac {
+			if maxUnqualifiedSet.Contains(share.id) {
 				continue
 			}
-			sh, ok := sharesMap[pid]
-			if !ok || sh == nil {
-				return nil, isn.ErrFailed.WithMessage("missing share for ID %d", pid)
+
+			chunk, ok := share.v[maxUnqualifiedSet]
+			if !ok || utils.IsNil(chunk) {
+				return nil, isn.ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", share.id, maxUnqualifiedSet.List())
 			}
-			val, exists := sh.v[Tj]
-			if !exists {
-				return nil, isn.ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", pid, Tj.List())
+			if refChunk, contains := chunks[maxUnqualifiedSet]; contains {
+				if !refChunk.Equal(chunk) {
+					return nil, isn.ErrFailed.WithMessage("inconsistent shares")
+				}
+			} else {
+				chunks[maxUnqualifiedSet] = chunk
 			}
-			rj = val
-			break
 		}
-		if rj.IsOpIdentity() {
-			return nil, isn.ErrFailed.WithMessage("could not find a party outside maximal unqualified set %v", Tj.List())
-		}
-		sHat = sHat.Op(rj)
 	}
-	return isn.NewSecret(sHat), nil
+
+	if !slices.Equal(slices.Sorted(slices.Values(c.ac)), slices.Sorted(maps.Keys(chunks))) {
+		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret")
+	}
+
+	return isn.NewSecret(sliceutils.Reduce(slices.Collect(maps.Values(chunks)), c.g.OpIdentity(), E.Op)), nil
 }

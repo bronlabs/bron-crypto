@@ -2,10 +2,14 @@ package dnf
 
 import (
 	"io"
+	"maps"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/errs-go/errs"
@@ -138,57 +142,43 @@ func (d *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 // Reconstruct recovers the secret from an authorized set of shares.
 //
 // The algorithm verifies that the provided shares form an authorized coalition,
-// finds a minimal qualified set Bk contained in the coalition, and reconstructs
-// the secret by summing the k-th components of all shares in Bk.
+// finds a minimal qualified set contained in the coalition, and reconstructs
+// the secret by summing the components of all shares in the set.
 //
 // Parameters:
 //   - shares: Variable number of shares from different shareholders
 //
 // Returns the reconstructed secret, or an error if the shares are unauthorised,
-// incomplete, or invalid.
+// incomplete, invalid, or inconsistent.
 func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
-	ids, err := sharing.CollectIDs(shares...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
-	}
-	// step 1
-	if !d.ac.IsAuthorized(ids...) {
-		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
-	}
-	// step 2: find a minimal qualified set Bk contained in the provided coalition
-	var qualifiedSet bitset.ImmutableBitSet[sharing.ID]
-	idSet := bitset.NewImmutableBitSet(ids...)
-	for _, Bi := range d.ac {
-		if Bi.IsSubSet(idSet) {
-			qualifiedSet = Bi
-			break
-		}
-	}
-	if qualifiedSet == 0 {
-		return nil, isn.ErrFailed.WithMessage("could not find a minimal qualified set contained in the provided shares")
-	}
-
-	// step 3: reconstruct from the qualified set's components
-	sharesMap := make(map[sharing.ID]*Share[E])
-	for _, sh := range shares {
-		if sh == nil {
+	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
+	for _, share := range shares {
+		if share == nil {
 			return nil, isn.ErrFailed.WithMessage("nil share provided")
 		}
-		sharesMap[sh.ID()] = sh
+
+		for _, minQualifiedSet := range d.ac {
+			if !minQualifiedSet.Contains(share.id) {
+				continue
+			}
+
+			chunk, ok := share.v[minQualifiedSet]
+			if !ok || utils.IsNil(chunk) {
+				return nil, isn.ErrFailed.WithMessage("share for ID %d does not contain piece for minimal qualified set %v", share.id, minQualifiedSet.List())
+			}
+			if refChunk, contains := chunks[minQualifiedSet]; contains {
+				if !refChunk.Equal(chunk) {
+					return nil, isn.ErrFailed.WithMessage("inconsistent shares")
+				}
+			} else {
+				chunks[minQualifiedSet] = chunk
+			}
+		}
 	}
 
-	sHat := d.g.OpIdentity()
-	for pid := range qualifiedSet.Iter() {
-		pShare, exists := sharesMap[pid]
-		if !exists || pShare == nil {
-			return nil, isn.ErrFailed.WithMessage("missing share for ID %d", pid)
-		}
-		// Retrieve value from sparse map; if missing, it's implicitly identity
-		val, exists := pShare.v[qualifiedSet]
-		if exists {
-			sHat = sHat.Op(val)
-		}
-		// If not exists, val is identity, so Op(identity) doesn't change sHat
+	if !slices.Equal(slices.Sorted(slices.Values(d.ac)), slices.Sorted(maps.Keys(chunks))) {
+		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret")
 	}
-	return isn.NewSecret(sHat), nil
+
+	return isn.NewSecret(sliceutils.Reduce(slices.Collect(maps.Values(chunks)), d.g.OpIdentity(), E.Op)), nil
 }
