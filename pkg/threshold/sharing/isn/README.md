@@ -2,7 +2,7 @@
 
 Package isn implements the Ito-Saito-Nishizeki (ISN) secret sharing scheme for general monotone access structures.
 
-The ISN scheme generalizes threshold secret sharing to arbitrary monotone access structures specified in either DNF (Disjunctive Normal Form) or CNF (Conjunctive Normal Form). Unlike Shamir's threshold scheme which only supports t-of-n access structures, ISN can handle complex authorization policies such as "any 2 executives OR any 3 managers" (DNF) or "at least one from each department" (CNF).
+The ISN scheme generalizes threshold secret sharing to arbitrary monotone access structures specified in either DNF (Disjunctive Normal Form) or CNF (Conjunctive Normal Form). Unlike Shamir's threshold scheme which only supports t-of-n access structures, ISN can handle complex authorization policies such as "any 2 executives OR any 3 managers" (DNF) or "at least one from each department" (CNF). Note that any access structure is representable in both DNF and CNF, but the choice of representation can impact the efficiency of share generation and reconstruction.
 
 ## DNF Variant
 
