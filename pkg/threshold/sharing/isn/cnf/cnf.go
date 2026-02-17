@@ -182,7 +182,6 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *isn.Secret[E], prng io.Reade
 	return &DealerOutput[E]{
 		shares: hashmap.NewComparableFromNativeLike(shares).Freeze(),
 	}, DealerFunc[E](shares), nil
-
 }
 
 // Reconstruct recovers the secret from an authorized set of shares.

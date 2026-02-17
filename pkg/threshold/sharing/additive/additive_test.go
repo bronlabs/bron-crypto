@@ -1027,7 +1027,7 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 
 	// Test authorization checks with arbitrary IDs
 	require.True(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(99)))
-	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000))) // Missing one
-	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))  // Wrong IDs
+	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000)))                  // Missing one
+	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))         // Wrong IDs
 	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(999))) // One wrong ID
 }

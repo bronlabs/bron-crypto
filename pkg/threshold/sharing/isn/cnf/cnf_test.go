@@ -449,7 +449,7 @@ func TestCNFDealAndRevealDealerFunc(t *testing.T) {
 		require.NotNil(t, out)
 		require.NotNil(t, dealerFunc)
 		require.Equal(t, 4, out.Shares().Size())
-		require.Equal(t, 4, len(dealerFunc))
+		require.Len(t, dealerFunc, 4)
 
 		// Verify dealer func contains all shares
 		for id, share := range out.Shares().Iter() {
@@ -511,7 +511,7 @@ func TestCNFDealRandomAndRevealDealerFunc(t *testing.T) {
 		require.NotNil(t, secret)
 		require.NotNil(t, dealerFunc)
 		require.Equal(t, 4, out.Shares().Size())
-		require.Equal(t, 4, len(dealerFunc))
+		require.Len(t, dealerFunc, 4)
 
 		// Verify dealer func contains all shares
 		for id, share := range out.Shares().Iter() {
@@ -545,7 +545,7 @@ func TestCNFDealRandomAndRevealDealerFunc(t *testing.T) {
 		require.False(t, secret1.Equal(secret2))
 
 		// Verify dealer funcs differ (at least one share should be different)
-		require.Equal(t, len(dealerFunc1), len(dealerFunc2))
+		require.Len(t, dealerFunc2, len(dealerFunc1))
 		foundDifference := false
 		for id := range dealerFunc1 {
 			if !dealerFunc1[id].Equal(dealerFunc2[id]) {
