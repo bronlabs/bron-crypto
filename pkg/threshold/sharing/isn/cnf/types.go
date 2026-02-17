@@ -19,7 +19,21 @@ import (
 // DealerFunc represents the dealer function that maps shareholder IDs to their
 // shares. This is returned by LSSS methods that reveal the dealer function,
 // enabling protocols that require knowledge of the complete share distribution.
-type DealerFunc[E algebra.GroupElement[E]] map[sharing.ID]*Share[E]
+type DealerFunc[E algebra.GroupElement[E]] map[bitset.ImmutableBitSet[sharing.ID]]E
+
+func (df DealerFunc[E]) ShareOf(id sharing.ID) *Share[E] {
+	shareValue := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
+	for clause, value := range df {
+		if !clause.Contains(id) {
+			shareValue[clause] = value
+		}
+	}
+
+	return &Share[E]{
+		id: id,
+		v:  shareValue,
+	}
+}
 
 // Share represents a shareholder's portion in an ISN secret sharing scheme.
 // Each share contains a sparse map from clause identifiers (represented as

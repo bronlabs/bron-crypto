@@ -153,38 +153,22 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *isn.Secret[E], prng io.Reade
 		return nil, nil, isn.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
 
-	shares := make(map[sharing.ID]*Share[E])
-
-	// step 1: initialise each shareholder's share with an empty map
-	for p := range c.ac.Shareholders().Iter() {
-		shares[p] = &Share[E]{
-			id: p,
-			v:  make(map[bitset.ImmutableBitSet[sharing.ID]]E),
-		}
-	}
-
-	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
 	rs, err := isn.SumToSecret(secret, c.sampler.Share, prng, l)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
 
-	// step 3: distribute: party p gets piece rj (with key Tj) iff p ∉ Tj
-	for j, Tj := range c.ac {
-		// step 3.1: assign piece rj to all parties not in Tj
-		for p := range c.ac.Shareholders().Iter() {
-			// step 3.1.1: if p is not in Tj, store rj in sparse map
-			if !Tj.Contains(p) {
-				// step 3.1.1.1
-				shares[p].v[Tj] = rs[j]
-			}
-		}
+	dealerFunc := make(DealerFunc[E])
+	for i, clause := range c.ac {
+		dealerFunc[clause] = rs[i]
 	}
 
-	// step 4: return shares
-	return &DealerOutput[E]{
-		shares: hashmap.NewComparableFromNativeLike(shares).Freeze(),
-	}, DealerFunc[E](shares), nil
+	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
+	for id := range c.ac.Shareholders().Iter() {
+		shares.Put(id, dealerFunc.ShareOf(id))
+	}
+	output := &DealerOutput[E]{shares: shares.Freeze()}
+	return output, dealerFunc, nil
 }
 
 // Reconstruct recovers the secret from an authorized set of shares.
