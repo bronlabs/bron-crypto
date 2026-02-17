@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -87,26 +88,19 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 	if secret == nil {
 		return nil, ErrIsNil.WithMessage("secret is nil")
 	}
-	participantsList := d.ac.Shareholders().List()
-	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
+	isnSecret := isn.NewSecret(secret.Value())
 
-	partialSum := d.g.OpIdentity()
-	for _, id := range participantsList[1:] {
-		v, err := d.g.Random(prng)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("could not sample group element")
-		}
-		partialSum = partialSum.Op(v)
+	sharesList, err := isn.SumToSecret(isnSecret, d.g.Random, prng, d.ac.Shareholders().Size())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create shares using ISN")
+	}
+	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
+	for i, id := range d.ac.Shareholders().Iter2() {
 		shares.Put(id, &Share[E]{
 			id: id,
-			v:  v,
+			v:  sharesList[i],
 		})
 	}
-	final := secret.Value().Op(partialSum.OpInv())
-	shares.Put(participantsList[0], &Share[E]{
-		id: participantsList[0],
-		v:  final,
-	})
 	return &DealerOutput[E]{
 		shares: shares.Freeze(),
 	}, nil
