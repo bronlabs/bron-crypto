@@ -156,6 +156,14 @@ func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 // Returns the reconstructed secret, or an error if the shares are unauthorised,
 // incomplete, invalid, or inconsistent.
 func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
+	ids, err := sharing.CollectIDs(shares...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
+	}
+	if !c.ac.IsAuthorized(ids...) {
+		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
+	}
+
 	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 	for _, share := range shares {
 		if share == nil {
@@ -179,10 +187,6 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
 				chunks[maxUnqualifiedSet] = chunk
 			}
 		}
-	}
-
-	if !slices.Equal(slices.Sorted(slices.Values(c.ac)), slices.Sorted(maps.Keys(chunks))) {
-		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret")
 	}
 
 	return isn.NewSecret(sliceutils.Reduce(slices.Collect(maps.Values(chunks)), c.g.OpIdentity(), E.Op)), nil

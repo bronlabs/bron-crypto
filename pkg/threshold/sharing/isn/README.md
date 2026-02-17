@@ -79,18 +79,15 @@ Algorithm:
 ```pseudocode
 DNF.Reconstruct(Γ_min = [B1..Bm], provided coalition A, shares share[p]):
 
-1. Initialize chunks := empty map from minimal set -> group element
+1. If A is not authorized (A ∉ Γ): FAIL
 
-2. For each provided share from party p:
-2.1     For each minimal qualified set Bk where p ∈ Bk:
-2.1.1       If share[p][Bk] is missing: FAIL
-2.1.2       If chunks[Bk] already set and chunks[Bk] != share[p][Bk]: FAIL
-2.1.3       Otherwise set chunks[Bk] := share[p][Bk]
+2. Find a minimal qualified set Bk such that Bk ⊆ A.
+       (There must exist one because A ∈ Γ and Γ is monotone:
+        every authorized set contains a minimal qualified set.)
 
-3. If chunks does not contain an entry for every Bk in Γ_min: FAIL
-
-4. Compute:
-       s_hat := sum over all Bk in Γ_min of chunks[Bk]
+3. Compute:
+       s_hat := sum over p in Bk of share[p][Bk]
+       // Retrieve value from sparse map using Bk as key
    Output s_hat.
 ```
 
