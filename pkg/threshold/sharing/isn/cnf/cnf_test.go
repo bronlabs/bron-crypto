@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn/cnf"
 )
@@ -699,4 +700,46 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
+}
+
+func TestCNFShare_ToAdditive(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+
+	// 2-out-of-3 threshold
+	ac, err := sharing.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1).Freeze(),
+		hashset.NewComparable[sharing.ID](2).Freeze(),
+		hashset.NewComparable[sharing.ID](3).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	secret := isn.NewSecret(group.FromUint64(123456))
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(t, err)
+
+	minAS, err := sharing.NewMinimalQualifiedAccessStructure(hashset.NewComparable[sharing.ID](1, 3).Freeze())
+	require.NoError(t, err)
+
+	additiveScheme, err := additive.NewScheme(group, minAS.Shareholders())
+	require.NoError(t, err)
+
+	additiveShares := make([]*additive.Share[*k256.Scalar], 0, out.Shares().Size())
+	for id, share := range out.Shares().Iter() {
+		if !minAS.Shareholders().Contains(id) {
+			continue
+		}
+		addShare, err := share.ToAdditive(minAS)
+		require.NoError(t, err)
+		require.Equal(t, id, addShare.ID())
+		additiveShares = append(additiveShares, addShare)
+	}
+
+	reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
+	require.NoError(t, err)
+	require.True(t, reconstructed.Value().Equal(secret.Value()))
 }

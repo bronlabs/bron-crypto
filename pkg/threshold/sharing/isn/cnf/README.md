@@ -59,16 +59,18 @@ Algorithm:
 ```pseudocode
 CNF.Reconstruct(Γ_max_unqual = [T1..Tℓ], provided coalition A, shares share[p]):
 
-1. If A is not authorized (A ∉ Γ): FAIL
+1. Initialize chunks := empty map from maximal unqualified set -> group element
 
-2. For j = 1..ℓ:
-2.1     Find any party p in A such that p ∉ Tj.
-        (Such p must exist, otherwise A ⊆ Tj and A would be unqualified.)
-2.2     Let rj := share[p][ Tj ]
-        // Retrieve value from sparse map using Tj as key
+2. For each provided share from party p:
+2.1     For each maximal unqualified set Tj where p ∉ Tj:
+2.1.1       If share[p][Tj] is missing: FAIL
+2.1.2       If chunks[Tj] already set and chunks[Tj] != share[p][Tj]: FAIL
+2.1.3       Otherwise set chunks[Tj] := share[p][Tj]
 
-3. Compute:
-       s_hat := r1 + r2 + ... + rℓ
+3. If chunks does not contain an entry for every Tj in Γ_max_unqual: FAIL
+
+4. Compute:
+       s_hat := sum over all Tj in Γ_max_unqual of chunks[Tj]
    Output s_hat.
 ```
 
