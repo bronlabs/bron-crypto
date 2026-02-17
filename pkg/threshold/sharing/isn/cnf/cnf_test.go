@@ -52,7 +52,7 @@ func TestCNFSanity(t *testing.T) {
 	// Party 3: NOT in {1,2}, so has entry for {1,2}; IS in {3,4}, so no entry for {3,4}
 	// Party 4: NOT in {1,2}, so has entry for {1,2}; IS in {3,4}, so no entry for {3,4}
 	for _, share := range shares.Values() {
-		require.Equal(t, share.Value().Size(), 1, "each party should have 1 entry (outside one maximal unqualified set)")
+		require.Equal(t, 1, share.Value().Size(), "each party should have 1 entry (outside one maximal unqualified set)")
 	}
 
 	// Reconstruct with authorized set {1,3}
@@ -467,7 +467,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 	// Party 5: in {5,6}, NOT in {1,2} and {3,4} → 2 entries
 	// Party 6: in {5,6}, NOT in {1,2} and {3,4} → 2 entries
 	for _, share := range sharesMap {
-		require.Equal(t, share.Value().Size(), 2, "each party should be outside 2 of the 3 maximal unqualified sets")
+		require.Equal(t, 2, share.Value().Size(), "each party should be outside 2 of the 3 maximal unqualified sets")
 	}
 
 	t.Run("authorized minimal {1,3,5}", func(t *testing.T) {
