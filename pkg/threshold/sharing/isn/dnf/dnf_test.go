@@ -49,9 +49,9 @@ func TestDNFSanity(t *testing.T) {
 	// Parties 3,4 are in {2,3,4} only
 	for id, share := range shares.Iter() {
 		if id == 2 {
-			require.Len(t, share.Value(), 2, "party 2 should have 2 entries (in both clauses)")
+			require.Equal(t, 2, share.Value().Size(), "party 2 should have 2 entries (in both clauses)")
 		} else {
-			require.Len(t, share.Value(), 1, "parties 1,3,4 should have 1 entry (in one clause)")
+			require.Equal(t, 1, share.Value().Size(), "parties 1,3,4 should have 1 entry (in one clause)")
 		}
 	}
 
@@ -153,9 +153,10 @@ func TestDNFDealRandom(t *testing.T) {
 
 	t.Run("valid random generation", func(t *testing.T) {
 		t.Parallel()
-		out, err := scheme.DealRandom(pcg.NewRandomised())
+		out, secret, err := scheme.DealRandom(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, out)
+		require.NotNil(t, secret)
 		require.Equal(t, 3, out.Shares().Size())
 	})
 
@@ -163,27 +164,27 @@ func TestDNFDealRandom(t *testing.T) {
 		t.Parallel()
 		prng := pcg.NewRandomised()
 
-		out1, err := scheme.DealRandom(prng)
+		out1, secret1, err := scheme.DealRandom(prng)
 		require.NoError(t, err)
 
-		out2, err := scheme.DealRandom(prng)
-		require.NoError(t, err)
+		_, secret2, err2 := scheme.DealRandom(prng)
+		require.NoError(t, err2)
 
-		// Reconstruct both and verify they're different
-		secret1, err := scheme.Reconstruct(out1.Shares().Values()...)
-		require.NoError(t, err)
-
-		secret2, err := scheme.Reconstruct(out2.Shares().Values()...)
-		require.NoError(t, err)
-
+		// Verify consecutive random secrets differ
 		require.False(t, secret1.Equal(secret2), "consecutive random secrets should differ")
+
+		// Also verify reconstruction matches generated secrets
+		reconstructed1, err3 := scheme.Reconstruct(out1.Shares().Values()...)
+		require.NoError(t, err3)
+		require.True(t, secret1.Equal(reconstructed1))
 	})
 
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
-		out, err := scheme.DealRandom(nil)
+		out, secret, err := scheme.DealRandom(nil)
 		require.Error(t, err)
 		require.Nil(t, out)
+		require.Nil(t, secret)
 	})
 }
 
@@ -334,6 +335,140 @@ func TestDNFShareHomomorphism(t *testing.T) {
 	// Expected secret is secret1 + secret2
 	expectedSecret := isn.NewSecret(secret1.Value().Op(secret2.Value()))
 	require.True(t, expectedSecret.Equal(reconstructed))
+}
+
+func TestDNFDealAndRevealDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+	ac, err := sharing.NewDNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](2, 3).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	t.Run("deal and reveal dealer func", func(t *testing.T) {
+		t.Parallel()
+		secret := isn.NewSecret(group.FromUint64(99999))
+
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, out)
+		require.NotNil(t, dealerFunc)
+		require.Equal(t, 3, out.Shares().Size())
+		require.Equal(t, 3, len(dealerFunc))
+
+		// Verify dealer func contains all shares
+		for id, share := range out.Shares().Iter() {
+			dfShare, ok := dealerFunc[id]
+			require.True(t, ok)
+			require.True(t, share.Equal(dfShare))
+		}
+
+		// Verify reconstruction works
+		reconstructed, err := scheme.Reconstruct(out.Shares().Values()...)
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	})
+
+	t.Run("nil secret", func(t *testing.T) {
+		t.Parallel()
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, pcg.NewRandomised())
+		require.Error(t, err)
+		require.ErrorIs(t, err, isn.ErrIsNil)
+		require.Nil(t, out)
+		require.Nil(t, dealerFunc)
+	})
+
+	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
+		secret := isn.NewSecret(group.FromUint64(42))
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, isn.ErrIsNil)
+		require.Nil(t, out)
+		require.Nil(t, dealerFunc)
+	})
+}
+
+func TestDNFDealRandomAndRevealDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+	ac, err := sharing.NewDNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](2, 3).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := dnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	t.Run("deal random and reveal dealer func", func(t *testing.T) {
+		t.Parallel()
+
+		out, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, out)
+		require.NotNil(t, secret)
+		require.NotNil(t, dealerFunc)
+		require.Equal(t, 3, out.Shares().Size())
+		require.Equal(t, 3, len(dealerFunc))
+
+		// Verify dealer func contains all shares
+		for id, share := range out.Shares().Iter() {
+			dfShare, ok := dealerFunc[id]
+			require.True(t, ok)
+			require.True(t, share.Equal(dfShare))
+		}
+
+		// Verify reconstruction works
+		reconstructed, err := scheme.Reconstruct(out.Shares().Values()...)
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	})
+
+	t.Run("multiple generations produce different secrets and dealer funcs", func(t *testing.T) {
+		t.Parallel()
+		prng := pcg.NewRandomised()
+
+		out1, secret1, dealerFunc1, err := scheme.DealRandomAndRevealDealerFunc(prng)
+		require.NoError(t, err)
+
+		_, secret2, dealerFunc2, err2 := scheme.DealRandomAndRevealDealerFunc(prng)
+		require.NoError(t, err2)
+
+		// Verify secrets differ
+		require.False(t, secret1.Equal(secret2))
+
+		// Verify dealer funcs differ (at least one share should be different)
+		require.Equal(t, len(dealerFunc1), len(dealerFunc2))
+		foundDifference := false
+		for id := range dealerFunc1 {
+			if !dealerFunc1[id].Equal(dealerFunc2[id]) {
+				foundDifference = true
+				break
+			}
+		}
+		require.True(t, foundDifference, "dealer funcs should differ")
+
+		// Verify reconstruction works for both
+		reconstructed1, err3 := scheme.Reconstruct(out1.Shares().Values()...)
+		require.NoError(t, err3)
+		require.True(t, secret1.Equal(reconstructed1))
+	})
+
+	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
+		out, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(nil)
+		require.Error(t, err)
+		require.Nil(t, out)
+		require.Nil(t, secret)
+		require.Nil(t, dealerFunc)
+	})
 }
 
 func TestDNF_BLS12381(t *testing.T) {

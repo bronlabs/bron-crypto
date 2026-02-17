@@ -65,17 +65,37 @@ func (c *Scheme[E]) AccessStructure() sharing.CNFAccessStructure {
 //
 // Returns the dealer output containing all shares, or an error if sampling
 // or dealing fails.
-func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
+func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *isn.Secret[E], error) {
+	do, secret, _, err := c.DealRandomAndRevealDealerFunc(prng)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal random shares")
+	}
+	return do, secret, nil
+}
+
+// DealRandomAndRevealDealerFunc samples a uniformly random secret from the group,
+// splits it into shares according to the CNF access structure, and reveals the
+// dealer function. This is part of the LSSS interface.
+//
+// Parameters:
+//   - prng: A cryptographically secure random number generator
+//
+// Returns:
+//   - The dealer output containing all shares
+//   - The randomly generated secret
+//   - The dealer function mapping shareholder IDs to shares
+//   - An error if sampling or dealing fails
+func (c *Scheme[E]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E], *isn.Secret[E], DealerFunc[E], error) {
 	secretValue, err := c.sampler.Secret(prng)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not sample random secret")
+		return nil, nil, nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
 	secret := isn.NewSecret(secretValue)
-	shares, err := c.Deal(secret, prng)
+	shares, dealerFunc, err := c.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not deal shares for random secret")
+		return nil, nil, nil, errs.Wrap(err).WithMessage("could not deal shares for random secret")
 	}
-	return shares, nil
+	return shares, secret, dealerFunc, nil
 }
 
 // Deal splits the given secret into shares according to the CNF access structure.
@@ -92,15 +112,42 @@ func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], error) {
 //
 // Returns the dealer output containing all shares, or an error if dealing fails.
 func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], error) {
+	do, _, err := c.DealAndRevealDealerFunc(secret, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not deal shares")
+	}
+	return do, nil
+}
+
+// DealAndRevealDealerFunc splits the given secret into shares according to the
+// CNF access structure and reveals the dealer function. This is part of the
+// LSSS interface and enables protocols that require knowledge of the complete
+// share distribution.
+//
+// The algorithm creates an ℓ-out-of-ℓ additive sharing of the secret into
+// pieces r1,...,rℓ (where ℓ is the number of maximal unqualified sets). Each
+// party p receives a share vector with ℓ components, where component j is rj
+// if p is not in maximal unqualified set Tj, or the group identity element
+// if p is in Tj.
+//
+// Parameters:
+//   - secret: The secret to be shared
+//   - prng: A cryptographically secure random number generator
+//
+// Returns:
+//   - The dealer output containing all shares
+//   - The dealer function mapping shareholder IDs to shares
+//   - An error if dealing fails
+func (c *Scheme[E]) DealAndRevealDealerFunc(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], DealerFunc[E], error) {
 	if prng == nil {
-		return nil, isn.ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, isn.ErrIsNil.WithMessage("prng is nil")
 	}
 	if secret == nil {
-		return nil, isn.ErrIsNil.WithMessage("secret is nil")
+		return nil, nil, isn.ErrIsNil.WithMessage("secret is nil")
 	}
 	l := len(c.ac) // number of maximal unqualified sets / clauses
 	if l == 0 {
-		return nil, isn.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
+		return nil, nil, isn.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
 
 	shares := make(map[sharing.ID]*Share[E])
@@ -116,7 +163,7 @@ func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
 	rs, err := isn.SumToSecret(secret, c.sampler.Share, prng, l)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
+		return nil, nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
 
 	// step 3: distribute: party p gets piece rj (with key Tj) iff p ∉ Tj
@@ -134,7 +181,8 @@ func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 	// step 4: return shares
 	return &DealerOutput[E]{
 		shares: hashmap.NewComparableFromNativeLike(shares).Freeze(),
-	}, nil
+	}, DealerFunc[E](shares), nil
+
 }
 
 // Reconstruct recovers the secret from an authorized set of shares.

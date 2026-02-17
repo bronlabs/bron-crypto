@@ -5,10 +5,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 )
+
+// DealerFunc represents the dealer function that maps shareholder IDs to their
+// shares. This is returned by LSSS methods that reveal the dealer function,
+// enabling protocols that require knowledge of the complete share distribution.
+type DealerFunc[E algebra.GroupElement[E]] map[sharing.ID]*Share[E]
 
 // Share represents a shareholder's portion in an ISN secret sharing scheme.
 // Each share contains a sparse map from clause identifiers (represented as
@@ -30,8 +36,8 @@ func (s *Share[E]) ID() sharing.ID {
 // Value returns the share's sparse component map. Keys are clause identifiers
 // (bitsets), and values are group elements. Missing keys implicitly represent
 // the group identity element.
-func (s *Share[E]) Value() map[bitset.ImmutableBitSet[sharing.ID]]E {
-	return s.v
+func (s *Share[E]) Value() ds.Map[bitset.ImmutableBitSet[sharing.ID], E] {
+	return hashmap.NewComparableFromNativeLike(s.v).Freeze()
 }
 
 // Equal tests whether two shares are equal by comparing their IDs and
@@ -92,10 +98,23 @@ func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 	}
 }
 
+// ToAdditive converts this DNF share to an additive share for the given minimal
+// qualified access structure. This enables threshold-to-additive share conversion
+// using Lagrange coefficients for MPC protocols.
+//
+// Currently unimplemented and will panic if called.
 func (*Share[E]) ToAdditive(mqas *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
 	panic("implement me")
 }
 
+// ScalarOp performs scalar multiplication on the share by applying the scalar
+// to each component in the sparse map. This enables linear operations on shares,
+// such as computing linear combinations for MPC protocols.
+//
+// Parameters:
+//   - scalar: The scalar value to multiply with each share component
+//
+// Returns a new share with all components scaled by the given scalar.
 func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
 	result := &Share[E]{
 		id: s.id,

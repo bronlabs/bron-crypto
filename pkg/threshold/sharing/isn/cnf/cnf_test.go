@@ -174,9 +174,10 @@ func TestCNFDealRandom(t *testing.T) {
 
 	t.Run("valid random generation", func(t *testing.T) {
 		t.Parallel()
-		out, err := scheme.DealRandom(pcg.NewRandomised())
+		out, secret, err := scheme.DealRandom(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, out)
+		require.NotNil(t, secret)
 		require.Equal(t, 4, out.Shares().Size())
 	})
 
@@ -184,37 +185,32 @@ func TestCNFDealRandom(t *testing.T) {
 		t.Parallel()
 		prng := pcg.NewRandomised()
 
-		out1, err := scheme.DealRandom(prng)
+		out1, secret1, err := scheme.DealRandom(prng)
 		require.NoError(t, err)
 
-		out2, err := scheme.DealRandom(prng)
-		require.NoError(t, err)
+		_, secret2, err2 := scheme.DealRandom(prng)
+		require.NoError(t, err2)
 
-		// Reconstruct both with {1,3}
+		// Verify consecutive random secrets differ
+		require.False(t, secret1.Equal(secret2), "consecutive random secrets should differ")
+
+		// Also verify reconstruction matches generated secrets
 		sharesMap1 := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
 		for id, share := range out1.Shares().Iter() {
 			sharesMap1[id] = share
 		}
 
-		sharesMap2 := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
-		for id, share := range out2.Shares().Iter() {
-			sharesMap2[id] = share
-		}
-
-		secret1, err := scheme.Reconstruct(sharesMap1[1], sharesMap1[3])
-		require.NoError(t, err)
-
-		secret2, err := scheme.Reconstruct(sharesMap2[1], sharesMap2[3])
-		require.NoError(t, err)
-
-		require.False(t, secret1.Equal(secret2), "consecutive random secrets should differ")
+		reconstructed1, err3 := scheme.Reconstruct(sharesMap1[1], sharesMap1[3])
+		require.NoError(t, err3)
+		require.True(t, secret1.Equal(reconstructed1))
 	})
 
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
-		out, err := scheme.DealRandom(nil)
+		out, secret, err := scheme.DealRandom(nil)
 		require.Error(t, err)
 		require.Nil(t, out)
+		require.Nil(t, secret)
 	})
 }
 
@@ -429,6 +425,155 @@ func TestCNF_BLS12381(t *testing.T) {
 	reconstructed, err := scheme.Reconstruct(shares...)
 	require.NoError(t, err)
 	require.True(t, secret.Equal(reconstructed))
+}
+
+func TestCNFDealAndRevealDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+	ac, err := sharing.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	t.Run("deal and reveal dealer func", func(t *testing.T) {
+		t.Parallel()
+		secret := isn.NewSecret(group.FromUint64(12345))
+
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, out)
+		require.NotNil(t, dealerFunc)
+		require.Equal(t, 4, out.Shares().Size())
+		require.Equal(t, 4, len(dealerFunc))
+
+		// Verify dealer func contains all shares
+		for id, share := range out.Shares().Iter() {
+			dfShare, ok := dealerFunc[id]
+			require.True(t, ok)
+			require.True(t, share.Equal(dfShare))
+		}
+
+		// Verify reconstruction works
+		sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+		for id, share := range out.Shares().Iter() {
+			sharesMap[id] = share
+		}
+
+		reconstructed, err := scheme.Reconstruct(sharesMap[1], sharesMap[3])
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	})
+
+	t.Run("nil secret", func(t *testing.T) {
+		t.Parallel()
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, pcg.NewRandomised())
+		require.Error(t, err)
+		require.ErrorIs(t, err, isn.ErrIsNil)
+		require.Nil(t, out)
+		require.Nil(t, dealerFunc)
+	})
+
+	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
+		secret := isn.NewSecret(group.FromUint64(42))
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, isn.ErrIsNil)
+		require.Nil(t, out)
+		require.Nil(t, dealerFunc)
+	})
+}
+
+func TestCNFDealRandomAndRevealDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+	ac, err := sharing.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := cnf.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	t.Run("deal random and reveal dealer func", func(t *testing.T) {
+		t.Parallel()
+
+		out, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, out)
+		require.NotNil(t, secret)
+		require.NotNil(t, dealerFunc)
+		require.Equal(t, 4, out.Shares().Size())
+		require.Equal(t, 4, len(dealerFunc))
+
+		// Verify dealer func contains all shares
+		for id, share := range out.Shares().Iter() {
+			dfShare, ok := dealerFunc[id]
+			require.True(t, ok)
+			require.True(t, share.Equal(dfShare))
+		}
+
+		// Verify reconstruction works
+		sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+		for id, share := range out.Shares().Iter() {
+			sharesMap[id] = share
+		}
+
+		reconstructed, err := scheme.Reconstruct(sharesMap[1], sharesMap[3])
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	})
+
+	t.Run("multiple generations produce different secrets and dealer funcs", func(t *testing.T) {
+		t.Parallel()
+		prng := pcg.NewRandomised()
+
+		out1, secret1, dealerFunc1, err := scheme.DealRandomAndRevealDealerFunc(prng)
+		require.NoError(t, err)
+
+		_, secret2, dealerFunc2, err2 := scheme.DealRandomAndRevealDealerFunc(prng)
+		require.NoError(t, err2)
+
+		// Verify secrets differ
+		require.False(t, secret1.Equal(secret2))
+
+		// Verify dealer funcs differ (at least one share should be different)
+		require.Equal(t, len(dealerFunc1), len(dealerFunc2))
+		foundDifference := false
+		for id := range dealerFunc1 {
+			if !dealerFunc1[id].Equal(dealerFunc2[id]) {
+				foundDifference = true
+				break
+			}
+		}
+		require.True(t, foundDifference, "dealer funcs should differ")
+
+		// Verify reconstruction works for both
+		sharesMap1 := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+		for id, share := range out1.Shares().Iter() {
+			sharesMap1[id] = share
+		}
+
+		reconstructed1, err3 := scheme.Reconstruct(sharesMap1[1], sharesMap1[3])
+		require.NoError(t, err3)
+		require.True(t, secret1.Equal(reconstructed1))
+	})
+
+	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
+		out, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(nil)
+		require.Error(t, err)
+		require.Nil(t, out)
+		require.Nil(t, secret)
+		require.Nil(t, dealerFunc)
+	})
 }
 
 func TestCNF_ThreeClausesAccessStructure(t *testing.T) {

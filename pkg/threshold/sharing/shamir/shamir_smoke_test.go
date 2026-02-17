@@ -9,11 +9,10 @@ import (
 
 func _[FE algebra.PrimeFieldElement[FE]]() {
 	var (
-		_ sharing.DealerOutput[*shamir.Share[FE]]                                                                = (*shamir.DealerOutput[FE])(nil)
-		_ sharing.LinearShare[*shamir.Share[FE], FE, *additive.Share[FE], FE, *sharing.ThresholdAccessStructure] = (*shamir.Share[FE])(nil)
-		_ sharing.LinearlyShareableSecret[*shamir.Secret[FE], FE]                                                = (*shamir.Secret[FE])(nil)
+		_ sharing.DealerOutput[*shamir.Share[FE]]                                                                    = (*shamir.DealerOutput[FE])(nil)
+		_ sharing.LinearShare[*shamir.Share[FE], FE, *additive.Share[FE], FE, FE, *sharing.ThresholdAccessStructure] = (*shamir.Share[FE])(nil)
 
 		_ sharing.ThresholdSSS[*shamir.Share[FE], *shamir.Secret[FE], *shamir.DealerOutput[FE]]
-		_ sharing.PolynomialLSSS[*shamir.Share[FE], FE, *additive.Share[FE], *shamir.Secret[FE], FE, *shamir.DealerOutput[FE], FE, *sharing.ThresholdAccessStructure] = (*shamir.Scheme[FE])(nil)
+		_ sharing.PolynomialLSSS[*shamir.Share[FE], FE, *additive.Share[FE], FE, *shamir.Secret[FE], FE, *shamir.DealerOutput[FE], FE, *sharing.ThresholdAccessStructure] = (*shamir.Scheme[FE])(nil)
 	)
 }
