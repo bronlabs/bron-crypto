@@ -10,6 +10,9 @@
 // representable in both DNF and CNF, but the choice of representation can
 // impact the efficiency of share generation and reconstruction.
 //
+// This package currently provides the CNF variant through Scheme, Share, and
+// related APIs.
+//
 // # Share Representation
 //
 // Shares use a sparse map representation for space efficiency. Each share

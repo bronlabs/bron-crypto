@@ -1,4 +1,4 @@
-package cnf
+package isn
 
 import (
 	"maps"
@@ -12,7 +12,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -123,13 +122,13 @@ func (s *Share[E]) HashCode() base.HashCode {
 // Currently unimplemented and will panic if called.
 func (s *Share[E]) ToAdditive(to *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
 	if s == nil {
-		return nil, isn.ErrIsNil.WithMessage("share is nil")
+		return nil, ErrIsNil.WithMessage("share is nil")
 	}
 	if to == nil {
-		return nil, isn.ErrIsNil.WithMessage("access structure is nil")
+		return nil, ErrIsNil.WithMessage("access structure is nil")
 	}
 	if !to.Shareholders().Contains(s.id) {
-		return nil, isn.ErrMembership.WithMessage("share ID %d is not in access structure", s.id)
+		return nil, ErrMembership.WithMessage("share ID %d is not in access structure", s.id)
 	}
 
 	shareValue := s.group().OpIdentity()
@@ -194,5 +193,5 @@ func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *sharing.Mi
 		}
 	}
 
-	return 0, isn.ErrFailed.WithMessage("could not find pivot")
+	return 0, ErrFailed.WithMessage("could not find pivot")
 }

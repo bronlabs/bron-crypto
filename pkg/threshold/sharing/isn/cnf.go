@@ -1,4 +1,4 @@
-package cnf
+package isn
 
 import (
 	"io"
@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -23,7 +23,7 @@ const Name sharing.Name = "CNF secret sharing scheme"
 // with one component per maximal unqualified set.
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
-	sampler *isn.Sampler[E]
+	sampler *Sampler[E]
 	ac      sharing.CNFAccessStructure
 }
 
@@ -39,7 +39,7 @@ func NewFiniteScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
 	ac sharing.CNFAccessStructure,
 ) (*Scheme[E], error) {
-	sampler, err := isn.NewFiniteGroupElementSampler(g)
+	sampler, err := NewFiniteGroupElementSampler(g)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create sampler")
 	}
@@ -68,7 +68,7 @@ func (c *Scheme[E]) AccessStructure() sharing.CNFAccessStructure {
 //
 // Returns the dealer output containing all shares, or an error if sampling
 // or dealing fails.
-func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *isn.Secret[E], error) {
+func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *Secret[E], error) {
 	do, secret, _, err := c.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not deal random shares")
@@ -88,12 +88,12 @@ func (c *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *isn.Secret[E]
 //   - The randomly generated secret
 //   - The dealer function mapping shareholder IDs to shares
 //   - An error if sampling or dealing fails
-func (c *Scheme[E]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E], *isn.Secret[E], DealerFunc[E], error) {
+func (c *Scheme[E]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E], *Secret[E], DealerFunc[E], error) {
 	secretValue, err := c.sampler.Secret(prng)
 	if err != nil {
 		return nil, nil, nil, errs.Wrap(err).WithMessage("could not sample random secret")
 	}
-	secret := isn.NewSecret(secretValue)
+	secret := NewSecret(secretValue)
 	shares, dealerFunc, err := c.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
 		return nil, nil, nil, errs.Wrap(err).WithMessage("could not deal shares for random secret")
@@ -114,7 +114,7 @@ func (c *Scheme[E]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput
 //   - prng: A cryptographically secure random number generator
 //
 // Returns the dealer output containing all shares, or an error if dealing fails.
-func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], error) {
+func (c *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], error) {
 	do, _, err := c.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not deal shares")
@@ -141,20 +141,20 @@ func (c *Scheme[E]) Deal(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E
 //   - The dealer output containing all shares
 //   - The dealer function mapping shareholder IDs to shares
 //   - An error if dealing fails
-func (c *Scheme[E]) DealAndRevealDealerFunc(secret *isn.Secret[E], prng io.Reader) (*DealerOutput[E], DealerFunc[E], error) {
+func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (*DealerOutput[E], DealerFunc[E], error) {
 	if prng == nil {
-		return nil, nil, isn.ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, ErrIsNil.WithMessage("prng is nil")
 	}
 	if secret == nil {
-		return nil, nil, isn.ErrIsNil.WithMessage("secret is nil")
+		return nil, nil, ErrIsNil.WithMessage("secret is nil")
 	}
 	l := len(c.ac) // number of maximal unqualified sets / clauses
 	if l == 0 {
-		return nil, nil, isn.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
+		return nil, nil, ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
 
 	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
-	rs, err := isn.SumToSecret(secret, c.sampler.Share, prng, l)
+	rs, err := additive.SumToSecret(secret.Value(), c.sampler.Share, prng, l)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
@@ -188,19 +188,19 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *isn.Secret[E], prng io.Reade
 //
 // Returns the reconstructed secret, or an error if the shares are unauthorised,
 // incomplete, invalid, or inconsistent.
-func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
+func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	ids, err := sharing.CollectIDs(shares...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
 	if !c.ac.IsAuthorized(ids...) {
-		return nil, isn.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
+		return nil, ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 
 	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 	for _, share := range shares {
 		if share == nil {
-			return nil, isn.ErrFailed.WithMessage("nil share provided")
+			return nil, ErrFailed.WithMessage("nil share provided")
 		}
 
 		for _, maxUnqualifiedSet := range c.ac {
@@ -210,11 +210,11 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
 
 			chunk, ok := share.v[maxUnqualifiedSet]
 			if !ok || utils.IsNil(chunk) {
-				return nil, isn.ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", share.id, maxUnqualifiedSet.List())
+				return nil, ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", share.id, maxUnqualifiedSet.List())
 			}
 			if refChunk, contains := chunks[maxUnqualifiedSet]; contains {
 				if !refChunk.Equal(chunk) {
-					return nil, isn.ErrFailed.WithMessage("inconsistent shares")
+					return nil, ErrFailed.WithMessage("inconsistent shares")
 				}
 			} else {
 				chunks[maxUnqualifiedSet] = chunk
@@ -222,5 +222,5 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*isn.Secret[E], error) {
 		}
 	}
 
-	return isn.NewSecret(iterutils.Reduce(maps.Values(chunks), c.g.OpIdentity(), E.Op)), nil
+	return NewSecret(iterutils.Reduce(maps.Values(chunks), c.g.OpIdentity(), E.Op)), nil
 }

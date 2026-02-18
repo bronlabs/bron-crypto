@@ -1,4 +1,4 @@
-package cnf_test
+package isn_test
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -7,17 +7,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn/cnf"
 )
 
 func _[E algebra.GroupElement[E]]() {
 	var (
-		_ sharing.LinearShare[*cnf.Share[E], ds.Map[bitset.ImmutableBitSet[sharing.ID], E], *additive.Share[E], E, algebra.Numeric, *sharing.ThresholdAccessStructure] = (*cnf.Share[E])(nil)
+		_ sharing.LinearShare[*isn.Share[E], ds.Map[bitset.ImmutableBitSet[sharing.ID], E], *additive.Share[E], E, algebra.Numeric, *sharing.ThresholdAccessStructure] = (*isn.Share[E])(nil)
 		_ sharing.LSSS[
-			*cnf.Share[E], ds.Map[bitset.ImmutableBitSet[sharing.ID], E],
+			*isn.Share[E], ds.Map[bitset.ImmutableBitSet[sharing.ID], E],
 			*additive.Share[E], E,
 			*isn.Secret[E], E,
-			*cnf.DealerOutput[E], algebra.Numeric, sharing.CNFAccessStructure, cnf.DealerFunc[E],
-		] = (*cnf.Scheme[E])(nil)
+			*isn.DealerOutput[E], algebra.Numeric, sharing.CNFAccessStructure, isn.DealerFunc[E],
+		] = (*isn.Scheme[E])(nil)
 	)
 }
