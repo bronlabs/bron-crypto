@@ -77,21 +77,11 @@ func (s *Share[E]) Equal(other *Share[E]) bool {
 	return true
 }
 
-// Op performs component-wise group operation on two shares, enabling
+// Op performs a component-wise group operation on two shares, enabling
 // additive homomorphism. Combines entries from both maps, treating missing
 // keys as the group identity element.
 func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 	result := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
-
-	// Get a group instance from the first non-nil element
-	var group algebra.FiniteGroup[E]
-	for _, v := range s.v {
-		group = algebra.StructureMustBeAs[algebra.FiniteGroup[E]](v.Structure())
-		break
-	}
-	if group == nil {
-		panic("cannot determine group from share components")
-	}
 
 	// Combine all clauses from both shares
 	allClauses := make(map[bitset.ImmutableBitSet[sharing.ID]]bool)

@@ -153,20 +153,23 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *isn.Secret[E], prng io.Reade
 		return nil, nil, isn.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
 
+	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
 	rs, err := isn.SumToSecret(secret, c.sampler.Share, prng, l)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
-
 	dealerFunc := make(DealerFunc[E])
 	for i, clause := range c.ac {
 		dealerFunc[clause] = rs[i]
 	}
 
+	// step 3: distribute: party p gets piece rj (with key Tj) iff p ∉ Tj
 	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
 	for id := range c.ac.Shareholders().Iter() {
 		shares.Put(id, dealerFunc.ShareOf(id))
 	}
+
+	// step 4: return shares
 	output := &DealerOutput[E]{shares: shares.Freeze()}
 	return output, dealerFunc, nil
 }
