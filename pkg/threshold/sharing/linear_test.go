@@ -389,13 +389,13 @@ func TestCNFAccessStructure_CBOR(t *testing.T) {
 	})
 }
 
-func TestMinimalQualifiedAccessStructure_Creation(t *testing.T) {
+func TestUnanimityAccessStructure_Creation(t *testing.T) {
 	t.Parallel()
 
 	t.Run("valid creation", func(t *testing.T) {
 		t.Parallel()
 		shareholders := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
-		ac, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+		ac, err := sharing.NewUnanimityAccessStructure(shareholders)
 		require.NoError(t, err)
 		require.NotNil(t, ac)
 	})
@@ -403,14 +403,14 @@ func TestMinimalQualifiedAccessStructure_Creation(t *testing.T) {
 	t.Run("minimum two shareholders", func(t *testing.T) {
 		t.Parallel()
 		shareholders := hashset.NewComparable[sharing.ID](1, 2).Freeze()
-		ac, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+		ac, err := sharing.NewUnanimityAccessStructure(shareholders)
 		require.NoError(t, err)
 		require.NotNil(t, ac)
 	})
 
 	t.Run("nil shareholders", func(t *testing.T) {
 		t.Parallel()
-		ac, err := sharing.NewMinimalQualifiedAccessStructure(nil)
+		ac, err := sharing.NewUnanimityAccessStructure(nil)
 		require.Error(t, err)
 		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, ac)
@@ -419,7 +419,7 @@ func TestMinimalQualifiedAccessStructure_Creation(t *testing.T) {
 	t.Run("single shareholder", func(t *testing.T) {
 		t.Parallel()
 		shareholders := hashset.NewComparable[sharing.ID](1).Freeze()
-		ac, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+		ac, err := sharing.NewUnanimityAccessStructure(shareholders)
 		require.Error(t, err)
 		require.ErrorIs(t, err, sharing.ErrValue)
 		require.Nil(t, ac)
@@ -428,18 +428,18 @@ func TestMinimalQualifiedAccessStructure_Creation(t *testing.T) {
 	t.Run("empty shareholders", func(t *testing.T) {
 		t.Parallel()
 		shareholders := hashset.NewComparable[sharing.ID]().Freeze()
-		ac, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+		ac, err := sharing.NewUnanimityAccessStructure(shareholders)
 		require.Error(t, err)
 		require.ErrorIs(t, err, sharing.ErrValue)
 		require.Nil(t, ac)
 	})
 }
 
-func TestMinimalQualifiedAccessStructure_Shareholders(t *testing.T) {
+func TestUnanimityAccessStructure_Shareholders(t *testing.T) {
 	t.Parallel()
 
 	shareholders := hashset.NewComparable[sharing.ID](1, 2, 3, 4).Freeze()
-	ac, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+	ac, err := sharing.NewUnanimityAccessStructure(shareholders)
 	require.NoError(t, err)
 
 	result := ac.Shareholders()
@@ -447,11 +447,11 @@ func TestMinimalQualifiedAccessStructure_Shareholders(t *testing.T) {
 	require.True(t, result.Equal(shareholders))
 }
 
-func TestMinimalQualifiedAccessStructure_IsAuthorized(t *testing.T) {
+func TestUnanimityAccessStructure_IsAuthorized(t *testing.T) {
 	t.Parallel()
 
 	shareholders := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
-	ac, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+	ac, err := sharing.NewUnanimityAccessStructure(shareholders)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -477,20 +477,20 @@ func TestMinimalQualifiedAccessStructure_IsAuthorized(t *testing.T) {
 	}
 }
 
-func TestMinimalQualifiedAccessStructure_CBOR(t *testing.T) {
+func TestUnanimityAccessStructure_CBOR(t *testing.T) {
 	t.Parallel()
 
 	t.Run("marshal and unmarshal", func(t *testing.T) {
 		t.Parallel()
 		shareholders := hashset.NewComparable[sharing.ID](1, 2, 3, 4, 5).Freeze()
-		ac, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+		ac, err := sharing.NewUnanimityAccessStructure(shareholders)
 		require.NoError(t, err)
 
 		data, err := ac.MarshalCBOR()
 		require.NoError(t, err)
 		require.NotNil(t, data)
 
-		var decoded sharing.MinimalQualifiedAccessStructure
+		var decoded sharing.UnanimityAccessStructure
 		err = decoded.UnmarshalCBOR(data)
 		require.NoError(t, err)
 

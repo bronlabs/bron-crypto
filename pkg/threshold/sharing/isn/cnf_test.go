@@ -717,7 +717,7 @@ func TestCNFShare_ToAdditive(t *testing.T) {
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
-	minAS, err := sharing.NewMinimalQualifiedAccessStructure(hashset.NewComparable[sharing.ID](1, 3).Freeze())
+	minAS, err := sharing.NewUnanimityAccessStructure(hashset.NewComparable[sharing.ID](1, 3).Freeze())
 	require.NoError(t, err)
 
 	additiveScheme, err := additive.NewScheme(group, minAS.Shareholders())

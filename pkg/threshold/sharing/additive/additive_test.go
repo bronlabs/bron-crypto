@@ -498,14 +498,14 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 
 	tests := []struct {
 		name         string
-		shareFunc    func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error)
-		accessStruct *sharing.MinimalQualifiedAccessStructure
+		shareFunc    func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error)
+		accessStruct *sharing.UnanimityAccessStructure
 		expectError  bool
 		errorIs      error
 	}{
 		{
 			name: "valid share",
-			shareFunc: func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
+			shareFunc: func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
 				return validShare, nil
 			},
 			accessStruct: scheme.AccessStructure(),
@@ -513,7 +513,7 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 		},
 		{
 			name: "nil share value check",
-			shareFunc: func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
+			shareFunc: func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
 				// This would test share validation but we can't create a nil share
 				return nil, additive.ErrIsNil.WithMessage("share is nil")
 			},
@@ -523,7 +523,7 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 		},
 		{
 			name: "invalid share ID",
-			shareFunc: func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
+			shareFunc: func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
 				return additive.NewShare(999, validShare.Value(), ac)
 			},
 			accessStruct: scheme.AccessStructure(),

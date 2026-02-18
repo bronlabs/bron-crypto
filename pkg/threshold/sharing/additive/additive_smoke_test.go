@@ -7,6 +7,6 @@ import (
 
 func _[G additive.Group[E], E additive.GroupElement[E]]() {
 	var (
-		_ sharing.HomomorphicShare[*additive.Share[E], E, *sharing.MinimalQualifiedAccessStructure] = (*additive.Share[E])(nil)
+		_ sharing.HomomorphicShare[*additive.Share[E], E, *sharing.UnanimityAccessStructure] = (*additive.Share[E])(nil)
 	)
 }

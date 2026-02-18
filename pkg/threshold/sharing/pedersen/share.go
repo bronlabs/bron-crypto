@@ -141,7 +141,7 @@ func (s *Share[S]) Bytes() []byte {
 // the secret component by the appropriate Lagrange coefficient. The blinding
 // component is discarded. The resulting additive shares can be summed to
 // reconstruct the secret.
-func (s *Share[S]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[S], error) {
+func (s *Share[S]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (*additive.Share[S], error) {
 	ss, err := shamir.NewShare(s.id, s.secret.Value(), nil)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create shamir share from share")

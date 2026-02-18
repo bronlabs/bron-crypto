@@ -151,7 +151,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
-	quorum2, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
+	quorum2, err := sharing.NewUnanimityAccessStructure(c.quorum)
 	if err != nil {
 		panic(err)
 	}

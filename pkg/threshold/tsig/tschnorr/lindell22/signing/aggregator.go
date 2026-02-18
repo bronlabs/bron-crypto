@@ -110,7 +110,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	// aggregated signature verification failed, now doing identifiable abort
 
 	identityAborts := []error{}
-	quorumAsMinimalQualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(quorum)
+	quorumAsUnanimitySet, err := sharing.NewUnanimityAccessStructure(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create minimal qualified access structure")
 	}
@@ -123,7 +123,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create lifted share for sender %d", sender)
 		}
-		senderAdditivePKShare, err := senderPKShare.ToAdditive(quorumAsMinimalQualifiedSet)
+		senderAdditivePKShare, err := senderPKShare.ToAdditive(quorumAsUnanimitySet)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
 		}

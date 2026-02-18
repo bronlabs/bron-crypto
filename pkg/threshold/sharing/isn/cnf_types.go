@@ -120,7 +120,7 @@ func (s *Share[E]) HashCode() base.HashCode {
 // using Lagrange coefficients for MPC protocols.
 //
 // Currently unimplemented and will panic if called.
-func (s *Share[E]) ToAdditive(to *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
+func (s *Share[E]) ToAdditive(to *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
 	if s == nil {
 		return nil, ErrIsNil.WithMessage("share is nil")
 	}
@@ -184,7 +184,7 @@ func (d *DealerOutput[E]) Shares() ds.Map[sharing.ID, *Share[E]] {
 	return d.shares
 }
 
-func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *sharing.MinimalQualifiedAccessStructure) (sharing.ID, error) {
+func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *sharing.UnanimityAccessStructure) (sharing.ID, error) {
 	sortedIds := target.Shareholders().List()
 	slices.Sort(sortedIds)
 	for _, id := range sortedIds {

@@ -36,7 +36,7 @@ func NewScheme[E GroupElement[E]](g Group[E], shareholders ds.Set[sharing.ID]) (
 	if g == nil {
 		return nil, ErrIsNil.WithMessage("group is nil")
 	}
-	accessStructure, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+	accessStructure, err := sharing.NewUnanimityAccessStructure(shareholders)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create access structure")
 	}
@@ -49,7 +49,7 @@ func NewScheme[E GroupElement[E]](g Group[E], shareholders ds.Set[sharing.ID]) (
 // Scheme implements additive secret sharing over a finite group.
 type Scheme[E GroupElement[E]] struct {
 	g  Group[E]
-	ac *sharing.MinimalQualifiedAccessStructure
+	ac *sharing.UnanimityAccessStructure
 }
 
 // Name returns the canonical name of this scheme.
@@ -58,7 +58,7 @@ func (*Scheme[E]) Name() sharing.Name {
 }
 
 // AccessStructure returns the access structure (all shareholders required).
-func (d *Scheme[E]) AccessStructure() *sharing.MinimalQualifiedAccessStructure {
+func (d *Scheme[E]) AccessStructure() *sharing.UnanimityAccessStructure {
 	return d.ac
 }
 
@@ -164,7 +164,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 
 // NewShare creates a new additive share with the given ID and value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *sharing.MinimalQualifiedAccessStructure) (*Share[E], error) {
+func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *sharing.UnanimityAccessStructure) (*Share[E], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}

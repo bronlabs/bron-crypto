@@ -106,7 +106,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 		return nil, ErrInvalidRound.WithMessage("cosigner %d cannot compute partial signature in round %d, expected round 3", c.sid, c.round)
 	}
 	// step 3.7.1: compute additive share d_i'
-	mqac, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
+	mqac, err := sharing.NewUnanimityAccessStructure(c.quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.quorum)
 	}
