@@ -150,7 +150,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	k2 := sc.state.k2
 
 	quorum := hashset.NewComparable(sc.SharingID(), sc.primarySharingID)
-	ac, err := sharing.NewMinimalQualifiedAccessStructure(quorum.Freeze())
+	ac, err := sharing.NewUnanimityAccessStructure(quorum.Freeze())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create access structure for additive sharing")
 	}

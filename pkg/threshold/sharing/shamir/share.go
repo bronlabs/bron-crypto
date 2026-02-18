@@ -38,7 +38,7 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *sha
 // ToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[FE], error) {
+func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
 	field, ok := s.v.Structure().(algebra.PrimeField[FE])
 	if !ok {
 		return nil, ErrType.WithMessage("share value does not implement Field interface")

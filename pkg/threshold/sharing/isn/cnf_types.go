@@ -1,6 +1,9 @@
-package cnf
+package isn
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
@@ -9,7 +12,27 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
+	"github.com/bronlabs/errs-go/errs"
 )
+
+// DealerFunc represents the dealer function that maps shareholder IDs to their
+// shares. This is returned by LSSS methods that reveal the dealer function,
+// enabling protocols that require knowledge of the complete share distribution.
+type DealerFunc[E algebra.GroupElement[E]] map[bitset.ImmutableBitSet[sharing.ID]]E
+
+func (df DealerFunc[E]) ShareOf(id sharing.ID) *Share[E] {
+	shareValue := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
+	for clause, value := range df {
+		if !clause.Contains(id) {
+			shareValue[clause] = value
+		}
+	}
+
+	return &Share[E]{
+		id: id,
+		v:  shareValue,
+	}
+}
 
 // Share represents a shareholder's portion in an ISN secret sharing scheme.
 // Each share contains a sparse map from clause identifiers (represented as
@@ -53,21 +76,11 @@ func (s *Share[E]) Equal(other *Share[E]) bool {
 	return true
 }
 
-// Op performs component-wise group operation on two shares, enabling
+// Op performs a component-wise group operation on two shares, enabling
 // additive homomorphism. Combines entries from both maps, treating missing
 // keys as the group identity element.
 func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 	result := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
-
-	// Get a group instance from the first non-nil element
-	var group algebra.FiniteGroup[E]
-	for _, v := range s.v {
-		group = algebra.StructureMustBeAs[algebra.FiniteGroup[E]](v.Structure())
-		break
-	}
-	if group == nil {
-		panic("cannot determine group from share components")
-	}
 
 	// Combine all clauses from both shares
 	allClauses := make(map[bitset.ImmutableBitSet[sharing.ID]]bool)
@@ -102,10 +115,48 @@ func (s *Share[E]) HashCode() base.HashCode {
 	return c
 }
 
-func (*Share[E]) ToAdditive(mqas *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
-	panic("implement me")
+// ToAdditive converts this CNF share to an additive share for the given minimal
+// qualified access structure. This enables threshold-to-additive share conversion
+// using Lagrange coefficients for MPC protocols.
+//
+// Currently unimplemented and will panic if called.
+func (s *Share[E]) ToAdditive(to *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
+	if s == nil {
+		return nil, ErrIsNil.WithMessage("share is nil")
+	}
+	if to == nil {
+		return nil, ErrIsNil.WithMessage("access structure is nil")
+	}
+	if !to.Shareholders().Contains(s.id) {
+		return nil, ErrMembership.WithMessage("share ID %d is not in access structure", s.id)
+	}
+
+	shareValue := s.group().OpIdentity()
+	for maxUnqualifiedSet, additiveShare := range s.v {
+		p, err := pivot(maxUnqualifiedSet, to)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("no pivot for maximal unqualified set")
+		}
+		if p == s.id {
+			shareValue = shareValue.Op(additiveShare)
+		}
+	}
+
+	share, err := additive.NewShare(s.id, shareValue, to)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+	return share, nil
 }
 
+// ScalarOp performs scalar multiplication on the share by applying the scalar
+// to each component in the sparse map. This enables linear operations on shares,
+// such as computing linear combinations for MPC protocols.
+//
+// Parameters:
+//   - scalar: The scalar value to multiply with each share component
+//
+// Returns a new share with all components scaled by the given scalar.
 func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
 	result := &Share[E]{
 		id: s.id,
@@ -117,6 +168,11 @@ func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
 	return result
 }
 
+func (s *Share[E]) group() algebra.Group[E] {
+	v := algebra.StructureMustBeAs[algebra.Group[E]](slices.Collect(maps.Values(s.v))[0].Structure())
+	return v
+}
+
 // DealerOutput contains the shares produced by a dealing operation.
 // It provides access to the mapping from shareholder IDs to their shares.
 type DealerOutput[E algebra.GroupElement[E]] struct {
@@ -126,4 +182,16 @@ type DealerOutput[E algebra.GroupElement[E]] struct {
 // Shares returns the map of shareholder IDs to their corresponding shares.
 func (d *DealerOutput[E]) Shares() ds.Map[sharing.ID, *Share[E]] {
 	return d.shares
+}
+
+func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *sharing.UnanimityAccessStructure) (sharing.ID, error) {
+	sortedIds := target.Shareholders().List()
+	slices.Sort(sortedIds)
+	for _, id := range sortedIds {
+		if !unqualifiedSet.Contains(id) {
+			return id, nil
+		}
+	}
+
+	return 0, ErrFailed.WithMessage("could not find pivot")
 }

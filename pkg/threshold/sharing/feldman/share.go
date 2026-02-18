@@ -67,7 +67,7 @@ func (s *LiftedShare[E, FE]) Value() E {
 // with the appropriate Lagrange coefficient. For shareholder i in qualified set S,
 // the result is g^{λ_i · f(i)} where λ_i is the Lagrange coefficient.
 // The resulting additive shares can be multiplied together to reconstruct g^s.
-func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
+func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
 	if qualifiedSet == nil {
 		return nil, ErrIsNil.WithMessage("qualified set is nil")
 	}
@@ -132,7 +132,7 @@ func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](s[0].v.Structure())
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[FE]](group.ScalarStructure())
-	qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+	qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 		hashset.NewComparable(
 			slices.Collect(
 				iterutils.Map(

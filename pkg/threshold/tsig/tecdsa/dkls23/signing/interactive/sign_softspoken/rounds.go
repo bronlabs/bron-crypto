@@ -94,7 +94,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
-	quorum, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
+	quorum, err := sharing.NewUnanimityAccessStructure(c.quorum)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}

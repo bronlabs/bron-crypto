@@ -70,61 +70,48 @@ type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOu
 // ThresholdSSS is a secret sharing scheme with a threshold access structure.
 type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *ThresholdAccessStructure]
 
-// AdditiveShare is a share that supports the group operation, allowing shares
+// HomomorphicShare is a share that supports the group operation, allowing shares
 // to be combined homomorphically. If parties hold shares of secrets a and b,
 // they can locally compute shares of a+b.
-type AdditiveShare[S interface {
+type HomomorphicShare[S interface {
 	Share[S]
 	algebra.HomomorphicLike[S, SV]
-}, SV algebra.GroupElement[SV], AC AccessStructure,
+}, SV any, // To support CNF/DNF variants, the share value type is not constrained to a specific algebraic structure.
+	AC AccessStructure,
 ] interface {
 	Share[S]
 	algebra.HomomorphicLike[S, SV]
 }
 
-// AdditivelyShareableSecret is a secret whose underlying value is a group element,
-// enabling additive homomorphism on the shared secret.
-type AdditivelyShareableSecret[W Secret[W], WV algebra.GroupElement[WV]] interface {
-	Secret[W]
-	base.Transparent[WV]
-}
-
-// AdditiveSSS is a secret sharing scheme with additive homomorphism.
-type AdditiveSSS[
-	S AdditiveShare[S, SV, AC], SV algebra.GroupElement[SV],
-	W AdditivelyShareableSecret[W, WV], WV algebra.GroupElement[WV],
-	DO DealerOutput[S], AC AccessStructure,
-] SSS[S, W, DO, AC]
-
-// LinearShare extends AdditiveShare with scalar multiplication and conversion
+// LinearShare extends HomomorphicShare with scalar operation and conversion
 // to additive shares. This enables threshold-to-additive share conversion using
 // Lagrange coefficients, which is essential for many MPC protocols.
 type LinearShare[S interface {
-	AdditiveShare[S, SV, AC]
-	algebra.AdditivelyHomomorphicLike[S, SV]
-	algebra.AdditivelyActable[S, SC]
-	ToAdditive(*MinimalQualifiedAccessStructure) (SA, error)
-}, SV algebra.AdditiveGroupElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
+	HomomorphicShare[S, SV, AC]
+	algebra.Actable[S, SC]
+	ToAdditive(*UnanimityAccessStructure) (SA, error)
+}, SV any,
+	SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure],
+	SAV algebra.GroupElement[SAV],
 	SC any, // To support packed variants, scalar type is not constrained.
 	AC AccessStructure,
 ] interface {
-	AdditiveShare[S, SV, AC]
-	algebra.AdditivelyHomomorphicLike[S, SV]
-	algebra.AdditivelyActable[S, SC]
-	ToAdditive(*MinimalQualifiedAccessStructure) (SA, error)
+	HomomorphicShare[S, SV, AC]
+	algebra.Actable[S, SC]
+	ToAdditive(*UnanimityAccessStructure) (SA, error)
 }
-
-// LinearlyShareableSecret is a secret over a prime field, enabling linear
-// operations on shares.
-type LinearlyShareableSecret[W Secret[W], WV algebra.PrimeFieldElement[WV]] AdditivelyShareableSecret[W, WV]
 
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.
 // It supports revealing the dealer function (polynomial) for protocols that need it.
 type LSSS[
-	S LinearShare[S, SV, SA, SC, AC], SV algebra.AdditiveGroupElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
-	W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC AccessStructure, DF any,
+	S LinearShare[S, SV, SA, SAV, SC, AC], SV any,
+	SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure], SAV algebra.GroupElement[SAV],
+	W interface {
+		Secret[W]
+		base.Transparent[WV]
+	}, WV algebra.GroupElement[WV], DO DealerOutput[S], SC any, AC AccessStructure, DF any,
 ] interface {
-	AdditiveSSS[S, SV, W, WV, DO, AC]
+	SSS[S, W, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
 }
@@ -133,6 +120,9 @@ type LSSS[
 // The dealer function is a polynomial f(x) where f(0) is the secret and f(i) is
 // shareholder i's share.
 type PolynomialLSSS[
-	S LinearShare[S, SV, SA, SC, AC], SV algebra.PrimeFieldElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
-	W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC AccessStructure,
-] LSSS[S, SV, SA, W, WV, DO, SC, AC, *polynomials.Polynomial[SV]]
+	S LinearShare[S, SV, SA, SAV, SC, AC], SV algebra.PrimeFieldElement[SV], SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure], SAV algebra.GroupElement[SAV],
+	W interface {
+		Secret[W]
+		base.Transparent[WV]
+	}, WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC AccessStructure,
+] LSSS[S, SV, SA, SAV, W, WV, DO, SC, AC, *polynomials.Polynomial[SV]]

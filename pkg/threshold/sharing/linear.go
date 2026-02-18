@@ -120,48 +120,48 @@ func (c CNFAccessStructure) IsAuthorized(ids ...ID) bool {
 	return true
 }
 
-// MinimalQualifiedAccessStructure represents an n-of-n access structure where
+// UnanimityAccessStructure represents an n-of-n access structure where
 // all shareholders must participate to reconstruct the secret. This is the
 // access structure for additive secret sharing.
-type MinimalQualifiedAccessStructure struct {
+type UnanimityAccessStructure struct {
 	ps ds.Set[ID]
 }
 
-type minimalQualifiedAccessStructureDTO struct {
+type unanimityAccessStructureDTO struct {
 	Ps map[ID]bool `cbor:"shareholders"`
 }
 
-// NewMinimalQualifiedAccessStructure creates a new n-of-n access structure.
+// NewUnanimityAccessStructure creates a new n-of-n access structure.
 //
 // Parameters:
 //   - shareholders: The set of shareholder IDs (must have at least 2 members)
 //
 // Returns an error if shareholders is nil or has fewer than 2 members.
-func NewMinimalQualifiedAccessStructure(shareholders ds.Set[ID]) (*MinimalQualifiedAccessStructure, error) {
+func NewUnanimityAccessStructure(shareholders ds.Set[ID]) (*UnanimityAccessStructure, error) {
 	if shareholders == nil {
 		return nil, ErrIsNil.WithMessage("ids cannot be nil")
 	}
 	if shareholders.Size() < 2 {
 		return nil, ErrValue.WithMessage("ids must have at least 2 shareholders")
 	}
-	return &MinimalQualifiedAccessStructure{
+	return &UnanimityAccessStructure{
 		ps: shareholders,
 	}, nil
 }
 
 // Shareholders returns the set of all shareholder IDs.
-func (a *MinimalQualifiedAccessStructure) Shareholders() ds.Set[ID] {
+func (a *UnanimityAccessStructure) Shareholders() ds.Set[ID] {
 	return a.ps
 }
 
 // IsAuthorized returns true only if the given IDs exactly match all shareholders.
 // Unlike threshold access structures, partial subsets are never authorized.
-func (a *MinimalQualifiedAccessStructure) IsAuthorized(ids ...ID) bool {
+func (a *UnanimityAccessStructure) IsAuthorized(ids ...ID) bool {
 	return a.ps.Size() == len(ids) && a.ps.Equal(hashset.NewComparable(ids...).Freeze())
 }
 
-func (a *MinimalQualifiedAccessStructure) MarshalCBOR() ([]byte, error) {
-	dto := minimalQualifiedAccessStructureDTO{
+func (a *UnanimityAccessStructure) MarshalCBOR() ([]byte, error) {
+	dto := unanimityAccessStructureDTO{
 		Ps: make(map[ID]bool),
 	}
 	for id := range a.ps.Iter() {
@@ -174,8 +174,8 @@ func (a *MinimalQualifiedAccessStructure) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (a *MinimalQualifiedAccessStructure) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[minimalQualifiedAccessStructureDTO](data)
+func (a *UnanimityAccessStructure) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[unanimityAccessStructureDTO](data)
 	if err != nil {
 		return errs.Wrap(err)
 	}

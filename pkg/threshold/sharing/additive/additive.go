@@ -8,9 +8,9 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -36,7 +36,7 @@ func NewScheme[E GroupElement[E]](g Group[E], shareholders ds.Set[sharing.ID]) (
 	if g == nil {
 		return nil, ErrIsNil.WithMessage("group is nil")
 	}
-	accessStructure, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+	accessStructure, err := sharing.NewUnanimityAccessStructure(shareholders)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create access structure")
 	}
@@ -49,7 +49,7 @@ func NewScheme[E GroupElement[E]](g Group[E], shareholders ds.Set[sharing.ID]) (
 // Scheme implements additive secret sharing over a finite group.
 type Scheme[E GroupElement[E]] struct {
 	g  Group[E]
-	ac *sharing.MinimalQualifiedAccessStructure
+	ac *sharing.UnanimityAccessStructure
 }
 
 // Name returns the canonical name of this scheme.
@@ -58,7 +58,7 @@ func (*Scheme[E]) Name() sharing.Name {
 }
 
 // AccessStructure returns the access structure (all shareholders required).
-func (d *Scheme[E]) AccessStructure() *sharing.MinimalQualifiedAccessStructure {
+func (d *Scheme[E]) AccessStructure() *sharing.UnanimityAccessStructure {
 	return d.ac
 }
 
@@ -88,11 +88,9 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 	if secret == nil {
 		return nil, ErrIsNil.WithMessage("secret is nil")
 	}
-	isnSecret := isn.NewSecret(secret.Value())
-
-	sharesList, err := isn.SumToSecret(isnSecret, d.g.Random, prng, d.ac.Shareholders().Size())
+	sharesList, err := SumToSecret(secret.Value(), d.g.Random, prng, d.ac.Shareholders().Size())
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create shares using ISN")
+		return nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
 	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
 	for i, id := range d.ac.Shareholders().Iter2() {
@@ -104,6 +102,37 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 	return &DealerOutput[E]{
 		shares: shares.Freeze(),
 	}, nil
+}
+
+// SumToSecret samples l-1 random group elements and computes the final one so
+// that all l shares sum to the provided secret.
+func SumToSecret[E GroupElement[E]](secret E, sampler func(io.Reader) (E, error), prng io.Reader, l int) ([]E, error) {
+	if utils.IsNil(secret) {
+		return nil, ErrIsNil.WithMessage("secret is nil")
+	}
+	if sampler == nil {
+		return nil, ErrIsNil.WithMessage("sampler is nil")
+	}
+	if prng == nil {
+		return nil, ErrIsNil.WithMessage("prng is nil")
+	}
+	if l <= 0 {
+		return nil, ErrFailed.WithMessage("number of shares must be positive")
+	}
+
+	group := algebra.StructureMustBeAs[algebra.Group[E]](secret.Structure())
+	rs := make([]E, l)
+	partial := group.OpIdentity()
+	for j := range l - 1 {
+		rj, err := sampler(prng)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("could not sample random group element")
+		}
+		rs[j] = rj
+		partial = partial.Op(rj)
+	}
+	rs[l-1] = secret.Op(partial.OpInv())
+	return rs, nil
 }
 
 // Reconstruct recovers the secret by summing all shares: s = s_1 + s_2 + ... + s_n.
@@ -135,7 +164,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 
 // NewShare creates a new additive share with the given ID and value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *sharing.MinimalQualifiedAccessStructure) (*Share[E], error) {
+func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *sharing.UnanimityAccessStructure) (*Share[E], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}

@@ -843,7 +843,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
 		t.Parallel()
 		// Create a qualified set with all shareholders
-		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+		qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -879,7 +879,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 			qualifiedIds.Add(id)
 		}
 
-		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+		qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 			qualifiedIds.Freeze(),
 		)
 		require.NoError(t, err)
@@ -915,7 +915,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 			qualifiedIds.Add(allIds[i])
 		}
 
-		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+		qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 			qualifiedIds.Freeze(),
 		)
 		require.NoError(t, err)
@@ -932,7 +932,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
 		t.Parallel()
-		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+		qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -1038,7 +1038,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		shares, err := scheme.Deal(zeroSecret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+		qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -1066,7 +1066,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		singleID := hashset.NewComparable[sharing.ID]()
 		singleID.Add(sharing.ID(1))
 
-		_, err := sharing.NewMinimalQualifiedAccessStructure(
+		_, err := sharing.NewUnanimityAccessStructure(
 			singleID.Freeze(),
 		)
 		require.Error(t, err)
@@ -1083,7 +1083,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		out, err := scheme.Deal(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+		qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -1140,7 +1140,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			out, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
-			qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
+			qualifiedSet, err := sharing.NewUnanimityAccessStructure(
 				scheme.AccessStructure().Shareholders(),
 			)
 			require.NoError(b, err)
@@ -1230,7 +1230,7 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 	require.ErrorIs(t, err, shamir.ErrFailed)
 
 	// Test ToAdditive conversion with arbitrary IDs
-	qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
+	qualifiedSet, err := sharing.NewUnanimityAccessStructure(shareholders)
 	require.NoError(t, err)
 
 	additiveShares := make([]*additive.Share[*k256.Scalar], 0)

@@ -87,7 +87,7 @@ type (
 
 type Homomorphism[E2 SemiGroupElement[E2], E1 SemiGroupElement[E1]] func(E1) E2
 
-type HomomorphicLike[T any, TV SemiGroupElement[TV]] interface {
+type HomomorphicLike[T any, TV any] interface {
 	base.Transparent[TV]
 	crtp.Operand[T]
 	base.Equatable[T]
@@ -105,17 +105,12 @@ type HomomorphicNegand[T any] interface {
 	HomNeg() T
 }
 
-type AdditivelyHomomorphicLike[T HomomorphicLike[T, TV], TV AdditiveSemiGroupElement[TV]] interface {
+type AdditivelyHomomorphicLike[T HomomorphicLike[T, TV], TV any] interface {
 	HomomorphicLike[T, TV]
 	crtp.Summand[T]
 }
 
-type AdditivelyHomomorphicLikeInCoDomain[T HomomorphicLike[T, TV], TV GroupElement[TV]] interface {
-	HomomorphicLike[T, TV]
-	HomomorphicSummand[T]
-}
-
-type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV MultiplicativeSemiGroupElement[TV]] interface {
+type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV any] interface {
 	HomomorphicLike[T, TV]
 	crtp.Multiplicand[T]
 }

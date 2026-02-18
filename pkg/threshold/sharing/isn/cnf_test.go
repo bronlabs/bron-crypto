@@ -1,4 +1,4 @@
-package cnf_test
+package isn_test
 
 import (
 	"bytes"
@@ -13,8 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn/cnf"
 )
 
 func TestCNFSanity(t *testing.T) {
@@ -32,10 +32,10 @@ func TestCNFSanity(t *testing.T) {
 	ac, err := sharing.NewCNFAccessStructure(maximalUnqualifiedSets...)
 	require.NoError(t, err)
 
-	scheme, err := cnf.NewFiniteScheme(group, ac)
+	scheme, err := isn.NewFiniteScheme(group, ac)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
-	require.Equal(t, cnf.Name, scheme.Name())
+	require.Equal(t, isn.Name, scheme.Name())
 
 	secret := isn.NewSecret(group.FromUint64(42))
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
@@ -56,7 +56,7 @@ func TestCNFSanity(t *testing.T) {
 	}
 
 	// Reconstruct with authorized set {1,3}
-	sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+	sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 	for id, share := range shares.Iter() {
 		sharesMap[id] = share
 	}
@@ -78,7 +78,7 @@ func TestCNFDeal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme, err := cnf.NewFiniteScheme(group, ac)
+	scheme, err := isn.NewFiniteScheme(group, ac)
 	require.NoError(t, err)
 
 	t.Run("zero secret", func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestCNFDeal(t *testing.T) {
 		require.NoError(t, err)
 
 		// Reconstruct with authorized set {1,3}
-		sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+		sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 		for id, share := range out.Shares().Iter() {
 			sharesMap[id] = share
 		}
@@ -104,7 +104,7 @@ func TestCNFDeal(t *testing.T) {
 		out, err := scheme.Deal(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+		sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 		for id, share := range out.Shares().Iter() {
 			sharesMap[id] = share
 		}
@@ -123,7 +123,7 @@ func TestCNFDeal(t *testing.T) {
 		out, err := scheme.Deal(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+		sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 		for id, share := range out.Shares().Iter() {
 			sharesMap[id] = share
 		}
@@ -169,14 +169,15 @@ func TestCNFDealRandom(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme, err := cnf.NewFiniteScheme(group, ac)
+	scheme, err := isn.NewFiniteScheme(group, ac)
 	require.NoError(t, err)
 
 	t.Run("valid random generation", func(t *testing.T) {
 		t.Parallel()
-		out, err := scheme.DealRandom(pcg.NewRandomised())
+		out, secret, err := scheme.DealRandom(pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, out)
+		require.NotNil(t, secret)
 		require.Equal(t, 4, out.Shares().Size())
 	})
 
@@ -184,37 +185,32 @@ func TestCNFDealRandom(t *testing.T) {
 		t.Parallel()
 		prng := pcg.NewRandomised()
 
-		out1, err := scheme.DealRandom(prng)
+		out1, secret1, err := scheme.DealRandom(prng)
 		require.NoError(t, err)
 
-		out2, err := scheme.DealRandom(prng)
-		require.NoError(t, err)
+		_, secret2, err2 := scheme.DealRandom(prng)
+		require.NoError(t, err2)
 
-		// Reconstruct both with {1,3}
-		sharesMap1 := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+		// Verify consecutive random secrets differ
+		require.False(t, secret1.Equal(secret2), "consecutive random secrets should differ")
+
+		// Also verify reconstruction matches generated secrets
+		sharesMap1 := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 		for id, share := range out1.Shares().Iter() {
 			sharesMap1[id] = share
 		}
 
-		sharesMap2 := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
-		for id, share := range out2.Shares().Iter() {
-			sharesMap2[id] = share
-		}
-
-		secret1, err := scheme.Reconstruct(sharesMap1[1], sharesMap1[3])
-		require.NoError(t, err)
-
-		secret2, err := scheme.Reconstruct(sharesMap2[1], sharesMap2[3])
-		require.NoError(t, err)
-
-		require.False(t, secret1.Equal(secret2), "consecutive random secrets should differ")
+		reconstructed1, err3 := scheme.Reconstruct(sharesMap1[1], sharesMap1[3])
+		require.NoError(t, err3)
+		require.True(t, secret1.Equal(reconstructed1))
 	})
 
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
-		out, err := scheme.DealRandom(nil)
+		out, secret, err := scheme.DealRandom(nil)
 		require.Error(t, err)
 		require.Nil(t, out)
+		require.Nil(t, secret)
 	})
 }
 
@@ -235,21 +231,21 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme, err := cnf.NewFiniteScheme(group, ac)
+	scheme, err := isn.NewFiniteScheme(group, ac)
 	require.NoError(t, err)
 	secret := isn.NewSecret(group.FromUint64(77777))
 
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
-	sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+	sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 	for id, share := range out.Shares().Iter() {
 		sharesMap[id] = share
 	}
 
 	t.Run("authorized minimal set {1,3}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[3],
 		}
@@ -260,7 +256,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 
 	t.Run("authorized minimal set {1,4}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[4],
 		}
@@ -271,7 +267,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 
 	t.Run("authorized minimal set {2,3}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[2],
 			sharesMap[3],
 		}
@@ -282,7 +278,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 
 	t.Run("authorized minimal set {2,4}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[2],
 			sharesMap[4],
 		}
@@ -293,7 +289,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 
 	t.Run("authorized superset {1,2,3}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[2],
 			sharesMap[3],
@@ -312,7 +308,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 
 	t.Run("unauthorised single party", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{sharesMap[1]}
+		shares := []*isn.Share[*k256.Scalar]{sharesMap[1]}
 		_, err := scheme.Reconstruct(shares...)
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
@@ -321,7 +317,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 	t.Run("unauthorised maximal unqualified set {1,2}", func(t *testing.T) {
 		t.Parallel()
 		// {1,2} is a maximal unqualified set, so it's unauthorised
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[2],
 		}
@@ -333,7 +329,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 	t.Run("unauthorised maximal unqualified set {3,4}", func(t *testing.T) {
 		t.Parallel()
 		// {3,4} is a maximal unqualified set, so it's unauthorised
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[3],
 			sharesMap[4],
 		}
@@ -344,7 +340,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 
 	t.Run("nil share in authorized set", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			nil,
 		}
@@ -363,7 +359,7 @@ func TestCNFShareHomomorphism(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme, err := cnf.NewFiniteScheme(group, ac)
+	scheme, err := isn.NewFiniteScheme(group, ac)
 	require.NoError(t, err)
 
 	// Create two secrets
@@ -380,7 +376,7 @@ func TestCNFShareHomomorphism(t *testing.T) {
 	require.NoError(t, err)
 
 	// Combine shares homomorphically
-	combinedShares := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+	combinedShares := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 	for id, share1 := range out1.Shares().Iter() {
 		share2, ok := out2.Shares().Get(id)
 		require.True(t, ok)
@@ -408,7 +404,7 @@ func TestCNF_BLS12381(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme, err := cnf.NewFiniteScheme(group, ac)
+	scheme, err := isn.NewFiniteScheme(group, ac)
 	require.NoError(t, err)
 
 	secret := isn.NewSecret(group.FromUint64(888888))
@@ -417,18 +413,163 @@ func TestCNF_BLS12381(t *testing.T) {
 
 	// Verify reconstruction with authorized set {1,4}
 	// (1 is not in {4,5} and 4 is not in {1,2,3})
-	sharesMap := make(map[sharing.ID]*cnf.Share[*bls12381.Scalar])
+	sharesMap := make(map[sharing.ID]*isn.Share[*bls12381.Scalar])
 	for id, share := range out.Shares().Iter() {
 		sharesMap[id] = share
 	}
 
-	shares := []*cnf.Share[*bls12381.Scalar]{
+	shares := []*isn.Share[*bls12381.Scalar]{
 		sharesMap[1],
 		sharesMap[4],
 	}
 	reconstructed, err := scheme.Reconstruct(shares...)
 	require.NoError(t, err)
 	require.True(t, secret.Equal(reconstructed))
+}
+
+func TestCNFDealAndRevealDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+	ac, err := sharing.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := isn.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	t.Run("deal and reveal dealer func", func(t *testing.T) {
+		t.Parallel()
+		secret := isn.NewSecret(group.FromUint64(12345))
+
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, out)
+		require.NotNil(t, dealerFunc)
+		require.Equal(t, 4, out.Shares().Size())
+
+		// Verify dealer func contains all shares
+		for id, share := range out.Shares().Iter() {
+			dfShare := dealerFunc.ShareOf(id)
+			require.True(t, share.Equal(dfShare))
+		}
+
+		// Verify reconstruction works
+		sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
+		for id, share := range out.Shares().Iter() {
+			sharesMap[id] = share
+		}
+
+		reconstructed, err := scheme.Reconstruct(sharesMap[1], sharesMap[3])
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	})
+
+	t.Run("nil secret", func(t *testing.T) {
+		t.Parallel()
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, pcg.NewRandomised())
+		require.Error(t, err)
+		require.ErrorIs(t, err, isn.ErrIsNil)
+		require.Nil(t, out)
+		require.Nil(t, dealerFunc)
+	})
+
+	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
+		secret := isn.NewSecret(group.FromUint64(42))
+		out, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, isn.ErrIsNil)
+		require.Nil(t, out)
+		require.Nil(t, dealerFunc)
+	})
+}
+
+func TestCNFDealRandomAndRevealDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+	ac, err := sharing.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := isn.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	t.Run("deal random and reveal dealer func", func(t *testing.T) {
+		t.Parallel()
+
+		out, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, out)
+		require.NotNil(t, secret)
+		require.NotNil(t, dealerFunc)
+		require.Equal(t, 4, out.Shares().Size())
+
+		// Verify dealer func contains all shares
+		for id, share := range out.Shares().Iter() {
+			dfShare := dealerFunc.ShareOf(id)
+			require.True(t, share.Equal(dfShare))
+		}
+
+		// Verify reconstruction works
+		sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
+		for id, share := range out.Shares().Iter() {
+			sharesMap[id] = share
+		}
+
+		reconstructed, err := scheme.Reconstruct(sharesMap[1], sharesMap[3])
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	})
+
+	t.Run("multiple generations produce different secrets and dealer funcs", func(t *testing.T) {
+		t.Parallel()
+		prng := pcg.NewRandomised()
+
+		out1, secret1, dealerFunc1, err := scheme.DealRandomAndRevealDealerFunc(prng)
+		require.NoError(t, err)
+
+		_, secret2, dealerFunc2, err2 := scheme.DealRandomAndRevealDealerFunc(prng)
+		require.NoError(t, err2)
+
+		// Verify secrets differ
+		require.False(t, secret1.Equal(secret2))
+
+		// Verify dealer funcs differ (at least one share should be different)
+		require.Len(t, dealerFunc2, len(dealerFunc1))
+		foundDifference := false
+		for id := range dealerFunc1 {
+			if !dealerFunc1[id].Equal(dealerFunc2[id]) {
+				foundDifference = true
+				break
+			}
+		}
+		require.True(t, foundDifference, "dealer funcs should differ")
+
+		// Verify reconstruction works for both
+		sharesMap1 := make(map[sharing.ID]*isn.Share[*k256.Scalar])
+		for id, share := range out1.Shares().Iter() {
+			sharesMap1[id] = share
+		}
+
+		reconstructed1, err3 := scheme.Reconstruct(sharesMap1[1], sharesMap1[3])
+		require.NoError(t, err3)
+		require.True(t, secret1.Equal(reconstructed1))
+	})
+
+	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
+		out, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(nil)
+		require.Error(t, err)
+		require.Nil(t, out)
+		require.Nil(t, secret)
+		require.Nil(t, dealerFunc)
+	})
 }
 
 func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
@@ -446,14 +587,14 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	scheme, err := cnf.NewFiniteScheme(group, ac)
+	scheme, err := isn.NewFiniteScheme(group, ac)
 	require.NoError(t, err)
 	secret := isn.NewSecret(group.FromUint64(111111))
 
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
-	sharesMap := make(map[sharing.ID]*cnf.Share[*k256.Scalar])
+	sharesMap := make(map[sharing.ID]*isn.Share[*k256.Scalar])
 	for id, share := range out.Shares().Iter() {
 		sharesMap[id] = share
 	}
@@ -481,7 +622,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		// - Outside {3,4}: need 1,2,5, or 6
 		// - Outside {5,6}: need 1,2,3, or 4
 		// {1,3,5} satisfies all: 3 outside {1,2}, 1 outside {3,4}, 1 outside {5,6}
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[3],
 			sharesMap[5],
@@ -493,7 +634,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 
 	t.Run("authorized minimal {2,4,6}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[2],
 			sharesMap[4],
 			sharesMap[6],
@@ -524,7 +665,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		// - Has 1,2 outside {5,6} ✓
 		// So that's authorized too.
 		// Let me test {1,2} which IS a maximal unqualified set
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[1],
 			sharesMap[2],
 		}
@@ -535,7 +676,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 
 	t.Run("unauthorised {3,4}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[3],
 			sharesMap[4],
 		}
@@ -546,7 +687,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 
 	t.Run("unauthorised {5,6}", func(t *testing.T) {
 		t.Parallel()
-		shares := []*cnf.Share[*k256.Scalar]{
+		shares := []*isn.Share[*k256.Scalar]{
 			sharesMap[5],
 			sharesMap[6],
 		}
@@ -554,4 +695,46 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorIs(t, err, isn.ErrUnauthorized)
 	})
+}
+
+func TestCNFShare_ToAdditive(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+
+	// 2-out-of-3 threshold
+	ac, err := sharing.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1).Freeze(),
+		hashset.NewComparable[sharing.ID](2).Freeze(),
+		hashset.NewComparable[sharing.ID](3).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := isn.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	secret := isn.NewSecret(group.FromUint64(123456))
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(t, err)
+
+	minAS, err := sharing.NewUnanimityAccessStructure(hashset.NewComparable[sharing.ID](1, 3).Freeze())
+	require.NoError(t, err)
+
+	additiveScheme, err := additive.NewScheme(group, minAS.Shareholders())
+	require.NoError(t, err)
+
+	additiveShares := make([]*additive.Share[*k256.Scalar], 0, out.Shares().Size())
+	for id, share := range out.Shares().Iter() {
+		if !minAS.Shareholders().Contains(id) {
+			continue
+		}
+		addShare, err := share.ToAdditive(minAS)
+		require.NoError(t, err)
+		require.Equal(t, id, addShare.ID())
+		additiveShares = append(additiveShares, addShare)
+	}
+
+	reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
+	require.NoError(t, err)
+	require.True(t, reconstructed.Value().Equal(secret.Value()))
 }
