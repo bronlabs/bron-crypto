@@ -18,7 +18,7 @@ into `l` pieces (where `l` is the number of maximal unqualified sets) and gives 
 not in maximal unqualified set `Tj`. An authorized coalition is not contained in any maximal unqualified set, 
 so it contains at least one party outside each `Tj` and can collect all pieces to reconstruct.
 
-Example: access structure "at least one from {p1,p2} AND at least one from {p3,p4}" 
+Example: access structure "at least one from `{p1,p2}` AND at least one from `{p3,p4}`" 
 has maximal unqualified sets `{{p1,p2}, {p3,p4}}`. Each party receives a sparse map where keys 
 are maximal unqualified sets and values are the corresponding secret pieces they hold.
 
@@ -33,16 +33,16 @@ $$
 \max(\overline{\Gamma}) = \{T_1, \dots, T_\ell\}.
 $$
 
-We split the secret \(s\) into \(\ell\) pieces \(r_1,\dots,r_\ell\) such that:
+We split the secret $s$ into $\ell$ pieces $(r_1,\dots,r_\ell)$ such that:
 
 $$
 r_1 + \cdots + r_\ell = s.
 $$
 
-For each \(j\), we give piece \(r_j\) to every party not in \(T_j\). A qualified
-coalition \(A \in \Gamma\) is not contained in any unqualified set, so for every
-\(j\) it contains some party outside \(T_j\), and can therefore collect all
-\(r_j\) and reconstruct \(s\).
+For each $j$, we give piece $r_j$ to every party not in $T_j$. A qualified
+coalition $A \in \Gamma$ is not contained in any unqualified set, so for every
+$j$ it contains some party outside $T_j$, and can therefore collect all
+$r_j$ and reconstruct $s$.
 
 #### CNF.Deal
 
