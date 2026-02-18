@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -15,6 +14,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
+type outputlessRunnerAdapter struct {
+	runner network.Runner[any]
+}
+
+func (a outputlessRunnerAdapter) Run(rt *network.Router) (*recovery.Output[*k256.Point, *k256.Scalar], error) {
+	_, err := a.runner.Run(rt)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
 func TestRunnerHappyPath(t *testing.T) {
 	t.Parallel()
 
@@ -22,29 +33,19 @@ func TestRunnerHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	mislayerId := sharing.ID(3)
 	shard, mislayers, recoverers := testutils.MakeRunners(t, ac, mislayerId)
-	var recoveredOutput *recovery.Output[*k256.Point, *k256.Scalar]
 
-	// this one has to be run manually due to a non-symmetrical communication scheme
-	coordinator := ntu.NewMockCoordinator(ac.Shareholders().List()...)
-	var errGroup errgroup.Group
+	runners := make(map[sharing.ID]network.Runner[*recovery.Output[*k256.Point, *k256.Scalar]], len(mislayers)+len(recoverers))
 	for id, recoverer := range recoverers {
-		delivery := coordinator.DeliveryFor(id)
-		router := network.NewRouter(delivery)
-		errGroup.Go(func() error {
-			_, err = recoverer.Run(router)
-			return err
-		})
+		runners[id] = outputlessRunnerAdapter{runner: recoverer}
 	}
 	for id, mislayer := range mislayers {
-		delivery := coordinator.DeliveryFor(id)
-		router := network.NewRouter(delivery)
-		errGroup.Go(func() error {
-			recoveredOutput, err = mislayer.Run(router)
-			return err
-		})
+		runners[id] = mislayer
 	}
-	err = errGroup.Wait()
-	require.NoError(t, err)
+
+	outputs := ntu.TestExecuteRunnersWithQuorum(t, ac.Shareholders(), runners)
+	recoveredOutput, ok := outputs[mislayerId]
+	require.True(t, ok)
+	require.NotNil(t, recoveredOutput)
 
 	require.True(t, shard.Share().Equal(recoveredOutput.Share()))
 }

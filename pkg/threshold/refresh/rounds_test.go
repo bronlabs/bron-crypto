@@ -80,12 +80,12 @@ func Test_HappyPath(t *testing.T) {
 	shares := make(map[sharing.ID]*feldman.Share[*k256.Scalar])
 	verificationVectors := make(map[sharing.ID]feldman.VerificationVector[*k256.Point, *k256.Scalar])
 	for _, p := range participants {
-		s, v, err := p.Round2(r2bi[p.SharingID()], r2ui[p.SharingID()])
+		out, err := p.Round2(r2bi[p.SharingID()], r2ui[p.SharingID()])
 		require.NoError(t, err)
-		err = scheme.Verify(s, v)
+		err = scheme.Verify(out.Share(), out.VerificationVector())
 		require.NoError(t, err)
-		shares[p.SharingID()] = s
-		verificationVectors[p.SharingID()] = v
+		shares[p.SharingID()] = out.Share()
+		verificationVectors[p.SharingID()] = out.VerificationVector()
 	}
 
 	t.Run("should generate valid shares", func(t *testing.T) {
