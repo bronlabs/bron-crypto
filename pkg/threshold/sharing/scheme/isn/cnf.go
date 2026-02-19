@@ -24,7 +24,7 @@ const Name sharing.Name = "CNF secret sharing scheme"
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
 	sampler *Sampler[E]
-	ac      sharing.CNFAccessStructure
+	ac      sharing.MonotoneAccessStructure
 }
 
 // NewFiniteScheme creates a new CNF ISN scheme over the given finite group
@@ -37,7 +37,7 @@ type Scheme[E algebra.GroupElement[E]] struct {
 // Returns the initialised scheme.
 func NewFiniteScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
-	ac sharing.CNFAccessStructure,
+	ac sharing.MonotoneAccessStructure,
 ) (*Scheme[E], error) {
 	sampler, err := NewFiniteGroupElementSampler(g)
 	if err != nil {
@@ -56,7 +56,7 @@ func (*Scheme[E]) Name() sharing.Name {
 }
 
 // AccessStructure returns the CNF access structure (maximal unqualified sets).
-func (c *Scheme[E]) AccessStructure() sharing.CNFAccessStructure {
+func (c *Scheme[E]) AccessStructure() sharing.MonotoneAccessStructure {
 	return c.ac
 }
 
