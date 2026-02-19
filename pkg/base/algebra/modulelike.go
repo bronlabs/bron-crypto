@@ -108,3 +108,11 @@ type (
 		S crtp.RingElement[S],
 	] = crtp.MultivariatePolynomial[MP, P, S]
 )
+
+type (
+	MatrixModule[M crtp.Matrix[M, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]] = crtp.MatrixModule[M, S]
+	Matrix[M crtp.Matrix[M, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]]       = crtp.Matrix[M, Ei, S]
+
+	MatrixAlgebra[M crtp.Matrix[M, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]]        = crtp.MatrixAlgebra[M, S]
+	SquareMatrix[SM crtp.SquareMatrix[SM, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]] = crtp.SquareMatrix[SM, Ei, S]
+)

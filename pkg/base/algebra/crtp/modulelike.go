@@ -181,3 +181,69 @@ type MultivariatePolynomial[PP, P, S any] interface {
 	PartialDerivative(arity uint) (PP, error)
 	PartialDegree(arity uint) (int, error)
 }
+
+// ******************* Matrices.
+
+type MatrixModule[M, S any] interface {
+	Module[M, S]
+	AbelianSemiGroup[M, S]
+	Dimensions() (n, m int)
+	IsSquare() bool
+}
+
+type matrix[M, Ei, S any] interface {
+	ModuleElement[M, S]
+	AbelianSemiGroupElement[M, S]
+	Dimensions() (n, m int)
+	Transpose() M
+	SubMatrix(row1, row2, col1, col2 int) (M, error)
+	IsSquare() bool
+	IsDiagonal() bool
+	Get(row, col int) (Ei, error)
+	GetRow(row int) ([]Ei, error)
+	GetColumn(col int) ([]Ei, error)
+	IsZero() bool
+
+	KroneckerProduct(other M) M
+	HadamardProduct(other M) M
+
+	SwapRow(i, j int) (M, error)
+	SwapColumn(i, j int) (M, error)
+	RowAdd(row1, row2 int, scalar S) (M, error)
+	ColumnAdd(col1, col2 int, scalar S) (M, error)
+	RowMul(row int, scalar S) (M, error)
+	ColumnMul(col int, scalar S) (M, error)
+}
+
+type Matrix[M, Ei, S any] interface {
+	matrix[M, Ei, S]
+
+	TryMul(M) (M, error)
+
+	ConcatRows(other M) (M, error)
+	ConcatColumns(other M) (M, error)
+
+	Set(row, col int, value Ei) (M, error)
+	SetRow(row int, values ...Ei) (M, error)
+	SetColumn(col int, values ...Ei) (M, error)
+
+	InsertRow(row int, values ...Ei) (M, error)
+	InsertColumn(col int, values ...Ei) (M, error)
+
+	DeleteRow(row int) (M, error)
+	DeleteColumn(col int) (M, error)
+}
+
+type MatrixAlgebra[SM, S any] interface {
+	MatrixModule[SM, S]
+	Algebra[SM, S]
+	Identity() SM
+}
+
+type SquareMatrix[SM, Ei, S any] interface {
+	matrix[SM, Ei, S]
+	AlgebraElement[SM, S]
+	IsIdentity() bool
+	Trace() Ei
+	Determinant() Ei
+}
