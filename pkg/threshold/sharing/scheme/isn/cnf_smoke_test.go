@@ -5,8 +5,8 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/isn"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/isn"
 )
 
 func _[E algebra.GroupElement[E]]() {

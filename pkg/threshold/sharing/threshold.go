@@ -1,21 +1,28 @@
 package sharing
 
 import (
+	"iter"
+	"maps"
+	"slices"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// ThresholdAccessStructure represents a (t,n) threshold access structure where
+var _ MonotoneAccessStructure = (*Threshold)(nil)
+
+// Threshold represents a (t,n) threshold access structure where
 // any subset of at least t shareholders (out of n total) is authorized to
 // reconstruct the secret.
-type ThresholdAccessStructure struct {
+type Threshold struct {
 	t  uint
 	ps ds.Set[ID]
 }
 
-type thresholdAccessStructureDTO struct {
+type thresholdDTO struct {
 	T  uint        `cbor:"threshold"`
 	Ps map[ID]bool `cbor:"shareholders"`
 }
@@ -27,7 +34,7 @@ type thresholdAccessStructureDTO struct {
 //   - ps: The set of shareholder IDs, must not contain 0
 //
 // Returns an error if t < 2, t > |ps|, ps is nil, or ps contains 0.
-func NewThresholdAccessStructure(t uint, ps ds.Set[ID]) (*ThresholdAccessStructure, error) {
+func NewThresholdAccessStructure(t uint, ps ds.Set[ID]) (*Threshold, error) {
 	if ps == nil {
 		return nil, ErrIsNil.WithMessage("party set is nil")
 	}
@@ -40,33 +47,43 @@ func NewThresholdAccessStructure(t uint, ps ds.Set[ID]) (*ThresholdAccessStructu
 	if t > uint(ps.Size()) {
 		return nil, ErrValue.WithMessage("total cannot be less than threshold")
 	}
-	return &ThresholdAccessStructure{
+	return &Threshold{
 		t:  t,
 		ps: ps,
 	}, nil
 }
 
 // Threshold returns the minimum number of shares required for reconstruction.
-func (a *ThresholdAccessStructure) Threshold() uint {
+func (a *Threshold) Threshold() uint {
 	return a.t
 }
 
 // Shareholders returns the set of all valid shareholder IDs.
-func (a *ThresholdAccessStructure) Shareholders() ds.Set[ID] {
+func (a *Threshold) Shareholders() ds.Set[ID] {
 	return a.ps
 }
 
-// IsAuthorized returns true if the given set of shareholder IDs forms an
+// IsQualified returns true if the given set of shareholder IDs forms an
 // authorized subset (i.e., has at least t members, all from the shareholder set).
-func (a *ThresholdAccessStructure) IsAuthorized(ids ...ID) bool {
-	idsSet := hashset.NewComparable(ids...)
+func (a *Threshold) IsQualified(ids ...ID) bool {
+	idsSet := hashset.NewComparable(ids...).Freeze()
 	return idsSet.Size() >= int(a.t) &&
-		idsSet.Size() <= a.ps.Size() &&
-		idsSet.Freeze().IsSubSet(a.ps)
+		idsSet.IsSubSet(a.ps)
+}
+
+func (a *Threshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
+	return func(yield func(ds.Set[ID]) bool) {
+		for c := range sliceutils.Combinations(a.ps.List(), a.t-1) {
+			s := hashset.NewComparable[ID](c...)
+			if cont := yield(s.Freeze()); !cont {
+				break
+			}
+		}
+	}
 }
 
 // Equal returns true if two access structures have the same threshold and shareholders.
-func (a *ThresholdAccessStructure) Equal(other *ThresholdAccessStructure) bool {
+func (a *Threshold) Equal(other *Threshold) bool {
 	if a == nil || other == nil {
 		return a == other
 	}
@@ -80,18 +97,18 @@ func (a *ThresholdAccessStructure) Equal(other *ThresholdAccessStructure) bool {
 }
 
 // Clone returns a deep copy of this access structure.
-func (a *ThresholdAccessStructure) Clone() *ThresholdAccessStructure {
+func (a *Threshold) Clone() *Threshold {
 	if a == nil {
 		return nil
 	}
-	return &ThresholdAccessStructure{
+	return &Threshold{
 		t:  a.t,
 		ps: a.ps.Clone(),
 	}
 }
 
-func (a *ThresholdAccessStructure) MarshalCBOR() ([]byte, error) {
-	dto := &thresholdAccessStructureDTO{
+func (a *Threshold) MarshalCBOR() ([]byte, error) {
+	dto := &thresholdDTO{
 		T:  a.t,
 		Ps: make(map[ID]bool),
 	}
@@ -106,17 +123,13 @@ func (a *ThresholdAccessStructure) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (a *ThresholdAccessStructure) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*thresholdAccessStructureDTO](data)
+func (a *Threshold) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*thresholdDTO](data)
 	if err != nil {
 		return err
 	}
-	ps := hashset.NewComparable[ID]()
-	for k, v := range dto.Ps {
-		if v {
-			ps.Add(k)
-		}
-	}
+	ps := hashset.NewComparable(slices.Collect(maps.Keys(dto.Ps))...)
+
 	a2, err := NewThresholdAccessStructure(dto.T, ps.Freeze())
 	if err != nil {
 		return err
