@@ -118,9 +118,9 @@ type matrixLowLevel[M, Ei, S any] interface {
 
 	// Assigning output
 	Minor(out, in M, row, col int) (ok ct.Bool)
-	Get(out *Ei, row, col int) (ok ct.Bool)
-	GetRow(out *[]Ei, row int) (ok ct.Bool)
-	GetColumn(out *[]Ei, col int) (ok ct.Bool)
+	Get(out Ei, row, col int) (ok ct.Bool)
+	GetRow(out []Ei, row int) (ok ct.Bool)
+	GetColumn(out []Ei, col int) (ok ct.Bool)
 
 	// Mutating receiver
 	Transpose(in M)
@@ -159,8 +159,8 @@ type MatrixLowLevelPtr[M MatrixLowLevel[M, Ei, S], Ei groupElementLowLevel[Ei], 
 type squareMatrixLowLevel[M, Ei, S any] interface {
 	matrixLowLevel[M, Ei, S]
 	ringElementLowLevel[M]
-	Trace(out *Ei) (ok ct.Bool)
-	Determinant(out *Ei) (ok ct.Bool)
+	Trace(out Ei) (ok ct.Bool)
+	Determinant(out Ei) (ok ct.Bool)
 }
 
 type SquareMatrixLowLevel[M squareMatrixLowLevel[M, Ei, S], Ei groupElementLowLevel[Ei], S ringElementLowLevel[S]] interface {
