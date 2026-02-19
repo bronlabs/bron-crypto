@@ -54,6 +54,8 @@ type (
 )
 
 type (
+	AbelianSemiGroup[E crtp.AbelianSemiGroupElement[E, S], S crtp.RingElement[S]]        = crtp.AbelianSemiGroup[E, S]
+	AbelianSemiGroupElement[E crtp.AbelianSemiGroupElement[E, S], S crtp.RingElement[S]] = crtp.AbelianSemiGroupElement[E, S]
 	// Ab ~= Mod_Z, however due to type system constraints we cannot express this directly without breaking some things (e.g. ZMod would have to be considered as a euclidean domain)
 	// So we leave it under-constrained as a RingElement, just to satisfy properties of a module.
 	AbelianGroup[E crtp.AbelianGroupElement[E, S], S crtp.RingElement[S]]        = crtp.AbelianGroup[E, S]

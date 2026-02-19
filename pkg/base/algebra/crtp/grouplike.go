@@ -142,11 +142,21 @@ type FiniteGroup[GE any] interface {
 	FiniteStructure[GE]
 }
 
-// **************** Extra Groups.
+// **************** Extra Structures.
 
-type AbelianGroup[E, S any] Module[E, S]
+type AbelianSemiGroup[E, S any] SemiGroup[E]
 
-type AbelianGroupElement[E, S any] ModuleElement[E, S]
+type AbelianSemiGroupElement[E, S any] SemiGroupElement[E]
+
+type AbelianGroup[E, S any] interface {
+	Module[E, S]
+	AbelianSemiGroup[E, S]
+}
+
+type AbelianGroupElement[E, S any] interface {
+	ModuleElement[E, S]
+	AbelianSemiGroupElement[E, S]
+}
 
 type PrimeGroup[E, S any] interface {
 	FiniteGroup[E]
