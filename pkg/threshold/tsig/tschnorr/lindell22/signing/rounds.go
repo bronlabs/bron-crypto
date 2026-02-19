@@ -171,10 +171,11 @@ func verifyBigRCommitment[
 func dlogProve[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (proof compiler.NIZKPoKProof, statement *schnorrpok.Statement[E, S], err error) {
+	provingTape := c.tape.Clone()
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
-	c.tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
-	c.tape.AppendBytes("prover", proverIDBytes)
-	prover, err := c.niDlogScheme.NewProver(c.sid, c.tape)
+	provingTape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
+	provingTape.AppendBytes("prover", proverIDBytes)
+	prover, err := c.niDlogScheme.NewProver(c.sid, provingTape)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}

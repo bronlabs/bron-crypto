@@ -40,3 +40,32 @@ func TestExecuteRunners[O any](tb testing.TB, runners map[sharing.ID]network.Run
 	require.NoError(tb, err)
 	return results
 }
+
+// TestExecuteRunners concurrently executes the given runners with mock deliveries and collects their outputs.
+func TestExecuteRunnersWithQuorum[O any](tb testing.TB, quorum network.Quorum, runners map[sharing.ID]network.Runner[O]) map[sharing.ID]O {
+	tb.Helper()
+
+	results := make(map[sharing.ID]O)
+	var resultsMutex sync.Mutex
+	testCoordinator := NewMockCoordinator(quorum.List()...)
+
+	var errGroup errgroup.Group
+	for id, runner := range runners {
+		errGroup.Go(func() error {
+			rt := network.NewRouter(testCoordinator.DeliveryFor(id))
+			result, err := runner.Run(rt)
+			if err != nil {
+				return err
+			}
+
+			resultsMutex.Lock()
+			defer resultsMutex.Unlock()
+			results[id] = result
+			return nil
+		})
+	}
+
+	err := errGroup.Wait()
+	require.NoError(tb, err)
+	return results
+}

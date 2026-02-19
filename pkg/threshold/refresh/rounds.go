@@ -2,7 +2,6 @@ package refresh
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -16,14 +15,18 @@ func (p *Participant[G, S]) Round1() (broadcast *Round1Broadcast[G, S], unicasts
 }
 
 // Round2 finishes the refresh by adding the zero-share to the existing shard.
-func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S]], r2u network.RoundMessages[*Round1P2P[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
-	share, verification, err = p.zeroParticipant.Round2(r2b, r2u)
+func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S]], r2u network.RoundMessages[*Round1P2P[G, S]]) (output *Output[G, S], err error) {
+	share, verification, err := p.zeroParticipant.Round2(r2b, r2u)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("failed to run round 2 of zero participant")
+		return nil, errs.Wrap(err).WithMessage("failed to run round 2 of zero participant")
 	}
 
 	share = share.Add(p.shard.Share())
 	verification = verification.Op(p.shard.VerificationVector())
 
-	return share, verification, nil
+	output = &Output[G, S]{
+		share:              share,
+		verificationVector: verification,
+	}
+	return output, nil
 }
