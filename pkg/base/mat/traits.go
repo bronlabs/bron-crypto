@@ -364,9 +364,10 @@ func (m *MatrixTrait[S, W, WT]) TryMul(other W) (W, error) {
 	W(&out).init(m.m, other.cols())
 	outData := W(&out).data()
 	otherData := other.data()
+	ring := m.scalarRing()
 	for i := range m.m {
 		for j := range other.cols() {
-			var sum S
+			sum := ring.Zero()
 			for k := range m.n {
 				sum = sum.Add(m.v[m.idx(i, k)].Mul(otherData[other.idx(k, j)]))
 			}
