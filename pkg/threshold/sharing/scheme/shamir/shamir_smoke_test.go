@@ -3,8 +3,8 @@ package shamir_test
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 )
 
 func _[FE algebra.PrimeFieldElement[FE]]() {

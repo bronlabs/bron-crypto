@@ -21,8 +21,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
+	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/pedersen"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
@@ -119,7 +119,7 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 			}
 
 			// Create Feldman scheme for reconstruction
-			feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
+			feldmanScheme, err := feldman.NewScheme(group.Generator(), ac)
 			require.NoError(t, err)
 
 			// Test reconstruction with all shares
@@ -288,7 +288,9 @@ func TestDKGShareProperties(t *testing.T) {
 
 	t.Run("share reconstruction subsets", func(t *testing.T) {
 		t.Parallel()
-		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
+		feldmanAS, err := sharing.NewThresholdAccessStructure(threshold, parties.Values()[0].AccessStructure().Shareholders())
+		require.NoError(t, err)
+		feldmanScheme, err := feldman.NewScheme(group.Generator(), feldmanAS)
 		require.NoError(t, err)
 
 		// Test different combinations of threshold shares
@@ -683,7 +685,9 @@ func TestRoundProgression(t *testing.T) {
 		}
 
 		// Verify that shares can reconstruct a valid secret
-		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
+		feldmanAS, err := sharing.NewThresholdAccessStructure(threshold, parties.Values()[0].AccessStructure().Shareholders())
+		require.NoError(t, err)
+		feldmanScheme, err := feldman.NewScheme(group.Generator(), feldmanAS)
 		require.NoError(t, err)
 
 		secret, err := feldmanScheme.ReconstructAndVerify(referenceVV, shares...)
@@ -805,7 +809,7 @@ func TestMaliciousParticipants(t *testing.T) {
 			output, err := participant.Round3(r3broadcastInputs[participant.SharingID()], r3unicastInputs[participant.SharingID()])
 			if participant.SharingID() == victimID {
 				require.Error(t, err)
-				require.ErrorIs(t, err, feldman.ErrVerification)
+				require.ErrorIs(t, err, sharing.ErrVerification)
 				require.True(t, base.IsIdentifiableAbortError(err))
 				culprits := base.GetMaliciousIdentities[sharing.ID](err)
 				require.Len(t, culprits, 1)
@@ -1045,7 +1049,7 @@ func BenchmarkShareReconstruction(b *testing.B) {
 		shares = append(shares, output.Share())
 	}
 
-	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
+	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac)
 	if err != nil {
 		b.Fatal(err)
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
@@ -21,7 +21,11 @@ import (
 
 // DealRandom deals random shares from a trusted dealer.
 func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *dkls23.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
-	feldmanDealer, err := feldman.NewScheme(curve.Generator(), threshold, shareholder)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholder)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create access structure")
+	}
+	feldmanDealer, err := feldman.NewScheme(curve.Generator(), ac)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create shamir scheme")
 	}

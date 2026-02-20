@@ -1,3 +1,4 @@
+//nolint:testpackage // White-box tests validate internal access-structure state.
 package sharing
 
 import (
@@ -122,7 +123,7 @@ func TestUnanimityEqual(t *testing.T) {
 	require.True(t, a.Equal(b))
 	require.False(t, a.Equal(c))
 
-	var nilA *Unanimity
+	var nilA *UnanimityAccessStructure
 	require.True(t, nilA.Equal(nil))
 	require.False(t, nilA.Equal(a))
 	require.False(t, a.Equal(nilA))
@@ -140,7 +141,7 @@ func TestUnanimityClone(t *testing.T) {
 	require.True(t, u.Equal(clone))
 	require.NotSame(t, u.Shareholders(), clone.Shareholders())
 
-	var nilU *Unanimity
+	var nilU *UnanimityAccessStructure
 	require.Nil(t, nilU.Clone())
 }
 
@@ -153,7 +154,7 @@ func TestUnanimityCBORRoundTrip(t *testing.T) {
 	data, err := serde.MarshalCBOR(original)
 	require.NoError(t, err)
 
-	decoded, err := serde.UnmarshalCBOR[Unanimity](data)
+	decoded, err := serde.UnmarshalCBOR[UnanimityAccessStructure](data)
 	require.NoError(t, err)
 
 	require.True(t, original.Shareholders().Equal(decoded.Shareholders()))
@@ -169,7 +170,7 @@ func TestUnanimityUnmarshalCBOR(t *testing.T) {
 	t.Run("invalid bytes", func(t *testing.T) {
 		t.Parallel()
 
-		var u Unanimity
+		var u UnanimityAccessStructure
 		err := u.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
 		require.Error(t, err)
 		require.ErrorIs(t, err, serde.ErrDeserialisation)
@@ -181,7 +182,7 @@ func TestUnanimityUnmarshalCBOR(t *testing.T) {
 		data, err := serde.MarshalCBOR(unanimityDTO{Ps: map[ID]bool{1: true}})
 		require.NoError(t, err)
 
-		var u Unanimity
+		var u UnanimityAccessStructure
 		err = u.UnmarshalCBOR(data)
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrValue)

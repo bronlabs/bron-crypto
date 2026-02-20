@@ -107,7 +107,7 @@ func NewShortKeyCosigner[
 	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
-	if !shard.AccessStructure().IsAuthorized(quorum.List()...) {
+	if !shard.AccessStructure().IsQualified(quorum.List()...) {
 		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
 	}
 	dst := fmt.Sprintf("%s-%d-%s-%d-%d", transcriptLabel, sid, curveFamily.Name(), bls.ShortKey, rogueKeyAlg)
@@ -167,7 +167,7 @@ func NewLongKeyCosigner[
 	if tape == nil {
 		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
 	}
-	if !shard.AccessStructure().IsAuthorized(quorum.List()...) {
+	if !shard.AccessStructure().IsQualified(quorum.List()...) {
 		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
 	}
 	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {

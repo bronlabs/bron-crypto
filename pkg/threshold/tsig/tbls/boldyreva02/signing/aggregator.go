@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -133,7 +133,7 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 	if len(message) == 0 {
 		return nil, ErrInvalidArgument.WithMessage("message cannot be empty")
 	}
-	if !A.publicMaterial.AccessStructure().IsAuthorized(partialSigs.Keys()...) {
+	if !A.publicMaterial.AccessStructure().IsQualified(partialSigs.Keys()...) {
 		return nil, ErrInvalidArgument.WithMessage("partial signatures are not authorized in the access structure")
 	}
 	partialSignatureVerifier, err := A.scheme.Verifier(bls.VerifyWithCustomDST[PK](A.targetDst))

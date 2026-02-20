@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
@@ -16,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -24,7 +24,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	ttu "github.com/bronlabs/bron-crypto/pkg/transcripts/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -139,7 +139,9 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 				t.Parallel()
 
 				publicKeyValue := dkgOutputs[quorum.List()[0]].PublicKeyValue()
-				dealer, err := feldman.NewScheme(group.Generator(), uint(threshold), quorum)
+				ac, err := sharing.NewThresholdAccessStructure(uint(threshold), quorum)
+				require.NoError(t, err)
+				dealer, err := feldman.NewScheme(group.Generator(), ac)
 				require.NoError(t, err)
 
 				shares := slices.Collect(iterutils.Map(maps.Values(dkgOutputs), func(output *gennaro.DKGOutput[G, S]) *feldman.Share[S] { return output.Share() }))

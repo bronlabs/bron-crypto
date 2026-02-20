@@ -11,8 +11,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/pedersen"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -124,11 +124,11 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen key")
 	}
-	pedersenVSS, err := pedersen.NewScheme(key, ac.Threshold(), ac.Shareholders())
+	pedersenVSS, err := pedersen.NewScheme(key, ac)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen VSS scheme")
 	}
-	feldmanVSS, err := feldman.NewScheme(key.G(), ac.Threshold(), ac.Shareholders())
+	feldmanVSS, err := feldman.NewScheme(key.G(), ac)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create feldman VSS scheme")
 	}

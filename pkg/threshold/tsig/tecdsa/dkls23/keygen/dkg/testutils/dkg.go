@@ -20,7 +20,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	gennaroTU "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg"
@@ -123,7 +123,7 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	// secret shares match
 	for th := accessStructure.Threshold(); th <= uint(accessStructure.Shareholders().Size()); th++ {
 		for shardsSubset := range sliceutils.Combinations(slices.Collect(maps.Values(shards)), th) {
-			feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure.Threshold(), accessStructure.Shareholders())
+			feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure)
 			require.NoError(tb, err)
 			sharesSubset := sliceutils.Map(shardsSubset, func(s *dkls23.Shard[P, B, S]) *feldman.Share[S] {
 				return s.Share()

@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/errs-go/errs"
@@ -22,7 +22,11 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	if curve == nil || shareholder == nil || shareholder.Size() == 0 || prng == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid input to trusted dealer")
 	}
-	feldmanDealer, err := feldman.NewScheme(curve.Generator(), 2, shareholder)
+	ac, err := sharing.NewThresholdAccessStructure(2, shareholder)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create access structure")
+	}
+	feldmanDealer, err := feldman.NewScheme(curve.Generator(), ac)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create shamir scheme")
 	}

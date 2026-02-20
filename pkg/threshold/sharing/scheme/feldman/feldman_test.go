@@ -13,13 +13,26 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 )
+
+func newFeldmanScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](
+	basePoint E,
+	threshold uint,
+	shareholders ds.Set[sharing.ID],
+) (*feldman.Scheme[E, FE], error) {
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
+	if err != nil {
+		return nil, err
+	}
+	return feldman.NewScheme(basePoint, ac)
+}
 
 func TestSanity(t *testing.T) {
 	t.Parallel()
@@ -30,7 +43,7 @@ func TestSanity(t *testing.T) {
 	threshold := uint(2)
 	total := uint(5)
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	scheme, err := feldman.NewScheme(basePoint, threshold, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, threshold, shareholders)
 	require.NoError(t, err, "could not create scheme")
 
 	secret := feldman.NewSecret(field.FromUint64(42))
@@ -112,21 +125,21 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 			secret:      nil,
 			prng:        pcg.NewRandomised(),
 			expectError: true,
-			errorIs:     shamir.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name:        "nil prng",
 			secret:      fortyTwoSecret,
 			prng:        nil,
 			expectError: true,
-			errorIs:     shamir.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name:        "both nil",
 			secret:      nil,
 			prng:        nil,
 			expectError: true,
-			errorIs:     shamir.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 	}
 
@@ -196,7 +209,7 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 					insufficientShares := shareSlice[:threshold-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
-					require.ErrorIs(t, err, shamir.ErrFailed)
+					require.ErrorIs(t, err, sharing.ErrFailed)
 				}
 
 				// Verify each share
@@ -242,7 +255,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 			name:        "nil prng",
 			prng:        nil,
 			expectError: true,
-			errorIs:     feldman.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 			iterations:  1,
 		},
 		{
@@ -365,7 +378,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
 				if config.errors {
 					require.Error(t, err, "should return error for invalid configuration")
 					return
@@ -395,7 +408,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
 				dealCases(t, scheme, field)
 			})
@@ -425,7 +438,7 @@ func TestDealRandom(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
 				dealRandomCases(t, scheme)
 			})
@@ -438,7 +451,7 @@ func TestDealRandom(t *testing.T) {
 		basePoint := curve.Generator()
 
 		shareholders := sharing.NewOrdinalShareholderSet(6)
-		scheme, err := feldman.NewScheme(basePoint, 3, shareholders)
+		scheme, err := newFeldmanScheme(basePoint, 3, shareholders)
 		require.NoError(t, err)
 		dealRandomCases(t, scheme)
 	})
@@ -465,7 +478,7 @@ func BenchmarkDeal(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := feldman.NewScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))
@@ -500,7 +513,7 @@ func BenchmarkDealRandom(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := feldman.NewScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -522,7 +535,7 @@ func TestDealDeterministic(t *testing.T) {
 	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
 	require.NoError(t, err)
 
 	secret := feldman.NewSecret(field.FromUint64(42))
@@ -559,7 +572,7 @@ func TestDealRandomDistribution(t *testing.T) {
 	curve := k256.NewCurve()
 	basePoint := curve.Generator()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
 	require.NoError(t, err)
 
 	iterations := 1000
@@ -634,7 +647,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 
 		err = scheme.Verify(tamperedShare, reference)
 		require.Error(t, err)
-		require.ErrorIs(t, err, feldman.ErrVerification)
+		require.ErrorIs(t, err, sharing.ErrVerification)
 	})
 
 	t.Run("ReconstructAndVerify fails with tampered share", func(t *testing.T) {
@@ -690,7 +703,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 
 		err = scheme.Verify(mismatchedShare, reference)
 		require.Error(t, err)
-		require.ErrorIs(t, err, feldman.ErrVerification)
+		require.ErrorIs(t, err, sharing.ErrVerification)
 	})
 }
 
@@ -718,7 +731,7 @@ func TestVerification(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
 				verificationCases(t, scheme, field)
 			})
@@ -732,7 +745,7 @@ func TestVerification(t *testing.T) {
 		basePoint := curve.Generator()
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
+		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
 		require.NoError(t, err)
 		verificationCases(t, scheme, field)
 	})
@@ -988,7 +1001,7 @@ func TestHomomorphicOperations(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
 				homomorphicOpsCases(t, scheme, field)
 			})
@@ -1002,7 +1015,7 @@ func TestHomomorphicOperations(t *testing.T) {
 		basePoint := curve.Generator()
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
+		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
 		require.NoError(t, err)
 		homomorphicOpsCases(t, scheme, field)
 	})
@@ -1014,7 +1027,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := feldman.NewScheme(basePoint, 3, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, 3, shareholders)
 	require.NoError(b, err)
 
 	// Create shares
@@ -1077,7 +1090,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		}
 
 		// Verify reconstruction with additive shares
-		additiveScheme, err := additive.NewScheme(field, scheme.AccessStructure().Shareholders())
+		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
 		require.NoError(t, err)
 
 		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
@@ -1111,7 +1124,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		}
 
 		// Verify reconstruction
-		additiveScheme, err := additive.NewScheme(field, qualifiedIds.Freeze())
+		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
 		require.NoError(t, err)
 
 		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
@@ -1138,7 +1151,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrMembership)
+		require.ErrorIs(t, err, sharing.ErrMembership)
 		require.Nil(t, additiveShare)
 	})
 
@@ -1201,7 +1214,7 @@ func TestToAdditive(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1227,7 +1240,7 @@ func TestToAdditive(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1246,7 +1259,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	t.Run("zero secret conversion", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(3)
-		scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
+		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
 		require.NoError(t, err)
 
 		// Deal shares for zero secret
@@ -1266,7 +1279,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		}
 
 		// Verify reconstruction
-		additiveScheme, err := additive.NewScheme(field, scheme.AccessStructure().Shareholders())
+		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
 		require.NoError(t, err)
 
 		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
@@ -1288,7 +1301,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	t.Run("share with modified value", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(3)
-		scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
+		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
 		require.NoError(t, err)
 
 		secret := feldman.NewSecret(field.FromUint64(100))
@@ -1345,7 +1358,7 @@ func BenchmarkToAdditive(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := feldman.NewScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))
@@ -1385,7 +1398,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 
 	// Create Feldman scheme
 	basePoint := curve.PrimeSubGroupGenerator()
-	scheme, err := feldman.NewScheme(basePoint, threshold, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, threshold, shareholders)
 	require.NoError(t, err)
 
 	// Deal shares
@@ -1521,7 +1534,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0)
 		_, err := liftedShares.ReconstructAsAdditive()
 		require.Error(t, err)
-		require.ErrorIs(t, err, feldman.ErrArgument)
+		require.ErrorIs(t, err, sharing.ErrArgument)
 	})
 
 	t.Run("ToAdditive conversion", func(t *testing.T) {
@@ -1568,7 +1581,7 @@ func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
 
 	// Create Feldman scheme
 	basePoint := curve.PrimeSubGroupGenerator()
-	scheme, err := feldman.NewScheme(basePoint, threshold, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, threshold, shareholders)
 	require.NoError(t, err)
 
 	// Create a known secret
@@ -1636,7 +1649,7 @@ func BenchmarkVerification(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := feldman.NewScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))

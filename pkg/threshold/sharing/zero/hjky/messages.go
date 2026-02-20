@@ -2,7 +2,7 @@ package hjky
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 )
 
 // Round1Broadcast carries the Feldman verification vector for the zero-share.

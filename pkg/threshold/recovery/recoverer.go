@@ -7,7 +7,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -39,7 +39,7 @@ func NewRecoverer[
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](shard.VerificationVector().Coefficients()[0].Structure())
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](shard.Share().Value().Structure())
-	scheme, err := feldman.NewScheme(group.Generator(), shard.AccessStructure().Threshold(), shard.AccessStructure().Shareholders())
+	scheme, err := feldman.NewScheme(group.Generator(), shard.AccessStructure())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create feldman scheme")
 	}

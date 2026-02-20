@@ -168,7 +168,7 @@ func NewCosigner[
 	if !quorum.Contains(shard.Share().ID()) {
 		return nil, ErrInvalidMembership.WithMessage("quorum %s cannot contain participant %d", quorum, sid)
 	}
-	if !shard.AccessStructure().IsAuthorized(quorum.List()...) {
+	if !shard.AccessStructure().IsQualified(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("shard %d access structure is not authorized for quorum %s", shard.Share().ID(), quorum)
 	}
 	if prng == nil {

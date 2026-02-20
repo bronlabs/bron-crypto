@@ -12,12 +12,12 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-var _ MonotoneAccessStructure = (*Unanimity)(nil)
+var _ MonotoneAccessStructure = (*UnanimityAccessStructure)(nil)
 
-// Unanimity represents an n-of-n access structure where
+// UnanimityAccessStructure represents an n-of-n access structure where
 // all shareholders must participate to reconstruct the secret. This is the
 // access structure for additive secret sharing.
-type Unanimity struct {
+type UnanimityAccessStructure struct {
 	ps ds.Set[ID]
 }
 
@@ -31,7 +31,7 @@ type unanimityDTO struct {
 //   - shareholders: The set of shareholder IDs (must have at least 2 members)
 //
 // Returns an error if shareholders is nil or has fewer than 2 members.
-func NewUnanimityAccessStructure(shareholders ds.Set[ID]) (*Unanimity, error) {
+func NewUnanimityAccessStructure(shareholders ds.Set[ID]) (*UnanimityAccessStructure, error) {
 	if shareholders == nil {
 		return nil, ErrIsNil.WithMessage("ids cannot be nil")
 	}
@@ -42,12 +42,12 @@ func NewUnanimityAccessStructure(shareholders ds.Set[ID]) (*Unanimity, error) {
 		return nil, ErrMembership.WithMessage("shareholders cannot contain 0")
 	}
 
-	return &Unanimity{
+	return &UnanimityAccessStructure{
 		ps: shareholders,
 	}, nil
 }
 
-func (u *Unanimity) IsQualified(ids ...ID) bool {
+func (u *UnanimityAccessStructure) IsQualified(ids ...ID) bool {
 	if u == nil || u.ps == nil {
 		return false
 	}
@@ -55,11 +55,11 @@ func (u *Unanimity) IsQualified(ids ...ID) bool {
 	return idSet.Equal(u.ps)
 }
 
-func (u *Unanimity) Shareholders() ds.Set[ID] {
+func (u *UnanimityAccessStructure) Shareholders() ds.Set[ID] {
 	return u.ps
 }
 
-func (u *Unanimity) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
+func (u *UnanimityAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	return func(yield func(ds.Set[ID]) bool) {
 		for c := range sliceutils.Combinations(u.ps.List(), uint(u.ps.Size()-1)) {
 			s := hashset.NewComparable[ID](c...)
@@ -71,7 +71,7 @@ func (u *Unanimity) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 }
 
 // Equal returns true if two access structures have the same shareholders.
-func (u *Unanimity) Equal(other *Unanimity) bool {
+func (u *UnanimityAccessStructure) Equal(other *UnanimityAccessStructure) bool {
 	if u == nil || other == nil {
 		return u == other
 	}
@@ -82,16 +82,16 @@ func (u *Unanimity) Equal(other *Unanimity) bool {
 }
 
 // Clone returns a deep copy of this access structure.
-func (u *Unanimity) Clone() *Unanimity {
+func (u *UnanimityAccessStructure) Clone() *UnanimityAccessStructure {
 	if u == nil {
 		return nil
 	}
-	return &Unanimity{
+	return &UnanimityAccessStructure{
 		ps: u.ps.Clone(),
 	}
 }
 
-func (u *Unanimity) MarshalCBOR() ([]byte, error) {
+func (u *UnanimityAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := unanimityDTO{
 		Ps: make(map[ID]bool),
 	}
@@ -105,7 +105,7 @@ func (u *Unanimity) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (u *Unanimity) UnmarshalCBOR(data []byte) error {
+func (u *UnanimityAccessStructure) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[unanimityDTO](data)
 	if err != nil {
 		return errs.Wrap(err)

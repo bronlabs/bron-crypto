@@ -1,3 +1,4 @@
+//nolint:testpackage // White-box tests validate internal normalisation details.
 package sharing
 
 import (
@@ -16,7 +17,7 @@ func TestNewDNF(t *testing.T) {
 	t.Run("empty input invalid", func(t *testing.T) {
 		t.Parallel()
 
-		d, err := NewDNF()
+		d, err := NewDNFAccessStructure()
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrValue)
 		require.Nil(t, d)
@@ -25,7 +26,7 @@ func TestNewDNF(t *testing.T) {
 	t.Run("nil set invalid", func(t *testing.T) {
 		t.Parallel()
 
-		d, err := NewDNF(nil)
+		d, err := NewDNFAccessStructure(nil)
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, d)
@@ -34,7 +35,7 @@ func TestNewDNF(t *testing.T) {
 	t.Run("empty set invalid", func(t *testing.T) {
 		t.Parallel()
 
-		d, err := NewDNF(hashset.NewComparable[ID]().Freeze())
+		d, err := NewDNFAccessStructure(hashset.NewComparable[ID]().Freeze())
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrValue)
 		require.Nil(t, d)
@@ -43,13 +44,13 @@ func TestNewDNF(t *testing.T) {
 	t.Run("id zero invalid", func(t *testing.T) {
 		t.Parallel()
 
-		d, err := NewDNF(hashset.NewComparable[ID](0, 1).Freeze())
+		d, err := NewDNFAccessStructure(hashset.NewComparable[ID](0, 1).Freeze())
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrMembership)
 		require.Nil(t, d)
 	})
 
-	t.Run("normalizes duplicates and keeps only minimal sets", func(t *testing.T) {
+	t.Run("normalises duplicates and keeps only minimal sets", func(t *testing.T) {
 		t.Parallel()
 
 		s1 := hashset.NewComparable[ID](1, 2).Freeze()
@@ -57,7 +58,7 @@ func TestNewDNF(t *testing.T) {
 		s3 := hashset.NewComparable[ID](1, 2, 3).Freeze() // superset of s1
 		s4 := hashset.NewComparable[ID](4).Freeze()
 
-		d, err := NewDNF(s1, s2, s3, s4)
+		d, err := NewDNFAccessStructure(s1, s2, s3, s4)
 		require.NoError(t, err)
 
 		got := make(map[string]struct{})
@@ -76,7 +77,7 @@ func TestNewDNF(t *testing.T) {
 func TestDNFIsQualified(t *testing.T) {
 	t.Parallel()
 
-	d, err := NewDNF(
+	d, err := NewDNFAccessStructure(
 		hashset.NewComparable[ID](1, 2).Freeze(),
 		hashset.NewComparable[ID](3, 4).Freeze(),
 	)
@@ -108,7 +109,7 @@ func TestDNFIsQualified(t *testing.T) {
 func TestDNFMaximalUnqualifiedSetsIter(t *testing.T) {
 	t.Parallel()
 
-	d, err := NewDNF(
+	d, err := NewDNFAccessStructure(
 		hashset.NewComparable[ID](1, 2).Freeze(),
 		hashset.NewComparable[ID](3, 4).Freeze(),
 	)
@@ -182,7 +183,7 @@ func TestDNFMaximalUnqualifiedSetsIter_AgainstBruteForce(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -190,7 +191,7 @@ func TestDNFMaximalUnqualifiedSetsIter_AgainstBruteForce(t *testing.T) {
 			for _, ids := range tc.sets {
 				sets = append(sets, hashset.NewComparable[ID](ids...).Freeze())
 			}
-			d, err := NewDNF(sets...)
+			d, err := NewDNFAccessStructure(sets...)
 			require.NoError(t, err)
 
 			got := make(map[string]struct{})
@@ -204,12 +205,29 @@ func TestDNFMaximalUnqualifiedSetsIter_AgainstBruteForce(t *testing.T) {
 	}
 }
 
+func TestDNF_ChronoVault(t *testing.T) {
+	t.Parallel()
+
+	ac, err := NewDNFAccessStructure(
+		hashset.NewComparable[ID](1, 2).Freeze(),
+		hashset.NewComparable[ID](1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
+		hashset.NewComparable[ID](2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
+	)
+	require.NoError(t, err)
+
+	for aci := range ac.MaximalUnqualifiedSetsIter() {
+		l := aci.List()
+		slices.Sort(l)
+		t.Logf("%v", l)
+	}
+}
+
 func TestNewDNF_RejectsZeroShareholder(t *testing.T) {
 	t.Parallel()
 
 	valid := hashset.NewComparable[ID](1, 2).Freeze()
 	invalid := hashset.NewComparable[ID](0, 3).Freeze()
-	d, err := NewDNF(valid, invalid)
+	d, err := NewDNFAccessStructure(valid, invalid)
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrMembership)
 	require.Nil(t, d)

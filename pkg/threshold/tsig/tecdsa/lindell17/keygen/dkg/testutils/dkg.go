@@ -19,7 +19,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17/keygen/dkg"
@@ -45,7 +45,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
 
 	// Create initial shards from Feldman DKG (or use a dealer)
-	feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure.Threshold(), accessStructure.Shareholders())
+	feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure)
 	require.NoError(tb, err)
 
 	feldmanOutput, _, err := feldmanScheme.DealRandom(prng)
