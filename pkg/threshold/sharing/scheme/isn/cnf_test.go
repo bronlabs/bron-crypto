@@ -799,3 +799,25 @@ func TestCNFShare_ToAdditive(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, reconstructed.Value().Equal(secret.Value()))
 }
+
+func TestDNF_ChronoVault(t *testing.T) {
+	t.Parallel()
+
+	ac, err := sharing.NewDNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
+		hashset.NewComparable[sharing.ID](2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
+	)
+	require.NoError(t, err)
+
+	field := k256.NewScalarField()
+	scheme, err := isn.NewFiniteScheme(field, ac)
+	require.NoError(t, err)
+
+	prng := pcg.NewRandomised()
+	output, _, err := scheme.DealRandom(prng)
+	require.NoError(t, err)
+	for id, share := range output.Shares().Iter() {
+		t.Logf("%d: %d", id, share.Value().Size())
+	}
+}

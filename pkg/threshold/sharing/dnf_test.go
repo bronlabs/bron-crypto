@@ -205,23 +205,6 @@ func TestDNFMaximalUnqualifiedSetsIter_AgainstBruteForce(t *testing.T) {
 	}
 }
 
-func TestDNF_ChronoVault(t *testing.T) {
-	t.Parallel()
-
-	ac, err := NewDNFAccessStructure(
-		hashset.NewComparable[ID](1, 2).Freeze(),
-		hashset.NewComparable[ID](1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
-		hashset.NewComparable[ID](2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
-	)
-	require.NoError(t, err)
-
-	for aci := range ac.MaximalUnqualifiedSetsIter() {
-		l := aci.List()
-		slices.Sort(l)
-		t.Logf("%v", l)
-	}
-}
-
 func TestNewDNF_RejectsZeroShareholder(t *testing.T) {
 	t.Parallel()
 
