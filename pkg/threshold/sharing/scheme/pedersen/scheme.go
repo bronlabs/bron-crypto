@@ -5,14 +5,13 @@ import (
 	"maps"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -20,16 +19,19 @@ import (
 //
 // Parameters:
 //   - key: Pedersen commitment key containing generators g and h
-//   - threshold: Minimum shares required for reconstruction (must be ≥ 2)
-//   - shareholders: Set of shareholder IDs who will receive shares
-func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[E, S], error) {
+//   - accessStructure: Threshold access structure defining quorum requirements
+func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure *sharing.ThresholdAccessStructure) (*Scheme[E, S], error) {
+	if accessStructure == nil {
+		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
+	}
+
 	pedcomScheme, err := pedcom.NewScheme(key)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create pedersen scheme")
 	}
 	module := algebra.StructureMustBeAs[algebra.Module[E, S]](key.G().Structure())
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](module.ScalarStructure())
-	shamirSSS, err := shamir.NewScheme(field, threshold, shareholders)
+	shamirSSS, err := shamir.NewScheme(field, accessStructure)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create shamir scheme")
 	}
@@ -59,7 +61,7 @@ func (s *Scheme[E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 
 func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (*shamir.DealerOutput[S], *shamir.Secret[S], shamir.DealerFunc[S], error) {
 	if prng == nil {
-		return nil, nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	var shamirShares *shamir.DealerOutput[S]
 	var secretPoly shamir.DealerFunc[S]
@@ -84,7 +86,7 @@ func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (
 // The verification vector contains Pedersen commitments g^{a_j}·h^{b_j}.
 func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], *DealerFunc[S], error) {
 	if secret == nil {
-		return nil, nil, ErrIsNil.WithMessage("secret is nil")
+		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
 	// Deal secret shares (can be zero)
 	shamirShares, secretPoly, err := s.shamirSSS.DealAndRevealDealerFunc(secret, prng)
@@ -135,7 +137,7 @@ func (s *Scheme[E, S]) Deal(secret *Secret[S], prng io.Reader) (*DealerOutput[E,
 // the dealing polynomials.
 func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *Secret[S], *DealerFunc[S], error) {
 	if prng == nil {
-		return nil, nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	value, err := s.shamirSSS.Field().Random(prng)
 	if err != nil {
@@ -152,7 +154,7 @@ func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOut
 // DealRandom generates shares for a randomly sampled secret.
 func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *Secret[S], error) {
 	if prng == nil {
-		return nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	shares, secret, _, err := s.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
@@ -191,10 +193,10 @@ func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], sha
 // Returns nil if g^{s_i}·h^{t_i} equals the evaluation of the verification vector at the share's ID.
 func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) error {
 	if vector == nil {
-		return ErrIsNil.WithMessage("verification vector is nil")
+		return sharing.ErrIsNil.WithMessage("verification vector is nil")
 	}
 	if uint(vector.Degree()+1) != s.AccessStructure().Threshold() {
-		return ErrVerification.WithMessage("verification vector degree does not match threshold")
+		return sharing.ErrVerification.WithMessage("verification vector degree does not match threshold")
 	}
 	commitment, err := pedcom.NewCommitment(vector.Eval(s.shamirSSS.SharingIDToLagrangeNode(share.ID())))
 	if err != nil {

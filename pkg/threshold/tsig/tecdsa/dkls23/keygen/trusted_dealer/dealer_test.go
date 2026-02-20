@@ -5,13 +5,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/trusted_dealer"
 )
@@ -29,12 +29,14 @@ func Test_HappyPath(t *testing.T) {
 
 	shards, pk, err := trusted_dealer.DealRandom(curve, THRESHOLD, shareholders.Freeze(), prng)
 	require.NoError(t, err)
+	ac, err := sharing.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
+	require.NoError(t, err)
 
 	t.Run("shares match", func(t *testing.T) {
 		t.Parallel()
 		for th := uint(THRESHOLD); th <= TOTAL; th++ {
 			for shardsSubset := range sliceutils.Combinations(shards.Values(), th) {
-				feldmanScheme, err := feldman.NewScheme(curve.Generator(), THRESHOLD, shareholders.Freeze())
+				feldmanScheme, err := feldman.NewScheme(curve.Generator(), ac)
 				require.NoError(t, err)
 				sharesSubset := sliceutils.Map(shardsSubset, func(s *dkls23.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]) *feldman.Share[*k256.Scalar] {
 					return s.Share()

@@ -10,7 +10,8 @@ Extends Shamir's scheme with public verification of shares.
 ## Usage
 
 ```go
-scheme, _ := feldman.NewScheme(basePoint, threshold, shareholders)
+ac, _ := sharing.NewThresholdAccessStructure(threshold, shareholders)
+scheme, _ := feldman.NewScheme(basePoint, ac)
 
 // Deal shares with verification vector
 output, _ := scheme.Deal(secret, prng)

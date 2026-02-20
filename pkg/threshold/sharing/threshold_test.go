@@ -1,3 +1,4 @@
+//nolint:testpackage // White-box tests validate internal access-structure state.
 package sharing
 
 import (
@@ -141,7 +142,7 @@ func TestThresholdEqual(t *testing.T) {
 	require.False(t, a.Equal(c))
 	require.False(t, a.Equal(d))
 
-	var nilA *Threshold
+	var nilA *ThresholdAccessStructure
 	require.True(t, nilA.Equal(nil))
 	require.False(t, nilA.Equal(a))
 	require.False(t, a.Equal(nilA))
@@ -159,7 +160,7 @@ func TestThresholdClone(t *testing.T) {
 	require.True(t, a.Equal(clone))
 	require.NotSame(t, a.Shareholders(), clone.Shareholders())
 
-	var nilA *Threshold
+	var nilA *ThresholdAccessStructure
 	require.Nil(t, nilA.Clone())
 }
 
@@ -172,7 +173,7 @@ func TestThresholdCBORRoundTrip(t *testing.T) {
 	data, err := serde.MarshalCBOR(original)
 	require.NoError(t, err)
 
-	decoded, err := serde.UnmarshalCBOR[Threshold](data)
+	decoded, err := serde.UnmarshalCBOR[ThresholdAccessStructure](data)
 	require.NoError(t, err)
 	require.True(t, original.Equal(&decoded))
 
@@ -188,7 +189,7 @@ func TestThresholdUnmarshalCBOR(t *testing.T) {
 	t.Run("invalid bytes", func(t *testing.T) {
 		t.Parallel()
 
-		var a Threshold
+		var a ThresholdAccessStructure
 		err := a.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
 		require.Error(t, err)
 		require.ErrorIs(t, err, serde.ErrDeserialisation)
@@ -203,7 +204,7 @@ func TestThresholdUnmarshalCBOR(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		var a Threshold
+		var a ThresholdAccessStructure
 		err = a.UnmarshalCBOR(data)
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrValue)

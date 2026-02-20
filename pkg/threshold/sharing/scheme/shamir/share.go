@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -27,7 +27,7 @@ type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
 // If an access structure is provided, validates that the ID is a valid shareholder.
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *sharing.ThresholdAccessStructure) (*Share[FE], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
-		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
+		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
 	return &Share[FE]{
 		id: id,
@@ -41,7 +41,7 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *sha
 func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
 	field, ok := s.v.Structure().(algebra.PrimeField[FE])
 	if !ok {
-		return nil, ErrType.WithMessage("share value does not implement Field interface")
+		return nil, sharing.ErrType.WithMessage("share value does not implement Field interface")
 	}
 	lambdas, err := LagrangeCoefficients(field, qualifiedSet.Shareholders().List()...)
 	if err != nil {
@@ -49,7 +49,7 @@ func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (
 	}
 	lambdaI, exists := lambdas.Get(s.id)
 	if !exists {
-		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
+		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
 	}
 	converted := lambdaI.Mul(s.v)
 	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)

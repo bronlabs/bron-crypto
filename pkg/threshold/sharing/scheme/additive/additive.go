@@ -28,17 +28,13 @@ const Name sharing.Name = "Additive Secret Sharing Scheme"
 //
 // Parameters:
 //   - g: The group over which sharing is performed
-//   - shareholders: Set of shareholder IDs who will receive shares (all required for reconstruction)
-func NewScheme[E GroupElement[E]](g Group[E], shareholders ds.Set[sharing.ID]) (*Scheme[E], error) {
-	if shareholders == nil {
-		return nil, ErrIsNil.WithMessage("identities is nil")
-	}
+//   - accessStructure: Unanimity access structure (all members are required for reconstruction)
+func NewScheme[E GroupElement[E]](g Group[E], accessStructure *sharing.UnanimityAccessStructure) (*Scheme[E], error) {
 	if g == nil {
-		return nil, ErrIsNil.WithMessage("group is nil")
+		return nil, sharing.ErrIsNil.WithMessage("group is nil")
 	}
-	accessStructure, err := sharing.NewUnanimityAccessStructure(shareholders)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create access structure")
+	if accessStructure == nil {
+		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
 	return &Scheme[E]{
 		g:  g,
@@ -65,7 +61,7 @@ func (d *Scheme[E]) AccessStructure() *sharing.UnanimityAccessStructure {
 // DealRandom generates shares for a randomly sampled secret.
 func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *Secret[E], error) {
 	if prng == nil {
-		return nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	value, err := d.g.Random(prng)
 	if err != nil {
@@ -83,10 +79,10 @@ func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *Secret[E], er
 // and the final share is computed to ensure s_1 + s_2 + ... + s_n = s.
 func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], error) {
 	if prng == nil {
-		return nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	if secret == nil {
-		return nil, ErrIsNil.WithMessage("secret is nil")
+		return nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
 	sharesList, err := SumToSecret(secret.Value(), d.g.Random, prng, d.ac.Shareholders().Size())
 	if err != nil {
@@ -108,16 +104,16 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 // that all l shares sum to the provided secret.
 func SumToSecret[E GroupElement[E]](secret E, sampler func(io.Reader) (E, error), prng io.Reader, l int) ([]E, error) {
 	if utils.IsNil(secret) {
-		return nil, ErrIsNil.WithMessage("secret is nil")
+		return nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
 	if sampler == nil {
-		return nil, ErrIsNil.WithMessage("sampler is nil")
+		return nil, sharing.ErrIsNil.WithMessage("sampler is nil")
 	}
 	if prng == nil {
-		return nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	if l <= 0 {
-		return nil, ErrFailed.WithMessage("number of shares must be positive")
+		return nil, sharing.ErrFailed.WithMessage("number of shares must be positive")
 	}
 
 	group := algebra.StructureMustBeAs[algebra.Group[E]](secret.Structure())
@@ -155,8 +151,8 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	// Create set from valid shares only
 	sharesSet := hashset.NewHashable(validShares...).List()
 
-	if !d.ac.IsAuthorized(ids...) {
-		return nil, ErrFailed.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
+	if !d.ac.IsQualified(ids...) {
+		return nil, sharing.ErrFailed.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 	reconstructed := algebrautils.Sum(sharesSet[0], sharesSet[1:]...)
 	return &Secret[E]{v: reconstructed.v}, nil
@@ -166,7 +162,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 // If an access structure is provided, validates that the ID is a valid shareholder.
 func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *sharing.UnanimityAccessStructure) (*Share[E], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
-		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
+		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
 	return &Share[E]{
 		id: id,

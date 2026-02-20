@@ -11,11 +11,20 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 )
+
+func newAdditiveScheme[E additive.GroupElement[E]](g additive.Group[E], shareholders ds.Set[sharing.ID]) (*additive.Scheme[E], error) {
+	ac, err := sharing.NewUnanimityAccessStructure(shareholders)
+	if err != nil {
+		return nil, err
+	}
+	return additive.NewScheme(g, ac)
+}
 
 func TestSanity(t *testing.T) {
 	t.Parallel()
@@ -23,7 +32,7 @@ func TestSanity(t *testing.T) {
 	field := k256.NewScalarField()
 	total := 5
 	identities := sharing.NewOrdinalShareholderSet(uint(total))
-	scheme, err := additive.NewScheme(field, identities)
+	scheme, err := newAdditiveScheme(field, identities)
 	require.NoError(t, err, "could not create scheme")
 
 	secret := additive.NewSecret(field.FromUint64(42))
@@ -96,21 +105,21 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 			secret:      nil,
 			prng:        pcg.NewRandomised(),
 			expectError: true,
-			errorIs:     additive.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name:        "nil prng",
 			secret:      fortyTwoSecret,
 			prng:        nil,
 			expectError: true,
-			errorIs:     additive.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name:        "both nil",
 			secret:      nil,
 			prng:        nil,
 			expectError: true,
-			errorIs:     additive.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name:         "deterministic prng",
@@ -200,7 +209,7 @@ func dealRandomCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.
 			name:        "nil prng",
 			prng:        nil,
 			expectError: true,
-			errorIs:     additive.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 			iterations:  1,
 		},
 		{
@@ -316,7 +325,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				return allShares[:total-1]
 			},
 			expectError: true,
-			errorIs:     additive.ErrFailed,
+			errorIs:     sharing.ErrFailed,
 		},
 		{
 			name: "missing multiple shares",
@@ -327,7 +336,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				return allShares[:1]
 			},
 			expectError: true,
-			errorIs:     additive.ErrFailed,
+			errorIs:     sharing.ErrFailed,
 		},
 		{
 			name: "no shares",
@@ -335,7 +344,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				return []*additive.Share[E]{}
 			},
 			expectError: true,
-			errorIs:     additive.ErrFailed,
+			errorIs:     sharing.ErrFailed,
 		},
 		{
 			name: "nil share in list",
@@ -358,7 +367,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				return duplicated
 			},
 			expectError: true,
-			errorIs:     additive.ErrFailed,
+			errorIs:     sharing.ErrFailed,
 		},
 		{
 			name: "invalid share ID",
@@ -366,14 +375,14 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				// Try to create an invalid share - this should fail
 				_, err := additive.NewShare(999, allShares[0].Value(), scheme.AccessStructure())
 				require.Error(t, err)
-				require.ErrorIs(t, err, additive.ErrMembership)
+				require.ErrorIs(t, err, sharing.ErrMembership)
 
 				// Since we can't create an invalid share (NewShare validates),
 				// we'll test with shares that don't form a complete set
 				return allShares[:1] // Only one share - not authorized
 			},
 			expectError: true,
-			errorIs:     additive.ErrFailed,
+			errorIs:     sharing.ErrFailed,
 		},
 	}
 
@@ -515,11 +524,11 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 			name: "nil share value check",
 			shareFunc: func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
 				// This would test share validation but we can't create a nil share
-				return nil, additive.ErrIsNil.WithMessage("share is nil")
+				return nil, sharing.ErrIsNil.WithMessage("share is nil")
 			},
 			accessStruct: scheme.AccessStructure(),
 			expectError:  true,
-			errorIs:      additive.ErrIsNil,
+			errorIs:      sharing.ErrIsNil,
 		},
 		{
 			name: "invalid share ID",
@@ -528,7 +537,7 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 			},
 			accessStruct: scheme.AccessStructure(),
 			expectError:  true,
-			errorIs:      additive.ErrMembership,
+			errorIs:      sharing.ErrMembership,
 		},
 	}
 
@@ -570,7 +579,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := additive.NewScheme(field, identities)
+				scheme, err := newAdditiveScheme(field, identities)
 				require.NoError(t, err)
 				dealCases(t, scheme, field)
 			})
@@ -593,7 +602,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := additive.NewScheme(field, identities)
+				scheme, err := newAdditiveScheme(field, identities)
 				require.NoError(t, err)
 				dealCases(t, scheme, field)
 			})
@@ -620,7 +629,7 @@ func TestDealRandom(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := additive.NewScheme(field, identities)
+				scheme, err := newAdditiveScheme(field, identities)
 				require.NoError(t, err)
 				dealRandomCases(t, scheme)
 			})
@@ -632,7 +641,7 @@ func TestDealRandom(t *testing.T) {
 		field := bls12381.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(6)
-		scheme, err := additive.NewScheme(field, identities)
+		scheme, err := newAdditiveScheme(field, identities)
 		require.NoError(t, err)
 		dealRandomCases(t, scheme)
 	})
@@ -658,7 +667,7 @@ func TestReconstruct(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				identities := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := additive.NewScheme(field, identities)
+				scheme, err := newAdditiveScheme(field, identities)
 				require.NoError(t, err)
 				reconstructCases(t, scheme, field)
 			})
@@ -674,7 +683,7 @@ func TestHomomorphicOperations(t *testing.T) {
 		field := k256.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := additive.NewScheme(field, identities)
+		scheme, err := newAdditiveScheme(field, identities)
 		require.NoError(t, err)
 		homomorphicOpsCases(t, scheme, field)
 	})
@@ -684,7 +693,7 @@ func TestHomomorphicOperations(t *testing.T) {
 		field := bls12381.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := additive.NewScheme(field, identities)
+		scheme, err := newAdditiveScheme(field, identities)
 		require.NoError(t, err)
 		homomorphicOpsCases(t, scheme, field)
 	})
@@ -696,7 +705,7 @@ func TestShareValidation(t *testing.T) {
 	field := k256.NewScalarField()
 
 	identities := sharing.NewOrdinalShareholderSet(3)
-	scheme, err := additive.NewScheme(field, identities)
+	scheme, err := newAdditiveScheme(field, identities)
 	require.NoError(t, err)
 	shareValidationCases(t, scheme, field)
 }
@@ -709,7 +718,7 @@ func TestNewScheme(t *testing.T) {
 	t.Run("valid construction", func(t *testing.T) {
 		t.Parallel()
 		identities := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := additive.NewScheme(field, identities)
+		scheme, err := newAdditiveScheme(field, identities)
 		require.NoError(t, err)
 		require.NotNil(t, scheme)
 		require.Equal(t, 5, scheme.AccessStructure().Shareholders().Size())
@@ -717,18 +726,18 @@ func TestNewScheme(t *testing.T) {
 
 	t.Run("nil identities", func(t *testing.T) {
 		t.Parallel()
-		scheme, err := additive.NewScheme(field, nil)
+		scheme, err := newAdditiveScheme(field, nil)
 		require.Error(t, err)
-		require.ErrorIs(t, err, additive.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, scheme)
 	})
 
 	t.Run("nil group", func(t *testing.T) {
 		t.Parallel()
 		identities := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := additive.NewScheme[*k256.Scalar](nil, identities)
+		scheme, err := newAdditiveScheme[*k256.Scalar](nil, identities)
 		require.Error(t, err)
-		require.ErrorIs(t, err, additive.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, scheme)
 	})
 
@@ -736,7 +745,7 @@ func TestNewScheme(t *testing.T) {
 		t.Parallel()
 		singleID := hashset.NewComparable[sharing.ID]()
 		singleID.Add(sharing.ID(1))
-		scheme, err := additive.NewScheme(field, singleID.Freeze())
+		scheme, err := newAdditiveScheme(field, singleID.Freeze())
 		require.Error(t, err)
 		require.ErrorIs(t, err, sharing.ErrValue)
 		require.Nil(t, scheme)
@@ -748,7 +757,7 @@ func TestNewScheme(t *testing.T) {
 		customIds.Add(sharing.ID(10))
 		customIds.Add(sharing.ID(20))
 		customIds.Add(sharing.ID(30))
-		scheme, err := additive.NewScheme(field, customIds.Freeze())
+		scheme, err := newAdditiveScheme(field, customIds.Freeze())
 		require.NoError(t, err)
 		require.NotNil(t, scheme)
 		require.Equal(t, 3, scheme.AccessStructure().Shareholders().Size())
@@ -764,18 +773,18 @@ func TestAccessStructure(t *testing.T) {
 	field := k256.NewScalarField()
 
 	identities := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := additive.NewScheme(field, identities)
+	scheme, err := newAdditiveScheme(field, identities)
 	require.NoError(t, err)
 
 	t.Run("IsAuthorized", func(t *testing.T) {
 		t.Parallel()
 		// Should be authorized only with all shareholders
-		require.True(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5)))
-		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))                               // Missing one
-		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2)))                                                             // Missing many
-		require.False(t, scheme.AccessStructure().IsAuthorized())                                                                                         // No shareholders
-		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5), sharing.ID(6))) // Too many
-		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(99)))               // Invalid ID
+		require.True(t, scheme.AccessStructure().IsQualified(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5)))
+		require.False(t, scheme.AccessStructure().IsQualified(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))                               // Missing one
+		require.False(t, scheme.AccessStructure().IsQualified(sharing.ID(1), sharing.ID(2)))                                                             // Missing many
+		require.False(t, scheme.AccessStructure().IsQualified())                                                                                         // No shareholders
+		require.False(t, scheme.AccessStructure().IsQualified(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5), sharing.ID(6))) // Too many
+		require.False(t, scheme.AccessStructure().IsQualified(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(99)))               // Invalid ID
 	})
 
 	t.Run("Shareholders", func(t *testing.T) {
@@ -793,7 +802,7 @@ func TestDealDeterministic(t *testing.T) {
 
 	field := k256.NewScalarField()
 	identities := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := additive.NewScheme(field, identities)
+	scheme, err := newAdditiveScheme(field, identities)
 	require.NoError(t, err)
 
 	secret := additive.NewSecret(field.FromUint64(42))
@@ -840,7 +849,7 @@ func BenchmarkDeal(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			identities := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := additive.NewScheme(field, identities)
+			scheme, err := newAdditiveScheme(field, identities)
 			require.NoError(b, err)
 
 			secret := additive.NewSecret(field.FromUint64(42))
@@ -873,7 +882,7 @@ func BenchmarkDealRandom(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			identities := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := additive.NewScheme(field, identities)
+			scheme, err := newAdditiveScheme(field, identities)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -904,7 +913,7 @@ func BenchmarkReconstruct(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			identities := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := additive.NewScheme(field, identities)
+			scheme, err := newAdditiveScheme(field, identities)
 			require.NoError(b, err)
 
 			secret := additive.NewSecret(field.FromUint64(42))
@@ -939,7 +948,7 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 
 	shareholders := arbitraryIDs.Freeze()
 
-	scheme, err := additive.NewScheme(field, shareholders)
+	scheme, err := newAdditiveScheme(field, shareholders)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
 	require.Equal(t, 4, scheme.AccessStructure().Shareholders().Size())
@@ -984,7 +993,7 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 	}
 	_, err = scheme.Reconstruct(incompleteShares...)
 	require.Error(t, err)
-	require.ErrorIs(t, err, additive.ErrFailed)
+	require.ErrorIs(t, err, sharing.ErrFailed)
 
 	// Test DealRandom with arbitrary IDs
 	randomOut, randomSecret, err := scheme.DealRandom(pcg.NewRandomised())
@@ -1027,10 +1036,10 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 	require.True(t, expectedSum.Equal(reconstructedSum.Value()))
 
 	// Test authorization checks with arbitrary IDs
-	require.True(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(99)))
-	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000)))                  // Missing one
-	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))         // Wrong IDs
-	require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(999))) // One wrong ID
+	require.True(t, scheme.AccessStructure().IsQualified(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(99)))
+	require.False(t, scheme.AccessStructure().IsQualified(sharing.ID(13), sharing.ID(256), sharing.ID(1000)))                  // Missing one
+	require.False(t, scheme.AccessStructure().IsQualified(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))         // Wrong IDs
+	require.False(t, scheme.AccessStructure().IsQualified(sharing.ID(13), sharing.ID(256), sharing.ID(1000), sharing.ID(999))) // One wrong ID
 }
 func sumToSecret_HappyPaths[E algebra.PrimeFieldElement[E]](t *testing.T, group algebra.PrimeField[E], secret uint64, numberOfShares int) (sum E) {
 	t.Helper()
@@ -1160,7 +1169,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 		t.Parallel()
 		shares, err := additive.SumToSecret(nil, group.Random, pcg.NewRandomised(), 3)
 		require.Error(t, err)
-		require.ErrorIs(t, err, additive.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, shares)
 	})
 
@@ -1168,7 +1177,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 		t.Parallel()
 		shares, err := additive.SumToSecret(secret.Value(), group.Random, nil, 3)
 		require.Error(t, err)
-		require.ErrorIs(t, err, additive.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, shares)
 	})
 
@@ -1176,7 +1185,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 		t.Parallel()
 		shares, err := additive.SumToSecret(secret.Value(), group.Random, pcg.NewRandomised(), 0)
 		require.Error(t, err)
-		require.ErrorIs(t, err, additive.ErrFailed)
+		require.ErrorIs(t, err, sharing.ErrFailed)
 		require.Nil(t, shares)
 	})
 
@@ -1184,7 +1193,7 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 		t.Parallel()
 		shares, err := additive.SumToSecret(secret.Value(), group.Random, pcg.NewRandomised(), -1)
 		require.Error(t, err)
-		require.ErrorIs(t, err, additive.ErrFailed)
+		require.ErrorIs(t, err, sharing.ErrFailed)
 		require.Nil(t, shares)
 	})
 

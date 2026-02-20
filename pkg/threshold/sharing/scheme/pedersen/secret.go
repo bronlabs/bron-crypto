@@ -2,7 +2,7 @@ package pedersen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 )
 
 // Secret is a Pedersen VSS secret, which is identical to a Shamir secret.

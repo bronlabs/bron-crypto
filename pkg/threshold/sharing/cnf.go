@@ -65,6 +65,7 @@ func (c *CNFAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	return slices.Values(c.maximalUnqualifiedSets)
 }
 
+//nolint:dupl // Keep CNF normalisation logic explicit and parallel to DNF for readability.
 func normaliseCNF(unqualifiedSets ...ds.Set[ID]) ([]ds.Set[ID], error) {
 	if len(unqualifiedSets) == 0 {
 		return nil, ErrValue.WithMessage("must have at least one unqualified set")
@@ -81,17 +82,17 @@ func normaliseCNF(unqualifiedSets ...ds.Set[ID]) ([]ds.Set[ID], error) {
 		if s.Contains(0) {
 			return nil, ErrMembership.WithMessage("unqualified set cannot contain shareholder ID 0")
 		}
-		normalized := hashset.NewComparable[ID](s.List()...).Freeze()
+		normalised := hashset.NewComparable[ID](s.List()...).Freeze()
 
 		alreadySeen := false
 		for _, seen := range uniqueSets {
-			if normalized.Equal(seen) {
+			if normalised.Equal(seen) {
 				alreadySeen = true
 				break
 			}
 		}
 		if !alreadySeen {
-			uniqueSets = append(uniqueSets, normalized)
+			uniqueSets = append(uniqueSets, normalised)
 		}
 	}
 

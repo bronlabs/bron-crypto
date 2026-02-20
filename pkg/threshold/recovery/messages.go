@@ -2,7 +2,7 @@ package recovery
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 )
 
 // Round1Broadcast publishes blinded verification material for the recovery offset.

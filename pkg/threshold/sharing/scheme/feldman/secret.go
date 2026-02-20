@@ -2,7 +2,7 @@ package feldman
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 )
 
 // NewSecret creates a new secret from a field element.

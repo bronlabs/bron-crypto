@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -44,7 +44,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](g.ScalarStructure())
-	scheme, err := feldman.NewScheme(g.Generator(), as.Threshold(), as.Shareholders())
+	scheme, err := feldman.NewScheme(g.Generator(), as)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create feldman scheme")
 	}

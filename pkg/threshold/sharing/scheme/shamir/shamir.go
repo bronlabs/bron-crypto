@@ -33,7 +33,7 @@ func SharingIDToLagrangeNode[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeFi
 // For shareholder i in set S, the coefficient λ_i = ∏_{j∈S,j≠i} j/(j-i).
 func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeField[FE], sharingIDs ...sharing.ID) (ds.Map[sharing.ID, FE], error) {
 	if hashset.NewComparable(sharingIDs...).Size() != len(sharingIDs) {
-		return nil, ErrMembership.WithMessage("invalid sharing id hash set")
+		return nil, sharing.ErrMembership.WithMessage("invalid sharing id hash set")
 	}
 
 	sharingIDsScalar := make([]FE, len(sharingIDs))

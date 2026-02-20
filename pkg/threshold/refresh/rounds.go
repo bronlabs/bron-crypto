@@ -2,6 +2,7 @@ package refresh
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/errs-go/errs"
 )
 

@@ -7,7 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/access_structure"
 )
 
 // Name is a human-readable identifier for a secret sharing scheme.
@@ -42,7 +41,7 @@ type VerifiableDealerOutput[S Share[S], V VerificationMaterial] DealerOutput[S]
 // SSS (Secret Sharing Scheme) is the base interface for all secret sharing schemes.
 // It provides dealing (splitting a secret into shares) and reconstruction
 // (recovering the secret from authorized shares).
-type SSS[S Share[S], W Secret[W], DO DealerOutput[S], AC access_structure.MonotoneAccessStructure] interface {
+type SSS[S Share[S], W Secret[W], DO DealerOutput[S], AC MonotoneAccessStructure] interface {
 	Name() Name
 	Deal(secret W, prng io.Reader) (DO, error)
 	DealRandom(prng io.Reader) (DO, W, error)
@@ -53,7 +52,7 @@ type SSS[S Share[S], W Secret[W], DO DealerOutput[S], AC access_structure.Monoto
 // VSSS (Verifiable Secret Sharing Scheme) extends SSS with the ability to verify
 // shares against public verification material. This allows shareholders to detect
 // a malicious dealer who distributes inconsistent shares.
-type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOutput[S, V], AC access_structure.MonotoneAccessStructure] interface {
+type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOutput[S, V], AC MonotoneAccessStructure] interface {
 	SSS[S, W, DO, AC]
 	Reconstruct(shares ...S) (secret W, err error)
 	ReconstructAndVerify(reference V, shares ...S) (secret W, err error)
@@ -61,7 +60,7 @@ type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOu
 }
 
 // ThresholdSSS is a secret sharing scheme with a threshold access structure.
-type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *access_structure.Threshold]
+type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *ThresholdAccessStructure]
 
 // HomomorphicShare is a share that supports the group operation, allowing shares
 // to be combined homomorphically. If parties hold shares of secrets a and b,
@@ -70,7 +69,7 @@ type HomomorphicShare[S interface {
 	Share[S]
 	algebra.HomomorphicLike[S, SV]
 }, SV any, // To support CNF/DNF variants, the share value type is not constrained to a specific algebraic structure.
-	AC AccessStructure,
+	AC MonotoneAccessStructure,
 ] interface {
 	Share[S]
 	algebra.HomomorphicLike[S, SV]
@@ -82,27 +81,27 @@ type HomomorphicShare[S interface {
 type LinearShare[S interface {
 	HomomorphicShare[S, SV, AC]
 	algebra.Actable[S, SC]
-	ToAdditive(unanimity *access_structure.Unanimity) (SA, error)
+	ToAdditive(unanimity *UnanimityAccessStructure) (SA, error)
 }, SV any,
-	SA HomomorphicShare[SA, SAV, *access_structure.Unanimity],
+	SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure],
 	SAV algebra.GroupElement[SAV],
 	SC any, // To support packed variants, scalar type is not constrained.
-	AC access_structure.MonotoneAccessStructure,
+	AC MonotoneAccessStructure,
 ] interface {
 	HomomorphicShare[S, SV, AC]
 	algebra.Actable[S, SC]
-	ToAdditive(unanimity *access_structure.Unanimity) (SA, error)
+	ToAdditive(unanimity *UnanimityAccessStructure) (SA, error)
 }
 
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.
 // It supports revealing the dealer function (polynomial) for protocols that need it.
 type LSSS[
 	S LinearShare[S, SV, SA, SAV, SC, AC], SV any,
-	SA HomomorphicShare[SA, SAV, *access_structure.Unanimity], SAV algebra.GroupElement[SAV],
+	SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure], SAV algebra.GroupElement[SAV],
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
-	}, WV algebra.GroupElement[WV], DO DealerOutput[S], SC any, AC access_structure.MonotoneAccessStructure, DF any,
+	}, WV algebra.GroupElement[WV], DO DealerOutput[S], SC any, AC MonotoneAccessStructure, DF any,
 ] interface {
 	SSS[S, W, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
@@ -113,9 +112,9 @@ type LSSS[
 // The dealer function is a polynomial f(x) where f(0) is the secret and f(i) is
 // shareholder i's share.
 type PolynomialLSSS[
-	S LinearShare[S, SV, SA, SAV, SC, AC], SV algebra.PrimeFieldElement[SV], SA HomomorphicShare[SA, SAV, *access_structure.Unanimity], SAV algebra.GroupElement[SAV],
+	S LinearShare[S, SV, SA, SAV, SC, AC], SV algebra.PrimeFieldElement[SV], SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure], SAV algebra.GroupElement[SAV],
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
-	}, WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC access_structure.MonotoneAccessStructure,
+	}, WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC MonotoneAccessStructure,
 ] LSSS[S, SV, SA, SAV, W, WV, DO, SC, AC, *polynomials.Polynomial[SV]]

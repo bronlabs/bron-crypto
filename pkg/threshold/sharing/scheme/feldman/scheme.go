@@ -5,12 +5,11 @@ import (
 	"maps"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -24,16 +23,18 @@ type Scheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]
 //
 // Parameters:
 //   - basePoint: Generator g of the group used for verification commitments
-//   - threshold: Minimum shares required for reconstruction (must be ≥ 2)
-//   - shareholders: Set of shareholder IDs
-func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](basePoint E, threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[E, FE], error) {
+//   - accessStructure: Threshold access structure defining quorum requirements
+func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](basePoint E, accessStructure *sharing.ThresholdAccessStructure) (*Scheme[E, FE], error) {
 	if utils.IsNil(basePoint) {
-		return nil, ErrIsNil.WithMessage("base point is nil")
+		return nil, sharing.ErrIsNil.WithMessage("base point is nil")
+	}
+	if accessStructure == nil {
+		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](basePoint.Structure())
 	f := algebra.StructureMustBeAs[algebra.PrimeField[FE]](group.ScalarStructure())
-	shamirScheme, err := shamir.NewScheme(f, threshold, shareholders)
+	shamirScheme, err := shamir.NewScheme(f, accessStructure)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create shamir scheme")
 	}
@@ -66,7 +67,7 @@ func (d *Scheme[E, FE]) DealRandom(prng io.Reader) (*DealerOutput[E, FE], *Secre
 // the dealing polynomial.
 func (d *Scheme[E, FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (output *DealerOutput[E, FE], secret *Secret[FE], dealerFunc DealerFunc[FE], err error) {
 	if prng == nil {
-		return nil, nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	value, err := d.shamirSSS.Field().Random(prng)
 	if err != nil {
@@ -135,16 +136,16 @@ func (d *Scheme[E, FE]) ReconstructAndVerify(reference VerificationVector[E, FE]
 // Returns nil if g^{share} equals the evaluation of the verification vector at the share's ID.
 func (d *Scheme[E, FE]) Verify(share *Share[FE], reference VerificationVector[E, FE]) error {
 	if reference == nil {
-		return ErrIsNil.WithMessage("verification vector is nil")
+		return sharing.ErrIsNil.WithMessage("verification vector is nil")
 	}
 	if reference.Degree()+1 != int(d.shamirSSS.AccessStructure().Threshold()) {
-		return ErrVerification.WithMessage("verification vector degree %d does not match expected degree %d", reference.Degree(), d.shamirSSS.AccessStructure().Threshold()-1)
+		return sharing.ErrVerification.WithMessage("verification vector degree %d does not match expected degree %d", reference.Degree(), d.shamirSSS.AccessStructure().Threshold()-1)
 	}
 	x := d.shamirSSS.SharingIDToLagrangeNode(share.ID())
 	yInExponent := reference.Eval(x)
 	shareInExponent := d.basePoint.ScalarOp(share.Value())
 	if !yInExponent.Equal(shareInExponent) {
-		return ErrVerification.WithMessage("verification vector does not match share in exponent")
+		return sharing.ErrVerification.WithMessage("verification vector does not match share in exponent")
 	}
 	return nil
 }

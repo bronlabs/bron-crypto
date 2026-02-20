@@ -16,7 +16,7 @@ type DNFAccessStructure struct {
 	minimalQualifiedSets []ds.Set[ID]
 }
 
-func NewDNF(qualifiedSets ...ds.Set[ID]) (*DNFAccessStructure, error) {
+func NewDNFAccessStructure(qualifiedSets ...ds.Set[ID]) (*DNFAccessStructure, error) {
 	minimalQualifiedSets, err := normaliseDNF(qualifiedSets...)
 	if err != nil {
 		return nil, errs.Wrap(err)
@@ -124,6 +124,7 @@ func (d *DNFAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	}
 }
 
+//nolint:dupl // Keep DNF normalisation logic explicit and parallel to CNF for readability.
 func normaliseDNF(qualifiedSets ...ds.Set[ID]) ([]ds.Set[ID], error) {
 	if len(qualifiedSets) == 0 {
 		return nil, ErrValue.WithMessage("must have at least one qualified set")
@@ -140,17 +141,17 @@ func normaliseDNF(qualifiedSets ...ds.Set[ID]) ([]ds.Set[ID], error) {
 		if s.Contains(0) {
 			return nil, ErrMembership.WithMessage("qualified set cannot contain shareholder ID 0")
 		}
-		normalized := hashset.NewComparable[ID](s.List()...).Freeze()
+		normalised := hashset.NewComparable[ID](s.List()...).Freeze()
 
 		alreadySeen := false
 		for _, seen := range uniqueSets {
-			if normalized.Equal(seen) {
+			if normalised.Equal(seen) {
 				alreadySeen = true
 				break
 			}
 		}
 		if !alreadySeen {
-			uniqueSets = append(uniqueSets, normalized)
+			uniqueSets = append(uniqueSets, normalised)
 		}
 	}
 

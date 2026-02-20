@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -61,7 +61,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("should generate valid shares", func(t *testing.T) {
 		t.Parallel()
 
-		scheme, err := feldman.NewScheme(k256.NewCurve().Generator(), as.Threshold(), as.Shareholders())
+		scheme, err := feldman.NewScheme(k256.NewCurve().Generator(), as)
 		require.NoError(t, err)
 		zero, err := scheme.Reconstruct(slices.Collect(maps.Values(shares))...)
 		require.NoError(t, err)

@@ -11,15 +11,31 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 )
+
+func newPedersenScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	tb testing.TB,
+	key *pedcom.Key[E, S],
+	threshold uint,
+	shareholders ds.Set[sharing.ID],
+) (*pedersen.Scheme[E, S], error) {
+	tb.Helper()
+
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
+	if err != nil {
+		return nil, err
+	}
+	return pedersen.NewScheme(key, ac)
+}
 
 // TestSchemeCreation tests creation of Pedersen schemes with various parameters
 func TestSchemeCreation(t *testing.T) {
@@ -50,7 +66,7 @@ func TestSchemeCreation(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(tc.total)
-				scheme, err := pedersen.NewScheme(key, tc.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, tc.threshold, shareholders)
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
 				require.Equal(t, tc.threshold, scheme.AccessStructure().Threshold())
@@ -63,40 +79,40 @@ func TestSchemeCreation(t *testing.T) {
 		t.Parallel()
 		// Threshold of 0
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		_, err := pedersen.NewScheme(key, 0, shareholders)
+		_, err := newPedersenScheme(t, key, 0, shareholders)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrValue)
+		require.ErrorIs(t, err, sharing.ErrValue)
 
 		// Threshold of 1
-		_, err = pedersen.NewScheme(key, 1, shareholders)
+		_, err = newPedersenScheme(t, key, 1, shareholders)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrValue)
+		require.ErrorIs(t, err, sharing.ErrValue)
 
 		// Threshold greater than total
-		_, err = pedersen.NewScheme(key, 6, shareholders)
+		_, err = newPedersenScheme(t, key, 6, shareholders)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrValue)
+		require.ErrorIs(t, err, sharing.ErrValue)
 	})
 
 	t.Run("invalid total", func(t *testing.T) {
 		t.Parallel()
 		// Total of 0
 		shareholders := sharing.NewOrdinalShareholderSet(0)
-		_, err := pedersen.NewScheme(key, 2, shareholders)
+		_, err := newPedersenScheme(t, key, 2, shareholders)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrValue)
+		require.ErrorIs(t, err, sharing.ErrValue)
 
 		// Total of 1
 		shareholders = sharing.NewOrdinalShareholderSet(1)
-		_, err = pedersen.NewScheme(key, 2, shareholders)
+		_, err = newPedersenScheme(t, key, 2, shareholders)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrValue)
+		require.ErrorIs(t, err, sharing.ErrValue)
 	})
 
 	t.Run("nil key", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		_, err := pedersen.NewScheme[*k256.Point](nil, 2, shareholders)
+		_, err := newPedersenScheme[*k256.Point](t, nil, 2, shareholders)
 		require.Error(t, err)
 		require.ErrorIs(t, err, pedcom.ErrInvalidArgument)
 	})
@@ -117,7 +133,7 @@ func TestSanity(t *testing.T) {
 	threshold := uint(2)
 	total := uint(5)
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	scheme, err := pedersen.NewScheme(key, threshold, shareholders)
+	scheme, err := newPedersenScheme(t, key, threshold, shareholders)
 	require.NoError(t, err, "could not create scheme")
 
 	secret := pedersen.NewSecret(field.FromUint64(42))
@@ -197,21 +213,21 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 			secret:      nil,
 			prng:        pcg.NewRandomised(),
 			expectError: true,
-			errorIs:     pedersen.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name:        "nil prng",
 			secret:      fortyTwoSecret,
 			prng:        nil,
 			expectError: true,
-			errorIs:     shamir.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name:        "both nil",
 			secret:      nil,
 			prng:        nil,
 			expectError: true,
-			errorIs:     pedersen.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 		},
 	}
 
@@ -279,7 +295,7 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 					insufficientShares := shareSlice[:threshold-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
-					require.ErrorIs(t, err, shamir.ErrFailed)
+					require.ErrorIs(t, err, sharing.ErrFailed)
 				}
 
 				// Verify each share
@@ -325,7 +341,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 			name:        "nil prng",
 			prng:        nil,
 			expectError: true,
-			errorIs:     pedersen.ErrIsNil,
+			errorIs:     sharing.ErrIsNil,
 			iterations:  1,
 		},
 		{
@@ -451,7 +467,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
 				if config.errors {
 					require.Error(t, err, "should return error for invalid configuration")
 					return
@@ -486,7 +502,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
 				require.NoError(t, err)
 				dealCases(t, scheme, field)
 			})
@@ -521,7 +537,7 @@ func TestDealRandom(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
 				require.NoError(t, err)
 				dealRandomCases(t, scheme)
 			})
@@ -539,7 +555,7 @@ func TestDealRandom(t *testing.T) {
 		require.NoError(t, err)
 
 		shareholders := sharing.NewOrdinalShareholderSet(6)
-		scheme, err := pedersen.NewScheme(key, 3, shareholders)
+		scheme, err := newPedersenScheme(t, key, 3, shareholders)
 		require.NoError(t, err)
 		dealRandomCases(t, scheme)
 	})
@@ -693,7 +709,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedersen.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 	})
 
 	t.Run("nil secret message", func(t *testing.T) {
@@ -706,7 +722,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedersen.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 	})
 }
 
@@ -739,7 +755,7 @@ func TestVerification(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
 				require.NoError(t, err)
 				verificationCases(t, scheme, field)
 			})
@@ -758,7 +774,7 @@ func TestVerification(t *testing.T) {
 		require.NoError(t, err)
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := pedersen.NewScheme(key, 2, shareholders)
+		scheme, err := newPedersenScheme(t, key, 2, shareholders)
 		require.NoError(t, err)
 		verificationCases(t, scheme, field)
 	})
@@ -1031,7 +1047,7 @@ func TestHomomorphicOperations(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
 				require.NoError(t, err)
 				homomorphicOpsCases(t, scheme, field)
 			})
@@ -1050,7 +1066,7 @@ func TestHomomorphicOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := pedersen.NewScheme(key, 2, shareholders)
+		scheme, err := newPedersenScheme(t, key, 2, shareholders)
 		require.NoError(t, err)
 		homomorphicOpsCases(t, scheme, field)
 	})
@@ -1088,7 +1104,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		}
 
 		// Verify reconstruction with additive shares
-		additiveScheme, err := additive.NewScheme(field, scheme.AccessStructure().Shareholders())
+		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
 		require.NoError(t, err)
 
 		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
@@ -1122,7 +1138,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		}
 
 		// Verify reconstruction
-		additiveScheme, err := additive.NewScheme(field, qualifiedIds.Freeze())
+		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
 		require.NoError(t, err)
 
 		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
@@ -1149,7 +1165,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrMembership)
+		require.ErrorIs(t, err, sharing.ErrMembership)
 		require.Nil(t, additiveShare)
 	})
 
@@ -1217,7 +1233,7 @@ func TestToAdditive(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1248,7 +1264,7 @@ func TestToAdditive(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1272,7 +1288,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	t.Run("valid dealer function", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := pedersen.NewScheme(key, 2, shareholders)
+		scheme, err := newPedersenScheme(t, key, 2, shareholders)
 		require.NoError(t, err)
 
 		secret := pedersen.NewSecret(field.FromUint64(42))
@@ -1294,13 +1310,13 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := pedersen.NewScheme(key, 2, shareholders)
+		scheme, err := newPedersenScheme(t, key, 2, shareholders)
 		require.NoError(t, err)
 
 		secret := pedersen.NewSecret(field.FromUint64(42))
 		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, nil)
 		require.Error(t, err)
-		require.ErrorIs(t, err, shamir.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, shares)
 		require.Nil(t, dealerFunc)
 	})
@@ -1308,12 +1324,12 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	t.Run("nil secret", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := pedersen.NewScheme(key, 2, shareholders)
+		scheme, err := newPedersenScheme(t, key, 2, shareholders)
 		require.NoError(t, err)
 
 		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, pcg.NewRandomised())
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedersen.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, shares)
 		require.Nil(t, dealerFunc)
 	})
@@ -1321,7 +1337,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	t.Run("verify shares from dealer function", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(7)
-		scheme, err := pedersen.NewScheme(key, 3, shareholders)
+		scheme, err := newPedersenScheme(t, key, 3, shareholders)
 		require.NoError(t, err)
 
 		secret := pedersen.NewSecret(field.FromUint64(100))
@@ -1358,7 +1374,7 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 	t.Run("valid random dealer function", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := pedersen.NewScheme(key, 2, shareholders)
+		scheme, err := newPedersenScheme(t, key, 2, shareholders)
 		require.NoError(t, err)
 
 		shares, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(pcg.NewRandomised())
@@ -1385,12 +1401,12 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := pedersen.NewScheme(key, 2, shareholders)
+		scheme, err := newPedersenScheme(t, key, 2, shareholders)
 		require.NoError(t, err)
 
 		shares, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(nil)
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedersen.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 		require.Nil(t, shares)
 		require.Nil(t, secret)
 		require.Nil(t, dealerFunc)
@@ -1411,7 +1427,7 @@ func TestNewShare(t *testing.T) {
 	require.NoError(t, err)
 
 	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := pedersen.NewScheme(key, 2, shareholders)
+	scheme, err := newPedersenScheme(t, key, 2, shareholders)
 	require.NoError(t, err)
 
 	t.Run("valid share creation", func(t *testing.T) {
@@ -1449,7 +1465,7 @@ func TestNewShare(t *testing.T) {
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedersen.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 	})
 
 	t.Run("nil blinding witness", func(t *testing.T) {
@@ -1464,7 +1480,7 @@ func TestNewShare(t *testing.T) {
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedersen.ErrIsNil)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 	})
 
 	t.Run("invalid shareholder ID", func(t *testing.T) {
@@ -1484,7 +1500,7 @@ func TestNewShare(t *testing.T) {
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedersen.ErrMembership)
+		require.ErrorIs(t, err, sharing.ErrMembership)
 	})
 
 	t.Run("nil access structure allowed", func(t *testing.T) {
@@ -1578,7 +1594,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 	require.NoError(t, err)
 
 	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := pedersen.NewScheme(key, 2, shareholders)
+	scheme, err := newPedersenScheme(t, key, 2, shareholders)
 	require.NoError(t, err)
 
 	t.Run("blinding factor provides perfect hiding", func(t *testing.T) {
@@ -1689,7 +1705,7 @@ func BenchmarkDeal(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
@@ -1728,7 +1744,7 @@ func BenchmarkDealRandom(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -1766,7 +1782,7 @@ func BenchmarkReconstruct(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
@@ -1810,7 +1826,7 @@ func BenchmarkVerification(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
@@ -1842,7 +1858,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	require.NoError(b, err)
 
 	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := pedersen.NewScheme(key, 3, shareholders)
+	scheme, err := newPedersenScheme(b, key, 3, shareholders)
 	require.NoError(b, err)
 
 	// Create shares
@@ -1897,7 +1913,7 @@ func BenchmarkToAdditive(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))

@@ -10,35 +10,38 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// Name is the human-readable name for the CNF variant of ISN.
-const Name sharing.Name = "CNF secret sharing scheme"
+// Name is the human-readable name for ISN secret sharing.
+const Name sharing.Name = "ISN secret sharing scheme"
 
 // Scheme implements the Ito-Saito-Nishizeki secret sharing scheme with
-// a CNF (Conjunctive Normal Form) access structure. The access structure
-// is specified by maximal unqualified sets (clauses). Each share is a vector
-// with one component per maximal unqualified set.
+// a monotone access structure represented via maximal unqualified sets.
+// Each share is a vector with one component per maximal unqualified set.
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
 	sampler *Sampler[E]
 	ac      sharing.MonotoneAccessStructure
 }
 
-// NewFiniteScheme creates a new CNF ISN scheme over the given finite group
+// NewFiniteScheme creates a new ISN scheme over the given finite group
 // with the specified access structure.
 //
 // Parameters:
 //   - g: The finite group over which secrets and shares are defined
-//   - ac: The CNF access structure specifying maximal unqualified sets
+//   - ac: The monotone access structure specifying maximal unqualified sets
 //
 // Returns the initialised scheme.
 func NewFiniteScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
 	ac sharing.MonotoneAccessStructure,
 ) (*Scheme[E], error) {
+	if ac == nil {
+		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
+	}
+
 	sampler, err := NewFiniteGroupElementSampler(g)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create sampler")
@@ -55,7 +58,7 @@ func (*Scheme[E]) Name() sharing.Name {
 	return Name
 }
 
-// AccessStructure returns the CNF access structure (maximal unqualified sets).
+// AccessStructure returns the scheme access structure.
 func (c *Scheme[E]) AccessStructure() sharing.MonotoneAccessStructure {
 	return c.ac
 }
@@ -143,14 +146,15 @@ func (c *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 //   - An error if dealing fails
 func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (*DealerOutput[E], DealerFunc[E], error) {
 	if prng == nil {
-		return nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	if secret == nil {
-		return nil, nil, ErrIsNil.WithMessage("secret is nil")
+		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
-	l := len(c.ac) // number of maximal unqualified sets / clauses
+	clauses := c.clauses()
+	l := len(clauses) // number of maximal unqualified sets / clauses
 	if l == 0 {
-		return nil, nil, ErrFailed.WithMessage("access structure has no maximal unqualified sets")
+		return nil, nil, sharing.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
 
 	// step 2: create an ℓ-out-of-ℓ additive sharing of s into pieces r1..rℓ
@@ -159,7 +163,7 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (
 		return nil, nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
 	dealerFunc := make(DealerFunc[E])
-	for i, clause := range c.ac {
+	for i, clause := range clauses {
 		dealerFunc[clause] = rs[i]
 	}
 
@@ -193,28 +197,29 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
-	if !c.ac.IsAuthorized(ids...) {
-		return nil, ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
+	if !c.ac.IsQualified(ids...) {
+		return nil, sharing.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 
+	clauses := c.clauses()
 	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 	for _, share := range shares {
 		if share == nil {
-			return nil, ErrFailed.WithMessage("nil share provided")
+			return nil, sharing.ErrFailed.WithMessage("nil share provided")
 		}
 
-		for _, maxUnqualifiedSet := range c.ac {
+		for _, maxUnqualifiedSet := range clauses {
 			if maxUnqualifiedSet.Contains(share.id) {
 				continue
 			}
 
 			chunk, ok := share.v[maxUnqualifiedSet]
 			if !ok || utils.IsNil(chunk) {
-				return nil, ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", share.id, maxUnqualifiedSet.List())
+				return nil, sharing.ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", share.id, maxUnqualifiedSet.List())
 			}
 			if refChunk, contains := chunks[maxUnqualifiedSet]; contains {
 				if !refChunk.Equal(chunk) {
-					return nil, ErrFailed.WithMessage("inconsistent shares")
+					return nil, sharing.ErrFailed.WithMessage("inconsistent shares")
 				}
 			} else {
 				chunks[maxUnqualifiedSet] = chunk
@@ -223,4 +228,17 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	}
 
 	return NewSecret(iterutils.Reduce(maps.Values(chunks), c.g.OpIdentity(), E.Op)), nil
+}
+
+func (c *Scheme[E]) clauses() []bitset.ImmutableBitSet[sharing.ID] {
+	clausesCount := 0
+	for range c.ac.MaximalUnqualifiedSetsIter() {
+		clausesCount++
+	}
+
+	clauses := make([]bitset.ImmutableBitSet[sharing.ID], 0, clausesCount)
+	for set := range c.ac.MaximalUnqualifiedSetsIter() {
+		clauses = append(clauses, bitset.NewImmutableBitSet(set.List()...))
+	}
+	return clauses
 }

@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
@@ -24,26 +23,13 @@ type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 //
 // Parameters:
 //   - f: The prime field over which sharing is performed
-//   - threshold: Minimum number of shares required for reconstruction (must be ≥ 2)
-//   - shareholders: Set of shareholder IDs who will receive shares
-//
-// The threshold must not exceed the number of shareholders.
-func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[FE], error) {
+//   - accessStructure: Threshold access structure defining quorum requirements
+func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], accessStructure *sharing.ThresholdAccessStructure) (*Scheme[FE], error) {
 	if f == nil {
-		return nil, ErrIsNil.WithMessage("invalid field")
+		return nil, sharing.ErrIsNil.WithMessage("invalid field")
 	}
-	if shareholders == nil {
-		return nil, ErrIsNil.WithMessage("shareholders is nil")
-	}
-	if threshold < 2 {
-		return nil, ErrValue.WithMessage("threshold cannot be less than 2")
-	}
-	if threshold > uint(shareholders.Size()) {
-		return nil, ErrValue.WithMessage("threshold cannot be greater than total number of shareholders")
-	}
-	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create access structure")
+	if accessStructure == nil {
+		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
 	ring, err := polynomials.NewPolynomialRing(f)
 	if err != nil {
@@ -53,7 +39,7 @@ func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], thres
 	return &Scheme[FE]{
 		f:        f,
 		polyRing: ring,
-		ac:       ac,
+		ac:       accessStructure,
 	}, nil
 }
 
@@ -82,7 +68,7 @@ func (d *Scheme[FE]) PolynomialRing() *polynomials.PolynomialRing[FE] {
 // for verification or further computation.
 func (d *Scheme[FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[FE], *Secret[FE], DealerFunc[FE], error) {
 	if prng == nil {
-		return nil, nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	value, err := d.f.Random(prng)
 	if err != nil {
@@ -109,10 +95,10 @@ func (d *Scheme[FE]) DealRandom(prng io.Reader) (*DealerOutput[FE], *Secret[FE],
 // dealing polynomial f(x) where f(0) = secret.
 func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE], DealerFunc[FE], error) {
 	if secret == nil {
-		return nil, nil, ErrIsNil.WithMessage("secret is nil")
+		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
 	if prng == nil {
-		return nil, nil, ErrIsNil.WithMessage("prng is nil")
+		return nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 	poly, err := d.polyRing.RandomPolynomialWithConstantTerm(int(d.ac.Threshold()-1), secret.v, prng)
 	if err != nil {
@@ -147,8 +133,8 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
-	if !d.ac.IsAuthorized(ids...) {
-		return nil, ErrFailed.WithMessage("shares are not authorized by the access structure")
+	if !d.ac.IsQualified(ids...) {
+		return nil, sharing.ErrFailed.WithMessage("shares are not authorized by the access structure")
 	}
 	nodes := make([]FE, sharesSet.Size())
 	values := make([]FE, sharesSet.Size())

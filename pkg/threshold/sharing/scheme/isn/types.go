@@ -4,13 +4,13 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/errs-go/errs"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
 // NewFiniteGroupElementSampler creates a new Sampler for secrets and shares based on the random sampling function of a finite group. It returns an error if the provided group is nil.
 func NewFiniteGroupElementSampler[E algebra.GroupElement[E]](g algebra.FiniteGroup[E]) (*Sampler[E], error) {
 	if g == nil {
-		return nil, ErrIsNil.WithMessage("group is nil")
+		return nil, sharing.ErrIsNil.WithMessage("group is nil")
 	}
 	return &Sampler[E]{
 		secrets: g.Random,
@@ -63,10 +63,3 @@ func (s *Secret[E]) Clone() *Secret[E] {
 		v: s.v.Clone(),
 	}
 }
-
-var (
-	ErrIsNil        = errs.New("is nil")
-	ErrMembership   = errs.New("membership error")
-	ErrFailed       = errs.New("failed")
-	ErrUnauthorized = errs.New("unauthorised")
-)

@@ -15,7 +15,7 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/refresh"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -30,7 +30,7 @@ func Test_HappyPath(t *testing.T) {
 	as, err := sharing.NewThresholdAccessStructure(2, sharingIDs)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
-	scheme, err := feldman.NewScheme(curve.Generator(), 2, sharingIDs)
+	scheme, err := feldman.NewScheme(curve.Generator(), as)
 	require.NoError(t, err)
 	secretValue, err := k256.NewScalarField().Random(prng)
 	require.NoError(t, err)

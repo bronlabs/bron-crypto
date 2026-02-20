@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/errs-go/errs"
@@ -79,7 +79,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		return nil, ErrNilArgument.WithMessage("partial signatures cannot be nil")
 	}
 	quorum := hashset.NewComparable(partialSignatures.Keys()...).Freeze()
-	if !a.pkm.AccessStructure().IsAuthorized(quorum.List()...) {
+	if !a.pkm.AccessStructure().IsQualified(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
 	}
 	R := iterutils.Reduce(slices.Values(partialSignatures.Values()),

@@ -10,7 +10,8 @@ Extends Feldman VSS with information-theoretic hiding.
 ## Usage
 
 ```go
-scheme, _ := pedersen.NewScheme(pedersenKey, threshold, shareholders)
+ac, _ := sharing.NewThresholdAccessStructure(threshold, shareholders)
+scheme, _ := pedersen.NewScheme(pedersenKey, ac)
 
 // Deal shares with verification vector
 output, _ := scheme.Deal(secret, prng)

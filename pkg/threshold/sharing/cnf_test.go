@@ -1,3 +1,4 @@
+//nolint:testpackage // White-box tests validate internal normalisation details.
 package sharing
 
 import (
@@ -47,7 +48,7 @@ func TestNewCNF(t *testing.T) {
 		require.Nil(t, c)
 	})
 
-	t.Run("normalizes duplicates and keeps only maximal sets", func(t *testing.T) {
+	t.Run("normalises duplicates and keeps only maximal sets", func(t *testing.T) {
 		t.Parallel()
 
 		s1 := hashset.NewComparable[ID](1, 2).Freeze()
