@@ -214,16 +214,6 @@ type Matrix[M, S any] interface {
 	ColumnScalarMul(i int, scalar S) (M, error)
 
 	TryMul(M) (M, error)
-
-	// Set(row, col int, value Ei) (M, error)
-	// SetRow(row int, values ...Ei) (M, error)
-	// SetColumn(col int, values ...Ei) (M, error)
-
-	// InsertRow(row int, values ...Ei) (M, error)
-	// InsertColumn(col int, values ...Ei) (M, error)
-
-	// DeleteRow(row int) (M, error)
-	// DeleteColumn(col int) (M, error)
 }
 
 type MatrixAlgebra[SM, S any] interface {
