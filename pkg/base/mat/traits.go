@@ -88,6 +88,10 @@ func (mm *MatrixModuleTrait[S, W, WT]) ScalarStructure() algebra.Structure[S] {
 	return mm.ring
 }
 
+func (mm *MatrixModuleTrait[S, W, WT]) ScalarRing() algebra.Ring[S] {
+	return mm.ring
+}
+
 type MatrixTrait[S algebra.RingElement[S], W matrixWrapperPtrConstraint[S, WT], WT any] struct {
 	self W
 	m, n int
@@ -108,14 +112,14 @@ func (m *MatrixTrait[S, W, WT]) Dimensions() (rows, cols int) {
 
 func (m *MatrixTrait[S, W, WT]) Get(row, col int) (S, error) {
 	if row < 0 || row >= m.m || col < 0 || col >= m.n {
-		return *new(S), ErrDimensionMismatch.WithMessage("index out of bounds: row %d, col %d for matrix of dimensions %dx%d", row, col, m.m, m.n)
+		return *new(S), ErrDimension.WithMessage("index out of bounds: row %d, col %d for matrix of dimensions %dx%d", row, col, m.m, m.n)
 	}
 	return m.v[m.idx(row, col)], nil
 }
 
 func (m *MatrixTrait[S, W, WT]) GetRow(i int) ([]S, error) {
 	if i < 0 || i >= m.m {
-		return nil, ErrDimensionMismatch.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
+		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
 	}
 	row := make([]S, m.n)
 	copy(row, m.v[i*m.n:(i+1)*m.n])
@@ -124,7 +128,7 @@ func (m *MatrixTrait[S, W, WT]) GetRow(i int) ([]S, error) {
 
 func (m *MatrixTrait[S, W, WT]) GetColumn(j int) ([]S, error) {
 	if j < 0 || j >= m.n {
-		return nil, ErrDimensionMismatch.WithMessage("column index out of bounds: %d for matrix with %d columns", j, m.n)
+		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", j, m.n)
 	}
 	column := make([]S, m.m)
 	for i := range m.m {
@@ -133,9 +137,13 @@ func (m *MatrixTrait[S, W, WT]) GetColumn(j int) ([]S, error) {
 	return column, nil
 }
 
+func (m *MatrixTrait[S, W, WT]) Op(other W) W {
+	return m.Add(other)
+}
+
 func (m *MatrixTrait[S, W, WT]) AddMut(other W) W {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
-		panic(ErrDimensionMismatch.WithMessage("cannot add: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
+		panic(ErrDimension.WithMessage("cannot add: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
 	}
 	otherData := other.data()
 	for i := range m.v {
@@ -151,7 +159,7 @@ func (m *MatrixTrait[S, W, WT]) Add(other W) W {
 
 func (m *MatrixTrait[S, W, WT]) SubMut(other W) W {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
-		panic(ErrDimensionMismatch.WithMessage("cannot subtract: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
+		panic(ErrDimension.WithMessage("cannot subtract: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
 	}
 	otherData := other.data()
 	for i := range m.v {
@@ -226,69 +234,69 @@ func (m *MatrixTrait[S, W, WT]) IsSquare() bool {
 	return m.m == m.n
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnAddMut(i, j int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) ColumnAddMut(i, j int, scalar S) (W, error) {
 	if i < 0 || i >= m.n || j < 0 || j >= m.n {
-		panic(ErrDimensionMismatch.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n))
+		return nil, ErrDimension.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n)
 	}
 	for row := range m.m {
 		m.v[m.idx(row, j)] = m.v[m.idx(row, j)].Add(m.v[m.idx(row, i)].Mul(scalar))
 	}
-	return m.self
+	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnAdd(i, j int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) ColumnAdd(i, j int, scalar S) (W, error) {
 	c := m.clone()
 	return c.ColumnAddMut(i, j, scalar)
 }
 
-func (m *MatrixTrait[S, W, WT]) RowAddMut(i, j int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) RowAddMut(i, j int, scalar S) (W, error) {
 	if i < 0 || i >= m.m || j < 0 || j >= m.m {
-		panic(ErrDimensionMismatch.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m))
+		return nil, ErrDimension.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m)
 	}
 	for col := range m.n {
 		m.v[m.idx(j, col)] = m.v[m.idx(j, col)].Add(m.v[m.idx(i, col)].Mul(scalar))
 	}
-	return m.self
+	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) RowAdd(i, j int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) RowAdd(i, j int, scalar S) (W, error) {
 	c := m.clone()
 	return c.RowAddMut(i, j, scalar)
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnScalarMulMut(i int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) ColumnScalarMulMut(i int, scalar S) (W, error) {
 	if i < 0 || i >= m.n {
-		panic(ErrDimensionMismatch.WithMessage("column index out of bounds: %d for matrix with %d columns", i, m.n))
+		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", i, m.n)
 	}
 	for row := range m.m {
 		m.v[m.idx(row, i)] = m.v[m.idx(row, i)].Mul(scalar)
 	}
-	return m.self
+	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnScalarMul(i int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) ColumnScalarMul(i int, scalar S) (W, error) {
 	c := m.clone()
 	return c.ColumnScalarMulMut(i, scalar)
 }
 
-func (m *MatrixTrait[S, W, WT]) RowScalarMulMut(i int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) RowScalarMulMut(i int, scalar S) (W, error) {
 	if i < 0 || i >= m.m {
-		panic(ErrDimensionMismatch.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m))
+		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
 	}
 	for col := range m.n {
 		m.v[m.idx(i, col)] = m.v[m.idx(i, col)].Mul(scalar)
 	}
-	return m.self
+	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) RowScalarMul(i int, scalar S) W {
+func (m *MatrixTrait[S, W, WT]) RowScalarMul(i int, scalar S) (W, error) {
 	c := m.clone()
 	return c.RowScalarMulMut(i, scalar)
 }
 
-func (m *MatrixTrait[S, W, WT]) Augment(other W) W {
+func (m *MatrixTrait[S, W, WT]) Augment(other W) (W, error) {
 	if m.m != other.rows() {
-		panic(ErrDimensionMismatch.WithMessage("cannot concatenate columns: number of rows in first matrix (%d) does not match number of rows in second matrix (%d)", m.m, other.rows()))
+		return nil, ErrDimension.WithMessage("cannot concatenate columns: number of rows in first matrix (%d) does not match number of rows in second matrix (%d)", m.m, other.rows())
 	}
 	var out WT
 	W(&out).init(m.m, m.n+other.cols())
@@ -298,12 +306,12 @@ func (m *MatrixTrait[S, W, WT]) Augment(other W) W {
 		copy(d[i*(m.n+other.cols()):i*(m.n+other.cols())+m.n], m.v[i*m.n:(i+1)*m.n])
 		copy(d[i*(m.n+other.cols())+m.n:(i+1)*(m.n+other.cols())], otherData[i*other.cols():(i+1)*other.cols()])
 	}
-	return W(&out)
+	return W(&out), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) Stack(other W) W {
+func (m *MatrixTrait[S, W, WT]) Stack(other W) (W, error) {
 	if m.n != other.cols() {
-		panic(ErrDimensionMismatch.WithMessage("cannot concatenate rows: number of columns in first matrix (%d) does not match number of columns in second matrix (%d)", m.n, other.cols()))
+		return nil, ErrDimension.WithMessage("cannot concatenate rows: number of columns in first matrix (%d) does not match number of columns in second matrix (%d)", m.n, other.cols())
 	}
 	var out WT
 	W(&out).init(m.m+other.rows(), m.n)
@@ -311,46 +319,46 @@ func (m *MatrixTrait[S, W, WT]) Stack(other W) W {
 	otherData := other.data()
 	copy(d[:m.m*m.n], m.v)
 	copy(d[m.m*m.n:], otherData)
-	return W(&out)
+	return W(&out), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapColumnMut(i, j int) W {
+func (m *MatrixTrait[S, W, WT]) SwapColumnMut(i, j int) (W, error) {
 	if i < 0 || i >= m.n || j < 0 || j >= m.n {
-		panic(ErrDimensionMismatch.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n))
+		panic(ErrDimension.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n))
 	}
 	for row := range m.m {
 		idx1 := m.idx(row, i)
 		idx2 := m.idx(row, j)
 		m.v[idx1], m.v[idx2] = m.v[idx2], m.v[idx1]
 	}
-	return m.self
+	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapColumn(i, j int) W {
+func (m *MatrixTrait[S, W, WT]) SwapColumn(i, j int) (W, error) {
 	c := m.clone()
 	return c.SwapColumnMut(i, j)
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapRowMut(i, j int) W {
+func (m *MatrixTrait[S, W, WT]) SwapRowMut(i, j int) (W, error) {
 	if i < 0 || i >= m.m || j < 0 || j >= m.m {
-		panic(ErrDimensionMismatch.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m))
+		panic(ErrDimension.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m))
 	}
 	for col := range m.n {
 		idx1 := m.idx(i, col)
 		idx2 := m.idx(j, col)
 		m.v[idx1], m.v[idx2] = m.v[idx2], m.v[idx1]
 	}
-	return m.self
+	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapRow(i, j int) W {
+func (m *MatrixTrait[S, W, WT]) SwapRow(i, j int) (W, error) {
 	c := m.clone()
 	return c.SwapRowMut(i, j)
 }
 
 func (m *MatrixTrait[S, W, WT]) TryMul(other W) (W, error) {
 	if m.n != other.rows() {
-		return nil, ErrDimensionMismatch.WithMessage("cannot multiply: number of columns in first matrix (%d) does not match number of rows in second matrix (%d)", m.n, other.rows())
+		return nil, ErrDimension.WithMessage("cannot multiply: number of columns in first matrix (%d) does not match number of rows in second matrix (%d)", m.n, other.rows())
 	}
 	var out WT
 	W(&out).init(m.m, other.cols())
@@ -368,9 +376,21 @@ func (m *MatrixTrait[S, W, WT]) TryMul(other W) (W, error) {
 	return W(&out), nil
 }
 
+func (m *MatrixTrait[S, W, WT]) Transpose() W {
+	var out WT
+	W(&out).init(m.n, m.m)
+	outData := W(&out).data()
+	for i := range m.m {
+		for j := range m.n {
+			outData[W(&out).idx(j, i)] = m.v[m.idx(i, j)]
+		}
+	}
+	return W(&out)
+}
+
 func (m *MatrixTrait[S, W, WT]) Minor(row, col int) (W, error) {
 	if row < 0 || row >= m.m || col < 0 || col >= m.n {
-		return nil, ErrDimensionMismatch.WithMessage("index out of bounds: row %d, col %d for matrix of dimensions %dx%d", row, col, m.m, m.n)
+		return nil, ErrDimension.WithMessage("index out of bounds: row %d, col %d for matrix of dimensions %dx%d", row, col, m.m, m.n)
 	}
 	var minor WT
 	W(&minor).init(m.m-1, m.n-1)
@@ -391,18 +411,18 @@ func (m *MatrixTrait[S, W, WT]) Minor(row, col int) (W, error) {
 	return W(&minor), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) HadamardProductMut(other W) W {
+func (m *MatrixTrait[S, W, WT]) HadamardProductMut(other W) (W, error) {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
-		panic(ErrDimensionMismatch.WithMessage("cannot compute Hadamard product: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
+		return nil, ErrDimension.WithMessage("cannot compute Hadamard product: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols())
 	}
 	otherData := other.data()
 	for i := range m.v {
 		m.v[i] = m.v[i].Mul(otherData[i])
 	}
-	return m.self
+	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) HadamardProduct(other W) W {
+func (m *MatrixTrait[S, W, WT]) HadamardProduct(other W) (W, error) {
 	c := m.clone()
 	return c.HadamardProductMut(other)
 }
@@ -494,31 +514,4 @@ func (m *MatrixTrait[S, W, WT]) Clone() W {
 	copy(W(&cloned).data(), m.v)
 	return W(&cloned)
 
-}
-
-type MatrixModule2[S algebra.RingElement[S]] struct {
-	MatrixModuleTrait[S, *Matrix2[S], Matrix2[S]]
-}
-
-type Matrix2[S algebra.RingElement[S]] struct {
-	MatrixTrait[S, *Matrix2[S], Matrix2[S]]
-}
-
-func (m *Matrix2[S]) init(rows, cols int) {
-	m.m = rows
-	m.n = cols
-	m.v = make([]S, rows*cols)
-	m.self = m
-}
-
-func (m *Matrix2[S]) rows() int {
-	return m.m
-}
-
-func (m *Matrix2[S]) cols() int {
-	return m.n
-}
-
-func (m *Matrix2[S]) data() []S {
-	return m.v
 }
