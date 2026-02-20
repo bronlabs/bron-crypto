@@ -47,6 +47,24 @@ func TestMatrixAlgebraConstructor(t *testing.T) {
 	})
 }
 
+func TestMatrixAlgebraNewRowMajor(t *testing.T) {
+	t.Parallel()
+	alg := newAlgebra(t, 2)
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		m, err := alg.NewRowMajor(scalar(1), scalar(2), scalar(3), scalar(4))
+		require.NoError(t, err)
+		require.True(t, m.Equal(newSquare(t, [][]uint64{{1, 2}, {3, 4}})))
+	})
+
+	t.Run("wrong_count", func(t *testing.T) {
+		t.Parallel()
+		_, err := alg.NewRowMajor(scalar(1), scalar(2), scalar(3))
+		require.Error(t, err)
+	})
+}
+
 // --- Identity ---
 
 func TestSquareIdentity(t *testing.T) {
@@ -162,6 +180,31 @@ func TestSquareMul(t *testing.T) {
 		a := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
 		require.True(t, a.Square().Equal(a.Mul(a)))
 	})
+}
+
+func TestSquareMulAssign(t *testing.T) {
+	t.Parallel()
+	a := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
+	b := newSquare(t, [][]uint64{{5, 6}, {7, 8}})
+	expected := a.Mul(b)
+	a.MulAssign(b)
+	require.True(t, a.Equal(expected))
+}
+
+func TestSquareAsRectangular(t *testing.T) {
+	t.Parallel()
+	sq := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
+	rect := sq.AsRectangular()
+	r, c := rect.Dimensions()
+	require.Equal(t, 2, r)
+	require.Equal(t, 2, c)
+	for i := range 2 {
+		for j := range 2 {
+			sv, _ := sq.Get(i, j)
+			rv, _ := rect.Get(i, j)
+			require.True(t, sv.Equal(rv))
+		}
+	}
 }
 
 // --- Trace ---
@@ -315,4 +358,48 @@ func TestSquareSwapColumn(t *testing.T) {
 	got, err := m.SwapColumn(0, 1)
 	require.NoError(t, err)
 	require.True(t, got.Equal(newSquare(t, [][]uint64{{2, 1}, {4, 3}})))
+}
+
+// --- Augment / Stack return rectangular ---
+
+func TestSquareAugmentReturnsRectangular(t *testing.T) {
+	t.Parallel()
+	sq := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
+	col := newMatrix(t, [][]uint64{{5}, {6}})
+	// Augmenting a square matrix returns a *Matrix (rectangular), not *SquareMatrix.
+	got, err := sq.Augment(col)
+	require.NoError(t, err)
+	want := newMatrix(t, [][]uint64{{1, 2, 5}, {3, 4, 6}})
+	require.True(t, got.Equal(want))
+	r, c := got.Dimensions()
+	require.Equal(t, 2, r)
+	require.Equal(t, 3, c)
+}
+
+func TestSquareStackReturnsRectangular(t *testing.T) {
+	t.Parallel()
+	sq := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
+	row := newMatrix(t, [][]uint64{{5, 6}})
+	got, err := sq.Stack(row)
+	require.NoError(t, err)
+	want := newMatrix(t, [][]uint64{{1, 2}, {3, 4}, {5, 6}})
+	require.True(t, got.Equal(want))
+}
+
+// --- Spans on square ---
+
+func TestSquareSpans(t *testing.T) {
+	t.Parallel()
+	m := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
+	b := []S{scalar(5), scalar(11)}
+	// Spans returns *Matrix (rectangular) since the result is n×1.
+	sol, err := m.Spans(b)
+	require.NoError(t, err)
+	// Verify M*x = b
+	product, err := m.AsRectangular().TryMul(sol)
+	require.NoError(t, err)
+	for i, want := range b {
+		v, _ := product.Get(i, 0)
+		require.True(t, v.Equal(want), "row %d", i)
+	}
 }

@@ -1,12 +1,17 @@
 package mat
 
 import (
+	"crypto/sha3"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type matrixWrapper[S algebra.RingElement[S]] interface {
@@ -23,32 +28,41 @@ type matrixWrapperPtrConstraint[S algebra.RingElement[S], WT any] interface {
 	Clone() *WT
 }
 
+// MatrixModuleTrait provides shared implementation for matrix module structures.
+// It is embedded by [MatrixModule] and [MatrixAlgebra] to provide common
+// module-level operations: dimensions, serialization, and zero/identity construction.
 type MatrixModuleTrait[S algebra.RingElement[S], W matrixWrapperPtrConstraint[S, WT], WT any] struct {
-	ring algebra.Ring[S]
+	ring algebra.FiniteRing[S]
 	rows int
 	cols int
 }
 
+// Name returns a human-readable name for the module, e.g. "M_2x3(fieldName)".
 func (mm *MatrixModuleTrait[S, W, WT]) Name() string {
 	return fmt.Sprintf("M_%dx%d(%s)", mm.rows, mm.cols, mm.ring.Name())
 }
 
+// Dimensions returns the number of rows and columns.
 func (mm *MatrixModuleTrait[S, W, WT]) Dimensions() (m, n int) {
 	return mm.rows, mm.cols
 }
 
+// Order returns the cardinality of the matrix module.
 func (mm *MatrixModuleTrait[S, W, WT]) Order() algebra.Cardinal {
 	return cardinal.New(uint64(mm.rows) * uint64(mm.cols)).Mul(mm.ring.Order())
 }
 
+// ElementSize returns the byte size of a single matrix (rows * cols * scalar size).
 func (mm *MatrixModuleTrait[S, W, WT]) ElementSize() int {
 	return mm.rows * mm.cols * mm.ring.ElementSize()
 }
 
+// IsSquare reports whether the module's matrices are square.
 func (mm *MatrixModuleTrait[S, W, WT]) IsSquare() bool {
 	return mm.rows == mm.cols
 }
 
+// FromBytes deserializes a matrix from a byte slice. The length must match ElementSize.
 func (mm *MatrixModuleTrait[S, W, WT]) FromBytes(data []byte) (W, error) {
 	if len(data) != mm.ElementSize() {
 		return nil, ErrFailed.WithMessage("invalid data length: expected %d bytes, got %d", mm.ElementSize(), len(data))
@@ -70,6 +84,7 @@ func (mm *MatrixModuleTrait[S, W, WT]) FromBytes(data []byte) (W, error) {
 	return W(&matrix), nil
 }
 
+// OpIdentity returns the additive identity (zero matrix).
 func (mm *MatrixModuleTrait[S, W, WT]) OpIdentity() W {
 	var matrix WT
 	W(&matrix).init(mm.rows, mm.cols)
@@ -80,44 +95,129 @@ func (mm *MatrixModuleTrait[S, W, WT]) OpIdentity() W {
 	return W(&matrix)
 }
 
+// Zero returns the zero matrix (alias for [MatrixModuleTrait.OpIdentity]).
 func (mm *MatrixModuleTrait[S, W, WT]) Zero() W {
 	return mm.OpIdentity()
 }
 
+// New creates a matrix from a slice of row slices.
+// The number of rows must match the module's row count, all rows must have
+// length equal to the module's column count.
+func (mm *MatrixModuleTrait[S, W, WT]) New(rows [][]S) (W, error) {
+	if len(rows) != mm.rows {
+		return nil, ErrDimension.WithMessage("row count mismatch: module expects %d rows, got %d", mm.rows, len(rows))
+	}
+	var matrix WT
+	W(&matrix).init(mm.rows, mm.cols)
+	d := W(&matrix).data()
+	for i, row := range rows {
+		if len(row) != mm.cols {
+			return nil, ErrDimension.WithMessage("row %d has %d columns, expected %d", i, len(row), mm.cols)
+		}
+		copy(d[i*mm.cols:(i+1)*mm.cols], row)
+	}
+	return W(&matrix), nil
+}
+
+// NewRowMajor creates a matrix from elements in row-major order.
+// The number of elements must equal rows * cols of the module.
+func (mm *MatrixModuleTrait[S, W, WT]) NewRowMajor(elements ...S) (W, error) {
+	total := mm.rows * mm.cols
+	if len(elements) != total {
+		return nil, ErrDimension.WithMessage("element count mismatch: expected %d, got %d", total, len(elements))
+	}
+	var matrix WT
+	W(&matrix).init(mm.rows, mm.cols)
+	copy(W(&matrix).data(), elements)
+	return W(&matrix), nil
+}
+
+// Random generates a matrix with uniformly random elements from the scalar ring.
+func (mm *MatrixModuleTrait[S, W, WT]) Random(prng io.Reader) (W, error) {
+	values := make([]S, mm.rows*mm.cols)
+	var err error
+	for i := range values {
+		values[i], err = mm.ring.Random(prng)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to generate random element for matrix")
+		}
+	}
+	out, err := mm.NewRowMajor(values...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create random matrix")
+	}
+	return out, nil
+}
+
+// Hash derives a matrix deterministically from the given data.
+// Each element is hashed independently using an index-prefixed domain separation
+// scheme (SHA3-256), ensuring distinct elements for the same input.
+func (mm *MatrixModuleTrait[S, W, WT]) Hash(data []byte) (W, error) {
+	values := make([]S, mm.rows*mm.cols)
+	for i := range values {
+		di, err := hashing.HashIndexLengthPrefixed(sha3.New256, binary.BigEndian.AppendUint64(nil, uint64(i)), data)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to hash data for matrix element %d", i)
+		}
+		values[i], err = mm.ring.Hash(di)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to hash element for matrix")
+		}
+	}
+	out, err := mm.NewRowMajor(values...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create hashed matrix")
+	}
+	return out, nil
+}
+
+// ScalarStructure returns the algebraic structure of the scalar ring.
 func (mm *MatrixModuleTrait[S, W, WT]) ScalarStructure() algebra.Structure[S] {
 	return mm.ring
 }
 
-func (mm *MatrixModuleTrait[S, W, WT]) ScalarRing() algebra.Ring[S] {
+// ScalarRing returns the underlying finite scalar ring.
+func (mm *MatrixModuleTrait[S, W, WT]) ScalarRing() algebra.FiniteRing[S] {
 	return mm.ring
 }
 
-type MatrixTrait[S algebra.RingElement[S], W matrixWrapperPtrConstraint[S, WT], WT any] struct {
+// MatrixTrait provides shared implementation for matrix element types.
+// It is embedded by [Matrix] and [SquareMatrix] to provide element access,
+// arithmetic, row/column operations, and linear system solving.
+//
+// Type parameters:
+//   - S: the scalar ring element type
+//   - W/WT: the concrete matrix wrapper type (self-referential for CRTP)
+//   - RectW/RectWT: the rectangular matrix type used by Augment and Stack
+type MatrixTrait[S algebra.RingElement[S], W matrixWrapperPtrConstraint[S, WT], WT any, RectW matrixWrapperPtrConstraint[S, RectWT], RectWT any] struct {
 	self W
 	m, n int
 	v    []S
 }
 
-func (m *MatrixTrait[S, W, WT]) scalarRing() algebra.Ring[S] {
-	return algebra.StructureMustBeAs[algebra.Ring[S]](m.v[0].Structure())
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) scalarRing() algebra.FiniteRing[S] {
+	return algebra.StructureMustBeAs[algebra.FiniteRing[S]](m.v[0].Structure())
 }
 
-func (m *MatrixTrait[S, W, WT]) idx(row, col int) int {
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) idx(row, col int) int {
 	return row*m.n + col
 }
 
-func (m *MatrixTrait[S, W, WT]) Dimensions() (rows, cols int) {
+// Dimensions returns the number of rows and columns.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Dimensions() (rows, cols int) {
 	return m.m, m.n
 }
 
-func (m *MatrixTrait[S, W, WT]) Get(row, col int) (S, error) {
+// Get returns the element at (row, col), or an error if out of bounds.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Get(row, col int) (S, error) {
 	if row < 0 || row >= m.m || col < 0 || col >= m.n {
 		return *new(S), ErrDimension.WithMessage("index out of bounds: row %d, col %d for matrix of dimensions %dx%d", row, col, m.m, m.n)
 	}
 	return m.v[m.idx(row, col)], nil
 }
 
-func (m *MatrixTrait[S, W, WT]) GetRow(i int) ([]S, error) {
+// GetRow returns a copy of the i-th row.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) GetRow(i int) ([]S, error) {
 	if i < 0 || i >= m.m {
 		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
 	}
@@ -126,7 +226,8 @@ func (m *MatrixTrait[S, W, WT]) GetRow(i int) ([]S, error) {
 	return row, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) GetColumn(j int) ([]S, error) {
+// GetColumn returns a copy of the j-th column.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) GetColumn(j int) ([]S, error) {
 	if j < 0 || j >= m.n {
 		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", j, m.n)
 	}
@@ -137,11 +238,13 @@ func (m *MatrixTrait[S, W, WT]) GetColumn(j int) ([]S, error) {
 	return column, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) Op(other W) W {
+// Op returns the group operation result (addition). Alias for [MatrixTrait.Add].
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Op(other W) W {
 	return m.Add(other)
 }
 
-func (m *MatrixTrait[S, W, WT]) AddMut(other W) W {
+// AddAssign adds other to m in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) AddAssign(other W) {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
 		panic(ErrDimension.WithMessage("cannot add: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
 	}
@@ -149,15 +252,17 @@ func (m *MatrixTrait[S, W, WT]) AddMut(other W) W {
 	for i := range m.v {
 		m.v[i] = m.v[i].Add(otherData[i])
 	}
-	return m.self
 }
 
-func (m *MatrixTrait[S, W, WT]) Add(other W) W {
+// Add returns m + other as a new matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Add(other W) W {
 	c := m.clone()
-	return c.AddMut(other)
+	c.AddAssign(other)
+	return c.self
 }
 
-func (m *MatrixTrait[S, W, WT]) SubMut(other W) W {
+// SubAssign subtracts other from m in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SubAssign(other W) {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
 		panic(ErrDimension.WithMessage("cannot subtract: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
 	}
@@ -165,52 +270,63 @@ func (m *MatrixTrait[S, W, WT]) SubMut(other W) W {
 	for i := range m.v {
 		m.v[i] = m.v[i].Sub(otherData[i])
 	}
-	return m.self
 }
 
-func (m *MatrixTrait[S, W, WT]) TrySub(other W) (W, error) {
+// TrySub returns m - other. The error return exists for interface compatibility.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) TrySub(other W) (W, error) {
 	return m.Sub(other), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) Sub(other W) W {
+// Sub returns m - other as a new matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Sub(other W) W {
 	c := m.clone()
-	return c.SubMut(other)
+	c.SubAssign(other)
+	return c.self
 }
 
-func (m *MatrixTrait[S, W, WT]) DoubleMut() W {
-	return m.AddMut(m.self)
+// DoubleAssign doubles m in place: m = m + m.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) DoubleAssign() {
+	m.AddAssign(m.self)
 }
 
-func (m *MatrixTrait[S, W, WT]) Double() W {
+// Double returns 2*m as a new matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Double() W {
 	c := m.clone()
-	return c.DoubleMut()
+	c.DoubleAssign()
+	return c.self
 }
 
-func (m *MatrixTrait[S, W, WT]) OpInv() W {
+// OpInv returns the additive inverse (alias for [MatrixTrait.Neg]).
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) OpInv() W {
 	return m.Neg()
 }
 
-func (m *MatrixTrait[S, W, WT]) NegMut() W {
+// NegAssign negates m in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) NegAssign() {
 	for i := range m.v {
 		m.v[i] = m.v[i].Neg()
 	}
-	return m.self
 }
 
-func (m *MatrixTrait[S, W, WT]) TryNeg() (W, error) {
+// TryNeg returns -m. The error return exists for interface compatibility.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) TryNeg() (W, error) {
 	return m.Neg(), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) Neg() W {
+// Neg returns -m as a new matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Neg() W {
 	c := m.clone()
-	return c.NegMut()
+	c.NegAssign()
+	return c.self
 }
 
-func (m *MatrixTrait[S, W, WT]) IsOpIdentity() bool {
+// IsOpIdentity reports whether m is the additive identity (alias for [MatrixTrait.IsZero]).
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IsOpIdentity() bool {
 	return m.IsZero()
 }
 
-func (m *MatrixTrait[S, W, WT]) IsZero() bool {
+// IsZero reports whether all elements are zero.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IsZero() bool {
 	for i := range m.v {
 		if !m.v[i].IsZero() {
 			return false
@@ -219,7 +335,8 @@ func (m *MatrixTrait[S, W, WT]) IsZero() bool {
 	return true
 }
 
-func (m *MatrixTrait[S, W, WT]) IsDiagonal() bool {
+// IsDiagonal reports whether all off-diagonal elements are zero.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IsDiagonal() bool {
 	for i := range m.m {
 		for j := range m.n {
 			if i != j && !m.v[m.idx(i, j)].IsZero() {
@@ -230,99 +347,125 @@ func (m *MatrixTrait[S, W, WT]) IsDiagonal() bool {
 	return true
 }
 
-func (m *MatrixTrait[S, W, WT]) IsSquare() bool {
+// IsSquare reports whether the matrix has equal rows and columns.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IsSquare() bool {
 	return m.m == m.n
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnAddMut(i, j int, scalar S) (W, error) {
+// ColumnAddAssign adds scalar * column i to column j in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ColumnAddAssign(i, j int, scalar S) error {
 	if i < 0 || i >= m.n || j < 0 || j >= m.n {
-		return nil, ErrDimension.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n)
+		return ErrDimension.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n)
 	}
 	for row := range m.m {
 		m.v[m.idx(row, j)] = m.v[m.idx(row, j)].Add(m.v[m.idx(row, i)].Mul(scalar))
 	}
-	return m.self, nil
+	return nil
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnAdd(i, j int, scalar S) (W, error) {
+// ColumnAdd returns a new matrix with scalar * column i added to column j.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ColumnAdd(i, j int, scalar S) (W, error) {
 	c := m.clone()
-	return c.ColumnAddMut(i, j, scalar)
+	if err := c.ColumnAddAssign(i, j, scalar); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to add column %d to column %d with scalar %v", i, j, scalar)
+	}
+	return c.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) RowAddMut(i, j int, scalar S) (W, error) {
+// RowAddAssign adds scalar * row i to row j in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) RowAddAssign(i, j int, scalar S) error {
 	if i < 0 || i >= m.m || j < 0 || j >= m.m {
-		return nil, ErrDimension.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m)
+		return ErrDimension.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m)
 	}
 	for col := range m.n {
 		m.v[m.idx(j, col)] = m.v[m.idx(j, col)].Add(m.v[m.idx(i, col)].Mul(scalar))
 	}
-	return m.self, nil
+	return nil
 }
 
-func (m *MatrixTrait[S, W, WT]) RowAdd(i, j int, scalar S) (W, error) {
+// RowAdd returns a new matrix with scalar * row i added to row j.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) RowAdd(i, j int, scalar S) (W, error) {
 	c := m.clone()
-	return c.RowAddMut(i, j, scalar)
+	if err := c.RowAddAssign(i, j, scalar); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to add row %d to row %d", i, j)
+	}
+	return c.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnScalarMulMut(i int, scalar S) (W, error) {
+// ColumnScalarMulAssign multiplies column i by scalar in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ColumnScalarMulAssign(i int, scalar S) error {
 	if i < 0 || i >= m.n {
-		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", i, m.n)
+		return ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", i, m.n)
 	}
 	for row := range m.m {
 		m.v[m.idx(row, i)] = m.v[m.idx(row, i)].Mul(scalar)
 	}
-	return m.self, nil
+	return nil
 }
 
-func (m *MatrixTrait[S, W, WT]) ColumnScalarMul(i int, scalar S) (W, error) {
+// ColumnScalarMul returns a new matrix with column i multiplied by scalar.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ColumnScalarMul(i int, scalar S) (W, error) {
 	c := m.clone()
-	return c.ColumnScalarMulMut(i, scalar)
+	if err := c.ColumnScalarMulAssign(i, scalar); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to scale column %d", i)
+	}
+	return c.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) RowScalarMulMut(i int, scalar S) (W, error) {
+// RowScalarMulAssign multiplies row i by scalar in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) RowScalarMulAssign(i int, scalar S) error {
 	if i < 0 || i >= m.m {
-		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
+		return ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
 	}
 	for col := range m.n {
 		m.v[m.idx(i, col)] = m.v[m.idx(i, col)].Mul(scalar)
 	}
-	return m.self, nil
+	return nil
 }
 
-func (m *MatrixTrait[S, W, WT]) RowScalarMul(i int, scalar S) (W, error) {
+// RowScalarMul returns a new matrix with row i multiplied by scalar.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) RowScalarMul(i int, scalar S) (W, error) {
 	c := m.clone()
-	return c.RowScalarMulMut(i, scalar)
+	if err := c.RowScalarMulAssign(i, scalar); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to scale row %d", i)
+	}
+	return c.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) Augment(other W) (W, error) {
+// Augment concatenates other as additional columns: [m | other].
+// The result is always a rectangular matrix (RectW), even when called on a square matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Augment(other RectW) (RectW, error) {
 	if m.m != other.rows() {
 		return nil, ErrDimension.WithMessage("cannot concatenate columns: number of rows in first matrix (%d) does not match number of rows in second matrix (%d)", m.m, other.rows())
 	}
-	var out WT
-	W(&out).init(m.m, m.n+other.cols())
-	d := W(&out).data()
+	var out RectWT
+	RectW(&out).init(m.m, m.n+other.cols())
+	d := RectW(&out).data()
 	otherData := other.data()
 	for i := range m.m {
 		copy(d[i*(m.n+other.cols()):i*(m.n+other.cols())+m.n], m.v[i*m.n:(i+1)*m.n])
 		copy(d[i*(m.n+other.cols())+m.n:(i+1)*(m.n+other.cols())], otherData[i*other.cols():(i+1)*other.cols()])
 	}
-	return W(&out), nil
+	return RectW(&out), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) Stack(other W) (W, error) {
+// Stack concatenates other as additional rows: [m; other].
+// The result is always a rectangular matrix (RectW), even when called on a square matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Stack(other RectW) (RectW, error) {
 	if m.n != other.cols() {
 		return nil, ErrDimension.WithMessage("cannot concatenate rows: number of columns in first matrix (%d) does not match number of columns in second matrix (%d)", m.n, other.cols())
 	}
-	var out WT
-	W(&out).init(m.m+other.rows(), m.n)
-	d := W(&out).data()
+	var out RectWT
+	RectW(&out).init(m.m+other.rows(), m.n)
+	d := RectW(&out).data()
 	otherData := other.data()
 	copy(d[:m.m*m.n], m.v)
 	copy(d[m.m*m.n:], otherData)
-	return W(&out), nil
+	return RectW(&out), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapColumnMut(i, j int) (W, error) {
+// SwapColumnAssign swaps columns i and j in place. Panics if indices are out of bounds.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SwapColumnAssign(i, j int) {
 	if i < 0 || i >= m.n || j < 0 || j >= m.n {
 		panic(ErrDimension.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n))
 	}
@@ -331,15 +474,17 @@ func (m *MatrixTrait[S, W, WT]) SwapColumnMut(i, j int) (W, error) {
 		idx2 := m.idx(row, j)
 		m.v[idx1], m.v[idx2] = m.v[idx2], m.v[idx1]
 	}
-	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapColumn(i, j int) (W, error) {
+// SwapColumn returns a new matrix with columns i and j swapped.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SwapColumn(i, j int) (W, error) {
 	c := m.clone()
-	return c.SwapColumnMut(i, j)
+	c.SwapColumnAssign(i, j)
+	return c.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapRowMut(i, j int) (W, error) {
+// SwapRowAssign swaps rows i and j in place. Panics if indices are out of bounds.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SwapRowAssign(i, j int) {
 	if i < 0 || i >= m.m || j < 0 || j >= m.m {
 		panic(ErrDimension.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m))
 	}
@@ -348,15 +493,17 @@ func (m *MatrixTrait[S, W, WT]) SwapRowMut(i, j int) (W, error) {
 		idx2 := m.idx(j, col)
 		m.v[idx1], m.v[idx2] = m.v[idx2], m.v[idx1]
 	}
-	return m.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) SwapRow(i, j int) (W, error) {
+// SwapRow returns a new matrix with rows i and j swapped.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SwapRow(i, j int) (W, error) {
 	c := m.clone()
-	return c.SwapRowMut(i, j)
+	c.SwapRowAssign(i, j)
+	return c.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) TryMul(other W) (W, error) {
+// TryMul returns the matrix product m * other, or an error if dimensions are incompatible.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) TryMul(other W) (W, error) {
 	if m.n != other.rows() {
 		return nil, ErrDimension.WithMessage("cannot multiply: number of columns in first matrix (%d) does not match number of rows in second matrix (%d)", m.n, other.rows())
 	}
@@ -377,7 +524,8 @@ func (m *MatrixTrait[S, W, WT]) TryMul(other W) (W, error) {
 	return W(&out), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) Transpose() W {
+// Transpose returns the transpose of m.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Transpose() W {
 	var out WT
 	W(&out).init(m.n, m.m)
 	outData := W(&out).data()
@@ -389,7 +537,8 @@ func (m *MatrixTrait[S, W, WT]) Transpose() W {
 	return W(&out)
 }
 
-func (m *MatrixTrait[S, W, WT]) Minor(row, col int) (W, error) {
+// Minor returns the (m-1)x(n-1) matrix with the given row and column removed.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Minor(row, col int) (W, error) {
 	if row < 0 || row >= m.m || col < 0 || col >= m.n {
 		return nil, ErrDimension.WithMessage("index out of bounds: row %d, col %d for matrix of dimensions %dx%d", row, col, m.m, m.n)
 	}
@@ -412,43 +561,114 @@ func (m *MatrixTrait[S, W, WT]) Minor(row, col int) (W, error) {
 	return W(&minor), nil
 }
 
-func (m *MatrixTrait[S, W, WT]) HadamardProductMut(other W) (W, error) {
+// HadamardProductAssign computes the element-wise (Hadamard) product in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) HadamardProductAssign(other W) error {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
-		return nil, ErrDimension.WithMessage("cannot compute Hadamard product: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols())
+		return ErrDimension.WithMessage("cannot compute Hadamard product: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols())
 	}
 	otherData := other.data()
 	for i := range m.v {
 		m.v[i] = m.v[i].Mul(otherData[i])
 	}
-	return m.self, nil
+	return nil
 }
 
-func (m *MatrixTrait[S, W, WT]) HadamardProduct(other W) (W, error) {
+// Spans solves M*x = b where M is this m×n matrix and b is column (length m).
+// Returns x as an n×1 rectangular matrix, or an error if b is not in the column span of M.
+// Free variables (in underdetermined systems) are set to zero.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Spans(column []S) (RectW, error) {
+	if len(column) != m.m {
+		return nil, ErrDimension.WithMessage("column length %d does not match matrix row count %d", len(column), m.m)
+	}
+
+	// Build column vector as an m×1 rectangular matrix and augment [M | b].
+	var bCol RectWT
+	RectW(&bCol).init(m.m, 1)
+	copy(RectW(&bCol).data(), column)
+
+	aug, err := m.Augment(RectW(&bCol))
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to build augmented matrix for Spans")
+	}
+
+	sol, err := solveAugmented(m.scalarRing(), aug)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("column is not in the span of the matrix")
+	}
+
+	var out RectWT
+	RectW(&out).init(m.n, 1)
+	copy(RectW(&out).data(), sol)
+	return RectW(&out), nil
+}
+
+// RowSpans solves x*M = r where M is this m×n matrix and r is row (length n).
+// This is equivalent to solving M^T * x^T = r^T.
+// Returns x as an m×1 rectangular matrix, or an error if r is not in the row span of M.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) RowSpans(row []S) (RectW, error) {
+	if len(row) != m.n {
+		return nil, ErrDimension.WithMessage("row length %d does not match matrix column count %d", len(row), m.n)
+	}
+
+	// Build augmented matrix [M^T | r] as a rectangular matrix.
+	// M^T is n×m, augmented is n × (m+1).
+	var aug RectWT
+	RectW(&aug).init(m.n, m.m+1)
+	augData := RectW(&aug).data()
+	augCols := m.m + 1
+	for i := range m.n {
+		for j := range m.m {
+			augData[i*augCols+j] = m.v[j*m.n+i] // M^T[i][j] = M[j][i]
+		}
+		augData[i*augCols+m.m] = row[i]
+	}
+
+	sol, err := solveAugmented(m.scalarRing(), RectW(&aug))
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("row is not in the row span of the matrix")
+	}
+
+	var out RectWT
+	RectW(&out).init(m.m, 1)
+	copy(RectW(&out).data(), sol)
+	return RectW(&out), nil
+}
+
+// HadamardProduct returns the element-wise (Hadamard) product as a new matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) HadamardProduct(other W) (W, error) {
 	c := m.clone()
-	return c.HadamardProductMut(other)
+	if err := c.HadamardProductAssign(other); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute Hadamard product")
+	}
+	return c.self, nil
 }
 
-func (m *MatrixTrait[S, W, WT]) ScalarOp(scalar S) W {
+// ScalarOp returns the scalar module operation (alias for [MatrixTrait.ScalarMul]).
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ScalarOp(scalar S) W {
 	return m.ScalarMul(scalar)
 }
 
-func (m *MatrixTrait[S, W, WT]) ScalarMulMut(scalar S) W {
+// ScalarMulAssign multiplies every element by scalar in place.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ScalarMulAssign(scalar S) {
 	for i := range m.v {
 		m.v[i] = m.v[i].Mul(scalar)
 	}
-	return m.self
 }
 
-func (m *MatrixTrait[S, W, WT]) ScalarMul(scalar S) W {
+// ScalarMul returns a new matrix with every element multiplied by scalar.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ScalarMul(scalar S) W {
 	c := m.clone()
-	return c.ScalarMulMut(scalar)
+	c.ScalarMulAssign(scalar)
+	return c.self
 }
 
-func (m *MatrixTrait[S, W, WT]) IsTorsionFree() bool {
+// IsTorsionFree reports whether the matrix module is torsion-free.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IsTorsionFree() bool {
 	return m.m == 1 && m.n == 1 && m.scalarRing().IsDomain()
 }
 
-func (m *MatrixTrait[S, W, WT]) Equal(other W) bool {
+// Equal reports whether m and other have the same dimensions and equal elements.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Equal(other W) bool {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
 		return false
 	}
@@ -461,7 +681,8 @@ func (m *MatrixTrait[S, W, WT]) Equal(other W) bool {
 	return true
 }
 
-func (m *MatrixTrait[S, W, WT]) Bytes() []byte {
+// Bytes serializes the matrix to bytes by concatenating each scalar's byte representation.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Bytes() []byte {
 	scalarSize := m.scalarRing().ElementSize()
 	data := make([]byte, len(m.v)*scalarSize)
 	for i, element := range m.v {
@@ -470,7 +691,8 @@ func (m *MatrixTrait[S, W, WT]) Bytes() []byte {
 	return data
 }
 
-func (m *MatrixTrait[S, W, WT]) HashCode() base.HashCode {
+// HashCode returns a combined hash of all elements.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) HashCode() base.HashCode {
 	acc := base.HashCode(1)
 	for _, element := range m.v {
 		acc = acc.Combine(element.HashCode())
@@ -478,9 +700,9 @@ func (m *MatrixTrait[S, W, WT]) HashCode() base.HashCode {
 	return acc
 }
 
-func (m *MatrixTrait[S, W, WT]) String() string {
+// String returns a human-readable representation of the matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) String() string {
 	var b strings.Builder
-	// Rough preallocation: brackets/newlines plus per-element formatting. This is only a hint.
 	b.Grow(4 + m.m*(6+m.n*8))
 
 	b.WriteString("[\n")
@@ -499,9 +721,28 @@ func (m *MatrixTrait[S, W, WT]) String() string {
 	return b.String()
 }
 
-func (m *MatrixTrait[S, W, WT]) clone() MatrixTrait[S, W, WT] {
+// Clone returns a deep copy of the matrix.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Clone() W {
+	var cloned WT
+	W(&cloned).init(m.m, m.n)
+	copy(W(&cloned).data(), m.v)
+	return W(&cloned)
+}
+
+// findPivotRow returns the first row at or below startRow with a non-zero entry
+// in the given column, or -1 if none exists.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) findPivotRow(col, startRow int) int {
+	for r := startRow; r < m.m; r++ {
+		if !m.v[m.idx(r, col)].IsZero() {
+			return r
+		}
+	}
+	return -1
+}
+
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) clone() MatrixTrait[S, W, WT, RectW, RectWT] {
 	clonedSelf := m.self.Clone()
-	return MatrixTrait[S, W, WT]{
+	return MatrixTrait[S, W, WT, RectW, RectWT]{
 		self: clonedSelf,
 		m:    m.m,
 		n:    m.n,
@@ -509,10 +750,82 @@ func (m *MatrixTrait[S, W, WT]) clone() MatrixTrait[S, W, WT] {
 	}
 }
 
-func (m *MatrixTrait[S, W, WT]) Clone() W {
-	var cloned WT
-	W(&cloned).init(m.m, m.n)
-	copy(W(&cloned).data(), m.v)
-	return W(&cloned)
+// solveAugmented performs Gauss-Jordan elimination in place on aug, treating
+// the last column as the augmented vector b in [A | b]. It returns the solution
+// as a slice of length (cols-1), or an error if the system is inconsistent.
+// Free variables are set to zero. aug is modified in place.
+func solveAugmented[S algebra.RingElement[S]](ring algebra.Ring[S], aug matrixWrapper[S]) ([]S, error) {
+	rows, cols := aug.rows(), aug.cols()
+	numVars := cols - 1
+	d := aug.data()
 
+	pivotCols := make([]int, 0, min(rows, numVars))
+	pivotRow := 0
+
+	for pc := 0; pc < numVars && pivotRow < rows; pc++ {
+		// Find pivot.
+		pr := -1
+		for r := pivotRow; r < rows; r++ {
+			if !d[aug.idx(r, pc)].IsZero() {
+				pr = r
+				break
+			}
+		}
+		if pr < 0 {
+			continue // free variable
+		}
+
+		// Swap rows.
+		if pr != pivotRow {
+			for j := range cols {
+				pi, ri := aug.idx(pivotRow, j), aug.idx(pr, j)
+				d[pi], d[ri] = d[ri], d[pi]
+			}
+		}
+
+		// Scale pivot row so the leading entry becomes 1.
+		invPivot, err := ring.One().TryDiv(d[aug.idx(pivotRow, pc)])
+		if err != nil {
+			return nil, ErrFailed.WithMessage("pivot element is not invertible")
+		}
+		for j := range cols {
+			idx := aug.idx(pivotRow, j)
+			d[idx] = d[idx].Mul(invPivot)
+		}
+
+		// Eliminate this column from all other rows.
+		for i := range rows {
+			if i == pivotRow {
+				continue
+			}
+			factor := d[aug.idx(i, pc)]
+			if factor.IsZero() {
+				continue
+			}
+			for j := range cols {
+				ii, pi := aug.idx(i, j), aug.idx(pivotRow, j)
+				d[ii] = d[ii].Sub(factor.Mul(d[pi]))
+			}
+		}
+
+		pivotCols = append(pivotCols, pc)
+		pivotRow++
+	}
+
+	// Consistency: any non-pivot row with a non-zero entry in the b column.
+	for i := pivotRow; i < rows; i++ {
+		if !d[aug.idx(i, numVars)].IsZero() {
+			return nil, ErrFailed.WithMessage("system is inconsistent: no solution exists")
+		}
+	}
+
+	// Extract solution.
+	sol := make([]S, numVars)
+	for i := range numVars {
+		sol[i] = ring.Zero()
+	}
+	for i, pc := range pivotCols {
+		sol[pc] = d[aug.idx(i, numVars)]
+	}
+	return sol, nil
 }

@@ -1,6 +1,7 @@
 package mat_test
 
 import (
+	"crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -91,6 +92,84 @@ func TestMatrixModuleProperties(t *testing.T) {
 		r, c := z.Dimensions()
 		require.Equal(t, 2, r)
 		require.Equal(t, 3, c)
+	})
+}
+
+func TestMatrixRandom(t *testing.T) {
+	t.Parallel()
+	mod := newModule(t, 3, 3)
+	m, err := mod.Random(rand.Reader)
+	require.NoError(t, err)
+	r, c := m.Dimensions()
+	require.Equal(t, 3, r)
+	require.Equal(t, 3, c)
+
+	// Not all elements should be equal (overwhelmingly unlikely for a 256-bit field).
+	first, _ := m.Get(0, 0)
+	allSame := true
+	for i := range 3 {
+		for j := range 3 {
+			if i == 0 && j == 0 {
+				continue
+			}
+			v, _ := m.Get(i, j)
+			if !v.Equal(first) {
+				allSame = false
+			}
+		}
+	}
+	require.False(t, allSame, "all elements are identical — random generation is broken")
+}
+
+func TestMatrixHash(t *testing.T) {
+	t.Parallel()
+	mod := newModule(t, 2, 2)
+	m, err := mod.Hash([]byte("test input"))
+	require.NoError(t, err)
+	r, c := m.Dimensions()
+	require.Equal(t, 2, r)
+	require.Equal(t, 2, c)
+
+	// Each element should be different (each uses a different index in the hash).
+	elems := make([]S, 4)
+	for i := range 2 {
+		for j := range 2 {
+			elems[i*2+j], _ = m.Get(i, j)
+		}
+	}
+	for i := 0; i < len(elems); i++ {
+		for j := i + 1; j < len(elems); j++ {
+			require.False(t, elems[i].Equal(elems[j]),
+				"elements (%d) and (%d) are equal — hash domain separation is broken", i, j)
+		}
+	}
+
+	// Deterministic: same input produces same output.
+	m2, err := mod.Hash([]byte("test input"))
+	require.NoError(t, err)
+	require.True(t, m.Equal(m2))
+
+	// Different input produces different output.
+	m3, err := mod.Hash([]byte("different input"))
+	require.NoError(t, err)
+	require.False(t, m.Equal(m3))
+}
+
+func TestMatrixNewRowMajor(t *testing.T) {
+	t.Parallel()
+	mod := newModule(t, 2, 3)
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		m, err := mod.NewRowMajor(scalar(1), scalar(2), scalar(3), scalar(4), scalar(5), scalar(6))
+		require.NoError(t, err)
+		require.True(t, m.Equal(newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})))
+	})
+
+	t.Run("wrong_count", func(t *testing.T) {
+		t.Parallel()
+		_, err := mod.NewRowMajor(scalar(1), scalar(2))
+		require.Error(t, err)
 	})
 }
 
@@ -210,7 +289,7 @@ func TestMatrixClone(t *testing.T) {
 	t.Parallel()
 	orig := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
 	clone := orig.Clone()
-	clone.AddMut(clone)
+	clone.AddAssign(clone)
 	// original unchanged
 	require.True(t, orig.Equal(newMatrix(t, [][]uint64{{1, 2}, {3, 4}})))
 }
@@ -405,6 +484,157 @@ func TestMatrixMultiply(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, got.Equal(newMatrix(t, [][]uint64{{21}})))
 	})
+}
+
+// --- Spans / RowSpans ---
+
+func TestMatrixSpans(t *testing.T) {
+	t.Parallel()
+
+	t.Run("square_unique", func(t *testing.T) {
+		t.Parallel()
+		// M = [[1,2],[3,4]], b = [5,11] → x = [1,2] since 1*1+2*2=5, 1*3+2*4=11
+		m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		b := []S{scalar(5), scalar(11)}
+		sol, err := m.Spans(b)
+		require.NoError(t, err)
+		// Verify M*x = b
+		product, err := m.TryMul(sol)
+		require.NoError(t, err)
+		for i, want := range b {
+			v, _ := product.Get(i, 0)
+			require.True(t, v.Equal(want), "row %d", i)
+		}
+	})
+
+	t.Run("overdetermined_consistent", func(t *testing.T) {
+		t.Parallel()
+		// M = [[1,0],[0,1],[1,1]], b = [3,4,7] → x = [3,4]
+		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}, {1, 1}})
+		b := []S{scalar(3), scalar(4), scalar(7)}
+		sol, err := m.Spans(b)
+		require.NoError(t, err)
+		product, err := m.TryMul(sol)
+		require.NoError(t, err)
+		for i, want := range b {
+			v, _ := product.Get(i, 0)
+			require.True(t, v.Equal(want), "row %d", i)
+		}
+	})
+
+	t.Run("overdetermined_inconsistent", func(t *testing.T) {
+		t.Parallel()
+		// M = [[1,0],[0,1],[1,1]], b = [3,4,8] → inconsistent (3+4 != 8)
+		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}, {1, 1}})
+		b := []S{scalar(3), scalar(4), scalar(8)}
+		_, err := m.Spans(b)
+		require.Error(t, err)
+	})
+
+	t.Run("underdetermined", func(t *testing.T) {
+		t.Parallel()
+		// M = [[1,2,3]], b = [6] → many solutions, free vars set to 0 → x = [6,0,0]
+		m := newMatrix(t, [][]uint64{{1, 2, 3}})
+		b := []S{scalar(6)}
+		sol, err := m.Spans(b)
+		require.NoError(t, err)
+		// Verify M*x = b
+		product, err := m.TryMul(sol)
+		require.NoError(t, err)
+		v, _ := product.Get(0, 0)
+		require.True(t, v.Equal(scalar(6)))
+	})
+
+	t.Run("identity", func(t *testing.T) {
+		t.Parallel()
+		// I*x = b → x = b
+		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
+		b := []S{scalar(7), scalar(13)}
+		sol, err := m.Spans(b)
+		require.NoError(t, err)
+		v0, _ := sol.Get(0, 0)
+		v1, _ := sol.Get(1, 0)
+		require.True(t, v0.Equal(scalar(7)))
+		require.True(t, v1.Equal(scalar(13)))
+	})
+
+	t.Run("wrong_column_length", func(t *testing.T) {
+		t.Parallel()
+		m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		_, err := m.Spans([]S{scalar(1)})
+		require.Error(t, err)
+	})
+
+	t.Run("needs_row_swap", func(t *testing.T) {
+		t.Parallel()
+		// M = [[0,1],[2,3]], b = [5,11] → needs pivot swap
+		m := newMatrix(t, [][]uint64{{0, 1}, {2, 3}})
+		b := []S{scalar(5), scalar(11)}
+		sol, err := m.Spans(b)
+		require.NoError(t, err)
+		product, err := m.TryMul(sol)
+		require.NoError(t, err)
+		for i, want := range b {
+			v, _ := product.Get(i, 0)
+			require.True(t, v.Equal(want), "row %d", i)
+		}
+	})
+}
+
+func TestMatrixRowSpans(t *testing.T) {
+	t.Parallel()
+
+	t.Run("square_unique", func(t *testing.T) {
+		t.Parallel()
+		// M = [[1,3],[2,4]], r = [5,11] → solve x*M = r
+		m := newMatrix(t, [][]uint64{{1, 3}, {2, 4}})
+		r := []S{scalar(5), scalar(11)}
+		sol, err := m.RowSpans(r)
+		require.NoError(t, err)
+		// Verify x*M = r: sol^T * M should give r
+		mt := m.Transpose()
+		product, err := mt.TryMul(sol)
+		require.NoError(t, err)
+		for i, want := range r {
+			v, _ := product.Get(i, 0)
+			require.True(t, v.Equal(want), "col %d", i)
+		}
+	})
+
+	t.Run("inconsistent", func(t *testing.T) {
+		t.Parallel()
+		// M = [[1,0],[0,1],[0,0]], r = [0,0,1] → row [0,0,1] not in row span
+		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}, {0, 0}})
+		r := []S{scalar(0), scalar(0), scalar(1)}
+		_, err := m.RowSpans(r)
+		require.Error(t, err)
+	})
+
+	t.Run("wrong_row_length", func(t *testing.T) {
+		t.Parallel()
+		m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		_, err := m.RowSpans([]S{scalar(1)})
+		require.Error(t, err)
+	})
+}
+
+// --- String / HashCode ---
+
+func TestMatrixString(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+	s := m.String()
+	require.Contains(t, s, "[")
+	require.Contains(t, s, "]")
+}
+
+func TestMatrixHashCode(t *testing.T) {
+	t.Parallel()
+	a := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+	b := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+	c := newMatrix(t, [][]uint64{{5, 6}, {7, 8}})
+	require.Equal(t, a.HashCode(), b.HashCode())
+	require.NotEqual(t, a.HashCode(), c.HashCode())
 }
 
 // --- Serialization ---
