@@ -110,9 +110,9 @@ type (
 )
 
 type (
-	MatrixModule[M crtp.Matrix[M, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]] = crtp.MatrixModule[M, S]
-	Matrix[M crtp.Matrix[M, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]]       = crtp.Matrix[M, Ei, S]
+	MatrixModule[M crtp.Matrix[M, S], S crtp.RingElement[S]] = crtp.MatrixModule[M, S]
+	Matrix[M crtp.Matrix[M, S], S crtp.RingElement[S]]       = crtp.Matrix[M, S]
 
-	MatrixAlgebra[M crtp.Matrix[M, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]]        = crtp.MatrixAlgebra[M, S]
-	SquareMatrix[SM crtp.SquareMatrix[SM, Ei, S], Ei crtp.GroupElement[Ei], S crtp.RingElement[S]] = crtp.SquareMatrix[SM, Ei, S]
+	MatrixAlgebra[M crtp.Matrix[M, S], S crtp.RingElement[S]]        = crtp.MatrixAlgebra[M, S]
+	SquareMatrix[SM crtp.SquareMatrix[SM, S], S crtp.RingElement[S]] = crtp.SquareMatrix[SM, S]
 )
