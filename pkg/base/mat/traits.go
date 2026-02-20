@@ -30,7 +30,7 @@ type matrixWrapperPtrConstraint[S algebra.RingElement[S], WT any] interface {
 
 // MatrixModuleTrait provides shared implementation for matrix module structures.
 // It is embedded by [MatrixModule] and [MatrixAlgebra] to provide common
-// module-level operations: dimensions, serialization, and zero/identity construction.
+// module-level operations: dimensions, serialisation, and zero/identity construction.
 type MatrixModuleTrait[S algebra.RingElement[S], W matrixWrapperPtrConstraint[S, WT], WT any] struct {
 	ring algebra.FiniteRing[S]
 	rows int
@@ -681,7 +681,7 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Equal(other W) bool {
 	return true
 }
 
-// Bytes serializes the matrix to bytes by concatenating each scalar's byte representation.
+// Bytes serialises the matrix to bytes by concatenating each scalar's byte representation.
 func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Bytes() []byte {
 	scalarSize := m.scalarRing().ElementSize()
 	data := make([]byte, len(m.v)*scalarSize)
@@ -706,10 +706,10 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) String() string {
 	b.Grow(4 + m.m*(6+m.n*8))
 
 	b.WriteString("[\n")
-	for i := 0; i < m.m; i++ {
+	for i := range m.m {
 		b.WriteString("  [")
 		rowOff := i * m.n
-		for j := 0; j < m.n; j++ {
+		for j := range m.n {
 			fmt.Fprint(&b, m.v[rowOff+j])
 			if j < m.n-1 {
 				b.WriteString(", ")

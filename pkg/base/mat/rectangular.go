@@ -23,7 +23,7 @@ func NewMatrixModule[S algebra.RingElement[S]](rows, cols uint, ring algebra.Fin
 
 // MatrixModule is the algebraic structure (module) for rectangular matrices over a finite ring.
 // It serves as a factory for [Matrix] instances and provides module-level properties
-// like dimensions, element size, and serialization.
+// like dimensions, element size, and serialisation.
 type MatrixModule[S algebra.RingElement[S]] struct {
 	MatrixModuleTrait[S, *Matrix[S], Matrix[S]]
 }
@@ -51,7 +51,7 @@ func (m *Matrix[S]) cols() int {
 	return m.n
 }
 
-func (m *Matrix[S]) data() []S {
+func (m *Matrix[S]) data() []S { //nolint:unused // false positive: needed for the trait implementation.
 	return m.v
 }
 

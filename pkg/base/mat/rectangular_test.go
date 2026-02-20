@@ -1,7 +1,7 @@
 package mat_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -98,7 +98,7 @@ func TestMatrixModuleProperties(t *testing.T) {
 func TestMatrixRandom(t *testing.T) {
 	t.Parallel()
 	mod := newModule(t, 3, 3)
-	m, err := mod.Random(rand.Reader)
+	m, err := mod.Random(crand.Reader)
 	require.NoError(t, err)
 	r, c := m.Dimensions()
 	require.Equal(t, 3, r)
@@ -137,7 +137,7 @@ func TestMatrixHash(t *testing.T) {
 			elems[i*2+j], _ = m.Get(i, j)
 		}
 	}
-	for i := 0; i < len(elems); i++ {
+	for i := range elems {
 		for j := i + 1; j < len(elems); j++ {
 			require.False(t, elems[i].Equal(elems[j]),
 				"elements (%d) and (%d) are equal — hash domain separation is broken", i, j)
@@ -385,7 +385,7 @@ func TestMatrixMinor(t *testing.T) {
 	t.Parallel()
 	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
 
-	t.Run("center", func(t *testing.T) {
+	t.Run("centre", func(t *testing.T) {
 		t.Parallel()
 		got, err := m.Minor(1, 1)
 		require.NoError(t, err)
@@ -637,7 +637,7 @@ func TestMatrixHashCode(t *testing.T) {
 	require.NotEqual(t, a.HashCode(), c.HashCode())
 }
 
-// --- Serialization ---
+// --- Serialisation ---
 
 func TestMatrixBytes(t *testing.T) {
 	t.Parallel()

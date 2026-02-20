@@ -89,7 +89,7 @@ func (m *SquareMatrix[S]) cols() int {
 	return m.n
 }
 
-func (m *SquareMatrix[S]) data() []S {
+func (m *SquareMatrix[S]) data() []S { //nolint:unused // false positive: needed for the trait implementation.
 	return m.v
 }
 
@@ -224,7 +224,7 @@ func (m *SquareMatrix[S]) TryInv() (*SquareMatrix[S], error) {
 			return nil, ErrFailed.WithMessage("matrix is singular")
 		}
 
-		// Normalize pivot row.
+		// Normalise pivot row.
 		for j := range n {
 			a.v[a.idx(k, j)] = a.v[a.idx(k, j)].Mul(invPivot)
 			out.v[out.idx(k, j)] = out.v[out.idx(k, j)].Mul(invPivot)
