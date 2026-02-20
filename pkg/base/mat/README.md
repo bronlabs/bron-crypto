@@ -59,16 +59,6 @@ x, err := m.Spans(b)
 x, err = m.RowSpans(r)
 ```
 
-## Design
-
-The package uses a trait-based generic design (CRTP pattern):
-
-- `MatrixModuleTrait` — shared module-level logic (dimensions, serialization, zero construction, random sampling, hashing).
-- `MatrixTrait` — shared element-level logic (arithmetic, row/column ops, solving).
-
-`SquareMatrix` uses a `RectW` type parameter so that `Augment` and `Stack` return
-rectangular `Matrix` instances even when called on square matrices.
-
 ### Immutable vs Assign
 
 Most operations come in pairs:
