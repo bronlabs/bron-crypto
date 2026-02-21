@@ -360,6 +360,108 @@ func TestSquareSwapColumn(t *testing.T) {
 	require.True(t, got.Equal(newSquare(t, [][]uint64{{2, 1}, {4, 3}})))
 }
 
+// --- SubMatrix / Slice on square ---
+
+func TestSquareSubMatrixGivenRows(t *testing.T) {
+	t.Parallel()
+	m := newSquare(t, [][]uint64{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
+
+	t.Run("single_row", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenRows(1)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{4, 5, 6}})))
+	})
+
+	t.Run("subset", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenRows(0, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 2, 3}, {7, 8, 9}})))
+	})
+
+	t.Run("OOB", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.SubMatrixGivenRows(3)
+		require.Error(t, err)
+	})
+}
+
+func TestSquareSubMatrixGivenColumns(t *testing.T) {
+	t.Parallel()
+	m := newSquare(t, [][]uint64{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
+
+	t.Run("single_column", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenColumns(2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{3}, {6}, {9}})))
+	})
+
+	t.Run("subset", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenColumns(0, 1)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 2}, {4, 5}, {7, 8}})))
+	})
+
+	t.Run("OOB", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.SubMatrixGivenColumns(3)
+		require.Error(t, err)
+	})
+}
+
+func TestSquareRowSlice(t *testing.T) {
+	t.Parallel()
+	m := newSquare(t, [][]uint64{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
+
+	t.Run("first_two", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.RowSlice(0, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})))
+	})
+
+	t.Run("single_row", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.RowSlice(2, 3)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{7, 8, 9}})))
+	})
+
+	t.Run("invalid_range", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.RowSlice(2, 1)
+		require.Error(t, err)
+	})
+}
+
+func TestSquareColumnSlice(t *testing.T) {
+	t.Parallel()
+	m := newSquare(t, [][]uint64{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
+
+	t.Run("first_two", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.ColumnSlice(0, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 2}, {4, 5}, {7, 8}})))
+	})
+
+	t.Run("single_column", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.ColumnSlice(1, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{2}, {5}, {8}})))
+	})
+
+	t.Run("invalid_range", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.ColumnSlice(0, 4)
+		require.Error(t, err)
+	})
+}
+
 // --- Augment / Stack return rectangular ---
 
 func TestSquareAugmentReturnsRectangular(t *testing.T) {

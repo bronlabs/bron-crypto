@@ -89,7 +89,7 @@ func (m *SquareMatrix[S]) cols() int {
 	return m.n
 }
 
-func (m *SquareMatrix[S]) data() []S { //nolint:unused // false positive: needed for the trait implementation.
+func (m *SquareMatrix[S]) data() []S {
 	return m.v
 }
 
