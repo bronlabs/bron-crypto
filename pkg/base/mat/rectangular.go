@@ -51,7 +51,7 @@ func (m *Matrix[S]) cols() int {
 	return m.n
 }
 
-func (m *Matrix[S]) data() []S { //nolint:unused // false positive: needed for the trait implementation.
+func (m *Matrix[S]) data() []S {
 	return m.v
 }
 
