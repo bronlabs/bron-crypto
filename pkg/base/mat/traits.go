@@ -464,6 +464,72 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Stack(other RectW) (RectW, error)
 	return RectW(&out), nil
 }
 
+// SubMatrixGivenRows returns a submatrix containing the specified row indices and all columns.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SubMatrixGivenRows(indices ...int) (RectW, error) {
+	if len(indices) == 0 {
+		return nil, ErrDimension.WithMessage("must specify at least one row index")
+	}
+	for _, i := range indices {
+		if i < 0 || i >= m.m {
+			return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
+		}
+	}
+	var out RectWT
+	RectW(&out).init(len(indices), m.n)
+	d := RectW(&out).data()
+	for j, i := range indices {
+		copy(d[j*m.n:(j+1)*m.n], m.v[i*m.n:(i+1)*m.n])
+	}
+	return RectW(&out), nil
+}
+
+// RowSlice returns a submatrix containing rows from start (inclusive) to end (exclusive) and all columns.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) RowSlice(start, end int) (RectW, error) {
+	if start < 0 || end > m.m || start >= end {
+		return nil, ErrDimension.WithMessage("invalid row slice: start=%d, end=%d for matrix with %d rows", start, end, m.m)
+	}
+	var out RectWT
+	RectW(&out).init(end-start, m.n)
+	d := RectW(&out).data()
+	copy(d, m.v[start*m.n:end*m.n])
+	return RectW(&out), nil
+}
+
+// SubMatrixGivenColumns returns a submatrix containing the specified column indices and all rows.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SubMatrixGivenColumns(indices ...int) (RectW, error) {
+	if len(indices) == 0 {
+		return nil, ErrDimension.WithMessage("must specify at least one column index")
+	}
+	for _, j := range indices {
+		if j < 0 || j >= m.n {
+			return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", j, m.n)
+		}
+	}
+	var out RectWT
+	RectW(&out).init(m.m, len(indices))
+	d := RectW(&out).data()
+	for i := range m.m {
+		for j, col := range indices {
+			d[i*len(indices)+j] = m.v[m.idx(i, col)]
+		}
+	}
+	return RectW(&out), nil
+}
+
+// ColumnSlice returns a submatrix containing columns from start (inclusive) to end (exclusive) and all rows.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ColumnSlice(start, end int) (RectW, error) {
+	if start < 0 || end > m.n || start >= end {
+		return nil, ErrDimension.WithMessage("invalid column slice: start=%d, end=%d for matrix with %d columns", start, end, m.n)
+	}
+	var out RectWT
+	RectW(&out).init(m.m, end-start)
+	d := RectW(&out).data()
+	for i := range m.m {
+		copy(d[i*(end-start):i*(end-start)+(end-start)], m.v[i*m.n+start:i*m.n+end])
+	}
+	return RectW(&out), nil
+}
+
 // SwapColumnAssign swaps columns i and j in place. Panics if indices are out of bounds.
 func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SwapColumnAssign(i, j int) {
 	if i < 0 || i >= m.n || j < 0 || j >= m.n {
