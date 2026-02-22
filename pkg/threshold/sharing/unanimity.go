@@ -47,6 +47,7 @@ func NewUnanimityAccessStructure(shareholders ds.Set[ID]) (*UnanimityAccessStruc
 	}, nil
 }
 
+// IsQualified reports whether ids equal the full shareholder set.
 func (u *UnanimityAccessStructure) IsQualified(ids ...ID) bool {
 	if u == nil || u.ps == nil {
 		return false
@@ -55,10 +56,12 @@ func (u *UnanimityAccessStructure) IsQualified(ids ...ID) bool {
 	return idSet.Equal(u.ps)
 }
 
+// Shareholders returns the full shareholder set.
 func (u *UnanimityAccessStructure) Shareholders() ds.Set[ID] {
 	return u.ps
 }
 
+// MaximalUnqualifiedSetsIter streams all size-(n-1) subsets.
 func (u *UnanimityAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	return func(yield func(ds.Set[ID]) bool) {
 		for c := range sliceutils.Combinations(u.ps.List(), uint(u.ps.Size()-1)) {
@@ -91,6 +94,7 @@ func (u *UnanimityAccessStructure) Clone() *UnanimityAccessStructure {
 	}
 }
 
+// MarshalCBOR serializes the access structure.
 func (u *UnanimityAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := unanimityDTO{
 		Ps: make(map[ID]bool),
@@ -105,6 +109,7 @@ func (u *UnanimityAccessStructure) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the access structure.
 func (u *UnanimityAccessStructure) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[unanimityDTO](data)
 	if err != nil {

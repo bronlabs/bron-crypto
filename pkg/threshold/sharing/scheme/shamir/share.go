@@ -135,6 +135,7 @@ func (s *Share[FE]) Bytes() []byte {
 	return buf
 }
 
+// MarshalCBOR serializes the share.
 func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 	dto := &shareDTO[FE]{
 		ID: s.id,
@@ -147,6 +148,7 @@ func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the share.
 func (s *Share[FE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shareDTO[FE]](data)
 	if err != nil {

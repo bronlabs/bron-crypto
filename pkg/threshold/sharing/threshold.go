@@ -71,6 +71,7 @@ func (a *ThresholdAccessStructure) IsQualified(ids ...ID) bool {
 		idsSet.IsSubSet(a.ps)
 }
 
+// MaximalUnqualifiedSetsIter streams all size-(t-1) subsets of shareholders.
 func (a *ThresholdAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	return func(yield func(ds.Set[ID]) bool) {
 		for c := range sliceutils.Combinations(a.ps.List(), a.t-1) {
@@ -107,6 +108,7 @@ func (a *ThresholdAccessStructure) Clone() *ThresholdAccessStructure {
 	}
 }
 
+// MarshalCBOR serializes the threshold access structure.
 func (a *ThresholdAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := &thresholdDTO{
 		T:  a.t,
@@ -123,6 +125,7 @@ func (a *ThresholdAccessStructure) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the threshold access structure.
 func (a *ThresholdAccessStructure) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*thresholdDTO](data)
 	if err != nil {

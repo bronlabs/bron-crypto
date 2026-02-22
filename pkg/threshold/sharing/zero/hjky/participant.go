@@ -32,6 +32,7 @@ type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	state           State[G, S]
 }
 
+// State stores participant-local protocol state across HJKY rounds.
 type State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	verificationVectors map[sharing.ID]feldman.VerificationVector[G, S]
 	share               *feldman.Share[S]

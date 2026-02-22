@@ -11,11 +11,15 @@ import (
 
 var _ MonotoneAccessStructure = (*CNFAccessStructure)(nil)
 
+// CNFAccessStructure represents a monotone access structure via maximal
+// unqualified clauses in conjunctive normal form.
 type CNFAccessStructure struct {
 	shareholders           ds.Set[ID]
 	maximalUnqualifiedSets []ds.Set[ID]
 }
 
+// NewCNFAccessStructure constructs a CNF access structure from unqualified sets
+// and normalizes them into unique maximal clauses.
 func NewCNFAccessStructure(unqualifiedSets ...ds.Set[ID]) (*CNFAccessStructure, error) {
 	maximalUnqualifiedSets, err := normaliseCNF(unqualifiedSets...)
 	if err != nil {
@@ -37,6 +41,7 @@ func NewCNFAccessStructure(unqualifiedSets ...ds.Set[ID]) (*CNFAccessStructure, 
 	return c, nil
 }
 
+// IsQualified reports whether ids satisfy the CNF access policy.
 func (c *CNFAccessStructure) IsQualified(ids ...ID) bool {
 	if c == nil || c.shareholders == nil {
 		return false
@@ -54,10 +59,12 @@ func (c *CNFAccessStructure) IsQualified(ids ...ID) bool {
 	return true
 }
 
+// Shareholders returns the shareholder universe for this access structure.
 func (c *CNFAccessStructure) Shareholders() ds.Set[ID] {
 	return c.shareholders
 }
 
+// MaximalUnqualifiedSetsIter streams maximal unqualified sets.
 func (c *CNFAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	if c == nil || len(c.maximalUnqualifiedSets) == 0 {
 		return slices.Values([]ds.Set[ID]{})

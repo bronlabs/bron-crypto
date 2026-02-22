@@ -11,11 +11,15 @@ import (
 
 var _ MonotoneAccessStructure = (*DNFAccessStructure)(nil)
 
+// DNFAccessStructure represents a monotone access structure via minimal
+// qualified clauses in disjunctive normal form.
 type DNFAccessStructure struct {
 	shareholders         ds.Set[ID]
 	minimalQualifiedSets []ds.Set[ID]
 }
 
+// NewDNFAccessStructure constructs a DNF access structure from qualified sets
+// and normalizes them into unique minimal clauses.
 func NewDNFAccessStructure(qualifiedSets ...ds.Set[ID]) (*DNFAccessStructure, error) {
 	minimalQualifiedSets, err := normaliseDNF(qualifiedSets...)
 	if err != nil {
@@ -37,6 +41,7 @@ func NewDNFAccessStructure(qualifiedSets ...ds.Set[ID]) (*DNFAccessStructure, er
 	return d, nil
 }
 
+// IsQualified reports whether ids satisfy the DNF access policy.
 func (d *DNFAccessStructure) IsQualified(ids ...ID) bool {
 	if d == nil || d.shareholders == nil {
 		return false
@@ -54,10 +59,13 @@ func (d *DNFAccessStructure) IsQualified(ids ...ID) bool {
 	return false
 }
 
+// Shareholders returns the shareholder universe for this access structure.
 func (d *DNFAccessStructure) Shareholders() ds.Set[ID] {
 	return d.shareholders
 }
 
+// MaximalUnqualifiedSetsIter streams maximal unqualified sets induced by the
+// minimal qualified clauses.
 func (d *DNFAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	if d == nil || d.shareholders == nil {
 		return slices.Values([]ds.Set[ID]{})

@@ -15,6 +15,7 @@ const Name sharing.Name = "ISN secret sharing scheme"
 // enabling protocols that require knowledge of the complete share distribution.
 type DealerFunc[E algebra.GroupElement[E]] map[bitset.ImmutableBitSet[sharing.ID]]E
 
+// ShareOf derives the share for shareholder id from the dealer function.
 func (df DealerFunc[E]) ShareOf(id sharing.ID) *Share[E] {
 	shareValue := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 	for clause, value := range df {
