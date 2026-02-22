@@ -637,6 +637,212 @@ func TestMatrixHashCode(t *testing.T) {
 	require.NotEqual(t, a.HashCode(), c.HashCode())
 }
 
+// --- SubMatrix / Slice ---
+
+func TestMatrixSubMatrixGivenRows(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
+
+	t.Run("single_row", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenRows(1)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{4, 5, 6}})))
+	})
+
+	t.Run("multiple_rows", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenRows(0, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 2, 3}, {7, 8, 9}})))
+	})
+
+	t.Run("reversed_order", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenRows(2, 0)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{7, 8, 9}, {1, 2, 3}})))
+	})
+
+	t.Run("all_rows", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenRows(0, 1, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(m))
+	})
+
+	t.Run("OOB", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.SubMatrixGivenRows(3)
+		require.Error(t, err)
+	})
+
+	t.Run("negative_index", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.SubMatrixGivenRows(-1)
+		require.Error(t, err)
+	})
+}
+
+func TestMatrixSubMatrixGivenColumns(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+
+	t.Run("single_column", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenColumns(1)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{2}, {5}})))
+	})
+
+	t.Run("multiple_columns", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenColumns(0, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 3}, {4, 6}})))
+	})
+
+	t.Run("reversed_order", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenColumns(2, 0)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{3, 1}, {6, 4}})))
+	})
+
+	t.Run("all_columns", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.SubMatrixGivenColumns(0, 1, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(m))
+	})
+
+	t.Run("OOB", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.SubMatrixGivenColumns(3)
+		require.Error(t, err)
+	})
+
+	t.Run("negative_index", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.SubMatrixGivenColumns(-1)
+		require.Error(t, err)
+	})
+}
+
+func TestMatrixRowSlice(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}})
+
+	t.Run("first_two", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.RowSlice(0, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})))
+	})
+
+	t.Run("middle", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.RowSlice(1, 3)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{4, 5, 6}, {7, 8, 9}})))
+	})
+
+	t.Run("last_row", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.RowSlice(3, 4)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{10, 11, 12}})))
+	})
+
+	t.Run("all_rows", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.RowSlice(0, 4)
+		require.NoError(t, err)
+		require.True(t, got.Equal(m))
+	})
+
+	t.Run("start_equals_end", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.RowSlice(2, 2)
+		require.Error(t, err)
+	})
+
+	t.Run("start_greater_than_end", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.RowSlice(3, 1)
+		require.Error(t, err)
+	})
+
+	t.Run("end_exceeds_rows", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.RowSlice(0, 5)
+		require.Error(t, err)
+	})
+
+	t.Run("negative_start", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.RowSlice(-1, 2)
+		require.Error(t, err)
+	})
+}
+
+func TestMatrixColumnSlice(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3, 4}, {5, 6, 7, 8}})
+
+	t.Run("first_two", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.ColumnSlice(0, 2)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{1, 2}, {5, 6}})))
+	})
+
+	t.Run("middle", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.ColumnSlice(1, 3)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{2, 3}, {6, 7}})))
+	})
+
+	t.Run("last_column", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.ColumnSlice(3, 4)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMatrix(t, [][]uint64{{4}, {8}})))
+	})
+
+	t.Run("all_columns", func(t *testing.T) {
+		t.Parallel()
+		got, err := m.ColumnSlice(0, 4)
+		require.NoError(t, err)
+		require.True(t, got.Equal(m))
+	})
+
+	t.Run("start_equals_end", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.ColumnSlice(2, 2)
+		require.Error(t, err)
+	})
+
+	t.Run("start_greater_than_end", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.ColumnSlice(3, 1)
+		require.Error(t, err)
+	})
+
+	t.Run("end_exceeds_cols", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.ColumnSlice(0, 5)
+		require.Error(t, err)
+	})
+
+	t.Run("negative_start", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.ColumnSlice(-1, 2)
+		require.Error(t, err)
+	})
+}
+
 // --- Serialisation ---
 
 func TestMatrixBytes(t *testing.T) {
