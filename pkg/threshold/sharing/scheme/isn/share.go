@@ -9,30 +9,12 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
-
-// DealerFunc represents the dealer function that maps shareholder IDs to their
-// shares. This is returned by LSSS methods that reveal the dealer function,
-// enabling protocols that require knowledge of the complete share distribution.
-type DealerFunc[E algebra.GroupElement[E]] map[bitset.ImmutableBitSet[sharing.ID]]E
-
-func (df DealerFunc[E]) ShareOf(id sharing.ID) *Share[E] {
-	shareValue := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
-	for clause, value := range df {
-		if !clause.Contains(id) {
-			shareValue[clause] = value
-		}
-	}
-
-	return &Share[E]{
-		id: id,
-		v:  shareValue,
-	}
-}
 
 // Share represents a shareholder's portion in an ISN secret sharing scheme.
 // Each share contains a sparse map from clause identifiers (represented as
@@ -168,20 +150,32 @@ func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
 	return result
 }
 
+func (s *Share[E]) MarshalCBOR() ([]byte, error) {
+	dto := &shareDTO[E]{
+		ID: s.id,
+		V:  s.v,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal ISN Share")
+	}
+	return data, nil
+}
+
+func (s *Share[E]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*shareDTO[E]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal ISN Share")
+	}
+
+	s.id = dto.ID
+	s.v = dto.V
+	return nil
+}
+
 func (s *Share[E]) group() algebra.Group[E] {
 	v := algebra.StructureMustBeAs[algebra.Group[E]](slices.Collect(maps.Values(s.v))[0].Structure())
 	return v
-}
-
-// DealerOutput contains the shares produced by a dealing operation.
-// It provides access to the mapping from shareholder IDs to their shares.
-type DealerOutput[E algebra.GroupElement[E]] struct {
-	shares ds.Map[sharing.ID, *Share[E]]
-}
-
-// Shares returns the map of shareholder IDs to their corresponding shares.
-func (d *DealerOutput[E]) Shares() ds.Map[sharing.ID, *Share[E]] {
-	return d.shares
 }
 
 func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *sharing.UnanimityAccessStructure) (sharing.ID, error) {
@@ -194,4 +188,9 @@ func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *sharing.Un
 	}
 
 	return 0, sharing.ErrFailed.WithMessage("could not find pivot")
+}
+
+type shareDTO[E algebra.GroupElement[E]] struct {
+	ID sharing.ID                               `cbor:"sharingID"`
+	V  map[bitset.ImmutableBitSet[sharing.ID]]E `cbor:"value"`
 }
