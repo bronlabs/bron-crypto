@@ -14,15 +14,12 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// Name is the human-readable name for ISN secret sharing.
-const Name sharing.Name = "ISN secret sharing scheme"
-
 // Scheme implements the Ito-Saito-Nishizeki secret sharing scheme with
 // a monotone access structure represented via maximal unqualified sets.
 // Each share is a vector with one component per maximal unqualified set.
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
-	sampler *Sampler[E]
+	sampler *sampler[E]
 	ac      sharing.MonotoneAccessStructure
 }
 
@@ -42,7 +39,7 @@ func NewFiniteScheme[E algebra.GroupElement[E]](
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
 
-	sampler, err := NewFiniteGroupElementSampler(g)
+	sampler, err := newFiniteGroupElementSampler(g)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create sampler")
 	}
@@ -241,4 +238,29 @@ func (c *Scheme[E]) clauses() []bitset.ImmutableBitSet[sharing.ID] {
 		clauses = append(clauses, bitset.NewImmutableBitSet(set.List()...))
 	}
 	return clauses
+}
+
+// sampler provides functions to sample secrets and shares for ISN schemes. It abstracts the randomness source and allows for flexible sampling strategies.
+type sampler[E algebra.GroupElement[E]] struct {
+	secrets func(io.Reader) (E, error)
+	shares  func(io.Reader) (E, error)
+}
+
+// newFiniteGroupElementSampler creates a new sampler for secrets and shares based on the random sampling function of a finite group. It returns an error if the provided group is nil.
+func newFiniteGroupElementSampler[E algebra.GroupElement[E]](g algebra.FiniteGroup[E]) (*sampler[E], error) {
+	if g == nil {
+		return nil, sharing.ErrIsNil.WithMessage("group is nil")
+	}
+	return &sampler[E]{
+		secrets: g.Random,
+		shares:  g.Random,
+	}, nil
+}
+
+func (s *sampler[E]) Secret(prng io.Reader) (E, error) {
+	return s.secrets(prng)
+}
+
+func (s *sampler[E]) Share(prng io.Reader) (E, error) {
+	return s.shares(prng)
 }

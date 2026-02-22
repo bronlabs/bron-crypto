@@ -12,6 +12,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/isn"
@@ -798,6 +799,57 @@ func TestCNFShare_ToAdditive(t *testing.T) {
 	reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
 	require.NoError(t, err)
 	require.True(t, reconstructed.Value().Equal(secret.Value()))
+}
+
+func TestCNFShareCBOR(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewScalarField()
+	ac, err := sharing.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1).Freeze(),
+		hashset.NewComparable[sharing.ID](2).Freeze(),
+		hashset.NewComparable[sharing.ID](3).Freeze(),
+	)
+	require.NoError(t, err)
+
+	scheme, err := isn.NewFiniteScheme(group, ac)
+	require.NoError(t, err)
+
+	out, err := scheme.Deal(isn.NewSecret(group.FromUint64(123)), pcg.NewRandomised())
+	require.NoError(t, err)
+	share, ok := out.Shares().Get(1)
+	require.True(t, ok)
+
+	t.Run("round-trip via serde", func(t *testing.T) {
+		t.Parallel()
+
+		data, err := serde.MarshalCBOR(share)
+		require.NoError(t, err)
+
+		decoded, err := serde.UnmarshalCBOR[isn.Share[*k256.Scalar]](data)
+		require.NoError(t, err)
+		require.True(t, share.Equal(&decoded))
+	})
+
+	t.Run("round-trip via methods", func(t *testing.T) {
+		t.Parallel()
+
+		data, err := share.MarshalCBOR()
+		require.NoError(t, err)
+
+		var decoded isn.Share[*k256.Scalar]
+		err = decoded.UnmarshalCBOR(data)
+		require.NoError(t, err)
+		require.True(t, share.Equal(&decoded))
+	})
+
+	t.Run("invalid CBOR", func(t *testing.T) {
+		t.Parallel()
+
+		var decoded isn.Share[*k256.Scalar]
+		err := decoded.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
+		require.Error(t, err)
+	})
 }
 
 func TestDNF_ChronoVault(t *testing.T) {
