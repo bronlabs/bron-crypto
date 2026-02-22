@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/recovery"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func MakeRunners(tb testing.TB, ac *sharing.ThresholdAccessStructure, mislayerID
 	prng := pcg.NewRandomised()
 
 	group := k256.NewCurve()
-	scheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
+	scheme, err := feldman.NewScheme(group.Generator(), ac)
 	require.NoError(tb, err)
 	dealerOutput, _, err := scheme.DealRandom(prng)
 	require.NoError(tb, err)
