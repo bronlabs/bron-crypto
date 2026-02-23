@@ -70,3 +70,43 @@ func (m *Matrix[S]) Module() *MatrixModule[S] {
 func (m *Matrix[S]) Structure() algebra.Structure[*Matrix[S]] {
 	return m.Module()
 }
+
+// IsColumnVector returns true if this matrix has exactly one column.
+func (m *Matrix[S]) IsColumnVector() bool {
+	return m.n == 1
+}
+
+// IsRowVector returns true if this matrix has exactly one row.
+func (m *Matrix[S]) IsRowVector() bool {
+	return m.m == 1
+}
+
+// vectorLength returns the length of a row or column vector, or -1 if the matrix is not a vector.
+func (m *Matrix[S]) vectorLength() int {
+	if m.IsRowVector() {
+		return m.n
+	}
+	if m.IsColumnVector() {
+		return m.m
+	}
+	return -1
+}
+
+// DotProduct computes the dot product of two vectors (row or column).
+// Both m and vector must be vectors (single row or single column) of the same length.
+func (m *Matrix[S]) DotProduct(vector *Matrix[S]) (S, error) {
+	ring := m.scalarRing()
+	mLen := m.vectorLength()
+	vLen := vector.vectorLength()
+	if mLen < 0 || vLen < 0 {
+		return ring.Zero(), ErrDimension.WithMessage("dot product requires vectors: got %dx%d and %dx%d", m.m, m.n, vector.m, vector.n)
+	}
+	if mLen != vLen {
+		return ring.Zero(), ErrDimension.WithMessage("incompatible vector lengths for dot product: %d and %d", mLen, vLen)
+	}
+	result := ring.Zero()
+	for i := range mLen {
+		result = result.Add(m.v[i].Mul(vector.v[i]))
+	}
+	return result, nil
+}

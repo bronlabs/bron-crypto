@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"iter"
 	"strings"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -217,25 +218,57 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Get(row, col int) (S, error) {
 }
 
 // GetRow returns a copy of the i-th row.
-func (m *MatrixTrait[S, W, WT, RectW, RectWT]) GetRow(i int) ([]S, error) {
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) GetRow(i int) (RectW, error) {
 	if i < 0 || i >= m.m {
 		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", i, m.m)
 	}
-	row := make([]S, m.n)
-	copy(row, m.v[i*m.n:(i+1)*m.n])
-	return row, nil
+	var rowMatrix RectWT
+	RectW(&rowMatrix).init(1, m.n)
+	copy(RectW(&rowMatrix).data(), m.v[i*m.n:(i+1)*m.n])
+	return RectW(&rowMatrix), nil
+}
+
+// IterRows yields each row as a RectW matrix in sequence. The yielded row is a copy and can be safely modified by the caller.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IterRows() iter.Seq[RectW] {
+	return func(yield func(RectW) bool) {
+		for i := range m.m {
+			rowi, err := m.GetRow(i)
+			if err != nil {
+				panic(errs.Wrap(err).WithMessage("failed to get row %d during IterRows", i))
+			}
+			if !yield(rowi) {
+				return
+			}
+		}
+	}
 }
 
 // GetColumn returns a copy of the j-th column.
-func (m *MatrixTrait[S, W, WT, RectW, RectWT]) GetColumn(j int) ([]S, error) {
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) GetColumn(j int) (RectW, error) {
 	if j < 0 || j >= m.n {
 		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", j, m.n)
 	}
-	column := make([]S, m.m)
+	var colMatrix RectWT
+	RectW(&colMatrix).init(m.m, 1)
 	for i := range m.m {
-		column[i] = m.v[m.idx(i, j)]
+		RectW(&colMatrix).data()[i] = m.v[m.idx(i, j)]
 	}
-	return column, nil
+	return RectW(&colMatrix), nil
+}
+
+// IterColumns yields each column as a RectW matrix in sequence. The yielded column is a copy and can be safely modified by the caller.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IterColumns() iter.Seq[RectW] {
+	return func(yield func(RectW) bool) {
+		for j := range m.n {
+			colj, err := m.GetColumn(j)
+			if err != nil {
+				panic(errs.Wrap(err).WithMessage("failed to get column %d during IterColumns", j))
+			}
+			if !yield(colj) {
+				return
+			}
+		}
+	}
 }
 
 // Op returns the group operation result (addition). Alias for [MatrixTrait.Add].
