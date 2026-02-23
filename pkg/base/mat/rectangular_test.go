@@ -237,6 +237,109 @@ func TestMatrixPredicates(t *testing.T) {
 	})
 }
 
+// --- Vector predicates ---
+
+func TestMatrixIsColumnVector(t *testing.T) {
+	t.Parallel()
+	require.True(t, newMatrix(t, [][]uint64{{1}, {2}, {3}}).IsColumnVector())
+	require.True(t, newMatrix(t, [][]uint64{{7}}).IsColumnVector())
+	require.False(t, newMatrix(t, [][]uint64{{1, 2}}).IsColumnVector())
+	require.False(t, newMatrix(t, [][]uint64{{1, 2}, {3, 4}}).IsColumnVector())
+}
+
+func TestMatrixIsRowVector(t *testing.T) {
+	t.Parallel()
+	require.True(t, newMatrix(t, [][]uint64{{1, 2, 3}}).IsRowVector())
+	require.True(t, newMatrix(t, [][]uint64{{7}}).IsRowVector())
+	require.False(t, newMatrix(t, [][]uint64{{1}, {2}}).IsRowVector())
+	require.False(t, newMatrix(t, [][]uint64{{1, 2}, {3, 4}}).IsRowVector())
+}
+
+// --- Dot product ---
+
+func TestMatrixDotProduct(t *testing.T) {
+	t.Parallel()
+
+	t.Run("row_dot_column", func(t *testing.T) {
+		t.Parallel()
+		row := newMatrix(t, [][]uint64{{1, 2, 3}})
+		col := newMatrix(t, [][]uint64{{4}, {5}, {6}})
+		// 1*4 + 2*5 + 3*6 = 32
+		got, err := row.DotProduct(col)
+		require.NoError(t, err)
+		require.True(t, got.Equal(scalar(32)))
+	})
+
+	t.Run("column_dot_column", func(t *testing.T) {
+		t.Parallel()
+		a := newMatrix(t, [][]uint64{{1}, {2}, {3}})
+		b := newMatrix(t, [][]uint64{{4}, {5}, {6}})
+		got, err := a.DotProduct(b)
+		require.NoError(t, err)
+		require.True(t, got.Equal(scalar(32)))
+	})
+
+	t.Run("row_dot_row", func(t *testing.T) {
+		t.Parallel()
+		a := newMatrix(t, [][]uint64{{1, 2, 3}})
+		b := newMatrix(t, [][]uint64{{4, 5, 6}})
+		got, err := a.DotProduct(b)
+		require.NoError(t, err)
+		require.True(t, got.Equal(scalar(32)))
+	})
+
+	t.Run("column_dot_row", func(t *testing.T) {
+		t.Parallel()
+		col := newMatrix(t, [][]uint64{{1}, {2}, {3}})
+		row := newMatrix(t, [][]uint64{{4, 5, 6}})
+		got, err := col.DotProduct(row)
+		require.NoError(t, err)
+		require.True(t, got.Equal(scalar(32)))
+	})
+
+	t.Run("length_1", func(t *testing.T) {
+		t.Parallel()
+		a := newMatrix(t, [][]uint64{{7}})
+		b := newMatrix(t, [][]uint64{{3}})
+		got, err := a.DotProduct(b)
+		require.NoError(t, err)
+		require.True(t, got.Equal(scalar(21)))
+	})
+
+	t.Run("orthogonal_is_zero", func(t *testing.T) {
+		t.Parallel()
+		a := newMatrix(t, [][]uint64{{1, 0}})
+		b := newMatrix(t, [][]uint64{{0}, {1}})
+		got, err := a.DotProduct(b)
+		require.NoError(t, err)
+		require.True(t, got.IsZero())
+	})
+
+	t.Run("incompatible_lengths", func(t *testing.T) {
+		t.Parallel()
+		a := newMatrix(t, [][]uint64{{1, 2, 3}})
+		b := newMatrix(t, [][]uint64{{4, 5}})
+		_, err := a.DotProduct(b)
+		require.Error(t, err)
+	})
+
+	t.Run("not_a_vector", func(t *testing.T) {
+		t.Parallel()
+		a := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		b := newMatrix(t, [][]uint64{{5}, {6}})
+		_, err := a.DotProduct(b)
+		require.Error(t, err)
+	})
+
+	t.Run("both_not_vectors", func(t *testing.T) {
+		t.Parallel()
+		a := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		b := newMatrix(t, [][]uint64{{5, 6}, {7, 8}})
+		_, err := a.DotProduct(b)
+		require.Error(t, err)
+	})
+}
+
 // --- Element access ---
 
 func TestMatrixGet(t *testing.T) {
