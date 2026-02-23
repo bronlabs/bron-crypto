@@ -259,19 +259,20 @@ func TestMatrixGetRowColumn(t *testing.T) {
 		t.Parallel()
 		row, err := m.GetRow(0)
 		require.NoError(t, err)
-		require.Len(t, row, 3)
-		for j, want := range []uint64{1, 2, 3} {
-			require.True(t, row[j].Equal(scalar(want)))
-		}
+		r, c := row.Dimensions()
+		require.Equal(t, 1, r)
+		require.Equal(t, 3, c)
+		require.True(t, row.Equal(newMatrix(t, [][]uint64{{1, 2, 3}})))
 	})
 
 	t.Run("GetColumn", func(t *testing.T) {
 		t.Parallel()
 		col, err := m.GetColumn(1)
 		require.NoError(t, err)
-		require.Len(t, col, 2)
-		require.True(t, col[0].Equal(scalar(2)))
-		require.True(t, col[1].Equal(scalar(5)))
+		r, c := col.Dimensions()
+		require.Equal(t, 2, r)
+		require.Equal(t, 1, c)
+		require.True(t, col.Equal(newMatrix(t, [][]uint64{{2}, {5}})))
 	})
 
 	t.Run("OOB", func(t *testing.T) {
@@ -840,6 +841,121 @@ func TestMatrixColumnSlice(t *testing.T) {
 		t.Parallel()
 		_, err := m.ColumnSlice(-1, 2)
 		require.Error(t, err)
+	})
+}
+
+// --- Iterators ---
+
+func TestMatrixIterRows(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+
+	t.Run("yields_all_rows", func(t *testing.T) {
+		t.Parallel()
+		var rows []*mat.Matrix[S]
+		for row := range m.IterRows() {
+			rows = append(rows, row)
+		}
+		require.Len(t, rows, 2)
+		require.True(t, rows[0].Equal(newMatrix(t, [][]uint64{{1, 2, 3}})))
+		require.True(t, rows[1].Equal(newMatrix(t, [][]uint64{{4, 5, 6}})))
+	})
+
+	t.Run("row_dimensions", func(t *testing.T) {
+		t.Parallel()
+		for row := range m.IterRows() {
+			r, c := row.Dimensions()
+			require.Equal(t, 1, r)
+			require.Equal(t, 3, c)
+		}
+	})
+
+	t.Run("rows_are_copies", func(t *testing.T) {
+		t.Parallel()
+		for row := range m.IterRows() {
+			row.ScalarMulAssign(scalar(0))
+		}
+		// Original unchanged.
+		v, _ := m.Get(0, 0)
+		require.True(t, v.Equal(scalar(1)))
+	})
+
+	t.Run("break_early", func(t *testing.T) {
+		t.Parallel()
+		count := 0
+		for range m.IterRows() {
+			count++
+			break
+		}
+		require.Equal(t, 1, count)
+	})
+
+	t.Run("single_row", func(t *testing.T) {
+		t.Parallel()
+		m1 := newMatrix(t, [][]uint64{{7, 8, 9}})
+		var rows []*mat.Matrix[S]
+		for row := range m1.IterRows() {
+			rows = append(rows, row)
+		}
+		require.Len(t, rows, 1)
+		require.True(t, rows[0].Equal(m1))
+	})
+}
+
+func TestMatrixIterColumns(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+
+	t.Run("yields_all_columns", func(t *testing.T) {
+		t.Parallel()
+		var cols []*mat.Matrix[S]
+		for col := range m.IterColumns() {
+			cols = append(cols, col)
+		}
+		require.Len(t, cols, 3)
+		require.True(t, cols[0].Equal(newMatrix(t, [][]uint64{{1}, {4}})))
+		require.True(t, cols[1].Equal(newMatrix(t, [][]uint64{{2}, {5}})))
+		require.True(t, cols[2].Equal(newMatrix(t, [][]uint64{{3}, {6}})))
+	})
+
+	t.Run("column_dimensions", func(t *testing.T) {
+		t.Parallel()
+		for col := range m.IterColumns() {
+			r, c := col.Dimensions()
+			require.Equal(t, 2, r)
+			require.Equal(t, 1, c)
+		}
+	})
+
+	t.Run("columns_are_copies", func(t *testing.T) {
+		t.Parallel()
+		for col := range m.IterColumns() {
+			col.ScalarMulAssign(scalar(0))
+		}
+		// Original unchanged.
+		v, _ := m.Get(0, 0)
+		require.True(t, v.Equal(scalar(1)))
+	})
+
+	t.Run("break_early", func(t *testing.T) {
+		t.Parallel()
+		count := 0
+		for range m.IterColumns() {
+			count++
+			break
+		}
+		require.Equal(t, 1, count)
+	})
+
+	t.Run("single_column", func(t *testing.T) {
+		t.Parallel()
+		m1 := newMatrix(t, [][]uint64{{7}, {8}})
+		var cols []*mat.Matrix[S]
+		for col := range m1.IterColumns() {
+			cols = append(cols, col)
+		}
+		require.Len(t, cols, 1)
+		require.True(t, cols[0].Equal(m1))
 	})
 }
 

@@ -462,6 +462,58 @@ func TestSquareColumnSlice(t *testing.T) {
 	})
 }
 
+// --- Iterators on square ---
+
+func TestSquareIterRows(t *testing.T) {
+	t.Parallel()
+	m := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
+
+	t.Run("yields_all_rows", func(t *testing.T) {
+		t.Parallel()
+		var rows []*mat.Matrix[S]
+		for row := range m.IterRows() {
+			rows = append(rows, row)
+		}
+		require.Len(t, rows, 2)
+		require.True(t, rows[0].Equal(newMatrix(t, [][]uint64{{1, 2}})))
+		require.True(t, rows[1].Equal(newMatrix(t, [][]uint64{{3, 4}})))
+	})
+
+	t.Run("rows_are_copies", func(t *testing.T) {
+		t.Parallel()
+		for row := range m.IterRows() {
+			row.ScalarMulAssign(scalar(0))
+		}
+		v, _ := m.Get(0, 0)
+		require.True(t, v.Equal(scalar(1)))
+	})
+}
+
+func TestSquareIterColumns(t *testing.T) {
+	t.Parallel()
+	m := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
+
+	t.Run("yields_all_columns", func(t *testing.T) {
+		t.Parallel()
+		var cols []*mat.Matrix[S]
+		for col := range m.IterColumns() {
+			cols = append(cols, col)
+		}
+		require.Len(t, cols, 2)
+		require.True(t, cols[0].Equal(newMatrix(t, [][]uint64{{1}, {3}})))
+		require.True(t, cols[1].Equal(newMatrix(t, [][]uint64{{2}, {4}})))
+	})
+
+	t.Run("columns_are_copies", func(t *testing.T) {
+		t.Parallel()
+		for col := range m.IterColumns() {
+			col.ScalarMulAssign(scalar(0))
+		}
+		v, _ := m.Get(0, 0)
+		require.True(t, v.Equal(scalar(1)))
+	})
+}
+
 // --- Augment / Stack return rectangular ---
 
 func TestSquareAugmentReturnsRectangular(t *testing.T) {

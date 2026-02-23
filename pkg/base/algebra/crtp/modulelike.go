@@ -200,8 +200,6 @@ type Matrix[M, S any] interface {
 	IsSquare() bool
 	IsDiagonal() bool
 	Get(row, col int) (S, error)
-	GetRow(row int) ([]S, error)
-	GetColumn(col int) ([]S, error)
 	IsZero() bool
 
 	HadamardProduct(other M) (M, error)
