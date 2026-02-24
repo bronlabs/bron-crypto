@@ -540,20 +540,17 @@ func TestSquareStackReturnsRectangular(t *testing.T) {
 	require.True(t, got.Equal(want))
 }
 
-// --- Spans on square ---
+// --- SolveRight on square ---
 
-func TestSquareSpans(t *testing.T) {
+func TestSquareSolveRight(t *testing.T) {
 	t.Parallel()
 	m := newSquare(t, [][]uint64{{1, 2}, {3, 4}})
-	b := []S{scalar(5), scalar(11)}
-	// Spans returns *Matrix (rectangular) since the result is n×1.
-	sol, err := m.Spans(b)
+	b := columnVector(t, 5, 11)
+	// SolveRight is a free function constrained to finite field elements.
+	sol, err := mat.SolveRight(m.AsRectangular(), b)
 	require.NoError(t, err)
 	// Verify M*x = b
 	product, err := m.AsRectangular().TryMul(sol)
 	require.NoError(t, err)
-	for i, want := range b {
-		v, _ := product.Get(i, 0)
-		require.True(t, v.Equal(want), "row %d", i)
-	}
+	require.True(t, product.Equal(b))
 }
