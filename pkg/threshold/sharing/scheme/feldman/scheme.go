@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -148,4 +149,15 @@ func (d *Scheme[E, FE]) Verify(share *Share[FE], reference VerificationVector[E,
 		return sharing.ErrVerification.WithMessage("verification vector does not match share in exponent")
 	}
 	return nil
+}
+
+// ShareToAdditiveShare converts this Shamir share to an additive share by multiplying
+// by the appropriate Lagrange coefficient. The resulting additive shares can
+// be summed to reconstruct the secret.
+func (*Scheme[E, FE]) ShareToAdditiveShare(s *Share[FE], quorum *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
+	share, err := s.ToAdditive(quorum)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert share to additive share")
+	}
+	return share, nil
 }

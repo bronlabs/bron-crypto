@@ -108,14 +108,12 @@ func TestHierarchicalConjunctiveThresholdIsQualified(t *testing.T) {
 func TestHierarchicalConjunctiveThresholdShareholders(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHierarchicalConjunctiveThresholdAccessStructure(
+	_, err := NewHierarchicalConjunctiveThresholdAccessStructure(
 		WithLevel(1, 1, 1, 2),
 		WithLevel(2, 2, 3),
 		WithLevel(3, 3, 4, 4),
 	)
-	require.NoError(t, err)
-
-	require.True(t, h.Shareholders().Equal(hashset.NewComparable[ID](1, 2, 3, 4).Freeze()))
+	require.Error(t, err)
 }
 
 func TestHierarchicalConjunctiveThresholdMaximalUnqualifiedSetsIter_AgainstBruteForce(t *testing.T) {
@@ -146,14 +144,6 @@ func TestHierarchicalConjunctiveThresholdMaximalUnqualifiedSetsIter_AgainstBrute
 				WithLevel(2, 2, 3),
 				WithLevel(4, 4, 5, 6),
 				WithLevel(6, 7, 8),
-			},
-		},
-		{
-			name: "overlapping levels",
-			levels: []*ThresholdLevel{
-				WithLevel(1, 1, 2, 3),
-				WithLevel(2, 3, 4, 5),
-				WithLevel(4, 5, 6, 7, 8),
 			},
 		},
 	}

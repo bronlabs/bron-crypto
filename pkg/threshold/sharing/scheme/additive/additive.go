@@ -3,7 +3,6 @@ package additive
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -90,10 +89,8 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 	}
 	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
 	for i, id := range d.ac.Shareholders().Iter2() {
-		shares.Put(id, &Share[E]{
-			id: id,
-			v:  sharesList[i],
-		})
+		s, _ := NewShare(id, sharesList[i], d.ac)
+		shares.Put(id, s)
 	}
 	return &DealerOutput[E]{
 		shares: shares.Freeze(),
@@ -155,76 +152,20 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		return nil, sharing.ErrFailed.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 	reconstructed := algebrautils.Sum(sharesSet[0], sharesSet[1:]...)
-	return &Secret[E]{v: reconstructed.v}, nil
+	return &Secret[E]{v: reconstructed.Value()}, nil
 }
 
-// NewShare creates a new additive share with the given ID and value.
-// If an access structure is provided, validates that the ID is a valid shareholder.
+type Share[E GroupElement[E]] = sharing.AdditiveShare[E]
+
 func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *sharing.UnanimityAccessStructure) (*Share[E], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
-	return &Share[E]{
-		id: id,
-		v:  v,
-	}, nil
-}
-
-// Share represents an additive secret share consisting of a shareholder ID
-// and a group element value.
-type Share[E GroupElement[E]] struct {
-	id sharing.ID
-	v  E
-}
-
-// ID returns the shareholder identifier for this share.
-func (s *Share[E]) ID() sharing.ID {
-	return s.id
-}
-
-// Value returns the group element value of this share.
-func (s *Share[E]) Value() E {
-	return s.v
-}
-
-// Equal returns true if two shares have the same ID and value.
-func (s *Share[E]) Equal(other *Share[E]) bool {
-	if s == nil || other == nil {
-		return s == other
+	share, err := sharing.NewAdditiveShare(id, v)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create additive share")
 	}
-	return s.id == other.id && s.v.Equal(other.v)
-}
-
-// Op is an alias for Add, implementing the group element interface.
-func (s *Share[E]) Op(other *Share[E]) *Share[E] {
-	return s.Add(other)
-}
-
-// Add returns a new share that is the component-wise sum of two shares.
-// Both shares must have the same ID.
-func (s *Share[E]) Add(other *Share[E]) *Share[E] {
-	return &Share[E]{
-		id: s.id,
-		v:  s.v.Op(other.v),
-	}
-}
-
-// Clone returns a deep copy of this share.
-func (s *Share[E]) Clone() *Share[E] {
-	return &Share[E]{
-		id: s.id,
-		v:  s.v.Clone(),
-	}
-}
-
-// HashCode returns a hash code for this share, for use in hash-based collections.
-func (s *Share[E]) HashCode() base.HashCode {
-	return base.HashCode(s.id) ^ s.v.HashCode()
-}
-
-// SchemeName returns the name of the secret sharing scheme.
-func (*Share[E]) SchemeName() sharing.Name {
-	return Name
+	return share, nil
 }
 
 // NewSecret creates a new secret from a group element.

@@ -38,6 +38,9 @@ func NewHierarchicalConjunctiveThresholdAccessStructure(levels ...*ThresholdLeve
 		}
 		currentThreshold = l.threshold
 
+		if cumulativeParties.Intersection(parties).Size() > 0 {
+			return nil, ErrValue.WithMessage("parties must be disjoint")
+		}
 		cumulativeParties.AddAll(l.parties...)
 		if cumulativeParties.Size() < l.threshold {
 			return nil, ErrValue.WithMessage("thresholds must be less than or equal to the number of parties")

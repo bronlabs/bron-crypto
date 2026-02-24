@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -210,4 +211,11 @@ func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) 
 		return errs.Wrap(err).WithMessage("could not verify commitment")
 	}
 	return nil
+}
+
+// ShareToAdditiveShare converts this Shamir share to an additive share by multiplying
+// by the appropriate Lagrange coefficient. The resulting additive shares can
+// be summed to reconstruct the secret.
+func (*Scheme[E, S]) ShareToAdditiveShare(s *Share[S], quorum *sharing.UnanimityAccessStructure) (*additive.Share[S], error) {
+	return s.ToAdditive(quorum)
 }

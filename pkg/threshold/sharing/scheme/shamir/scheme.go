@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -152,4 +153,11 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 // Field returns the prime field over which this scheme operates.
 func (d *Scheme[FE]) Field() algebra.PrimeField[FE] {
 	return d.f
+}
+
+// ShareToAdditiveShare converts this Shamir share to an additive share by multiplying
+// by the appropriate Lagrange coefficient. The resulting additive shares can
+// be summed to reconstruct the secret.
+func (*Scheme[FE]) ShareToAdditiveShare(s *Share[FE], quorum *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
+	return s.ToAdditive(quorum)
 }

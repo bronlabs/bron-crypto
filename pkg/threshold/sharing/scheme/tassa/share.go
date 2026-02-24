@@ -53,7 +53,3 @@ func (s *Share[F]) ScalarOp(actor F) *Share[F] {
 		value: s.value.Mul(actor),
 	}
 }
-
-func (*Share[F]) ToAdditive(unanimity *sharing.UnanimityAccessStructure) (*additive.Share[F], error) {
-	panic("not implemented")
-}

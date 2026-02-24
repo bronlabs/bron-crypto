@@ -81,7 +81,6 @@ type HomomorphicShare[S interface {
 type LinearShare[S interface {
 	HomomorphicShare[S, SV, AC]
 	algebra.Actable[S, SC]
-	ToAdditive(unanimity *UnanimityAccessStructure) (SA, error)
 }, SV any,
 	SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure],
 	SAV algebra.GroupElement[SAV],
@@ -90,7 +89,6 @@ type LinearShare[S interface {
 ] interface {
 	HomomorphicShare[S, SV, AC]
 	algebra.Actable[S, SC]
-	ToAdditive(unanimity *UnanimityAccessStructure) (SA, error)
 }
 
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.
@@ -106,6 +104,7 @@ type LSSS[
 	SSS[S, W, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
+	ShareToAdditiveShare(input S, unanimity *UnanimityAccessStructure) (SA, error)
 }
 
 // PolynomialLSSS is an LSSS based on polynomial evaluation, such as Shamir's scheme.
