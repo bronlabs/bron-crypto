@@ -108,7 +108,7 @@ func (a *ThresholdAccessStructure) Clone() *ThresholdAccessStructure {
 	}
 }
 
-// MarshalCBOR serializes the threshold access structure.
+// MarshalCBOR serialises the threshold access structure.
 func (a *ThresholdAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := &thresholdDTO{
 		T:  a.t,

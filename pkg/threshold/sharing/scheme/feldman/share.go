@@ -92,7 +92,7 @@ func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStr
 	return additiveShare, nil
 }
 
-// MarshalCBOR serializes the lifted share.
+// MarshalCBOR serialises the lifted share.
 func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 	dto := &liftedShareDTO[E, FE]{
 		ID: s.id,

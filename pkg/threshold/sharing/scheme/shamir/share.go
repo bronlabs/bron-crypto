@@ -135,7 +135,7 @@ func (s *Share[FE]) Bytes() []byte {
 	return buf
 }
 
-// MarshalCBOR serializes the share.
+// MarshalCBOR serialises the share.
 func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 	dto := &shareDTO[FE]{
 		ID: s.id,

@@ -19,7 +19,7 @@ type CNFAccessStructure struct {
 }
 
 // NewCNFAccessStructure constructs a CNF access structure from unqualified sets
-// and normalizes them into unique maximal clauses.
+// and normalises them into unique maximal clauses.
 func NewCNFAccessStructure(unqualifiedSets ...ds.Set[ID]) (*CNFAccessStructure, error) {
 	maximalUnqualifiedSets, err := normaliseCNF(unqualifiedSets...)
 	if err != nil {

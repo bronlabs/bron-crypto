@@ -828,6 +828,23 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Clone() W {
 	return W(&cloned)
 }
 
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SetColumn(c int, data []S) (W, error) {
+	if c < 0 || c >= m.n {
+		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", c, m.n)
+	}
+	if len(data) != m.m {
+		return nil, ErrDimension.WithMessage("column length %d does not match matrix row count %d", len(data), m.m)
+	}
+
+	var out WT
+	W(&out).init(m.m, m.n)
+	copy(W(&out).data(), m.v)
+	for r, d := range data {
+		W(&out).data()[m.idx(r, c)] = d.Clone()
+	}
+	return &out, nil
+}
+
 // findPivotRow returns the first row at or below startRow with a non-zero entry
 // in the given column, or -1 if none exists.
 func (m *MatrixTrait[S, W, WT, RectW, RectWT]) findPivotRow(col, startRow int) int {

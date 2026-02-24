@@ -150,7 +150,7 @@ func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
 	return result
 }
 
-// MarshalCBOR serializes the share.
+// MarshalCBOR serialises the share.
 func (s *Share[E]) MarshalCBOR() ([]byte, error) {
 	dto := &shareDTO[E]{
 		ID: s.id,

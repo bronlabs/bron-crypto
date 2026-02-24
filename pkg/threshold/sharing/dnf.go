@@ -19,7 +19,7 @@ type DNFAccessStructure struct {
 }
 
 // NewDNFAccessStructure constructs a DNF access structure from qualified sets
-// and normalizes them into unique minimal clauses.
+// and normalises them into unique minimal clauses.
 func NewDNFAccessStructure(qualifiedSets ...ds.Set[ID]) (*DNFAccessStructure, error) {
 	minimalQualifiedSets, err := normaliseDNF(qualifiedSets...)
 	if err != nil {

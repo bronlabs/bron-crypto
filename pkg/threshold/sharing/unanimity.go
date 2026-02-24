@@ -94,7 +94,7 @@ func (u *UnanimityAccessStructure) Clone() *UnanimityAccessStructure {
 	}
 }
 
-// MarshalCBOR serializes the access structure.
+// MarshalCBOR serialises the access structure.
 func (u *UnanimityAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := unanimityDTO{
 		Ps: make(map[ID]bool),
