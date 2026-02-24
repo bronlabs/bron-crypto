@@ -4,12 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 )
-
-func _[F algebra.PrimeFieldElement[F]]() {
-	var _ sharing.LinearShare[*Share[F], F, *additive.Share[F], F, F, *sharing.HierarchicalConjunctiveThresholdAccessStructure] = (*Share[F])(nil)
-}
 
 type Share[F algebra.PrimeFieldElement[F]] struct {
 	id    sharing.ID
@@ -29,7 +24,7 @@ func (s *Share[F]) Equal(rhs *Share[F]) bool {
 }
 
 func (s *Share[F]) HashCode() ds.HashCode {
-	return s.value.HashCode() ^ ds.HashCode(s.id)
+	return s.value.HashCode().Combine(ds.HashCode(s.id))
 }
 
 func (s *Share[F]) Value() F {

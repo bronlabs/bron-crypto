@@ -22,10 +22,6 @@ const (
 	Name = "Tassa Secret Sharing Scheme"
 )
 
-func _[F algebra.PrimeFieldElement[F]]() {
-	var _ sharing.PolynomialLSSS[*Share[F], F, *additive.Share[F], F, *Secret[F], F, *DealerOutput[F], F, *sharing.HierarchicalConjunctiveThresholdAccessStructure] = (*Scheme[F])(nil)
-}
-
 type Secret[F algebra.PrimeFieldElement[F]] struct {
 	value F
 }

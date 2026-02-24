@@ -62,40 +62,25 @@ type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOu
 // ThresholdSSS is a secret sharing scheme with a threshold access structure.
 type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *ThresholdAccessStructure]
 
-// HomomorphicShare is a share that supports the group operation, allowing shares
-// to be combined homomorphically. If parties hold shares of secrets a and b,
-// they can locally compute shares of a+b.
-type HomomorphicShare[S interface {
-	Share[S]
-	algebra.HomomorphicLike[S, SV]
-}, SV any, // To support CNF/DNF variants, the share value type is not constrained to a specific algebraic structure.
-	AC MonotoneAccessStructure,
-] interface {
-	Share[S]
-	algebra.HomomorphicLike[S, SV]
-}
-
 // LinearShare extends HomomorphicShare with scalar operation and conversion
 // to additive shares. This enables threshold-to-additive share conversion using
 // Lagrange coefficients, which is essential for many MPC protocols.
 type LinearShare[S interface {
-	HomomorphicShare[S, SV, AC]
+	Share[S]
+	algebra.HomomorphicLike[S, SV]
 	algebra.Actable[S, SC]
 }, SV any,
-	SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure],
-	SAV algebra.GroupElement[SAV],
 	SC any, // To support packed variants, scalar type is not constrained.
-	AC MonotoneAccessStructure,
 ] interface {
-	HomomorphicShare[S, SV, AC]
+	Share[S]
+	algebra.HomomorphicLike[S, SV]
 	algebra.Actable[S, SC]
 }
 
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.
 // It supports revealing the dealer function (polynomial) for protocols that need it.
 type LSSS[
-	S LinearShare[S, SV, SA, SAV, SC, AC], SV any,
-	SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure], SAV algebra.GroupElement[SAV],
+	S LinearShare[S, SV, SC], SV any,
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
@@ -104,16 +89,16 @@ type LSSS[
 	SSS[S, W, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
-	ShareToAdditiveShare(input S, unanimity *UnanimityAccessStructure) (SA, error)
+	ShareToAdditiveShare(input S, unanimity *UnanimityAccessStructure) (*AdditiveShare[WV], error)
 }
 
 // PolynomialLSSS is an LSSS based on polynomial evaluation, such as Shamir's scheme.
 // The dealer function is a polynomial f(x) where f(0) is the secret and f(i) is
 // shareholder i's share.
 type PolynomialLSSS[
-	S LinearShare[S, SV, SA, SAV, SC, AC], SV algebra.PrimeFieldElement[SV], SA HomomorphicShare[SA, SAV, *UnanimityAccessStructure], SAV algebra.GroupElement[SAV],
+	S LinearShare[S, SV, SC], SV algebra.PrimeFieldElement[SV],
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
 	}, WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC MonotoneAccessStructure,
-] LSSS[S, SV, SA, SAV, W, WV, DO, SC, AC, *polynomials.Polynomial[SV]]
+] LSSS[S, SV, W, WV, DO, SC, AC, *polynomials.Polynomial[SV]]

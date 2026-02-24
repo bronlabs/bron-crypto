@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // NewAdditiveShare creates a new additive share with the given ID and value.
@@ -56,6 +57,14 @@ func (s *AdditiveShare[E]) Add(other *AdditiveShare[E]) *AdditiveShare[E] {
 	}
 }
 
+// ScalarOp returns a new share that is the result of multiplying this share's value by a scalar actor. The ID remains unchanged.
+func (s *AdditiveShare[E]) ScalarOp(actor algebra.Numeric) *AdditiveShare[E] {
+	return &AdditiveShare[E]{
+		id: s.id,
+		v:  algebrautils.ScalarMul(s.v, actor),
+	}
+}
+
 // Clone returns a deep copy of this share.
 func (s *AdditiveShare[E]) Clone() *AdditiveShare[E] {
 	return &AdditiveShare[E]{
@@ -66,5 +75,5 @@ func (s *AdditiveShare[E]) Clone() *AdditiveShare[E] {
 
 // HashCode returns a hash code for this share, for use in hash-based collections.
 func (s *AdditiveShare[E]) HashCode() base.HashCode {
-	return base.HashCode(s.id) ^ s.v.HashCode()
+	return base.HashCode(s.id).Combine(s.v.HashCode())
 }
