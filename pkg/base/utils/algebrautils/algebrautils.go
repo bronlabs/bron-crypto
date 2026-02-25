@@ -5,6 +5,8 @@ import (
 	"math/bits"
 	"slices"
 
+	"golang.org/x/exp/constraints"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
@@ -100,8 +102,8 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](base E, exponent S
 	return res
 }
 
-// ScalarMulUint64 computes the scalar multiplication of the given base element by the given exponent.
-func ScalarMulUint64[E algebra.MonoidElement[E]](e E, s uint64) E {
+// ScalarMulNative computes the scalar multiplication of the given base element by the given exponent.
+func ScalarMulNative[E algebra.MonoidElement[E], S constraints.Unsigned](e E, s S) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](e.Structure())
 
 	if s == 0 {

@@ -375,7 +375,7 @@ func (p *Polynomial[RE]) Derivative() *Polynomial[RE] {
 	}
 	derivCoeffs := make([]RE, p.Degree())
 	for i := 1; i <= p.Degree(); i++ {
-		derivCoeffs[i-1] = algebrautils.ScalarMulUint64(p.coeffs[i], uint64(i))
+		derivCoeffs[i-1] = algebrautils.ScalarMulNative(p.coeffs[i], uint64(i))
 	}
 	return &Polynomial[RE]{
 		coeffs: derivCoeffs,

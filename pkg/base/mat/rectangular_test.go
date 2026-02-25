@@ -43,6 +43,20 @@ func newMatrix(t *testing.T, rows [][]uint64) *mat.Matrix[S] {
 	return m
 }
 
+func columnVector(t *testing.T, vals ...uint64) *mat.Matrix[S] {
+	t.Helper()
+	rows := make([][]uint64, len(vals))
+	for i, v := range vals {
+		rows[i] = []uint64{v}
+	}
+	return newMatrix(t, rows)
+}
+
+func rowVector(t *testing.T, vals ...uint64) *mat.Matrix[S] {
+	t.Helper()
+	return newMatrix(t, [][]uint64{vals})
+}
+
 // --- Module / constructor tests ---
 
 func TestMatrixModuleConstructor(t *testing.T) {
@@ -590,48 +604,42 @@ func TestMatrixMultiply(t *testing.T) {
 	})
 }
 
-// --- Spans / RowSpans ---
+// --- SolveRight / SolveLeft ---
 
-func TestMatrixSpans(t *testing.T) {
+func TestMatrixSolveRight(t *testing.T) {
 	t.Parallel()
 
 	t.Run("square_unique", func(t *testing.T) {
 		t.Parallel()
 		// M = [[1,2],[3,4]], b = [5,11] → x = [1,2] since 1*1+2*2=5, 1*3+2*4=11
 		m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-		b := []S{scalar(5), scalar(11)}
-		sol, err := m.Spans(b)
+		b := columnVector(t, 5, 11)
+		sol, err := mat.SolveRight(m, b)
 		require.NoError(t, err)
 		// Verify M*x = b
 		product, err := m.TryMul(sol)
 		require.NoError(t, err)
-		for i, want := range b {
-			v, _ := product.Get(i, 0)
-			require.True(t, v.Equal(want), "row %d", i)
-		}
+		require.True(t, product.Equal(b))
 	})
 
 	t.Run("overdetermined_consistent", func(t *testing.T) {
 		t.Parallel()
 		// M = [[1,0],[0,1],[1,1]], b = [3,4,7] → x = [3,4]
 		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}, {1, 1}})
-		b := []S{scalar(3), scalar(4), scalar(7)}
-		sol, err := m.Spans(b)
+		b := columnVector(t, 3, 4, 7)
+		sol, err := mat.SolveRight(m, b)
 		require.NoError(t, err)
 		product, err := m.TryMul(sol)
 		require.NoError(t, err)
-		for i, want := range b {
-			v, _ := product.Get(i, 0)
-			require.True(t, v.Equal(want), "row %d", i)
-		}
+		require.True(t, product.Equal(b))
 	})
 
 	t.Run("overdetermined_inconsistent", func(t *testing.T) {
 		t.Parallel()
 		// M = [[1,0],[0,1],[1,1]], b = [3,4,8] → inconsistent (3+4 != 8)
 		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}, {1, 1}})
-		b := []S{scalar(3), scalar(4), scalar(8)}
-		_, err := m.Spans(b)
+		b := columnVector(t, 3, 4, 8)
+		_, err := mat.SolveRight(m, b)
 		require.Error(t, err)
 	})
 
@@ -639,33 +647,29 @@ func TestMatrixSpans(t *testing.T) {
 		t.Parallel()
 		// M = [[1,2,3]], b = [6] → many solutions, free vars set to 0 → x = [6,0,0]
 		m := newMatrix(t, [][]uint64{{1, 2, 3}})
-		b := []S{scalar(6)}
-		sol, err := m.Spans(b)
+		b := columnVector(t, 6)
+		sol, err := mat.SolveRight(m, b)
 		require.NoError(t, err)
 		// Verify M*x = b
 		product, err := m.TryMul(sol)
 		require.NoError(t, err)
-		v, _ := product.Get(0, 0)
-		require.True(t, v.Equal(scalar(6)))
+		require.True(t, product.Equal(b))
 	})
 
 	t.Run("identity", func(t *testing.T) {
 		t.Parallel()
 		// I*x = b → x = b
 		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
-		b := []S{scalar(7), scalar(13)}
-		sol, err := m.Spans(b)
+		b := columnVector(t, 7, 13)
+		sol, err := mat.SolveRight(m, b)
 		require.NoError(t, err)
-		v0, _ := sol.Get(0, 0)
-		v1, _ := sol.Get(1, 0)
-		require.True(t, v0.Equal(scalar(7)))
-		require.True(t, v1.Equal(scalar(13)))
+		require.True(t, sol.Equal(b))
 	})
 
 	t.Run("wrong_column_length", func(t *testing.T) {
 		t.Parallel()
 		m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-		_, err := m.Spans([]S{scalar(1)})
+		_, err := mat.SolveRight(m, columnVector(t, 1))
 		require.Error(t, err)
 	})
 
@@ -673,51 +677,45 @@ func TestMatrixSpans(t *testing.T) {
 		t.Parallel()
 		// M = [[0,1],[2,3]], b = [5,11] → needs pivot swap
 		m := newMatrix(t, [][]uint64{{0, 1}, {2, 3}})
-		b := []S{scalar(5), scalar(11)}
-		sol, err := m.Spans(b)
+		b := columnVector(t, 5, 11)
+		sol, err := mat.SolveRight(m, b)
 		require.NoError(t, err)
 		product, err := m.TryMul(sol)
 		require.NoError(t, err)
-		for i, want := range b {
-			v, _ := product.Get(i, 0)
-			require.True(t, v.Equal(want), "row %d", i)
-		}
+		require.True(t, product.Equal(b))
 	})
 }
 
-func TestMatrixRowSpans(t *testing.T) {
+func TestMatrixSolveLeft(t *testing.T) {
 	t.Parallel()
 
 	t.Run("square_unique", func(t *testing.T) {
 		t.Parallel()
 		// M = [[1,3],[2,4]], r = [5,11] → solve x*M = r
 		m := newMatrix(t, [][]uint64{{1, 3}, {2, 4}})
-		r := []S{scalar(5), scalar(11)}
-		sol, err := m.RowSpans(r)
+		r := rowVector(t, 5, 11)
+		sol, err := mat.SolveLeft(m, r)
 		require.NoError(t, err)
-		// Verify x*M = r: sol^T * M should give r
+		// Verify x*M = r: M^T * x = r^T
 		mt := m.Transpose()
 		product, err := mt.TryMul(sol)
 		require.NoError(t, err)
-		for i, want := range r {
-			v, _ := product.Get(i, 0)
-			require.True(t, v.Equal(want), "col %d", i)
-		}
+		require.True(t, product.Equal(r.Transpose()))
 	})
 
 	t.Run("inconsistent", func(t *testing.T) {
 		t.Parallel()
-		// M = [[1,0],[0,1],[0,0]], r = [0,0,1] → row [0,0,1] not in row span
-		m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}, {0, 0}})
-		r := []S{scalar(0), scalar(0), scalar(1)}
-		_, err := m.RowSpans(r)
+		// M = [[1,0],[1,0]], row span = {[a,0]} → r = [0,1] not in row span
+		m := newMatrix(t, [][]uint64{{1, 0}, {1, 0}})
+		r := rowVector(t, 0, 1)
+		_, err := mat.SolveLeft(m, r)
 		require.Error(t, err)
 	})
 
 	t.Run("wrong_row_length", func(t *testing.T) {
 		t.Parallel()
 		m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-		_, err := m.RowSpans([]S{scalar(1)})
+		_, err := mat.SolveLeft(m, rowVector(t, 1))
 		require.Error(t, err)
 	})
 }

@@ -12,9 +12,9 @@ This library provides implementations of state-of-the-art cryptographic protocol
 
 The primary focus of this library is MPC (Multi-Party Computation), specifically threshold signing. We support the following protocols:
 
-- **Threshold Schnorr**: [Lindell22](./pkg/threshold/tsig/tschnorr/lindell22/) ([Reference](https://eprint.iacr.org/2022/374))
-- **Threshold ECDSA**: [DKLs23](./pkg/threshold/tsig/tecdsa/dkls23/) ([Reference](https://eprint.iacr.org/2023/765)) and [Lindell17](./pkg/threshold/tsig/tecdsa/lindell17/) ([Reference](https://eprint.iacr.org/2017/552)). We provide three variants of DKLs23: [one](./pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign_softspoken/) using OT extensions (compatible with the paper), [one](./pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign_bbot/) without OT extensions, and [one](./pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign/) that generates base OT during signing.
-- **Threshold BLS**: [Boldyreva02](./pkg/threshold/tsig/tbls/boldyreva02/) ([Reference](https://link.springer.com/chapter/10.1007/3-540-36288-6_3))
+- **Threshold Schnorr**: [Lindell22](./pkg/mpc/tsig/tschnorr/lindell22/) ([Reference](https://eprint.iacr.org/2022/374))
+- **Threshold ECDSA**: [DKLs23](./pkg/mpc/tsig/tecdsa/dkls23/) ([Reference](https://eprint.iacr.org/2023/765)) and [Lindell17](./pkg/mpc/tsig/tecdsa/lindell17/) ([Reference](https://eprint.iacr.org/2017/552)). We provide three variants of DKLs23: [one](./pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign_softspoken/) using OT extensions (compatible with the paper), [one](./pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign_bbot/) without OT extensions, and [one](./pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign/) that generates base OT during signing.
+- **Threshold BLS**: [Boldyreva02](./pkg/mpc/tsig/tbls/boldyreva02/) ([Reference](https://link.springer.com/chapter/10.1007/3-540-36288-6_3))
 
 The design of threshold signing protocols are stateless. Orchestrating them is not in scope of this library; this includes implementation of the networking layer as well. For example, to establish the broadcast channel one typically has to do [Echo-Broadcast](./pkg/network/echo/) yet this is implemented as a separate package.
 

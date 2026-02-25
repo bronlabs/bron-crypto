@@ -4,6 +4,7 @@ import (
 	"iter"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 )
 
 // MutableBiMap is a mutable bidirectional map where both keys and values are unique.
@@ -26,6 +27,20 @@ func NewMutableBiMap[K any, V any](emptyKey ds.MutableMap[K, V], emptyValue ds.M
 		internalMap: emptyKey,
 		reverseMap:  emptyValue,
 	}, nil
+}
+
+// NewMutableBiMapFromNativeLike creates a new mutable bidirectional map from a native Go map.
+func NewMutableBiMapFromNativeLike[K, V comparable](m map[K]V) ds.MutableBiMap[K, V] {
+	internalMap := hashmap.NewComparable[K, V]()
+	reverseMap := hashmap.NewComparable[V, K]()
+	for k, v := range m {
+		internalMap.Put(k, v)
+		reverseMap.Put(v, k)
+	}
+	return &MutableBiMap[K, V]{
+		internalMap: internalMap,
+		reverseMap:  reverseMap,
+	}
 }
 
 // Reverse returns a view of this bimap with keys and values swapped.
