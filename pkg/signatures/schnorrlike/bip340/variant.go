@@ -9,8 +9,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/errs-go/errs"
 )
 

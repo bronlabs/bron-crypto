@@ -1,6 +1,6 @@
 package echo
 
-import "github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+import "github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 
 // Round1P2P carries the original broadcast payload.
 type Round1P2P struct {

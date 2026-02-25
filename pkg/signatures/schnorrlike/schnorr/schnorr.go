@@ -8,8 +8,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/errs-go/errs"
 )
 

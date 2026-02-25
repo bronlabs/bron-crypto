@@ -2,7 +2,7 @@ package network
 
 import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
 // Round is the sequential identifier of a protocol step.

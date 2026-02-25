@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
