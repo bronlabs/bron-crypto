@@ -13,8 +13,9 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/interactive/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
 	ltu "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/testutils"
@@ -39,7 +40,7 @@ func TestRunnerHappyPath_BIP340(t *testing.T) {
 	require.NoError(t, err)
 
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	accessStructure, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
+	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)

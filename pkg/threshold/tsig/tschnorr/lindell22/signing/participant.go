@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -106,7 +107,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 		return nil, ErrInvalidRound.WithMessage("cosigner %d cannot compute partial signature in round %d, expected round 3", c.sid, c.round)
 	}
 	// step 3.7.1: compute additive share d_i'
-	mqac, err := sharing.NewUnanimityAccessStructure(c.quorum)
+	mqac, err := accessstructures.NewUnanimityAccessStructure(c.quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.quorum)
 	}

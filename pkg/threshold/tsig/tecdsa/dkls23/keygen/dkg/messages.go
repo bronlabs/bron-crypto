@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/zero/przs/setup"
 )
 
 // Round1Broadcast carries round 1 broadcast messages.

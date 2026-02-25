@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
@@ -20,7 +21,7 @@ type Share[FE algebra.PrimeFieldElement[FE]] = shamir.Share[FE]
 
 // NewShare creates a new Feldman share with the given ID and value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *sharing.ThresholdAccessStructure) (*Share[FE], error) {
+func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *accessstructures.Threshold) (*Share[FE], error) {
 	s, err := shamir.NewShare(id, v, ac)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Feldman share")
@@ -67,7 +68,7 @@ func (s *LiftedShare[E, FE]) Value() E {
 // with the appropriate Lagrange coefficient. For shareholder i in qualified set S,
 // the result is g^{λ_i · f(i)} where λ_i is the Lagrange coefficient.
 // The resulting additive shares can be multiplied together to reconstruct g^s.
-func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
+func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *accessstructures.Unanimity) (*additive.Share[E], error) {
 	if qualifiedSet == nil {
 		return nil, sharing.ErrIsNil.WithMessage("qualified set is nil")
 	}
@@ -134,7 +135,7 @@ func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](s[0].v.Structure())
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[FE]](group.ScalarStructure())
-	qualifiedSet, err := sharing.NewUnanimityAccessStructure(
+	qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
 		hashset.NewComparable(
 			slices.Collect(
 				iterutils.Map(

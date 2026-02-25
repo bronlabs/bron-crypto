@@ -1,14 +1,17 @@
 package sharing
 
-import "github.com/bronlabs/errs-go/errs"
+import (
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
+	"github.com/bronlabs/errs-go/errs"
+)
 
 var (
 	// ErrIsNil indicates a required value was nil.
-	ErrIsNil = errs.New("is nil")
+	ErrIsNil = accessstructures.ErrIsNil
 	// ErrValue indicates an invalid value.
-	ErrValue = errs.New("invalid value")
+	ErrValue = accessstructures.ErrValue
 	// ErrMembership indicates an invalid shareholder membership relation.
-	ErrMembership = errs.New("membership error")
+	ErrMembership = accessstructures.ErrMembership
 	// ErrFailed indicates an operation failed.
 	ErrFailed = errs.New("failed")
 	// ErrArgument indicates invalid function arguments.

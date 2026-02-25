@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -25,7 +26,7 @@ type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
 
 // NewShare creates a new Shamir share with the given ID and value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *sharing.ThresholdAccessStructure) (*Share[FE], error) {
+func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *accessstructures.Threshold) (*Share[FE], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
@@ -38,7 +39,7 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *sha
 // ToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
+func (s *Share[FE]) ToAdditive(qualifiedSet *accessstructures.Unanimity) (*additive.Share[FE], error) {
 	field, ok := s.v.Structure().(algebra.PrimeField[FE])
 	if !ok {
 		return nil, sharing.ErrType.WithMessage("share value does not implement Field interface")

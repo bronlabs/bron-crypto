@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
@@ -29,7 +30,7 @@ type shareDTO[S algebra.PrimeFieldElement[S]] struct {
 
 // NewShare creates a new Pedersen share with the given ID, secret, and blinding value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *sharing.ThresholdAccessStructure) (*Share[S], error) {
+func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *accessstructures.Threshold) (*Share[S], error) {
 	if secret == nil {
 		return nil, sharing.ErrIsNil.WithMessage("secret cannot be nil")
 	}
@@ -141,7 +142,7 @@ func (s *Share[S]) Bytes() []byte {
 // the secret component by the appropriate Lagrange coefficient. The blinding
 // component is discarded. The resulting additive shares can be summed to
 // reconstruct the secret.
-func (s *Share[S]) ToAdditive(qualifiedSet *sharing.UnanimityAccessStructure) (*additive.Share[S], error) {
+func (s *Share[S]) ToAdditive(qualifiedSet *accessstructures.Unanimity) (*additive.Share[S], error) {
 	ss, err := shamir.NewShare(s.id, s.secret.Value(), nil)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create shamir share from share")

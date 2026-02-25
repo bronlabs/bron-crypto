@@ -19,6 +19,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
@@ -33,7 +34,7 @@ const paillierKeyLen = 1024
 func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
 	curve ecdsa.Curve[P, B, S],
-	accessStructure *sharing.ThresholdAccessStructure,
+	accessStructure *accessstructures.Threshold,
 ) map[sharing.ID]*lindell17.Shard[P, B, S] {
 	tb.Helper()
 

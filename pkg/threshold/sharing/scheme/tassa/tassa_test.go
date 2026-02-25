@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/tassa"
 )
@@ -18,9 +19,9 @@ func TestSchemeHappyPath(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
 
-	accessStructure, err := sharing.NewHierarchicalConjunctiveThresholdAccessStructure(
-		sharing.WithLevel(2, 1, 2, 3, 4),
-		sharing.WithLevel(4, 5, 6, 7, 8),
+	accessStructure, err := accessstructures.NewHierarchicalConjunctiveThresholdAccessStructure(
+		accessstructures.WithLevel(2, 1, 2, 3, 4),
+		accessstructures.WithLevel(4, 5, 6, 7, 8),
 	)
 	require.NoError(t, err)
 
@@ -62,9 +63,9 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
 
-	accessStructure, err := sharing.NewHierarchicalConjunctiveThresholdAccessStructure(
-		sharing.WithLevel(2, 1, 2, 3, 4),
-		sharing.WithLevel(4, 5, 6, 7, 8),
+	accessStructure, err := accessstructures.NewHierarchicalConjunctiveThresholdAccessStructure(
+		accessstructures.WithLevel(2, 1, 2, 3, 4),
+		accessstructures.WithLevel(4, 5, 6, 7, 8),
 	)
 	require.NoError(t, err)
 
@@ -86,7 +87,7 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 		for l2 := range sliceutils.KCoveringCombinations(remaining.List(), uint(4-len(l1))) {
 			ids := append(l1, l2...)
 			require.True(t, accessStructure.IsQualified(ids...))
-			additiveAccessStructure, err := sharing.NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
+			additiveAccessStructure, err := accessstructures.NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
 			require.NoError(t, err)
 
 			subShares := []*sharing.AdditiveShare[*k256.Scalar]{}
@@ -111,9 +112,9 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 func TestSchemeDealAndReconstructErrors(t *testing.T) {
 	t.Parallel()
 
-	accessStructure, err := sharing.NewHierarchicalConjunctiveThresholdAccessStructure(
-		sharing.WithLevel(2, 1, 2, 3, 4),
-		sharing.WithLevel(4, 5, 6, 7, 8),
+	accessStructure, err := accessstructures.NewHierarchicalConjunctiveThresholdAccessStructure(
+		accessstructures.WithLevel(2, 1, 2, 3, 4),
+		accessstructures.WithLevel(4, 5, 6, 7, 8),
 	)
 	require.NoError(t, err)
 

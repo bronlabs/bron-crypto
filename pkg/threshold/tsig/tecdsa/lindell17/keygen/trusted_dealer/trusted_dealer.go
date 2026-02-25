@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
@@ -22,7 +23,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	if curve == nil || shareholder == nil || shareholder.Size() == 0 || prng == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid input to trusted dealer")
 	}
-	ac, err := sharing.NewThresholdAccessStructure(2, shareholder)
+	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholder)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create access structure")
 	}

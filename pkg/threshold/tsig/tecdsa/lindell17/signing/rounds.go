@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -150,7 +151,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	k2 := sc.state.k2
 
 	quorum := hashset.NewComparable(sc.SharingID(), sc.primarySharingID)
-	ac, err := sharing.NewUnanimityAccessStructure(quorum.Freeze())
+	ac, err := accessstructures.NewUnanimityAccessStructure(quorum.Freeze())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create access structure for additive sharing")
 	}

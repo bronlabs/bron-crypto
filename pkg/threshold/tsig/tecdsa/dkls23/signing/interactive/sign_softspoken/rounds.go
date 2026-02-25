@@ -13,7 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -94,7 +95,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
-	quorum, err := sharing.NewUnanimityAccessStructure(c.quorum)
+	quorum, err := accessstructures.NewUnanimityAccessStructure(c.quorum)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -20,7 +21,7 @@ import (
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
 	sampler *sampler[E]
-	ac      sharing.MonotoneAccessStructure
+	ac      accessstructures.Monotone
 }
 
 // NewFiniteScheme creates a new ISN scheme over the given finite group
@@ -33,7 +34,7 @@ type Scheme[E algebra.GroupElement[E]] struct {
 // Returns the initialised scheme.
 func NewFiniteScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
-	ac sharing.MonotoneAccessStructure,
+	ac accessstructures.Monotone,
 ) (*Scheme[E], error) {
 	if ac == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
@@ -56,7 +57,7 @@ func (*Scheme[E]) Name() sharing.Name {
 }
 
 // AccessStructure returns the scheme access structure.
-func (c *Scheme[E]) AccessStructure() sharing.MonotoneAccessStructure {
+func (c *Scheme[E]) AccessStructure() accessstructures.Monotone {
 	return c.ac
 }
 
@@ -230,7 +231,7 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 // ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[E]) ConvertShareToAdditive(s *Share[E], quorum *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
+func (*Scheme[E]) ConvertShareToAdditive(s *Share[E], quorum *accessstructures.Unanimity) (*additive.Share[E], error) {
 	return s.ToAdditive(quorum)
 }
 

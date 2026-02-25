@@ -5,7 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/zero/przs/setup"
 )
 
 // Round1Broadcast carries round 1 broadcast messages.

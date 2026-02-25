@@ -2,7 +2,7 @@ package keygen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/interactive/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/errs-go/errs"

@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -62,13 +63,13 @@ func (do *DealerOutput[F]) Shares() ds.Map[sharing.ID, *Share[F]] {
 
 // Scheme implements Tassa hierarchical secret sharing over a prime field.
 type Scheme[F algebra.PrimeFieldElement[F]] struct {
-	accessStructure *sharing.HierarchicalConjunctiveThresholdAccessStructure
+	accessStructure *accessstructures.HierarchicalConjunctiveThreshold
 	field           algebra.PrimeField[F]
 }
 
 // NewScheme creates a Tassa scheme for the given hierarchical access structure
 // and field, validating scheme-specific constraints.
-func NewScheme[F algebra.PrimeFieldElement[F]](accessStructure *sharing.HierarchicalConjunctiveThresholdAccessStructure, field algebra.PrimeField[F]) (*Scheme[F], error) {
+func NewScheme[F algebra.PrimeFieldElement[F]](accessStructure *accessstructures.HierarchicalConjunctiveThreshold, field algebra.PrimeField[F]) (*Scheme[F], error) {
 	if accessStructure == nil || field == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure or field is nil")
 	}
@@ -177,7 +178,7 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 }
 
 // AccessStructure returns the hierarchical access policy used by the scheme.
-func (s *Scheme[F]) AccessStructure() *sharing.HierarchicalConjunctiveThresholdAccessStructure {
+func (s *Scheme[F]) AccessStructure() *accessstructures.HierarchicalConjunctiveThreshold {
 	return s.accessStructure
 }
 
@@ -261,7 +262,7 @@ func (s *Scheme[F]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput
 
 // ConvertShareToAdditive converts a Tassa share to an additive share over the
 // provided quorum.
-func (s *Scheme[F]) ConvertShareToAdditive(share *Share[F], quorum *sharing.UnanimityAccessStructure) (*additive.Share[F], error) {
+func (s *Scheme[F]) ConvertShareToAdditive(share *Share[F], quorum *accessstructures.Unanimity) (*additive.Share[F], error) {
 	if !quorum.Shareholders().Contains(share.id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d does not belong to quorum", share.id)
 	}
@@ -364,7 +365,7 @@ func (s *Scheme[F]) rank(id sharing.ID) (int, bool) {
 	return 0, false
 }
 
-func checkConstraints[F algebra.PrimeFieldElement[F]](ac *sharing.HierarchicalConjunctiveThresholdAccessStructure, field algebra.PrimeField[F]) error {
+func checkConstraints[F algebra.PrimeFieldElement[F]](ac *accessstructures.HierarchicalConjunctiveThreshold, field algebra.PrimeField[F]) error {
 	// constraint 1: ids from lower level are strictly greater than ids from higher levels
 	prevMax := sharing.ID(0)
 	cummulativeIds := hashset.NewComparable[sharing.ID]()

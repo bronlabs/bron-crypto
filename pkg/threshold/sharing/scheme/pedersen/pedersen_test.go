@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
@@ -30,7 +31,7 @@ func newPedersenScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 ) (*pedersen.Scheme[E, S], error) {
 	tb.Helper()
 
-	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	if err != nil {
 		return nil, err
 	}
@@ -1088,7 +1089,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
 		t.Parallel()
 		// Create a qualified set with all shareholders
-		qualifiedSet, err := sharing.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		// Convert each share to additive
@@ -1122,7 +1123,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 			qualifiedIds.Add(id)
 		}
 
-		qualifiedSet, err := sharing.NewUnanimityAccessStructure(qualifiedIds.Freeze())
+		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(qualifiedIds.Freeze())
 		require.NoError(t, err)
 
 		// Convert shares in the qualified set
@@ -1156,7 +1157,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 			qualifiedIds.Add(allIds[i])
 		}
 
-		qualifiedSet, err := sharing.NewUnanimityAccessStructure(qualifiedIds.Freeze())
+		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(qualifiedIds.Freeze())
 		require.NoError(t, err)
 
 		// Try to convert share with ID 1 (not in qualified set)
@@ -1171,7 +1172,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
 		t.Parallel()
-		qualifiedSet, err := sharing.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		share, exists := shares.Shares().Get(allIds[0])
@@ -1920,7 +1921,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
-			qualifiedSet, err := sharing.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+			qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 			require.NoError(b, err)
 
 			share, exists := shares.Shares().Get(sharing.ID(1))

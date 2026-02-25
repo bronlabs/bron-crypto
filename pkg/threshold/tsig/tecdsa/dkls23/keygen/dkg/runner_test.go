@@ -16,9 +16,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
-	gennaroTU "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/interactive/dkg/gennaro"
+	gennaroTU "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/interactive/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
@@ -38,7 +39,7 @@ func TestRunner_HappyPath(t *testing.T) {
 	curve := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	sessionID := ntu.MakeRandomSessionID(t, prng)
-	accessStructure, err := sharing.NewThresholdAccessStructure(threshold, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
+	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
 	require.NoError(t, err)
 
 	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))

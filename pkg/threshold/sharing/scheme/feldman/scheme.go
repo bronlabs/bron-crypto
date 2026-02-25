@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
@@ -25,7 +26,7 @@ type Scheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]
 // Parameters:
 //   - basePoint: Generator g of the group used for verification commitments
 //   - accessStructure: Threshold access structure defining quorum requirements
-func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](basePoint E, accessStructure *sharing.ThresholdAccessStructure) (*Scheme[E, FE], error) {
+func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](basePoint E, accessStructure *accessstructures.Threshold) (*Scheme[E, FE], error) {
 	if utils.IsNil(basePoint) {
 		return nil, sharing.ErrIsNil.WithMessage("base point is nil")
 	}
@@ -51,7 +52,7 @@ func (*Scheme[E, FE]) Name() sharing.Name {
 }
 
 // AccessStructure returns the threshold access structure.
-func (d *Scheme[E, FE]) AccessStructure() *sharing.ThresholdAccessStructure {
+func (d *Scheme[E, FE]) AccessStructure() *accessstructures.Threshold {
 	return d.shamirSSS.AccessStructure()
 }
 
@@ -154,7 +155,7 @@ func (d *Scheme[E, FE]) Verify(share *Share[FE], reference VerificationVector[E,
 // ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[E, FE]) ConvertShareToAdditive(s *Share[FE], quorum *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
+func (*Scheme[E, FE]) ConvertShareToAdditive(s *Share[FE], quorum *accessstructures.Unanimity) (*additive.Share[FE], error) {
 	share, err := s.ToAdditive(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not convert share to additive share")

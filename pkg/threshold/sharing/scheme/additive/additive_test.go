@@ -15,11 +15,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 )
 
 func newAdditiveScheme[E additive.GroupElement[E]](g additive.Group[E], shareholders ds.Set[sharing.ID]) (*additive.Scheme[E], error) {
-	ac, err := sharing.NewUnanimityAccessStructure(shareholders)
+	ac, err := accessstructures.NewUnanimityAccessStructure(shareholders)
 	if err != nil {
 		return nil, err
 	}
@@ -507,14 +508,14 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 
 	tests := []struct {
 		name         string
-		shareFunc    func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error)
-		accessStruct *sharing.UnanimityAccessStructure
+		shareFunc    func(ac *accessstructures.Unanimity) (*additive.Share[E], error)
+		accessStruct *accessstructures.Unanimity
 		expectError  bool
 		errorIs      error
 	}{
 		{
 			name: "valid share",
-			shareFunc: func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
+			shareFunc: func(ac *accessstructures.Unanimity) (*additive.Share[E], error) {
 				return validShare, nil
 			},
 			accessStruct: scheme.AccessStructure(),
@@ -522,7 +523,7 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 		},
 		{
 			name: "nil share value check",
-			shareFunc: func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
+			shareFunc: func(ac *accessstructures.Unanimity) (*additive.Share[E], error) {
 				// This would test share validation but we can't create a nil share
 				return nil, sharing.ErrIsNil.WithMessage("share is nil")
 			},
@@ -532,7 +533,7 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 		},
 		{
 			name: "invalid share ID",
-			shareFunc: func(ac *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
+			shareFunc: func(ac *accessstructures.Unanimity) (*additive.Share[E], error) {
 				return additive.NewShare(999, validShare.Value(), ac)
 			},
 			accessStruct: scheme.AccessStructure(),

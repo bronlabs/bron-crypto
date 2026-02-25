@@ -13,8 +13,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/zero/przs"
+	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -151,7 +152,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
-	quorum2, err := sharing.NewUnanimityAccessStructure(c.quorum)
+	quorum2, err := accessstructures.NewUnanimityAccessStructure(c.quorum)
 	if err != nil {
 		panic(err)
 	}

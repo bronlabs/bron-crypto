@@ -4,13 +4,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 )
 
 // Shard represents a threshold signature shard held by a participant.
 type Shard[
 	PK signatures.PublicKey[PK],
 	S sharing.Share[S],
-	AC sharing.MonotoneAccessStructure,
+	AC accessstructures.Monotone,
 ] interface {
 	Share() S
 	PublicMaterial[PK, AC]
@@ -20,7 +21,7 @@ type Shard[
 // PublicMaterial represents the public material shared among participants.
 type PublicMaterial[
 	PK signatures.PublicKey[PK],
-	AC sharing.MonotoneAccessStructure,
+	AC accessstructures.Monotone,
 ] interface {
 	PublicKey() PK
 	AccessStructure() AC

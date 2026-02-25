@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 	"github.com/bronlabs/errs-go/errs"
@@ -21,7 +22,7 @@ import (
 // Parameters:
 //   - key: Pedersen commitment key containing generators g and h
 //   - accessStructure: Threshold access structure defining quorum requirements
-func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure *sharing.ThresholdAccessStructure) (*Scheme[E, S], error) {
+func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure *accessstructures.Threshold) (*Scheme[E, S], error) {
 	if accessStructure == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
@@ -56,7 +57,7 @@ func (*Scheme[E, S]) Name() sharing.Name {
 }
 
 // AccessStructure returns the threshold access structure.
-func (s *Scheme[E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
+func (s *Scheme[E, S]) AccessStructure() *accessstructures.Threshold {
 	return s.shamirSSS.AccessStructure()
 }
 
@@ -216,6 +217,6 @@ func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) 
 // ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[E, S]) ConvertShareToAdditive(s *Share[S], quorum *sharing.UnanimityAccessStructure) (*additive.Share[S], error) {
+func (*Scheme[E, S]) ConvertShareToAdditive(s *Share[S], quorum *accessstructures.Unanimity) (*additive.Share[S], error) {
 	return s.ToAdditive(quorum)
 }
