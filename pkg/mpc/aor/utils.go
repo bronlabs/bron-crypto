@@ -4,8 +4,8 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 func validateIncomingBroadcastMessages[MB network.Message](p *Participant, rIn network.Round, uIn network.RoundMessages[MB]) (iter.Seq2[sharing.ID, MB], error) {

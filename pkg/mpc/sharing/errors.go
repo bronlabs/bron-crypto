@@ -2,12 +2,13 @@ package sharing
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/errs-go/errs"
 )
 
 var (
 	// ErrIsNil indicates a required value was nil.
-	ErrIsNil = accessstructures.ErrIsNil
+	ErrIsNil = internal.ErrIsNil
 	// ErrValue indicates an invalid value.
 	ErrValue = accessstructures.ErrValue
 	// ErrMembership indicates an invalid shareholder membership relation.

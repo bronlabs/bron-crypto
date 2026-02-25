@@ -4,8 +4,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 )
 
 // Round1P2P carries round 1 peer-to-peer messages.

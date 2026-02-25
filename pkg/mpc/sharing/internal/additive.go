@@ -1,10 +1,16 @@
-package sharing
+package internal
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/errs-go/errs"
+)
+
+var (
+	// ErrIsNil indicates a required value was nil.
+	ErrIsNil = errs.New("is nil")
 )
 
 // NewAdditiveShare creates a new additive share with the given ID and value.

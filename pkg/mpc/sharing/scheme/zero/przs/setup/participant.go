@@ -5,9 +5,9 @@ import (
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )

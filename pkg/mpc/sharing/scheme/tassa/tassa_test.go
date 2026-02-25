@@ -90,7 +90,7 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 			additiveAccessStructure, err := accessstructures.NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
 			require.NoError(t, err)
 
-			subShares := []*sharing.AdditiveShare[*k256.Scalar]{}
+			subShares := []*additive.Share[*k256.Scalar]{}
 			for _, id := range ids {
 				s, ok := out.Shares().Get(id)
 				require.True(t, ok)

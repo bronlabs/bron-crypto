@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -156,13 +157,13 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	return &Secret[E]{v: reconstructed.Value()}, nil
 }
 
-type Share[E GroupElement[E]] = sharing.AdditiveShare[E]
+type Share[E GroupElement[E]] = internal.AdditiveShare[E]
 
 func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *accessstructures.Unanimity) (*Share[E], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
-	share, err := sharing.NewAdditiveShare(id, v)
+	share, err := internal.NewAdditiveShare(id, v)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create additive share")
 	}

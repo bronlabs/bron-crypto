@@ -1,8 +1,8 @@
 package echo
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 // Participant drives the echo broadcast protocol for a single party.

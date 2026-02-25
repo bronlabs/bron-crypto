@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/aor"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/aor/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	ttu "github.com/bronlabs/bron-crypto/pkg/transcripts/testutils"
 )
 
