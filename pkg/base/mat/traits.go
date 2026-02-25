@@ -828,6 +828,7 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Clone() W {
 	return W(&cloned)
 }
 
+// SetColumn returns a new matrix with column c set to data.
 func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SetColumn(c int, data []S) (W, error) {
 	if c < 0 || c >= m.n {
 		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", c, m.n)

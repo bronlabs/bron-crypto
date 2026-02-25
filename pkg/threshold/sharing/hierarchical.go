@@ -11,14 +11,29 @@ import (
 
 var _ MonotoneAccessStructure = (*HierarchicalConjunctiveThresholdAccessStructure)(nil)
 
+// WithLevel constructs a hierarchical threshold level.
+//
+// The threshold is cumulative across this level and all previous levels.
 func WithLevel(threshold int, parties ...ID) *ThresholdLevel {
 	return &ThresholdLevel{threshold, parties}
 }
 
+// HierarchicalConjunctiveThresholdAccessStructure is a monotone access
+// structure composed of ordered levels and strictly increasing cumulative
+// thresholds.
 type HierarchicalConjunctiveThresholdAccessStructure struct {
 	levels []*ThresholdLevel
 }
 
+// NewHierarchicalConjunctiveThresholdAccessStructure builds a hierarchical
+// conjunctive threshold access structure from ordered levels.
+//
+// Validation rules:
+//   - at least one level must be provided
+//   - shareholder ID 0 is not allowed
+//   - levels must be disjoint
+//   - thresholds must be strictly increasing
+//   - each threshold must not exceed cumulative parties up to that level
 func NewHierarchicalConjunctiveThresholdAccessStructure(levels ...*ThresholdLevel) (*HierarchicalConjunctiveThresholdAccessStructure, error) {
 	if len(levels) < 1 {
 		return nil, ErrValue.WithMessage("at least 1 level required")
@@ -53,10 +68,12 @@ func NewHierarchicalConjunctiveThresholdAccessStructure(levels ...*ThresholdLeve
 	return h, nil
 }
 
+// Levels returns levels in policy evaluation order.
 func (h *HierarchicalConjunctiveThresholdAccessStructure) Levels() []*ThresholdLevel {
 	return h.levels
 }
 
+// IsQualified reports whether ids satisfy every cumulative level threshold.
 func (h *HierarchicalConjunctiveThresholdAccessStructure) IsQualified(ids ...ID) bool {
 	partiesSet := hashset.NewComparable[ID](ids...)
 	cumulativeParties := hashset.NewComparable[ID]()
@@ -70,6 +87,7 @@ func (h *HierarchicalConjunctiveThresholdAccessStructure) IsQualified(ids ...ID)
 	return true
 }
 
+// Shareholders returns the union of all shareholders across levels.
 func (h *HierarchicalConjunctiveThresholdAccessStructure) Shareholders() ds.Set[ID] {
 	shareholders := hashset.NewComparable[ID]()
 	for _, level := range h.levels {
@@ -78,6 +96,7 @@ func (h *HierarchicalConjunctiveThresholdAccessStructure) Shareholders() ds.Set[
 	return shareholders.Freeze()
 }
 
+// MaximalUnqualifiedSetsIter streams all maximal unqualified sets.
 func (h *HierarchicalConjunctiveThresholdAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	if h == nil || len(h.levels) == 0 {
 		return slices.Values([]ds.Set[ID]{})
@@ -190,15 +209,19 @@ func qualifiesAfterAddingAtLevel(level int, cumulative, thresholds []int) bool {
 	return true
 }
 
+// ThresholdLevel defines one hierarchical level with a cumulative threshold and
+// level-local shareholders.
 type ThresholdLevel struct {
 	threshold int
 	parties   []ID
 }
 
+// Threshold returns the cumulative threshold of the level.
 func (l *ThresholdLevel) Threshold() int {
 	return l.threshold
 }
 
+// Shareholders returns shareholders assigned to this level.
 func (l *ThresholdLevel) Shareholders() ds.Set[ID] {
 	return hashset.NewComparable[ID](l.parties...).Freeze()
 }

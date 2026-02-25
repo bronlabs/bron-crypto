@@ -19,19 +19,23 @@ import (
 )
 
 const (
+	// Name is the human-readable identifier of the Tassa secret sharing scheme.
 	Name = "Tassa Secret Sharing Scheme"
 )
 
+// Secret is a Tassa secret represented as a prime-field element.
 type Secret[F algebra.PrimeFieldElement[F]] struct {
 	value F
 }
 
+// NewSecret constructs a secret wrapper from a field element.
 func NewSecret[F algebra.PrimeFieldElement[F]](value F) *Secret[F] {
 	return &Secret[F]{
 		value: value,
 	}
 }
 
+// Equal reports whether two secrets are equal.
 func (s *Secret[F]) Equal(r *Secret[F]) bool {
 	if s == nil || r == nil {
 		return s == r
@@ -40,23 +44,29 @@ func (s *Secret[F]) Equal(r *Secret[F]) bool {
 	return s.value.Equal(r.value)
 }
 
+// Value returns the underlying field element.
 func (s *Secret[F]) Value() F {
 	return s.value
 }
 
+// DealerOutput contains shares produced by one dealing execution.
 type DealerOutput[F algebra.PrimeFieldElement[F]] struct {
 	shares ds.Map[sharing.ID, *Share[F]]
 }
 
+// Shares returns the dealt shares indexed by shareholder ID.
 func (do *DealerOutput[F]) Shares() ds.Map[sharing.ID, *Share[F]] {
 	return do.shares
 }
 
+// Scheme implements Tassa hierarchical secret sharing over a prime field.
 type Scheme[F algebra.PrimeFieldElement[F]] struct {
 	accessStructure *sharing.HierarchicalConjunctiveThresholdAccessStructure
 	field           algebra.PrimeField[F]
 }
 
+// NewScheme creates a Tassa scheme for the given hierarchical access structure
+// and field, validating scheme-specific constraints.
 func NewScheme[F algebra.PrimeFieldElement[F]](accessStructure *sharing.HierarchicalConjunctiveThresholdAccessStructure, field algebra.PrimeField[F]) (*Scheme[F], error) {
 	if accessStructure == nil || field == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure or field is nil")
@@ -72,10 +82,13 @@ func NewScheme[F algebra.PrimeFieldElement[F]](accessStructure *sharing.Hierarch
 	return s, nil
 }
 
+// Name returns the scheme identifier.
 func (*Scheme[F]) Name() sharing.Name {
 	return Name
 }
 
+// Deal splits the provided secret into shares according to the hierarchical
+// access structure.
 func (s *Scheme[F]) Deal(secret *Secret[F], prng io.Reader) (*DealerOutput[F], error) {
 	output, _, err := s.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
@@ -84,6 +97,7 @@ func (s *Scheme[F]) Deal(secret *Secret[F], prng io.Reader) (*DealerOutput[F], e
 	return output, nil
 }
 
+// DealRandom samples a random secret and splits it into shares.
 func (s *Scheme[F]) DealRandom(prng io.Reader) (*DealerOutput[F], *Secret[F], error) {
 	output, secret, _, err := s.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
@@ -92,6 +106,7 @@ func (s *Scheme[F]) DealRandom(prng io.Reader) (*DealerOutput[F], *Secret[F], er
 	return output, secret, nil
 }
 
+// Reconstruct recovers the secret from a qualified set of shares.
 func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err error) {
 	if len(shares) < 2 {
 		return nil, sharing.ErrArgument.WithMessage("at least two shares are required")
@@ -144,10 +159,13 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 	return secret, nil
 }
 
+// AccessStructure returns the hierarchical access policy used by the scheme.
 func (s *Scheme[F]) AccessStructure() *sharing.HierarchicalConjunctiveThresholdAccessStructure {
 	return s.accessStructure
 }
 
+// DealAndRevealDealerFunc deals shares and returns the dealer polynomial used
+// to generate them.
 func (s *Scheme[F]) DealAndRevealDealerFunc(secret *Secret[F], prng io.Reader) (*DealerOutput[F], *polynomials.Polynomial[F], error) {
 	if secret == nil || utils.IsNil(secret.value) {
 		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
@@ -189,6 +207,8 @@ func (s *Scheme[F]) DealAndRevealDealerFunc(secret *Secret[F], prng io.Reader) (
 	return output, dealerFunc, nil
 }
 
+// DealRandomAndRevealDealerFunc samples a random secret, deals shares, and
+// returns the dealer polynomial used in the dealing.
 func (s *Scheme[F]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[F], *Secret[F], *polynomials.Polynomial[F], error) {
 	if prng == nil {
 		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
@@ -209,9 +229,8 @@ func (s *Scheme[F]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput
 	return output, secret, dealerFunc, nil
 }
 
-// ShareToAdditiveShare converts this Shamir share to an additive share by multiplying
-// by the appropriate Lagrange coefficient. The resulting additive shares can
-// be summed to reconstruct the secret.
+// ShareToAdditiveShare converts a Tassa share to an additive share over the
+// provided quorum.
 func (s *Scheme[F]) ShareToAdditiveShare(share *Share[F], quorum *sharing.UnanimityAccessStructure) (*additive.Share[F], error) {
 	if !quorum.Shareholders().Contains(share.id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d does not belong to quorum", share.id)
