@@ -375,7 +375,7 @@ func (p *Polynomial[RE]) Derivative() *Polynomial[RE] {
 	}
 	derivCoeffs := make([]RE, p.Degree())
 	for i := 1; i <= p.Degree(); i++ {
-		derivCoeffs[i-1] = scalarMul(p.coeffs[i], uint64(i))
+		derivCoeffs[i-1] = algebrautils.ScalarMulUint64(p.coeffs[i], uint64(i))
 	}
 	return &Polynomial[RE]{
 		coeffs: derivCoeffs,
@@ -487,22 +487,4 @@ func (p *Polynomial[RE]) IsTorsionFree() bool {
 
 func (p *Polynomial[RE]) ScalarStructure() algebra.Ring[RE] {
 	return p.CoefficientStructure()
-}
-
-func scalarMul[RE algebra.RingElement[RE]](e RE, s uint64) RE {
-	ring := algebra.StructureMustBeAs[algebra.Ring[RE]](e.Structure())
-
-	if s == 0 {
-		return ring.Zero()
-	}
-	x := e.Clone()
-	y := ring.Zero()
-	for s > 1 {
-		if (s & 1) != 0 {
-			y = y.Add(x)
-		}
-		x = x.Double()
-		s >>= 1
-	}
-	return x.Add(y)
 }

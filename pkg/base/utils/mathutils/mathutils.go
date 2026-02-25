@@ -52,3 +52,15 @@ func FloorLog2(x int) int {
 func CeilLog2(x int) int {
 	return 64 - bits.LeadingZeros64(uint64(x)-1)
 }
+
+// FactorialUint64 returns n! if a result does not overflow.
+func FactorialUint64(n uint64) (uint64, error) {
+	if n > 20 {
+		return 0, errs.New("factorial overflow").WithStackFrame()
+	}
+	f := uint64(1)
+	for i := uint64(2); i <= n; i++ {
+		f *= i
+	}
+	return f, nil
+}

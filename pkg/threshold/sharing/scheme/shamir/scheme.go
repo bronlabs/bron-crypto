@@ -155,9 +155,9 @@ func (d *Scheme[FE]) Field() algebra.PrimeField[FE] {
 	return d.f
 }
 
-// ShareToAdditiveShare converts this Shamir share to an additive share by multiplying
+// ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[FE]) ShareToAdditiveShare(s *Share[FE], quorum *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
+func (*Scheme[FE]) ConvertShareToAdditive(s *Share[FE], quorum *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
 	return s.ToAdditive(quorum)
 }

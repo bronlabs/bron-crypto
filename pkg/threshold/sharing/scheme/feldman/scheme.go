@@ -151,10 +151,10 @@ func (d *Scheme[E, FE]) Verify(share *Share[FE], reference VerificationVector[E,
 	return nil
 }
 
-// ShareToAdditiveShare converts this Shamir share to an additive share by multiplying
+// ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[E, FE]) ShareToAdditiveShare(s *Share[FE], quorum *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
+func (*Scheme[E, FE]) ConvertShareToAdditive(s *Share[FE], quorum *sharing.UnanimityAccessStructure) (*additive.Share[FE], error) {
 	share, err := s.ToAdditive(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not convert share to additive share")

@@ -89,7 +89,7 @@ type LSSS[
 	SSS[S, W, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
-	ShareToAdditiveShare(input S, unanimity *UnanimityAccessStructure) (*AdditiveShare[WV], error)
+	ConvertShareToAdditive(input S, unanimity *UnanimityAccessStructure) (*AdditiveShare[WV], error)
 }
 
 // PolynomialLSSS is an LSSS based on polynomial evaluation, such as Shamir's scheme.

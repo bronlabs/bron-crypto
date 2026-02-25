@@ -33,8 +33,8 @@ Interpretation:
 - From levels 1-3 parties (`{1,2,3,4,5,6,7}`), at least `5` must participate.
 
 This implementation follows a hierarchical threshold-sharing model based on:
-
-- H. Talaat and A. M. Youssef, *Hierarchical Secret Sharing with Multi-level Access Structure* ([IACR ePrint 2017/724](https://eprint.iacr.org/2017/724.pdf)).
+- G. Traverso, D. Demirel, J. Buchmann, *Dynamic and Verifiable Hierarchical Secret Sharing* ([IACR ePrint 2017/724](https://eprint.iacr.org/2017/724.pdf)).
+- T. Tassa, Hierarchical Threshold Secret Sharing. ([J Cryptology 20, 237–264 (2007)](https://link.springer.com/article/10.1007/s00145-006-0334-8))
 
 ## Related Scheme Implementations
 

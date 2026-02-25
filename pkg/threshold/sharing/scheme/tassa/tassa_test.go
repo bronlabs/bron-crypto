@@ -93,7 +93,7 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 			for _, id := range ids {
 				s, ok := out.Shares().Get(id)
 				require.True(t, ok)
-				subShare, err := scheme.ShareToAdditiveShare(s, additiveAccessStructure)
+				subShare, err := scheme.ConvertShareToAdditive(s, additiveAccessStructure)
 				require.NoError(t, err)
 				subShares = append(subShares, subShare)
 			}

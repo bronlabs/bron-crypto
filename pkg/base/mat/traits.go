@@ -846,6 +846,40 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SetColumn(c int, data []S) (W, er
 	return &out, nil
 }
 
+// SetRow returns a new matrix with column r set to data.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SetRow(r int, data []S) (W, error) {
+	if r < 0 || r >= m.m {
+		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", r, m.m)
+	}
+	if len(data) != m.n {
+		return nil, ErrDimension.WithMessage("row length %d does not match matrix column count %d", len(data), m.n)
+	}
+
+	var out WT
+	W(&out).init(m.m, m.n)
+	copy(W(&out).data(), m.v)
+	for c, d := range data {
+		W(&out).data()[m.idx(r, c)] = d.Clone()
+	}
+	return &out, nil
+}
+
+// Set returns a new matrix with an element at (r, c) set to data.
+func (m *MatrixTrait[S, W, WT, RectW, RectWT]) Set(r, c int, data S) (W, error) {
+	if r < 0 || r >= m.m {
+		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", r, m.m)
+	}
+	if c < 0 || c >= m.n {
+		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", c, m.n)
+	}
+
+	var out WT
+	W(&out).init(m.m, m.n)
+	copy(W(&out).data(), m.v)
+	W(&out).data()[m.idx(r, c)] = data.Clone()
+	return &out, nil
+}
+
 // findPivotRow returns the first row at or below startRow with a non-zero entry
 // in the given column, or -1 if none exists.
 func (m *MatrixTrait[S, W, WT, RectW, RectWT]) findPivotRow(col, startRow int) int {

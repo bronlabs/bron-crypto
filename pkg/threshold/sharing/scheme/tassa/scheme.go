@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/additive"
 	"github.com/bronlabs/errs-go/errs"
@@ -108,10 +109,10 @@ func (s *Scheme[F]) DealRandom(prng io.Reader) (*DealerOutput[F], *Secret[F], er
 
 // Reconstruct recovers the secret from a qualified set of shares.
 func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err error) {
+	// 1. Require Q is qualified under ac.
 	if len(shares) < 2 {
 		return nil, sharing.ErrArgument.WithMessage("at least two shares are required")
 	}
-
 	sharesMap := make(map[sharing.ID]*Share[F])
 	for _, share := range shares {
 		if share == nil {
@@ -123,32 +124,46 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 		sharesMap[share.id] = share
 	}
 	quorum := slices.Collect(maps.Keys(sharesMap))
-	slices.Sort(quorum)
 	if !s.AccessStructure().Shareholders().IsSuperSet(hashset.NewComparable(quorum...).Freeze()) ||
 		!s.AccessStructure().IsQualified(quorum...) {
 
 		return nil, sharing.ErrMembership.WithMessage("invalid quorum")
 	}
 
+	// 2. Order Q increasingly: [i1, ..., in].
+	slices.Sort(quorum)
+
+	//   3. Build an n x n matrix M with entries:
+	//     3.1 Let rank(id) be the threshold of the previous level containing id.
+	//     3.2 Let phi(t, i, j) = (d^j/dx^j x^t) evaluated at x = i.
+	//     3.3 Set M[r, c] = phi(c, ir, rank(ir)).
 	m, err := s.buildMatrix(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not build matrix")
 	}
+
+	// 4. Compute d <- det(M); require d != 0.
 	d := m.Determinant()
 	if d.IsZero() {
 		return nil, sharing.ErrMembership.WithMessage("unqualified set")
 	}
 
+	// 5. Set Y <- column vector [shares[i1], ..., shares[in]].
 	shareValues := make([]F, len(quorum))
 	for i, id := range quorum {
 		shareValues[i] = sharesMap[id].value
 	}
+
+	// 6. Set M0 <- M with the first column replaced by Y.
 	m0, err := m.SetColumn(0, shareValues)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not set column")
 	}
+
+	// 7. Compute d0 <- det(M0).
 	d0 := m0.Determinant()
 
+	// 8. Set s <- d0 / d.
 	secretValue, err := d0.TryDiv(d)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not divide determinants during reconstruction")
@@ -156,6 +171,8 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 	secret = &Secret[F]{
 		value: secretValue,
 	}
+
+	// 9. Return s.
 	return secret, nil
 }
 
@@ -174,7 +191,10 @@ func (s *Scheme[F]) DealAndRevealDealerFunc(secret *Secret[F], prng io.Reader) (
 		return nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
 
+	// 1. Set k <- Tm - 1.
 	degree := s.accessStructure.Levels()[len(s.AccessStructure().Levels())-1].Threshold() - 1
+
+	// 2. Sample f(x), a random polynomial over F of degree k such that f(0) = s.
 	polys, err := polynomials.NewPolynomialRing(s.field)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create polynomial ring")
@@ -185,12 +205,19 @@ func (s *Scheme[F]) DealAndRevealDealerFunc(secret *Secret[F], prng io.Reader) (
 	}
 
 	shares := hashmap.NewComparable[sharing.ID, *Share[F]]()
+
+	// 3. Set d <- 0.
 	d := 0
+
+	// 4. For each level (Ti, Li) in ac order:
 	for _, level := range s.AccessStructure().Levels() {
+		// 4.1 Set g(x) <- d-th derivative of f(x).
 		p := dealerFunc.Clone()
 		for range d {
 			p = p.Derivative()
 		}
+
+		// 4.2 For each id in Li, set shares[id] <- g(id).
 		for id := range level.Shareholders().Iter() {
 			shareValue := p.Eval(s.field.FromUint64(uint64(id)))
 			shares.Put(id, &Share[F]{
@@ -198,9 +225,12 @@ func (s *Scheme[F]) DealAndRevealDealerFunc(secret *Secret[F], prng io.Reader) (
 				value: shareValue,
 			})
 		}
+
+		// 4.3 Set d <- Ti.
 		d = level.Threshold()
 	}
 
+	// 5. Return shares.
 	output := &DealerOutput[F]{
 		shares: shares.Freeze(),
 	}
@@ -229,9 +259,9 @@ func (s *Scheme[F]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput
 	return output, secret, dealerFunc, nil
 }
 
-// ShareToAdditiveShare converts a Tassa share to an additive share over the
+// ConvertShareToAdditive converts a Tassa share to an additive share over the
 // provided quorum.
-func (s *Scheme[F]) ShareToAdditiveShare(share *Share[F], quorum *sharing.UnanimityAccessStructure) (*additive.Share[F], error) {
+func (s *Scheme[F]) ConvertShareToAdditive(share *Share[F], quorum *sharing.UnanimityAccessStructure) (*additive.Share[F], error) {
 	if !quorum.Shareholders().Contains(share.id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d does not belong to quorum", share.id)
 	}
@@ -350,32 +380,23 @@ func checkConstraints[F algebra.PrimeFieldElement[F]](ac *sharing.HierarchicalCo
 		prevMax = allIds[len(allIds)-1]
 	}
 
+	// we increase n and k by one to accommodate "off by one error" caused by precision lost with float64
+	n := uint64(prevMax) + 1
+	k := uint64(ac.Levels()[len(ac.Levels())-1].Threshold()) + 1
 	q, _ := field.Order().Big().Float64()
-	n := prevMax
-	k := uint64(ac.Levels()[len(ac.Levels())-1].Threshold())
 
-	// constraint 2 (equation 29): 2^(−k) · (k+1)^((k+1)/2) · N^((k−1)k/2) < q = |F|
-	if math.Pow(2.0, -float64(k))*math.Pow(float64(k)+1.0, (float64(k)+1.0)/2.0)*math.Pow(float64(n), (float64(k)-1.0)*float64(k)/2.0) >= q {
-		return sharing.ErrFailed.WithMessage("constraint failed")
-	}
-
-	// constraint 3 (equation 35): α(k)N^((k−1)(k−2)/2) < q = |F| where α(k) := 2^(−k+2) ·(k−1)^((k−1)/2) ·(k−1)!
+	// for k > 20, k! overflows uint64. Since we do not work with big enough fields to support such a big k anyway,
+	// we reject.
 	if k > 20 {
 		// this will overflow factorial anyway
 		return sharing.ErrFailed.WithMessage("too big threshold")
 	}
-	alpha := math.Pow(2.0, 2.0-float64(k)) * math.Pow(float64(k-1), (float64(k)-1.0)/2.0) * float64(factorial(k-1))
+
+	// constraint 3 (equation 35): α(k)N^((k−1)(k−2)/2) < q = |F| where α(k) := 2^(−k+2) ·(k−1)^((k−1)/2) ·(k−1)!
+	alpha := math.Pow(2.0, 2.0-float64(k)) * math.Pow(float64(k-1), (float64(k)-1.0)/2.0) * float64(errs.Must1(mathutils.FactorialUint64(k-1)))
 	if (alpha * math.Pow(float64(n), (float64(k)-1.0)*(float64(k)-2)/2.0)) >= q {
 		return sharing.ErrFailed.WithMessage("constraint failed")
 	}
 
 	return nil
-}
-
-func factorial(n uint64) uint64 {
-	f := uint64(1)
-	for i := uint64(2); i <= n; i++ {
-		f *= i
-	}
-	return f
 }

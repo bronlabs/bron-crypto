@@ -100,6 +100,24 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](base E, exponent S
 	return res
 }
 
+func ScalarMulUint64[E algebra.MonoidElement[E]](e E, s uint64) E {
+	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](e.Structure())
+
+	if s == 0 {
+		return monoid.OpIdentity()
+	}
+	x := e.Clone()
+	y := monoid.OpIdentity()
+	for s > 1 {
+		if (s & 1) != 0 {
+			y = y.Op(x)
+		}
+		x = x.Op(x)
+		s >>= 1
+	}
+	return x.Op(y)
+}
+
 // MultiScalarMul performs a Pippenger-style multi-scalar multiplication:
 //
 //	sum_i scalars[i] * points[i]

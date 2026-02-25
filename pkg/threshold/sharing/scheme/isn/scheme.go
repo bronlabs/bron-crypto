@@ -227,10 +227,10 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	return NewSecret(iterutils.Reduce(maps.Values(chunks), c.g.OpIdentity(), E.Op)), nil
 }
 
-// ShareToAdditiveShare converts this Shamir share to an additive share by multiplying
+// ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[E]) ShareToAdditiveShare(s *Share[E], quorum *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
+func (*Scheme[E]) ConvertShareToAdditive(s *Share[E], quorum *sharing.UnanimityAccessStructure) (*additive.Share[E], error) {
 	return s.ToAdditive(quorum)
 }
 
