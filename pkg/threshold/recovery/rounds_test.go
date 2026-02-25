@@ -12,7 +12,7 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/recovery"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 )
 
@@ -27,11 +27,10 @@ func Test_HappyPath(t *testing.T) {
 	for i := 1; i <= TOTAL; i++ {
 		shareholdersList[i-1] = sharing.ID(i)
 	}
-	shareholders := hashset.NewComparable(shareholdersList[:]...).Freeze()
 	group := k256.NewCurve()
 	as, err := sharing.NewThresholdAccessStructure(THRESHOLD, hashset.NewComparable(shareholdersList[:]...).Freeze())
 	require.NoError(t, err)
-	scheme, err := feldman.NewScheme(group.Generator(), THRESHOLD, shareholders)
+	scheme, err := feldman.NewScheme(group.Generator(), as)
 	require.NoError(t, err)
 	dealerOutput, _, err := scheme.DealRandom(prng)
 	require.NoError(t, err)

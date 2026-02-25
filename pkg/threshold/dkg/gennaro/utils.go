@@ -5,8 +5,8 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/shamir"
 )
 
 // ComputePartialPublicKey derives each participant's partial public key from a share and verification vector.
@@ -14,7 +14,7 @@ func ComputePartialPublicKey[E GroupElement[E, S], S Scalar[S]](
 	sf algebra.PrimeField[S],
 	share *feldman.Share[S],
 	vector feldman.VerificationVector[E, S],
-	ac sharing.AccessStructure,
+	ac sharing.MonotoneAccessStructure,
 ) (ds.Map[sharing.ID, E], error) {
 	if share == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil share")
