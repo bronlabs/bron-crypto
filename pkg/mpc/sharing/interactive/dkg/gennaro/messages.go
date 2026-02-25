@@ -1,9 +1,9 @@
 package gennaro
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
 // Round1Broadcast carries the dealer’s Pedersen VSS verification vector.

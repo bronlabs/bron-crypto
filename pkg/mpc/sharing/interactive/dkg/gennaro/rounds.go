@@ -6,11 +6,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -61,27 +62,15 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift pedersen dealer function to exponent")
 	}
-
-	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	// We are using Pedersen commitment as an equivocable and extractable commitment scheme. For it to be extractable,
+	// we need dlog proofs for the feldman verification vector and its dual (lifted by H).
+	pedersenBlindingVector, err := polynomials.LiftPolynomial(p.state.pedersenDealerFunc.H, p.state.key.H())
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
+		return nil, nil, errs.Wrap(err).WithMessage("failed to lift pedersen blinding dealer function to exponent")
 	}
-	niBatchSchnorr, err := compiler.Compile(p.niCompilerName, batchSchnorrProtocol, p.prng)
+	proof, err := batchDlogProve(p, pedersenBlindingVector)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot compile protocol to non interactive")
-	}
-	proverTape := p.tape.Clone()
-	proverTape.AppendBytes(proverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.id)))
-	prover, err := niBatchSchnorr.NewProver(p.sid, proverTape)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
-	}
-
-	witness := batch_schnorr.NewWitness(p.state.pedersenDealerFunc.G.Coefficients()...)
-	statement := batch_schnorr.NewStatement(p.state.key.G(), p.state.localFeldmanVerificationVector.Coefficients()...)
-	proof, err := prover.Prove(statement, witness)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot prove batch schnorr statement")
+		return nil, nil, errs.Wrap(err).WithMessage("failed to create batch dlog proof for feldman verification vector")
 	}
 
 	p.round++
@@ -101,7 +90,11 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
 	}
-	niBatchSchnorr, err := compiler.Compile(p.niCompilerName, batchSchnorrProtocol, p.prng)
+	batchSchnorrProtocolAnded, err := sigand.Compose(batchSchnorrProtocol, 2)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compose batch schnorr protocol with AND")
+	}
+	niBatchSchnorr, err := compiler.Compile(p.niCompilerName, batchSchnorrProtocolAnded, p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compile protocol to non interactive")
 	}
@@ -120,7 +113,11 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 		}
-		statement := batch_schnorr.NewStatement(p.state.key.G(), inB.FeldmanVerificationVector.Coefficients()...)
+		referencePedersenVector, _ := p.state.receivedPedersenVerificationVectors.Get(pid)
+		pedersenBlindingVector := referencePedersenVector.Op(inB.FeldmanVerificationVector.OpInv())
+		statementS := batch_schnorr.NewStatement(p.state.key.G(), inB.FeldmanVerificationVector.Coefficients()...)
+		statementH := batch_schnorr.NewStatement(p.state.key.H(), pedersenBlindingVector.Coefficients()...)
+		statement := sigand.ComposeStatements(statementS, statementH)
 		err = verifier.Verify(statement, inB.Proof)
 		if err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman verification vector")
@@ -132,7 +129,6 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		if err := p.state.feldmanVSS.Verify(feldmanShare, inB.FeldmanVerificationVector); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman share from party %d", pid)
 		}
-		referencePedersenVector, _ := p.state.receivedPedersenVerificationVectors.Get(pid)
 		if err := p.state.pedersenVSS.Verify(inU.Share, referencePedersenVector); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify pedersen share from party %d", pid)
 		}
@@ -149,4 +145,40 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 	}
 	p.round++
 	return out, nil
+}
+
+func batchDlogProve[E GroupElement[E, S], S Scalar[S]](
+	p *Participant[E, S],
+	pedersenBlindingVector *polynomials.ModuleValuedPolynomial[E, S],
+) (compiler.NIZKPoKProof, error) {
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
+	}
+	batchSchnorrProtocolAnded, err := sigand.Compose(batchSchnorrProtocol, 2)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compose batch schnorr protocol with AND")
+	}
+	niBatchSchnorr, err := compiler.Compile(p.niCompilerName, batchSchnorrProtocolAnded, p.prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compile protocol to non interactive")
+	}
+	proverTape := p.tape.Clone()
+	proverTape.AppendBytes(proverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.id)))
+	prover, err := niBatchSchnorr.NewProver(p.sid, proverTape)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
+	}
+
+	witnessG := batch_schnorr.NewWitness(p.state.pedersenDealerFunc.G.Coefficients()...)
+	witnessH := batch_schnorr.NewWitness(p.state.pedersenDealerFunc.H.Coefficients()...)
+	witness := sigand.ComposeWitnesses(witnessG, witnessH)
+	statementG := batch_schnorr.NewStatement(p.state.key.G(), p.state.localFeldmanVerificationVector.Coefficients()...)
+	statementH := batch_schnorr.NewStatement(p.state.key.H(), pedersenBlindingVector.Coefficients()...)
+	statement := sigand.ComposeStatements(statementG, statementH)
+	proof, err := prover.Prove(statement, witness)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot prove batch schnorr statement")
+	}
+	return proof, nil
 }
