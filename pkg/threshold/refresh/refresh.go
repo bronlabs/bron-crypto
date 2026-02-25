@@ -2,7 +2,7 @@ package refresh
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 )
 
 type Output[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {

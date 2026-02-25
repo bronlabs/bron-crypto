@@ -1,4 +1,4 @@
-//go:build !nobignum
+//go:build !purego && !nobignum
 
 package boring_test
 

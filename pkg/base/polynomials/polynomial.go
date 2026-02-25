@@ -1,7 +1,6 @@
 package polynomials
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -369,22 +368,14 @@ func (p *Polynomial[RE]) ConstantTerm() RE {
 
 func (p *Polynomial[RE]) Derivative() *Polynomial[RE] {
 	ring := algebra.StructureMustBeAs[algebra.FiniteRing[RE]](p.coeffs[0].Structure())
-	if len(p.coeffs) <= 1 {
+	if p.Degree() <= 0 {
 		return &Polynomial[RE]{
 			coeffs: []RE{ring.Zero()},
 		}
 	}
-	derivCoeffs := make([]RE, len(p.coeffs)-1)
-	for i := 1; i < len(p.coeffs); i++ {
-		// Create properly sized big-endian bytes for the index
-		elemSize := ring.ElementSize()
-		indexBytes := make([]byte, elemSize)
-		binary.BigEndian.PutUint64(indexBytes[elemSize-8:], uint64(i))
-		rb, err := ring.FromBytes(indexBytes)
-		if err != nil {
-			panic("internal error: could not create ring element from uint64")
-		}
-		derivCoeffs[i-1] = p.coeffs[i].Mul(rb)
+	derivCoeffs := make([]RE, p.Degree())
+	for i := 1; i <= p.Degree(); i++ {
+		derivCoeffs[i-1] = algebrautils.ScalarMulUint64(p.coeffs[i], uint64(i))
 	}
 	return &Polynomial[RE]{
 		coeffs: derivCoeffs,

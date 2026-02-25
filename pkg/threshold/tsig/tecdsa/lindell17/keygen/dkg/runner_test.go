@@ -15,7 +15,7 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17/keygen/dkg"
@@ -41,7 +41,7 @@ func TestRunnerHappyPath_K256_2of3(t *testing.T) {
 	accessStructure, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
-	feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure.Threshold(), accessStructure.Shareholders())
+	feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure)
 	require.NoError(t, err)
 	feldmanOutput, _, err := feldmanScheme.DealRandom(prng)
 	require.NoError(t, err)
