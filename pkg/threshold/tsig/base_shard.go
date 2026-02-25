@@ -23,7 +23,7 @@ type BasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldE
 }
 
 type basePublicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	AccessStructure   *accessstructures.Threshold           `cbor:"accessStructure"`
+	AccessStructure   *accessstructures.Threshold                 `cbor:"accessStructure"`
 	FV                feldman.VerificationVector[E, S]            `cbor:"verificationVector"`
 	PartialPublicKeys map[sharing.ID]*schnorrlike.PublicKey[E, S] `cbor:"partialPublicKeys"`
 }

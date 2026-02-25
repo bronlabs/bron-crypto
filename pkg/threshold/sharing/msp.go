@@ -103,20 +103,20 @@ func (m *MSP[E]) ReconstructionVector(IDs ...ID) (*mat.Matrix[E], error) {
 	idSet := hashset.NewComparable(IDs...)
 	rows := make([]int, 0, m.psi.Size())
 	for id := range idSet.Iter() {
-		rows_id, ok := m.psiInv[id]
+		rowsID, ok := m.psiInv[id]
 		if !ok {
 			return nil, ErrValue.WithMessage("ID %d is not associated with any row in the MSP", id)
 		}
-		rows = append(rows, rows_id...)
+		rows = append(rows, rowsID...)
 	}
 	if len(rows) == 0 {
 		return nil, ErrValue.WithMessage("no rows selected for given IDs")
 	}
-	M_IDs, err := m.matrix.SubMatrixGivenRows(rows...)
+	MIDs, err := m.matrix.SubMatrixGivenRows(rows...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to extract submatrix for given IDs")
 	}
-	out, err := mat.SolveLeft(M_IDs, m.targetRowVector)
+	out, err := mat.SolveLeft(MIDs, m.targetRowVector)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("target vector is not in the span of the selected rows")
 	}

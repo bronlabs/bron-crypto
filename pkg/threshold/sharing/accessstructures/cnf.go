@@ -72,7 +72,6 @@ func (c *CNF) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	return slices.Values(c.maximalUnqualifiedSets)
 }
 
-//nolint:dupl // Keep CNF normalisation logic explicit and parallel to DNF for readability.
 func normaliseCNF(unqualifiedSets ...ds.Set[ID]) ([]ds.Set[ID], error) {
 	if len(unqualifiedSets) == 0 {
 		return nil, ErrValue.WithMessage("must have at least one unqualified set")

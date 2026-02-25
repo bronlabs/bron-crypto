@@ -12,7 +12,7 @@ func _[FE algebra.PrimeFieldElement[FE]]() {
 		_ sharing.DealerOutput[*shamir.Share[FE]]        = (*shamir.DealerOutput[FE])(nil)
 		_ sharing.LinearShare[*shamir.Share[FE], FE, FE] = (*shamir.Share[FE])(nil)
 
-		_ sharing.ThresholdSSS[*shamir.Share[FE], *shamir.Secret[FE], *shamir.DealerOutput[FE]]                                                  = (*shamir.Scheme[FE])(nil)
+		_ sharing.ThresholdSSS[*shamir.Share[FE], *shamir.Secret[FE], *shamir.DealerOutput[FE]]                                            = (*shamir.Scheme[FE])(nil)
 		_ sharing.PolynomialLSSS[*shamir.Share[FE], FE, *shamir.Secret[FE], FE, *shamir.DealerOutput[FE], FE, *accessstructures.Threshold] = (*shamir.Scheme[FE])(nil)
 	)
 }
