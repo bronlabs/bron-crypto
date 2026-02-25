@@ -100,6 +100,7 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](base E, exponent S
 	return res
 }
 
+// ScalarMulUint64 computes the scalar multiplication of the given base element by the given exponent.
 func ScalarMulUint64[E algebra.MonoidElement[E]](e E, s uint64) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](e.Structure())
 
