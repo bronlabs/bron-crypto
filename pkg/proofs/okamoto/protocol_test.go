@@ -389,66 +389,99 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 }
 
 func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
-	tb testing.TB, curve curves.Curve[P, F, S],
+	t *testing.T, curve curves.Curve[P, F, S],
 ) {
-	tb.Helper()
+	t.Helper()
 
 	prng := pcg.NewRandomised()
 
 	// Create two independent generators for the Pedersen commitment key.
 	g, err := curve.Random(pcg.NewRandomised())
-	require.NoError(tb, err)
+	require.NoError(t, err)
 	h, err := curve.Random(pcg.NewRandomised())
-	require.NoError(tb, err)
+	require.NoError(t, err)
 
 	key, err := pedersen.NewCommitmentKey(g, h)
-	require.NoError(tb, err)
+	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
-	require.NoError(tb, err)
+	require.NoError(t, err)
 	committer, err := scheme.Committer()
-	require.NoError(tb, err)
+	require.NoError(t, err)
 
 	// Commit to a random message.
 	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
-	require.True(tb, ok)
+	require.True(t, ok)
 	msgScalar, err := sf.Random(pcg.NewRandomised())
-	require.NoError(tb, err)
+	require.NoError(t, err)
 	message := pedersen.NewMessage(msgScalar)
 
 	commitment, pedersenWitness, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(tb, err)
+	require.NoError(t, err)
 
 	// Prove knowledge of opening (m, r) such that C = g^m * h^r using Okamoto.
 	generators := []P{key.G(), key.H()}
 	protocol, err := okamoto.NewProtocol(generators, prng)
-	require.NoError(tb, err)
+	require.NoError(t, err)
 
 	// The Okamoto witness is the pair (message, randomness).
 	okaWitness, err := okamoto.NewWitness(message.Value(), pedersenWitness.Value())
-	require.NoError(tb, err)
+	require.NoError(t, err)
 
-	// The Okamoto statement is the commitment point itself.
-	okaStatement, err := okamoto.NewStatement(commitment.Value())
-	require.NoError(tb, err)
+	t.Run("valid opening", func(t *testing.T) {
+		t.Parallel()
+		// The Okamoto statement is the commitment point itself.
+		okaStatement, err := okamoto.NewStatement(commitment.Value())
+		require.NoError(t, err)
 
-	// Verify that phi(witness) == statement.
-	err = protocol.ValidateStatement(okaStatement, okaWitness)
-	require.NoError(tb, err)
+		// Verify that phi(witness) == statement.
+		err = protocol.ValidateStatement(okaStatement, okaWitness)
+		require.NoError(t, err)
 
-	// round 1
-	com, state, err := protocol.ComputeProverCommitment(okaStatement, okaWitness)
-	require.NoError(tb, err)
+		// round 1
+		com, state, err := protocol.ComputeProverCommitment(okaStatement, okaWitness)
+		require.NoError(t, err)
 
-	// round 2
-	challenge := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(pcg.NewRandomised(), challenge)
-	require.NoError(tb, err)
+		// round 2
+		challenge := make([]byte, protocol.GetChallengeBytesLength())
+		_, err = io.ReadFull(pcg.NewRandomised(), challenge)
+		require.NoError(t, err)
 
-	// round 3
-	response, err := protocol.ComputeProverResponse(okaStatement, okaWitness, com, state, challenge)
-	require.NoError(tb, err)
+		// round 3
+		response, err := protocol.ComputeProverResponse(okaStatement, okaWitness, com, state, challenge)
+		require.NoError(t, err)
 
-	// verify
-	err = protocol.Verify(okaStatement, com, challenge, response)
-	require.NoError(tb, err)
+		// verify
+		err = protocol.Verify(okaStatement, com, challenge, response)
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid opening", func(t *testing.T) {
+		t.Parallel()
+		randomPoint, err := curve.Random(pcg.NewRandomised())
+		require.NoError(t, err)
+		// The Okamoto statement is the commitment point itself.
+		invalidStatement, err := okamoto.NewStatement(randomPoint)
+		require.NoError(t, err)
+
+		// Verify that phi(witness) == statement.
+		err = protocol.ValidateStatement(invalidStatement, okaWitness)
+		require.Error(t, err)
+
+		// round 1
+		com, state, err := protocol.ComputeProverCommitment(invalidStatement, okaWitness)
+		require.NoError(t, err)
+
+		// round 2
+		challenge := make([]byte, protocol.GetChallengeBytesLength())
+		_, err = io.ReadFull(pcg.NewRandomised(), challenge)
+		require.NoError(t, err)
+
+		// round 3
+		response, err := protocol.ComputeProverResponse(invalidStatement, okaWitness, com, state, challenge)
+		require.NoError(t, err)
+
+		// verify
+		err = protocol.Verify(invalidStatement, com, challenge, response)
+		require.Error(t, err)
+	})
 }
