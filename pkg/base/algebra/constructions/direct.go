@@ -157,7 +157,6 @@ func (m *DirectSumModuleElement[E, S]) ScalarDiagonal(s *DirectPowerRingElement[
 	scaledComponents := make([]E, arity)
 	for i := range arity {
 		scaledComponents[i] = m.Components()[i].ScalarOp(s.Components()[i])
-
 	}
 	module := algebra.StructureMustBeAs[algebra.Module[E, S]](m.Components()[0].Structure())
 	directSumModule, err := NewDirectSumModule(module, uint(m.Arity().Uint64()))
@@ -186,7 +185,6 @@ func (m *FiniteDirectSumModuleElement[E, S]) ScalarDiagonal(s *FiniteDirectPower
 	scaledComponents := make([]E, arity)
 	for i := range arity {
 		scaledComponents[i] = m.Components()[i].ScalarOp(s.Components()[i])
-
 	}
 	module := algebra.StructureMustBeAs[algebra.FiniteModule[E, S]](m.Components()[0].Structure())
 	directSumModule, err := NewFiniteDirectSumModule(module, uint(m.Arity().Uint64()))

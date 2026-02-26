@@ -132,7 +132,6 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 
 	return &Protocol[G, S]{*maurerProtocol}, nil
-
 }
 
 type anchor[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
