@@ -582,3 +582,50 @@ func (d *DirectSumModuleElement[E, S, W, WT]) ScalarOp(s S) W {
 	}
 	return W(&out)
 }
+
+// ========== Algebra ==========.
+
+type DirectSumAlgebra[M algebra.Algebra[E, S], E algebra.AlgebraElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
+	DirectPowerRing[M, E, W, WT]
+}
+
+func (s *DirectSumAlgebra[M, E, S, W, WT]) ScalarStructure() algebra.Structure[S] {
+	return s.base.ScalarStructure()
+}
+
+type DirectSumAlgebraElement[E algebra.AlgebraElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
+	DirectPowerRingElement[E, W, WT]
+}
+
+func (d *DirectSumAlgebraElement[E, S, W, WT]) CoDiagonal() E {
+	if d.Arity().IsZero() {
+		panic(ErrInvalidArgument.WithMessage("cannot compute diagonal of empty element"))
+	}
+	out := d.components[0]
+	for _, c := range d.components[1:] {
+		out = out.Op(c)
+	}
+	return out
+}
+
+func (d *DirectSumAlgebraElement[E, S, W, WT]) IsTorsionFree() bool {
+	return sliceutils.All(d.components, func(c E) bool {
+		return c.IsTorsionFree()
+	})
+}
+
+func (d *DirectSumAlgebraElement[E, S, W, WT]) ScalarOp(s S) W {
+	return d.ScalarMul(s)
+}
+
+func (d *DirectSumAlgebraElement[E, S, W, WT]) ScalarMul(s S) W {
+	values := make([]E, d.arity)
+	for i, c := range d.components {
+		values[i] = c.ScalarMul(s)
+	}
+	var out WT
+	if err := W(&out).set(d.arity, values...); err != nil {
+		panic(ErrInvalidArgument.WithMessage("failed to set components"))
+	}
+	return W(&out)
+}

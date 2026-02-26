@@ -104,7 +104,7 @@ func TestDirectSumOfPolynomialsStructure(t *testing.T) {
 	require.Equal(t, dsum.Name(), s.Name())
 }
 
-func TestDirectSumOfPolynomialsIsSemiDomain(t *testing.T) {
+func TestDirectSumOfPolynomialsIsDomain(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
@@ -112,13 +112,8 @@ func TestDirectSumOfPolynomialsIsSemiDomain(t *testing.T) {
 
 	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
-
-	p1, _ := polyRing.New(field.FromUint64(1))
-	p2, _ := polyRing.New(field.FromUint64(2))
-	elem, _ := dsum.New(p1, p2)
-
-	// Direct sums are never semi-domains
-	require.False(t, elem.IsDomain())
+	// Direct sums are never domains
+	require.False(t, dsum.IsDomain())
 }
 
 func TestDirectSumOfPolynomialsCoefficientAlgebra(t *testing.T) {

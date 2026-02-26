@@ -57,7 +57,7 @@ func NewDirectSumOfPolynomialRings[S algebra.RingElement[S]](polyRing *Polynomia
 // a module over the scalar ring S. It implements
 // algebra.Module[*DirectSumOfPolynomials[S], S].
 type DirectSumOfPolynomialRings[S algebra.RingElement[S]] struct {
-	traits.DirectSumModule[*PolynomialRing[S], *Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
+	traits.DirectSumAlgebra[*PolynomialRing[S], *Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
 }
 
 // CoefficientAlgebra returns the direct sum of regular algebras formed from
@@ -79,7 +79,7 @@ func (r *DirectSumOfPolynomialRings[S]) CoefficientAlgebra() *constructions.Dire
 // DirectSumOfPolynomials is an element of [DirectSumOfPolynomialRings]:
 // a fixed-length tuple of scalar polynomials.
 type DirectSumOfPolynomials[S algebra.RingElement[S]] struct {
-	traits.DirectSumModuleElement[*Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
+	traits.DirectSumAlgebraElement[*Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
 }
 
 // Structure reconstructs the parent DirectSumOfPolynomialRings from the
@@ -95,11 +95,6 @@ func (p *DirectSumOfPolynomials[S]) Structure() algebra.Structure[*DirectSumOfPo
 	}
 	out, _ := NewDirectSumOfPolynomialRings(polyRing, uint(arity.Uint64()))
 	return out
-}
-
-// IsDomain always returns false; a direct sum of rings is never a domain.
-func (*DirectSumOfPolynomials[S]) IsDomain() bool {
-	return false
 }
 
 // CoefficientAlgebra returns the direct sum of regular algebras formed from
