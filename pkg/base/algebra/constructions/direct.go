@@ -152,6 +152,24 @@ func (m *DirectSumModuleElement[E, S]) Structure() algebra.Structure[*DirectSumM
 	return out
 }
 
+func (m *DirectSumModuleElement[E, S]) ScalarDiagonal(s *DirectPowerRingElement[S]) *DirectSumModuleElement[E, S] {
+	arity := m.Arity().Uint64()
+	scaledComponents := make([]E, arity)
+	for i := range arity {
+		scaledComponents[i] = m.Components()[i].ScalarOp(s.Components()[i])
+	}
+	module := algebra.StructureMustBeAs[algebra.Module[E, S]](m.Components()[0].Structure())
+	directSumModule, err := NewDirectSumModule(module, uint(m.Arity().Uint64()))
+	if err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to create direct sum module for scalar diagonal operation"))
+	}
+	out, err := directSumModule.New(scaledComponents...)
+	if err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to create direct sum module element for scalar diagonal operation"))
+	}
+	return out
+}
+
 type FiniteDirectSumModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
 	traits.DirectSumModuleElement[E, S, *FiniteDirectSumModuleElement[E, S], FiniteDirectSumModuleElement[E, S]]
 }
@@ -159,5 +177,23 @@ type FiniteDirectSumModuleElement[E algebra.ModuleElement[E, S], S algebra.RingE
 func (m *FiniteDirectSumModuleElement[E, S]) Structure() algebra.Structure[*FiniteDirectSumModuleElement[E, S]] {
 	module := algebra.StructureMustBeAs[algebra.FiniteModule[E, S]](m.Components()[0].Structure())
 	out, _ := NewFiniteDirectSumModule(module, uint(m.Arity().Uint64()))
+	return out
+}
+
+func (m *FiniteDirectSumModuleElement[E, S]) ScalarDiagonal(s *FiniteDirectPowerRingElement[S]) *FiniteDirectSumModuleElement[E, S] {
+	arity := m.Arity().Uint64()
+	scaledComponents := make([]E, arity)
+	for i := range arity {
+		scaledComponents[i] = m.Components()[i].ScalarOp(s.Components()[i])
+	}
+	module := algebra.StructureMustBeAs[algebra.FiniteModule[E, S]](m.Components()[0].Structure())
+	directSumModule, err := NewFiniteDirectSumModule(module, uint(m.Arity().Uint64()))
+	if err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to create direct sum module for scalar diagonal operation"))
+	}
+	out, err := directSumModule.New(scaledComponents...)
+	if err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to create direct sum module element for scalar diagonal operation"))
+	}
 	return out
 }
