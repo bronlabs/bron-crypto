@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/okamoto"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -134,8 +135,7 @@ func Test_VerificationFailsWithWrongWitness(t *testing.T) {
 	w2, err := sf.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
-	statement, err := okamoto.NewStatement(g1.ScalarMul(w1), g2.ScalarMul(w2))
-	require.NoError(t, err)
+	statement := okamoto.NewStatement(g1.ScalarMul(w1).Add(g2.ScalarMul(w2)))
 
 	// Create wrong witness
 	wrongW1, err := sf.Random(pcg.NewRandomised())
@@ -181,8 +181,7 @@ func Test_ValidateStatement(t *testing.T) {
 
 	witness, err := okamoto.NewWitness(w1, w2)
 	require.NoError(t, err)
-	statement, err := okamoto.NewStatement(g1.ScalarMul(w1), g2.ScalarMul(w2))
-	require.NoError(t, err)
+	statement := okamoto.NewStatement(g1.ScalarMul(w1).Add(g2.ScalarMul(w2)))
 
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
@@ -233,16 +232,6 @@ func Test_NewWitnessErrors(t *testing.T) {
 	})
 }
 
-func Test_NewStatementErrors(t *testing.T) {
-	t.Parallel()
-
-	t.Run("no values", func(t *testing.T) {
-		t.Parallel()
-		_, err := okamoto.NewStatement[*k256.Point]()
-		require.Error(t, err)
-	})
-}
-
 // --- Generic test helpers ---
 
 func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
@@ -276,8 +265,7 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	witness, err := okamoto.NewWitness(witnessScalars...)
 	require.NoError(tb, err)
-	statement, err := okamoto.NewStatement(statementParts...)
-	require.NoError(tb, err)
+	statement := okamoto.NewStatement(algebrautils.Sum(statementParts[0], statementParts[1:]...))
 
 	// round 1
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
@@ -315,8 +303,7 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	// Random statement (simulator does not need a valid witness)
 	x, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
-	statement, err := okamoto.NewStatement(x)
-	require.NoError(tb, err)
+	statement := okamoto.NewStatement(x)
 
 	// simulate
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
@@ -361,8 +348,7 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	witness, err := okamoto.NewWitness(witnessScalars...)
 	require.NoError(tb, err)
-	statement, err := okamoto.NewStatement(statementParts...)
-	require.NoError(tb, err)
+	statement := okamoto.NewStatement(statementParts[0].Add(statementParts[1]))
 
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
 	require.NoError(tb, err)
@@ -430,8 +416,7 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	t.Run("valid opening", func(t *testing.T) {
 		t.Parallel()
 		// The Okamoto statement is the commitment point itself.
-		okaStatement, err := okamoto.NewStatement(commitment.Value())
-		require.NoError(t, err)
+		okaStatement := okamoto.NewStatement(commitment.Value())
 
 		// Verify that phi(witness) == statement.
 		err = protocol.ValidateStatement(okaStatement, okaWitness)
@@ -460,8 +445,7 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 		randomPoint, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		// The Okamoto statement is the commitment point itself.
-		invalidStatement, err := okamoto.NewStatement(randomPoint)
-		require.NoError(t, err)
+		invalidStatement := okamoto.NewStatement(randomPoint)
 
 		// Verify that phi(witness) == statement.
 		err = protocol.ValidateStatement(invalidStatement, okaWitness)

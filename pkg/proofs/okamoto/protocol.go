@@ -53,20 +53,8 @@ func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) (*Witness[S], error) {
 // NewStatement constructs a statement from individual group elements whose product
 // forms the public element z = g_1 * g_2 * ... * g_m.
 // For proving knowledge of a Pedersen opening, pass the commitment value directly.
-func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](gs ...G) (*Statement[G, S], error) {
-	if len(gs) == 0 {
-		return nil, ErrInvalidArgument.WithMessage("at least one statement value is required")
-	}
-	baseGroup := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](gs[0].Structure())
-	sumModule, err := constructions.NewFiniteDirectSumModule(baseGroup, uint(len(gs)))
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create direct sum module")
-	}
-	statementValue, err := sumModule.New(gs...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create statement element")
-	}
-	return &Statement[G, S]{X: statementValue.CoDiagonal()}, nil
+func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](g G) *Statement[G, S] {
+	return &Statement[G, S]{X: g}
 }
 
 // Protocol implements Okamoto's sigma protocol for proving knowledge of a representation.
