@@ -68,7 +68,7 @@ func (m *RegularModule[R, E, W, WT]) Zero() W {
 	return W(&out)
 }
 
-func (m *RegularModule[R, E, W, WT]) New(e E) (W, error) {
+func (*RegularModule[R, E, W, WT]) New(e E) (W, error) {
 	var out WT
 	if err := W(&out).set(e); err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create new element")
@@ -139,7 +139,9 @@ func (m *RegularModuleElement[E, W, WT]) TrySub(other W) (W, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to subtract element")
 	}
-	W(&out).set(v)
+	if err := W(&out).set(v); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to set subtracted element")
+	}
 	return W(&out), nil
 }
 
@@ -192,7 +194,9 @@ func (m *RegularModuleElement[E, W, WT]) ScalarOp(s E) W {
 
 func (m *RegularModuleElement[E, W, WT]) ScalarMul(s E) W {
 	var out WT
-	W(&out).set(m.v.Mul(s))
+	if err := W(&out).set(m.v.Mul(s)); err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to multiply element by scalar"))
+	}
 	return W(&out)
 }
 
@@ -213,7 +217,9 @@ func (m *RegularModuleElement[E, W, WT]) String() string {
 
 func (m *RegularModuleElement[E, W, WT]) Clone() W {
 	var out WT
-	W(&out).set(m.v.Clone())
+	if err := W(&out).set(m.v.Clone()); err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to clone element"))
+	}
 	return W(&out)
 }
 
@@ -231,7 +237,7 @@ func (m *RegularAlgebra[R, E, W, WT]) Name() string {
 
 func (m *RegularAlgebra[R, E, W, WT]) One() W {
 	var out WT
-	if err := W(&out).set(m.RegularModule.Ring.One()); err != nil {
+	if err := W(&out).set(m.Ring.One()); err != nil {
 		panic(errs.Wrap(err).WithMessage("failed to set one element"))
 	}
 	return W(&out)

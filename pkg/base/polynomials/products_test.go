@@ -3,10 +3,11 @@ package polynomials_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
 )
 
 // =========== DirectSumOfPolynomialRings ===========
@@ -49,7 +50,7 @@ func TestDirectSumOfPolynomialRingsNew(t *testing.T) {
 	require.NoError(t, err)
 
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2)) // 1 + 2x
-	p2, _ := polyRing.New(field.FromUint64(3))                     // 3
+	p2, _ := polyRing.New(field.FromUint64(3))                      // 3
 
 	t.Run("Valid components", func(t *testing.T) {
 		t.Parallel()
@@ -117,7 +118,7 @@ func TestDirectSumOfPolynomialsIsSemiDomain(t *testing.T) {
 	elem, _ := dsum.New(p1, p2)
 
 	// Direct sums are never semi-domains
-	require.False(t, elem.IsSemiDomain())
+	require.False(t, elem.IsDomain())
 }
 
 func TestDirectSumOfPolynomialsCoefficientAlgebra(t *testing.T) {
@@ -307,7 +308,7 @@ func TestDirectSumOfPolynomialModulesLift(t *testing.T) {
 	gen2 := gen.Double()
 
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2)) // 1 + 2x
-	p2, _ := polyRing.New(field.FromUint64(3))                     // 3
+	p2, _ := polyRing.New(field.FromUint64(3))                      // 3
 
 	t.Run("Valid lift", func(t *testing.T) {
 		t.Parallel()

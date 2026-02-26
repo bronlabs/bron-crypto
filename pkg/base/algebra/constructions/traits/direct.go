@@ -28,7 +28,7 @@ type DirectPowerInheritterPtrConstraint[E algebra.SemiGroupElement[E], T any] in
 	DirectPowerInheritter[E]
 }
 
-// ========== SemiGroup ==========
+// ========== SemiGroup ==========.
 
 type DirectPowerSemiGroup[S algebra.SemiGroup[E], E algebra.SemiGroupElement[E], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	base  S
@@ -92,14 +92,14 @@ func (s *DirectPowerSemiGroup[S, E, W, WT]) Diagonal(e E) (W, error) {
 	return s.New(sliceutils.Repeat[[]E](e, s.arity)...)
 }
 
-func (s *DirectPowerSemiGroup[S, E, W, WT]) Set(base S, dim uint) error {
-	if utils.IsNil(base) {
+func (s *DirectPowerSemiGroup[S, E, W, WT]) Set(b S, dim uint) error {
+	if utils.IsNil(b) {
 		return ErrInvalidArgument.WithMessage("base cannot be nil")
 	}
 	if dim == 0 {
 		return ErrInvalidArgument.WithMessage("arity must be greater than 0")
 	}
-	s.base = base
+	s.base = b
 	s.arity = int(dim)
 	return nil
 }
@@ -218,7 +218,7 @@ func (d *DirectPowerSemiGroupElement[E, W, WT]) String() string {
 	return out
 }
 
-// ========== Group ==========
+// ========== Group ==========.
 
 type DirectPowerGroup[S algebra.Group[E], E algebra.GroupElement[E], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	DirectPowerSemiGroup[S, E, W, WT]
@@ -254,13 +254,13 @@ func (d *DirectPowerGroupElement[E, W, WT]) OpInv() W {
 	return W(&out)
 }
 
-// ========== Ring ==========
+// ========== Ring ==========.
 
 type DirectPowerRing[R algebra.Ring[E], E algebra.RingElement[E], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	DirectPowerGroup[R, E, W, WT]
 }
 
-func (s *DirectPowerRing[R, E, W, WT]) IsDomain() bool {
+func (*DirectPowerRing[R, E, W, WT]) IsDomain() bool {
 	return false
 }
 
@@ -459,7 +459,7 @@ func (d *DirectPowerRingElement[E, W, WT]) Neg() W {
 	return W(&out)
 }
 
-// =============== Polynomial Likes ==================
+// =============== Polynomial Likes ==================.
 
 func EvalDirectProductOfPolynomialLikes[
 	Ps algebra.CoProduct[Ps, P],
@@ -486,7 +486,7 @@ func EvalDirectProductOfPolynomialLikes[
 	return values, nil
 }
 
-// ================ Misc =======================
+// ================ Misc =======================.
 
 type DirectPowerOfFiniteStructures[S interface {
 	algebra.SemiGroup[E]
@@ -496,14 +496,14 @@ type DirectPowerOfFiniteStructures[S interface {
 	dim  int
 }
 
-func (s *DirectPowerOfFiniteStructures[S, E, W, WT]) SetFiniteStructureAttributes(base S, dim uint) error {
-	if utils.IsNil(base) {
+func (s *DirectPowerOfFiniteStructures[S, E, W, WT]) SetFiniteStructureAttributes(b S, dim uint) error {
+	if utils.IsNil(b) {
 		return ErrInvalidArgument.WithMessage("base cannot be nil")
 	}
 	if dim == 0 {
 		return ErrInvalidArgument.WithMessage("dimension must be greater than 0")
 	}
-	s.base = base
+	s.base = b
 	s.dim = int(dim)
 	return nil
 }
@@ -540,7 +540,7 @@ func (s *DirectPowerOfFiniteStructures[S, E, W, WT]) Hash(input []byte) (W, erro
 	return W(&out), nil
 }
 
-// ========== Module ==========
+// ========== Module ==========.
 
 type DirectSumModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	DirectPowerGroup[M, E, W, WT]

@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// =========== Group ===========
+// =========== Group ===========.
 
 func NewDirectPowerGroup[G algebra.Group[E], E algebra.GroupElement[E]](g G, arity uint) (*DirectPowerGroup[G, E], error) {
 	out := &DirectPowerGroup[G, E]{}
@@ -58,7 +58,7 @@ func (g *FiniteDirectPowerGroupElement[E]) Structure() algebra.Structure[*Finite
 	return out
 }
 
-// =========== Ring ===========
+// =========== Ring ===========.
 
 func NewDirectPowerRing[R algebra.Ring[E], E algebra.RingElement[E]](r R, arity uint) (*DirectPowerRing[R, E], error) {
 	out := &DirectPowerRing[R, E]{}
@@ -110,7 +110,7 @@ func (r *FiniteDirectPowerRingElement[E]) Structure() algebra.Structure[*FiniteD
 	return out
 }
 
-// =========== Module ===========
+// =========== Module ===========.
 
 func NewDirectSumModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m M, arity uint) (*DirectSumModule[M, E, S], error) {
 	out := &DirectSumModule[M, E, S]{}

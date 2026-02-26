@@ -26,7 +26,7 @@ type FieldUnitSubGroup[FE acrtp.FieldElement[FE]] struct {
 	f algebra.Field[FE]
 }
 
-func (g FieldUnitSubGroup[FE]) New(fe FE) (*FieldUnitSubGroupElement[FE], error) {
+func (FieldUnitSubGroup[FE]) New(fe FE) (*FieldUnitSubGroupElement[FE], error) {
 	if fe.IsZero() {
 		return nil, ErrInvalidArgument.WithMessage("argument is zero")
 	}

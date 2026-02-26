@@ -97,21 +97,21 @@ func (p *DirectSumOfPolynomials[S]) Structure() algebra.Structure[*DirectSumOfPo
 	return out
 }
 
-// IsSemiDomain always returns false; a direct sum of rings is never a domain.
-func (p *DirectSumOfPolynomials[S]) IsSemiDomain() bool {
+// IsDomain always returns false; a direct sum of rings is never a domain.
+func (*DirectSumOfPolynomials[S]) IsDomain() bool {
 	return false
 }
 
 // CoefficientAlgebra returns the direct sum of regular algebras formed from
 // the coefficient ring of the first component.
-func (r *DirectSumOfPolynomials[S]) CoefficientAlgebra() *constructions.DirectSumModule[
+func (p *DirectSumOfPolynomials[S]) CoefficientAlgebra() *constructions.DirectSumModule[
 	*constructions.FiniteRegularAlgebra[
 		algebra.FiniteRing[S],
 		S,
 	], *constructions.FiniteRegularAlgebraElement[S], S] {
-	coeffRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](r.Components()[0].CoefficientStructure())
+	coeffRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](p.Components()[0].CoefficientStructure())
 	alg, _ := constructions.NewFiniteRegularAlgebra(coeffRing)
-	out, _ := constructions.NewDirectSumModule(alg, uint(r.Arity().Uint64()))
+	out, _ := constructions.NewDirectSumModule(alg, uint(p.Arity().Uint64()))
 	return out
 }
 
@@ -209,16 +209,16 @@ func (m *DirectSumOfPolynomialModules[C, S]) CoefficientModule() *constructions.
 
 // BaseAlgebra returns the direct sum of regular algebras formed from the
 // scalar ring of the polynomial module.
-func (r *DirectSumOfPolynomialModules[C, S]) BaseAlgebra() *constructions.DirectSumModule[
+func (m *DirectSumOfPolynomialModules[C, S]) BaseAlgebra() *constructions.DirectSumModule[
 	*constructions.FiniteRegularAlgebra[
 		algebra.FiniteRing[S], S,
 	], *constructions.FiniteRegularAlgebraElement[S], S] {
-	scalarRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](r.Factor().ScalarStructure())
+	scalarRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](m.Factor().ScalarStructure())
 	alg, err := constructions.NewFiniteRegularAlgebra(scalarRing)
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("could not create finite regular algebra"))
 	}
-	out, err := constructions.NewDirectSumModule(alg, uint(r.Arity().Uint64()))
+	out, err := constructions.NewDirectSumModule(alg, uint(m.Arity().Uint64()))
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("could not create direct sum of finite regular algebras"))
 	}
@@ -248,19 +248,22 @@ func (m *DirectSumOfModuleValuedPolynomials[C, S]) Structure() algebra.Structure
 
 // CoefficientModule returns the direct sum of coefficient modules.
 func (m *DirectSumOfModuleValuedPolynomials[C, S]) CoefficientModule() *constructions.DirectSumModule[algebra.Module[C, S], C, S] {
-	out, err := constructions.NewDirectSumModule(m.Components()[0].CoefficientStructure().(algebra.Module[C, S]), uint(m.Arity().Uint64()))
+	coefficientModule := algebra.StructureMustBeAs[algebra.Module[C, S]](m.Components()[0].CoefficientStructure())
+	out, err := constructions.NewDirectSumModule(coefficientModule, uint(m.Arity().Uint64()))
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("could not create direct sum of coefficient modules"))
 	}
 	return out
 }
+
 // BaseRing returns the direct power ring of scalars matching the arity.
 func (m *DirectSumOfModuleValuedPolynomials[C, S]) BaseRing() *constructions.DirectPowerRing[algebra.Ring[S], S] {
 	polyModule, ok := m.Components()[0].Structure().(*PolynomialModule[C, S])
 	if !ok {
 		panic(ErrValidation.WithMessage("component is not a polynomial module"))
 	}
-	out, err := constructions.NewDirectPowerRing(polyModule.ScalarStructure().(algebra.Ring[S]), uint(m.Arity().Uint64()))
+	scalarRing := algebra.StructureMustBeAs[algebra.Ring[S]](polyModule.ScalarStructure())
+	out, err := constructions.NewDirectPowerRing(scalarRing, uint(m.Arity().Uint64()))
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("could not create direct power ring"))
 	}
