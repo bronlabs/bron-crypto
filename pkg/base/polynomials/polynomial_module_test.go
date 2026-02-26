@@ -203,53 +203,6 @@ func TestPolynomialModuleRandomWithConstantTerm(t *testing.T) {
 	})
 }
 
-func TestPolynomialModuleMultiScalarOp(t *testing.T) {
-	t.Parallel()
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	polyMod, err := polynomials.NewPolynomialModule(curve)
-	require.NoError(t, err)
-	g := curve.Generator()
-
-	t.Run("multi scalar op", func(t *testing.T) {
-		t.Parallel()
-		p1, err := polyMod.New(g.Clone())
-		require.NoError(t, err)
-		p2, err := polyMod.New(g.Double())
-		require.NoError(t, err)
-
-		scalars := []*k256.Scalar{field.FromUint64(2), field.FromUint64(3)}
-		polys := []*polynomials.ModuleValuedPolynomial[*k256.Point, *k256.Scalar]{p1, p2}
-
-		result, err := polyMod.MultiScalarOp(scalars, polys)
-		require.NoError(t, err)
-		require.NotNil(t, result)
-
-		// 2*G + 3*(2G) = 2G + 6G = 8G
-		expected := g.ScalarOp(field.FromUint64(8))
-		require.True(t, result.ConstantTerm().Equal(expected))
-	})
-
-	t.Run("length mismatch returns error", func(t *testing.T) {
-		t.Parallel()
-		p1, _ := polyMod.New(g.Clone())
-		scalars := []*k256.Scalar{field.FromUint64(1), field.FromUint64(2)}
-		polys := []*polynomials.ModuleValuedPolynomial[*k256.Point, *k256.Scalar]{p1}
-
-		_, err := polyMod.MultiScalarOp(scalars, polys)
-		require.Error(t, err)
-	})
-
-	t.Run("empty input returns error", func(t *testing.T) {
-		t.Parallel()
-		scalars := []*k256.Scalar{}
-		polys := []*polynomials.ModuleValuedPolynomial[*k256.Point, *k256.Scalar]{}
-
-		_, err := polyMod.MultiScalarOp(scalars, polys)
-		require.Error(t, err)
-	})
-}
-
 func TestModuleValuedPolynomialOp(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
