@@ -6,11 +6,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -57,7 +57,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 			Share: shareForThisParty,
 		})
 	}
-	p.state.localFeldmanVerificationVector, err = polynomials.LiftPolynomial(p.state.pedersenDealerFunc.G, p.state.key.G())
+	p.state.localFeldmanVerificationVector, err = polynomials.LiftPolynomial(p.state.pedersenDealerFunc.Components()[0], p.state.key.G())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift pedersen dealer function to exponent")
 	}
@@ -77,7 +77,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 	}
 
-	witness := batch_schnorr.NewWitness(p.state.pedersenDealerFunc.G.Coefficients()...)
+	witness := batch_schnorr.NewWitness(p.state.pedersenDealerFunc.Components()[0].Coefficients()...)
 	statement := batch_schnorr.NewStatement(p.state.key.G(), p.state.localFeldmanVerificationVector.Coefficients()...)
 	proof, err := prover.Prove(statement, witness)
 	if err != nil {

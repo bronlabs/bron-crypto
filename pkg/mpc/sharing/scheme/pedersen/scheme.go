@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
@@ -86,7 +87,7 @@ func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (
 // DealAndRevealDealerFunc creates shares for the given secret and returns the dealing
 // polynomials. Uses two polynomials: f(x) for the secret and r(x) for blinding.
 // The verification vector contains Pedersen commitments g^{a_j}·h^{b_j}.
-func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], *DealerFunc[S], error) {
+func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], *polynomials.DirectSumOfPolynomials[S], error) {
 	if secret == nil {
 		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
@@ -100,12 +101,19 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not deal blinding shares")
 	}
-	dealerFunc := NewDealerFunc(secretPoly, blindingPoly)
-	dealerFuncInTheExponent, err := liftDealerFuncToExp(dealerFunc, s.key.G(), s.key.H())
+	directSumRing, err := polynomials.NewDirectSumOfPolynomialRings(secretPoly.Ring(), 2)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create direct sum of polynomial rings")
+	}
+	dealerFunc, err := directSumRing.New(secretPoly, blindingPoly)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create direct sum of polynomials")
+	}
+	dealerFuncInTheExponent, err := polynomials.LiftDirectSumOfPolynomialsToExponent(dealerFunc, s.key.G(), s.key.H())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not lift direct sum of polynomials to exponent")
 	}
-	verificationVector := dealerFuncInTheExponent.VerificationVector()
+	verificationVector := dealerFuncInTheExponent.CoDiagonal()
 	shares := hashmap.NewComparableFromNativeLike(
 		maps.Collect(
 			iterutils.Map2(
@@ -137,7 +145,7 @@ func (s *Scheme[E, S]) Deal(secret *Secret[S], prng io.Reader) (*DealerOutput[E,
 
 // DealRandomAndRevealDealerFunc generates shares for a random secret and returns
 // the dealing polynomials.
-func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *Secret[S], *DealerFunc[S], error) {
+func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *Secret[S], *polynomials.DirectSumOfPolynomials[S], error) {
 	if prng == nil {
 		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}

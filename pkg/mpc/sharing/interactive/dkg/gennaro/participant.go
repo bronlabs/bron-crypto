@@ -7,13 +7,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -83,7 +84,7 @@ type State[E GroupElement[E, S], S Scalar[S]] struct {
 	receivedFeldmanVerificationVectors  ds.MutableMap[sharing.ID, feldman.VerificationVector[E, S]]
 
 	localPedersenDealerOutput      *pedersen.DealerOutput[E, S]
-	pedersenDealerFunc             *pedersen.DealerFunc[S]
+	pedersenDealerFunc             *polynomials.DirectSumOfPolynomials[S]
 	localFeldmanVerificationVector feldman.VerificationVector[E, S]
 	localSecret                    *pedersen.Secret[S]
 	localShare                     *pedersen.Share[S]

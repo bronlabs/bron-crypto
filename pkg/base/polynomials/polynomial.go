@@ -200,8 +200,8 @@ func (p *Polynomial[RE]) Eval(at RE) RE {
 	return out
 }
 
-// Structure reconstructs the parent PolynomialRing from the coefficient ring.
-func (p *Polynomial[RE]) Structure() algebra.Structure[*Polynomial[RE]] {
+// Ring reconstructs the parent PolynomialRing from the coefficient ring.
+func (p *Polynomial[RE]) Ring() *PolynomialRing[RE] {
 	if len(p.coeffs) == 0 {
 		panic("internal error: empty coeffs")
 	}
@@ -210,6 +210,11 @@ func (p *Polynomial[RE]) Structure() algebra.Structure[*Polynomial[RE]] {
 	return &PolynomialRing[RE]{
 		ring: underlyingRing,
 	}
+}
+
+// Structure reconstructs the parent PolynomialRing from the coefficient ring.
+func (p *Polynomial[RE]) Structure() algebra.Structure[*Polynomial[RE]] {
+	return p.Ring()
 }
 
 // Bytes serialises the polynomial as a concatenation of coefficient bytes in

@@ -607,7 +607,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		// Create new message and witness for tampered share
 		message := pedcom.NewMessage(tamperedValue)
 		witness := originalShare.Blinding()
-		tamperedShare, err := pedersen.NewShare[S](
+		tamperedShare, err := pedersen.NewShare(
 			originalShare.ID(),
 			message,
 			witness,
@@ -631,7 +631,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		witness, err := pedcom.NewWitness(tamperedBlinding)
 		require.NoError(t, err)
 
-		tamperedShare, err := pedersen.NewShare[S](
+		tamperedShare, err := pedersen.NewShare(
 			originalShare.ID(),
 			message,
 			witness,
@@ -654,7 +654,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		tamperedValue := originalValue.Add(field.One())
 		message := pedcom.NewMessage(tamperedValue)
 		witness := originalShare.Blinding()
-		tamperedShare, err := pedersen.NewShare[S](
+		tamperedShare, err := pedersen.NewShare(
 			originalShare.ID(),
 			message,
 			witness,
@@ -703,7 +703,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	t.Run("nil blinding witness", func(t *testing.T) {
 		t.Parallel()
 		originalShare := shares.Shares().Values()[0]
-		_, err := pedersen.NewShare[S](
+		_, err := pedersen.NewShare(
 			originalShare.ID(),
 			originalShare.Secret(),
 			nil,
@@ -716,7 +716,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	t.Run("nil secret message", func(t *testing.T) {
 		t.Parallel()
 		originalShare := shares.Shares().Values()[0]
-		_, err := pedersen.NewShare[S](
+		_, err := pedersen.NewShare(
 			originalShare.ID(),
 			nil,
 			originalShare.Blinding(),
@@ -990,7 +990,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 		witness, err := pedcom.NewWitness(newBlinding)
 		require.NoError(t, err)
 
-		newShare, err := pedersen.NewShare[S](share.ID(), message, witness, scheme.AccessStructure())
+		newShare, err := pedersen.NewShare(share.ID(), message, witness, scheme.AccessStructure())
 		require.NoError(t, err)
 		require.True(t, newValue.Equal(newShare.Value()))
 		require.True(t, newBlinding.Equal(newShare.Blinding().Value()))
@@ -1000,7 +1000,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 		require.False(t, share.Equal(share2))
 
 		// Create a copy of the share
-		shareCopy, err := pedersen.NewShare[S](
+		shareCopy, err := pedersen.NewShare(
 			share.ID(),
 			share.Secret(),
 			share.Blinding(),
@@ -1300,11 +1300,11 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		require.Equal(t, 5, shares.Shares().Size())
 
 		// Verify polynomial degrees
-		require.Equal(t, 1, dealerFunc.G.Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, dealerFunc.H.Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = threshold - 1
 
 		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := dealerFunc.G.ConstantTerm()
+		secretCoeff := dealerFunc.Components()[0].ConstantTerm()
 		require.True(t, secret.Value().Equal(secretCoeff))
 	})
 
@@ -1350,8 +1350,8 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 			x := shamir.SharingIDToLagrangeNode(field, id)
 
 			// Evaluate dealer function components at x
-			secretValue := dealerFunc.G.Eval(x)
-			blindingValue := dealerFunc.H.Eval(x)
+			secretValue := dealerFunc.Components()[0].Eval(x)
+			blindingValue := dealerFunc.Components()[1].Eval(x)
 
 			// Check that share values match
 			require.True(t, secretValue.Equal(share.Value()))
@@ -1386,11 +1386,11 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 		require.Equal(t, 5, shares.Shares().Size())
 
 		// Verify polynomial degrees
-		require.Equal(t, 1, dealerFunc.G.Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, dealerFunc.H.Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = threshold - 1
 
 		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := dealerFunc.G.ConstantTerm()
+		secretCoeff := dealerFunc.Components()[0].ConstantTerm()
 		require.True(t, secret.Value().Equal(secretCoeff))
 
 		// Verify reconstruction
@@ -1440,7 +1440,7 @@ func TestNewShare(t *testing.T) {
 		witness, err := pedcom.NewWitness(blinding)
 		require.NoError(t, err)
 
-		share, err := pedersen.NewShare[*k256.Scalar](
+		share, err := pedersen.NewShare(
 			sharing.ID(1),
 			message,
 			witness,
@@ -1459,7 +1459,7 @@ func TestNewShare(t *testing.T) {
 		witness, err := pedcom.NewWitness(blinding)
 		require.NoError(t, err)
 
-		_, err = pedersen.NewShare[*k256.Scalar](
+		_, err = pedersen.NewShare(
 			sharing.ID(1),
 			nil,
 			witness,
@@ -1540,7 +1540,7 @@ func TestNewShare(t *testing.T) {
 		witness2, err := pedcom.NewWitness(blinding2)
 		require.NoError(t, err)
 
-		share1, err := pedersen.NewShare[*k256.Scalar](
+		share1, err := pedersen.NewShare(
 			sharing.ID(1),
 			message1,
 			witness1,
@@ -1548,7 +1548,7 @@ func TestNewShare(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		share2, err := pedersen.NewShare[*k256.Scalar](
+		share2, err := pedersen.NewShare(
 			sharing.ID(2),
 			message2,
 			witness2,
@@ -1566,7 +1566,7 @@ func TestNewShare(t *testing.T) {
 		require.False(t, share1.Equal(nil))
 
 		// Create identical share
-		share1Copy, err := pedersen.NewShare[*k256.Scalar](
+		share1Copy, err := pedersen.NewShare(
 			sharing.ID(1),
 			message1,
 			witness1,
