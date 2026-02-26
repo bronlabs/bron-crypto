@@ -10,6 +10,7 @@ type moduleValuedPolynomialDTO[ME algebra.ModuleElement[ME, S], S algebra.RingEl
 	Coeffs []ME `cbor:"coefficients"`
 }
 
+// MarshalCBOR serialises the module-valued polynomial to CBOR.
 func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	dto := &moduleValuedPolynomialDTO[ME, S]{
 		Coeffs: p.coeffs,
@@ -21,6 +22,7 @@ func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises a module-valued polynomial from CBOR.
 func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*moduleValuedPolynomialDTO[ME, S]](data)
 	if err != nil {
@@ -37,6 +39,7 @@ type polynomialDTO[RE algebra.RingElement[RE]] struct {
 	Coeffs []RE `cbor:"coefficients"`
 }
 
+// MarshalCBOR serialises the polynomial to CBOR.
 func (p *Polynomial[RE]) MarshalCBOR() ([]byte, error) {
 	dto := &polynomialDTO[RE]{
 		Coeffs: p.coeffs,
@@ -48,6 +51,7 @@ func (p *Polynomial[RE]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises a polynomial from CBOR.
 func (p *Polynomial[RE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*polynomialDTO[RE]](data)
 	if err != nil {

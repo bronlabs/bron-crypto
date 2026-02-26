@@ -13,6 +13,8 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+// LiftPolynomial lifts a scalar polynomial into a module-valued polynomial by
+// multiplying each coefficient by the base module element.
 func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], baseElem algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {
 	coeffs := make([]ME, len(poly.coeffs))
 	for i, c := range poly.coeffs {
@@ -25,10 +27,14 @@ func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]
 	return p, nil
 }
 
+// PolynomialModule is the module M[x] of univariate polynomials whose
+// coefficients live in a finite module M. Scalars come from the scalar ring
+// of M. It implements algebra.Module[*ModuleValuedPolynomial[ME, S], S].
 type PolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
 	module algebra.FiniteModule[ME, S]
 }
 
+// NewPolynomialModule constructs a polynomial module over the given finite module.
 func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.FiniteModule[ME, S]) (*PolynomialModule[ME, S], error) {
 	if module == nil {
 		return nil, ErrValidation.WithMessage("nil module")
@@ -36,6 +42,9 @@ func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[
 	return &PolynomialModule[ME, S]{module: module}, nil
 }
 
+// New creates a module-valued polynomial from the given coefficients in
+// ascending degree order. If no coefficients are given the zero polynomial
+// is returned.
 func (m *PolynomialModule[ME, S]) New(coeffs ...ME) (*ModuleValuedPolynomial[ME, S], error) {
 	if len(coeffs) < 1 {
 		return m.OpIdentity(), nil
@@ -51,10 +60,13 @@ func (m *PolynomialModule[ME, S]) New(coeffs ...ME) (*ModuleValuedPolynomial[ME,
 	}, nil
 }
 
+// Name returns a human-readable name of the form "PolynomialModule[M, S]".
 func (m *PolynomialModule[ME, S]) Name() string {
 	return fmt.Sprintf("PolynomialModule[%s, %s]", m.module.Name(), m.module.ScalarStructure().Name())
 }
 
+// RandomModuleValuedPolynomial returns a random module-valued polynomial of
+// the given degree with a random constant term.
 func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
 	if degree < 0 {
 		return nil, ErrValidation.WithMessage("negative degree")
@@ -71,6 +83,9 @@ func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng 
 	return poly, nil
 }
 
+// RandomModuleValuedPolynomialWithConstantTerm returns a random module-valued
+// polynomial of the given degree whose constant coefficient equals
+// constantTerm. The leading coefficient is guaranteed to be non-identity.
 func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(degree int, constantTerm ME, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
 	if degree < 0 {
 		return nil, ErrValidation.WithMessage("negative degree")
@@ -100,10 +115,13 @@ func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(d
 	}, nil
 }
 
+// Order returns Infinite, since a polynomial module has infinitely many elements.
 func (*PolynomialModule[ME, S]) Order() algebra.Cardinal {
 	return cardinal.Infinite()
 }
 
+// FromBytes deserialises a module-valued polynomial from a concatenation of
+// fixed-size coefficient encodings in ascending degree order.
 func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomial[ME, S], error) {
 	coeffSize := m.module.ElementSize()
 	if len(bytes) == 0 {
@@ -131,37 +149,34 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 	return poly, nil
 }
 
+// ElementSize returns -1 because module-valued polynomials are variable-length.
 func (*PolynomialModule[ME, S]) ElementSize() int {
 	return -1
 }
 
+// OpIdentity returns the additive identity (zero module-valued polynomial).
 func (m *PolynomialModule[ME, S]) OpIdentity() *ModuleValuedPolynomial[ME, S] {
 	return &ModuleValuedPolynomial[ME, S]{coeffs: []ME{m.module.OpIdentity()}}
 }
 
+// ScalarStructure returns the scalar ring of the underlying module.
 func (m *PolynomialModule[ME, S]) ScalarStructure() algebra.Structure[S] {
 	return m.module.ScalarStructure()
 }
 
-func (m *PolynomialModule[ME, S]) MultiScalarOp(scalars []S, elements []*ModuleValuedPolynomial[ME, S]) (*ModuleValuedPolynomial[ME, S], error) {
-	if len(scalars) != len(elements) {
-		return nil, ErrLengthMismatch.WithMessage("scalar and elements mismatch")
-	}
-	if len(scalars) == 0 {
-		return nil, ErrValidation.WithMessage("empty input")
-	}
-
-	out := m.OpIdentity()
-	for i, pi := range elements {
-		out = out.Op(pi.ScalarOp(scalars[i]))
-	}
-	return out, nil
+// CoefficientStructure returns the underlying coefficient module.
+func (m *PolynomialModule[ME, S]) CoefficientStructure() algebra.Structure[ME] {
+	return m.module
 }
 
+// ModuleValuedPolynomial is a univariate polynomial whose coefficients are
+// elements of a module ME over a scalar ring S, stored in ascending degree
+// order. It implements algebra.ModuleElement[*ModuleValuedPolynomial[ME, S], S].
 type ModuleValuedPolynomial[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
 	coeffs []ME
 }
 
+// Structure reconstructs the parent PolynomialModule from the coefficient module.
 func (p *ModuleValuedPolynomial[ME, S]) Structure() algebra.Structure[*ModuleValuedPolynomial[ME, S]] {
 	if len(p.coeffs) == 0 {
 		panic("internal error: empty coeffs")
@@ -173,6 +188,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Structure() algebra.Structure[*ModuleVal
 	}
 }
 
+// CoefficientStructure returns the finite module that the coefficients belong to.
 func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.FiniteModule[ME, S] {
 	if len(p.coeffs) == 0 {
 		panic("internal error: empty coeffs")
@@ -180,18 +196,23 @@ func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.FiniteMod
 	return algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](p.coeffs[0].Structure())
 }
 
+// ScalarStructure returns the scalar ring of the coefficient module.
 func (p *ModuleValuedPolynomial[ME, S]) ScalarStructure() algebra.Ring[S] {
 	return algebra.StructureMustBeAs[algebra.Ring[S]](p.CoefficientStructure().ScalarStructure())
 }
 
+// ConstantTerm returns the degree-0 coefficient.
 func (p *ModuleValuedPolynomial[ME, S]) ConstantTerm() ME {
 	return p.coeffs[0]
 }
 
+// IsConstant reports whether the polynomial has degree 0 or less.
 func (p *ModuleValuedPolynomial[ME, S]) IsConstant() bool {
 	return p.Degree() <= 0
 }
 
+// LeadingCoefficient returns the highest-degree non-identity coefficient, or
+// the module identity if p is the zero polynomial.
 func (p *ModuleValuedPolynomial[ME, S]) LeadingCoefficient() ME {
 	deg := p.Degree()
 	if deg < 0 {
@@ -200,6 +221,9 @@ func (p *ModuleValuedPolynomial[ME, S]) LeadingCoefficient() ME {
 	return p.coeffs[deg]
 }
 
+// PolynomialOp multiplies a module-valued polynomial by a scalar polynomial
+// via convolution (schoolbook multiplication using ScalarOp for coefficient
+// scaling and Op for coefficient addition).
 func (p *ModuleValuedPolynomial[ME, S]) PolynomialOp(poly *Polynomial[S]) *ModuleValuedPolynomial[ME, S] {
 	if len(p.coeffs) == 0 || len(poly.coeffs) == 0 {
 		return p.Clone()
@@ -219,6 +243,7 @@ func (p *ModuleValuedPolynomial[ME, S]) PolynomialOp(poly *Polynomial[S]) *Modul
 	}
 }
 
+// Derivative returns the formal derivative p'(x).
 func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME, S] {
 	if len(p.coeffs) <= 1 {
 		return &ModuleValuedPolynomial[ME, S]{
@@ -243,6 +268,8 @@ func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME,
 	}
 }
 
+// Bytes serialises the polynomial as a concatenation of coefficient bytes in
+// ascending degree order.
 func (p *ModuleValuedPolynomial[ME, S]) Bytes() []byte {
 	out := make([]byte, 0, len(p.coeffs)*p.CoefficientStructure().ElementSize())
 	for _, c := range p.coeffs {
@@ -251,6 +278,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Bytes() []byte {
 	return out
 }
 
+// Clone returns a deep copy of the polynomial.
 func (p *ModuleValuedPolynomial[ME, S]) Clone() *ModuleValuedPolynomial[ME, S] {
 	coeffs := make([]ME, len(p.coeffs))
 	for i, c := range p.coeffs {
@@ -261,6 +289,8 @@ func (p *ModuleValuedPolynomial[ME, S]) Clone() *ModuleValuedPolynomial[ME, S] {
 	}
 }
 
+// Equal reports whether p and rhs represent the same polynomial (trailing
+// identity coefficients are ignored).
 func (p *ModuleValuedPolynomial[ME, S]) Equal(rhs *ModuleValuedPolynomial[ME, S]) bool {
 	for i := range min(len(p.coeffs), len(rhs.coeffs)) {
 		if !p.coeffs[i].Equal(rhs.coeffs[i]) {
@@ -281,6 +311,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Equal(rhs *ModuleValuedPolynomial[ME, S]
 	return true
 }
 
+// HashCode returns a hash derived from XOR-ing the hash codes of all coefficients.
 func (p *ModuleValuedPolynomial[ME, S]) HashCode() base.HashCode {
 	h := base.HashCode(0)
 	for _, c := range p.coeffs {
@@ -289,6 +320,7 @@ func (p *ModuleValuedPolynomial[ME, S]) HashCode() base.HashCode {
 	return h
 }
 
+// String returns a bracket-delimited list of coefficient strings.
 func (p *ModuleValuedPolynomial[ME, S]) String() string {
 	repr := "["
 	for _, c := range p.coeffs {
@@ -298,6 +330,7 @@ func (p *ModuleValuedPolynomial[ME, S]) String() string {
 	return repr
 }
 
+// Op returns the sum of two module-valued polynomials (coefficient-wise addition).
 func (p *ModuleValuedPolynomial[ME, S]) Op(e *ModuleValuedPolynomial[ME, S]) *ModuleValuedPolynomial[ME, S] {
 	coeffs := make([]ME, max(len(p.coeffs), len(e.coeffs)))
 	for i := range min(len(p.coeffs), len(e.coeffs)) {
@@ -315,12 +348,14 @@ func (p *ModuleValuedPolynomial[ME, S]) Op(e *ModuleValuedPolynomial[ME, S]) *Mo
 	}
 }
 
+// OpElement adds a module element to the constant term of p.
 func (p *ModuleValuedPolynomial[ME, S]) OpElement(e ME) *ModuleValuedPolynomial[ME, S] {
 	clone := p.Clone()
 	clone.coeffs[0] = clone.coeffs[0].Op(e)
 	return clone
 }
 
+// IsOpIdentity reports whether all coefficients are the module identity.
 func (p *ModuleValuedPolynomial[ME, S]) IsOpIdentity() bool {
 	for _, c := range p.coeffs {
 		if !c.IsOpIdentity() {
@@ -330,10 +365,12 @@ func (p *ModuleValuedPolynomial[ME, S]) IsOpIdentity() bool {
 	return true
 }
 
+// TryOpInv returns the additive inverse of p (always succeeds).
 func (p *ModuleValuedPolynomial[ME, S]) TryOpInv() (*ModuleValuedPolynomial[ME, S], error) {
 	return p.OpInv(), nil
 }
 
+// OpInv returns the additive inverse of p (coefficient-wise inversion).
 func (p *ModuleValuedPolynomial[ME, S]) OpInv() *ModuleValuedPolynomial[ME, S] {
 	coeffs := make([]ME, len(p.coeffs))
 	for i, c := range p.coeffs {
@@ -345,6 +382,7 @@ func (p *ModuleValuedPolynomial[ME, S]) OpInv() *ModuleValuedPolynomial[ME, S] {
 	}
 }
 
+// ScalarOp multiplies every coefficient by the scalar (module action).
 func (p *ModuleValuedPolynomial[ME, S]) ScalarOp(actor S) *ModuleValuedPolynomial[ME, S] {
 	coeffs := make([]ME, len(p.coeffs))
 	for i := 0; i < len(coeffs); i++ {
@@ -356,6 +394,7 @@ func (p *ModuleValuedPolynomial[ME, S]) ScalarOp(actor S) *ModuleValuedPolynomia
 	}
 }
 
+// IsTorsionFree reports whether every coefficient is torsion-free.
 func (p *ModuleValuedPolynomial[ME, S]) IsTorsionFree() bool {
 	for i := range p.coeffs {
 		if !p.coeffs[i].IsTorsionFree() {
@@ -365,6 +404,8 @@ func (p *ModuleValuedPolynomial[ME, S]) IsTorsionFree() bool {
 	return true
 }
 
+// Eval evaluates the module-valued polynomial at the given scalar point using
+// Horner's method.
 func (p *ModuleValuedPolynomial[ME, S]) Eval(at S) ME {
 	out := p.coeffs[len(p.coeffs)-1].Clone()
 	for i := len(p.coeffs) - 2; i >= 0; i-- {
@@ -373,6 +414,8 @@ func (p *ModuleValuedPolynomial[ME, S]) Eval(at S) ME {
 	return out
 }
 
+// Degree returns the degree of p (the index of the highest non-identity
+// coefficient), or −1 for the zero polynomial.
 func (p *ModuleValuedPolynomial[ME, S]) Degree() int {
 	for i := len(p.coeffs) - 1; i >= 0; i-- {
 		if !p.coeffs[i].IsOpIdentity() {
@@ -382,6 +425,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Degree() int {
 	return -1
 }
 
+// Coefficients returns the coefficient slice in ascending degree order.
 func (p *ModuleValuedPolynomial[ME, S]) Coefficients() []ME {
 	return p.coeffs
 }
