@@ -3,6 +3,7 @@ package schnorr
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
@@ -47,7 +48,7 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generator G, prng io.Reader) (*Protocol[G, S], error) {
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](generator.Structure())
 	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
-	challengeByteLen := 16
+	challengeByteLen := base.ComputationalSecurityBytesCeil // To make it non interactive, it has to be at least equal to computational security parameter.
 	soundnessError := uint(challengeByteLen * 8)
 	homomorphism := func(s S) G { return generator.ScalarOp(s) }
 	l, err := num.N().FromBytes(group.Order().Bytes())
@@ -56,7 +57,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 	anc := &anchor[G, S]{l, scalarField.Zero()}
 
-	maurerProto, err := maurer09.NewProtocol(
+	maurerProtocol, err := maurer09.NewProtocol(
 		challengeByteLen,
 		soundnessError,
 		Name,
@@ -70,7 +71,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		return nil, errs.Wrap(err)
 	}
 
-	return &Protocol[G, S]{*maurerProto}, nil
+	return &Protocol[G, S]{*maurerProtocol}, nil
 }
 
 type anchor[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
