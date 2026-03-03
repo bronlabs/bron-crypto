@@ -255,9 +255,9 @@ func NewSignature[GE GroupElement[GE, S], S Scalar[S]](e S, r GE, s S) (*Signatu
 // Some variants (like Mina) don't store E explicitly as it can be recomputed.
 // The serialised format varies by variant (typically just R.x and S).
 type Signature[GE GroupElement[GE, S], S Scalar[S]] struct {
-	E S
-	R GE
-	S S
+	E S  `cbor:"e"`
+	R GE `cbor:"r"`
+	S S  `cbor:"s"`
 }
 
 // Equal returns true if two signatures have identical E, R, and S values.

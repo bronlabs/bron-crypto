@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -162,9 +163,9 @@ func RogueKeyPreventionAlgorithmIsSupported(alg RogueKeyPreventionAlgorithm) boo
 // (lies in the prime-order subgroup). This prevents invalid key attacks.
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.5
 func NewPublicKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v PK) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	if v.IsOpIdentity() {
 		return nil, ErrInvalidArgument.WithMessage("cannot create public key from identity point")
@@ -180,9 +181,9 @@ func NewPublicKey[
 // NewPublicKeyFromBytes deserializes a PublicKey from its compressed byte representation.
 // The input is validated to ensure it represents a valid curve point in the correct subgroup.
 func NewPublicKeyFromBytes[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	v, err := subGroup.FromBytes(input)
 	if err != nil {
@@ -200,9 +201,9 @@ func NewPublicKeyFromBytes[
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.4
 type PublicKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	signatures.PublicKeyTrait[PK, S]
 }
@@ -277,9 +278,9 @@ func (pk *PublicKey[P1, F1, P2, F2, E, S]) TryAdd(other *PublicKey[P1, F1, P2, F
 // The public key is derived as pk = sk * G (SkToPk operation in the spec).
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.4
 func NewPrivateKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], v S) (*PrivateKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	if v.IsOpIdentity() {
 		return nil, ErrInvalidArgument.WithMessage("cannot create private key from identity scalar")
@@ -298,9 +299,9 @@ func NewPrivateKey[
 // NewPrivateKeyFromBytes deserializes a PrivateKey from its byte representation.
 // The input is interpreted as a big-endian integer and validated to be non-zero.
 func NewPrivateKeyFromBytes[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PrivateKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](subGroup.ScalarStructure())
 	v, err := sf.FromBytes(input)
@@ -319,9 +320,9 @@ func NewPrivateKeyFromBytes[
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.3
 type PrivateKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	signatures.PrivateKeyTrait[PK, S]
 }
@@ -377,9 +378,9 @@ func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Bytes() []byte {
 // Security: Validates subgroup membership to prevent attacks exploiting small subgroup elements.
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.5
 func NewSignature[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v Sig, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if v.IsOpIdentity() {
 		return nil, ErrInvalidArgument.WithMessage("cannot create signature from identity point")
@@ -396,9 +397,9 @@ func NewSignature[
 // NewSignatureFromBytes deserializes a Signature from its compressed byte representation.
 // The input is validated to ensure it represents a valid curve point in the correct subgroup.
 func NewSignatureFromBytes[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if subGroup == nil {
 		return nil, ErrInvalidArgument.WithMessage("subgroup cannot be nil")
@@ -420,12 +421,21 @@ func NewSignatureFromBytes[
 // Verification uses the pairing equation: e(pk, H(m)) = e(G, sig)
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 type Signature[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	v   Sig
 	pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]
+}
+
+type signatureDTO[
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	V   Sig                                            `cbor:"v"`
+	Pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S] `cbor:"pop"`
 }
 
 // Value returns the underlying curve point of the signature.
@@ -498,6 +508,32 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
 	return sig.v.HashCode()
 }
 
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) MarshalCBOR() ([]byte, error) {
+	dto := &signatureDTO[Sig, SigFE, PK, PKFE, E, S]{
+		V:   sig.v,
+		Pop: sig.pop,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal signature to CBOR")
+	}
+	return data, nil
+}
+
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*signatureDTO[Sig, SigFE, PK, PKFE, E, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal signature from CBOR")
+	}
+	sig2, err := NewSignature(dto.V, dto.Pop)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not create signature from deserialized data")
+	}
+
+	*sig = *sig2
+	return nil
+}
+
 // NewProofOfPossession creates a ProofOfPossession from an elliptic curve point.
 // A proof of possession is a signature on the public key itself, demonstrating that
 // the signer knows the corresponding secret key.
@@ -507,9 +543,9 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-3.3.2
 func NewProofOfPossession[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v Sig) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
 	if v.IsOpIdentity() {
 		return nil, ErrInvalidArgument.WithMessage("cannot create proof of possession from identity signature")
@@ -517,21 +553,17 @@ func NewProofOfPossession[
 	if !v.IsTorsionFree() {
 		return nil, ErrInvalidArgument.WithMessage("cannot create proof of possession from signature with torsion point")
 	}
-	sig, err := NewSignature(v, nil)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create proof of possession from signature")
-	}
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
-		Signature: *sig,
+		v: v,
 	}, nil
 }
 
 // NewProofOfPossessionFromBytes deserializes a ProofOfPossession from its compressed byte representation.
 // The input is validated to ensure it represents a valid curve point in the correct subgroup.
 func NewProofOfPossessionFromBytes[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
 	if subGroup == nil {
 		return nil, ErrInvalidArgument.WithMessage("subgroup cannot be nil")
@@ -559,11 +591,19 @@ func NewProofOfPossessionFromBytes[
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-3.3
 type ProofOfPossession[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
-	Signature[Sig, SigFE, PK, PKFE, E, S]
+	v Sig
+}
+
+type proofOfPossessionDTO[
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	V Sig `cbor:"v"`
 }
 
 // Bytes returns the compressed serialisation of the proof of possession.
@@ -571,12 +611,12 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
 	if pop == nil {
 		return nil
 	}
-	return pop.Signature.Bytes()
+	return pop.v.Bytes()
 }
 
 // Value returns the underlying curve point of the proof.
 func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Value() Sig {
-	return pop.Signature.Value()
+	return pop.v
 }
 
 // Equal returns true if both proofs represent the same curve point.
@@ -584,7 +624,7 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Equal(other *ProofOfPo
 	if pop == nil || other == nil {
 		return pop == other
 	}
-	return pop.Signature.Equal(&other.Signature)
+	return pop.v.Equal(other.v)
 }
 
 // Clone returns a deep copy of the proof of possession.
@@ -592,7 +632,7 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Clone() *ProofOfPosses
 	if pop == nil {
 		return nil
 	}
-	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{Signature: *pop.Signature.Clone()}
+	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{v: pop.v.Clone()}
 }
 
 // TryAdd aggregates this proof of possession with another by elliptic curve point addition.
@@ -601,18 +641,40 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *ProofOfP
 	if other == nil {
 		return nil, ErrInvalidArgument.WithMessage("cannot add nil proof of possession")
 	}
-	v, err := pop.Signature.TryAdd(&other.Signature)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not add signatures in proof of possession")
-	}
+	v := pop.v.Add(other.v)
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
-		Signature: *v,
+		v: v,
 	}, nil
 }
 
 // HashCode returns a hash of the proof for use in hash-based data structures.
 func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
-	return pop.Signature.HashCode()
+	return pop.v.HashCode()
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) MarshalCBOR() ([]byte, error) {
+	dto := &proofOfPossessionDTO[Sig, SigFE, PK, PKFE, E, S]{
+		V: pop.v,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal proof of possession to CBOR")
+	}
+	return data, nil
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*proofOfPossessionDTO[Sig, SigFE, PK, PKFE, E, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal proof of possession from CBOR")
+	}
+	pop2, err := NewProofOfPossession(dto.V)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not create proof of possession from deserialized data")
+	}
+
+	*pop = *pop2
+	return nil
 }
 
 // AggregateAll combines multiple BLS elements (public keys, signatures, or proofs) into a single
@@ -624,12 +686,12 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCo
 // The aggregation is homomorphic, enabling efficient batch verification of multiple signatures.
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.8
 func AggregateAll[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, ET, S], PKFE algebra.FieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, ET, S], SGFE algebra.FieldElement[SGFE],
-	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
-	Xs ~[]X, X interface {
-		TryAdd(other X) (X, error)
-	},
+PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, ET, S], PKFE algebra.FieldElement[PKFE],
+SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, ET, S], SGFE algebra.FieldElement[SGFE],
+ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
+Xs ~[]X, X interface {
+	TryAdd(other X) (X, error)
+},
 ](xs Xs) (X, error) {
 	if len(xs) == 0 {
 		return *new(X), ErrInvalidArgument.WithMessage("cannot aggregate empty slice of elements")
