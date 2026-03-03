@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
@@ -104,15 +105,15 @@ func (s *Share[FE]) SubPlain(other FE) *Share[FE] {
 }
 
 // ScalarOp is an alias for ScalarMul.
-func (s *Share[FE]) ScalarOp(scalar FE) *Share[FE] {
+func (s *Share[FE]) ScalarOp(scalar algebra.Numeric) *Share[FE] {
 	return s.ScalarMul(scalar)
 }
 
 // ScalarMul returns a new share with the value multiplied by a scalar.
-func (s *Share[FE]) ScalarMul(scalar FE) *Share[FE] {
+func (s *Share[FE]) ScalarMul(scalar algebra.Numeric) *Share[FE] {
 	return &Share[FE]{
 		id: s.id,
-		v:  s.v.Mul(scalar),
+		v:  algebrautils.ScalarMul(s.v, scalar),
 	}
 }
 

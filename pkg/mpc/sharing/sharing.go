@@ -2,11 +2,11 @@ package sharing
 
 import (
 	"io"
+	"iter"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
@@ -45,10 +45,10 @@ type VerifiableDealerOutput[S Share[S], V VerificationMaterial] DealerOutput[S]
 // (recovering the secret from authorized shares).
 type SSS[S Share[S], W Secret[W], DO DealerOutput[S], AC accessstructures.Monotone] interface {
 	Name() Name
+	AccessStructure() AC
 	Deal(secret W, prng io.Reader) (DO, error)
 	DealRandom(prng io.Reader) (DO, W, error)
 	Reconstruct(shares ...S) (secret W, err error)
-	AccessStructure() AC
 }
 
 // VSSS (Verifiable Secret Sharing Scheme) extends SSS with the ability to verify
@@ -56,7 +56,6 @@ type SSS[S Share[S], W Secret[W], DO DealerOutput[S], AC accessstructures.Monoto
 // a malicious dealer who distributes inconsistent shares.
 type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOutput[S, V], AC accessstructures.Monotone] interface {
 	SSS[S, W, DO, AC]
-	Reconstruct(shares ...S) (secret W, err error)
 	ReconstructAndVerify(reference V, shares ...S) (secret W, err error)
 	Verify(share S, reference V) (err error)
 }
@@ -69,38 +68,61 @@ type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *ac
 // Lagrange coefficients, which is essential for many MPC protocols.
 type LinearShare[S interface {
 	Share[S]
-	algebra.HomomorphicLike[S, SV]
-	algebra.Actable[S, SC]
-}, SV any,
-	SC any, // To support packed variants, scalar type is not constrained.
+	algebra.Operand[S]
+	algebra.Actable[S, algebra.Numeric]
+	Repr() iter.Seq[SV]
+}, SV algebra.GroupElement[SV],
 ] interface {
 	Share[S]
-	algebra.HomomorphicLike[S, SV]
-	algebra.Actable[S, SC]
+	algebra.Operand[S]
+	algebra.Actable[S, algebra.Numeric]
+	Repr() iter.Seq[SV]
+}
+
+type DealerFunc[
+	DF interface {
+		algebra.Operand[DF]
+		ShareOf(id ID) S
+		Repr() iter.Seq[SV]
+		Accepts(AC) bool
+	},
+	S Share[S], SV algebra.GroupElement[SV],
+	AC accessstructures.Monotone,
+] interface {
+	algebra.Operand[DF]
+	ShareOf(id ID) S
+	Repr() iter.Seq[SV]
+	Accepts(AC) bool
+}
+
+type LinearDealerFunc[
+	LDF interface {
+		DealerFunc[LDF, S, SV, AC]
+		Lift(LFTSV) (LFTDF, error)
+	}, LFTDF DealerFunc[LFTDF, LFTS, LFTSV, AC],
+	S LinearShare[S, SV], SV algebra.GroupElement[SV],
+	LFTS Share[LFTS], LFTSV algebra.GroupElement[LFTSV],
+	AC accessstructures.Monotone,
+] interface {
+	DealerFunc[LDF, S, SV, AC]
+	Lift(LFTSV) (LFTDF, error)
 }
 
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.
 // It supports revealing the dealer function (polynomial) for protocols that need it.
 type LSSS[
-	S LinearShare[S, SV, SC], SV any,
+	S LinearShare[S, SV], SV algebra.GroupElement[SV],
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
-	}, WV algebra.GroupElement[WV], DO DealerOutput[S], SC any, AC accessstructures.Monotone, DF any,
+	}, WV algebra.GroupElement[WV], DO DealerOutput[S], AC accessstructures.Monotone,
+	LDF LinearDealerFunc[LDF, LFTDF, S, SV, LFTS, LFTSV, AC],
+	LFTDF DealerFunc[LFTDF, LFTS, LFTSV, AC],
+	LFTS LinearShare[LFTS, LFTSV],
+	LFTSV algebra.GroupElement[LFTSV],
 ] interface {
 	SSS[S, W, DO, AC]
-	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
-	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
+	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, LDF, error)
+	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, LDF, error)
 	ConvertShareToAdditive(input S, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[WV], error)
 }
-
-// PolynomialLSSS is an LSSS based on polynomial evaluation, such as Shamir's scheme.
-// The dealer function is a polynomial f(x) where f(0) is the secret and f(i) is
-// shareholder i's share.
-type PolynomialLSSS[
-	S LinearShare[S, SV, SC], SV algebra.PrimeFieldElement[SV],
-	W interface {
-		Secret[W]
-		base.Transparent[WV]
-	}, WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC accessstructures.Monotone,
-] LSSS[S, SV, W, WV, DO, SC, AC, *polynomials.Polynomial[SV]]
