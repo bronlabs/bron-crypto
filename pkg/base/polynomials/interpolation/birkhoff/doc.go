@@ -1,2 +1,2 @@
-// Package birkhoff provides Birkhoff interpolation over finite fields
+// Package birkhoff provides Birkhoff interpolation over finite fields.
 package birkhoff

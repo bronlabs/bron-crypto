@@ -55,7 +55,7 @@ func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*
 	return poly, nil
 }
 
-// BuildVandermondeMatrix constructs the generalized Vandermonde matrix used by
+// BuildVandermondeMatrix constructs the generalised Vandermonde matrix used by
 // Birkhoff interpolation for nodes (xs[i], js[i]).
 func BuildVandermondeMatrix[F algebra.PrimeFieldElement[F]](xs []F, js []uint64) (*mat.SquareMatrix[F], error) {
 	if len(xs) != len(js) {
