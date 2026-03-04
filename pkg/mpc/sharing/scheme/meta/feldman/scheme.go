@@ -2,7 +2,9 @@ package feldman
 
 import (
 	"io"
+	"iter"
 	"maps"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -14,30 +16,39 @@ import (
 )
 
 type Scheme[
-	S sharing.LinearShare[S, SV], SV any,
+	S sharing.LinearShare[S, SV, SC], SV any, SC any,
 	W interface {
 		sharing.Secret[W]
 		base.Transparent[WV]
 	}, WV algebra.GroupElement[WV],
 	DO sharing.DealerOutput[S],
 	AC accessstructures.Monotone,
-	DF sharing.LinearDealerFunc[S, EREPR, LFTS, LFTEREPR, AC], EREPR any, LFTEREPR base.Equatable[LFTEREPR],
-	LFTS sharing.LinearShare[LFTS, LFTEREPR],
+	DF any,
+	LFTDF interface {
+		ShareOf(id sharing.ID) LFTS
+		Accepts(AC) bool
+	},
+	LFTS interface {
+		sharing.Share[LFTS]
+		Repr() iter.Seq[LFTEREPR]
+	},
+	LFTEREPR base.Equatable[LFTEREPR],
 ] struct {
-	basePoint LFTEREPR
-	lsss      sharing.LSSS[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]
-	liftShare func(share SV, basePoint LFTEREPR) (LFTEREPR, error) // will lift to basepoint
+	basePoint      LFTEREPR
+	lsss           sharing.LSSS[S, SV, W, WV, DO, SC, AC, DF]
+	liftDealerFunc func(DF, LFTEREPR) (LFTDF, error)
+	liftShare      func(SV, LFTEREPR) (LFTEREPR, error)
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) Name() sharing.Name {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) Name() sharing.Name {
 	return Name
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) AccessStructure() AC {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) AccessStructure() AC {
 	return s.lsss.AccessStructure()
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) Deal(secret W, prng io.Reader) (*DealerOutput[S, SV, LFTS, LFTEREPR, AC], error) {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) Deal(secret W, prng io.Reader) (*DealerOutput[S, LFTDF], error) {
 	do, _, err := s.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to deal shares")
@@ -45,39 +56,39 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) Deal(secret W,
 	return do, nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) DealAndRevealDealerFunc(secret W, prng io.Reader) (*DealerOutput[S, SV, LFTS, LFTEREPR, AC], DF, error) {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) DealAndRevealDealerFunc(secret W, prng io.Reader) (*DealerOutput[S, LFTDF], DF, error) {
 	underlyingShares, underlyingDealerFunc, err := s.lsss.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
 		return nil, *new(DF), errs.Wrap(err).WithMessage("failed to deal secret")
 	}
-	liftedDealerFunc, err := underlyingDealerFunc.Lift(s.basePoint)
+	liftedDealerFunc, err := s.liftDealerFunc(underlyingDealerFunc, s.basePoint)
 	if err != nil {
 		return nil, *new(DF), errs.Wrap(err).WithMessage("failed to lift dealer function")
 	}
 	shares := hashmap.NewComparableFromNativeLike(maps.Collect(underlyingShares.Shares().Iter())).Freeze()
-	return &DealerOutput[S, SV, LFTS, LFTEREPR, AC]{
+	return &DealerOutput[S, LFTDF]{
 		liftedDealerFunc: liftedDealerFunc,
 		shares:           shares,
 	}, underlyingDealerFunc, nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[S, SV, LFTS, LFTEREPR, AC], W, DF, error) {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[S, LFTDF], W, DF, error) {
 	underlyingShares, secret, underlyingDealerFunc, err := s.lsss.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
 		return nil, *new(W), *new(DF), errs.Wrap(err).WithMessage("failed to deal random secret")
 	}
-	liftedDealerFunc, err := underlyingDealerFunc.Lift(s.basePoint)
+	liftedDealerFunc, err := s.liftDealerFunc(underlyingDealerFunc, s.basePoint)
 	if err != nil {
 		return nil, *new(W), *new(DF), errs.Wrap(err).WithMessage("failed to lift dealer function")
 	}
 	shares := hashmap.NewComparableFromNativeLike(maps.Collect(underlyingShares.Shares().Iter())).Freeze()
-	return &DealerOutput[S, SV, LFTS, LFTEREPR, AC]{
+	return &DealerOutput[S, LFTDF]{
 		liftedDealerFunc: liftedDealerFunc,
 		shares:           shares,
 	}, secret, underlyingDealerFunc, nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) DealRandom(prng io.Reader) (*DealerOutput[S, SV, LFTS, LFTEREPR, AC], W, error) {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) DealRandom(prng io.Reader) (*DealerOutput[S, LFTDF], W, error) {
 	do, secret, _, err := s.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
 		return nil, *new(W), errs.Wrap(err).WithMessage("failed to deal random secret")
@@ -85,7 +96,7 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) DealRandom(prn
 	return do, secret, nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) Reconstruct(shares ...S) (W, error) {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) Reconstruct(shares ...S) (W, error) {
 	reconstructed, err := s.lsss.Reconstruct(shares...)
 	if err != nil {
 		return *new(W), errs.Wrap(err).WithMessage("failed to reconstruct secret")
@@ -93,10 +104,7 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) Reconstruct(sh
 	return reconstructed, nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) ReconstructAndVerify(reference sharing.DealerFunc[LFTS, LFTEREPR, AC], shares ...S) (W, error) {
-	if reference == nil {
-		return *new(W), sharing.ErrIsNil.WithMessage("reference dealer function is nil")
-	}
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) ReconstructAndVerify(reference LFTDF, shares ...S) (W, error) {
 	reconstructed, err := s.Reconstruct(shares...)
 	if err != nil {
 		return *new(W), errs.Wrap(err).WithMessage("failed to reconstruct secret")
@@ -109,25 +117,29 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) ReconstructAnd
 	return reconstructed, nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) Verify(share S, liftedDealerFunc sharing.DealerFunc[LFTS, LFTEREPR, AC]) error {
-	if liftedDealerFunc == nil {
-		return sharing.ErrIsNil.WithMessage("lifted dealer function is nil")
-	}
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) Verify(share S, liftedDealerFunc LFTDF) error {
 	if !liftedDealerFunc.Accepts(s.lsss.AccessStructure()) {
 		return sharing.ErrVerification.WithMessage("lifted dealer function does not accept scheme's access structure")
 	}
 	liftedShare := liftedDealerFunc.ShareOf(share.ID())
-	manuallyLiftedShareValue, err := s.liftShare(share.Value(), s.basePoint)
-	if err != nil {
-		return err
+	liftedShareRepr := slices.Collect(liftedShare.Repr())
+	shareRepr := slices.Collect(share.Repr())
+	if len(liftedShareRepr) != len(shareRepr) {
+		return sharing.ErrVerification.WithMessage("share component count mismatch")
 	}
-	if !liftedShare.Value().Equal(manuallyLiftedShareValue) {
-		return sharing.ErrVerification.WithMessage("share verification failed")
+	for i, sv := range shareRepr {
+		manuallyLiftedShareValue, err := s.liftShare(sv, s.basePoint)
+		if err != nil {
+			return errs.Wrap(err).WithMessage("failed to lift share component")
+		}
+		if !liftedShareRepr[i].Equal(manuallyLiftedShareValue) {
+			return sharing.ErrVerification.WithMessage("share verification failed")
+		}
 	}
 	return nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, EREPR, LFTEREPR, LFTS]) ConvertShareToAdditive(input S, unanimity *accessstructures.Unanimity) (*additive.Share[WV], error) {
+func (s *Scheme[S, SV, SC, W, WV, DO, AC, DF, LFTDF, LFTS, LFTEREPR]) ConvertShareToAdditive(input S, unanimity *accessstructures.Unanimity) (*additive.Share[WV], error) {
 	out, err := s.lsss.ConvertShareToAdditive(input, unanimity)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert share to additive")

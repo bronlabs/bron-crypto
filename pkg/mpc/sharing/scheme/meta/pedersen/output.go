@@ -4,24 +4,21 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 )
 
 type DealerOutput[
-	LFTUDF sharing.DealerFunc[LFTUDF, LFTS, LFTSV, AC],
-	LFTSV algebra.PrimeGroupElement[LFTSV, SV],
-	LFTS sharing.LinearShare[LFTS, LFTSV],
-	SV algebra.PrimeFieldElement[SV],
-	AC accessstructures.Monotone,
+	US sharing.Share[US],
+	USV algebra.PrimeFieldElement[USV],
+	LFTUDF any,
 ] struct {
-	shares             ds.Map[sharing.ID, *Share[SV]]
+	shares             ds.Map[sharing.ID, *Share[US, USV]]
 	verificationVector LFTUDF
 }
 
-func (d *DealerOutput[LFTUDF, LFTSV, LFTS, SV, AC]) Shares() ds.Map[sharing.ID, *Share[SV]] {
+func (d *DealerOutput[US, USV, LFTUDF]) Shares() ds.Map[sharing.ID, *Share[US, USV]] {
 	return d.shares
 }
 
-func (d *DealerOutput[LFTUDF, LFTSV, LFTS, SV, AC]) VerificationVector() LFTUDF {
+func (d *DealerOutput[US, USV, LFTUDF]) VerificationVector() LFTUDF {
 	return d.verificationVector
 }

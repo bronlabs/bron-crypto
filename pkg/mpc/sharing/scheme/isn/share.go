@@ -1,6 +1,7 @@
 package isn
 
 import (
+	"iter"
 	"maps"
 	"slices"
 
@@ -130,6 +131,23 @@ func (s *Share[E]) ToAdditive(to *accessstructures.Unanimity) (*additive.Share[E
 		return nil, errs.Wrap(err)
 	}
 	return share, nil
+}
+
+// Repr returns an iterator that yields the share's clause values in deterministic
+// order (sorted by clause key).
+func (s *Share[E]) Repr() iter.Seq[E] {
+	return func(yield func(E) bool) {
+		keys := make([]bitset.ImmutableBitSet[sharing.ID], 0, len(s.v))
+		for k := range s.v {
+			keys = append(keys, k)
+		}
+		slices.Sort(keys)
+		for _, k := range keys {
+			if !yield(s.v[k]) {
+				return
+			}
+		}
+	}
 }
 
 // ScalarOp performs scalar multiplication on the share by applying the scalar

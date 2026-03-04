@@ -2,6 +2,7 @@ package shamir
 
 import (
 	"encoding/binary"
+	"iter"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -69,6 +70,13 @@ func (s *Share[_]) ID() sharing.ID {
 // Value returns the share value (the polynomial evaluation at ID).
 func (s *Share[FE]) Value() FE {
 	return s.v
+}
+
+// Repr returns an iterator that yields the share's single value component.
+func (s *Share[FE]) Repr() iter.Seq[FE] {
+	return func(yield func(FE) bool) {
+		yield(s.v)
+	}
 }
 
 // Equal returns true if two shares have the same ID and value.

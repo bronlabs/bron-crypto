@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"iter"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -76,6 +78,13 @@ func (s *AdditiveShare[E]) Clone() *AdditiveShare[E] {
 	return &AdditiveShare[E]{
 		id: s.id,
 		v:  s.v.Clone(),
+	}
+}
+
+// Repr returns an iterator that yields the share's single value component.
+func (s *AdditiveShare[E]) Repr() iter.Seq[E] {
+	return func(yield func(E) bool) {
+		yield(s.v)
 	}
 }
 

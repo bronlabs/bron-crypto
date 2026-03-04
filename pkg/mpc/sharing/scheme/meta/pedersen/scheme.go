@@ -2,6 +2,7 @@ package pedersen
 
 import (
 	"io"
+	"iter"
 	"maps"
 	"slices"
 
@@ -16,32 +17,41 @@ import (
 )
 
 type Scheme[
-	US sharing.LinearShare[US, USV], USV algebra.PrimeFieldElement[USV],
+	US sharing.LinearShare[US, USV, USSC], USV algebra.PrimeFieldElement[USV], USSC any,
 	W interface {
 		sharing.Secret[W]
 		base.Transparent[WV]
 	}, WV algebra.GroupElement[WV],
 	UDO sharing.DealerOutput[US],
 	AC accessstructures.Monotone,
-	ULDF sharing.LinearDealerFunc[ULDF, LFTUDF, US, USV, LFTUS, LFTUSV, AC],
-	LFTUDF sharing.DealerFunc[LFTUDF, LFTUS, LFTUSV, AC],
-	LFTUS sharing.LinearShare[LFTUS, LFTUSV],
+	ULDF any,
+	LFTUDF interface {
+		algebra.Operand[LFTUDF]
+		ShareOf(id sharing.ID) LFTUS
+		Repr() iter.Seq[LFTUSV]
+		Accepts(AC) bool
+	},
+	LFTUS interface {
+		sharing.Share[LFTUS]
+		Repr() iter.Seq[LFTUSV]
+	},
 	LFTUSV algebra.PrimeGroupElement[LFTUSV, USV],
 ] struct {
 	key              *pedcom.Key[LFTUSV, USV]
-	lsss             sharing.LSSS[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]
+	lsss             sharing.LSSS[US, USV, W, WV, UDO, USSC, AC, ULDF]
 	commitmentScheme *pedcom.Scheme[LFTUSV, USV]
+	liftDealerFunc   func(ULDF, LFTUSV) (LFTUDF, error)
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Name() sharing.Name {
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Name() sharing.Name {
 	return Name
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) AccessStructure() AC {
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) AccessStructure() AC {
 	return s.lsss.AccessStructure()
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Deal(secret W, prng io.Reader) (*DealerOutput[LFTUDF, LFTUSV, LFTUS, USV, AC], error) {
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Deal(secret W, prng io.Reader) (*DealerOutput[US, USV, LFTUDF], error) {
 	do, _, err := s.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to deal shares")
@@ -49,14 +59,14 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Deal(secr
 	return do, nil
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRevealDealerFunc(secret W, prng io.Reader) (
-	*DealerOutput[LFTUDF, LFTUSV, LFTUS, USV, AC], *LinearDealerFunc[US, USV, LFTUS, LFTUSV, AC, ULDF, LFTUDF], error,
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRevealDealerFunc(secret W, prng io.Reader) (
+	*DealerOutput[US, USV, LFTUDF], *LinearDealerFunc[ULDF], error,
 ) {
 	dealtShares, shareDealerFunc, err := s.lsss.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to deal secret")
 	}
-	liftedShareDealerFunc, err := shareDealerFunc.Lift(s.key.G())
+	liftedShareDealerFunc, err := s.liftDealerFunc(shareDealerFunc, s.key.G())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift share dealer function")
 	}
@@ -64,7 +74,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRe
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to deal blinding shares")
 	}
-	liftedBlindingDealerFunc, err := blindingDealerFunc.Lift(s.key.H())
+	liftedBlindingDealerFunc, err := s.liftDealerFunc(blindingDealerFunc, s.key.H())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift blinding dealer function")
 	}
@@ -73,7 +83,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRe
 		maps.Collect(
 			iterutils.Map2(
 				dealtShares.Shares().Iter(),
-				func(id sharing.ID, underlyingShare US) (sharing.ID, *Share[USV]) {
+				func(id sharing.ID, underlyingShare US) (sharing.ID, *Share[US, USV]) {
 					blindingShare, _ := blindingShares.Shares().Get(id)
 					messages := slices.Collect(iterutils.Map(
 						underlyingShare.Repr(),
@@ -88,29 +98,29 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRe
 							return out
 						},
 					))
-					share, _ := NewShare(id, messages, witnesses, nil)
+					share, _ := NewShare(underlyingShare, messages, witnesses)
 					return id, share
 				},
 			),
 		),
 	)
-	return &DealerOutput[LFTUDF, LFTUSV, LFTUS, USV, AC]{
+	return &DealerOutput[US, USV, LFTUDF]{
 			shares:             shares.Freeze(),
 			verificationVector: verificationVector,
-		}, &LinearDealerFunc[US, USV, LFTUS, LFTUSV, AC, ULDF, LFTUDF]{
+		}, &LinearDealerFunc[ULDF]{
 			shares:   shareDealerFunc,
 			blinding: blindingDealerFunc,
 		}, nil
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRandomAndRevealDealerFunc(prng io.Reader) (
-	*DealerOutput[LFTUDF, LFTUSV, LFTUS, USV, AC], W, *LinearDealerFunc[US, USV, LFTUS, LFTUSV, AC, ULDF, LFTUDF], error,
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRandomAndRevealDealerFunc(prng io.Reader) (
+	*DealerOutput[US, USV, LFTUDF], W, *LinearDealerFunc[ULDF], error,
 ) {
 	dealtShares, dealtSecret, shareDealerFunc, err := s.lsss.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
 		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to deal secret")
 	}
-	liftedShareDealerFunc, err := shareDealerFunc.Lift(s.key.G())
+	liftedShareDealerFunc, err := s.liftDealerFunc(shareDealerFunc, s.key.G())
 	if err != nil {
 		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to lift share dealer function")
 	}
@@ -118,7 +128,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRando
 	if err != nil {
 		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to deal blinding shares")
 	}
-	liftedBlindingDealerFunc, err := blindingDealerFunc.Lift(s.key.H())
+	liftedBlindingDealerFunc, err := s.liftDealerFunc(blindingDealerFunc, s.key.H())
 	if err != nil {
 		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to lift blinding dealer function")
 	}
@@ -127,7 +137,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRando
 		maps.Collect(
 			iterutils.Map2(
 				dealtShares.Shares().Iter(),
-				func(id sharing.ID, underlyingShare US) (sharing.ID, *Share[USV]) {
+				func(id sharing.ID, underlyingShare US) (sharing.ID, *Share[US, USV]) {
 					blindingShare, _ := blindingShares.Shares().Get(id)
 					messages := slices.Collect(iterutils.Map(
 						underlyingShare.Repr(),
@@ -142,22 +152,22 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRando
 							return out
 						},
 					))
-					share, _ := NewShare(id, messages, witnesses, nil)
+					share, _ := NewShare(underlyingShare, messages, witnesses)
 					return id, share
 				},
 			),
 		),
 	)
-	return &DealerOutput[LFTUDF, LFTUSV, LFTUS, USV, AC]{
+	return &DealerOutput[US, USV, LFTUDF]{
 			shares:             shares.Freeze(),
 			verificationVector: verificationVector,
-		}, dealtSecret, &LinearDealerFunc[US, USV, LFTUS, LFTUSV, AC, ULDF, LFTUDF]{
+		}, dealtSecret, &LinearDealerFunc[ULDF]{
 			shares:   shareDealerFunc,
 			blinding: blindingDealerFunc,
 		}, nil
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRandom(prng io.Reader) (*DealerOutput[LFTUDF, LFTUSV, LFTUS, USV, AC], W, error) {
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRandom(prng io.Reader) (*DealerOutput[US, USV, LFTUDF], W, error) {
 	do, secret, _, err := s.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
 		return nil, *new(W), errs.Wrap(err).WithMessage("failed to deal random secret")
@@ -165,10 +175,10 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRando
 	return do, secret, nil
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Reconstruct(shares ...*Share[USV]) (W, error) {
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Reconstruct(shares ...*Share[US, USV]) (W, error) {
 	underlyingShares := make([]US, len(shares))
 	for i, share := range shares {
-		underlyingShares[i] = share.secret
+		underlyingShares[i] = share.underlying
 	}
 	reconstructed, err := s.lsss.Reconstruct(underlyingShares...)
 	if err != nil {
@@ -177,10 +187,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Reconstru
 	return reconstructed, nil
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) ReconstructAndVerify(reference sharing.DealerFunc[LFTUS, LFTEREPR, AC], shares ...*Share[USV]) (W, error) {
-	if reference == nil {
-		return *new(W), sharing.ErrIsNil.WithMessage("reference dealer function is nil")
-	}
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) ReconstructAndVerify(reference LFTUDF, shares ...*Share[US, USV]) (W, error) {
 	reconstructed, err := s.Reconstruct(shares...)
 	if err != nil {
 		return *new(W), errs.Wrap(err).WithMessage("failed to reconstruct secret")
@@ -193,7 +200,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Reconstru
 	return reconstructed, nil
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Verify(share *Share[USV], verificationVector LFTUDF) error {
+func (s *Scheme[US, USV, USSC, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Verify(share *Share[US, USV], verificationVector LFTUDF) error {
 	if !verificationVector.Accepts(s.AccessStructure()) {
 		return sharing.ErrVerification.WithMessage("verification vector does not accept the scheme's access structure")
 	}
@@ -218,11 +225,3 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Verify(sh
 	}
 	return nil
 }
-
-// func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, EREPR, LFTEREPR, LFTUS]) ConvertShareToAdditive(input *Share[USV], unanimity *accessstructures.Unanimity) (*additive.Share[WV], error) {
-// 	out, err := s.lsss.ConvertShareToAdditive(input, unanimity)
-// 	if err != nil {
-// 		return nil, errs.Wrap(err).WithMessage("failed to convert share to additive")
-// 	}
-// 	return out, nil
-// }

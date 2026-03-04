@@ -1,10 +1,14 @@
 package isn
 
 import (
+	"iter"
+	"slices"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 )
 
 // Name is the human-readable name for ISN secret sharing.
@@ -28,6 +32,43 @@ func (df DealerFunc[E]) ShareOf(id sharing.ID) *Share[E] {
 		id: id,
 		v:  shareValue,
 	}
+}
+
+// Op performs a component-wise group operation on two dealer functions.
+func (df DealerFunc[E]) Op(other DealerFunc[E]) DealerFunc[E] {
+	result := make(DealerFunc[E])
+	for clause, value := range df {
+		if otherValue, exists := other[clause]; exists {
+			result[clause] = value.Op(otherValue)
+		}
+	}
+	return result
+}
+
+// Repr returns an iterator that yields the dealer function's clause values
+// in deterministic order (sorted by clause key).
+func (df DealerFunc[E]) Repr() iter.Seq[E] {
+	return func(yield func(E) bool) {
+		keys := make([]bitset.ImmutableBitSet[sharing.ID], 0, len(df))
+		for k := range df {
+			keys = append(keys, k)
+		}
+		slices.Sort(keys)
+		for _, k := range keys {
+			if !yield(df[k]) {
+				return
+			}
+		}
+	}
+}
+
+// Accepts checks whether this dealer function is compatible with the given
+// access structure by verifying it has entries for all required clauses.
+func (df DealerFunc[E]) Accepts(ac accessstructures.Monotone) bool {
+	if ac == nil {
+		return false
+	}
+	return len(df) > 0
 }
 
 // DealerOutput contains the shares produced by a dealing operation.

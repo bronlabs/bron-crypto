@@ -1,6 +1,7 @@
 package pedersen
 
 import (
+	"iter"
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -128,6 +129,13 @@ func (s *Share[S]) Equal(other *Share[S]) bool {
 		return s == other
 	}
 	return s.id == other.id && s.secret.Equal(other.secret) && s.blinding.Equal(other.blinding)
+}
+
+// Repr returns an iterator that yields the share's secret value component.
+func (s *Share[S]) Repr() iter.Seq[S] {
+	return func(yield func(S) bool) {
+		yield(s.secret.Value())
+	}
 }
 
 // Bytes returns the canonical byte representation of this share.

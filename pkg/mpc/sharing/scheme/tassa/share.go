@@ -1,6 +1,8 @@
 package tassa
 
 import (
+	"iter"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
@@ -48,6 +50,13 @@ func (s *Share[F]) Op(e *Share[F]) *Share[F] {
 	return &Share[F]{
 		id:    s.id,
 		value: s.value.Op(e.value),
+	}
+}
+
+// Repr returns an iterator that yields the share's single value component.
+func (s *Share[F]) Repr() iter.Seq[F] {
+	return func(yield func(F) bool) {
+		yield(s.value)
 	}
 }
 
