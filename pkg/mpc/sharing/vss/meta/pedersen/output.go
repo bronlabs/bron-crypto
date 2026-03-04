@@ -7,7 +7,7 @@ import (
 )
 
 type DealerOutput[
-	US sharing.Share[US],
+	US sharing.LinearShare[US, USV],
 	USV algebra.PrimeFieldElement[USV],
 	LFTUDF any,
 ] struct {

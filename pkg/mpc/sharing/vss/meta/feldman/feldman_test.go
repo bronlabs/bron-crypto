@@ -43,9 +43,7 @@ func TestFeldmanWithShamir(t *testing.T) {
 		basePoint,
 		shamirScheme,
 		shamir.LiftDealerFunc[*k256.Point, *k256.Scalar],
-		func(v *k256.Scalar, bp *k256.Point) (*k256.Point, error) {
-			return bp.ScalarOp(v), nil
-		},
+		shamir.LiftShare[*k256.Point, *k256.Scalar],
 	)
 
 	t.Run("Deal and verify", func(t *testing.T) {
@@ -158,9 +156,7 @@ func TestFeldmanWithISN(t *testing.T) {
 		basePoint,
 		isnScheme,
 		isn.LiftDealerFunc[*k256.Point, *k256.Scalar],
-		func(v *k256.Scalar, bp *k256.Point) (*k256.Point, error) {
-			return bp.ScalarOp(v), nil
-		},
+		isn.LiftShare[*k256.Point, *k256.Scalar],
 	)
 
 	t.Run("Deal and verify", func(t *testing.T) {

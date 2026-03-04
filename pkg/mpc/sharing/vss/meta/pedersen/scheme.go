@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -102,6 +103,26 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRe
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to deal secret")
 	}
+	return s.dealBlindingAndFinalise(dealtShares, shareDealerFunc, prng)
+}
+
+func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRandomAndRevealDealerFunc(prng io.Reader) (
+	*DealerOutput[US, USV, LFTUDF], W, *LinearDealerFunc[ULDF], error,
+) {
+	dealtShares, dealtSecret, shareDealerFunc, err := s.lsss.DealRandomAndRevealDealerFunc(prng)
+	if err != nil {
+		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to deal secret")
+	}
+	do, ldf, err := s.dealBlindingAndFinalise(dealtShares, shareDealerFunc, prng)
+	if err != nil {
+		return nil, *new(W), nil, err
+	}
+	return do, dealtSecret, ldf, nil
+}
+
+func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) dealBlindingAndFinalise(
+	dealtShares UDO, shareDealerFunc ULDF, prng io.Reader,
+) (*DealerOutput[US, USV, LFTUDF], *LinearDealerFunc[ULDF], error) {
 	liftedShareDealerFunc, err := s.liftDealerFunc(shareDealerFunc, s.key.G())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift share dealer function")
@@ -121,21 +142,10 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRe
 				dealtShares.Shares().Iter(),
 				func(id sharing.ID, underlyingShare US) (sharing.ID, *Share[US, USV]) {
 					blindingShare, _ := blindingShares.Shares().Get(id)
-					messages := slices.Collect(iterutils.Map(
-						underlyingShare.Repr(),
-						func(shareComponent USV) *pedcom.Message[USV] {
-							return pedcom.NewMessage(shareComponent)
-						},
-					))
-					witnesses := slices.Collect(iterutils.Map(
-						blindingShare.Repr(),
-						func(blindingComponent USV) *pedcom.Witness[USV] {
-							out, _ := pedcom.NewWitness(blindingComponent)
-							return out
-						},
-					))
-					share, _ := NewShare(underlyingShare, messages, witnesses)
-					return id, share
+					return id, &Share[US, USV]{
+						secret:   underlyingShare,
+						blinding: blindingShare,
+					}
 				},
 			),
 		),
@@ -144,60 +154,6 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealAndRe
 			shares:             shares.Freeze(),
 			verificationVector: verificationVector,
 		}, &LinearDealerFunc[ULDF]{
-			shares:   shareDealerFunc,
-			blinding: blindingDealerFunc,
-		}, nil
-}
-
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRandomAndRevealDealerFunc(prng io.Reader) (
-	*DealerOutput[US, USV, LFTUDF], W, *LinearDealerFunc[ULDF], error,
-) {
-	dealtShares, dealtSecret, shareDealerFunc, err := s.lsss.DealRandomAndRevealDealerFunc(prng)
-	if err != nil {
-		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to deal secret")
-	}
-	liftedShareDealerFunc, err := s.liftDealerFunc(shareDealerFunc, s.key.G())
-	if err != nil {
-		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to lift share dealer function")
-	}
-	blindingShares, _, blindingDealerFunc, err := s.lsss.DealRandomAndRevealDealerFunc(prng)
-	if err != nil {
-		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to deal blinding shares")
-	}
-	liftedBlindingDealerFunc, err := s.liftDealerFunc(blindingDealerFunc, s.key.H())
-	if err != nil {
-		return nil, *new(W), nil, errs.Wrap(err).WithMessage("failed to lift blinding dealer function")
-	}
-	verificationVector := liftedShareDealerFunc.Op(liftedBlindingDealerFunc)
-	shares := hashmap.NewComparableFromNativeLike(
-		maps.Collect(
-			iterutils.Map2(
-				dealtShares.Shares().Iter(),
-				func(id sharing.ID, underlyingShare US) (sharing.ID, *Share[US, USV]) {
-					blindingShare, _ := blindingShares.Shares().Get(id)
-					messages := slices.Collect(iterutils.Map(
-						underlyingShare.Repr(),
-						func(shareComponent USV) *pedcom.Message[USV] {
-							return pedcom.NewMessage(shareComponent)
-						},
-					))
-					witnesses := slices.Collect(iterutils.Map(
-						blindingShare.Repr(),
-						func(blindingComponent USV) *pedcom.Witness[USV] {
-							out, _ := pedcom.NewWitness(blindingComponent)
-							return out
-						},
-					))
-					share, _ := NewShare(underlyingShare, messages, witnesses)
-					return id, share
-				},
-			),
-		),
-	)
-	return &DealerOutput[US, USV, LFTUDF]{
-			shares:             shares.Freeze(),
-			verificationVector: verificationVector,
-		}, dealtSecret, &LinearDealerFunc[ULDF]{
 			shares:   shareDealerFunc,
 			blinding: blindingDealerFunc,
 		}, nil
@@ -212,11 +168,12 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRando
 }
 
 func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Reconstruct(shares ...*Share[US, USV]) (W, error) {
-	underlyingShares := make([]US, len(shares))
-	for i, share := range shares {
-		underlyingShares[i] = share.underlying
-	}
-	reconstructed, err := s.lsss.Reconstruct(underlyingShares...)
+	reconstructed, err := s.lsss.Reconstruct(
+		sliceutils.Map(
+			shares,
+			func(share *Share[US, USV]) US { return share.Secret() },
+		)...,
+	)
 	if err != nil {
 		return *new(W), errs.Wrap(err).WithMessage("failed to reconstruct secret")
 	}
@@ -241,7 +198,11 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Verify(sh
 		return sharing.ErrVerification.WithMessage("verification vector does not accept the scheme's access structure")
 	}
 	liftedShare := verificationVector.ShareOf(share.ID())
+
 	liftedShareRepr := slices.Collect(liftedShare.Repr())
+	shareSecretRepr := slices.Collect(share.Secret().Repr())
+	shareBlindingRepr := slices.Collect(share.Blinding().Repr())
+
 	commitments := make([]*pedcom.Commitment[LFTUSV, USV], len(liftedShareRepr))
 	for i, component := range liftedShareRepr {
 		commitment, err := pedcom.NewCommitment(component)
@@ -255,7 +216,12 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Verify(sh
 		return errs.Wrap(err).WithMessage("failed to create verifier")
 	}
 	for i, commitment := range commitments {
-		if err := verifier.Verify(commitment, share.Secret()[i], share.Blinding()[i]); err != nil {
+		pedersenMessage := pedcom.NewMessage(shareSecretRepr[i])
+		pedersenWitness, err := pedcom.NewWitness(shareBlindingRepr[i])
+		if err != nil {
+			return errs.Wrap(err).WithMessage("failed to create witness from share blinding component")
+		}
+		if err := verifier.Verify(commitment, pedersenMessage, pedersenWitness); err != nil {
 			return errs.Wrap(err).WithMessage("share verification failed")
 		}
 	}

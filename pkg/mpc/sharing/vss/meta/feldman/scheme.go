@@ -4,7 +4,6 @@ import (
 	"io"
 	"iter"
 	"maps"
-	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -16,7 +15,7 @@ import (
 )
 
 func NewScheme[
-	S sharing.LinearShare[S, SV], SV any,
+	S sharing.LinearShare[S, SV], SV algebra.GroupElement[SV],
 	W interface {
 		sharing.Secret[W]
 		base.Transparent[WV]
@@ -37,7 +36,7 @@ func NewScheme[
 	basePoint LFTSV,
 	lsss sharing.LSSS[S, SV, W, WV, DO, AC, DF],
 	liftDealerFunc func(DF, LFTSV) (LFTDF, error),
-	liftShare func(SV, LFTSV) (LFTSV, error),
+	liftShare func(S, LFTSV) (LFTS, error),
 ) *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV] {
 	return &Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]{
 		basePoint:      basePoint,
@@ -48,7 +47,7 @@ func NewScheme[
 }
 
 type Scheme[
-	S sharing.LinearShare[S, SV], SV any,
+	S sharing.LinearShare[S, SV], SV algebra.GroupElement[SV],
 	W interface {
 		sharing.Secret[W]
 		base.Transparent[WV]
@@ -69,7 +68,7 @@ type Scheme[
 	basePoint      LFTSV
 	lsss           sharing.LSSS[S, SV, W, WV, DO, AC, DF]
 	liftDealerFunc func(DF, LFTSV) (LFTDF, error)
-	liftShare      func(SV, LFTSV) (LFTSV, error)
+	liftShare      func(S, LFTSV) (LFTS, error)
 }
 
 func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]) Name() sharing.Name {
@@ -154,19 +153,13 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]) Verify(share S, l
 		return sharing.ErrVerification.WithMessage("lifted dealer function does not accept scheme's access structure")
 	}
 	liftedShare := liftedDealerFunc.ShareOf(share.ID())
-	liftedShareRepr := slices.Collect(liftedShare.Repr())
-	shareRepr := slices.Collect(share.Repr())
-	if len(liftedShareRepr) != len(shareRepr) {
-		return sharing.ErrVerification.WithMessage("share component count mismatch")
+
+	manuallyLiftedShare, err := s.liftShare(share, s.basePoint)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to lift share for verification")
 	}
-	for i, sv := range shareRepr {
-		manuallyLiftedShareValue, err := s.liftShare(sv, s.basePoint)
-		if err != nil {
-			return errs.Wrap(err).WithMessage("failed to lift share component")
-		}
-		if !liftedShareRepr[i].Equal(manuallyLiftedShareValue) {
-			return sharing.ErrVerification.WithMessage("share verification failed")
-		}
+	if !liftedShare.Equal(manuallyLiftedShare) {
+		return sharing.ErrVerification.WithMessage("share verification failed")
 	}
 	return nil
 }

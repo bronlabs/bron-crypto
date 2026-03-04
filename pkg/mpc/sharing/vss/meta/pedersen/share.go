@@ -1,72 +1,62 @@
 package pedersen
 
 import (
+	"slices"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/errs-go/errs"
 )
 
-type Share[US sharing.Share[US], USV algebra.PrimeFieldElement[USV]] struct {
-	underlying US
-	secret     []*pedcom.Message[USV]
-	blinding   []*pedcom.Witness[USV]
+type Share[US sharing.LinearShare[US, USV], USV algebra.PrimeFieldElement[USV]] struct {
+	secret   US
+	blinding US
 }
 
-type shareDTO[USV algebra.PrimeFieldElement[USV]] struct {
-	ID       sharing.ID            `cbor:"sharingID"`
-	Secret_  []*pedcom.Message[USV] `cbor:"secret"`
-	Blinding []*pedcom.Witness[USV] `cbor:"blinding"`
+type shareDTO[US sharing.LinearShare[US, USV], USV algebra.PrimeFieldElement[USV]] struct {
+	ID       sharing.ID `cbor:"sharingID"`
+	Secret   US         `cbor:"secret"`
+	Blinding US         `cbor:"blinding"`
 }
 
 // NewShare creates a new meta Pedersen share wrapping an underlying share with
 // Pedersen commitment components (messages and witnesses).
-func NewShare[US sharing.Share[US], USV algebra.PrimeFieldElement[USV]](
-	underlying US,
-	secret []*pedcom.Message[USV],
-	blinding []*pedcom.Witness[USV],
+func NewShare[US sharing.LinearShare[US, USV], USV algebra.PrimeFieldElement[USV]](
+	secret, blinding US,
 ) (*Share[US, USV], error) {
-	if secret == nil {
+	if utils.IsNil(secret) {
 		return nil, sharing.ErrIsNil.WithMessage("secret cannot be nil")
 	}
-	if blinding == nil {
+	if utils.IsNil(blinding) {
 		return nil, sharing.ErrIsNil.WithMessage("blinding cannot be nil")
 	}
-	if len(secret) != len(blinding) {
-		return nil, sharing.ErrFailed.WithMessage("secret and blinding must have the same length")
+	if secret.ID() != blinding.ID() {
+		return nil, sharing.ErrValue.WithMessage("secret and blinding must have the same ID")
+	}
+	if len(slices.Collect(secret.Repr())) != len(slices.Collect(blinding.Repr())) {
+		return nil, sharing.ErrValue.WithMessage("secret and blinding must have the same number of components")
 	}
 	return &Share[US, USV]{
-		underlying: underlying,
-		secret:     secret,
-		blinding:   blinding,
+		secret:   secret,
+		blinding: blinding,
 	}, nil
 }
 
 // ID returns the shareholder identifier, delegated from the underlying share.
 func (s *Share[US, USV]) ID() sharing.ID {
-	return s.underlying.ID()
-}
-
-// Underlying returns the underlying share stored in this meta Pedersen share.
-func (s *Share[US, USV]) Underlying() US {
-	return s.underlying
+	return s.secret.ID()
 }
 
 // Blinding returns the blinding components of this share.
-func (s *Share[US, USV]) Blinding() []*pedcom.Witness[USV] {
-	if s == nil {
-		return nil
-	}
+func (s *Share[US, USV]) Blinding() US {
 	return s.blinding
 }
 
 // Secret returns the secret components as Pedersen messages.
-func (s *Share[US, USV]) Secret() []*pedcom.Message[USV] {
-	if s == nil {
-		return nil
-	}
+func (s *Share[US, USV]) Secret() US {
 	return s.secret
 }
 
@@ -76,19 +66,9 @@ func (s *Share[US, USV]) Op(other *Share[US, USV]) *Share[US, USV] {
 	if s.ID() != other.ID() {
 		panic("cannot add shares with different IDs")
 	}
-	if len(s.secret) != len(other.secret) || len(s.blinding) != len(other.blinding) {
-		panic("cannot add shares with different secret/blinding lengths")
-	}
-	outSecret := make([]*pedcom.Message[USV], len(s.secret))
-	outBlinding := make([]*pedcom.Witness[USV], len(s.blinding))
-	for i := range s.secret {
-		outSecret[i] = s.secret[i].Op(other.secret[i])
-		outBlinding[i] = s.blinding[i].Op(other.blinding[i])
-	}
 	return &Share[US, USV]{
-		underlying: s.underlying,
-		secret:     outSecret,
-		blinding:   outBlinding,
+		secret:   s.secret.Op(other.secret),
+		blinding: s.blinding.Op(other.blinding),
 	}
 }
 
@@ -100,21 +80,9 @@ func (s *Share[US, USV]) Add(other *Share[US, USV]) *Share[US, USV] {
 // ScalarOp multiplies both secret and blinding components by a scalar.
 // The underlying share is preserved from the receiver.
 func (s *Share[US, USV]) ScalarOp(scalar USV) *Share[US, USV] {
-	w2, err := pedcom.NewWitness(scalar)
-	if err != nil {
-		panic(sharing.ErrFailed.WithMessage("could not create witness from scalar: %v", err))
-	}
-	m2 := pedcom.NewMessage(scalar)
-	outSecret := make([]*pedcom.Message[USV], len(s.secret))
-	outBlinding := make([]*pedcom.Witness[USV], len(s.blinding))
-	for i := range s.secret {
-		outSecret[i] = s.secret[i].Mul(m2)
-		outBlinding[i] = s.blinding[i].Mul(w2)
-	}
 	return &Share[US, USV]{
-		underlying: s.underlying,
-		secret:     outSecret,
-		blinding:   outBlinding,
+		secret:   s.secret.ScalarOp(scalar),
+		blinding: s.blinding.ScalarOp(scalar),
 	}
 }
 
@@ -125,14 +93,7 @@ func (s *Share[US, USV]) ScalarMul(scalar USV) *Share[US, USV] {
 
 // HashCode returns a hash code for this share.
 func (s *Share[US, USV]) HashCode() base.HashCode {
-	out := base.HashCode(s.ID())
-	for _, m := range s.secret {
-		out = out.Combine(m.HashCode())
-	}
-	for _, w := range s.blinding {
-		out = out.Combine(w.HashCode())
-	}
-	return out
+	return base.HashCode(s.ID()).Combine(s.secret.HashCode(), s.blinding.HashCode())
 }
 
 // Equal returns true if two shares have the same ID, secret, and blinding components.
@@ -140,36 +101,15 @@ func (s *Share[US, USV]) Equal(other *Share[US, USV]) bool {
 	if s == nil || other == nil {
 		return s == other
 	}
-	if s.ID() != other.ID() {
-		return false
-	}
-	if len(s.secret) != len(other.secret) || len(s.blinding) != len(other.blinding) {
-		return false
-	}
-	for i := range s.secret {
-		if !s.secret[i].Equal(other.secret[i]) {
-			return false
-		}
-	}
-	for i := range s.blinding {
-		if !s.blinding[i].Equal(other.blinding[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// Bytes returns the canonical byte representation of this share.
-func (s *Share[US, USV]) Bytes() []byte {
-	panic("implement me")
+	return s.ID() == other.ID() && s.secret.Equal(other.secret) && s.blinding.Equal(other.blinding)
 }
 
 // MarshalCBOR serialises the share. Note: the underlying share is not serialised;
 // only the ID, secret, and blinding components are stored.
 func (s *Share[US, USV]) MarshalCBOR() ([]byte, error) {
-	dto := shareDTO[USV]{
+	dto := shareDTO[US, USV]{
 		ID:       s.ID(),
-		Secret_:  s.secret,
+		Secret:   s.secret,
 		Blinding: s.blinding,
 	}
 	data, err := serde.MarshalCBOR(dto)
@@ -177,4 +117,17 @@ func (s *Share[US, USV]) MarshalCBOR() ([]byte, error) {
 		return nil, errs.Wrap(err).WithMessage("failed to marshal Pedersen Share")
 	}
 	return data, nil
+}
+
+func (s *Share[US, USV]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[shareDTO[US, USV]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen Share")
+	}
+	share, err := NewShare(dto.Secret, dto.Blinding)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("invalid data for Pedersen Share")
+	}
+	*s = *share
+	return nil
 }

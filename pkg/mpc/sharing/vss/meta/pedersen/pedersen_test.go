@@ -113,15 +113,12 @@ func TestPedersenWithShamir(t *testing.T) {
 		originalShare := shares[0]
 
 		// Tamper with the secret component
-		tamperedMessages := originalShare.Secret()
-		tamperedMsg := pedcom.NewMessage(tamperedMessages[0].Value().Add(field.One()))
-		tamperedMsgs := []*pedcom.Message[*k256.Scalar]{tamperedMsg}
+		originalSecret := originalShare.Secret()
+		tamperedValue := originalSecret.Value().Add(field.One())
+		tamperedSecretShare, err := shamir.NewShare(originalSecret.ID(), tamperedValue, ac)
+		require.NoError(t, err)
 
-		tamperedShare, err := pedersen.NewShare(
-			originalShare.Underlying(),
-			tamperedMsgs,
-			originalShare.Blinding(),
-		)
+		tamperedShare, err := pedersen.NewShare(tamperedSecretShare, originalShare.Blinding())
 		require.NoError(t, err)
 
 		err = scheme.Verify(tamperedShare, verificationVector)

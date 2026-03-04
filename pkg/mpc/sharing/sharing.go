@@ -70,7 +70,7 @@ type LinearShare[S interface {
 	algebra.Operand[S]
 	algebra.Actable[S, algebra.Numeric]
 	Repr() iter.Seq[SV]
-}, SV any,
+}, SV algebra.GroupElement[SV],
 ] interface {
 	Share[S]
 	algebra.Operand[S]
@@ -81,7 +81,7 @@ type LinearShare[S interface {
 // DealerFunc represents a dealer function that maps shareholder IDs to shares
 // and can verify compatibility with an access structure. Used by meta-schemes
 // for verification.
-type DealerFunc[S Share[S], SV any, AC accessstructures.Monotone] interface {
+type DealerFunc[S Share[S], SV algebra.GroupElement[SV], AC accessstructures.Monotone] interface {
 	ShareOf(id ID) S
 	Repr() iter.Seq[SV]
 	Accepts(AC) bool
@@ -90,7 +90,7 @@ type DealerFunc[S Share[S], SV any, AC accessstructures.Monotone] interface {
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.
 // It supports revealing the dealer function for protocols that need it.
 type LSSS[
-	S LinearShare[S, SV], SV any,
+	S LinearShare[S, SV], SV algebra.GroupElement[SV],
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
@@ -100,4 +100,18 @@ type LSSS[
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
 	ConvertShareToAdditive(input S, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[WV], error)
+}
+
+type LiftableLSSS[
+	S LinearShare[S, SV], SV algebra.RingElement[SV],
+	W interface {
+		Secret[W]
+		base.Transparent[WV]
+	}, WV algebra.GroupElement[WV], DO DealerOutput[S], AC accessstructures.Monotone, DF DealerFunc[S, SV, AC],
+	LFTS LinearShare[LFTS, LFTSV], LFTSV algebra.ModuleElement[LFTSV, SV], LFTDF DealerFunc[LFTS, LFTSV, AC],
+] interface {
+	LSSS[S, SV, W, WV, DO, AC, DF]
+	LiftDealerFunc(DF, LFTSV) (LFTDF, error)
+	LiftShare(S, LFTSV) (LFTS, error)
+	ConvertLiftedShareToAdditive(input LFTS, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[WV], error)
 }
