@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls"
 	"github.com/bronlabs/errs-go/errs"
 )

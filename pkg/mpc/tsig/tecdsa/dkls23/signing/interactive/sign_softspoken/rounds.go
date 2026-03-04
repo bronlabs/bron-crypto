@@ -12,7 +12,7 @@ import (
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"

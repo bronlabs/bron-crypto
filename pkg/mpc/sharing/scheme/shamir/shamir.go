@@ -5,16 +5,9 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/errs-go/errs"
-)
-
-// DealerFunc is the polynomial used by the dealer to generate shares.
-// The secret is f(0) and each share i is f(i).
-type (
-	DealerFunc[FE algebra.PrimeFieldElement[FE]] = *polynomials.Polynomial[FE]
 )
 
 // Name is the canonical name of this secret sharing scheme.

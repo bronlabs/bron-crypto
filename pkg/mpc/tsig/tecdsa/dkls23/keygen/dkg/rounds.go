@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs/setup"
+	przsSetup "github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/errs-go/errs"
 )

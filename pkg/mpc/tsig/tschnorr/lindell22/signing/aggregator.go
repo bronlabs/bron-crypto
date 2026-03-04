@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -119,7 +119,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 			return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
 		}
 		senderPartialPublicKey, _ := a.pkm.PartialPublicKeys().Get(sender)
-		senderPKShare, err := feldman.NewLiftedShare(sender, senderPartialPublicKey.Value())
+		senderPKShare, err := shamir.NewLiftedShare(sender, senderPartialPublicKey.Value())
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create lifted share for sender %d", sender)
 		}

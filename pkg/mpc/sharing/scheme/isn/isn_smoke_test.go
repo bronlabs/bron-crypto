@@ -9,11 +9,11 @@ import (
 
 func _[E algebra.GroupElement[E]]() {
 	var (
-		_ sharing.LinearShare[*isn.Share[E], E, algebra.Numeric] = (*isn.Share[E])(nil)
+		_ sharing.LinearShare[*isn.Share[E], E] = (*isn.Share[E])(nil)
 		_ sharing.LSSS[
 			*isn.Share[E], E,
 			*isn.Secret[E], E,
-			*isn.DealerOutput[E], algebra.Numeric, accessstructures.Monotone, isn.DealerFunc[E],
+			*isn.DealerOutput[E], *accessstructures.CNF, isn.DealerFunc[E],
 		] = (*isn.Scheme[E])(nil)
 	)
 }

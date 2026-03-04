@@ -20,7 +20,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/dkg"

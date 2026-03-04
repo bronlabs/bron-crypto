@@ -3,6 +3,7 @@ package isn
 import (
 	"io"
 	"maps"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
@@ -21,7 +22,7 @@ import (
 type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
 	sampler *sampler[E]
-	ac      accessstructures.Monotone
+	ac      *accessstructures.CNF
 }
 
 // NewFiniteScheme creates a new ISN scheme over the given finite group
@@ -44,10 +45,14 @@ func NewFiniteScheme[E algebra.GroupElement[E]](
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create sampler")
 	}
+	cnf, err := accessstructures.NewCNFAccessStructure(slices.Collect(ac.MaximalUnqualifiedSetsIter())...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create CNF access structure")
+	}
 	return &Scheme[E]{
 		g:       g,
 		sampler: sampler,
-		ac:      ac,
+		ac:      cnf,
 	}, nil
 }
 
@@ -57,7 +62,7 @@ func (*Scheme[E]) Name() sharing.Name {
 }
 
 // AccessStructure returns the scheme access structure.
-func (c *Scheme[E]) AccessStructure() accessstructures.Monotone {
+func (c *Scheme[E]) AccessStructure() *accessstructures.CNF {
 	return c.ac
 }
 
@@ -149,7 +154,7 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (
 	if secret == nil {
 		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
-	clauses := c.clauses()
+	clauses := clauses(c.ac)
 	l := len(clauses) // number of maximal unqualified sets / clauses
 	if l == 0 {
 		return nil, nil, sharing.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
@@ -199,7 +204,7 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		return nil, sharing.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 
-	clauses := c.clauses()
+	clauses := clauses(c.ac)
 	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 	for _, share := range shares {
 		if share == nil {
@@ -233,42 +238,4 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 // be summed to reconstruct the secret.
 func (*Scheme[E]) ConvertShareToAdditive(s *Share[E], quorum *accessstructures.Unanimity) (*additive.Share[E], error) {
 	return s.ToAdditive(quorum)
-}
-
-func (c *Scheme[E]) clauses() []bitset.ImmutableBitSet[sharing.ID] {
-	clausesCount := 0
-	for range c.ac.MaximalUnqualifiedSetsIter() {
-		clausesCount++
-	}
-
-	clauses := make([]bitset.ImmutableBitSet[sharing.ID], 0, clausesCount)
-	for set := range c.ac.MaximalUnqualifiedSetsIter() {
-		clauses = append(clauses, bitset.NewImmutableBitSet(set.List()...))
-	}
-	return clauses
-}
-
-// sampler provides functions to sample secrets and shares for ISN schemes. It abstracts the randomness source and allows for flexible sampling strategies.
-type sampler[E algebra.GroupElement[E]] struct {
-	secrets func(io.Reader) (E, error)
-	shares  func(io.Reader) (E, error)
-}
-
-// newFiniteGroupElementSampler creates a new sampler for secrets and shares based on the random sampling function of a finite group. It returns an error if the provided group is nil.
-func newFiniteGroupElementSampler[E algebra.GroupElement[E]](g algebra.FiniteGroup[E]) (*sampler[E], error) {
-	if g == nil {
-		return nil, sharing.ErrIsNil.WithMessage("group is nil")
-	}
-	return &sampler[E]{
-		secrets: g.Random,
-		shares:  g.Random,
-	}, nil
-}
-
-func (s *sampler[E]) Secret(prng io.Reader) (E, error) {
-	return s.secrets(prng)
-}
-
-func (s *sampler[E]) Share(prng io.Reader) (E, error) {
-	return s.shares(prng)
 }

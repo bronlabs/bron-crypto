@@ -1,11 +1,9 @@
 package isn
 
 import (
-	"iter"
-	"slices"
+	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -13,74 +11,6 @@ import (
 
 // Name is the human-readable name for ISN secret sharing.
 const Name sharing.Name = "ISN secret sharing scheme"
-
-// DealerFunc represents the dealer function that maps shareholder IDs to their
-// shares. This is returned by LSSS methods that reveal the dealer function,
-// enabling protocols that require knowledge of the complete share distribution.
-type DealerFunc[E algebra.GroupElement[E]] map[bitset.ImmutableBitSet[sharing.ID]]E
-
-// ShareOf derives the share for shareholder id from the dealer function.
-func (df DealerFunc[E]) ShareOf(id sharing.ID) *Share[E] {
-	shareValue := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
-	for clause, value := range df {
-		if !clause.Contains(id) {
-			shareValue[clause] = value
-		}
-	}
-
-	return &Share[E]{
-		id: id,
-		v:  shareValue,
-	}
-}
-
-// Op performs a component-wise group operation on two dealer functions.
-func (df DealerFunc[E]) Op(other DealerFunc[E]) DealerFunc[E] {
-	result := make(DealerFunc[E])
-	for clause, value := range df {
-		if otherValue, exists := other[clause]; exists {
-			result[clause] = value.Op(otherValue)
-		}
-	}
-	return result
-}
-
-// Repr returns an iterator that yields the dealer function's clause values
-// in deterministic order (sorted by clause key).
-func (df DealerFunc[E]) Repr() iter.Seq[E] {
-	return func(yield func(E) bool) {
-		keys := make([]bitset.ImmutableBitSet[sharing.ID], 0, len(df))
-		for k := range df {
-			keys = append(keys, k)
-		}
-		slices.Sort(keys)
-		for _, k := range keys {
-			if !yield(df[k]) {
-				return
-			}
-		}
-	}
-}
-
-// Accepts checks whether this dealer function is compatible with the given
-// access structure by verifying it has entries for all required clauses.
-func (df DealerFunc[E]) Accepts(ac accessstructures.Monotone) bool {
-	if ac == nil {
-		return false
-	}
-	return len(df) > 0
-}
-
-// DealerOutput contains the shares produced by a dealing operation.
-// It provides access to the mapping from shareholder IDs to their shares.
-type DealerOutput[E algebra.GroupElement[E]] struct {
-	shares ds.Map[sharing.ID, *Share[E]]
-}
-
-// Shares returns the map of shareholder IDs to their corresponding shares.
-func (d *DealerOutput[E]) Shares() ds.Map[sharing.ID, *Share[E]] {
-	return d.shares
-}
 
 // Secret represents a shared secret value in an ISN scheme. The secret
 // is an element of a finite group and can be split into shares using
@@ -112,4 +42,42 @@ func (s *Secret[E]) Clone() *Secret[E] {
 	return &Secret[E]{
 		v: s.v.Clone(),
 	}
+}
+
+func clauses(ac *accessstructures.CNF) []bitset.ImmutableBitSet[sharing.ID] {
+	clausesCount := 0
+	for range ac.MaximalUnqualifiedSetsIter() {
+		clausesCount++
+	}
+
+	clauses := make([]bitset.ImmutableBitSet[sharing.ID], 0, clausesCount)
+	for set := range ac.MaximalUnqualifiedSetsIter() {
+		clauses = append(clauses, bitset.NewImmutableBitSet(set.List()...))
+	}
+	return clauses
+}
+
+// sampler provides functions to sample secrets and shares for ISN schemes. It abstracts the randomness source and allows for flexible sampling strategies.
+type sampler[E algebra.GroupElement[E]] struct {
+	secrets func(io.Reader) (E, error)
+	shares  func(io.Reader) (E, error)
+}
+
+// newFiniteGroupElementSampler creates a new sampler for secrets and shares based on the random sampling function of a finite group. It returns an error if the provided group is nil.
+func newFiniteGroupElementSampler[E algebra.GroupElement[E]](g algebra.FiniteGroup[E]) (*sampler[E], error) {
+	if g == nil {
+		return nil, sharing.ErrIsNil.WithMessage("group is nil")
+	}
+	return &sampler[E]{
+		secrets: g.Random,
+		shares:  g.Random,
+	}, nil
+}
+
+func (s *sampler[E]) Secret(prng io.Reader) (E, error) {
+	return s.secrets(prng)
+}
+
+func (s *sampler[E]) Share(prng io.Reader) (E, error) {
+	return s.shares(prng)
 }

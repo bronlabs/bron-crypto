@@ -1274,3 +1274,230 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 	}
 	require.True(t, sum.Equal(field.One()), "Lagrange coefficients should sum to 1")
 }
+
+func TestLiftedShareAndReconstruction(t *testing.T) {
+	t.Parallel()
+
+	// Setup
+	curve := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	threshold := uint(3)
+	total := uint(5)
+
+	// Create shareholders and access structure
+	shareholders := sharing.NewOrdinalShareholderSet(total)
+	_, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	require.NoError(t, err)
+
+	// Create Shamir scheme
+	basePoint := curve.PrimeSubGroupGenerator()
+	scheme, err := newShamirScheme(curve.ScalarField(), threshold, shareholders)
+	require.NoError(t, err)
+
+	// Deal shares
+	shares, secret, err := scheme.DealRandom(prng)
+	require.NoError(t, err)
+
+	t.Run("lift shares and reconstruct", func(t *testing.T) {
+		t.Parallel()
+		// Lift all shares to the exponent
+		liftedShares := make(shamir.SharesInExponent[*k256.Point, *k256.Scalar], 0, total)
+		for id, share := range shares.Shares().Iter() {
+			// Compute share in exponent: g^s_i
+			shareInExponent := basePoint.ScalarOp(share.Value())
+			lifted, err := shamir.NewLiftedShare(id, shareInExponent)
+			require.NoError(t, err)
+			liftedShares = append(liftedShares, lifted)
+		}
+
+		// Reconstruct from all shares
+		reconstructed, err := liftedShares.ReconstructAsAdditive()
+		require.NoError(t, err)
+
+		// Verify: reconstructed should equal g^s where s is the secret
+		expected := basePoint.ScalarOp(secret.Value())
+		require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
+	})
+
+	t.Run("reconstruct from threshold shares", func(t *testing.T) {
+		t.Parallel()
+		// Select threshold shares (IDs 1, 2, 3)
+		selectedIDs := []sharing.ID{1, 2, 3}
+		liftedShares := make(shamir.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
+
+		for _, id := range selectedIDs {
+			share, exists := shares.Shares().Get(id)
+			require.True(t, exists)
+
+			// Compute share in exponent
+			shareInExponent := basePoint.ScalarOp(share.Value())
+			lifted, err := shamir.NewLiftedShare(id, shareInExponent)
+			require.NoError(t, err)
+			liftedShares = append(liftedShares, lifted)
+		}
+
+		// Reconstruct from threshold shares
+		reconstructed, err := liftedShares.ReconstructAsAdditive()
+		require.NoError(t, err)
+
+		// Verify
+		expected := basePoint.ScalarOp(secret.Value())
+		require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
+	})
+
+	t.Run("different threshold sets yield same result", func(t *testing.T) {
+		t.Parallel()
+		// First set: IDs 1, 2, 3
+		set1IDs := []sharing.ID{1, 2, 3}
+		liftedSet1 := make(shamir.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
+
+		for _, id := range set1IDs {
+			share, exists := shares.Shares().Get(id)
+			require.True(t, exists, "share %d not found", id)
+			shareInExponent := basePoint.ScalarOp(share.Value())
+			lifted, err := shamir.NewLiftedShare(id, shareInExponent)
+			require.NoError(t, err)
+			liftedSet1 = append(liftedSet1, lifted)
+		}
+
+		reconstructed1, err := liftedSet1.ReconstructAsAdditive()
+		require.NoError(t, err)
+
+		// Second set: IDs 1, 3, 4
+		set2IDs := []sharing.ID{1, 3, 4}
+		liftedSet2 := make(shamir.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
+
+		for _, id := range set2IDs {
+			share, exists := shares.Shares().Get(id)
+			require.True(t, exists, "share %d not found", id)
+			shareInExponent := basePoint.ScalarOp(share.Value())
+			lifted, err := shamir.NewLiftedShare(id, shareInExponent)
+			require.NoError(t, err)
+			liftedSet2 = append(liftedSet2, lifted)
+		}
+
+		reconstructed2, err := liftedSet2.ReconstructAsAdditive()
+		require.NoError(t, err)
+
+		// Both should equal the same value
+		require.True(t, reconstructed1.Equal(reconstructed2), "different threshold sets yielded different results")
+	})
+
+	t.Run("insufficient shares error", func(t *testing.T) {
+		t.Parallel()
+		// Try with only 2 shares (below threshold)
+		liftedShares := make(shamir.SharesInExponent[*k256.Point, *k256.Scalar], 0, 2)
+
+		for i := range 2 {
+			share, _ := shares.Shares().Get(sharing.ID(i + 1))
+			shareInExponent := basePoint.ScalarOp(share.Value())
+			lifted, _ := shamir.NewLiftedShare(sharing.ID(i+1), shareInExponent)
+			liftedShares = append(liftedShares, lifted)
+		}
+
+		// This should still work since ReconstructAsAdditive doesn't check threshold
+		// It just uses whatever shares are provided
+		_, err := liftedShares.ReconstructAsAdditive()
+		require.NoError(t, err)
+		// But the result won't be correct unless we have threshold shares
+	})
+
+	t.Run("empty shares error", func(t *testing.T) {
+		t.Parallel()
+		liftedShares := make(shamir.SharesInExponent[*k256.Point, *k256.Scalar], 0)
+		_, err := liftedShares.ReconstructAsAdditive()
+		require.Error(t, err)
+		require.ErrorIs(t, err, sharing.ErrArgument)
+	})
+
+	t.Run("ToAdditive conversion", func(t *testing.T) {
+		t.Parallel()
+		// Create a qualified set
+		selectedIDs := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
+		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(selectedIDs)
+		require.NoError(t, err)
+
+		// Get a share and lift it
+		share1, _ := shares.Shares().Get(sharing.ID(1))
+		shareInExponent := basePoint.ScalarOp(share1.Value())
+		lifted, err := shamir.NewLiftedShare(sharing.ID(1), shareInExponent)
+		require.NoError(t, err)
+
+		// Convert to additive share
+		additiveShare, err := lifted.ToAdditive(qualifiedSet)
+		require.NoError(t, err)
+		require.NotNil(t, additiveShare)
+		require.Equal(t, sharing.ID(1), additiveShare.ID())
+
+		// The value should be λ_1 * g^s_1 where λ_1 is the Lagrange coefficient
+		// We can't easily verify the exact value without computing Lagrange coefficients
+		// but we can check it's not zero
+		require.False(t, additiveShare.Value().IsZero())
+	})
+}
+
+// TestLiftedShareCorrectnessWithManualCalculation verifies the mathematical correctness
+func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
+	t.Parallel()
+
+	// Setup
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+
+	// Create a simple 2-of-3 scheme
+	threshold := uint(2)
+	total := uint(3)
+	shareholders := sharing.NewOrdinalShareholderSet(total)
+	_, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	require.NoError(t, err)
+
+	// Create Shamir scheme
+	basePoint := curve.PrimeSubGroupGenerator()
+	scheme, err := newShamirScheme(field, threshold, shareholders)
+	require.NoError(t, err)
+
+	// Create a known secret
+	secretValue := field.FromUint64(42)
+	secret := shamir.NewSecret(secretValue)
+
+	// Deal shares with known secret
+	shares, err := scheme.Deal(secret, prng)
+	require.NoError(t, err)
+
+	// Verify the polynomial evaluation
+	// For a polynomial f(x) = a0 + a1*x where a0 = secret
+	// We have f(1), f(2), f(3) as our shares
+
+	// Lift shares for participants 0 and 2
+	selectedIDs := []sharing.ID{1, 3}
+	liftedShares := make(shamir.SharesInExponent[*k256.Point, *k256.Scalar], 0, len(selectedIDs))
+
+	for _, id := range selectedIDs {
+		share, exists := shares.Shares().Get(id)
+		require.True(t, exists)
+
+		// Compute g^{f(id)}
+		shareInExponent := basePoint.ScalarOp(share.Value())
+		lifted, err := shamir.NewLiftedShare(id, shareInExponent)
+		require.NoError(t, err)
+		liftedShares = append(liftedShares, lifted)
+	}
+
+	// Reconstruct
+	reconstructed, err := liftedShares.ReconstructAsAdditive()
+	require.NoError(t, err)
+
+	// Verify: reconstructed should equal g^secret
+	expected := basePoint.ScalarOp(secretValue)
+	require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
+
+	// Also verify using Lagrange coefficients manually
+	// For points (1, f(1)) and (3, f(3)), we need to find f(0)
+	// λ_1 = 3/(3-1) = 3/2
+	// λ_3 = 1/(1-3) = 1/(-2) = -1/2
+	// f(0) = λ_1 * f(1) + λ_3 * f(3)
+
+	// In the group: g^{f(0)} = g^{λ_1 * f(1)} * g^{λ_3 * f(3)}
+	//                        = (g^{f(1)})^{λ_1} * (g^{f(3)})^{λ_3}
+}

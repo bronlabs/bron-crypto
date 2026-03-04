@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/signing"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/testutils"

@@ -68,7 +68,7 @@ func (d *Scheme[FE]) PolynomialRing() *polynomials.PolynomialRing[FE] {
 // DealRandomAndRevealDealerFunc generates shares for a random secret and returns
 // the dealing polynomial. This is useful for protocols that need the polynomial
 // for verification or further computation.
-func (d *Scheme[FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[FE], *Secret[FE], DealerFunc[FE], error) {
+func (d *Scheme[FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[FE], *Secret[FE], *DealerFunc[FE], error) {
 	if prng == nil {
 		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
@@ -95,7 +95,7 @@ func (d *Scheme[FE]) DealRandom(prng io.Reader) (*DealerOutput[FE], *Secret[FE],
 
 // DealAndRevealDealerFunc creates shares for the given secret and returns the
 // dealing polynomial f(x) where f(0) = secret.
-func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE], DealerFunc[FE], error) {
+func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE], *DealerFunc[FE], error) {
 	if secret == nil {
 		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
@@ -114,7 +114,7 @@ func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 			v:  poly.Eval(node),
 		})
 	}
-	return &DealerOutput[FE]{shares: shares.Freeze()}, poly, nil
+	return &DealerOutput[FE]{shares: shares.Freeze()}, &DealerFunc[FE]{poly: poly}, nil
 }
 
 // Deal creates shares for the given secret.

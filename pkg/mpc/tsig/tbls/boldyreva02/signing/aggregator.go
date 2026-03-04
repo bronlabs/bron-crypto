@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
@@ -140,8 +140,8 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create verifier for partial signature")
 	}
-	sigShares := feldman.SharesInExponent[SG, S]{}
-	popShares := feldman.SharesInExponent[SG, S]{}
+	sigShares := shamir.SharesInExponent[SG, S]{}
+	popShares := shamir.SharesInExponent[SG, S]{}
 	for sender, psig := range partialSigs.Iter() {
 		partialPublicKey, exists := A.publicMaterial.PartialPublicKeys().Get(sender)
 		if !exists {
@@ -174,13 +174,13 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		if err := partialSignatureVerifier.Verify(psig.SigmaI, partialPublicKey, internalMessage); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature")
 		}
-		shareInExponent, err := feldman.NewLiftedShare(sender, psig.SigmaI.Value())
+		shareInExponent, err := shamir.NewLiftedShare(sender, psig.SigmaI.Value())
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create additive share for sender %d", sender)
 		}
 		sigShares = append(sigShares, shareInExponent)
 		if A.targetRogueKeyAlg == bls.POP {
-			popShareInExponent, err := feldman.NewLiftedShare(sender, psig.SigmaPopI.Value())
+			popShareInExponent, err := shamir.NewLiftedShare(sender, psig.SigmaPopI.Value())
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("failed to create additive share for POP signature for sender %d", sender)
 			}
