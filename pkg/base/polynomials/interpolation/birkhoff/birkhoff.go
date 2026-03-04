@@ -8,6 +8,9 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+// Interpolate reconstructs a polynomial from Birkhoff interpolation nodes.
+// Each triple (xs[i], js[i], ys[i]) represents the js[i]-th derivative value
+// of the polynomial evaluated at xs[i].
 func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*polynomials.Polynomial[F], error) {
 	if len(xs) != len(js) || len(xs) != len(ys) {
 		return nil, errs.New("validation failed").WithMessage("x, j, and y must have the same length")
@@ -52,6 +55,8 @@ func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*
 	return poly, nil
 }
 
+// BuildVandermondeMatrix constructs the generalized Vandermonde matrix used by
+// Birkhoff interpolation for nodes (xs[i], js[i]).
 func BuildVandermondeMatrix[F algebra.PrimeFieldElement[F]](xs []F, js []uint64) (*mat.SquareMatrix[F], error) {
 	if len(xs) != len(js) {
 		return nil, errs.New("validation failed").WithMessage("x and j must have the same length")
