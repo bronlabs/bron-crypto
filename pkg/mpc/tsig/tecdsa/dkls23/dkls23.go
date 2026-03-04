@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -14,6 +15,39 @@ type PartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 	r P
 	u S
 	w S
+}
+
+func (ps *PartialSignature[P, B, S]) MarshalCBOR() ([]byte, error) {
+	dto := &partialSignatureDTO[P, B, S]{
+		R: ps.r,
+		U: ps.u,
+		W: ps.w,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal dkls23 PartialSignature")
+	}
+	return data, nil
+}
+
+func (ps *PartialSignature[P, B, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*partialSignatureDTO[P, B, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal dkls23 PartialSignature")
+	}
+	ps2, err := NewPartialSignature(dto.R, dto.U, dto.W)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create dkls23 PartialSignature")
+	}
+
+	*ps = *ps2
+	return nil
+}
+
+type partialSignatureDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	R P `cbor:"r"`
+	U S `cbor:"u"`
+	W S `cbor:"w"`
 }
 
 // NewPartialSignature returns a new partial signature.

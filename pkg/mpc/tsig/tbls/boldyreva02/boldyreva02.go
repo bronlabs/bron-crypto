@@ -17,9 +17,9 @@ type PartialSignature[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	// SigmaI is the partial signature on the message.
-	SigmaI *bls.Signature[Sig, SigFE, PK, PKFE, E, S]
+	SigmaI *bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_i"`
 	// SigmaPopI is the proof-of-possession signature, present only when using POP algorithm.
-	SigmaPopI *bls.Signature[Sig, SigFE, PK, PKFE, E, S]
+	SigmaPopI *bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_pop_i"`
 }
 
 // Equal returns true if two PartialSignature instances are equal.

@@ -44,7 +44,7 @@ type PartialSignature[
 	GE algebra.PrimeGroupElement[GE, S],
 	S algebra.PrimeFieldElement[S],
 ] struct {
-	Sig schnorrlike.Signature[GE, S]
+	Sig schnorrlike.Signature[GE, S] `cbor:"signature"`
 }
 
 // AsSchnorrSignature returns the underlying Schnorr signature.

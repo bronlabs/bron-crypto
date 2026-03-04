@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	gentu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -16,6 +15,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/keygen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/signing"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -105,7 +106,7 @@ func DoThresholdSign[
 	// Convert map to RoundMessages
 	partialSigsMap := hashmap.NewComparable[sharing.ID, *boldyreva02.PartialSignature[SG, SGFE, PK, PKFE, E, S]]()
 	for id, psig := range partialSigs {
-		partialSigsMap.Put(id, psig)
+		partialSigsMap.Put(id, ntu.CBORRoundTrip(tb, psig))
 	}
 	roundMessages := partialSigsMap.Freeze()
 

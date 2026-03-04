@@ -14,12 +14,12 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign_bbot"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
@@ -76,8 +76,9 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	r4bi, r4ui := ntu.MapO2I(tb, cosigners, r3bo, r3uo)
 	partialSignatures := make(map[sharing.ID]*dkls23.PartialSignature[P, B, S])
 	for _, cosigner := range cosigners {
-		partialSignatures[cosigner.SharingID()], err = cosigner.Round4(r4bi[cosigner.SharingID()], r4ui[cosigner.SharingID()], message)
+		ps, err := cosigner.Round4(r4bi[cosigner.SharingID()], r4ui[cosigner.SharingID()], message)
 		require.NoError(tb, err)
+		partialSignatures[cosigner.SharingID()] = ntu.CBORRoundTrip(tb, ps)
 	}
 
 	signature, err := dkls23.Aggregate(ecdsaSuite, pk, message, slices.Collect(maps.Values(partialSignatures))...)
