@@ -30,7 +30,7 @@ func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*
 		return nil, polynomials.ErrFailed.WithMessage("determinant is zero")
 	}
 
-	var coeffs []F
+	coeffs := make([]F, 0, len(xs))
 	for c := range xs {
 		numMatrix, err := denMatrix.SetColumn(c, ys)
 		if err != nil {
@@ -62,7 +62,7 @@ func BuildVandermondeMatrix[F algebra.PrimeFieldElement[F]](xs []F, js []uint64)
 		return nil, errs.New("validation failed").WithMessage("x and j must have the same length")
 	}
 
-	var coeffs []F
+	coeffs := make([]F, 0, len(xs)*len(xs))
 	for r := range xs {
 		for c := range xs {
 			coeff, err := internal.Phi(c, xs[r], js[r])

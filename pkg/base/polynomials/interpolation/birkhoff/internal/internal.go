@@ -58,7 +58,7 @@ func SortNodes[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (xsO
 func Phi[F algebra.PrimeFieldElement[F]](t int, i F, j uint64) (F, error) {
 	field := algebra.StructureMustBeAs[algebra.PrimeField[F]](i.Structure())
 	coeffs := make([]F, t+1)
-	for c := 0; c < len(coeffs); c++ {
+	for c := range coeffs {
 		coeffs[c] = field.Zero()
 	}
 	coeffs[len(coeffs)-1] = field.One()
