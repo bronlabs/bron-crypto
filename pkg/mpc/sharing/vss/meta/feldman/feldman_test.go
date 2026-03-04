@@ -27,7 +27,7 @@ func TestFeldmanWithShamir(t *testing.T) {
 	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
-	shamirScheme, err := shamir.NewScheme(field, ac)
+	liftableScheme, err := shamir.NewLiftableScheme[*k256.Point, *k256.Scalar](curve, ac)
 	require.NoError(t, err)
 
 	scheme := feldman.NewScheme[
@@ -39,12 +39,7 @@ func TestFeldmanWithShamir(t *testing.T) {
 		*shamir.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 		*shamir.LiftedShare[*k256.Point, *k256.Scalar],
 		*k256.Point,
-	](
-		basePoint,
-		shamirScheme,
-		shamir.LiftDealerFunc[*k256.Point, *k256.Scalar],
-		shamir.LiftShare[*k256.Point, *k256.Scalar],
-	)
+	](basePoint, liftableScheme)
 
 	t.Run("Deal and verify", func(t *testing.T) {
 		t.Parallel()
@@ -140,7 +135,7 @@ func TestFeldmanWithISN(t *testing.T) {
 	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
-	isnScheme, err := isn.NewFiniteScheme[*k256.Scalar](field, ac)
+	liftableScheme, err := isn.NewFiniteLiftableScheme[*k256.Point, *k256.Scalar](curve, ac)
 	require.NoError(t, err)
 
 	scheme := feldman.NewScheme[
@@ -152,12 +147,7 @@ func TestFeldmanWithISN(t *testing.T) {
 		isn.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 		*isn.LiftedShare[*k256.Point],
 		*k256.Point,
-	](
-		basePoint,
-		isnScheme,
-		isn.LiftDealerFunc[*k256.Point, *k256.Scalar],
-		isn.LiftShare[*k256.Point, *k256.Scalar],
-	)
+	](basePoint, liftableScheme)
 
 	t.Run("Deal and verify", func(t *testing.T) {
 		t.Parallel()

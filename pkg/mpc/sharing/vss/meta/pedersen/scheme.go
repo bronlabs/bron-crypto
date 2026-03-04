@@ -2,7 +2,6 @@ package pedersen
 
 import (
 	"io"
-	"iter"
 	"maps"
 	"slices"
 
@@ -28,16 +27,13 @@ func NewScheme[
 	ULDF sharing.DealerFunc[US, USV, AC],
 	LFTUDF interface {
 		algebra.Operand[LFTUDF]
-		ShareOf(id sharing.ID) LFTUS
-		Repr() iter.Seq[LFTUSV]
-		Accepts(AC) bool
-	},
-	LFTUS interface {
-		sharing.Share[LFTUS]
-		Repr() iter.Seq[LFTUSV]
-	},
+		sharing.DealerFunc[LFTUS, LFTUSV, AC]
+	}, LFTUS sharing.LinearShare[LFTUS, LFTUSV],
 	LFTUSV algebra.PrimeGroupElement[LFTUSV, USV],
-](key *pedcom.Key[LFTUSV, USV], lsss sharing.LSSS[US, USV, W, WV, UDO, AC, ULDF], liftDealerFunc func(ULDF, LFTUSV) (LFTUDF, error)) (*Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV], error) {
+](
+	key *pedcom.Key[LFTUSV, USV],
+	lsss sharing.LiftableLSSS[US, USV, W, WV, UDO, AC, ULDF, LFTUS, LFTUSV, LFTUDF],
+) (*Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV], error) {
 	if key == nil {
 		return nil, errs.New("key cannot be nil")
 	}
@@ -49,7 +45,6 @@ func NewScheme[
 		key:              key,
 		lsss:             lsss,
 		commitmentScheme: commitmentScheme,
-		liftDealerFunc:   liftDealerFunc,
 	}, nil
 }
 
@@ -64,20 +59,13 @@ type Scheme[
 	ULDF sharing.DealerFunc[US, USV, AC],
 	LFTUDF interface {
 		algebra.Operand[LFTUDF]
-		ShareOf(id sharing.ID) LFTUS
-		Repr() iter.Seq[LFTUSV]
-		Accepts(AC) bool
-	},
-	LFTUS interface {
-		sharing.Share[LFTUS]
-		Repr() iter.Seq[LFTUSV]
-	},
+		sharing.DealerFunc[LFTUS, LFTUSV, AC]
+	}, LFTUS sharing.LinearShare[LFTUS, LFTUSV],
 	LFTUSV algebra.PrimeGroupElement[LFTUSV, USV],
 ] struct {
 	key              *pedcom.Key[LFTUSV, USV]
-	lsss             sharing.LSSS[US, USV, W, WV, UDO, AC, ULDF]
+	lsss             sharing.LiftableLSSS[US, USV, W, WV, UDO, AC, ULDF, LFTUS, LFTUSV, LFTUDF]
 	commitmentScheme *pedcom.Scheme[LFTUSV, USV]
-	liftDealerFunc   func(ULDF, LFTUSV) (LFTUDF, error)
 }
 
 func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) Name() sharing.Name {
@@ -123,7 +111,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) DealRando
 func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) dealBlindingAndFinalise(
 	dealtShares UDO, shareDealerFunc ULDF, prng io.Reader,
 ) (*DealerOutput[US, USV, LFTUDF], *LinearDealerFunc[ULDF], error) {
-	liftedShareDealerFunc, err := s.liftDealerFunc(shareDealerFunc, s.key.G())
+	liftedShareDealerFunc, err := s.lsss.LiftDealerFunc(shareDealerFunc, s.key.G())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift share dealer function")
 	}
@@ -131,7 +119,7 @@ func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV]) dealBlind
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to deal blinding shares")
 	}
-	liftedBlindingDealerFunc, err := s.liftDealerFunc(blindingDealerFunc, s.key.H())
+	liftedBlindingDealerFunc, err := s.lsss.LiftDealerFunc(blindingDealerFunc, s.key.H())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift blinding dealer function")
 	}

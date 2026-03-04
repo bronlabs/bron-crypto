@@ -192,7 +192,12 @@ func (s *Share[E]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ISN Share")
 	}
-
+	if dto.ID == 0 {
+		return sharing.ErrIsZero.WithMessage("share ID is zero")
+	}
+	if utils.IsNil(dto.V) {
+		return sharing.ErrIsNil.WithMessage("value map is nil")
+	}
 	s.id = dto.ID
 	s.v = dto.V
 	return nil
@@ -215,24 +220,6 @@ func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *accessstru
 	return 0, sharing.ErrFailed.WithMessage("could not find pivot")
 }
 
-func LiftShare[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](share *Share[S], basePoint E) (*LiftedShare[E], error) {
-	if share == nil {
-		return nil, sharing.ErrIsNil.WithMessage("share is nil")
-	}
-	if utils.IsNil(basePoint) {
-		return nil, sharing.ErrIsNil.WithMessage("base point is nil")
-	}
-	vs := make(map[bitset.ImmutableBitSet[sharing.ID]]E, len(share.v))
-	for clause, value := range share.v {
-		vs[clause] = basePoint.ScalarOp(value)
-	}
-	out, err := NewLiftedShare(share.id, vs)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create lifted share")
-	}
-	return out, nil
-}
-
 func NewLiftedShare[E algebra.GroupElement[E]](id sharing.ID, v map[bitset.ImmutableBitSet[sharing.ID]]E) (*LiftedShare[E], error) {
 	if utils.IsNil(v) {
 		return nil, sharing.ErrIsNil.WithMessage("value map is nil")
@@ -240,90 +227,34 @@ func NewLiftedShare[E algebra.GroupElement[E]](id sharing.ID, v map[bitset.Immut
 	if id == 0 {
 		return nil, sharing.ErrIsZero.WithMessage("share ID is zero")
 	}
-	return &LiftedShare[E]{id: id, v: v}, nil
+	return &LiftedShare[E]{
+		Share: Share[E]{
+			id: id, v: v,
+		},
+	}, nil
 }
 
 // LiftedShare wraps share clause values as group elements for a
 // specific shareholder.
 type LiftedShare[E algebra.GroupElement[E]] struct {
-	id sharing.ID
-	v  map[bitset.ImmutableBitSet[sharing.ID]]E
+	Share[E]
 }
 
-type liftedShareDTO[E algebra.GroupElement[E]] struct {
-	ID sharing.ID                               `cbor:"sharingID"`
-	V  map[bitset.ImmutableBitSet[sharing.ID]]E `cbor:"value"`
-}
-
-// ID returns the shareholder identifier.
-func (ls *LiftedShare[E]) ID() sharing.ID {
-	return ls.id
-}
-
-// Repr yields clause values in deterministic order (sorted by clause key).
-func (ls *LiftedShare[E]) Repr() iter.Seq[E] {
-	return func(yield func(E) bool) {
-		keys := make([]bitset.ImmutableBitSet[sharing.ID], 0, len(ls.v))
-		for k := range ls.v {
-			keys = append(keys, k)
-		}
-		slices.Sort(keys)
-		for _, k := range keys {
-			if !yield(ls.v[k]) {
-				return
-			}
-		}
-	}
-}
-
-// Equal returns true if two LiftedShare have the same ID and values.
 func (ls *LiftedShare[E]) Equal(other *LiftedShare[E]) bool {
 	if ls == nil || other == nil {
 		return ls == other
 	}
-	if ls.id != other.id || len(ls.v) != len(other.v) {
-		return false
-	}
-	for clause, val := range ls.v {
-		otherVal, exists := other.v[clause]
-		if !exists || !val.Equal(otherVal) {
-			return false
-		}
-	}
-	return true
+	return ls.Share.Equal(&other.Share)
 }
 
-// HashCode returns a hash code for this lifted ISN share.
-func (ls *LiftedShare[E]) HashCode() base.HashCode {
-	c := base.HashCode(ls.id)
-	for bi, si := range ls.v {
-		c = c.Combine(base.HashCode(bi), si.HashCode())
+func (ls *LiftedShare[E]) Op(other *LiftedShare[E]) *LiftedShare[E] {
+	return &LiftedShare[E]{
+		Share: *ls.Share.Op(&other.Share),
 	}
-	return c
 }
 
-func (ls *LiftedShare[E]) MarshalCBOR() ([]byte, error) {
-	dto := &liftedShareDTO[E]{
-		ID: ls.id,
-		V:  ls.v,
+func (ls *LiftedShare[E]) ScalarOp(scalar algebra.Numeric) *LiftedShare[E] {
+	return &LiftedShare[E]{
+		Share: *ls.Share.ScalarOp(scalar),
 	}
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal Lifted ISN Share")
-	}
-	return data, nil
-}
-
-func (ls *LiftedShare[E]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*liftedShareDTO[E]](data)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to unmarshal Lifted ISN Share")
-	}
-
-	ls2, err := NewLiftedShare(dto.ID, dto.V)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("invalid data for Lifted ISN Share")
-	}
-	*ls = *ls2
-	return nil
 }

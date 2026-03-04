@@ -2,7 +2,6 @@ package feldman
 
 import (
 	"io"
-	"iter"
 	"maps"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -15,7 +14,7 @@ import (
 )
 
 func NewScheme[
-	S sharing.LinearShare[S, SV], SV algebra.GroupElement[SV],
+	S sharing.LinearShare[S, SV], SV algebra.RingElement[SV],
 	W interface {
 		sharing.Secret[W]
 		base.Transparent[WV]
@@ -24,30 +23,22 @@ func NewScheme[
 	AC accessstructures.Monotone,
 	DF sharing.DealerFunc[S, SV, AC],
 	LFTDF interface {
-		ShareOf(id sharing.ID) LFTS
-		Accepts(AC) bool
-	},
-	LFTS interface {
-		sharing.Share[LFTS]
-		Repr() iter.Seq[LFTSV]
-	},
-	LFTSV base.Equatable[LFTSV],
+		algebra.Operand[LFTDF]
+		sharing.DealerFunc[LFTS, LFTSV, AC]
+	}, LFTS sharing.LinearShare[LFTS, LFTSV],
+	LFTSV algebra.ModuleElement[LFTSV, SV],
 ](
 	basePoint LFTSV,
-	lsss sharing.LSSS[S, SV, W, WV, DO, AC, DF],
-	liftDealerFunc func(DF, LFTSV) (LFTDF, error),
-	liftShare func(S, LFTSV) (LFTS, error),
+	lsss sharing.LiftableLSSS[S, SV, W, WV, DO, AC, DF, LFTS, LFTSV, LFTDF],
 ) *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV] {
 	return &Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]{
-		basePoint:      basePoint,
-		lsss:           lsss,
-		liftDealerFunc: liftDealerFunc,
-		liftShare:      liftShare,
+		basePoint: basePoint,
+		lsss:      lsss,
 	}
 }
 
 type Scheme[
-	S sharing.LinearShare[S, SV], SV algebra.GroupElement[SV],
+	S sharing.LinearShare[S, SV], SV algebra.RingElement[SV],
 	W interface {
 		sharing.Secret[W]
 		base.Transparent[WV]
@@ -56,19 +47,13 @@ type Scheme[
 	AC accessstructures.Monotone,
 	DF sharing.DealerFunc[S, SV, AC],
 	LFTDF interface {
-		ShareOf(id sharing.ID) LFTS
-		Accepts(AC) bool
-	},
-	LFTS interface {
-		sharing.Share[LFTS]
-		Repr() iter.Seq[LFTSV]
-	},
-	LFTSV base.Equatable[LFTSV],
+		algebra.Operand[LFTDF]
+		sharing.DealerFunc[LFTS, LFTSV, AC]
+	}, LFTS sharing.LinearShare[LFTS, LFTSV],
+	LFTSV algebra.ModuleElement[LFTSV, SV],
 ] struct {
-	basePoint      LFTSV
-	lsss           sharing.LSSS[S, SV, W, WV, DO, AC, DF]
-	liftDealerFunc func(DF, LFTSV) (LFTDF, error)
-	liftShare      func(S, LFTSV) (LFTS, error)
+	basePoint LFTSV
+	lsss      sharing.LiftableLSSS[S, SV, W, WV, DO, AC, DF, LFTS, LFTSV, LFTDF]
 }
 
 func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]) Name() sharing.Name {
@@ -92,7 +77,7 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]) DealAndRevealDeal
 	if err != nil {
 		return nil, *new(DF), errs.Wrap(err).WithMessage("failed to deal secret")
 	}
-	liftedDealerFunc, err := s.liftDealerFunc(underlyingDealerFunc, s.basePoint)
+	liftedDealerFunc, err := s.lsss.LiftDealerFunc(underlyingDealerFunc, s.basePoint)
 	if err != nil {
 		return nil, *new(DF), errs.Wrap(err).WithMessage("failed to lift dealer function")
 	}
@@ -108,7 +93,7 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]) DealRandomAndReve
 	if err != nil {
 		return nil, *new(W), *new(DF), errs.Wrap(err).WithMessage("failed to deal random secret")
 	}
-	liftedDealerFunc, err := s.liftDealerFunc(underlyingDealerFunc, s.basePoint)
+	liftedDealerFunc, err := s.lsss.LiftDealerFunc(underlyingDealerFunc, s.basePoint)
 	if err != nil {
 		return nil, *new(W), *new(DF), errs.Wrap(err).WithMessage("failed to lift dealer function")
 	}
@@ -154,7 +139,7 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV]) Verify(share S, l
 	}
 	liftedShare := liftedDealerFunc.ShareOf(share.ID())
 
-	manuallyLiftedShare, err := s.liftShare(share, s.basePoint)
+	manuallyLiftedShare, err := s.lsss.LiftShare(share, s.basePoint)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to lift share for verification")
 	}

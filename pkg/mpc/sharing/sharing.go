@@ -108,10 +108,13 @@ type LiftableLSSS[
 		Secret[W]
 		base.Transparent[WV]
 	}, WV algebra.GroupElement[WV], DO DealerOutput[S], AC accessstructures.Monotone, DF DealerFunc[S, SV, AC],
-	LFTS LinearShare[LFTS, LFTSV], LFTSV algebra.ModuleElement[LFTSV, SV], LFTDF DealerFunc[LFTS, LFTSV, AC],
+	LFTS LinearShare[LFTS, LFTSV], LFTSV algebra.ModuleElement[LFTSV, SV], LFTDF interface {
+		algebra.Operand[LFTDF]
+		DealerFunc[LFTS, LFTSV, AC]
+	},
 ] interface {
 	LSSS[S, SV, W, WV, DO, AC, DF]
 	LiftDealerFunc(DF, LFTSV) (LFTDF, error)
 	LiftShare(S, LFTSV) (LFTS, error)
-	ConvertLiftedShareToAdditive(input LFTS, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[WV], error)
+	ConvertLiftedShareToAdditive(input LFTS, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[LFTSV], error)
 }

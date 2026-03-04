@@ -5,7 +5,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 )
@@ -42,20 +41,6 @@ func (a *DealerFunc[FE]) Accepts(ac *accessstructures.Threshold) bool {
 // Polynomial returns the underlying polynomial.
 func (a *DealerFunc[FE]) Polynomial() *polynomials.Polynomial[FE] {
 	return a.poly
-}
-
-func LiftDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](df *DealerFunc[FE], basePoint E) (*LiftedDealerFunc[E, FE], error) {
-	if df == nil {
-		return nil, sharing.ErrIsNil.WithMessage("dealer func is nil")
-	}
-	if utils.IsNil(basePoint) {
-		return nil, sharing.ErrIsNil.WithMessage("base point is nil")
-	}
-	liftedPoly, err := polynomials.LiftPolynomial(df.Polynomial(), basePoint)
-	if err != nil {
-		return nil, sharing.ErrIsNil.WithMessage("could not lift polynomial: %w", err)
-	}
-	return &LiftedDealerFunc[E, FE]{poly: liftedPoly}, nil
 }
 
 type LiftedDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {

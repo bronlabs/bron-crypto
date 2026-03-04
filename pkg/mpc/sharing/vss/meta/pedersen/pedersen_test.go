@@ -30,6 +30,7 @@ func newPedersenKey(t *testing.T) *pedcom.Key[*k256.Point, *k256.Scalar] {
 func TestPedersenWithShamir(t *testing.T) {
 	t.Parallel()
 
+	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	prng := pcg.NewRandomised()
 	key := newPedersenKey(t)
@@ -38,7 +39,7 @@ func TestPedersenWithShamir(t *testing.T) {
 	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
-	shamirScheme, err := shamir.NewScheme(field, ac)
+	liftableScheme, err := shamir.NewLiftableScheme[*k256.Point, *k256.Scalar](curve, ac)
 	require.NoError(t, err)
 
 	scheme, err := pedersen.NewScheme[
@@ -50,11 +51,7 @@ func TestPedersenWithShamir(t *testing.T) {
 		*shamir.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 		*shamir.LiftedShare[*k256.Point, *k256.Scalar],
 		*k256.Point,
-	](
-		key,
-		shamirScheme,
-		shamir.LiftDealerFunc[*k256.Point, *k256.Scalar],
-	)
+	](key, liftableScheme)
 	require.NoError(t, err)
 
 	t.Run("Deal and verify", func(t *testing.T) {
@@ -147,6 +144,7 @@ func TestPedersenWithShamir(t *testing.T) {
 func TestPedersenWithISN(t *testing.T) {
 	t.Parallel()
 
+	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	prng := pcg.NewRandomised()
 	key := newPedersenKey(t)
@@ -155,7 +153,7 @@ func TestPedersenWithISN(t *testing.T) {
 	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
-	isnScheme, err := isn.NewFiniteScheme[*k256.Scalar](field, ac)
+	liftableScheme, err := isn.NewFiniteLiftableScheme[*k256.Point, *k256.Scalar](curve, ac)
 	require.NoError(t, err)
 
 	scheme, err := pedersen.NewScheme[
@@ -167,11 +165,7 @@ func TestPedersenWithISN(t *testing.T) {
 		isn.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 		*isn.LiftedShare[*k256.Point],
 		*k256.Point,
-	](
-		key,
-		isnScheme,
-		isn.LiftDealerFunc[*k256.Point, *k256.Scalar],
-	)
+	](key, liftableScheme)
 	require.NoError(t, err)
 
 	t.Run("Deal and verify", func(t *testing.T) {

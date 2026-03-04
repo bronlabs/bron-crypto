@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 )
@@ -89,7 +88,7 @@ func (ldf LiftedDealerFunc[E, S]) ShareOf(id sharing.ID) *LiftedShare[E] {
 			shareValues[clause] = value
 		}
 	}
-	return &LiftedShare[E]{id: id, v: shareValues}
+	return &LiftedShare[E]{Share: Share[E]{id: id, v: shareValues}}
 }
 
 // Accepts returns true if the lifted dealer function has entries.
@@ -128,18 +127,4 @@ func (ldf LiftedDealerFunc[E, S]) Repr() iter.Seq[E] {
 			}
 		}
 	}
-}
-
-func LiftDealerFunc[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](df DealerFunc[S], basePoint E) (LiftedDealerFunc[E, S], error) {
-	if df == nil {
-		return nil, sharing.ErrIsNil.WithMessage("dealer func is nil")
-	}
-	if utils.IsNil(basePoint) {
-		return nil, sharing.ErrIsNil.WithMessage("base point is nil")
-	}
-	lifted := make(map[bitset.ImmutableBitSet[sharing.ID]]E, len(df))
-	for clause, value := range df {
-		lifted[clause] = basePoint.ScalarOp(value)
-	}
-	return LiftedDealerFunc[E, S](lifted), nil
 }

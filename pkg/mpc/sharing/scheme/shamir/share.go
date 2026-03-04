@@ -177,21 +177,6 @@ func (s *Share[FE]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](share *Share[FE], basePoint E) (*LiftedShare[E, FE], error) {
-	if share == nil {
-		return nil, sharing.ErrIsNil.WithMessage("share is nil")
-	}
-	if utils.IsNil(basePoint) {
-		return nil, sharing.ErrIsNil.WithMessage("base point is nil")
-	}
-	liftedValue := basePoint.ScalarOp(share.Value())
-	out, err := NewLiftedShare(share.ID(), liftedValue)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to lift share to exponent")
-	}
-	return out, nil
-}
-
 // LiftedShare represents a share lifted to the exponent: g^{f(i)} where f(i) is
 // the underlying Shamir share value. This is used when shares need to be verified
 // or combined in the group rather than the field.
@@ -227,6 +212,23 @@ func (s *LiftedShare[E, FE]) ID() sharing.ID {
 // Value returns the group element value g^{f(i)} of this lifted share.
 func (s *LiftedShare[E, FE]) Value() E {
 	return s.v
+}
+
+func (s *LiftedShare[E, FE]) Op(other *LiftedShare[E, FE]) *LiftedShare[E, FE] {
+	if s.id != other.id {
+		panic("cannot add shares with different IDs")
+	}
+	return &LiftedShare[E, FE]{
+		id: s.id,
+		v:  s.v.Op(other.v),
+	}
+}
+
+func (s *LiftedShare[E, FE]) ScalarOp(scalar algebra.Numeric) *LiftedShare[E, FE] {
+	return &LiftedShare[E, FE]{
+		id: s.id,
+		v:  algebrautils.ScalarMul(s.v, scalar),
+	}
 }
 
 // ToAdditive converts this lifted share to an additive share by exponentiating
