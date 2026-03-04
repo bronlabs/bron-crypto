@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -428,6 +429,15 @@ type Signature[
 	pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]
 }
 
+type signatureDTO[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	V   Sig                                            `cbor:"v"`
+	Pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S] `cbor:"pop"`
+}
+
 // Value returns the underlying curve point of the signature.
 func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Value() Sig {
 	return sig.v
@@ -498,6 +508,32 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
 	return sig.v.HashCode()
 }
 
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) MarshalCBOR() ([]byte, error) {
+	dto := &signatureDTO[Sig, SigFE, PK, PKFE, E, S]{
+		V:   sig.v,
+		Pop: sig.pop,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal signature to CBOR")
+	}
+	return data, nil
+}
+
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*signatureDTO[Sig, SigFE, PK, PKFE, E, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal signature from CBOR")
+	}
+	sig2, err := NewSignature(dto.V, dto.Pop)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not create signature from deserialized data")
+	}
+
+	*sig = *sig2
+	return nil
+}
+
 // NewProofOfPossession creates a ProofOfPossession from an elliptic curve point.
 // A proof of possession is a signature on the public key itself, demonstrating that
 // the signer knows the corresponding secret key.
@@ -517,12 +553,8 @@ func NewProofOfPossession[
 	if !v.IsTorsionFree() {
 		return nil, ErrInvalidArgument.WithMessage("cannot create proof of possession from signature with torsion point")
 	}
-	sig, err := NewSignature(v, nil)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create proof of possession from signature")
-	}
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
-		Signature: *sig,
+		v: v,
 	}, nil
 }
 
@@ -563,7 +595,15 @@ type ProofOfPossession[
 	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
-	Signature[Sig, SigFE, PK, PKFE, E, S]
+	v Sig
+}
+
+type proofOfPossessionDTO[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	V Sig `cbor:"v"`
 }
 
 // Bytes returns the compressed serialisation of the proof of possession.
@@ -571,12 +611,12 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
 	if pop == nil {
 		return nil
 	}
-	return pop.Signature.Bytes()
+	return pop.v.Bytes()
 }
 
 // Value returns the underlying curve point of the proof.
 func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Value() Sig {
-	return pop.Signature.Value()
+	return pop.v
 }
 
 // Equal returns true if both proofs represent the same curve point.
@@ -584,7 +624,7 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Equal(other *ProofOfPo
 	if pop == nil || other == nil {
 		return pop == other
 	}
-	return pop.Signature.Equal(&other.Signature)
+	return pop.v.Equal(other.v)
 }
 
 // Clone returns a deep copy of the proof of possession.
@@ -592,7 +632,7 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Clone() *ProofOfPosses
 	if pop == nil {
 		return nil
 	}
-	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{Signature: *pop.Signature.Clone()}
+	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{v: pop.v.Clone()}
 }
 
 // TryAdd aggregates this proof of possession with another by elliptic curve point addition.
@@ -601,18 +641,40 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *ProofOfP
 	if other == nil {
 		return nil, ErrInvalidArgument.WithMessage("cannot add nil proof of possession")
 	}
-	v, err := pop.Signature.TryAdd(&other.Signature)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not add signatures in proof of possession")
-	}
+	v := pop.v.Add(other.v)
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
-		Signature: *v,
+		v: v,
 	}, nil
 }
 
 // HashCode returns a hash of the proof for use in hash-based data structures.
 func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
-	return pop.Signature.HashCode()
+	return pop.v.HashCode()
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) MarshalCBOR() ([]byte, error) {
+	dto := &proofOfPossessionDTO[Sig, SigFE, PK, PKFE, E, S]{
+		V: pop.v,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal proof of possession to CBOR")
+	}
+	return data, nil
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*proofOfPossessionDTO[Sig, SigFE, PK, PKFE, E, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal proof of possession from CBOR")
+	}
+	pop2, err := NewProofOfPossession(dto.V)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not create proof of possession from deserialized data")
+	}
+
+	*pop = *pop2
+	return nil
 }
 
 // AggregateAll combines multiple BLS elements (public keys, signatures, or proofs) into a single
