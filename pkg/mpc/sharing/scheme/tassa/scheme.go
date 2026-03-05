@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/birkhoff"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -131,50 +132,28 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 		return nil, sharing.ErrMembership.WithMessage("invalid quorum")
 	}
 
-	// 2. Order Q increasingly: [i1, ..., in].
-	slices.Sort(quorum)
-
-	//   3. Build an n x n matrix M with entries:
-	//     3.1 Let rank(id) be the threshold of the previous level containing id.
-	//     3.2 Let phi(t, i, j) = (d^j/dx^j x^t) evaluated at x = i.
-	//     3.3 Set M[r, c] = phi(c, ir, rank(ir)).
-	m, err := s.buildMatrix(quorum)
+	field := algebra.StructureMustBeAs[algebra.PrimeField[F]](shares[0].Value().Structure())
+	var xs []F
+	var js []uint64
+	var ys []F
+	for _, id := range quorum {
+		xs = append(xs, field.FromUint64(uint64(id)))
+		j, ok := s.rank(id)
+		if !ok {
+			return nil, sharing.ErrFailed.WithMessage("invalid shareholder ID %d", id)
+		}
+		js = append(js, uint64(j))
+		ys = append(ys, sharesMap[id].value)
+	}
+	poly, err := birkhoff.Interpolate(xs, js, ys)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not build matrix")
+		return nil, errs.Wrap(err).WithMessage("could not interpolate polynomial")
 	}
-
-	// 4. Compute d <- det(M); require d != 0.
-	d := m.Determinant()
-	if d.IsZero() {
-		return nil, sharing.ErrMembership.WithMessage("unqualified set")
+	if poly.Degree() != s.accessStructure.Levels()[len(s.accessStructure.Levels())-1].Threshold()-1 {
+		return nil, sharing.ErrMembership.WithMessage("reconstruction failed")
 	}
-
-	// 5. Set Y <- column vector [shares[i1], ..., shares[in]].
-	shareValues := make([]F, len(quorum))
-	for i, id := range quorum {
-		shareValues[i] = sharesMap[id].value
-	}
-
-	// 6. Set M0 <- M with the first column replaced by Y.
-	m0, err := m.SetColumn(0, shareValues)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not set column")
-	}
-
-	// 7. Compute d0 <- det(M0).
-	d0 := m0.Determinant()
-
-	// 8. Set s <- d0 / d.
-	secretValue, err := d0.TryDiv(d)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not divide determinants during reconstruction")
-	}
-	secret = &Secret[F]{
-		value: secretValue,
-	}
-
-	// 9. Return s.
-	return secret, nil
+	secretValue := poly.Coefficients()[0]
+	return NewSecret(secretValue), nil
 }
 
 // AccessStructure returns the hierarchical access policy used by the scheme.
@@ -272,6 +251,7 @@ func (s *Scheme[F]) ConvertShareToAdditive(share *Share[F], quorum *accessstruct
 
 	sortedQuorum := quorum.Shareholders().List()
 	slices.Sort(sortedQuorum)
+
 	m, err := s.buildMatrix(sortedQuorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not build matrix")
@@ -307,51 +287,21 @@ func (s *Scheme[F]) ConvertShareToAdditive(share *Share[F], quorum *accessstruct
 }
 
 func (s *Scheme[F]) buildMatrix(sortedQuorum []sharing.ID) (*mat.SquareMatrix[F], error) {
-	var coeffs []F
-	for _, i := range sortedQuorum {
-		j, ok := s.rank(i)
+	var eyes []F
+	var jays []uint64
+	for _, id := range sortedQuorum {
+		eyes = append(eyes, s.field.FromUint64(uint64(id)))
+		j, ok := s.rank(id)
 		if !ok {
-			return nil, sharing.ErrMembership.WithMessage("share ID %d does not belong to any level", i)
+			return nil, sharing.ErrFailed.WithMessage("invalid shareholder ID %d", id)
 		}
-		for t := range sortedQuorum {
-			phi, err := s.phi(t, i, j)
-			if err != nil {
-				return nil, errs.Wrap(err).WithMessage("could not compute phi(t=%d, i=%d, j=%d)", t, i, j)
-			}
-			coeffs = append(coeffs, phi)
-		}
+		jays = append(jays, uint64(j))
 	}
-	matrices, err := mat.NewMatrixAlgebra(uint(len(sortedQuorum)), s.field)
+	m, err := birkhoff.BuildVandermondeMatrix(eyes, jays)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create matrix algebra")
+		return nil, errs.Wrap(err).WithMessage("could not create birkhoff matrix")
 	}
-	matrix, err := matrices.NewRowMajor(coeffs...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create matrix")
-	}
-	return matrix, nil
-}
-
-func (s *Scheme[F]) phi(t int, i sharing.ID, j int) (F, error) {
-	zero := s.field.Zero()
-	coeffs := make([]F, t+1)
-	for c := 0; c < len(coeffs); c++ {
-		coeffs[c] = s.field.Zero()
-	}
-	coeffs[len(coeffs)-1] = s.field.One()
-	polys, err := polynomials.NewPolynomialRing(s.field)
-	if err != nil {
-		return zero, errs.Wrap(err).WithMessage("could not create polynomial ring")
-	}
-	poly, err := polys.New(coeffs...)
-	if err != nil {
-		return zero, errs.Wrap(err).WithMessage("could not create polynomial")
-	}
-	for range j {
-		poly = poly.Derivative()
-	}
-	fi := s.field.FromUint64(uint64(i))
-	return poly.Eval(fi), nil
+	return m, nil
 }
 
 func (s *Scheme[F]) rank(id sharing.ID) (int, bool) {
