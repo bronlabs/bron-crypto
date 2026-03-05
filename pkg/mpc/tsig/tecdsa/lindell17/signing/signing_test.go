@@ -7,6 +7,7 @@ import (
 	"io"
 	"testing"
 
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -93,18 +94,18 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 		message := []byte("hello world")
 		r1, err := primaryCosigner.Round1()
 		require.NoError(t, err)
-		r2, err := secondaryCosigner.Round2(r1)
+		r2, err := secondaryCosigner.Round2(ntu.CBORRoundTrip(t, r1))
 		require.NoError(t, err)
-		r3, err := primaryCosigner.Round3(r2)
+		r3, err := primaryCosigner.Round3(ntu.CBORRoundTrip(t, r2))
 		require.NoError(t, err)
-		r4, err := secondaryCosigner.Round4(r3, message)
+		r4, err := secondaryCosigner.Round4(ntu.CBORRoundTrip(t, r3), message)
 		require.NoError(t, err)
-		signature, err := primaryCosigner.Round5(r4, message)
+		signature, err := primaryCosigner.Round5(ntu.CBORRoundTrip(t, r4), message)
 		require.NoError(t, err)
 
 		verifier, err := ecdsa.NewVerifier(suite)
 		require.NoError(t, err)
-		err = verifier.Verify(signature, publicKey, message)
+		err = verifier.Verify(ntu.CBORRoundTrip(t, signature), publicKey, message)
 		require.NoError(t, err)
 
 		primaryTapeCheck, err := primaryTape.ExtractBytes("test", 32)

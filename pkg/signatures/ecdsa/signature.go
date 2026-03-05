@@ -5,6 +5,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Signature represents an ECDSA signature consisting of two scalar values (r, s)
@@ -20,6 +22,12 @@ type Signature[S algebra.PrimeFieldElement[S]] struct {
 	v *int
 	r S
 	s S
+}
+
+type signatureDTO[S algebra.PrimeFieldElement[S]] struct {
+	V *int `cbor:"v"`
+	R S    `cbor:"r"`
+	S S    `cbor:"s"`
 }
 
 // NewSignature creates a Signature from r, s values and an optional recovery ID.
@@ -117,4 +125,30 @@ func (sig *Signature[S]) ToElliptic() (r, s *big.Int) {
 	nativeR := sig.r.Cardinal().Big()
 	nativeS := sig.s.Cardinal().Big()
 	return nativeR, nativeS
+}
+
+func (sig *Signature[S]) MarshalCBOR() ([]byte, error) {
+	dto := &signatureDTO[S]{
+		V: sig.v,
+		R: sig.r,
+		S: sig.s,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal ECDSA signature")
+	}
+	return data, nil
+}
+
+func (sig *Signature[S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*signatureDTO[S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal ECDSA signature")
+	}
+	sig2, err := NewSignature(dto.R, dto.S, dto.V)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create ECDSA signature from deserialized data")
+	}
+	*sig = *sig2
+	return nil
 }
