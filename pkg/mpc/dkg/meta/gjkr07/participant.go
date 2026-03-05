@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
@@ -42,11 +43,9 @@ type Participant[
 		base.Transparent[LFTWV]
 	}, LFTWV algebra.ModuleElement[LFTWV, WV],
 ] struct {
-	sid            network.SID
+	ctx            *session.Context
 	ac             AC
-	id             sharing.ID
 	niCompilerName compiler.Name
-	tape           ts.Transcript
 	prng           io.Reader
 	state          *State[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]
 	round          network.Round
@@ -104,23 +103,21 @@ func NewParticipant[
 		base.Transparent[LFTWV]
 	}, LFTWV algebra.ModuleElement[LFTWV, WV],
 ](
-	sid network.SID,
+	ctx *session.Context,
 	group algebra.PrimeGroup[LFTSV, SV],
 	lsss sharing.LiftableLSSS[S, SV, W, WV, DO, AC, DF, LFTS, LFTSV, LFTDF, LFTW, LFTWV],
 	ac AC,
-	myID sharing.ID,
 	niCompilerName compiler.Name,
-	tape ts.Transcript,
 	prng io.Reader,
 ) (*Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV], error) {
+	if ctx == nil {
+		return nil, ErrInvalidArgument.WithMessage("context is nil")
+	}
 	if utils.IsNil(group) {
 		return nil, ErrInvalidArgument.WithMessage("group is nil")
 	}
 	if lsss == nil {
 		return nil, ErrInvalidArgument.WithMessage("liftable LSSS cannot be nil")
-	}
-	if tape == nil {
-		return nil, ErrInvalidArgument.WithMessage("tape is nil")
 	}
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng is nil")
@@ -128,13 +125,16 @@ func NewParticipant[
 	if utils.IsNil(ac) {
 		return nil, ErrInvalidArgument.WithMessage("access structure is nil")
 	}
-	if !ac.Shareholders().Contains(myID) {
+	if !ctx.Quorum().Equal(ac.Shareholders()) {
+		return nil, ErrInvalidArgument.WithMessage("access structure doesn't match context")
+	}
+	if !ac.Shareholders().Contains(ctx.HolderID()) {
 		return nil, ErrInvalidArgument.WithMessage("myID is not a shareholder in the access structure")
 	}
-	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())
-	tape.AppendDomainSeparator(dst)
+	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, ctx.SessionID(), group.Name())
+	ctx.Transcript().AppendDomainSeparator(dst)
 
-	h, err := ts.Extract(tape, secondPedersenGeneratorLabel, group)
+	h, err := ts.Extract(ctx.Transcript(), secondPedersenGeneratorLabel, group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
 	}
@@ -151,11 +151,9 @@ func NewParticipant[
 		return nil, errs.Wrap(err).WithMessage("failed to create feldman VSS scheme")
 	}
 	return &Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]{
-		sid:            sid,
+		ctx:            ctx,
 		ac:             ac,
-		id:             myID,
 		niCompilerName: niCompilerName,
-		tape:           tape,
 		prng:           prng,
 		//nolint:exhaustruct // initially partially empty state
 		state: &State[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]{
@@ -170,7 +168,7 @@ func NewParticipant[
 }
 
 func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) SharingID() sharing.ID {
-	return p.id
+	return p.ctx.HolderID()
 }
 
 func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) AccessStructure() AC {

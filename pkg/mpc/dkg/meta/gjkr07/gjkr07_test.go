@@ -1,7 +1,6 @@
 package gjkr07_test
 
 import (
-	"crypto/sha3"
 	"fmt"
 	"io"
 	"slices"
@@ -19,17 +18,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gjkr07"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gjkr07/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/isn"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/pedersen"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 // ---------------------------------------------------------------------------
@@ -59,7 +57,7 @@ type shamirDKGOutput = gjkr07.DKGOutput[
 ]
 
 func setupShamir(
-	t *testing.T, threshold, total uint, group *k256.Curve, sid network.SID, tape ts.Transcript, prng io.Reader,
+	t *testing.T, threshold, total uint, group *k256.Curve, prng io.Reader,
 ) (
 	ac *accessstructures.Threshold,
 	parties ds.MutableMap[sharing.ID, *shamirParticipant],
@@ -72,25 +70,10 @@ func setupShamir(
 	liftableScheme, err := shamir.NewLiftableScheme(group, ac)
 	require.NoError(t, err)
 
-	if tape == nil {
-		tape = hagrid.NewTranscript("test")
-	}
-	if prng == nil {
-		prng = pcg.New(0, 0)
-	}
-
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 	parties = hashmap.NewComparable[sharing.ID, *shamirParticipant]()
-	for id := range shareholders.Iter() {
-		p, err := gjkr07.NewParticipant(
-			sid,
-			group,
-			liftableScheme,
-			ac,
-			id,
-			fiatshamir.Name,
-			tape.Clone(),
-			prng,
-		)
+	for id, ctx := range ctxs {
+		p, err := gjkr07.NewParticipant(ctx, group, liftableScheme, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -176,7 +159,7 @@ func makeThresholdCNF(threshold, total uint) *accessstructures.CNF {
 }
 
 func setupISN(
-	t *testing.T, cnf *accessstructures.CNF, group *k256.Curve, sid network.SID, tape ts.Transcript, prng io.Reader,
+	t *testing.T, cnf *accessstructures.CNF, group *k256.Curve, prng io.Reader,
 ) (
 	*accessstructures.CNF,
 	ds.MutableMap[sharing.ID, *isnParticipant],
@@ -186,25 +169,10 @@ func setupISN(
 	liftableScheme, err := isn.NewFiniteLiftableScheme(group, cnf)
 	require.NoError(t, err)
 
-	if tape == nil {
-		tape = hagrid.NewTranscript("test")
-	}
-	if prng == nil {
-		prng = pcg.New(0, 0)
-	}
-
+	ctxs := session_testutils.MakeRandomContexts(t, cnf.Shareholders(), prng)
 	parties := hashmap.NewComparable[sharing.ID, *isnParticipant]()
-	for id := range cnf.Shareholders().Iter() {
-		p, err := gjkr07.NewParticipant(
-			sid,
-			group,
-			liftableScheme,
-			cnf,
-			id,
-			fiatshamir.Name,
-			tape.Clone(),
-			prng,
-		)
+	for id, ctx := range ctxs {
+		p, err := gjkr07.NewParticipant(ctx, group, liftableScheme, cnf, fiatshamir.Name, prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -462,9 +430,7 @@ func shamirSuite(threshold, total uint) dkgSuite {
 		run: func(t *testing.T, prng io.Reader) *dkgResult {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-%s", name))))
-			tape := hagrid.NewTranscript(name)
-			ac, parties := setupShamir(t, threshold, total, group, sid, tape, prng)
+			ac, parties := setupShamir(t, threshold, total, group, prng)
 			outputs, err := doShamirDKG(t, parties)
 			require.NoError(t, err)
 			return shamirDKGResult(t, group, ac, outputs)
@@ -472,17 +438,15 @@ func shamirSuite(threshold, total uint) dkgSuite {
 		checkDeterminism: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-determinism-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestDeterminism-%s", name))
 			seed1, seed2 := uint64(42), uint64(1337)
 
 			prng1 := pcg.New(seed1, seed2)
-			_, parties1 := setupShamir(t, threshold, total, group, sid, tape, prng1)
+			_, parties1 := setupShamir(t, threshold, total, group, prng1)
 			outputs1, err := doShamirDKG(t, parties1)
 			require.NoError(t, err)
 
 			prng2 := pcg.New(seed1, seed2)
-			_, parties2 := setupShamir(t, threshold, total, group, sid, tape, prng2)
+			_, parties2 := setupShamir(t, threshold, total, group, prng2)
 			outputs2, err := doShamirDKG(t, parties2)
 			require.NoError(t, err)
 
@@ -496,11 +460,9 @@ func shamirSuite(threshold, total uint) dkgSuite {
 		checkRound1Broadcasts: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-round-messages-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestRoundMessages-%s", name))
 			prng := pcg.NewRandomised()
 
-			_, parties := setupShamir(t, threshold, total, group, sid, tape, prng)
+			_, parties := setupShamir(t, threshold, total, group, prng)
 			r1broadcasts, err := tu.DoRound1(parties.Values())
 			require.NoError(t, err)
 			require.Len(t, r1broadcasts, int(total))
@@ -517,8 +479,6 @@ func shamirSuite(threshold, total uint) dkgSuite {
 		checkValidation: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-validation-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestValidation-%s", name))
 			prng := pcg.NewRandomised()
 
 			shareholders := sharing.NewOrdinalShareholderSet(total)
@@ -527,41 +487,46 @@ func shamirSuite(threshold, total uint) dkgSuite {
 			liftableScheme, err := shamir.NewLiftableScheme(group, ac)
 			require.NoError(t, err)
 
-			newParticipant := func(sid network.SID, grp *k256.Curve, lsss *shamir.LiftableScheme[*k256.Point, *k256.Scalar], ac *accessstructures.Threshold, id sharing.ID, tape ts.Transcript, prng io.Reader) (*shamirParticipant, error) {
-				return gjkr07.NewParticipant(sid, grp, lsss, ac, id, fiatshamir.Name, tape, prng)
+			ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
+			ctx := ctxs[sharing.ID(1)]
+
+			newParticipant := func(ctx *session.Context, grp *k256.Curve, lsss *shamir.LiftableScheme[*k256.Point, *k256.Scalar], ac *accessstructures.Threshold, prng io.Reader) (*shamirParticipant, error) {
+				return gjkr07.NewParticipant(ctx, grp, lsss, ac, fiatshamir.Name, prng)
 			}
 
-			t.Run("participant not in access structure", func(t *testing.T) {
+			t.Run("nil context", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, ac, sharing.ID(10), tape.Clone(), prng)
+				_, err := newParticipant(nil, group, liftableScheme, ac, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil group", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, nil, liftableScheme, ac, sharing.ID(1), tape.Clone(), prng)
-				require.Error(t, err)
-				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
-			})
-
-			t.Run("nil tape", func(t *testing.T) {
-				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, ac, sharing.ID(1), nil, prng)
+				_, err := newParticipant(ctx, nil, liftableScheme, ac, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil prng", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, ac, sharing.ID(1), tape.Clone(), nil)
+				_, err := newParticipant(ctx, group, liftableScheme, ac, nil)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil access structure", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, nil, sharing.ID(1), tape.Clone(), prng)
+				_, err := newParticipant(ctx, group, liftableScheme, nil, prng)
+				require.Error(t, err)
+				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
+			})
+
+			t.Run("access structure mismatch with context", func(t *testing.T) {
+				t.Parallel()
+				mismatch, err := accessstructures.NewThresholdAccessStructure(threshold, hashset.NewComparable[sharing.ID](1, 2, 4).Freeze())
+				require.NoError(t, err)
+				_, err = newParticipant(ctx, group, liftableScheme, mismatch, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
@@ -574,9 +539,10 @@ func shamirSuite(threshold, total uint) dkgSuite {
 				lsss, err := shamir.NewLiftableScheme(group, minAC)
 				require.NoError(t, err)
 
+				minCtxs := session_testutils.MakeRandomContexts(t, minShareholders, prng)
 				parties := hashmap.NewComparable[sharing.ID, *shamirParticipant]()
-				for id := range minShareholders.Iter() {
-					p, err := newParticipant(sid, group, lsss, minAC, id, tape.Clone(), prng)
+				for id, minCtx := range minCtxs {
+					p, err := newParticipant(minCtx, group, lsss, minAC, prng)
 					require.NoError(t, err)
 					parties.Put(id, p)
 				}
@@ -588,11 +554,9 @@ func shamirSuite(threshold, total uint) dkgSuite {
 		checkRoundOrdering: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-round-order-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestRoundOutOfOrder-%s", name))
 			prng := pcg.NewRandomised()
 
-			_, parties := setupShamir(t, threshold, total, group, sid, tape, prng)
+			_, parties := setupShamir(t, threshold, total, group, prng)
 			participant := parties.Values()[0]
 
 			t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
@@ -636,11 +600,9 @@ func shamirSuite(threshold, total uint) dkgSuite {
 		checkMalicious: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-malicious-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestMalicious-%s", name))
 			prng := pcg.NewRandomised()
 
-			_, parties := setupShamir(t, threshold, total, group, sid, tape, prng)
+			_, parties := setupShamir(t, threshold, total, group, prng)
 
 			r1broadcasts, err := tu.DoRound1(parties.Values())
 			require.NoError(t, err)
@@ -734,9 +696,7 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 		run: func(t *testing.T, prng io.Reader) *dkgResult {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-%s", name))))
-			tape := hagrid.NewTranscript(name)
-			cnf, parties := setupISN(t, cnf, group, sid, tape, prng)
+			cnf, parties := setupISN(t, cnf, group, prng)
 			outputs, err := doISNDKG(t, parties)
 			require.NoError(t, err)
 			return isnDKGResult(t, group, cnf, outputs)
@@ -744,17 +704,15 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 		checkDeterminism: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-determinism-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestDeterminism-%s", name))
 			seed1, seed2 := uint64(42), uint64(1337)
 
 			prng1 := pcg.New(seed1, seed2)
-			_, parties1 := setupISN(t, cnf, group, sid, tape, prng1)
+			_, parties1 := setupISN(t, cnf, group, prng1)
 			outputs1, err := doISNDKG(t, parties1)
 			require.NoError(t, err)
 
 			prng2 := pcg.New(seed1, seed2)
-			_, parties2 := setupISN(t, cnf, group, sid, tape, prng2)
+			_, parties2 := setupISN(t, cnf, group, prng2)
 			outputs2, err := doISNDKG(t, parties2)
 			require.NoError(t, err)
 
@@ -768,11 +726,9 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 		checkRound1Broadcasts: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-round-messages-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestRoundMessages-%s", name))
 			prng := pcg.NewRandomised()
 
-			_, parties := setupISN(t, cnf, group, sid, tape, prng)
+			_, parties := setupISN(t, cnf, group, prng)
 			r1broadcasts, err := tu.DoRound1(parties.Values())
 			require.NoError(t, err)
 			require.Len(t, r1broadcasts, totalShareholders)
@@ -789,48 +745,53 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 		checkValidation: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-validation-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestValidation-%s", name))
 			prng := pcg.NewRandomised()
 
 			liftableScheme, err := isn.NewFiniteLiftableScheme(group, cnf)
 			require.NoError(t, err)
 
-			newParticipant := func(sid network.SID, grp *k256.Curve, lsss *isn.LiftableScheme[*k256.Point, *k256.Scalar], ac *accessstructures.CNF, id sharing.ID, tape ts.Transcript, prng io.Reader) (*isnParticipant, error) {
-				return gjkr07.NewParticipant(sid, grp, lsss, ac, id, fiatshamir.Name, tape, prng)
+			ctxs := session_testutils.MakeRandomContexts(t, cnf.Shareholders(), prng)
+			ctx := ctxs[sharing.ID(1)]
+
+			newParticipant := func(ctx *session.Context, grp *k256.Curve, lsss *isn.LiftableScheme[*k256.Point, *k256.Scalar], ac *accessstructures.CNF, prng io.Reader) (*isnParticipant, error) {
+				return gjkr07.NewParticipant(ctx, grp, lsss, ac, fiatshamir.Name, prng)
 			}
 
-			t.Run("participant not in access structure", func(t *testing.T) {
+			t.Run("nil context", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, cnf, sharing.ID(10), tape.Clone(), prng)
+				_, err := newParticipant(nil, group, liftableScheme, cnf, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil group", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, nil, liftableScheme, cnf, sharing.ID(1), tape.Clone(), prng)
-				require.Error(t, err)
-				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
-			})
-
-			t.Run("nil tape", func(t *testing.T) {
-				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, cnf, sharing.ID(1), nil, prng)
+				_, err := newParticipant(ctx, nil, liftableScheme, cnf, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil prng", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, cnf, sharing.ID(1), tape.Clone(), nil)
+				_, err := newParticipant(ctx, group, liftableScheme, cnf, nil)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil access structure", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(sid, group, liftableScheme, nil, sharing.ID(1), tape.Clone(), prng)
+				_, err := newParticipant(ctx, group, liftableScheme, nil, prng)
+				require.Error(t, err)
+				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
+			})
+
+			t.Run("access structure mismatch with context", func(t *testing.T) {
+				t.Parallel()
+				mismatchCNF, err := accessstructures.NewCNFAccessStructure(
+					hashset.NewComparable[sharing.ID](5, 6).Freeze(),
+				)
+				require.NoError(t, err)
+				_, err = newParticipant(ctx, group, liftableScheme, mismatchCNF, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
@@ -838,11 +799,9 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 		checkRoundOrdering: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-round-order-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestRoundOutOfOrder-%s", name))
 			prng := pcg.NewRandomised()
 
-			_, parties := setupISN(t, cnf, group, sid, tape, prng)
+			_, parties := setupISN(t, cnf, group, prng)
 			participant := parties.Values()[0]
 
 			t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
@@ -886,11 +845,9 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 		checkMalicious: func(t *testing.T) {
 			t.Helper()
 			group := k256.NewCurve()
-			sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-malicious-%s", name))))
-			tape := hagrid.NewTranscript(fmt.Sprintf("TestMalicious-%s", name))
 			prng := pcg.NewRandomised()
 
-			_, parties := setupISN(t, cnf, group, sid, tape, prng)
+			_, parties := setupISN(t, cnf, group, prng)
 
 			r1broadcasts, err := tu.DoRound1(parties.Values())
 			require.NoError(t, err)

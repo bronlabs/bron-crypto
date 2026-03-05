@@ -25,7 +25,7 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 		return nil, errs.Wrap(err).WithMessage("failed to deal random and reveal dealer function")
 	}
 	var ok bool
-	p.state.localShare, ok = p.state.localPedersenDealerOutput.Shares().Get(p.id)
+	p.state.localShare, ok = p.state.localPedersenDealerOutput.Shares().Get(p.SharingID())
 	if !ok {
 		return nil, ErrFailed.WithMessage("failed to get my pedersen share")
 	}
@@ -42,7 +42,7 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 	var err error
 	r2uo := hashmap.NewComparable[sharing.ID, *Round2Unicast[S, SV]]()
 	for pid := range p.ac.Shareholders().Iter() {
-		if pid == p.id {
+		if pid == p.SharingID() {
 			continue // skip myself
 		}
 		inB, _ := r2bin.Get(pid)
@@ -77,9 +77,9 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot compile protocol to non interactive")
 	}
-	proverTape := p.tape.Clone()
-	proverTape.AppendBytes(proverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.id)))
-	prover, err := niBatchSchnorr.NewProver(p.sid, proverTape)
+	proverTape := p.ctx.Transcript().Clone()
+	proverTape.AppendBytes(proverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.SharingID())))
+	prover, err := niBatchSchnorr.NewProver(p.ctx.SessionID(), proverTape)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 	}
@@ -116,7 +116,7 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 	summedShareRepr := slices.Collect(p.state.localShare.Secret().Repr())
 	summedFeldmanVerificationVector := p.state.localFeldmanVerificationVector
 	for pid := range p.ac.Shareholders().Iter() {
-		if pid == p.id {
+		if pid == p.SharingID() {
 			continue // skip myself
 		}
 
@@ -135,9 +135,9 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 		}
 
 		// Verify batch dlog proof
-		verifierTape := p.tape.Clone()
+		verifierTape := p.ctx.Transcript().Clone()
 		verifierTape.AppendBytes(proverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
-		verifier, err := niBatchSchnorr.NewVerifier(p.sid, verifierTape)
+		verifier, err := niBatchSchnorr.NewVerifier(p.ctx.SessionID(), verifierTape)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr verifier")
 		}
@@ -156,7 +156,7 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 		}
 		summedFeldmanVerificationVector = summedFeldmanVerificationVector.Op(inB.FeldmanVerificationVector)
 	}
-	outputShare, err := p.state.feldmanVSS.UnderlyingLSSS().NewShareFromRepr(p.id, slices.Values(summedShareRepr))
+	outputShare, err := p.state.feldmanVSS.UnderlyingLSSS().NewShareFromRepr(p.SharingID(), slices.Values(summedShareRepr))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create output feldman share")
 	}
