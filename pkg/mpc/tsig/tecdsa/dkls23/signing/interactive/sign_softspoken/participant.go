@@ -17,8 +17,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
@@ -29,30 +29,25 @@ import (
 )
 
 const (
-	transcriptLabel     = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN-"
-	mulLabel            = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_MUL-"
-	ckLabel             = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_CK-"
-	przsRandomizerLabel = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_PRZS_RANDOMIZER-"
-	otRandomizerLabel   = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_OT_RANDOMIZER-"
+	transcriptLabel   = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN-"
+	mulLabel          = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_MUL-"
+	ckLabel           = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_CK-"
+	otRandomizerLabel = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_OT_RANDOMIZER-"
 )
 
 // Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	suite     *ecdsa.Suite[P, B, S]
-	sessionID network.SID
-	shard     *dkls23.Shard[P, B, S]
-	zeroSeeds przs.Seeds
-	quorum    network.Quorum
-	prng      io.Reader
-	tape      transcripts.Transcript
-	state     CosignerState[P, B, S]
+	ctx   *session.Context
+	suite *ecdsa.Suite[P, B, S]
+	shard *dkls23.Shard[P, B, S]
+	prng  io.Reader
+	state CosignerState[P, B, S]
 }
 
 // CosignerState tracks per-round signing state.
 type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	zeroSampler *przs.Sampler[S]
-	aliceMul    map[sharing.ID]*rvole_softspoken.Alice[P, B, S]
-	bobMul      map[sharing.ID]*rvole_softspoken.Bob[P, B, S]
+	aliceMul map[sharing.ID]*rvole_softspoken.Alice[P, B, S]
+	bobMul   map[sharing.ID]*rvole_softspoken.Bob[P, B, S]
 
 	round          network.Round
 	ck             *hash_comm.Scheme
@@ -68,35 +63,33 @@ type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 }
 
 // NewCosigner returns a new cosigner.
-func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
-	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader) (*Cosigner[P, B, S], error) {
+	if ctx == nil || suite == nil || shard == nil || prng == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
 	if suite.IsDeterministic() {
 		return nil, ErrValidation.WithMessage("suite must be non-deterministic")
 	}
-	if !quorum.Contains(shard.Share().ID()) {
+	if !ctx.Quorum().Contains(shard.Share().ID()) {
 		return nil, ErrValidation.WithMessage("sharing id not part of the quorum")
 	}
-
-	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
-	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("couldn't randomise zero seeds")
+	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
+		return nil, ErrValidation.WithMessage("unqualified quorum")
 	}
-	otSenderSeeds, otReceiverSeeds, err := randomizeOTSeeds(shard.OTSenderSeeds(), shard.OTReceiverSeeds(), tape)
+
+	sid := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
+	otSenderSeeds, otReceiverSeeds, err := randomizeOTSeeds(shard.OTSenderSeeds(), shard.OTReceiverSeeds(), ctx.Transcript())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't randomise OT seeds")
 	}
 
 	//nolint:exhaustruct // lazy initialisation
 	c := &Cosigner[P, B, S]{
-		shard:     shard,
-		zeroSeeds: zeroSeeds,
-		quorum:    quorum,
-		suite:     suite,
-		prng:      prng,
-		tape:      tape,
+		ctx:   ctx,
+		shard: shard,
+		suite: suite,
+		prng:  prng,
 	}
 
 	c.state.aliceMul = make(map[sharing.ID]*rvole_softspoken.Alice[P, B, S])
@@ -110,9 +103,9 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		if !ok {
 			return nil, ErrFailed.WithMessage("couldn't find alice seed")
 		}
-		aliceTape := tape.Clone()
+		aliceTape := ctx.Transcript().Clone()
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(c.sessionID, mulSuite, aliceSeed, prng, aliceTape)
+		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(c.ctx.SessionID(), mulSuite, aliceSeed, prng, aliceTape)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("couldn't initialise Alice")
 		}
@@ -121,9 +114,9 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		if !ok {
 			return nil, ErrFailed.WithMessage("couldn't find bob seed")
 		}
-		bobTape := tape.Clone()
+		bobTape := c.ctx.Transcript().Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
-		c.state.bobMul[id], err = rvole_softspoken.NewBob(c.sessionID, mulSuite, bobSeed, prng, bobTape)
+		c.state.bobMul[id], err = rvole_softspoken.NewBob(c.ctx.SessionID(), mulSuite, bobSeed, prng, bobTape)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("couldn't initialise Bob")
 		}
@@ -135,49 +128,22 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 
 // SharingID returns the participant sharing identifier.
 func (c *Cosigner[P, B, S]) SharingID() sharing.ID {
-	return c.shard.Share().ID()
+	return c.ctx.HolderID()
 }
 
 // Quorum returns the protocol quorum.
 func (c *Cosigner[P, B, S]) Quorum() network.Quorum {
-	return c.quorum
+	return c.ctx.Quorum()
 }
 
 func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
 	return func(yield func(id sharing.ID) bool) {
-		for id := range c.quorum.Iter() {
-			if id == c.shard.Share().ID() {
-				continue
-			}
+		for id := range c.ctx.OtherPartiesOrdered() {
 			if !yield(id) {
 				return
 			}
 		}
 	}
-}
-
-func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.Seeds, error) {
-	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurityBits+7)/8)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot extract randomizer")
-	}
-
-	randomizedSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
-	for id, seed := range seeds.Iter() {
-		hasher, err := blake2b.New(przs.SeedLength, randomizerKey)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot create hasher")
-		}
-		_, err = hasher.Write(seed[:])
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot hash seed")
-		}
-		randomizedSeedBytes := hasher.Sum(nil)
-		var randomizedSeed [przs.SeedLength]byte
-		copy(randomizedSeed[:], randomizedSeedBytes)
-		randomizedSeeds.Put(id, randomizedSeed)
-	}
-	return randomizedSeeds.Freeze(), nil
 }
 
 func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput], tape transcripts.Transcript) (rss ds.Map[sharing.ID, *vsot.SenderOutput], rrs ds.Map[sharing.ID, *vsot.ReceiverOutput], err error) {

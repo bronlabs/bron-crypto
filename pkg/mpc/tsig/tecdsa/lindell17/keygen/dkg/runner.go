@@ -5,13 +5,13 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -31,15 +31,14 @@ type dkgRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 
 // NewRunner constructs a network runner that drives all Lindell17 DKG rounds.
 func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
-	sid network.SID,
+	ctx *session.Context,
 	shard *tecdsa.Shard[P, B, S],
 	paillierKeyLen int,
 	curve ecdsa.Curve[P, B, S],
 	prng io.Reader,
 	nic compiler.Name,
-	tape transcripts.Transcript,
 ) (network.Runner[*lindell17.Shard[P, B, S]], error) {
-	participant, err := NewParticipant(sid, shard, paillierKeyLen, curve, prng, nic, tape)
+	participant, err := NewParticipant(ctx, shard, paillierKeyLen, curve, prng, nic)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}

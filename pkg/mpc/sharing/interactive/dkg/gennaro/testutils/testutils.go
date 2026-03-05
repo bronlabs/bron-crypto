@@ -1,29 +1,28 @@
 package testutils
 
 import (
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/errs"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/stretchr/testify/require"
 )
 
-func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionID network.SID, accessStructure *accessstructures.Threshold, niCompiler compiler.Name, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, ctxs map[sharing.ID]*session.Context, accessStructure *accessstructures.Threshold, niCompiler compiler.Name, group algebra.PrimeGroup[G, S]) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
 	tb.Helper()
 
 	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])
 	for id := range accessStructure.Shareholders().Iter() {
-		runner, err := gennaro.NewGennaroDKGRunner(group, sessionID, id, accessStructure, niCompiler, tapes[id], pcg.NewRandomised())
+		runner, err := gennaro.NewGennaroDKGRunner(ctxs[id], group, accessStructure, niCompiler, pcg.NewRandomised())
 		require.NoError(tb, err)
 		runners[id] = runner
 	}
@@ -31,87 +30,46 @@ func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	return runners
 }
 
-func DoGennaroRound1[
-	E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
-](
-	participants []*gennaro.Participant[E, S],
-) (
-	r1bo map[sharing.ID]*gennaro.Round1Broadcast[E, S], err error,
-) {
-	r1bo = make(map[sharing.ID]*gennaro.Round1Broadcast[E, S], len(participants))
-	for _, pi := range participants {
-		r1bo[pi.SharingID()], err = pi.Round1()
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("%d could not run Gennaro round 1", pi.SharingID())
-		}
+func DoGennaroRound1[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S]) map[sharing.ID]*gennaro.Round1Broadcast[E, S] {
+	tb.Helper()
+	r1bo := make(map[sharing.ID]*gennaro.Round1Broadcast[E, S])
+	for id, p := range participants {
+		var err error
+		r1bo[id], err = p.Round1()
+		require.NoError(tb, err)
 	}
-
-	return r1bo, nil
+	return r1bo
 }
 
-func DoGennaroRound2[
-	E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
-](
-	participants []*gennaro.Participant[E, S], r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[E, S]],
-) (
-	r2bo map[sharing.ID]*gennaro.Round2Broadcast[E, S], r2uo map[sharing.ID]network.RoundMessages[*gennaro.Round2Unicast[E, S]], err error,
-) {
+func DoGennaroRound2[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[E, S]]) (r2bo map[sharing.ID]*gennaro.Round2Broadcast[E, S], r2uo map[sharing.ID]network.RoundMessages[*gennaro.Round2Unicast[E, S]]) {
+	tb.Helper()
 	r2bo = make(map[sharing.ID]*gennaro.Round2Broadcast[E, S], len(participants))
 	r2uo = make(map[sharing.ID]network.RoundMessages[*gennaro.Round2Unicast[E, S]], len(participants))
-	for _, pi := range participants {
-		r2bo[pi.SharingID()], r2uo[pi.SharingID()], err = pi.Round2(r2bi[pi.SharingID()])
-		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("%d could not run Gennaro round 2", pi.SharingID())
-		}
+	for id, p := range participants {
+		var err error
+		r2bo[id], r2uo[id], err = p.Round2(r2bi[id])
+		require.NoError(tb, err)
 	}
-	return r2bo, r2uo, nil
+	return r2bo, r2uo
 }
 
-func DoGennaroRound3[
-	E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
-](
-	participants []*gennaro.Participant[E, S], r3bi map[sharing.ID]network.RoundMessages[*gennaro.Round2Broadcast[E, S]], r3ui map[sharing.ID]network.RoundMessages[*gennaro.Round2Unicast[E, S]],
-) (
-	dkgOutput ds.MutableMap[sharing.ID, *gennaro.DKGOutput[E, S]], err error,
-) {
-	dkgOutput = hashmap.NewComparable[sharing.ID, *gennaro.DKGOutput[E, S]]()
-	for _, pi := range participants {
-		v, err := pi.Round3(r3bi[pi.SharingID()], r3ui[pi.SharingID()])
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("%d could not run Gennaro round 3", pi.SharingID())
-		}
-		dkgOutput.Put(pi.SharingID(), v)
-	}
-	return dkgOutput, nil
-}
-
-func DoGennaroDKG[
-	E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
-](
-	tb testing.TB, participants []*gennaro.Participant[E, S],
-) (
-	dkgOutput ds.MutableMap[sharing.ID, *gennaro.DKGOutput[E, S]], err error,
-) {
+func DoGennaroRound3[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r3bi map[sharing.ID]network.RoundMessages[*gennaro.Round2Broadcast[E, S]], r3ui map[sharing.ID]network.RoundMessages[*gennaro.Round2Unicast[E, S]]) map[sharing.ID]*gennaro.DKGOutput[E, S] {
 	tb.Helper()
-	r1bo, err := DoGennaroRound1(participants)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not run Gennaro round 1")
+	dkgOutput := make(map[sharing.ID]*gennaro.DKGOutput[E, S])
+	for id, p := range participants {
+		v, err := p.Round3(r3bi[id], r3ui[id])
+		require.NoError(tb, err)
+		dkgOutput[id] = v
 	}
+	return dkgOutput
+}
 
-	r2bi := ntu.MapBroadcastO2I(tb, participants, r1bo)
-
-	r2bo, r2uo, err := DoGennaroRound2(participants, r2bi)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not run Gennaro round 2")
-	}
-
-	r3bi := ntu.MapBroadcastO2I(tb, participants, r2bo)
-	r3ui := ntu.MapUnicastO2I(tb, participants, r2uo)
-
-	dkgOutput, err = DoGennaroRound3(participants, r3bi, r3ui)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not run Gennaro round 3")
-	}
-
-	return dkgOutput, nil
+func DoGennaroDKG[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S]) map[sharing.ID]*gennaro.DKGOutput[E, S] {
+	tb.Helper()
+	r1bo := DoGennaroRound1(tb, participants)
+	r2bi := ntu.MapBroadcastO2I(tb, slices.Collect(maps.Values(participants)), r1bo)
+	r2bo, r2uo := DoGennaroRound2(tb, participants, r2bi)
+	r3bi, r3ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r2bo, r2uo)
+	dkgOutput := DoGennaroRound3(tb, participants, r3bi, r3ui)
+	return dkgOutput
 }

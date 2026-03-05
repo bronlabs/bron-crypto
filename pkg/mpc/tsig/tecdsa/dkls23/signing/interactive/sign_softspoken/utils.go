@@ -21,11 +21,7 @@ func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldEleme
 	}
 
 	return func(yield func(p sharing.ID, m message[MB, MU]) bool) {
-		for id := range c.quorum.Iter() {
-			if id == c.shard.Share().ID() {
-				continue
-			}
-
+		for id := range c.ctx.OtherPartiesOrdered() {
 			b, ok := bIn.Get(id)
 			if !ok {
 				panic("this should never happen: missing broadcast message")
@@ -48,11 +44,7 @@ type messagePointerConstraint[MP network.Message, M any] interface {
 
 func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](c *Cosigner[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
 	return func(yield func(p sharing.ID, out UPtr) bool) {
-		for id := range c.quorum.Iter() {
-			if id == c.shard.Share().ID() {
-				continue
-			}
-
+		for id := range c.ctx.OtherPartiesOrdered() {
 			u := new(U)
 			if !yield(id, UPtr(u)) {
 				return

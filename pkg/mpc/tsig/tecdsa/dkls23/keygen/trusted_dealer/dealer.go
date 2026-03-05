@@ -7,16 +7,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -36,25 +35,6 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 		return nil, nil, errs.Wrap(err).WithMessage("could not deal shares")
 	}
 	public := curve.ScalarBaseMul(secret.Value())
-
-	// create zero sharing seeds
-	zeroSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, [przs.SeedLength]byte])
-	for id := range feldmanOutput.Shares().Iter() {
-		zeroSeeds[id] = hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
-	}
-	for me := range feldmanOutput.Shares().Iter() {
-		for they := range feldmanOutput.Shares().Iter() {
-			if me >= they {
-				continue
-			}
-			var seed [przs.SeedLength]byte
-			if _, err = io.ReadFull(prng, seed[:]); err != nil {
-				return nil, nil, errs.Wrap(err).WithMessage("cannot sample seed")
-			}
-			zeroSeeds[me].Put(they, seed)
-			zeroSeeds[they].Put(me, seed)
-		}
-	}
 
 	// create OT seeds
 	senderSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, *vsot.SenderOutput])
@@ -114,7 +94,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot create tECDSA DKLSS23 shard")
 		}
-		auxInfo, err := dkls23.NewAuxiliaryInfo(zeroSeeds[id].Freeze(), senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
+		auxInfo, err := dkls23.NewAuxiliaryInfo(senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot create auxiliary info")
 		}

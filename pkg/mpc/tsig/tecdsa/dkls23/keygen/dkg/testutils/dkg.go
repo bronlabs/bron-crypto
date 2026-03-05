@@ -2,8 +2,6 @@ package testutils
 
 import (
 	"bytes"
-	"encoding/hex"
-	"io"
 	"maps"
 	"slices"
 	"testing"
@@ -13,103 +11,91 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/maputils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
-	gennaroTU "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro/testutils"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
+	gennaroTU "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23/keygen/dkg"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/stretchr/testify/require"
 )
 
 func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *accessstructures.Threshold) map[sharing.ID]*dkls23.Shard[P, B, S] {
 	tb.Helper()
 
+	var err error
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(tb, err)
-
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
-	tapesMap := make(map[sharing.ID]transcripts.Transcript)
-
-	ids := slices.Collect(accessStructure.Shareholders().Iter())
-	gennaroDkgParticipants := make([]*gennaro.Participant[P, S], accessStructure.Shareholders().Size())
-	for i, id := range ids {
-		tapesMap[id] = tape.Clone()
-		gennaroDkgParticipants[i], err = gennaro.NewParticipant(sessionID, curve, id, accessStructure, fiatshamir.Name, tapesMap[id], prng)
+	ctxs := session_testutils.MakeRandomContexts(tb, accessStructure.Shareholders(), prng)
+	gennaroDkgParticipants := make(map[sharing.ID]*gennaro.Participant[P, S])
+	for id, ctx := range ctxs {
+		p, err := gennaro.NewParticipant(ctx, curve, accessStructure, fiatshamir.Name, prng)
 		require.NoError(tb, err)
+		gennaroDkgParticipants[id] = p
 	}
-	dkgOutputs, err := gennaroTU.DoGennaroDKG(tb, gennaroDkgParticipants)
-	require.NoError(tb, err)
+	dkgOutputs := gennaroTU.DoGennaroDKG(tb, gennaroDkgParticipants)
 
-	dkgParticipantsMap := make(map[sharing.ID]*dkg.Participant[P, B, S])
-	for id := range accessStructure.Shareholders().Iter() {
-		dkgOutput, ok := dkgOutputs.Get(id)
-		require.True(tb, ok)
+	dkgParticipants := make(map[sharing.ID]*dkg.Participant[P, B, S])
+	for id, dkgOutput := range dkgOutputs {
 		ecdsaShard, err := tecdsa.NewShard(dkgOutput.Share(), dkgOutput.VerificationVector(), accessStructure)
 		require.NoError(tb, err)
 
-		dkgParticipantsMap[id], err = dkg.NewParticipant(sessionID, id, ecdsaShard, tapesMap[id], prng)
+		dkgParticipants[id], err = dkg.NewParticipant(ctxs[id], ecdsaShard, prng)
 		require.NoError(tb, err)
 	}
-	dkgParticipants := slices.Collect(maps.Values(dkgParticipantsMap))
 
-	r1bo := make(map[sharing.ID]*dkg.Round1Broadcast[P, B, S])
 	r1uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round1P2P[P, B, S]])
-	for _, party := range dkgParticipants {
-		r1bo[party.SharingID()], r1uo[party.SharingID()], err = party.Round1()
+	for id, party := range dkgParticipants {
+		r1uo[id], err = party.Round1()
 		require.NoError(tb, err)
 	}
 
-	r2bi, r2ui := ntu.MapO2I(tb, dkgParticipants, r1bo, r1uo)
+	r2ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r1uo)
 	r2uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round2P2P[P, B, S]])
-	for _, party := range dkgParticipants {
-		r2uo[party.SharingID()], err = party.Round2(r2bi[party.SharingID()], r2ui[party.SharingID()])
+	for id, party := range dkgParticipants {
+		r2uo[id], err = party.Round2(r2ui[id])
 		require.NoError(tb, err)
 	}
 
-	r3ui := ntu.MapUnicastO2I(tb, dkgParticipants, r2uo)
+	r3ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r2uo)
 	r3uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round3P2P])
-	for _, party := range dkgParticipants {
-		r3uo[party.SharingID()], err = party.Round3(r3ui[party.SharingID()])
+	for id, party := range dkgParticipants {
+		r3uo[id], err = party.Round3(r3ui[id])
 		require.NoError(tb, err)
 	}
 
-	r4ui := ntu.MapUnicastO2I(tb, dkgParticipants, r3uo)
+	r4ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r3uo)
 	r4uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round4P2P])
-	for _, party := range dkgParticipants {
-		r4uo[party.SharingID()], err = party.Round4(r4ui[party.SharingID()])
+	for id, party := range dkgParticipants {
+		r4uo[id], err = party.Round4(r4ui[id])
 		require.NoError(tb, err)
 	}
 
-	r5ui := ntu.MapUnicastO2I(tb, dkgParticipants, r4uo)
+	r5ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r4uo)
 	r5uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round5P2P])
-	for _, party := range dkgParticipants {
-		r5uo[party.SharingID()], err = party.Round5(r5ui[party.SharingID()])
+	for id, party := range dkgParticipants {
+		r5uo[id], err = party.Round5(r5ui[id])
 		require.NoError(tb, err)
 	}
 
-	r6ui := ntu.MapUnicastO2I(tb, dkgParticipants, r5uo)
+	r6ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r5uo)
 	shards := make(map[sharing.ID]*dkls23.Shard[P, B, S])
-	for _, party := range dkgParticipants {
-		shards[party.SharingID()], err = party.Round6(r6ui[party.SharingID()])
+	for id, party := range dkgParticipants {
+		shards[id], err = party.Round6(r6ui[id])
 		require.NoError(tb, err)
 	}
 
 	// transcripts match
 	transcriptsBytes := make(map[sharing.ID][]byte)
-	for id, tape := range tapesMap {
+	for id, ctx := range ctxs {
 		var err error
-		transcriptsBytes[id], err = tape.ExtractBytes("test", 32)
+		transcriptsBytes[id], err = ctx.Transcript().ExtractBytes("test", 32)
 		require.NoError(tb, err)
 	}
 	transcriptBytesSlice := slices.Collect(maps.Values(transcriptsBytes))

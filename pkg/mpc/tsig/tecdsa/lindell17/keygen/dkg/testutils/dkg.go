@@ -1,30 +1,28 @@
 package testutils
 
 import (
-	"encoding/hex"
-	"io"
 	"maps"
 	"slices"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/maputils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/dkg"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
 const paillierKeyLen = 1024
@@ -39,11 +37,6 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	tb.Helper()
 
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(tb, err)
-
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
 
 	// Create initial shards from Feldman DKG (or use a dealer)
 	feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure)
@@ -61,16 +54,16 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Create DKG participants
+	ctxs := session_testutils.MakeRandomContexts(tb, accessStructure.Shareholders(), prng)
 	participants := make(map[sharing.ID]*dkg.Participant[P, B, S])
 	for id, shard := range baseShards {
 		participants[id], err = dkg.NewParticipant(
-			sessionID,
+			ctxs[id],
 			shard,
 			paillierKeyLen,
 			curve,
 			prng,
 			fiatshamir.Name,
-			tape.Clone(),
 		)
 		require.NoError(tb, err)
 	}

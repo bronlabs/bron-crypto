@@ -9,7 +9,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/errs-go/errs"
@@ -17,20 +16,13 @@ import (
 
 // AuxiliaryInfo holds auxiliary key material.
 type AuxiliaryInfo struct {
-	zeroSeeds       przs.Seeds
 	otSenderSeeds   ds.Map[sharing.ID, *vsot.SenderOutput]
 	otReceiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput]
 }
 
 type auxiliaryInfoDTO struct {
-	ZeroSeeds       map[sharing.ID][przs.SeedLength]byte `cbor:"zeroSeeds"`
-	OTSenderSeeds   map[sharing.ID]*vsot.SenderOutput    `cbor:"otSenderSeeds"`
-	OTReceiverSeeds map[sharing.ID]*vsot.ReceiverOutput  `cbor:"otReceiverSeeds"`
-}
-
-// ZeroSeeds returns the zero-setup seeds.
-func (a *AuxiliaryInfo) ZeroSeeds() przs.Seeds {
-	return a.zeroSeeds
+	OTSenderSeeds   map[sharing.ID]*vsot.SenderOutput   `cbor:"otSenderSeeds"`
+	OTReceiverSeeds map[sharing.ID]*vsot.ReceiverOutput `cbor:"otReceiverSeeds"`
 }
 
 // OTSenderSeeds returns the OT sender seeds.
@@ -45,18 +37,6 @@ func (a *AuxiliaryInfo) OTReceiverSeeds() ds.Map[sharing.ID, *vsot.ReceiverOutpu
 
 // Equal reports whether the value equals other.
 func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
-	if a.zeroSeeds.Size() != rhs.zeroSeeds.Size() {
-		return false
-	}
-	for id, l := range a.zeroSeeds.Iter() {
-		r, ok := rhs.zeroSeeds.Get(id)
-		if !ok {
-			return false
-		}
-		if l != r {
-			return false
-		}
-	}
 	if a.otSenderSeeds.Size() != rhs.otSenderSeeds.Size() {
 		return false
 	}
@@ -87,10 +67,6 @@ func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
 
 // MarshalCBOR implements cbor.Marshaler.
 func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
-	zeroSeeds := make(map[sharing.ID][przs.SeedLength]byte)
-	for id, seed := range a.zeroSeeds.Iter() {
-		zeroSeeds[id] = seed
-	}
 	otSenderSeeds := make(map[sharing.ID]*vsot.SenderOutput)
 	for id, seed := range a.otSenderSeeds.Iter() {
 		otSenderSeeds[id] = seed
@@ -100,7 +76,6 @@ func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 		otReceiverSeeds[id] = seed
 	}
 	dto := &auxiliaryInfoDTO{
-		ZeroSeeds:       zeroSeeds,
 		OTSenderSeeds:   otSenderSeeds,
 		OTReceiverSeeds: otReceiverSeeds,
 	}
@@ -117,19 +92,17 @@ func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
-	a.zeroSeeds = hashmap.NewImmutableComparableFromNativeLike(dto.ZeroSeeds)
 	a.otSenderSeeds = hashmap.NewImmutableComparableFromNativeLike(dto.OTSenderSeeds)
 	a.otReceiverSeeds = hashmap.NewImmutableComparableFromNativeLike(dto.OTReceiverSeeds)
 	return nil
 }
 
 // NewAuxiliaryInfo returns a new auxiliary info instance.
-func NewAuxiliaryInfo(zeroSeeds przs.Seeds, otSenderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], otReceiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput]) (*AuxiliaryInfo, error) {
-	if zeroSeeds == nil || otSenderSeeds == nil || otReceiverSeeds == nil {
+func NewAuxiliaryInfo(otSenderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], otReceiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput]) (*AuxiliaryInfo, error) {
+	if otSenderSeeds == nil || otReceiverSeeds == nil {
 		return nil, ErrNil.WithMessage("cannot create AuxiliaryInfo with nil fields")
 	}
 	return &AuxiliaryInfo{
-		zeroSeeds:       zeroSeeds,
 		otSenderSeeds:   otSenderSeeds,
 		otReceiverSeeds: otReceiverSeeds,
 	}, nil

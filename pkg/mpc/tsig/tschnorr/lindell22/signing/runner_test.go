@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
@@ -19,73 +20,53 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func TestRunnerHappyPath_BIP340(t *testing.T) {
 	t.Parallel()
 
-	const (
-		threshold = uint(2)
-		total     = uint(3)
-	)
+	const threshold = 2
+	const total = 3
 
 	prng := pcg.NewRandomised()
 	group := k256.NewCurve()
-	sid := ntu.MakeRandomSessionID(t, prng)
-	dkgTape := hagrid.NewTranscript("TestLindell22SigningRunnerDKG")
-
+	shareholders := sharing.NewOrdinalShareholderSet(total)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 	scheme, err := bip340.NewScheme(prng)
 	require.NoError(t, err)
 
-	shareholders := sharing.NewOrdinalShareholderSet(total)
 	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
 	for id := range shareholders.Iter() {
-		party, err := gennaro.NewParticipant(sid, group, id, accessStructure, fiatshamir.Name, dkgTape.Clone(), pcg.NewRandomised())
+		party, err := gennaro.NewParticipant(ctxs[id], group, accessStructure, fiatshamir.Name, pcg.NewRandomised())
 		require.NoError(t, err)
-		parties = append(parties, party)
+		parties[id] = party
 	}
 
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
-	require.Equal(t, int(total), shards.Size())
+	shards := ltu.DoLindell22DKG(t, parties)
+	require.Len(t, shards, total)
 
-	signingSID := ntu.MakeRandomSessionID(t, prng)
-	quorum := shareholders
+	signingCtxs := ctxs
 	message := []byte("Hello from Lindell22 runner")
 	variant := scheme.Variant()
 
-	tapes := make(map[sharing.ID]transcripts.Transcript, total)
 	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]], total)
-	for id := range quorum.Iter() {
-		shard, ok := shards.Get(id)
+	for id, ctx := range signingCtxs {
+		shard, ok := shards[id]
 		require.True(t, ok)
 
-		tapes[id] = hagrid.NewTranscript("TestLindell22SigningRunner")
-		runner, err := signing.NewRunner(
-			signingSID,
-			shard,
-			quorum,
-			group,
-			fiatshamir.Name,
-			variant,
-			message,
-			pcg.NewRandomised(),
-			tapes[id],
-		)
+		runner, err := signing.NewRunner(ctx, shard, fiatshamir.Name, variant, message, pcg.NewRandomised())
 		require.NoError(t, err)
 		runners[id] = runner
 	}
 
 	partialSignatures := ntu.TestExecuteRunners(t, runners)
-	require.Len(t, partialSignatures, int(quorum.Size()))
+	require.Len(t, partialSignatures, total)
 
-	anyID := quorum.List()[0]
-	publicMaterial, ok := shards.Get(anyID)
+	anyID := shareholders.List()[0]
+	publicMaterial, ok := shards[anyID]
 	require.True(t, ok)
 
 	aggregator, err := signing.NewAggregator(publicMaterial.PublicKeyMaterial(), scheme)
@@ -100,13 +81,13 @@ func TestRunnerHappyPath_BIP340(t *testing.T) {
 	err = verifier.Verify(sig, publicMaterial.PublicKey(), message)
 	require.NoError(t, err)
 
-	firstTapeBytes, err := tapes[anyID].ExtractBytes("test", 32)
+	firstTapeBytes, err := ctxs[anyID].Transcript().ExtractBytes("test", 32)
 	require.NoError(t, err)
-	for id := range quorum.Iter() {
+	for id, ctx := range ctxs {
 		if id == anyID {
 			continue
 		}
-		b, err := tapes[id].ExtractBytes("test", 32)
+		b, err := ctx.Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.True(t, slices.Equal(firstTapeBytes, b))
 	}

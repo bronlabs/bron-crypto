@@ -5,13 +5,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/zero/przs/setup"
 )
 
 // Round1Broadcast carries round 1 broadcast messages.
 type Round1Broadcast struct {
-	ZeroSetupR1 *przsSetup.Round1Broadcast `cbor:"zeroSetupR1"`
-
 	BigRCommitment hash_comm.Commitment `cbor:"bigRCommitment"`
 }
 
@@ -28,8 +25,7 @@ type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 
 // Round2P2P carries round 2 peer-to-peer messages.
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ZeroSetupR2 *przsSetup.Round2P2P        `cbor:"zeroSetupR2"`
-	MulR2       *rvole_bbot.Round2P2P[P, S] `cbor:"mulR2"`
+	MulR2 *rvole_bbot.Round2P2P[P, S] `cbor:"mulR2"`
 }
 
 // Round3Broadcast carries round 3 broadcast messages.

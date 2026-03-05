@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
@@ -18,6 +17,7 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/errs-go/errs"
+	"github.com/stretchr/testify/require"
 )
 
 // Type aliases for convenience.
@@ -31,34 +31,31 @@ func DoBoldyrevaDKG[
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
-	tb testing.TB, participants []*gennaro.Participant[PK, S], shortKey bool,
+	tb testing.TB, participants map[sharing.ID]*gennaro.Participant[PK, S], shortKey bool,
 ) (
-	shards ds.MutableMap[sharing.ID, *tbls.Shard[PK, PKFE, SG, SGFE, E, S]], err error,
+	shards map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S],
 ) {
 	tb.Helper()
+	var err error
 
 	// Run Gennaro DKG
-	dkgOutputs, err := gentu.DoGennaroDKG(tb, participants)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to run Gennaro DKG")
-	}
+	dkgOutputs := gentu.DoGennaroDKG(tb, participants)
 
 	// Convert DKG outputs to BLS shards
-	shards = hashmap.NewComparable[sharing.ID, *tbls.Shard[PK, PKFE, SG, SGFE, E, S]]()
-	for id, output := range dkgOutputs.Iter() {
+	shards = make(map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S])
+	for id, output := range dkgOutputs {
 		var shard *tbls.Shard[PK, PKFE, SG, SGFE, E, S]
 		if shortKey {
 			shard, err = keygen.NewShortKeyShard(output)
 		} else {
 			shard, err = keygen.NewLongKeyShard(output)
 		}
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create shard for participant %d", id)
-		}
-		shards.Put(id, shard)
+		require.NoError(tb, err)
+
+		shards[id] = shard
 	}
 
-	return shards, nil
+	return shards
 }
 
 // ProducePartialSignatures produces partial signatures from all cosigners.

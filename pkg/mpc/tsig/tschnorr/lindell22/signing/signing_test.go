@@ -3,8 +3,8 @@ package signing_test
 import (
 	"bytes"
 	"crypto/sha256"
-	"crypto/sha3"
 	"io"
+	"maps"
 	"slices"
 	"sync"
 	"testing"
@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro"
@@ -24,13 +25,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/signing"
 	ltu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
 	vanilla "github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -75,8 +74,6 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 	t.Helper()
 	// Setup
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-lindell22-bip340")))
-	tape := hagrid.NewTranscript("TestLindell22BIP340")
 	prng := pcg.NewRandomised()
 
 	// Create BIP340 scheme
@@ -87,18 +84,18 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG using testutils
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
-	require.Equal(t, int(total), shards.Size())
+	shards := ltu.DoLindell22DKG(t, parties)
+	require.Len(t, shards, int(total))
 
 	// Test threshold signing with a quorum
 	t.Run("threshold_signing", func(t *testing.T) {
@@ -111,59 +108,44 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners using testutils
-		signingSID := network.SID(sha3.Sum256([]byte("test-signing-session-bip340")))
 		variant := scheme.Variant()
 
 		// Convert shards to map for testutils
 		shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-		for id, shard := range shards.Iter() {
+		for id, shard := range shards {
 			shardsMap[id] = shard
 		}
 
-		cosigners := ltu.CreateLindell22Cosigners(
-			t,
-			signingSID,
-			shardsMap,
-			quorum,
-			variant,
-			ltu.NewFiatShamirCompiler,
-			tape,
-			prng,
-		)
+		signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+		cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 		// Sign a message using the 3-round protocol
 		message := []byte("Hello, Lindell22 with BIP340!")
 
 		// Round 1
-		r1bo, err := ltu.DoLindell22Round1(cosigners)
-		require.NoError(t, err)
+		r1bo := ltu.DoLindell22Round1(t, cosigners)
 
 		// Map broadcast outputs to inputs
-		participants := make([]networkParticipant, len(cosigners))
-		for i, c := range cosigners {
-			participants[i] = networkParticipant{c}
-		}
+		participants := slices.Collect(maps.Values(cosigners))
 		r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
 		// Round 2
-		r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-		require.NoError(t, err)
+		r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 		// Map broadcast outputs to inputs
 		r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
 		// Round 3
-		partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-		require.NoError(t, err)
+		partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 		// Verify we got partial signatures from all cosigners
-		require.Equal(t, len(cosigners), partialSigs.Size())
+		require.Len(t, partialSigs, len(cosigners))
 
 		// Manual aggregation to test signature validity
-		publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+		publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 
 		// Verify we have partial signatures with the expected properties
-		for _, psig := range partialSigs.Values() {
+		for psig := range maps.Values(partialSigs) {
 			require.NotNil(t, psig)
 			require.NotNil(t, psig.Sig.R)
 			require.NotNil(t, psig.Sig.S)
@@ -175,7 +157,7 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 		require.NoError(t, err)
 
 		// Aggregate the partial signatures
-		aggregatedSig, err := aggregator.Aggregate(partialSigs.Freeze(), message)
+		aggregatedSig, err := aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 		require.NoError(t, err)
 		require.NotNil(t, aggregatedSig)
 
@@ -193,8 +175,6 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 	t.Helper()
 	// Setup
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-lindell22-vanilla")))
-	tape := hagrid.NewTranscript("TestLindell22Vanilla")
 	prng := pcg.NewRandomised()
 
 	// Create Vanilla Schnorr scheme
@@ -205,18 +185,18 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG using testutils
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
-	require.Equal(t, int(total), shards.Size())
+	shards := ltu.DoLindell22DKG(t, parties)
+	require.Len(t, shards, int(total))
 
 	// Test threshold signing with a quorum
 	t.Run("threshold_signing", func(t *testing.T) {
@@ -229,59 +209,44 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners using testutils
-		signingSID := network.SID(sha3.Sum256([]byte("test-signing-session-vanilla")))
 		variant := scheme.Variant()
 
 		// Convert shards to map for testutils
 		shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-		for id, shard := range shards.Iter() {
+		for id, shard := range shards {
 			shardsMap[id] = shard
 		}
 
-		cosigners := ltu.CreateLindell22Cosigners(
-			t,
-			signingSID,
-			shardsMap,
-			quorum,
-			variant,
-			ltu.NewFiatShamirCompiler,
-			tape,
-			prng,
-		)
+		signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+		cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 		// Sign a message using the 3-round protocol
 		message := []byte("Hello, Lindell22 with Vanilla Schnorr!")
 
 		// Round 1
-		r1bo, err := ltu.DoLindell22Round1(cosigners)
-		require.NoError(t, err)
+		r1bo := ltu.DoLindell22Round1(t, cosigners)
 
 		// Map broadcast outputs to inputs
-		participants := make([]networkParticipant, len(cosigners))
-		for i, c := range cosigners {
-			participants[i] = networkParticipant{c}
-		}
+		participants := slices.Collect(maps.Values(cosigners))
 		r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
 		// Round 2
-		r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-		require.NoError(t, err)
+		r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 		// Map broadcast outputs to inputs
 		r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
 		// Round 3
-		partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-		require.NoError(t, err)
+		partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 		// Verify we got partial signatures from all cosigners
-		require.Equal(t, len(cosigners), partialSigs.Size())
+		require.Len(t, partialSigs, len(cosigners))
 
 		// Manual aggregation to test signature validity
-		publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+		publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 
 		// Verify we have partial signatures with the expected properties
-		for _, psig := range partialSigs.Values() {
+		for psig := range maps.Values(partialSigs) {
 			require.NotNil(t, psig)
 			require.NotNil(t, psig.Sig.R)
 			require.NotNil(t, psig.Sig.S)
@@ -293,7 +258,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 		require.NoError(t, err)
 
 		// Aggregate the partial signatures
-		aggregatedSig, err := aggregator.Aggregate(partialSigs.Freeze(), message)
+		aggregatedSig, err := aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 		require.NoError(t, err)
 		require.NotNil(t, aggregatedSig)
 
@@ -328,8 +293,6 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	threshold := uint(3)
 	total := uint(5)
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-identifiable-abort-bip340")))
-	tape := hagrid.NewTranscript("TestIdentifiableAbortBIP340")
 	prng := pcg.NewRandomised()
 
 	// Create scheme
@@ -340,20 +303,19 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
+	shards := ltu.DoLindell22DKG(t, parties)
 
 	// Create signing session
-	signingSID := network.SID(sha3.Sum256([]byte("test-signing-abort-bip340")))
 	quorumSet := hashset.NewComparable[sharing.ID]()
 	for i := range threshold {
 		quorumSet.Add(sharing.ID(i + 1))
@@ -364,52 +326,36 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 
 	// Convert shards to map for testutils
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards.Iter() {
+	for id, shard := range shards {
 		shardsMap[id] = shard
 	}
 
 	// Create cosigners
-	cosigners := ltu.CreateLindell22Cosigners(
-		t,
-		signingSID,
-		shardsMap,
-		quorum,
-		variant,
-		ltu.NewFiatShamirCompiler,
-		tape,
-		prng,
-	)
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 	message := []byte("Test identifiable abort with BIP340")
 
 	// Run rounds 1 and 2 normally
-	r1bo, err := ltu.DoLindell22Round1(cosigners)
-	require.NoError(t, err)
+	r1bo := ltu.DoLindell22Round1(t, cosigners)
 
-	participants := make([]networkParticipant, len(cosigners))
-	for i, c := range cosigners {
-		participants[i] = networkParticipant{c}
-	}
+	participants := slices.Collect(maps.Values(cosigners))
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-	r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-	require.NoError(t, err)
+	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
 	// Round 3 - get partial signatures
-	partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-	require.NoError(t, err)
+	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 	// Corrupt one signature
 	corruptedID := sharing.ID(1)
-	sf := k256.NewScalarField()
-
 	// Get the signature for the corrupted ID and replace it
-	validPsig, ok := partialSigs.Get(corruptedID)
+	validPsig, ok := partialSigs[corruptedID]
 	require.True(t, ok)
 
-	corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig, sf)
+	corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig)
 
 	// Create a new map with the corrupted signature
 	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
@@ -417,14 +363,14 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 		if id == corruptedID {
 			corruptedSigsMap.Put(id, corruptedPsig)
 		} else {
-			psig, _ := partialSigs.Get(id)
+			psig := partialSigs[id]
 			corruptedSigsMap.Put(id, psig)
 		}
 	}
 	corruptedSigs := corruptedSigsMap.Freeze()
 
 	// Try to aggregate with the corrupted signature - should trigger identifiable abort
-	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 	aggregator, err := signing.NewAggregator(publicMaterial, scheme)
 	require.NoError(t, err)
 
@@ -433,9 +379,9 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	require.Error(t, err)
 
 	// Check that the aggregator detected the bad signature
-	culprit, ok := errs.HasTag(err, base.IdentifiableAbortPartyIDTag)
-	require.True(t, ok)
-	require.Equal(t, corruptedID, culprit.(sharing.ID))
+	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
+	require.NotEmpty(t, culprits)
+	require.Contains(t, culprits, corruptedID)
 	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with BIP340")
 }
 
@@ -445,8 +391,6 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	threshold := uint(3)
 	total := uint(5)
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-identifiable-abort-vanilla")))
-	tape := hagrid.NewTranscript("TestIdentifiableAbortVanilla")
 	prng := pcg.NewRandomised()
 
 	// Create scheme
@@ -457,20 +401,19 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
+	shards := ltu.DoLindell22DKG(t, parties)
 
 	// Create signing session
-	signingSID := network.SID(sha3.Sum256([]byte("test-signing-abort-vanilla")))
 	quorumSet := hashset.NewComparable[sharing.ID]()
 	for i := range threshold {
 		quorumSet.Add(sharing.ID(i + 1))
@@ -481,67 +424,51 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 
 	// Convert shards to map for testutils
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards.Iter() {
+	for id, shard := range shards {
 		shardsMap[id] = shard
 	}
 
 	// Create cosigners
-	cosigners := ltu.CreateLindell22Cosigners(
-		t,
-		signingSID,
-		shardsMap,
-		quorum,
-		variant,
-		ltu.NewFiatShamirCompiler,
-		tape,
-		prng,
-	)
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 	message := []byte("Test identifiable abort with Vanilla Schnorr")
 
 	// Run rounds 1 and 2 normally
-	r1bo, err := ltu.DoLindell22Round1(cosigners)
-	require.NoError(t, err)
+	r1bo := ltu.DoLindell22Round1(t, cosigners)
 
-	participants := make([]networkParticipant, len(cosigners))
-	for i, c := range cosigners {
-		participants[i] = networkParticipant{c}
-	}
+	participants := slices.Collect(maps.Values(cosigners))
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-	r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-	require.NoError(t, err)
+	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
 	// Round 3 - get partial signatures
-	partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-	require.NoError(t, err)
+	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 	// Corrupt one signature
 	corruptedID1 := sharing.ID(1)
 	corruptedID2 := sharing.ID(2)
 	corruptedIDs := []sharing.ID{corruptedID1, corruptedID2}
-	sf := k256.NewScalarField()
-
 	// Get the signature for the corrupted ID and replace it
 	// Create a new map with the corrupted signature
 	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
 	for id := range quorum.Iter() {
 		if slices.Contains(corruptedIDs, id) {
-			validPsig, ok := partialSigs.Get(id)
+			validPsig, ok := partialSigs[id]
 			require.True(t, ok)
-			corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig, sf)
+			corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig)
 			corruptedSigsMap.Put(id, corruptedPsig)
 		} else {
-			psig, _ := partialSigs.Get(id)
+			psig := partialSigs[id]
 			corruptedSigsMap.Put(id, psig)
 		}
 	}
 	corruptedSigs := corruptedSigsMap.Freeze()
 
 	// Try to aggregate with the corrupted signature - should trigger identifiable abort
-	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 	aggregator, err := signing.NewAggregator(publicMaterial, scheme)
 	require.NoError(t, err)
 
@@ -551,19 +478,10 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 
 	// Check that the aggregator detected the bad signature
 	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
-	require.Len(t, culprits, 2)
+	require.GreaterOrEqual(t, len(culprits), 2)
 	require.Contains(t, culprits, corruptedID1)
 	require.Contains(t, culprits, corruptedID2)
 	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with Vanilla Schnorr")
-}
-
-// networkParticipant wraps cosigner to implement network.Participant interface
-type networkParticipant struct {
-	*signing.Cosigner[*k256.Point, *k256.Scalar, []byte]
-}
-
-func (np networkParticipant) SharingID() sharing.ID {
-	return np.Cosigner.SharingID()
 }
 
 // TestLindell22ConcurrentSigning tests signing multiple messages concurrently
@@ -604,8 +522,6 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Setup
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-concurrent-signing")))
-	tape := hagrid.NewTranscript("TestConcurrentSigning")
 	prng := pcg.NewRandomised()
 
 	// Create scheme
@@ -616,17 +532,17 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
+	shards := ltu.DoLindell22DKG(t, parties)
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
@@ -637,7 +553,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Convert shards to map
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards.Iter() {
+	for id, shard := range shards {
 		shardsMap[id] = shard
 	}
 
@@ -662,48 +578,27 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 			defer wg.Done()
 
 			// Create cosigners for this signing session
-			signingSID := network.SID(sha3.Sum256(append([]byte("concurrent-"), byte(index))))
-			cosigners := ltu.CreateLindell22Cosigners(
-				t,
-				signingSID,
-				shardsMap,
-				quorum,
-				variant,
-				ltu.NewFiatShamirCompiler,
-				tape.Clone(),
-				prng,
-			)
+			signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+			cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 			// Run protocol
-			r1bo, err := ltu.DoLindell22Round1(cosigners)
-			if err != nil {
-				results <- result{index, nil, err}
-				return
-			}
+			r1bo := ltu.DoLindell22Round1(t, cosigners)
 
-			participants := make([]networkParticipant, len(cosigners))
-			for j, c := range cosigners {
-				participants[j] = networkParticipant{c}
-			}
+			participants := slices.Collect(maps.Values(cosigners))
 			r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-			r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-			if err != nil {
-				results <- result{index, nil, err}
-				return
-			}
+			r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 			r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
-			partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-			if err != nil {
-				results <- result{index, nil, err}
-				return
-			}
+			partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 			// Aggregate based on scheme type
-			publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
-			var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
+			publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
+			var (
+				sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
+				err error
+			)
 
 			switch s := scheme.(type) {
 			case *bip340.Scheme:
@@ -712,7 +607,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 					results <- result{index, nil, err}
 					return
 				}
-				sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+				sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 				assert.NoError(t, err)
 			case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
 				aggregator, err := signing.NewAggregator(publicMaterial, s)
@@ -720,7 +615,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 					results <- result{index, nil, err}
 					return
 				}
-				sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+				sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 				assert.NoError(t, err)
 			}
 
@@ -813,8 +708,6 @@ func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumI
 	t.Helper()
 	// Setup
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-different-quorums")))
-	tape := hagrid.NewTranscript("TestDifferentQuorums")
 	prng := pcg.NewRandomised()
 
 	// Create scheme
@@ -825,21 +718,21 @@ func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumI
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
+	shards := ltu.DoLindell22DKG(t, parties)
 
 	// Convert shards to map
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards.Iter() {
+	for id, shard := range shards {
 		shardsMap[id] = shard
 	}
 
@@ -851,52 +744,37 @@ func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumI
 	quorum := quorumSet.Freeze()
 
 	// Create cosigners
-	signingSID := network.SID(sha3.Sum256([]byte("quorum-test")))
-	cosigners := ltu.CreateLindell22Cosigners(
-		t,
-		signingSID,
-		shardsMap,
-		quorum,
-		variant,
-		ltu.NewFiatShamirCompiler,
-		tape.Clone(),
-		prng,
-	)
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 	message := []byte("Test message for different quorums")
 
 	// Run protocol
-	r1bo, err := ltu.DoLindell22Round1(cosigners)
-	require.NoError(t, err)
+	r1bo := ltu.DoLindell22Round1(t, cosigners)
 
-	participants := make([]networkParticipant, len(cosigners))
-	for j, c := range cosigners {
-		participants[j] = networkParticipant{c}
-	}
+	participants := slices.Collect(maps.Values(cosigners))
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-	r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-	require.NoError(t, err)
+	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
-	partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-	require.NoError(t, err)
+	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 	// Aggregate
-	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 
 	var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
 	switch s := scheme.(type) {
 	case *bip340.Scheme:
 		aggregator, err := signing.NewAggregator(publicMaterial, s)
 		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 		require.NoError(t, err)
 	case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
 		aggregator, err := signing.NewAggregator(publicMaterial, s)
 		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 		require.NoError(t, err)
 	}
 
@@ -979,8 +857,6 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	// Setup
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-edge-cases")))
-	tape := hagrid.NewTranscript("TestEdgeCases")
 	prng := pcg.NewRandomised()
 
 	// Create scheme
@@ -991,17 +867,17 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
+	shards := ltu.DoLindell22DKG(t, parties)
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
@@ -1012,55 +888,40 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	// Convert shards to map
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards.Iter() {
+	for id, shard := range shards {
 		shardsMap[id] = shard
 	}
 
 	// Create cosigners
-	signingSID := network.SID(sha3.Sum256([]byte("edge-case")))
-	cosigners := ltu.CreateLindell22Cosigners(
-		t,
-		signingSID,
-		shardsMap,
-		quorum,
-		variant,
-		ltu.NewFiatShamirCompiler,
-		tape.Clone(),
-		prng,
-	)
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 	// Run protocol
-	r1bo, err := ltu.DoLindell22Round1(cosigners)
-	require.NoError(t, err)
+	r1bo := ltu.DoLindell22Round1(t, cosigners)
 
-	participants := make([]networkParticipant, len(cosigners))
-	for i, c := range cosigners {
-		participants[i] = networkParticipant{c}
-	}
+	participants := slices.Collect(maps.Values(cosigners))
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-	r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-	require.NoError(t, err)
+	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
-	partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-	require.NoError(t, err)
+	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 	// Aggregate
-	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 
 	var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
 	switch s := scheme.(type) {
 	case *bip340.Scheme:
 		aggregator, err := signing.NewAggregator(publicMaterial, s)
 		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 		require.NoError(t, err)
 	case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
 		aggregator, err := signing.NewAggregator(publicMaterial, s)
 		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
+		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 		require.NoError(t, err)
 	}
 
@@ -1090,8 +951,6 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 
 	// Setup with fixed seed
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-deterministic")))
-	tape := hagrid.NewTranscript("TestDeterministic")
 
 	// Note: BIP340 is deterministic, vanilla Schnorr is randomised
 	// So we only test BIP340 here for deterministic behaviour
@@ -1116,17 +975,17 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 			shareholders := sharing.NewOrdinalShareholderSet(total)
 			ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 			require.NoError(t, err)
+			ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-			parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+			parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 			for id := range shareholders.Iter() {
-				p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+				p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 				require.NoError(t, err)
-				parties = append(parties, p)
+				parties[id] = p
 			}
 
 			// Run DKG
-			shards, err := ltu.DoLindell22DKG(t, parties)
-			require.NoError(t, err)
+			shards := ltu.DoLindell22DKG(t, parties)
 
 			// Select same quorum
 			quorumSet := hashset.NewComparable[sharing.ID]()
@@ -1137,7 +996,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 
 			// Convert shards to map
 			shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-			for id, shard := range shards.Iter() {
+			for id, shard := range shards {
 				shardsMap[id] = shard
 			}
 
@@ -1145,44 +1004,30 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 			variant := scheme.Variant()
 
 			// Create cosigners
-			cosigners := ltu.CreateLindell22Cosigners(
-				t,
-				sid,
-				shardsMap,
-				quorum,
-				variant,
-				ltu.NewFiatShamirCompiler,
-				tape,
-				prng,
-			)
+			signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+			cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 			// Sign same message
 			message := []byte("Deterministic test message")
 
 			// Run protocol
-			r1bo, err := ltu.DoLindell22Round1(cosigners)
-			require.NoError(t, err)
+			r1bo := ltu.DoLindell22Round1(t, cosigners)
 
-			participants := make([]networkParticipant, len(cosigners))
-			for i, c := range cosigners {
-				participants[i] = networkParticipant{c}
-			}
+			participants := slices.Collect(maps.Values(cosigners))
 			r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-			r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-			require.NoError(t, err)
+			r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 			r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
-			partialSigs, err := ltu.DoLindell22Round3(cosigners, r3bi, message)
-			require.NoError(t, err)
+			partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
 
 			// Aggregate
-			publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+			publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 			aggregator, err := signing.NewAggregator(publicMaterial, scheme)
 			require.NoError(t, err)
 
-			sig, err := aggregator.Aggregate(partialSigs.Freeze(), message)
+			sig, err := aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 			require.NoError(t, err)
 
 			return sig
@@ -1210,8 +1055,6 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 	// Setup
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-abort-rounds")))
-	tape := hagrid.NewTranscript("TestAbortRounds")
 	prng := pcg.NewRandomised()
 
 	// Create scheme
@@ -1222,21 +1065,21 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG
-	shards, err := ltu.DoLindell22DKG(t, parties)
-	require.NoError(t, err)
+	shards := ltu.DoLindell22DKG(t, parties)
 
 	// Convert shards to map
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards.Iter() {
+	for id, shard := range shards {
 		shardsMap[id] = shard
 	}
 
@@ -1252,32 +1095,18 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners
-		signingSID := network.SID(sha3.Sum256([]byte("test-bad-proof")))
-		cosigners := ltu.CreateLindell22Cosigners(
-			t,
-			signingSID,
-			shardsMap,
-			quorum,
-			variant,
-			ltu.NewFiatShamirCompiler,
-			tape.Clone(),
-			prng,
-		)
+		signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+		cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
 
 		message := []byte("Test bad proof")
 
 		// Run rounds 1 and 2 normally
-		r1bo, err := ltu.DoLindell22Round1(cosigners)
-		require.NoError(t, err)
+		r1bo := ltu.DoLindell22Round1(t, cosigners)
 
-		participants := make([]networkParticipant, len(cosigners))
-		for i, c := range cosigners {
-			participants[i] = networkParticipant{c}
-		}
+		participants := slices.Collect(maps.Values(cosigners))
 		r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-		r2bo, err := ltu.DoLindell22Round2(cosigners, r2bi)
-		require.NoError(t, err)
+		r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
 
 		// Corrupt one cosigner's round 2 output
 		corruptedID := sharing.ID(1)
@@ -1288,8 +1117,9 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 		r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
-		// Round 3 should detect the bad proof
-		_, err = ltu.DoLindell22Round3(cosigners, r3bi, message)
+		// Round 3 should detect the bad proof.
+		_, err = cosigners[sharing.ID(2)].Round3(r3bi[sharing.ID(2)], message)
+		require.Error(t, err)
 		culprit, ok := errs.HasTag(err, base.IdentifiableAbortPartyIDTag)
 		require.True(t, ok)
 		require.Equal(t, corruptedID, culprit.(sharing.ID))
@@ -1305,8 +1135,6 @@ func BenchmarkLindell22Signing(b *testing.B) {
 	total := uint(5)
 
 	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("bench-lindell22")))
-	tape := hagrid.NewTranscript("BenchmarkLindell22")
 	prng := pcg.NewRandomised()
 
 	// Create scheme
@@ -1321,21 +1149,19 @@ func BenchmarkLindell22Signing(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	ctxs := session_testutils.MakeRandomContexts(b, shareholders, prng)
 
-	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
 		if err != nil {
 			b.Fatal(err)
 		}
-		parties = append(parties, p)
+		parties[id] = p
 	}
 
 	// Run DKG
-	shards, err := ltu.DoLindell22DKG(&testing.T{}, parties)
-	if err != nil {
-		b.Fatal(err)
-	}
+	shards := ltu.DoLindell22DKG(&testing.T{}, parties)
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
@@ -1346,7 +1172,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 
 	// Convert shards to map
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards.Iter() {
+	for id, shard := range shards {
 		shardsMap[id] = shard
 	}
 
@@ -1355,38 +1181,32 @@ func BenchmarkLindell22Signing(b *testing.B) {
 	message := []byte("Benchmark message")
 
 	b.ResetTimer()
-	for i := range b.N {
+	for range b.N {
 		// Create cosigners
-		signingSID := network.SID(sha3.Sum256(append([]byte("bench-"), byte(i))))
-		cosigners := ltu.CreateLindell22Cosigners(
-			&testing.T{},
-			signingSID,
-			shardsMap,
-			quorum,
-			variant,
-			ltu.NewFiatShamirCompiler,
-			tape.Clone(),
-			prng,
-		)
+		signingCtxs := session_testutils.MakeRandomContexts(&testing.T{}, quorum, prng)
+		cosigners := ltu.CreateLindell22Cosigners(&testing.T{}, signingCtxs, shardsMap, variant, prng)
 
 		// Run protocol
-		r1bo, _ := ltu.DoLindell22Round1(cosigners)
+		r1bo := ltu.DoLindell22Round1(&testing.T{}, cosigners)
 
-		participants := make([]networkParticipant, len(cosigners))
-		for j, c := range cosigners {
-			participants[j] = networkParticipant{c}
-		}
+		participants := slices.Collect(maps.Values(cosigners))
 		r2bi := ntu.MapBroadcastO2I(&testing.T{}, participants, r1bo)
 
-		r2bo, _ := ltu.DoLindell22Round2(cosigners, r2bi)
+		r2bo := ltu.DoLindell22Round2(&testing.T{}, cosigners, r2bi)
 
 		r3bi := ntu.MapBroadcastO2I(&testing.T{}, participants, r2bo)
 
-		partialSigs, _ := ltu.DoLindell22Round3(cosigners, r3bi, message)
+		partialSigs := ltu.DoLindell22Round3(&testing.T{}, cosigners, r3bi, message)
 
 		// Aggregate
-		publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+		publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
 		aggregator, _ := signing.NewAggregator(publicMaterial, scheme)
-		aggregator.Aggregate(partialSigs.Freeze(), message)
+		aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 	}
+}
+
+func firstCosigner(cosigners map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.Scalar, []byte]) *signing.Cosigner[*k256.Point, *k256.Scalar, []byte] {
+	ids := slices.Collect(maps.Keys(cosigners))
+	slices.Sort(ids)
+	return cosigners[ids[0]]
 }

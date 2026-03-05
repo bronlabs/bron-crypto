@@ -1,19 +1,19 @@
 package signing
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -23,11 +23,10 @@ const (
 
 // Cosigner holds common state for signing participants.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	ctx   *session.Context
 	round uint
 	// Base participant
 	prng  io.Reader
-	sid   network.SID
-	tape  transcripts.Transcript
 	suite *ecdsa.Suite[P, B, S]
 
 	// Threshold participant
@@ -74,14 +73,15 @@ func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
 	return cosigner.shard.Share().ID()
 }
 
-func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], err error) {
-	err = validateInputs(suite, hisSharingID, myShard, niCompiler, tape, prng)
+func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], err error) {
+	err = validateInputs(suite, hisSharingID, myShard, niCompiler, ctx, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
-	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sessionID, niCompiler, suite.Curve().Name())
-	tape.AppendDomainSeparator(dst)
+	sessionID := ctx.SessionID()
+	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, hex.EncodeToString(sessionID[:]), niCompiler, suite.Curve().Name())
+	ctx.Transcript().AppendDomainSeparator(dst)
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, dst, myShard.PublicKey().Value().ToCompressed())
 	if err != nil {
@@ -102,11 +102,10 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	}
 
 	return &Cosigner[P, B, S]{
+		ctx:              ctx,
 		round:            roundNo,
 		prng:             prng,
 		suite:            suite,
-		sid:              sessionID,
-		tape:             tape,
 		shard:            myShard,
 		commitmentScheme: commitmentScheme,
 		niDlogScheme:     niDlogScheme,
@@ -114,8 +113,8 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 }
 
 // NewPrimaryCosigner constructs a primary cosigner.
-func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
-	cosigner, err := newCosigner(sessionID, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
+func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
+	cosigner, err := newCosigner(ctx, suite, secondarySharingID, myShard, niCompiler, prng, 1)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not construct primary cosigner")
 	}
@@ -129,8 +128,8 @@ func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B],
 }
 
 // NewSecondaryCosigner constructs a secondary cosigner.
-func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
-	cosigner, err := newCosigner(sessionID, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
+func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
+	cosigner, err := newCosigner(ctx, suite, primarySharingID, myShard, niCompiler, prng, 2)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not construct secondary cosigner")
 	}
@@ -144,12 +143,12 @@ func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 	return secondaryCosigner, nil
 }
 
-func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], other sharing.ID, myShard *lindell17.Shard[P, B, S], nic compiler.Name, tape transcripts.Transcript, prng io.Reader) error {
+func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], other sharing.ID, myShard *lindell17.Shard[P, B, S], nic compiler.Name, ctx *session.Context, prng io.Reader) error {
 	if suite == nil {
 		return ErrInvalidArgument.WithMessage("suite is nil")
 	}
-	if tape == nil {
-		return ErrInvalidArgument.WithMessage("tape is nil")
+	if ctx == nil {
+		return ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	if prng == nil {
 		return ErrInvalidArgument.WithMessage("prng is nil")
@@ -166,6 +165,9 @@ func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	}
 	if !myShard.AccessStructure().Shareholders().Contains(other) || !myShard.AccessStructure().Shareholders().Contains(myShard.Share().ID()) {
 		return ErrInvalidArgument.WithMessage("sharing ID %d not in my shard access structure", other)
+	}
+	if !myShard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
+		return ErrInvalidArgument.WithMessage("not authorized quorum")
 	}
 	if !compiler.IsSupported(nic) {
 		return ErrInvalidArgument.WithMessage("unsupported NI compiler: %s", nic)
