@@ -12,7 +12,7 @@ import (
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
@@ -37,7 +37,7 @@ const (
 // Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ctx   *session.Context
-	shard *dkls23.Shard[P, B, S]
+	shard *tecdsa.Shard[P, B, S]
 	suite *ecdsa.Suite[P, B, S]
 	prng  io.Reader
 
@@ -68,7 +68,7 @@ type State[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 }
 
 // NewCosigner returns a new cosigner.
-func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader) (*Cosigner[P, B, S], error) {
 	if ctx == nil || suite == nil || shard == nil || prng == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}

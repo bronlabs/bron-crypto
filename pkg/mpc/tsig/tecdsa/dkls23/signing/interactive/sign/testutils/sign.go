@@ -36,7 +36,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 	for id := range quorum.Iter() {
 		shard, ok := shards[id]
 		require.True(tb, ok)
-		consignersMap[id], err = sign.NewCosigner(contextsMap[id], ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng)
+		consignersMap[id], err = sign.NewCosigner(contextsMap[id], ecdsaSuite, ntu.CBORRoundTrip(tb, shard.Shard), prng)
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(consignersMap))
