@@ -94,18 +94,4 @@ func (s *LiftableScheme[E, FE]) ReconstructInExponent(shares ...*LiftedShare[E, 
 	return &LiftedSecret[E, FE]{
 		v: reconstructed,
 	}, nil
-
-	// lambdas, err := LagrangeCoefficients(s.f, ids...)
-	// if err != nil {
-	// 	return nil, errs.Wrap(err).WithMessage("could not compute Lagrange coefficients")
-	// }
-
-	// group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](shares[0].v.Structure())
-	// result := group.OpIdentity()
-	// for _, share := range shares {
-	// 	lambdaI, _ := lambdas.Get(share.ID())
-	// 	result = result.Op(share.v.ScalarOp(lambdaI))
-	// }
-
-	// return &LiftedShare[E, FE]{v: result}, nil
 }

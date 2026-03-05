@@ -113,7 +113,7 @@ func NewParticipant[
 	tape ts.Transcript,
 	prng io.Reader,
 ) (*Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV], error) {
-	if group == nil {
+	if utils.IsNil(group) {
 		return nil, ErrInvalidArgument.WithMessage("group is nil")
 	}
 	if lsss == nil {
@@ -167,4 +167,12 @@ func NewParticipant[
 		},
 		round: 1,
 	}, nil
+}
+
+func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) SharingID() sharing.ID {
+	return p.id
+}
+
+func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) AccessStructure() AC {
+	return p.ac
 }

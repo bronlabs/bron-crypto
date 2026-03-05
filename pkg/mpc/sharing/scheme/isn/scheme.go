@@ -249,12 +249,22 @@ func (s *Scheme[E]) NewShareFromRepr(id sharing.ID, shareRepr iter.Seq[E]) (*Sha
 	if shareRepr == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share representation is nil")
 	}
+
+	// A share for shareholder id only contains entries for clauses where id is
+	// NOT a member (matching the semantics of ShareOf and Repr).
+	relevantClauses := make([]bitset.ImmutableBitSet[sharing.ID], 0, len(s.clauses))
+	for _, clause := range s.clauses {
+		if !clause.Contains(id) {
+			relevantClauses = append(relevantClauses, clause)
+		}
+	}
+
 	values := slices.Collect(shareRepr)
-	if len(values) != len(s.clauses) {
+	if len(values) != len(relevantClauses) {
 		return nil, sharing.ErrFailed.WithMessage("share representation must contain exactly one component per maximal unqualified set")
 	}
-	internalMap := make(map[bitset.ImmutableBitSet[sharing.ID]]E, len(s.clauses))
-	for i, clause := range s.clauses {
+	internalMap := make(map[bitset.ImmutableBitSet[sharing.ID]]E, len(relevantClauses))
+	for i, clause := range relevantClauses {
 		internalMap[clause] = values[i]
 	}
 	return &Share[E]{id: id, v: internalMap}, nil

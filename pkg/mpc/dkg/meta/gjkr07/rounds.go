@@ -141,7 +141,8 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr verifier")
 		}
-		statement := batch_schnorr.NewStatement(p.state.key.G(), localFeldmanVerificationVectorRepr...)
+		receivedFeldmanVectorRepr := slices.Collect(inB.FeldmanVerificationVector.Repr())
+		statement := batch_schnorr.NewStatement(p.state.key.G(), receivedFeldmanVectorRepr...)
 		err = verifier.Verify(statement, inB.Proof)
 		if err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman verification vector")
