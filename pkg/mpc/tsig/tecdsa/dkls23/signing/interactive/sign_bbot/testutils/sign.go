@@ -35,7 +35,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	for id := range ctxs {
 		shard, ok := shards[id]
 		require.True(tb, ok)
-		cosignersMap[id], err = sign_bbot.NewCosigner(ctxs[id], ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng)
+		cosignersMap[id], err = sign_bbot.NewCosigner(ctxs[id], ecdsaSuite, ntu.CBORRoundTrip(tb, shard.Shard), prng)
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(cosignersMap))

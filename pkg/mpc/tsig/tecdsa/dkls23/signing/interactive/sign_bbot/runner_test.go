@@ -38,7 +38,7 @@ func TestRunner_HappyPath(t *testing.T) {
 	for id := range quorum.Iter() {
 		shard, ok := shards[id]
 		require.True(t, ok)
-		runner, err := sign_bbot.NewRunner(ctxs[id], suite, shard, message, pcg.NewRandomised())
+		runner, err := sign_bbot.NewRunner(ctxs[id], suite, shard.Shard, message, pcg.NewRandomised())
 		require.NoError(t, err)
 		runners[id] = runner
 	}

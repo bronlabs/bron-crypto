@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
@@ -27,7 +28,7 @@ type signRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	ctx *session.Context,
 	suite *ecdsa.Suite[P, B, S],
-	shard *dkls23.Shard[P, B, S],
+	shard *tecdsa.Shard[P, B, S],
 	message []byte,
 	prng io.Reader,
 ) (network.Runner[*dkls23.PartialSignature[P, B, S]], error) {
