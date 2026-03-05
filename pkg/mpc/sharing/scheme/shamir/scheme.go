@@ -2,6 +2,8 @@ package shamir
 
 import (
 	"io"
+	"iter"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -161,4 +163,22 @@ func (d *Scheme[FE]) Field() algebra.PrimeField[FE] {
 // be summed to reconstruct the secret.
 func (*Scheme[FE]) ConvertShareToAdditive(s *Share[FE], quorum *accessstructures.Unanimity) (*additive.Share[FE], error) {
 	return s.ToAdditive(quorum)
+}
+
+func (d *Scheme[FE]) NewShareFromRepr(id sharing.ID, shareRepr iter.Seq[FE]) (*Share[FE], error) {
+	if id == 0 {
+		return nil, sharing.ErrIsZero.WithMessage("share ID cannot be 0")
+	}
+	if shareRepr == nil {
+		return nil, sharing.ErrIsNil.WithMessage("share representation is nil")
+	}
+	values := slices.Collect(shareRepr)
+	if len(values) != 1 {
+		return nil, sharing.ErrFailed.WithMessage("share representation must contain exactly one field element")
+	}
+	share, err := NewShare(id, values[0], d.ac)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create share from representation")
+	}
+	return share, nil
 }

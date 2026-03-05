@@ -2,6 +2,7 @@ package isn
 
 import (
 	"io"
+	"iter"
 	"maps"
 	"slices"
 
@@ -23,6 +24,7 @@ type Scheme[E algebra.GroupElement[E]] struct {
 	g       algebra.Group[E]
 	sampler *sampler[E]
 	ac      *accessstructures.CNF
+	clauses []bitset.ImmutableBitSet[sharing.ID]
 }
 
 // NewFiniteScheme creates a new ISN scheme over the given finite group
@@ -40,7 +42,6 @@ func NewFiniteScheme[E algebra.GroupElement[E]](
 	if ac == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
-
 	sampler, err := newFiniteGroupElementSampler(g)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create sampler")
@@ -49,10 +50,13 @@ func NewFiniteScheme[E algebra.GroupElement[E]](
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create CNF access structure")
 	}
+	cs := clauses(cnf)
+	slices.Sort(cs)
 	return &Scheme[E]{
 		g:       g,
 		sampler: sampler,
 		ac:      cnf,
+		clauses: cs,
 	}, nil
 }
 
@@ -154,8 +158,7 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (
 	if secret == nil {
 		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
-	clauses := clauses(c.ac)
-	l := len(clauses) // number of maximal unqualified sets / clauses
+	l := len(c.clauses) // number of maximal unqualified sets / clauses
 	if l == 0 {
 		return nil, nil, sharing.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
@@ -166,7 +169,7 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (
 		return nil, nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
 	dealerFunc := make(DealerFunc[E])
-	for i, clause := range clauses {
+	for i, clause := range c.clauses {
 		dealerFunc[clause] = rs[i]
 	}
 
@@ -204,14 +207,13 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		return nil, sharing.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 
-	clauses := clauses(c.ac)
 	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 	for _, share := range shares {
 		if share == nil {
 			return nil, sharing.ErrFailed.WithMessage("nil share provided")
 		}
 
-		for _, maxUnqualifiedSet := range clauses {
+		for _, maxUnqualifiedSet := range c.clauses {
 			if maxUnqualifiedSet.Contains(share.id) {
 				continue
 			}
@@ -238,4 +240,22 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 // be summed to reconstruct the secret.
 func (*Scheme[E]) ConvertShareToAdditive(s *Share[E], quorum *accessstructures.Unanimity) (*additive.Share[E], error) {
 	return s.ToAdditive(quorum)
+}
+
+func (s *Scheme[E]) NewShareFromRepr(id sharing.ID, shareRepr iter.Seq[E]) (*Share[E], error) {
+	if id == 0 {
+		return nil, sharing.ErrIsZero.WithMessage("share ID cannot be 0")
+	}
+	if shareRepr == nil {
+		return nil, sharing.ErrIsNil.WithMessage("share representation is nil")
+	}
+	values := slices.Collect(shareRepr)
+	if len(values) != len(s.clauses) {
+		return nil, sharing.ErrFailed.WithMessage("share representation must contain exactly one component per maximal unqualified set")
+	}
+	internalMap := make(map[bitset.ImmutableBitSet[sharing.ID]]E, len(s.clauses))
+	for i, clause := range s.clauses {
+		internalMap[clause] = values[i]
+	}
+	return &Share[E]{id: id, v: internalMap}, nil
 }

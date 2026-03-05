@@ -12,38 +12,6 @@ import (
 // Name is the human-readable name for ISN secret sharing.
 const Name sharing.Name = "ISN secret sharing scheme"
 
-// Secret represents a shared secret value in an ISN scheme. The secret
-// is an element of a finite group and can be split into shares using
-// either the DNF or CNF dealing algorithm.
-type Secret[E algebra.GroupElement[E]] struct {
-	v E
-}
-
-// NewSecret creates a new secret from a group element.
-func NewSecret[E algebra.GroupElement[E]](v E) *Secret[E] {
-	return &Secret[E]{v: v}
-}
-
-// Value returns the underlying group element of the secret.
-func (s *Secret[E]) Value() E {
-	return s.v
-}
-
-// Equal tests whether two secrets have equal values.
-func (s *Secret[E]) Equal(other *Secret[E]) bool {
-	if s == nil && other == nil {
-		return s == other
-	}
-	return s.v.Equal(other.v)
-}
-
-// Clone creates a deep copy of the secret.
-func (s *Secret[E]) Clone() *Secret[E] {
-	return &Secret[E]{
-		v: s.v.Clone(),
-	}
-}
-
 func clauses(ac *accessstructures.CNF) []bitset.ImmutableBitSet[sharing.ID] {
 	clausesCount := 0
 	for range ac.MaximalUnqualifiedSetsIter() {

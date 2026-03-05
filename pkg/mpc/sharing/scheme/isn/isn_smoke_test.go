@@ -21,6 +21,7 @@ func _[E algebra.ModuleElement[E, S], S algebra.RingElement[S]]() {
 			*isn.Secret[S], S,
 			*isn.DealerOutput[S], *accessstructures.CNF, isn.DealerFunc[S],
 			*isn.LiftedShare[E], E, isn.LiftedDealerFunc[E, S],
+			*isn.LiftedSecret[E, S], E,
 		] = (*isn.LiftableScheme[E, S])(nil)
 	)
 }

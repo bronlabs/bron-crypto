@@ -5,12 +5,22 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/errs-go/errs"
 )
 
 type DealerFunc[FE algebra.PrimeFieldElement[FE]] struct {
 	poly *polynomials.Polynomial[FE]
+}
+
+type dealerFuncDTO[FE algebra.PrimeFieldElement[FE]] struct {
+	Poly *polynomials.Polynomial[FE] `json:"poly"`
+}
+
+func (a *DealerFunc[FE]) Basis() FE {
+	return a.poly.Coefficients()[0]
 }
 
 // ShareOf evaluates the polynomial at the field element for the given ID,
@@ -43,8 +53,42 @@ func (a *DealerFunc[FE]) Polynomial() *polynomials.Polynomial[FE] {
 	return a.poly
 }
 
+func (a *DealerFunc[FE]) MarshalCBOR() ([]byte, error) {
+	dto := dealerFuncDTO[FE]{
+		Poly: a.poly,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal dealer func")
+	}
+	return data, nil
+}
+
+func (a *DealerFunc[FE]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*dealerFuncDTO[FE]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal Shamir Share")
+	}
+	if dto.Poly == nil {
+		return sharing.ErrFailed.WithMessage("deserialised polynomial is nil")
+	}
+	if dto.Poly.Degree() < 1 {
+		return sharing.ErrFailed.WithMessage("deserialised polynomial degree is less than 1")
+	}
+	a.poly = dto.Poly
+	return nil
+}
+
 type LiftedDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
 	poly *polynomials.ModuleValuedPolynomial[E, FE]
+}
+
+type liftedDealerFuncDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
+	Poly *polynomials.ModuleValuedPolynomial[E, FE] `json:"poly"`
+}
+
+func (a *LiftedDealerFunc[E, FE]) Basis() E {
+	return a.poly.Coefficients()[0]
 }
 
 func (a *LiftedDealerFunc[E, FE]) ShareOf(id sharing.ID) *LiftedShare[E, FE] {
@@ -77,4 +121,30 @@ func (a *LiftedDealerFunc[E, FE]) Op(other *LiftedDealerFunc[E, FE]) *LiftedDeal
 
 func (a *LiftedDealerFunc[E, FE]) Polynomial() *polynomials.ModuleValuedPolynomial[E, FE] {
 	return a.poly
+}
+
+func (a *LiftedDealerFunc[E, FE]) MarshalCBOR() ([]byte, error) {
+	dto := liftedDealerFuncDTO[E, FE]{
+		Poly: a.poly,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal lifted dealer func")
+	}
+	return data, nil
+}
+
+func (a *LiftedDealerFunc[E, FE]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*liftedDealerFuncDTO[E, FE]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal lifted dealer func")
+	}
+	if dto.Poly == nil {
+		return sharing.ErrFailed.WithMessage("deserialised lifted polynomial is nil")
+	}
+	if dto.Poly.Degree() < 1 {
+		return sharing.ErrFailed.WithMessage("deserialised lifted polynomial degree is less than 1")
+	}
+	a.poly = dto.Poly
+	return nil
 }

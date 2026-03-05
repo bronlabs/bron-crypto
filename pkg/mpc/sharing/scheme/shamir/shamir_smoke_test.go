@@ -19,6 +19,7 @@ func _[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]]() {
 		_ sharing.LiftableLSSS[
 			*shamir.Share[FE], FE, *shamir.Secret[FE], FE, *shamir.DealerOutput[FE], *accessstructures.Threshold, *shamir.DealerFunc[FE],
 			*shamir.LiftedShare[E, FE], E, *shamir.LiftedDealerFunc[E, FE],
+			*shamir.LiftedSecret[E, FE], E,
 		] = (*shamir.LiftableScheme[E, FE])(nil)
 	)
 }

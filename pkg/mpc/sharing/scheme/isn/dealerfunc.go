@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 )
@@ -16,6 +17,11 @@ import (
 // shares. This is returned by LSSS methods that reveal the dealer function,
 // enabling protocols that require knowledge of the complete share distribution.
 type DealerFunc[E algebra.GroupElement[E]] map[bitset.ImmutableBitSet[sharing.ID]]E
+
+func (df DealerFunc[E]) Basis() E {
+	values := slices.Collect(maps.Values(df))
+	return algebrautils.Fold(values[0], values[1:]...)
+}
 
 // ShareOf derives the share for shareholder id from the dealer function.
 func (df DealerFunc[E]) ShareOf(id sharing.ID) *Share[E] {
@@ -78,6 +84,11 @@ type LiftedDealerFunc[
 	E algebra.ModuleElement[E, S],
 	S algebra.RingElement[S],
 ] map[bitset.ImmutableBitSet[sharing.ID]]E
+
+func (ldf LiftedDealerFunc[E, S]) Basis() E {
+	values := slices.Collect(maps.Values(ldf))
+	return algebrautils.Fold(values[0], values[1:]...)
+}
 
 // ShareOf derives the lifted share for shareholder id by filtering clauses
 // that do not contain the shareholder (same logic as isn.DealerFunc.ShareOf).

@@ -82,6 +82,7 @@ type LinearShare[S interface {
 // and can verify compatibility with an access structure. Used by meta-schemes
 // for verification.
 type DealerFunc[S Share[S], SV algebra.GroupElement[SV], AC accessstructures.Monotone] interface {
+	Basis() SV
 	ShareOf(id ID) S
 	Repr() iter.Seq[SV]
 	Accepts(AC) bool
@@ -100,6 +101,7 @@ type LSSS[
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
 	ConvertShareToAdditive(input S, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[WV], error)
+	NewShareFromRepr(id ID, repr iter.Seq[SV]) (S, error)
 }
 
 type LiftableLSSS[
@@ -107,14 +109,19 @@ type LiftableLSSS[
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
-	}, WV algebra.GroupElement[WV], DO DealerOutput[S], AC accessstructures.Monotone, DF DealerFunc[S, SV, AC],
+	}, WV algebra.RingElement[WV], DO DealerOutput[S], AC accessstructures.Monotone, DF DealerFunc[S, SV, AC],
 	LFTS LinearShare[LFTS, LFTSV], LFTSV algebra.ModuleElement[LFTSV, SV], LFTDF interface {
 		algebra.Operand[LFTDF]
 		DealerFunc[LFTS, LFTSV, AC]
 	},
+	LFTW interface {
+		Secret[LFTW]
+		base.Transparent[LFTWV]
+	}, LFTWV algebra.ModuleElement[LFTWV, WV],
 ] interface {
 	LSSS[S, SV, W, WV, DO, AC, DF]
 	LiftDealerFunc(DF, LFTSV) (LFTDF, error)
 	LiftShare(S, LFTSV) (LFTS, error)
+	ReconstructInExponent(shares ...LFTS) (LFTW, error)
 	ConvertLiftedShareToAdditive(input LFTS, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[LFTSV], error)
 }

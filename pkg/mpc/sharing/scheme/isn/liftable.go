@@ -1,9 +1,12 @@
 package isn
 
 import (
+	"maps"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
@@ -13,6 +16,7 @@ import (
 type LiftableScheme[
 	E algebra.ModuleElement[E, S], S algebra.RingElement[S],
 ] struct {
+	module algebra.Module[E, S]
 	Scheme[S]
 }
 
@@ -25,6 +29,7 @@ func NewFiniteLiftableScheme[
 		return nil, errs.Wrap(err).WithMessage("could not create underlying ISN scheme")
 	}
 	return &LiftableScheme[E, S]{
+		module: g,
 		Scheme: *scheme,
 	}, nil
 }
@@ -66,4 +71,42 @@ func (s *LiftableScheme[E, S]) ConvertLiftedShareToAdditive(share *LiftedShare[E
 		return nil, sharing.ErrIsNil.WithMessage("share is nil")
 	}
 	return share.ToAdditive(unanimity)
+}
+
+func (s *LiftableScheme[E, S]) ReconstructInExponent(shares ...*LiftedShare[E]) (*LiftedSecret[E, S], error) {
+	ids, err := sharing.CollectIDs(shares...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
+	}
+	if !s.ac.IsQualified(ids...) {
+		return nil, sharing.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
+	}
+
+	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
+	for _, share := range shares {
+		if share == nil {
+			return nil, sharing.ErrFailed.WithMessage("nil share provided")
+		}
+
+		for _, maxUnqualifiedSet := range s.clauses {
+			if maxUnqualifiedSet.Contains(share.id) {
+				continue
+			}
+
+			chunk, ok := share.v[maxUnqualifiedSet]
+			if !ok || utils.IsNil(chunk) {
+				return nil, sharing.ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", share.id, maxUnqualifiedSet.List())
+			}
+			if refChunk, contains := chunks[maxUnqualifiedSet]; contains {
+				if !refChunk.Equal(chunk) {
+					return nil, sharing.ErrFailed.WithMessage("inconsistent shares")
+				}
+			} else {
+				chunks[maxUnqualifiedSet] = chunk
+			}
+		}
+	}
+
+	reconstructed := iterutils.Reduce(maps.Values(chunks), s.module.OpIdentity(), E.Op)
+	return NewLiftedSecret(reconstructed), nil
 }

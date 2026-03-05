@@ -2,7 +2,9 @@ package shamir
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -11,6 +13,7 @@ import (
 )
 
 type LiftableScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
+	group algebra.PrimeGroup[E, FE]
 	Scheme[FE]
 }
 
@@ -22,6 +25,7 @@ func NewLiftableScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 	}
 
 	return &LiftableScheme[E, FE]{
+		group:  primeGroup,
 		Scheme: *shamirScheme,
 	}, nil
 }
@@ -64,4 +68,44 @@ func (s *LiftableScheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[
 		return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share")
 	}
 	return out, nil
+}
+
+func (s *LiftableScheme[E, FE]) ReconstructInExponent(shares ...*LiftedShare[E, FE]) (*LiftedSecret[E, FE], error) {
+	sharesSet := hashset.NewHashable(shares...)
+	ids, err := sharing.CollectIDs(sharesSet.List()...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
+	}
+	if !s.ac.IsQualified(ids...) {
+		return nil, sharing.ErrFailed.WithMessage("shares are not authorized by the access structure")
+	}
+
+	nodes := make([]FE, len(shares))
+	values := make([]E, len(shares))
+	for i, share := range sharesSet.Iter2() {
+		nodes[i] = s.SharingIDToLagrangeNode(share.ID())
+		values[i] = share.Value()
+	}
+
+	reconstructed, err := lagrange.InterpolateInExponentAt(s.group, nodes, values, s.f.Zero())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not interpolate polynomial in exponent")
+	}
+	return &LiftedSecret[E, FE]{
+		v: reconstructed,
+	}, nil
+
+	// lambdas, err := LagrangeCoefficients(s.f, ids...)
+	// if err != nil {
+	// 	return nil, errs.Wrap(err).WithMessage("could not compute Lagrange coefficients")
+	// }
+
+	// group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](shares[0].v.Structure())
+	// result := group.OpIdentity()
+	// for _, share := range shares {
+	// 	lambdaI, _ := lambdas.Get(share.ID())
+	// 	result = result.Op(share.v.ScalarOp(lambdaI))
+	// }
+
+	// return &LiftedShare[E, FE]{v: result}, nil
 }
