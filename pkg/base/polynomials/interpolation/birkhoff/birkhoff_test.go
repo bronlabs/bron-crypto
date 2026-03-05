@@ -172,7 +172,7 @@ func testHappyPathInExp[G algebra.PrimeGroupElement[G, F], F algebra.PrimeFieldE
 		expPoly.Derivative().Derivative().Derivative().Eval(xs[6]),
 	}
 
-	interpolated, err := birkhoff.InterpolateInExp(xs, js, ys)
+	interpolated, err := birkhoff.InterpolateInExponent(xs, js, ys)
 	require.NoError(tb, err)
 	require.True(tb, expPoly.Equal(interpolated))
 }
