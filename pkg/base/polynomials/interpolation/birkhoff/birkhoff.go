@@ -8,6 +8,61 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+// InterpolateInExp reconstructs a module-valued polynomial from Birkhoff nodes
+// where values are group elements (i.e. interpolation in the exponent).
+func InterpolateInExp[G algebra.PrimeGroupElement[G, F], F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []G) (*polynomials.ModuleValuedPolynomial[G, F], error) {
+	if len(xs) != len(js) || len(xs) != len(ys) {
+		return nil, errs.New("validation failed").WithMessage("x, j, and y must have the same length")
+	}
+	if len(xs) == 0 {
+		return nil, polynomials.ErrValidation.WithMessage("no nodes")
+	}
+
+	xs, js, ys = internal.SortNodes(xs, js, ys)
+	denMatrix, err := BuildVandermondeMatrix(xs, js)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not build vandermonde matrix")
+	}
+	den := denMatrix.Determinant()
+	if den.IsZero() {
+		return nil, polynomials.ErrFailed.WithMessage("determinant is zero")
+	}
+	denInv, err := den.TryInv()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not invert determinant")
+	}
+
+	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, F]](ys[0].Structure())
+	coeffs := make([]G, 0, len(xs))
+	for c := range xs {
+		num := group.OpIdentity()
+		for r, y := range ys {
+			m, err := denMatrix.Minor(r, c)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("could not compute minor")
+			}
+			d := m.Determinant()
+			if (r+c)%2 != 0 {
+				d = d.Neg()
+			}
+			num = num.Op(y.ScalarOp(d))
+		}
+		coeff := num.ScalarOp(denInv)
+		coeffs = append(coeffs, coeff)
+	}
+
+	polyRing, err := polynomials.NewPolynomialModule(group)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create polynomial ring")
+	}
+	poly, err := polyRing.New(coeffs...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create polynomial")
+	}
+
+	return poly, nil
+}
+
 // Interpolate reconstructs a polynomial from Birkhoff interpolation nodes.
 // Each triple (xs[i], js[i], ys[i]) represents the js[i]-th derivative value
 // of the polynomial evaluated at xs[i].

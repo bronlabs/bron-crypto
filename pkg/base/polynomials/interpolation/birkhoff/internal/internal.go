@@ -10,19 +10,19 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-type Node[F algebra.PrimeFieldElement[F]] struct {
+type Node[F algebra.PrimeFieldElement[F], G any] struct {
 	X F
 	J uint64
-	Y F
+	Y G
 }
 
-type Nodes[F algebra.PrimeFieldElement[F]] []*Node[F]
+type Nodes[F algebra.PrimeFieldElement[F], G any] []*Node[F, G]
 
-func (n Nodes[F]) Len() int {
+func (n Nodes[F, G]) Len() int {
 	return len(n)
 }
 
-func (n Nodes[F]) Less(i, j int) bool {
+func (n Nodes[F, G]) Less(i, j int) bool {
 	xi, _ := num.N().FromBytesBE(n[i].X.Cardinal().BytesBE())
 	xj, _ := num.N().FromBytesBE(n[j].X.Cardinal().BytesBE())
 	if xi.Compare(xj) < 0 {
@@ -35,23 +35,23 @@ func (n Nodes[F]) Less(i, j int) bool {
 	return n[i].J < n[j].J
 }
 
-func (n Nodes[F]) Swap(i, j int) {
+func (n Nodes[F, G]) Swap(i, j int) {
 	n[i], n[j] = n[j], n[i]
 }
 
-func SortNodes[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (xsOut []F, jsOut []uint64, ysOut []F) {
-	nodes := make([]*Node[F], 0, len(xs))
+func SortNodes[F algebra.PrimeFieldElement[F], G any](xs []F, js []uint64, ys []G) (xsOut []F, jsOut []uint64, ysOut []G) {
+	nodes := make([]*Node[F, G], 0, len(xs))
 	for i := range xs {
-		nodes = append(nodes, &Node[F]{
+		nodes = append(nodes, &Node[F, G]{
 			X: xs[i],
 			J: js[i],
 			Y: ys[i],
 		})
 	}
-	sort.Sort(Nodes[F](nodes))
-	xsOut = sliceutils.Map(nodes, func(n *Node[F]) F { return n.X })
-	jsOut = sliceutils.Map(nodes, func(n *Node[F]) uint64 { return n.J })
-	ysOut = sliceutils.Map(nodes, func(n *Node[F]) F { return n.Y })
+	sort.Sort(Nodes[F, G](nodes))
+	xsOut = sliceutils.Map(nodes, func(n *Node[F, G]) F { return n.X })
+	jsOut = sliceutils.Map(nodes, func(n *Node[F, G]) uint64 { return n.J })
+	ysOut = sliceutils.Map(nodes, func(n *Node[F, G]) G { return n.Y })
 	return xsOut, jsOut, ysOut
 }
 
