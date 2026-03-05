@@ -21,6 +21,7 @@ type runner struct {
 	party *Participant
 }
 
+// NewSessionRunner creates a new session setup runner.
 func NewSessionRunner(id sharing.ID, quorum ds.Set[sharing.ID], prng io.Reader) (network.Runner[*Context], error) {
 	p, err := NewParticipant(id, quorum, prng)
 	if err != nil {
