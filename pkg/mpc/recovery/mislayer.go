@@ -2,25 +2,28 @@ package recovery
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/errs-go/errs"
 )
 
 // Mislayer represents the party whose share is being reconstructed.
 type Mislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	sharingID sharing.ID
-	field     algebra.PrimeField[S]
-	scheme    *feldman.Scheme[G, S]
-	quorum    network.Quorum
+	ctx    *session.Context
+	field  algebra.PrimeField[S]
+	scheme *feldman.Scheme[G, S]
 }
 
 // NewMislayer constructs a mislayer helper used to validate and interpolate recovered shares.
-func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](id sharing.ID, quorum network.Quorum, as *accessstructures.Threshold, group algebra.PrimeGroup[G, S]) (*Mislayer[G, S], error) {
-	if quorum == nil || as == nil || group == nil || !quorum.Contains(id) || !quorum.IsSubSet(as.Shareholders()) {
+func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *accessstructures.Threshold, group algebra.PrimeGroup[G, S]) (*Mislayer[G, S], error) {
+	if ctx == nil || as == nil || group == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+	}
+
+	if !ctx.Quorum().IsSubSet(as.Shareholders()) {
+		return nil, ErrInvalidArgument.WithMessage("access structure doesn't match context")
 	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
@@ -30,15 +33,14 @@ func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 
 	m := &Mislayer[G, S]{
-		sharingID: id,
-		field:     field,
-		scheme:    scheme,
-		quorum:    quorum,
+		ctx:    ctx,
+		field:  field,
+		scheme: scheme,
 	}
 	return m, nil
 }
 
 // SharingID returns the identifier of the share being recovered.
 func (m *Mislayer[G, S]) SharingID() sharing.ID {
-	return m.sharingID
+	return m.ctx.HolderID()
 }

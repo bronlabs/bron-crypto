@@ -2,20 +2,17 @@ package dkg_test
 
 import (
 	"bytes"
-	"encoding/hex"
 	"maps"
 	"slices"
 	"testing"
 
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	gennaroTU "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -24,46 +21,37 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23/keygen/dkg"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
 
 func TestRunner_HappyPath(t *testing.T) {
 	t.Parallel()
+	var err error
 
-	const (
-		threshold = uint(2)
-		total     = 3
-	)
+	const threshold = 2
+	const total = 3
 
 	curve := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	sessionID := ntu.MakeRandomSessionID(t, prng)
 	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
 	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, accessStructure.Shareholders(), prng)
 
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
-	tapesMap := make(map[sharing.ID]transcripts.Transcript)
-
-	ids := slices.Collect(accessStructure.Shareholders().Iter())
-	gennaroParticipants := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], accessStructure.Shareholders().Size())
-	for i, id := range ids {
-		tapesMap[id] = tape.Clone()
-		gennaroParticipants[i], err = gennaro.NewParticipant(sessionID, curve, id, accessStructure, fiatshamir.Name, tapesMap[id], prng)
+	gennaroParticipants := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], accessStructure.Shareholders().Size())
+	for id, ctx := range ctxs {
+		gennaroParticipants[id], err = gennaro.NewParticipant(ctx, curve, accessStructure, fiatshamir.Name, prng)
 		require.NoError(t, err)
 	}
-	dkgOutputs, err := gennaroTU.DoGennaroDKG(t, gennaroParticipants)
-	require.NoError(t, err)
+	dkgOutputs := gennaroTU.DoGennaroDKG(t, gennaroParticipants)
 
 	runners := make(map[sharing.ID]network.Runner[*dkls23.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
-	for id := range accessStructure.Shareholders().Iter() {
-		dkgOutput, ok := dkgOutputs.Get(id)
-		require.True(t, ok)
+	for id, dkgOutput := range dkgOutputs {
 		baseShard, err := tecdsa.NewShard(dkgOutput.Share(), dkgOutput.VerificationVector(), accessStructure)
 		require.NoError(t, err)
-		tapesMap[id] = tape.Clone()
 
-		runner, err := dkg.NewRunner(sessionID, id, baseShard, tapesMap[id], pcg.NewRandomised())
+		runner, err := dkg.NewRunner(ctxs[id], baseShard, prng)
 		require.NoError(t, err)
 		runners[id] = runner
 	}
@@ -93,13 +81,14 @@ func TestRunner_HappyPath(t *testing.T) {
 		}
 	}
 
-	transcriptValues := make([][]byte, 0, len(tapesMap))
-	for _, tr := range tapesMap {
-		v, err := tr.ExtractBytes("test", 32)
+	transcriptValues := make(map[sharing.ID][]byte)
+	for id, ctx := range ctxs {
+		v, err := ctx.Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
-		transcriptValues = append(transcriptValues, v)
+		transcriptValues[id] = v
 	}
+	tr := slices.Collect(maps.Values(transcriptValues))
 	for i := 1; i < len(transcriptValues); i++ {
-		require.True(t, bytes.Equal(transcriptValues[i-1], transcriptValues[i]))
+		require.True(t, bytes.Equal(tr[i-1], tr[i]))
 	}
 }

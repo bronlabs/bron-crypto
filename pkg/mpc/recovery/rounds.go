@@ -34,10 +34,7 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 		BlindVerificationVector: blindVerification,
 	}
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[G, S]]()
-	for id := range r.quorum.Iter() {
-		if id == r.mislayerID || id == r.SharingID() {
-			continue
-		}
+	for id := range r.recoverersCtx.OtherPartiesOrdered() {
 		s, ok := blindShares[id]
 		if !ok {
 			return nil, nil, ErrFailed.WithMessage("missing share")
@@ -53,10 +50,7 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 // Round2 aggregates blinded shares and publishes the original verification vector.
 func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (network.OutgoingUnicasts[*Round2P2P[G, S]], error) {
 	blindedShare := r.state.blindShare.Add(r.shard.Share())
-	for id := range r.quorum.Iter() {
-		if id == r.mislayerID || id == r.SharingID() {
-			continue
-		}
+	for id := range r.recoverersCtx.OtherPartiesOrdered() {
 		u, ok := r1u.Get(id)
 		if !ok {
 			return nil, ErrFailed.WithMessage("missing share")
@@ -95,11 +89,7 @@ func (m *Mislayer[G, S]) Round3(r2u network.RoundMessages[*Round2P2P[G, S]]) (ou
 	ys := []S{}
 
 	var verificationVector feldman.VerificationVector[G, S]
-	for id := range m.quorum.Iter() {
-		if id == m.sharingID {
-			continue
-		}
-
+	for id := range m.ctx.OtherPartiesOrdered() {
 		u, ok := r2u.Get(id)
 		if !ok {
 			return nil, ErrFailed.WithMessage("missing message")
@@ -114,11 +104,11 @@ func (m *Mislayer[G, S]) Round3(r2u network.RoundMessages[*Round2P2P[G, S]]) (ou
 		ys = append(ys, u.BlindedShare.Value())
 	}
 
-	shareValue, err := lagrange.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.sharingID)))
+	shareValue, err := lagrange.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.ctx.HolderID())))
 	if err != nil {
 		return nil, base.ErrAbort.WithMessage("cannot interpolate")
 	}
-	share, err := feldman.NewShare(m.sharingID, shareValue, nil)
+	share, err := feldman.NewShare(m.ctx.HolderID(), shareValue, nil)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("cannot create share")
 	}

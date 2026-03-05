@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
@@ -55,19 +56,17 @@ const (
 
 // Participant orchestrates the Gennaro DKG protocol for one party.
 type Participant[E GroupElement[E, S], S Scalar[S]] struct {
-	sid            network.SID
-	ac             *accessstructures.Threshold
-	id             sharing.ID
-	niCompilerName compiler.Name
-	tape           ts.Transcript
+	ctx            *session.Context
 	prng           io.Reader
+	ac             *accessstructures.Threshold
+	niCompilerName compiler.Name
 	state          *State[E, S]
 	round          network.Round
 }
 
 // SharingID returns the participant's identifier within the sharing scheme.
 func (p *Participant[E, S]) SharingID() sharing.ID {
-	return p.id
+	return p.ctx.HolderID()
 }
 
 // AccessStructure returns the access structure enforced by the DKG.
@@ -92,33 +91,34 @@ type State[E GroupElement[E, S], S Scalar[S]] struct {
 
 // NewParticipant constructs a participant for the Gennaro DKG protocol.
 func NewParticipant[E GroupElement[E, S], S Scalar[S]](
-	sid network.SID,
+	ctx *session.Context,
 	group Group[E, S],
-	myID sharing.ID,
 	ac *accessstructures.Threshold,
 	niCompilerName compiler.Name,
-	tape ts.Transcript,
 	prng io.Reader,
 ) (*Participant[E, S], error) {
-	if group == nil {
-		return nil, ErrInvalidArgument.WithMessage("group is nil")
-	}
-	if tape == nil {
-		return nil, ErrInvalidArgument.WithMessage("tape is nil")
-	}
-	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+	if ctx == nil {
+		return nil, ErrInvalidArgument.WithMessage("context is nil")
 	}
 	if ac == nil {
 		return nil, ErrInvalidArgument.WithMessage("access structure is nil")
 	}
-	if !ac.Shareholders().Contains(myID) {
+	if !ctx.Quorum().Equal(ac.Shareholders()) {
+		return nil, ErrInvalidArgument.WithMessage("access structure doesn't match context")
+	}
+	if group == nil {
+		return nil, ErrInvalidArgument.WithMessage("group is nil")
+	}
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+	}
+	if !ac.Shareholders().Contains(ctx.HolderID()) {
 		return nil, ErrInvalidArgument.WithMessage("myID is not a shareholder in the access structure")
 	}
-	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())
-	tape.AppendDomainSeparator(dst)
+	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, ctx.SessionID(), group.Name())
+	ctx.Transcript().AppendDomainSeparator(dst)
 
-	h, err := ts.Extract(tape, secondPedersenGeneratorLabel, group)
+	h, err := ts.Extract(ctx.Transcript(), secondPedersenGeneratorLabel, group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
 	}
@@ -135,10 +135,8 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 		return nil, errs.Wrap(err).WithMessage("failed to create feldman VSS scheme")
 	}
 	return &Participant[E, S]{
-		sid:            sid,
-		tape:           tape,
+		ctx:            ctx,
 		prng:           prng,
-		id:             myID,
 		ac:             ac,
 		niCompilerName: niCompilerName,
 		//nolint:exhaustruct // initially partially empty state

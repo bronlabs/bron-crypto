@@ -4,12 +4,11 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -18,8 +17,8 @@ type gennaroDkgRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 }
 
 // NewGennaroDKGRunner constructs a network runner that drives the three DKG rounds.
-func NewGennaroDKGRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], sessionID network.SID, sharingID sharing.ID, accessStructure *accessstructures.Threshold, niCompilerName compiler.Name, tape ts.Transcript, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
-	party, err := NewParticipant(sessionID, group, sharingID, accessStructure, niCompilerName, tape, prng)
+func NewGennaroDKGRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, group algebra.PrimeGroup[G, S], accessStructure *accessstructures.Threshold, niCompilerName compiler.Name, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
+	party, err := NewParticipant(ctx, group, accessStructure, niCompilerName, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}

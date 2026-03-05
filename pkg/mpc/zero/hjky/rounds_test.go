@@ -1,7 +1,6 @@
 package hjky_test
 
 import (
-	"io"
 	"maps"
 	"slices"
 	"testing"
@@ -9,53 +8,44 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	as, err := accessstructures.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
-	require.NoError(t, err)
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err = io.ReadFull(prng, sessionID[:])
+	quorum := ntu.MakeRandomQuorum(t, prng, 3)
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	as, err := accessstructures.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
 
-	tapes := make([]transcripts.Transcript, as.Shareholders().Size())
-	tapes[0] = hagrid.NewTranscript("test")
-	tapes[1] = hagrid.NewTranscript("test")
-	tapes[2] = hagrid.NewTranscript("test")
-
-	participants := make([]*hjky.Participant[*k256.Point, *k256.Scalar], as.Shareholders().Size())
-	participants[0], err = hjky.NewParticipant(sessionID, 1, as, curve, tapes[0], prng)
-	require.NoError(t, err)
-	participants[1], err = hjky.NewParticipant(sessionID, 2, as, curve, tapes[1], prng)
-	require.NoError(t, err)
-	participants[2], err = hjky.NewParticipant(sessionID, 3, as, curve, tapes[2], prng)
-
-	r1bo := make(map[sharing.ID]*hjky.Round1Broadcast[*k256.Point, *k256.Scalar])
-	r1uo := make(map[sharing.ID]network.RoundMessages[*hjky.Round1P2P[*k256.Point, *k256.Scalar]])
-	for _, p := range participants {
-		r1bo[p.SharingID()], r1uo[p.SharingID()], err = p.Round1()
+	participants := make(map[sharing.ID]*hjky.Participant[*k256.Point, *k256.Scalar])
+	for id, ctx := range ctxs {
+		participants[id], err = hjky.NewParticipant(ctx, as, curve, prng)
 		require.NoError(t, err)
 	}
 
-	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+	r1bo := make(map[sharing.ID]*hjky.Round1Broadcast[*k256.Point, *k256.Scalar])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*hjky.Round1P2P[*k256.Point, *k256.Scalar]])
+	for id, p := range participants {
+		r1bo[id], r1uo[id], err = p.Round1()
+		require.NoError(t, err)
+	}
+
+	r2bi, r2ui := ntu.MapO2I(t, slices.Collect(maps.Values(participants)), r1bo, r1uo)
 	shares := make(map[sharing.ID]*feldman.Share[*k256.Scalar])
 	verificationVectors := make(map[sharing.ID]feldman.VerificationVector[*k256.Point, *k256.Scalar])
-	for _, p := range participants {
-		shares[p.SharingID()], verificationVectors[p.SharingID()], err = p.Round2(r2bi[p.SharingID()], r2ui[p.SharingID()])
+	for id, p := range participants {
+		shares[id], verificationVectors[id], err = p.Round2(r2bi[id], r2ui[id])
 		require.NoError(t, err)
 	}
 
@@ -84,8 +74,8 @@ func Test_HappyPath(t *testing.T) {
 		t.Parallel()
 
 		data := make([][]byte, as.Shareholders().Size())
-		for i, tape := range tapes {
-			data[i], err = tape.ExtractBytes("test", 32)
+		for i, ctx := range slices.Collect(maps.Values(ctxs)) {
+			data[i], err = ctx.Transcript().ExtractBytes("test", 32)
 			require.NoError(t, err)
 			if i > 0 {
 				require.True(t, slices.Equal(data[i-1], data[i]))

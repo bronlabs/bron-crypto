@@ -9,12 +9,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23/keygen/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -47,26 +47,6 @@ func Test_HappyPath(t *testing.T) {
 
 				recoveredPk := curve.ScalarBaseMul(recoveredSk.Value())
 				require.True(t, recoveredPk.Equal(pk.Value()))
-			}
-		}
-	})
-
-	t.Run("zero seeds match", func(t *testing.T) {
-		t.Parallel()
-		for me := sharing.ID(1); me <= TOTAL; me++ {
-			for they := sharing.ID(1); they <= TOTAL; they++ {
-				if me == they {
-					continue
-				}
-				myShard, ok := shards.Get(me)
-				require.True(t, ok)
-				theirShard, ok := shards.Get(they)
-				require.True(t, ok)
-				mySeed, ok := myShard.ZeroSeeds().Get(they)
-				require.True(t, ok)
-				theirSeed, ok := theirShard.ZeroSeeds().Get(me)
-				require.True(t, ok)
-				require.Equal(t, mySeed, theirSeed)
 			}
 		}
 	})

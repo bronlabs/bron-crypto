@@ -92,7 +92,7 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 3, pc.round)
 	}
 
-	if err := dlogVerify(pc.tape, pc.niDlogScheme, pc.secondarySharingID, pc.sid, r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
+	if err := dlogVerify(pc.ctx.Transcript(), pc.niDlogScheme, pc.secondarySharingID, pc.ctx.SessionID(), r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
 		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("cannot verify R2 dlog proof")
 	}
 
@@ -134,7 +134,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 		return nil, errs.Wrap(err).WithMessage("cannot open R1 commitment")
 	}
 
-	if err := dlogVerify(sc.tape, sc.niDlogScheme, sc.primarySharingID, sc.sid, r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
+	if err := dlogVerify(sc.ctx.Transcript(), sc.niDlogScheme, sc.primarySharingID, sc.ctx.SessionID(), r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
 		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("cannot verify R1 dlog proof")
 	}
 
@@ -251,9 +251,9 @@ func dlogProve[
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(otherSharingID))
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
-	c.tape.AppendBytes(transcriptDLogSLabel, quorumBytes)
-	c.tape.AppendBytes(proverLabel, proverIDBytes)
-	prover, err := c.niDlogScheme.NewProver(c.sid, c.tape)
+	c.ctx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes)
+	c.ctx.Transcript().AppendBytes(proverLabel, proverIDBytes)
+	prover, err := c.niDlogScheme.NewProver(c.ctx.SessionID(), c.ctx.Transcript())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}

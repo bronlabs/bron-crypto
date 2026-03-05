@@ -18,14 +18,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	tu "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/interactive/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/feldman"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
-	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
-	ttu "github.com/bronlabs/bron-crypto/pkg/transcripts/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -101,13 +101,12 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	for i := range iters {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			prng := pcg.NewRandomised()
-			sessionID := ntu.MakeRandomSessionID(t, prng)
 			quorum := ntu.MakeRandomQuorum(t, prng, total)
+			ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 			accessStructure, err := accessstructures.NewThresholdAccessStructure(uint(threshold), quorum)
 			require.NoError(t, err)
 
-			tapes := ttu.MakeRandomTapes(t, prng, quorum)
-			runners := tu.MakeGennaroDKGRunners(t, sessionID, accessStructure, niCompiler, group, tapes)
+			runners := tu.MakeGennaroDKGRunners(t, ctxs, accessStructure, niCompiler, group)
 			dkgOutputs := ntu.TestExecuteRunners(t, runners)
 
 			t.Run("public materials are consistent", func(t *testing.T) {
@@ -159,7 +158,7 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 
 				tapeSamples := [][]byte{}
 				for id := range quorum.Iter() {
-					tape := tapes[id]
+					tape := ctxs[id].Transcript()
 					tapeSample, err := tape.ExtractBytes("test", 32)
 					require.NoError(t, err)
 					tapeSamples = append(tapeSamples, tapeSample)

@@ -3,9 +3,7 @@ package testutils
 import (
 	"bytes"
 
-	"encoding/hex"
 	"hash"
-	"io"
 	"maps"
 	"slices"
 	"testing"
@@ -15,14 +13,12 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,22 +26,17 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 	tb.Helper()
 
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(tb, err)
-	tape := hagrid.NewTranscript(hex.EncodeToString(sessionID[:]))
 	pk := slices.Collect(maps.Values(shards))[0].PublicKey()
 	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](pk.Value().Structure())
 	ecdsaSuite, err := ecdsa.NewSuite(curve, hashFunc)
 	require.NoError(tb, err)
 
-	tapesMap := make(map[sharing.ID]transcripts.Transcript)
+	contextsMap := session_testutils.MakeRandomContexts(tb, quorum, prng)
 	consignersMap := make(map[sharing.ID]*sign.Cosigner[P, B, S])
 	for id := range quorum.Iter() {
 		shard, ok := shards[id]
 		require.True(tb, ok)
-		tapesMap[id] = tape.Clone()
-		consignersMap[id], err = sign.NewCosigner(sessionID, quorum, ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng, tapesMap[id])
+		consignersMap[id], err = sign.NewCosigner(contextsMap[id], ecdsaSuite, ntu.CBORRoundTrip(tb, shard.Shard), prng)
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(consignersMap))
@@ -92,9 +83,9 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 
 	// transcripts match
 	transcriptsBytes := make(map[sharing.ID][]byte)
-	for id, tape := range tapesMap {
+	for id, ctx := range contextsMap {
 		var err error
-		transcriptsBytes[id], err = tape.ExtractBytes("test", 32)
+		transcriptsBytes[id], err = ctx.Transcript().ExtractBytes("test", 32)
 		require.NoError(tb, err)
 	}
 	transcriptBytesSlice := slices.Collect(maps.Values(transcriptsBytes))

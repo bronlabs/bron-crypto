@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto"
 	"fmt"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,13 +16,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/signing"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 var testAccessStructure = []int{2, 3}
@@ -63,53 +62,44 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	t.Helper()
 
 	prng := pcg.NewRandomised()
-	shareholders := []sharing.ID{}
-	for i := sharing.ID(1); i <= sharing.ID(total); i++ {
-		shareholders = append(shareholders, i)
-	}
-
-	shards, publicKey, err := trusted_dealer.DealRandom(suite.Curve(), hashset.NewComparable(shareholders...).Freeze(), base.IFCKeyLength, prng)
+	shareholders := sharing.NewOrdinalShareholderSet(uint(total))
+	shards, publicKey, err := trusted_dealer.DealRandom(suite.Curve(), shareholders, base.IFCKeyLength, prng)
 	require.NoError(t, err)
 
-	for subShareHolders := range sliceutils.KCoveringCombinations(shareholders, 2) {
-		var sessionID network.SID
-		_, err := io.ReadFull(prng, sessionID[:])
-		require.NoError(t, err)
-
+	for subShareHolders := range sliceutils.KCoveringCombinations(shareholders.List(), 2) {
 		primaryID := subShareHolders[0]
 		secondaryID := subShareHolders[1]
 		primaryShard, ok := shards.Get(primaryID)
 		require.True(t, ok)
 		secondaryShard, ok := shards.Get(secondaryID)
 		require.True(t, ok)
-		primaryTape := hagrid.NewTranscript("test")
-		secondaryTape := primaryTape.Clone()
 
-		primaryCosigner, err := signing.NewPrimaryCosigner(sessionID, suite, secondaryID, primaryShard, fiatshamir.Name, primaryTape, prng)
+		ctxs := session_testutils.MakeRandomContexts(t, hashset.NewComparable[sharing.ID](primaryID, secondaryID).Freeze(), prng)
+		primaryCosigner, err := signing.NewPrimaryCosigner(ctxs[primaryID], suite, secondaryID, primaryShard, fiatshamir.Name, prng)
 		require.NoError(t, err)
-		secondaryCosigner, err := signing.NewSecondaryCosigner(sessionID, suite, primaryID, secondaryShard, fiatshamir.Name, secondaryTape, prng)
+		secondaryCosigner, err := signing.NewSecondaryCosigner(ctxs[secondaryID], suite, primaryID, secondaryShard, fiatshamir.Name, prng)
 		require.NoError(t, err)
 
 		message := []byte("hello world")
 		r1, err := primaryCosigner.Round1()
 		require.NoError(t, err)
-		r2, err := secondaryCosigner.Round2(r1)
+		r2, err := secondaryCosigner.Round2(ntu.CBORRoundTrip(t, r1))
 		require.NoError(t, err)
-		r3, err := primaryCosigner.Round3(r2)
+		r3, err := primaryCosigner.Round3(ntu.CBORRoundTrip(t, r2))
 		require.NoError(t, err)
-		r4, err := secondaryCosigner.Round4(r3, message)
+		r4, err := secondaryCosigner.Round4(ntu.CBORRoundTrip(t, r3), message)
 		require.NoError(t, err)
-		signature, err := primaryCosigner.Round5(r4, message)
+		signature, err := primaryCosigner.Round5(ntu.CBORRoundTrip(t, r4), message)
 		require.NoError(t, err)
 
 		verifier, err := ecdsa.NewVerifier(suite)
 		require.NoError(t, err)
-		err = verifier.Verify(signature, publicKey, message)
+		err = verifier.Verify(ntu.CBORRoundTrip(t, signature), publicKey, message)
 		require.NoError(t, err)
 
-		primaryTapeCheck, err := primaryTape.ExtractBytes("test", 32)
+		primaryTapeCheck, err := ctxs[primaryID].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
-		secondaryTapeCheck, err := secondaryTape.ExtractBytes("test", 32)
+		secondaryTapeCheck, err := ctxs[secondaryID].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.True(t, bytes.Equal(primaryTapeCheck, secondaryTapeCheck))
 	}

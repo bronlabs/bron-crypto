@@ -5,12 +5,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -27,13 +26,11 @@ type dkgRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 }
 
 func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
-	sessionID network.SID,
-	sharingID sharing.ID,
+	ctx *session.Context,
 	baseShard *tecdsa.Shard[P, B, S],
-	tape transcripts.Transcript,
 	prng io.Reader,
 ) (network.Runner[*dkls23.Shard[P, B, S]], error) {
-	participant, err := NewParticipant(sessionID, sharingID, baseShard, tape, prng)
+	participant, err := NewParticipant(ctx, baseShard, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}
@@ -41,18 +38,16 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 }
 
 func (r *dkgRunner[P, B, S]) Run(rt *network.Router) (*dkls23.Shard[P, B, S], error) {
-	quorum := r.participant.baseShard.AccessStructure().Shareholders()
-
-	r1bOut, r1uOut, err := r.participant.Round1()
+	r1uOut, err := r.participant.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bIn, r2uIn, err := exchange.Exchange(rt, r1CorrelationID, quorum, r1bOut, r1uOut)
+	r2uIn, err := exchange.UnicastExchange(rt, r1CorrelationID, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
 
-	r2uOut, err := r.participant.Round2(r2bIn, r2uIn)
+	r2uOut, err := r.participant.Round2(r2uIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}

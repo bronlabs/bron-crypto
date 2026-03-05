@@ -4,13 +4,13 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -28,17 +28,14 @@ type signingRunner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElem
 func NewRunner[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
-	sid network.SID,
+	ctx *session.Context,
 	shard *lindell22.Shard[GE, S],
-	quorum network.Quorum,
-	group algebra.PrimeGroup[GE, S],
 	niCompilerName compiler.Name,
 	variant tschnorr.MPCFriendlyVariant[GE, S, M],
 	message M,
 	prng io.Reader,
-	tape ts.Transcript,
 ) (network.Runner[*lindell22.PartialSignature[GE, S]], error) {
-	cosigner, err := NewCosigner(sid, shard, quorum, group, niCompilerName, variant, prng, tape)
+	cosigner, err := NewCosigner(ctx, shard, niCompilerName, variant, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create cosigner")
 	}

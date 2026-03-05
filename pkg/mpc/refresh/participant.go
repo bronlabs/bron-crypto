@@ -6,11 +6,10 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -25,14 +24,15 @@ type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 }
 
 // NewParticipant constructs a shard refresher using the HjKy zero-sharing subprotocol.
-func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sid network.SID, shard *tsig.BaseShard[G, S], tape transcripts.Transcript, prng io.Reader) (*Participant[G, S], error) {
-	if shard == nil || tape == nil || prng == nil {
+func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, shard *tsig.BaseShard[G, S], prng io.Reader) (*Participant[G, S], error) {
+	if shard == nil || ctx == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("argument is nil")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
+	sid := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](shard.VerificationVector().Coefficients()[0].Structure())
-	zeroParticipant, err := hjky.NewParticipant(sid, shard.Share().ID(), shard.AccessStructure(), group, tape, prng)
+	zeroParticipant, err := hjky.NewParticipant(ctx, shard.AccessStructure(), group, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create zero participant")
 	}

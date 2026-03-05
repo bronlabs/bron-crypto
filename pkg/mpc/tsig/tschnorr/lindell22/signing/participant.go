@@ -1,10 +1,14 @@
 package signing
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
@@ -34,10 +38,8 @@ const (
 
 // Cosigner is a participant in the Lindell22 threshold Schnorr signing protocol.
 type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] struct {
-	sid     network.SID
+	ctx     *session.Context
 	shard   *lindell22.Shard[GE, S]
-	quorum  network.Quorum
-	tape    ts.Transcript
 	group   algebra.PrimeGroup[GE, S]
 	sf      algebra.PrimeField[S]
 	prng    io.Reader
@@ -60,41 +62,26 @@ type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] 
 
 // SessionID returns the session identifier for this signing session.
 func (c *Cosigner[GE, S, M]) SessionID() network.SID {
-	if c == nil {
-		return network.SID([32]byte{})
-	}
-	return c.sid
+	return c.ctx.SessionID()
 }
 
 // SharingID returns the party's identifier in the secret sharing scheme.
 func (c *Cosigner[GE, S, M]) SharingID() sharing.ID {
-	if c == nil {
-		return 0
-	}
-	return c.shard.Share().ID()
+	return c.ctx.HolderID()
 }
 
 // Quorum returns the set of parties participating in this signing session.
 func (c *Cosigner[GE, S, M]) Quorum() network.Quorum {
-	if c == nil {
-		return nil
-	}
-	return c.quorum
+	return hashset.NewComparable(slices.Collect(c.ctx.AllPartiesOrdered())...).Freeze()
 }
 
 // Shard returns the party's secret key share.
 func (c *Cosigner[GE, S, M]) Shard() *lindell22.Shard[GE, S] {
-	if c == nil {
-		return nil
-	}
 	return c.shard
 }
 
 // Variant returns the Schnorr variant being used for signing.
 func (c *Cosigner[GE, S, M]) Variant() tschnorr.MPCFriendlyVariant[GE, S, M] {
-	if c == nil {
-		return nil
-	}
 	return c.variant
 }
 
@@ -104,17 +91,24 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 		return nil, ErrNilArgument.WithMessage("cosigner cannot be nil")
 	}
 	if c.round != 3 {
-		return nil, ErrInvalidRound.WithMessage("cosigner %d cannot compute partial signature in round %d, expected round 3", c.sid, c.round)
+		return nil, ErrInvalidRound.WithMessage("cosigner %d cannot compute partial signature in round %d, expected round 3", c.ctx.HolderID(), c.round)
 	}
+
 	// step 3.7.1: compute additive share d_i'
-	mqac, err := accessstructures.NewUnanimityAccessStructure(c.quorum)
+	quorum, err := accessstructures.NewUnanimityAccessStructure(c.Quorum())
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.quorum)
+		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.Quorum())
 	}
-	ashare, err := c.shard.Share().ToAdditive(mqac)
+	zero, err := session.SampleZeroShare(c.ctx, c.sf)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot sample zero share")
+	}
+	ashare, err := c.shard.Share().ToAdditive(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert share %d to additive share", c.shard.Share().ID())
 	}
+	ashare = ashare.Add(zero)
+
 	myAdditiveShare, err := c.variant.CorrectAdditiveSecretShareParity(c.shard.PublicKey(), ashare)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot correct share %d parity", c.shard.Share().ID())
@@ -141,43 +135,36 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 func NewCosigner[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
-	sid network.SID,
+	ctx *session.Context,
 	shard *lindell22.Shard[GE, S],
-	quorum network.Quorum,
-	group algebra.PrimeGroup[GE, S],
 	niCompilerName compiler.Name,
 	variant tschnorr.MPCFriendlyVariant[GE, S, M],
 	prng io.Reader,
-	tape ts.Transcript,
 ) (*Cosigner[GE, S, M], error) {
 	if shard == nil {
 		return nil, ErrNilArgument.WithMessage("shard cannot be nil")
 	}
-	if tape == nil {
-		return nil, ErrNilArgument.WithMessage("transcript cannot be nil")
+	if ctx == nil {
+		return nil, ErrNilArgument.WithMessage("context cannot be nil")
 	}
-	if group == nil {
-		return nil, ErrNilArgument.WithMessage("group cannot be nil")
-	}
+	group := shard.PublicKey().Group()
 	sf, ok := group.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
 		return nil, ErrInvalidType.WithMessage("group %s structure is not a prime field", group.Name())
 	}
-	if quorum == nil {
-		return nil, ErrNilArgument.WithMessage("quorum cannot be nil")
+	if ctx.HolderID() != shard.Share().ID() {
+		return nil, ErrInvalidMembership.WithMessage("invalid context")
 	}
-	if !quorum.Contains(shard.Share().ID()) {
-		return nil, ErrInvalidMembership.WithMessage("quorum %s cannot contain participant %d", quorum, sid)
+	if !ctx.Quorum().Contains(shard.Share().ID()) {
+		return nil, ErrInvalidMembership.WithMessage("quorum doesn't cannot contain participant %d", shard.Share().ID())
 	}
-	if !shard.AccessStructure().IsQualified(quorum.List()...) {
-		return nil, ErrInvalidMembership.WithMessage("shard %d access structure is not authorized for quorum %s", shard.Share().ID(), quorum)
+	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
+		return nil, ErrInvalidMembership.WithMessage("shard %d access structure is not authorized for quorum %s", shard.Share().ID(), ctx.Quorum())
 	}
 	if prng == nil {
 		return nil, ErrNilArgument.WithMessage("prng cannot be nil")
 	}
-	if !group.Order().IsProbablyPrime() {
-		return nil, ErrInvalidType.WithMessage("group %s order is not prime", group.Name())
-	}
+
 	schnorrProtocol, err := schnorrpok.NewProtocol(group.Generator(), prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create schnorr protocol")
@@ -187,15 +174,14 @@ func NewCosigner[
 		return nil, errs.Wrap(err).WithMessage("failed to compile niDlogProver")
 	}
 
-	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())
-	tape.AppendDomainSeparator(dst)
-	quorumBytes := lindell22.QuorumBytes(quorum)
+	sid := ctx.SessionID()
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, hex.EncodeToString(sid[:]), group.Name())
+	ctx.Transcript().AppendDomainSeparator(dst)
+	quorumBytes := lindell22.QuorumBytes(ctx.Quorum())
 
 	return &Cosigner[GE, S, M]{
-		sid:          sid,
+		ctx:          ctx,
 		shard:        shard,
-		quorum:       quorum,
-		tape:         tape,
 		group:        group,
 		sf:           sf,
 		prng:         prng,
@@ -207,7 +193,7 @@ func NewCosigner[
 			k:                         *new(S),
 			bigR:                      *new(GE),
 			opening:                   lindell22.Opening{},
-			theirBigRCommitments:      make(map[sharing.ID]lindell22.Commitment, quorum.Size()-1),
+			theirBigRCommitments:      make(map[sharing.ID]lindell22.Commitment, ctx.Quorum().Size()-1),
 			tapeFrozenBeforeDlogProof: nil,
 		},
 	}, nil

@@ -10,10 +10,9 @@ import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -27,7 +26,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 	}
 
 	var ck [hash_comm.KeySize]byte
-	ckBytes, err := c.tape.ExtractBytes(ckLabel, uint(len(ck)))
+	ckBytes, err := c.ctx.Transcript().ExtractBytes(ckLabel, uint(len(ck)))
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to extract commitment key")
 	}
@@ -58,13 +57,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample phi")
 	}
 
-	zeroR1, err := c.state.zeroSetup.Round1()
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot round 1 of zero setup")
-	}
-
 	bOut := &Round1Broadcast{
-		ZeroSetupR1:    zeroR1,
 		BigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
@@ -86,17 +79,10 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
 	}
 
-	zeroR1 := hashmap.NewComparable[sharing.ID, *przsSetup.Round1Broadcast]()
 	mulR1 := make(map[sharing.ID]*rvole_bbot.Round1P2P[P, S])
 	for id, message := range incomingMessages {
 		c.state.bigRCommitment[id] = message.broadcast.BigRCommitment
-		zeroR1.Put(id, message.broadcast.ZeroSetupR1)
 		mulR1[id] = message.p2p.MulR1
-	}
-
-	zeroR2, err := c.state.zeroSetup.Round2(zeroR1.Freeze())
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round2")
 	}
 
 	c.state.chi = make(map[sharing.ID]S)
@@ -110,7 +96,6 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot run bob mul round2")
 		}
-		message.ZeroSetupR2, _ = zeroR2.Get(id)
 	}
 
 	c.state.round++
@@ -124,7 +109,6 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
 	}
 
-	zeroR2 := hashmap.NewComparable[sharing.ID, *przsSetup.Round2P2P]()
 	mulR2 := make(map[sharing.ID]*rvole_bbot.Round2P2P[P, S])
 	verifier, err := c.state.ck.Verifier()
 	if err != nil {
@@ -135,34 +119,25 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
 		c.state.bigR[id] = message.broadcast.BigR
-		zeroR2.Put(id, message.p2p.ZeroSetupR2)
 		mulR2[id] = message.p2p.MulR2
 	}
 
-	zeroSeeds, err := c.state.zeroSetup.Round3(zeroR2.Freeze())
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
-	}
-	c.state.zeroSampler, err = przs.NewSampler(c.shard.Share().ID(), c.quorum, zeroSeeds, c.suite.ScalarField())
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
-	}
-	zeta, err := c.state.zeroSampler.Sample()
+	zeta, err := session.SampleZeroShare(c.ctx, c.suite.ScalarField())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
-	quorum2, err := accessstructures.NewUnanimityAccessStructure(c.quorum)
+	quorum, err := accessstructures.NewUnanimityAccessStructure(c.ctx.Quorum())
 	if err != nil {
-		panic(err)
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}
 
-	sk, err := c.shard.Share().ToAdditive(quorum2)
+	sk, err := c.shard.Share().ToAdditive(quorum)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("to additive share failed")
 	}
 
-	c.state.sk = sk.Value().Add(zeta)
+	c.state.sk = sk.Add(zeta).Value()
 	c.state.pk = make(map[sharing.ID]P)
 	c.state.pk[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.sk)
 	c.state.c = make(map[sharing.ID][]S)

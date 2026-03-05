@@ -58,15 +58,12 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast]) 
 	if c.round != 2 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 2, c.round)
 	}
-	for pid := range c.quorum.Iter() {
-		if c.SharingID() == pid {
-			continue // skip self
-		}
+	for pid := range c.ctx.OtherPartiesOrdered() {
 		received, _ := inb.Get(pid)
 		c.state.theirBigRCommitments[pid] = received.BigRCommitment
 	}
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
-	c.state.tapeFrozenBeforeDlogProof = c.tape.Clone()
+	c.state.tapeFrozenBeforeDlogProof = c.ctx.Transcript().Clone()
 	bigRProof, statement, err := dlogProve(c, c.state.k, c.state.bigR, c.state.quorumBytes)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove dlog")
@@ -89,10 +86,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 3, c.round)
 	}
 	summedR := c.state.bigR
-	for pid := range c.quorum.Iter() {
-		if c.SharingID() == pid {
-			continue // skip self
-		}
+	for pid := range c.ctx.OtherPartiesOrdered() {
 		received, _ := inb.Get(pid)
 		theirBigR := received.BigR
 		theirOpening := received.BigROpening
@@ -103,7 +97,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		}
 		// step 3.3: Run NIPoKDL.Verify(R_j, π^dl_j)
 		if err := dlogVerify(
-			c.state.tapeFrozenBeforeDlogProof.Clone(), c.niDlogScheme, pid, c.sid, received.BigRProof, theirBigR, c.state.quorumBytes,
+			c.state.tapeFrozenBeforeDlogProof.Clone(), c.niDlogScheme, pid, c.ctx.SessionID(), received.BigRProof, theirBigR, c.state.quorumBytes,
 		); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("cannot verify dlog proof for participant")
 		}
@@ -127,7 +121,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 func commitBigR[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], bigR E) (commitment lindell22.Commitment, opening lindell22.Opening, err error) {
-	key, err := lindell22.NewCommitmentKey(c.sid, c.SharingID(), c.state.quorumBytes)
+	key, err := lindell22.NewCommitmentKey(c.ctx.SessionID(), c.SharingID(), c.state.quorumBytes)
 	if err != nil {
 		return lindell22.Commitment{}, lindell22.Opening{}, errs.Wrap(err).WithMessage("cannot create commitment key")
 	}
@@ -150,7 +144,7 @@ func commitBigR[
 func verifyBigRCommitment[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], theirID sharing.ID, theirBigR E, theirOpening lindell22.Opening, theirCommitment lindell22.Commitment) error {
-	key, err := lindell22.NewCommitmentKey(c.sid, theirID, c.state.quorumBytes)
+	key, err := lindell22.NewCommitmentKey(c.ctx.SessionID(), theirID, c.state.quorumBytes)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create commitment key for participant %d", theirID)
 	}
@@ -171,11 +165,11 @@ func verifyBigRCommitment[
 func dlogProve[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (proof compiler.NIZKPoKProof, statement *schnorrpok.Statement[E, S], err error) {
-	provingTape := c.tape.Clone()
+	provingTape := c.ctx.Transcript().Clone()
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	provingTape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
 	provingTape.AppendBytes("prover", proverIDBytes)
-	prover, err := c.niDlogScheme.NewProver(c.sid, provingTape)
+	prover, err := c.niDlogScheme.NewProver(c.ctx.SessionID(), provingTape)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
