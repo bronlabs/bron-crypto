@@ -18,6 +18,13 @@ func Test_HappyPath(t *testing.T) {
 	testHappyPath(t, k256.NewScalarField())
 }
 
+// Test_UnmetCriteria fails to uniquely determine a degree-3 polynomial because matrix A(E,X,\phi) is singular.
+func Test_UnmetCriteria(t *testing.T) {
+	t.Parallel()
+
+	testUnmetCriteria(t, k256.NewScalarField())
+}
+
 func testHappyPath[F algebra.PrimeFieldElement[F]](tb testing.TB, field algebra.PrimeField[F]) {
 	tb.Helper()
 	prng := pcg.NewRandomised()
@@ -70,4 +77,45 @@ func testHappyPath[F algebra.PrimeFieldElement[F]](tb testing.TB, field algebra.
 	interpolatedPoly, err := birkhoff.Interpolate(xs, js, ys)
 	require.NoError(tb, err)
 	require.True(tb, poly.Equal(interpolatedPoly))
+}
+
+func testUnmetCriteria[F algebra.PrimeFieldElement[F]](tb testing.TB, field algebra.PrimeField[F]) {
+	tb.Helper()
+	prng := pcg.NewRandomised()
+	polyRing, err := polynomials.NewPolynomialRing(field)
+	require.NoError(tb, err)
+
+	c0, err := field.Random(prng)
+	require.NoError(tb, err)
+	c1, err := field.Random(prng)
+	require.NoError(tb, err)
+	c2, err := field.Random(prng)
+	require.NoError(tb, err)
+	c3, err := field.Random(prng)
+	require.NoError(tb, err)
+	poly, err := polyRing.New(c0, c1, c2, c3)
+	require.NoError(tb, err)
+
+	xs := []F{}
+	js := []uint64{}
+	ys := []F{}
+
+	xs = append(xs, field.FromUint64(1))
+	js = append(js, 0)
+	ys = append(ys, poly.Eval(field.FromUint64(1)))
+
+	xs = append(xs, field.FromUint64(1))
+	js = append(js, 1)
+	ys = append(ys, poly.Derivative().Eval(field.FromUint64(1)))
+
+	xs = append(xs, field.FromUint64(1))
+	js = append(js, 3)
+	ys = append(ys, poly.Derivative().Derivative().Derivative().Eval(field.FromUint64(1)))
+
+	xs = append(xs, field.FromUint64(2))
+	js = append(js, 3)
+	ys = append(ys, poly.Derivative().Derivative().Derivative().Derivative().Eval(field.FromUint64(2)))
+
+	_, err = birkhoff.Interpolate(xs, js, ys)
+	require.Error(tb, err)
 }
