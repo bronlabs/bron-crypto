@@ -16,7 +16,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/signing"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/errs-go/errs"
 	"github.com/stretchr/testify/require"
 )
