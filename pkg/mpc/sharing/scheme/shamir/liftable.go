@@ -13,8 +13,9 @@ import (
 )
 
 type LiftableScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
-	group algebra.PrimeGroup[E, FE]
 	Scheme[FE]
+
+	group algebra.PrimeGroup[E, FE]
 }
 
 func NewLiftableScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](primeGroup algebra.PrimeGroup[E, FE], accessStructure *accessstructures.Threshold) (*LiftableScheme[E, FE], error) {
@@ -30,7 +31,7 @@ func NewLiftableScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 	}, nil
 }
 
-func (s *LiftableScheme[E, FE]) LiftDealerFunc(df *DealerFunc[FE], basePoint E) (*LiftedDealerFunc[E, FE], error) {
+func (*LiftableScheme[E, FE]) LiftDealerFunc(df *DealerFunc[FE], basePoint E) (*LiftedDealerFunc[E, FE], error) {
 	if df == nil {
 		return nil, sharing.ErrIsNil.WithMessage("dealer func is nil")
 	}
@@ -44,7 +45,7 @@ func (s *LiftableScheme[E, FE]) LiftDealerFunc(df *DealerFunc[FE], basePoint E) 
 	return &LiftedDealerFunc[E, FE]{poly: liftedPoly}, nil
 }
 
-func (s *LiftableScheme[E, FE]) LiftShare(share *Share[FE], basePoint E) (*LiftedShare[E, FE], error) {
+func (*LiftableScheme[E, FE]) LiftShare(share *Share[FE], basePoint E) (*LiftedShare[E, FE], error) {
 	if share == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share is nil")
 	}
@@ -59,7 +60,7 @@ func (s *LiftableScheme[E, FE]) LiftShare(share *Share[FE], basePoint E) (*Lifte
 	return out, nil
 }
 
-func (s *LiftableScheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[E, FE], unanimity *accessstructures.Unanimity) (*additive.Share[E], error) {
+func (*LiftableScheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[E, FE], unanimity *accessstructures.Unanimity) (*additive.Share[E], error) {
 	if share == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share is nil")
 	}

@@ -595,7 +595,7 @@ func shamirSuite(threshold, total uint) dkgSuite {
 			_, parties := setupShamir(t, threshold, total, group, sid, tape, prng)
 			participant := parties.Values()[0]
 
-			t.Run("cannot execute round 2 before round 1", func(t *testing.T) { //nolint:paralleltest // false positive.
+			t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
 				dummyR2Input := hashmap.NewComparable[sharing.ID, *gjkr07.Round1Broadcast[
 					*shamir.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 					*shamir.LiftedShare[*k256.Point, *k256.Scalar],
@@ -608,7 +608,7 @@ func shamirSuite(threshold, total uint) dkgSuite {
 				require.ErrorIs(t, err, gjkr07.ErrRound)
 			})
 
-			t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) { //nolint:paralleltest // false positive.
+			t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) {
 				dummyR3Broadcast := hashmap.NewComparable[sharing.ID, *gjkr07.Round2Broadcast[
 					*shamir.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 					*shamir.LiftedShare[*k256.Point, *k256.Scalar],
@@ -624,7 +624,7 @@ func shamirSuite(threshold, total uint) dkgSuite {
 				require.ErrorIs(t, err, gjkr07.ErrRound)
 			})
 
-			t.Run("cannot re-execute round 1", func(t *testing.T) { //nolint:paralleltest // false positive.
+			t.Run("cannot re-execute round 1", func(t *testing.T) {
 				_, err := participant.Round1()
 				require.NoError(t, err)
 
@@ -845,7 +845,7 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 			_, parties := setupISN(t, cnf, group, sid, tape, prng)
 			participant := parties.Values()[0]
 
-			t.Run("cannot execute round 2 before round 1", func(t *testing.T) { //nolint:paralleltest // false positive.
+			t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
 				dummyR2Input := hashmap.NewComparable[sharing.ID, *gjkr07.Round1Broadcast[
 					isn.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 					*isn.LiftedShare[*k256.Point],
@@ -858,7 +858,7 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 				require.ErrorIs(t, err, gjkr07.ErrRound)
 			})
 
-			t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) { //nolint:paralleltest // false positive.
+			t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) {
 				dummyR3Broadcast := hashmap.NewComparable[sharing.ID, *gjkr07.Round2Broadcast[
 					isn.LiftedDealerFunc[*k256.Point, *k256.Scalar],
 					*isn.LiftedShare[*k256.Point],
@@ -874,7 +874,7 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 				require.ErrorIs(t, err, gjkr07.ErrRound)
 			})
 
-			t.Run("cannot re-execute round 1", func(t *testing.T) { //nolint:paralleltest // false positive.
+			t.Run("cannot re-execute round 1", func(t *testing.T) {
 				_, err := participant.Round1()
 				require.NoError(t, err)
 
@@ -1000,7 +1000,7 @@ func TestDKGWithVariousConfigurations(t *testing.T) {
 		t.Run(s.name, func(t *testing.T) {
 			t.Parallel()
 			r := s.run(t, pcg.NewRandomised())
-			require.Equal(t, s.total, len(r.Entries))
+			require.Len(t, r.Entries, s.total)
 			require.True(t, r.VVsConsistent)
 			for _, e := range r.Entries {
 				require.Equal(t, e.ID, e.ShareID)

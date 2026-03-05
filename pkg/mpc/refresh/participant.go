@@ -8,8 +8,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/errs-go/errs"
 )
 

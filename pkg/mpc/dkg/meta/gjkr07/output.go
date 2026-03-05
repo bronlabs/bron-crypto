@@ -61,8 +61,9 @@ type DKGOutput[
 	SV algebra.PrimeFieldElement[SV],
 	AC accessstructures.Monotone,
 ] struct {
-	share S
 	DKGPublicOutput[LFTDF, LFTS, LFTSV, SV, AC]
+
+	share S
 }
 
 func (d *DKGOutput[LFTDF, LFTS, LFTSV, S, SV, AC]) Share() S {

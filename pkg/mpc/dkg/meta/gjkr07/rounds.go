@@ -124,7 +124,7 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 		inU, _ := r3ui.Get(pid)
 
 		// Verify pedersen vss share
-		referencePedersenVector, _ := p.state.receivedPedersenVerificationVectors[pid]
+		referencePedersenVector := p.state.receivedPedersenVerificationVectors[pid]
 		if err := p.state.pedersenVSS.Verify(inU.Share, referencePedersenVector); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify pedersen share from party %d", pid)
 		}
@@ -151,7 +151,7 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 
 		// Summing up
 		receivedSecretShareRepr := slices.Collect(inU.Share.Secret().Repr())
-		for i := range len(summedShareRepr) {
+		for i := range summedShareRepr {
 			summedShareRepr[i] = summedShareRepr[i].Add(receivedSecretShareRepr[i])
 		}
 		summedFeldmanVerificationVector = summedFeldmanVerificationVector.Op(inB.FeldmanVerificationVector)
@@ -166,5 +166,4 @@ func (p *Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV])
 	}
 	p.round++
 	return out, nil
-
 }

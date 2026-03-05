@@ -36,6 +36,6 @@ type Round2Broadcast[
 	SV algebra.PrimeFieldElement[SV],
 	AC accessstructures.Monotone,
 ] struct {
-	FeldmanVerificationVector LFTDF                `cbor:"verificationVector"`
+	FeldmanVerificationVector LFTDF                 `cbor:"verificationVector"`
 	Proof                     compiler.NIZKPoKProof `cbor:"proof"`
 }

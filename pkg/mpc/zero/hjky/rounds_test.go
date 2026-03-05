@@ -12,8 +12,8 @@ import (
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 )

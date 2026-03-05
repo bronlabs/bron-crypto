@@ -79,7 +79,7 @@ type Scheme[
 	commitmentScheme *pedcom.Scheme[LFTUSV, USV]
 }
 
-func (s *Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV, LFTW, LFTWV]) Name() sharing.Name {
+func (*Scheme[US, USV, W, WV, UDO, AC, ULDF, LFTUDF, LFTUS, LFTUSV, LFTW, LFTWV]) Name() sharing.Name {
 	return Name
 }
 

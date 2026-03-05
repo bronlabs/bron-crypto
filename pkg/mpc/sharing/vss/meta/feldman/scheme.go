@@ -71,7 +71,7 @@ type Scheme[
 	lsss      sharing.LiftableLSSS[S, SV, W, WV, DO, AC, DF, LFTS, LFTSV, LFTDF, LFTW, LFTWV]
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) Name() sharing.Name {
+func (*Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) Name() sharing.Name {
 	return Name
 }
 
@@ -109,7 +109,7 @@ func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) Deal
 	}, underlyingDealerFunc, nil
 }
 
-func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[S, SV, LFTDF, LFTS, LFTSV, AC], W, DF, error) {
+func (s *Scheme[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]) DealRandomAndRevealDealerFunc(prng io.Reader) (output *DealerOutput[S, SV, LFTDF, LFTS, LFTSV, AC], secret W, dealerFunc DF, err error) {
 	underlyingShares, secret, underlyingDealerFunc, err := s.lsss.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
 		return nil, *new(W), *new(DF), errs.Wrap(err).WithMessage("failed to deal random secret")

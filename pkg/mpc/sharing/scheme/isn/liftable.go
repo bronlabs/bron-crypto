@@ -16,8 +16,9 @@ import (
 type LiftableScheme[
 	E algebra.ModuleElement[E, S], S algebra.RingElement[S],
 ] struct {
-	module algebra.Module[E, S]
 	Scheme[S]
+
+	module algebra.Module[E, S]
 }
 
 func NewFiniteLiftableScheme[
@@ -34,7 +35,7 @@ func NewFiniteLiftableScheme[
 	}, nil
 }
 
-func (s *LiftableScheme[E, S]) LiftDealerFunc(df DealerFunc[S], basePoint E) (LiftedDealerFunc[E, S], error) {
+func (*LiftableScheme[E, S]) LiftDealerFunc(df DealerFunc[S], basePoint E) (LiftedDealerFunc[E, S], error) {
 	if df == nil {
 		return nil, sharing.ErrIsNil.WithMessage("dealer func is nil")
 	}
@@ -48,7 +49,7 @@ func (s *LiftableScheme[E, S]) LiftDealerFunc(df DealerFunc[S], basePoint E) (Li
 	return LiftedDealerFunc[E, S](lifted), nil
 }
 
-func (s *LiftableScheme[E, S]) LiftShare(share *Share[S], basePoint E) (*LiftedShare[E], error) {
+func (*LiftableScheme[E, S]) LiftShare(share *Share[S], basePoint E) (*LiftedShare[E], error) {
 	if share == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share is nil")
 	}
@@ -66,7 +67,7 @@ func (s *LiftableScheme[E, S]) LiftShare(share *Share[S], basePoint E) (*LiftedS
 	return out, nil
 }
 
-func (s *LiftableScheme[E, S]) ConvertLiftedShareToAdditive(share *LiftedShare[E], unanimity *accessstructures.Unanimity) (*additive.Share[E], error) {
+func (*LiftableScheme[E, S]) ConvertLiftedShareToAdditive(share *LiftedShare[E], unanimity *accessstructures.Unanimity) (*additive.Share[E], error) {
 	if share == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share is nil")
 	}
