@@ -1,7 +1,6 @@
 package signing_test
 
 import (
-	"crypto/sha3"
 	"fmt"
 	"testing"
 
@@ -19,10 +18,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/signing"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 // TestBoldyrevaDKGAndSign tests the complete DKG and signing flow
@@ -85,19 +82,20 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners for the quorum
-		signingSID := network.SID(sha3.Sum256([]byte("test-signing-session")))
 		cosigners := make([]*signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar], 0, threshold)
-
 		for id := range quorum.Iter() {
 			shard, ok := shards[id]
 			require.True(t, ok)
+			dkgCtx, ok := ctxs[id]
+			require.True(t, ok)
+			signCtx, err := dkgCtx.SubContext(quorum)
+			require.NoError(t, err)
+
 			cosigner, err := signing.NewShortKeyCosigner(
-				signingSID,
+				signCtx,
 				curveFamily,
 				shard,
-				quorum,
 				bls.Basic, // Use basic scheme for simplicity
-				ctxs[id].Transcript().Clone(),
 			)
 			require.NoError(t, err)
 			cosigners = append(cosigners, cosigner)
@@ -167,8 +165,6 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 	total := uint(5)
 
 	var curveFamily curves.PairingFriendlyFamily[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar] = &bls12381.FamilyTrait{}
-
-	tape := hagrid.NewTranscript("TestRogueKey")
 	prng := pcg.NewRandomised()
 
 	// Setup DKG participants
@@ -195,11 +191,13 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners
-		signingSID := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-signing-%d", rogueKeyAlg))))
 		cosigners := make([]*signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar], 0, threshold)
 		for id := range quorum.Iter() {
 			shard := shards[id]
-			cosigner, err := signing.NewShortKeyCosigner(signingSID, curveFamily, shard, quorum, rogueKeyAlg, tape.Clone())
+			dkgCtx := ctxs[id]
+			signCtx, err := dkgCtx.SubContext(quorum)
+			require.NoError(t, err)
+			cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, rogueKeyAlg)
 			require.NoError(t, err)
 			cosigners = append(cosigners, cosigner)
 		}
@@ -240,11 +238,13 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners
-		signingSID := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-signing-%d", rogueKeyAlg))))
 		cosigners := make([]*signing.Cosigner[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar], 0, threshold)
 		for id := range quorum.Iter() {
 			shard := shards[id]
-			cosigner, err := signing.NewLongKeyCosigner(signingSID, curveFamily, shard, quorum, rogueKeyAlg, tape.Clone())
+			dkgCtx := ctxs[id]
+			signCtx, err := dkgCtx.SubContext(quorum)
+			require.NoError(t, err)
+			cosigner, err := signing.NewLongKeyCosigner(signCtx, curveFamily, shard, rogueKeyAlg)
 			require.NoError(t, err)
 			cosigners = append(cosigners, cosigner)
 		}
@@ -280,7 +280,6 @@ func TestPartialSignatureVerification(t *testing.T) {
 	// Use BLS12-381 G2 for long key (public keys in G2, signatures in G1)
 	group := bls12381.NewG2()
 	curveFamily := &bls12381.FamilyTrait{}
-	tape := hagrid.NewTranscript("TestPartialSignatureVerification")
 	prng := pcg.NewRandomised()
 
 	// Setup DKG participants
@@ -306,7 +305,6 @@ func TestPartialSignatureVerification(t *testing.T) {
 	shards := tu.DoBoldyrevaDKG(t, parties, false) // false for long key
 
 	// Create cosigners for all participants
-	signingSID := network.SID(sha3.Sum256([]byte("test-partial-sig-session")))
 	cosigners := make([]*signing.Cosigner[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar], 0, total)
 
 	allIDs := hashset.NewComparable[sharing.ID]()
@@ -317,13 +315,14 @@ func TestPartialSignatureVerification(t *testing.T) {
 
 	for id := range shareholders.Iter() {
 		shard := shards[id]
+		dkgCtx := ctxs[id]
+		signCtx, err := dkgCtx.SubContext(quorum)
+		require.NoError(t, err)
 		cosigner, err := signing.NewLongKeyCosigner(
-			signingSID,
+			signCtx,
 			curveFamily,
 			shard,
-			quorum,
 			bls.MessageAugmentation, // Test with message augmentation
-			tape.Clone(),
 		)
 		require.NoError(t, err)
 		cosigners = append(cosigners, cosigner)
@@ -373,9 +372,7 @@ func TestCosignerCreationErrors(t *testing.T) {
 	t.Parallel()
 
 	// Setup minimal valid parameters
-	sid := network.SID(sha3.Sum256([]byte("test-errors")))
 	curveFamily := &bls12381.FamilyTrait{}
-	tape := hagrid.NewTranscript("TestErrors")
 	prng := pcg.NewRandomised()
 
 	// Create a valid shard for testing
@@ -400,28 +397,30 @@ func TestCosignerCreationErrors(t *testing.T) {
 
 	t.Run("NilCurveFamily", func(t *testing.T) {
 		t.Parallel()
-		_, err := signing.NewShortKeyCosigner(sid, nil, shard, quorum, bls.Basic, tape)
+		dkgCtx := ctxs[shard.Share().ID()]
+		signCtx, err := dkgCtx.SubContext(quorum)
+		require.NoError(t, err)
+		_, err = signing.NewShortKeyCosigner(signCtx, nil, shard, bls.Basic)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "curveFamily")
 	})
 
-	t.Run("NilTranscript", func(t *testing.T) {
-		t.Parallel()
-		_, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, bls.Basic, nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "transcript")
-	})
-
 	t.Run("NilShard", func(t *testing.T) {
 		t.Parallel()
-		_, err := signing.NewShortKeyCosigner(sid, curveFamily, nil, quorum, bls.Basic, tape)
+		dkgCtx := ctxs[shard.Share().ID()]
+		signCtx, err := dkgCtx.SubContext(quorum)
+		require.NoError(t, err)
+		_, err = signing.NewShortKeyCosigner(signCtx, curveFamily, nil, bls.Basic)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "shard")
 	})
 
 	t.Run("UnsupportedRogueKeyAlgorithm", func(t *testing.T) {
 		t.Parallel()
-		_, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, bls.RogueKeyPreventionAlgorithm(99), tape)
+		dkgCtx := ctxs[shard.Share().ID()]
+		signCtx, err := dkgCtx.SubContext(quorum)
+		require.NoError(t, err)
+		_, err = signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.RogueKeyPreventionAlgorithm(99))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not supported")
 	})
@@ -431,7 +430,10 @@ func TestCosignerCreationErrors(t *testing.T) {
 		// Create a quorum that doesn't meet the threshold
 		invalidQuorum := hashset.NewComparable[sharing.ID]()
 		invalidQuorum.Add(sharing.ID(1)) // Only 1 member, but threshold is 2
-		_, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, invalidQuorum.Freeze(), bls.Basic, tape)
+		dkgCtx := ctxs[shard.Share().ID()]
+		signCtx, err := dkgCtx.SubContext(invalidQuorum.Freeze())
+		require.NoError(t, err)
+		_, err = signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not authorized")
 	})
@@ -442,9 +444,7 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 	t.Parallel()
 
 	// Setup a valid cosigner
-	sid := network.SID(sha3.Sum256([]byte("test-partial-sig-errors")))
 	curveFamily := &bls12381.FamilyTrait{}
-	tape := hagrid.NewTranscript("TestPartialSigErrors")
 	prng := pcg.NewRandomised()
 
 	group := bls12381.NewG1()
@@ -468,7 +468,9 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 	quorumSet.Add(sharing.ID(2))
 	quorum := quorumSet.Freeze()
 
-	cosigner, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, bls.Basic, tape)
+	signCtx, err := ctxs[shard.Share().ID()].SubContext(quorum)
+	require.NoError(t, err)
+	cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
 	require.NoError(t, err)
 
 	t.Run("EmptyMessage", func(t *testing.T) {
@@ -544,8 +546,6 @@ func TestAggregationErrors(t *testing.T) {
 
 	// Setup valid components
 	curveFamily := &bls12381.FamilyTrait{}
-	sid := network.SID(sha3.Sum256([]byte("test-aggregation-errors")))
-	tape := hagrid.NewTranscript("TestAggregationErrors")
 	prng := pcg.NewRandomised()
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
@@ -570,7 +570,9 @@ func TestAggregationErrors(t *testing.T) {
 	cosigners := make([]*signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar], 0)
 	for id := range quorum.Iter() {
 		shard := shards[id]
-		cosigner, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, bls.Basic, tape.Clone())
+		signCtx, err := ctxs[id].SubContext(quorum)
+		require.NoError(t, err)
+		cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
 		require.NoError(t, err)
 		cosigners = append(cosigners, cosigner)
 	}
@@ -634,9 +636,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			sid := network.SID(sha3.Sum256([]byte("test-quorum-" + tc.name)))
 			curveFamily := &bls12381.FamilyTrait{}
-			tape := hagrid.NewTranscript("TestQuorum")
 			prng := pcg.NewRandomised()
 
 			// Setup DKG
@@ -666,7 +666,9 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 			for id := range quorum.Iter() {
 				shard, ok := shards[id]
 				require.True(t, ok)
-				cosigner, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, bls.Basic, tape.Clone())
+				signCtx, err := ctxs[id].SubContext(quorum)
+				require.NoError(t, err)
+				cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
 				require.NoError(t, err)
 				cosigners = append(cosigners, cosigner)
 			}
@@ -696,9 +698,7 @@ func TestCosignerGetters(t *testing.T) {
 	t.Parallel()
 
 	// Setup a cosigner
-	sid := network.SID(sha3.Sum256([]byte("test-getters")))
 	curveFamily := &bls12381.FamilyTrait{}
-	tape := hagrid.NewTranscript("TestGetters")
 	prng := pcg.NewRandomised()
 
 	group := bls12381.NewG1()
@@ -723,7 +723,9 @@ func TestCosignerGetters(t *testing.T) {
 	quorum := quorumSet.Freeze()
 
 	rogueKeyAlg := bls.POP
-	cosigner, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, rogueKeyAlg, tape)
+	signCtx, err := ctxs[shard.Share().ID()].SubContext(quorum)
+	require.NoError(t, err)
+	cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, rogueKeyAlg)
 	require.NoError(t, err)
 
 	t.Run("SharingID", func(t *testing.T) {
