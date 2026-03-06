@@ -134,9 +134,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto verifier")
 		}
 		if err := verifier.Verify(
-			sigand.ComposeStatements(sliceutils.Map(inB.PedersenVerificationVector.Coefficients(), func(coeff E) *okamoto.Statement[E, S] {
-				return okamoto.NewStatement(coeff)
-			})...),
+			sigand.ComposeStatements(sliceutils.Map(inB.PedersenVerificationVector.Coefficients(), okamoto.NewStatement)...),
 			inB.Proof,
 		); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify okamoto proof of knowledge of opening from party %d", pid)
