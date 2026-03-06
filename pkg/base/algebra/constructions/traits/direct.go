@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
@@ -34,6 +35,11 @@ type DirectPowerInheritterPtrConstraint[E algebra.SemiGroupElement[E], T any] in
 type DirectPowerSemiGroup[S algebra.SemiGroup[E], E algebra.SemiGroupElement[E], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	base  S
 	arity int
+}
+
+type directPowerSemiGroupDTO[S algebra.SemiGroup[E], E algebra.SemiGroupElement[E]] struct {
+	Base  S    `cbor:"base"`
+	Arity uint `cbor:"arity"`
 }
 
 func (s *DirectPowerSemiGroup[S, E, W, WT]) Base() S {
@@ -123,9 +129,36 @@ func (s *DirectPowerSemiGroup[S, E, W, WT]) Order() cardinal.Cardinal {
 	return out
 }
 
+func (s *DirectPowerSemiGroup[S, E, W, WT]) MarshalCBOR() ([]byte, error) {
+	dto := directPowerSemiGroupDTO[S, E]{
+		Base:  s.base,
+		Arity: uint(s.arity),
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal direct power semi-group to CBOR")
+	}
+	return out, nil
+}
+
+func (s *DirectPowerSemiGroup[S, E, W, WT]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[directPowerSemiGroupDTO[S, E]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal direct power semi-group from CBOR")
+	}
+	if err := s.Set(dto.Base, dto.Arity); err != nil {
+		return errs.Wrap(err).WithMessage("failed to set direct power semi-group from unmarshaled DTO")
+	}
+	return nil
+}
+
 type DirectPowerSemiGroupElement[E algebra.SemiGroupElement[E], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	components []E
 	arity      int
+}
+
+type directPowerSemiGroupElementDTO[E algebra.SemiGroupElement[E]] struct {
+	Components []E `cbor:"components"`
 }
 
 func (d *DirectPowerSemiGroupElement[E, W, WT]) Arity() cardinal.Cardinal {
@@ -144,6 +177,14 @@ func (d *DirectPowerSemiGroupElement[E, W, WT]) Bytes() []byte {
 }
 
 func (d *DirectPowerSemiGroupElement[E, W, WT]) set(arity int, components ...E) error {
+	for i, c := range components {
+		if utils.IsNil(c) {
+			return ErrInvalidArgument.WithMessage("component %d cannot be nil", i)
+		}
+	}
+	if len(components) != arity {
+		return ErrInvalidArgument.WithMessage("incorrect component count: expected %d, got %d", arity, len(components))
+	}
 	d.components = components
 	d.arity = arity
 	return nil
@@ -217,6 +258,28 @@ func (d *DirectPowerSemiGroupElement[E, W, WT]) String() string {
 	}
 	out += ")"
 	return out
+}
+
+func (d *DirectPowerSemiGroupElement[E, W, WT]) MarshalCBOR() ([]byte, error) {
+	dto := directPowerSemiGroupElementDTO[E]{
+		Components: d.components,
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal direct power semi-group element to CBOR")
+	}
+	return out, nil
+}
+
+func (d *DirectPowerSemiGroupElement[E, W, WT]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[directPowerSemiGroupElementDTO[E]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal direct power semi-group element from CBOR")
+	}
+	if err := d.set(len(dto.Components), dto.Components...); err != nil {
+		return errs.Wrap(err).WithMessage("failed to set direct power semi-group element from unmarshaled DTO")
+	}
+	return nil
 }
 
 // ========== Group ==========.

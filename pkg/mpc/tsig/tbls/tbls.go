@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
@@ -215,12 +215,9 @@ func NewShortKeyShard[
 	if !ok {
 		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
 	}
-	partialPublicKeyValues, err := gennaro.ComputePartialPublicKey(sf, share, vector, accessStructure)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to compute partial public keys from share")
-	}
 	partialPublicKeys := hashmap.NewComparable[sharing.ID, *bls.PublicKey[P1, FE1, P2, FE2, E, S]]()
-	for id, value := range partialPublicKeyValues.Iter() {
+	for id := range accessStructure.Shareholders().Iter() {
+		value := vector.Eval(shamir.SharingIDToLagrangeNode(sf, id))
 		pk, err := bls.NewPublicKey(value)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create public key for party %d", id)
@@ -279,12 +276,9 @@ func NewLongKeyShard[
 	if !ok {
 		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
 	}
-	partialPublicKeyValues, err := gennaro.ComputePartialPublicKey(sf, share, vector, accessStructure)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to compute partial public keys from share")
-	}
 	partialPublicKeys := hashmap.NewComparable[sharing.ID, *bls.PublicKey[P2, FE2, P1, FE1, E, S]]()
-	for id, value := range partialPublicKeyValues.Iter() {
+	for id := range accessStructure.Shareholders().Iter() {
+		value := vector.Eval(shamir.SharingIDToLagrangeNode(sf, id))
 		pk, err := bls.NewPublicKey(value)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create public key for party %d", id)
