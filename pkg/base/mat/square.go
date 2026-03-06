@@ -1,8 +1,9 @@
 package mat
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 // NewMatrixAlgebra creates a MatrixAlgebra for n×n square matrices over the given finite ring.

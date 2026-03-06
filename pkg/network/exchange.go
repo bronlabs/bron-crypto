@@ -1,10 +1,11 @@
 package network
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func SendUnicast[U any](rt *Router, correlationID string, messages RoundMessages[U]) error {

@@ -6,9 +6,10 @@ import (
 	"io"
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // StatementCartesian represents a binary OR-composed statement with two potentially

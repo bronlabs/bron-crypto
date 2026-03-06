@@ -4,9 +4,10 @@ import (
 	"crypto/elliptic"
 	"math/big"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

@@ -3,10 +3,11 @@ package vsot
 import (
 	"hash"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // SenderOutput carries the sender's ROT outputs for VSOT.

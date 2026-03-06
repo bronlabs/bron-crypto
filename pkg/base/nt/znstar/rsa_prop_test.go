@@ -5,10 +5,11 @@ import (
 
 	"pgregory.net/rapid"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const rsaGroupLen = 1024

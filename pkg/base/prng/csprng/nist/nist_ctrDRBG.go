@@ -7,8 +7,9 @@ import (
 	"math/bits"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
 type CtrDRBG struct {

@@ -3,8 +3,9 @@ package base
 import (
 	"golang.org/x/exp/constraints"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 type (

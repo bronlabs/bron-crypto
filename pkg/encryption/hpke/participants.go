@@ -4,11 +4,12 @@ import (
 	"io"
 	"sync"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // KeyGeneratorOption is a functional option for configuring the HPKE key generator.

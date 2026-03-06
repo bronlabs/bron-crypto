@@ -3,10 +3,11 @@ package ecdsa
 import (
 	"math/big"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Signature represents an ECDSA signature consisting of two scalar values (r, s)

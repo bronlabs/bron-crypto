@@ -1,9 +1,10 @@
 package sharing
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

@@ -3,9 +3,10 @@ package lindell17
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // DecomposeTwoThirds splits a scalar into x', x” with x = 3x' + x” in range [q/3, 2q/3).

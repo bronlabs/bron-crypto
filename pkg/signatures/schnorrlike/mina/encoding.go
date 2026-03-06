@@ -1,8 +1,9 @@
 package mina
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 )
 
 // Base58Check version prefixes for Mina key and signature encoding.

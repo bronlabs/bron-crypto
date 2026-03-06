@@ -1,8 +1,9 @@
 package mat
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 // SolveRight solves M*x = b where M is this m×n matrix and b is column (length m).

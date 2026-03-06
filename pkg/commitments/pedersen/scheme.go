@@ -1,9 +1,10 @@
 package pedersen
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Scheme wires together the Pedersen CRS with its committer and verifier.

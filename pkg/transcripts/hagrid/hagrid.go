@@ -5,8 +5,9 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 // Keep the tag at constant length.

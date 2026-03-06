@@ -4,9 +4,10 @@ import (
 	"crypto/hmac"
 	"hash"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/ioutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/kmac"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Hash iteratively writes all the inputs to the given hash function and returns the result.

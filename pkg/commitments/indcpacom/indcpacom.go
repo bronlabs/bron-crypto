@@ -3,10 +3,11 @@ package indcpacom
 import (
 	"fmt"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Scheme represents an IND-CPA commitment scheme constructed from an encryption scheme.

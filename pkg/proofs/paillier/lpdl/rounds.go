@@ -3,9 +3,10 @@ package lpdl
 import (
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 executes the verifier's first round.

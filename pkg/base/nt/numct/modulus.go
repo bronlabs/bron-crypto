@@ -8,9 +8,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // ModulusBasic is a modulus implementation based on saferith.Modulus.

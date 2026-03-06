@@ -1,11 +1,12 @@
 package birkhoff
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/birkhoff/internal"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // InterpolateInExponent reconstructs a module-valued polynomial from Birkhoff nodes

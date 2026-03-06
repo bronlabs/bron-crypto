@@ -24,6 +24,7 @@ formatters:
         - standard
         - default
         - prefix(github.com/bronlabs)
+        - prefix(github.com/bronlabs/bron-crypto)
         - blank
         - dot
       custom-order: true
