@@ -292,6 +292,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) OpInvAssign() {
 		m.v[i] = m.v[i].OpInv()
 	}
 }
+
 // OpInv returns the element-wise group inverse as a new matrix.
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) OpInv() W {
 	c := m.clone()

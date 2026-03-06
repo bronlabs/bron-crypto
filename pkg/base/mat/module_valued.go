@@ -1,8 +1,9 @@
 package mat
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 // NewModuleValuedMatrixModule creates a ModuleValuedMatrixModule for m×n matrices
@@ -81,7 +82,7 @@ func (m *ModuleValuedMatrix[E, S]) cols() int {
 	return m.n
 }
 
-func (m *ModuleValuedMatrix[E, S]) data() []E {
+func (m *ModuleValuedMatrix[E, S]) data() []E { //nolint:unused // false positive. Needed for interface compliance.
 	return m.v
 }
 
