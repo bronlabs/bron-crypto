@@ -1,9 +1,10 @@
 package constructions
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions/traits"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // =========== Group ===========.

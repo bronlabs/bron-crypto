@@ -1,10 +1,11 @@
 package exchange
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/echo"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

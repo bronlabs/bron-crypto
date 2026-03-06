@@ -4,6 +4,8 @@ import (
 	"crypto/subtle"
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -11,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 samples pairwise seed contributions and commits to them.

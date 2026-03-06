@@ -5,10 +5,11 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 var (

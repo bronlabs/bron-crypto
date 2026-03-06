@@ -1,11 +1,12 @@
 package sharing
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewOrdinalShareholderSet creates a set of shareholder IDs {1, 2, ..., count}.

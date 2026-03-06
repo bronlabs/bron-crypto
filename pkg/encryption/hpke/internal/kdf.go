@@ -6,8 +6,9 @@ import (
 	"encoding/binary"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
 type KDFID uint16

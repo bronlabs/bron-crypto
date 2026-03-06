@@ -3,6 +3,8 @@ package signing
 import (
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -14,7 +16,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Aggregator combines partial signatures into a complete threshold signature.

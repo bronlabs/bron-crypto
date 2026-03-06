@@ -3,8 +3,9 @@ package pedersen
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 // CommitterOption is a functional option for configuring committers.

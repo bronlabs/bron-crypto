@@ -7,11 +7,12 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // IntOne returns a new Int set to 1.

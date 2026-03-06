@@ -1,9 +1,10 @@
 package mat
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 type matrixDTO[S algebra.RingElement[S]] struct {

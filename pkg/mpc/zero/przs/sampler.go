@@ -4,12 +4,13 @@ import (
 	"io"
 	"math/rand/v2"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Sampler deterministically derives zero-sharing scalars from pairwise seeds.

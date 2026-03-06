@@ -3,13 +3,14 @@ package przssetup
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

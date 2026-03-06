@@ -1,8 +1,9 @@
 package accessstructures
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
 var (

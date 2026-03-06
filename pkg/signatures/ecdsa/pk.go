@@ -3,11 +3,12 @@ package ecdsa
 import (
 	nativeEcdsa "crypto/ecdsa"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // PublicKey represents an ECDSA public key as a point on an elliptic curve.

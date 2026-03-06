@@ -6,12 +6,13 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // VariantType identifies this as the Mina Schnorr variant.

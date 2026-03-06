@@ -3,11 +3,12 @@ package hpke
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // WithSenderPrivateKey returns an option that enables authenticated encapsulation

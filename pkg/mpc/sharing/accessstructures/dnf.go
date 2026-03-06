@@ -4,9 +4,10 @@ import (
 	"iter"
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 var _ Monotone = (*DNF)(nil)

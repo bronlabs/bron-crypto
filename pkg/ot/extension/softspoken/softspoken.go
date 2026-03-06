@@ -3,9 +3,10 @@ package softspoken
 import (
 	"hash"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const (

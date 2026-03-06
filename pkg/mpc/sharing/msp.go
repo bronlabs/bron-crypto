@@ -1,12 +1,13 @@
 package sharing
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], psi map[int]ID) (*MSP[E], error) {

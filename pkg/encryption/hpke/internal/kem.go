@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	dh "github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 type KEMID uint16

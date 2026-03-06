@@ -3,12 +3,13 @@ package constructions
 import (
 	"fmt"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	acrtp "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func NewFieldUnitSubGroup[F algebra.Field[FE], FE acrtp.FieldElement[FE]](f F) (*FieldUnitSubGroup[FE], error) {
