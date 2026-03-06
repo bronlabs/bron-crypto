@@ -106,7 +106,6 @@ func NewParticipant[
 	ctx *session.Context,
 	group algebra.PrimeGroup[LFTSV, SV],
 	lsss sharing.LiftableLSSS[S, SV, W, WV, DO, AC, DF, LFTS, LFTSV, LFTDF, LFTW, LFTWV],
-	ac AC,
 	niCompilerName compiler.Name,
 	prng io.Reader,
 ) (*Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV], error) {
@@ -116,19 +115,16 @@ func NewParticipant[
 	if utils.IsNil(group) {
 		return nil, ErrInvalidArgument.WithMessage("group is nil")
 	}
-	if lsss == nil {
+	if utils.IsNil(lsss) {
 		return nil, ErrInvalidArgument.WithMessage("liftable LSSS cannot be nil")
 	}
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
-	if utils.IsNil(ac) {
-		return nil, ErrInvalidArgument.WithMessage("access structure is nil")
-	}
-	if !ctx.Quorum().Equal(ac.Shareholders()) {
+	if !ctx.Quorum().Equal(lsss.AccessStructure().Shareholders()) {
 		return nil, ErrInvalidArgument.WithMessage("access structure doesn't match context")
 	}
-	if !ac.Shareholders().Contains(ctx.HolderID()) {
+	if !lsss.AccessStructure().Shareholders().Contains(ctx.HolderID()) {
 		return nil, ErrInvalidArgument.WithMessage("myID is not a shareholder in the access structure")
 	}
 	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, ctx.SessionID(), group.Name())
@@ -152,7 +148,7 @@ func NewParticipant[
 	}
 	return &Participant[S, SV, W, WV, DO, AC, DF, LFTDF, LFTS, LFTSV, LFTW, LFTWV]{
 		ctx:            ctx,
-		ac:             ac,
+		ac:             lsss.AccessStructure(),
 		niCompilerName: niCompilerName,
 		prng:           prng,
 		//nolint:exhaustruct // initially partially empty state

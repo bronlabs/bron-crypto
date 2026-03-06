@@ -73,7 +73,7 @@ func setupShamir(
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 	parties = hashmap.NewComparable[sharing.ID, *shamirParticipant]()
 	for id, ctx := range ctxs {
-		p, err := gjkr07.NewParticipant(ctx, group, liftableScheme, ac, fiatshamir.Name, prng)
+		p, err := gjkr07.NewParticipant(ctx, group, liftableScheme, fiatshamir.Name, prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -172,7 +172,7 @@ func setupISN(
 	ctxs := session_testutils.MakeRandomContexts(t, cnf.Shareholders(), prng)
 	parties := hashmap.NewComparable[sharing.ID, *isnParticipant]()
 	for id, ctx := range ctxs {
-		p, err := gjkr07.NewParticipant(ctx, group, liftableScheme, cnf, fiatshamir.Name, prng)
+		p, err := gjkr07.NewParticipant(ctx, group, liftableScheme, fiatshamir.Name, prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -490,43 +490,45 @@ func shamirSuite(threshold, total uint) dkgSuite {
 			ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 			ctx := ctxs[sharing.ID(1)]
 
-			newParticipant := func(ctx *session.Context, grp *k256.Curve, lsss *shamir.LiftableScheme[*k256.Point, *k256.Scalar], ac *accessstructures.Threshold, prng io.Reader) (*shamirParticipant, error) {
-				return gjkr07.NewParticipant(ctx, grp, lsss, ac, fiatshamir.Name, prng)
+			newParticipant := func(ctx *session.Context, grp *k256.Curve, lsss *shamir.LiftableScheme[*k256.Point, *k256.Scalar], prng io.Reader) (*shamirParticipant, error) {
+				return gjkr07.NewParticipant(ctx, grp, lsss, fiatshamir.Name, prng)
 			}
 
 			t.Run("nil context", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(nil, group, liftableScheme, ac, prng)
+				_, err := newParticipant(nil, group, liftableScheme, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil group", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(ctx, nil, liftableScheme, ac, prng)
+				_, err := newParticipant(ctx, nil, liftableScheme, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil prng", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(ctx, group, liftableScheme, ac, nil)
+				_, err := newParticipant(ctx, group, liftableScheme, nil)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
-			t.Run("nil access structure", func(t *testing.T) {
+			t.Run("nil lsss", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(ctx, group, liftableScheme, nil, prng)
+				_, err := newParticipant(ctx, group, nil, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("access structure mismatch with context", func(t *testing.T) {
 				t.Parallel()
-				mismatch, err := accessstructures.NewThresholdAccessStructure(threshold, hashset.NewComparable[sharing.ID](1, 2, 4).Freeze())
+				mismatchAC, err := accessstructures.NewThresholdAccessStructure(threshold, hashset.NewComparable[sharing.ID](1, 2, 4).Freeze())
 				require.NoError(t, err)
-				_, err = newParticipant(ctx, group, liftableScheme, mismatch, prng)
+				mismatchLSSS, err := shamir.NewLiftableScheme(group, mismatchAC)
+				require.NoError(t, err)
+				_, err = newParticipant(ctx, group, mismatchLSSS, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
@@ -542,7 +544,7 @@ func shamirSuite(threshold, total uint) dkgSuite {
 				minCtxs := session_testutils.MakeRandomContexts(t, minShareholders, prng)
 				parties := hashmap.NewComparable[sharing.ID, *shamirParticipant]()
 				for id, minCtx := range minCtxs {
-					p, err := newParticipant(minCtx, group, lsss, minAC, prng)
+					p, err := newParticipant(minCtx, group, lsss, prng)
 					require.NoError(t, err)
 					parties.Put(id, p)
 				}
@@ -753,34 +755,34 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 			ctxs := session_testutils.MakeRandomContexts(t, cnf.Shareholders(), prng)
 			ctx := ctxs[sharing.ID(1)]
 
-			newParticipant := func(ctx *session.Context, grp *k256.Curve, lsss *isn.LiftableScheme[*k256.Point, *k256.Scalar], ac *accessstructures.CNF, prng io.Reader) (*isnParticipant, error) {
-				return gjkr07.NewParticipant(ctx, grp, lsss, ac, fiatshamir.Name, prng)
+			newParticipant := func(ctx *session.Context, grp *k256.Curve, lsss *isn.LiftableScheme[*k256.Point, *k256.Scalar], prng io.Reader) (*isnParticipant, error) {
+				return gjkr07.NewParticipant(ctx, grp, lsss, fiatshamir.Name, prng)
 			}
 
 			t.Run("nil context", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(nil, group, liftableScheme, cnf, prng)
+				_, err := newParticipant(nil, group, liftableScheme, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil group", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(ctx, nil, liftableScheme, cnf, prng)
+				_, err := newParticipant(ctx, nil, liftableScheme, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
 			t.Run("nil prng", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(ctx, group, liftableScheme, cnf, nil)
+				_, err := newParticipant(ctx, group, liftableScheme, nil)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
 
-			t.Run("nil access structure", func(t *testing.T) {
+			t.Run("nil lsss", func(t *testing.T) {
 				t.Parallel()
-				_, err := newParticipant(ctx, group, liftableScheme, nil, prng)
+				_, err := newParticipant(ctx, group, nil, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
@@ -791,7 +793,9 @@ func isnSuiteFromCNF(name string, cnf *accessstructures.CNF) dkgSuite {
 					hashset.NewComparable[sharing.ID](5, 6).Freeze(),
 				)
 				require.NoError(t, err)
-				_, err = newParticipant(ctx, group, liftableScheme, mismatchCNF, prng)
+				mismatchLSSS, err := isn.NewFiniteLiftableScheme(group, mismatchCNF)
+				require.NoError(t, err)
+				_, err = newParticipant(ctx, group, mismatchLSSS, prng)
 				require.Error(t, err)
 				require.ErrorIs(t, err, gjkr07.ErrInvalidArgument)
 			})
