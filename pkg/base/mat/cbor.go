@@ -13,6 +13,7 @@ type matrixDTO[S algebra.RingElement[S]] struct {
 	Data []S `cbor:"data"`
 }
 
+// MarshalCBOR serialises the matrix to CBOR.
 func (m *Matrix[S]) MarshalCBOR() ([]byte, error) {
 	dto := &matrixDTO[S]{
 		Rows: m.rows(),
@@ -26,6 +27,7 @@ func (m *Matrix[S]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises the matrix from CBOR.
 func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*matrixDTO[S]](data)
 	if err != nil {
@@ -47,6 +49,7 @@ type squareMatrixDTO[S algebra.RingElement[S]] struct {
 	Data []S `cbor:"data"`
 }
 
+// MarshalCBOR serialises the square matrix to CBOR.
 func (m *SquareMatrix[S]) MarshalCBOR() ([]byte, error) {
 	dto := &squareMatrixDTO[S]{
 		Size: m.rows(),
@@ -59,6 +62,7 @@ func (m *SquareMatrix[S]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises the square matrix from CBOR.
 func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*squareMatrixDTO[S]](data)
 	if err != nil {

@@ -13,10 +13,10 @@ func NewMatrixModule[S algebra.RingElement[S]](rows, cols uint, ring algebra.Fin
 		return nil, ErrFailed.WithMessage("ring cannot be nil")
 	}
 	return &MatrixModule[S]{
-		MatrixModuleTrait: MatrixModuleTrait[S, *Matrix[S], Matrix[S]]{
-			rows: int(rows),
-			cols: int(cols),
-			ring: ring,
+		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]{
+			rows:      int(rows),
+			cols:      int(cols),
+			structure: ring,
 		},
 	}, nil
 }
@@ -25,17 +25,22 @@ func NewMatrixModule[S algebra.RingElement[S]](rows, cols uint, ring algebra.Fin
 // It serves as a factory for [Matrix] instances and provides module-level properties
 // like dimensions, element size, and serialisation.
 type MatrixModule[S algebra.RingElement[S]] struct {
-	MatrixModuleTrait[S, *Matrix[S], Matrix[S]]
+	MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]
+}
+
+// ScalarRing returns the underlying finite ring of scalars.
+func (m *MatrixModule[S]) ScalarRing() algebra.FiniteRing[S] {
+	return m.structure
 }
 
 // Matrix is a generic rectangular matrix over a finite ring. Elements are stored in
-// row-major order. Arithmetic operations are inherited from [MatrixTrait].
+// row-major order. Arithmetic operations are inherited from [MatrixGroupElementTrait].
 type Matrix[S algebra.RingElement[S]] struct {
 	MatrixTrait[S, *Matrix[S], Matrix[S], *Matrix[S], Matrix[S]]
 }
 
 func (m *Matrix[S]) init(rows, cols int) {
-	m.MatrixTrait = MatrixTrait[S, *Matrix[S], Matrix[S], *Matrix[S], Matrix[S]]{
+	m.MatrixGroupElementTrait = MatrixGroupElementTrait[S, *Matrix[S], Matrix[S], *Matrix[S], Matrix[S]]{
 		self: m,
 		m:    rows,
 		n:    cols,
@@ -58,10 +63,10 @@ func (m *Matrix[S]) data() []S {
 // Module returns the MatrixModule that this matrix belongs to.
 func (m *Matrix[S]) Module() *MatrixModule[S] {
 	return &MatrixModule[S]{
-		MatrixModuleTrait: MatrixModuleTrait[S, *Matrix[S], Matrix[S]]{
-			rows: m.rows(),
-			cols: m.cols(),
-			ring: m.scalarRing(),
+		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]{
+			rows:      m.rows(),
+			cols:      m.cols(),
+			structure: algebra.StructureMustBeAs[algebra.FiniteRing[S]](m.scalarGroup()),
 		},
 	}
 }
@@ -69,27 +74,6 @@ func (m *Matrix[S]) Module() *MatrixModule[S] {
 // Structure returns the algebraic structure for this matrix type.
 func (m *Matrix[S]) Structure() algebra.Structure[*Matrix[S]] {
 	return m.Module()
-}
-
-// IsColumnVector returns true if this matrix has exactly one column.
-func (m *Matrix[S]) IsColumnVector() bool {
-	return m.n == 1
-}
-
-// IsRowVector returns true if this matrix has exactly one row.
-func (m *Matrix[S]) IsRowVector() bool {
-	return m.m == 1
-}
-
-// vectorLength returns the length of a row or column vector, or -1 if the matrix is not a vector.
-func (m *Matrix[S]) vectorLength() int {
-	if m.IsRowVector() {
-		return m.n
-	}
-	if m.IsColumnVector() {
-		return m.m
-	}
-	return -1
 }
 
 // DotProduct computes the dot product of two vectors (row or column).

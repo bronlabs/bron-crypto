@@ -1,6 +1,6 @@
 # mat
 
-Generic matrix package over finite rings.
+Generic matrix package over finite algebraic structures.
 
 ## Types
 
@@ -10,9 +10,17 @@ Generic matrix package over finite rings.
 | `Matrix[S]` | Generic m×n rectangular matrix over a finite ring element `S`. |
 | `MatrixAlgebra[S]` | Algebra structure for square matrices. Factory for `SquareMatrix[S]`. |
 | `SquareMatrix[S]` | Generic n×n square matrix with determinant, inverse, trace. |
+| `ModuleValuedMatrixModule[E, S]` | Module structure for module-valued matrices. Factory for `ModuleValuedMatrix[E, S]`. |
+| `ModuleValuedMatrix[E, S]` | Generic m×n matrix whose entries are module elements (e.g. curve points). |
 
-Both matrix types are generic over a scalar `S` constrained by `algebra.RingElement[S]`.
-The ring must implement `algebra.FiniteRing[S]` to support random sampling and hashing.
+Ring-valued matrices (`Matrix`, `SquareMatrix`) are generic over a scalar `S` constrained
+by `algebra.RingElement[S]`. The ring must implement `algebra.FiniteRing[S]` to support
+random sampling and hashing.
+
+Module-valued matrices (`ModuleValuedMatrix`) are generic over an element type `E`
+constrained by `algebra.ModuleElement[E, S]` and a scalar type `S`. They support group
+operations (element-wise addition/negation) and scalar multiplication, but not ring
+operations like matrix–matrix multiplication.
 
 ## Usage
 
@@ -53,10 +61,30 @@ tr := sq.Trace()
 product := sq.Mul(other)
 
 // Solve linear systems.
-// Mx = b (column span): returns x as n×1 matrix.
-x, err := m.Spans(b)
-// xM = r (row span): returns x as m×1 matrix.
-x, err = m.RowSpans(r)
+// Mx = b (right solve): returns x as n×1 matrix.
+x, err := mat.SolveRight(m, b)
+// xM = r (left solve): returns x as m×1 matrix.
+x, err = mat.SolveLeft(m, r)
+```
+
+### Module-valued matrices
+
+```go
+// Create a module for 2x2 matrices over curve points.
+mvMod, _ := mat.NewModuleValuedMatrixModule(2, 2, curve)
+
+// Construct from module elements.
+mv, _ := mvMod.New([][]E{{p1, p2}, {p3, p4}})
+
+// Lift a scalar matrix into module-valued via a base point.
+lifted, _ := mat.LiftMatrix(scalarMatrix, basePoint)
+
+// Group operations (element-wise point addition).
+sum := mv.Op(other)
+inv := mv.OpInv()
+
+// Scalar multiplication (multiply each element by a scalar).
+scaled := mv.ScalarOp(s)
 ```
 
 ### Immutable vs Assign
@@ -69,6 +97,9 @@ Most operations come in pairs:
 | `Sub` | `SubAssign` |
 | `Neg` | `NegAssign` |
 | `ScalarMul` | `ScalarMulAssign` |
+| `Op` | `OpAssign` |
+| `OpInv` | `OpInvAssign` |
+| `ScalarOp` | `ScalarOpAssign` |
 | `SwapRow` | `SwapRowAssign` |
 | ... | ... |
 
@@ -77,5 +108,5 @@ Assign methods mutate the receiver directly.
 
 ### Storage
 
-Elements are stored in a flat `[]S` slice in row-major order. Index `(i, j)` maps to
+Elements are stored in a flat slice in row-major order. Index `(i, j)` maps to
 `data[i*cols + j]`.
