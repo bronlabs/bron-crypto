@@ -82,7 +82,7 @@ func (m *ModuleValuedMatrix[E, S]) cols() int {
 	return m.n
 }
 
-func (m *ModuleValuedMatrix[E, S]) data() []E { //nolint:unused // false positive. Needed for interface compliance.
+func (m *ModuleValuedMatrix[E, S]) data() []E {
 	return m.v
 }
 
