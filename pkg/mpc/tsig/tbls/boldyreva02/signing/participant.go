@@ -1,17 +1,18 @@
 package signing
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const transcriptLabel = "BRON_CRYPTO_TBLS_BOLDYREVA-"
@@ -24,10 +25,8 @@ type Cosigner[
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
-	sid               network.SID
+	ctx               *session.Context
 	shard             *boldyreva02.Shard[PK, PKFE, SG, SGFE, E, S]
-	quorum            network.Quorum
-	tape              ts.Transcript
 	round             network.Round
 	targetRogueKeyAlg bls.RogueKeyPreventionAlgorithm
 	targetDst         string
@@ -46,7 +45,7 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) Quorum() network.Quorum {
 	if c == nil {
 		return nil
 	}
-	return c.quorum
+	return c.ctx.Quorum()
 }
 
 // Shard returns the cosigner's secret shard used for producing partial signatures.
@@ -86,33 +85,36 @@ func NewShortKeyCosigner[
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
-	sid network.SID,
+	ctx *session.Context,
 	curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S],
 	shard *boldyreva02.Shard[P1, FE1, P2, FE2, E, S],
-	quorum network.Quorum,
 	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
-	tape ts.Transcript,
 ) (*Cosigner[P1, FE1, P2, FE2, E, S], error) {
+	if ctx == nil {
+		return nil, ErrInvalidArgument.WithMessage("ctx is nil")
+	}
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
-	}
-	if tape == nil {
-		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
 	}
 	if shard == nil {
 		return nil, ErrInvalidArgument.WithMessage("shard is nil")
 	}
-	if quorum == nil {
-		return nil, ErrInvalidArgument.WithMessage("quorum is nil")
+
+	if ctx.HolderID() != shard.Share().ID() {
+		return nil, ErrInvalidArgument.WithMessage("shard does not belong to the holder")
+	}
+	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
+		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
 	}
 	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
-	if !shard.AccessStructure().IsQualified(quorum.List()...) {
+	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
 		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
 	}
-	dst := fmt.Sprintf("%s-%d-%s-%d-%d", transcriptLabel, sid, curveFamily.Name(), bls.ShortKey, rogueKeyAlg)
-	tape.AppendDomainSeparator(dst)
+	sid := ctx.SessionID()
+	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamily.Name(), bls.ShortKey, rogueKeyAlg)
+	ctx.Transcript().AppendDomainSeparator(dst)
 	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
@@ -126,10 +128,8 @@ func NewShortKeyCosigner[
 		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
 	return &Cosigner[P1, FE1, P2, FE2, E, S]{
-		sid:               sid,
+		ctx:               ctx,
 		shard:             shard,
-		quorum:            quorum,
-		tape:              tape,
 		scheme:            scheme,
 		targetRogueKeyAlg: rogueKeyAlg,
 		targetDst:         blsDst,
@@ -155,27 +155,29 @@ func NewLongKeyCosigner[
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
-	sid network.SID,
+	ctx *session.Context,
 	curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S],
 	shard *boldyreva02.Shard[P2, FE2, P1, FE1, E, S],
-	quorum network.Quorum,
 	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
-	tape ts.Transcript,
 ) (*Cosigner[P2, FE2, P1, FE1, E, S], error) {
+	if ctx == nil {
+		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
+	}
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
-	if tape == nil {
-		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
+	if ctx.HolderID() != shard.Share().ID() {
+		return nil, ErrInvalidArgument.WithMessage("shard does not belong to the holder")
 	}
-	if !shard.AccessStructure().IsQualified(quorum.List()...) {
+	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
 		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
 	}
 	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
-	dst := fmt.Sprintf("%s-%d-%s-%d-%d", transcriptLabel, sid, curveFamily.Name(), bls.LongKey, rogueKeyAlg)
-	tape.AppendDomainSeparator(dst)
+	sid := ctx.SessionID()
+	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamily.Name(), bls.LongKey, rogueKeyAlg)
+	ctx.Transcript().AppendDomainSeparator(dst)
 	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS long key scheme")
@@ -189,10 +191,8 @@ func NewLongKeyCosigner[
 		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
 	return &Cosigner[P2, FE2, P1, FE1, E, S]{
-		sid:               sid,
+		ctx:               ctx,
 		shard:             shard,
-		quorum:            quorum,
-		tape:              tape,
 		scheme:            scheme,
 		shareAsPrivateKey: shareAsPrivateKey,
 		targetRogueKeyAlg: rogueKeyAlg,
