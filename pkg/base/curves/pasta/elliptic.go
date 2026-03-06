@@ -49,7 +49,7 @@ func (*ellipticPallas) IsOnCurve(x, y *big.Int) bool {
 		return false
 	}
 	_, err := fromPallasAffine(x, y)
-	return err != nil
+	return err == nil
 }
 
 // Add sets the receiver to lhs + rhs.
@@ -112,7 +112,7 @@ func (*ellipticVesta) IsOnCurve(x, y *big.Int) bool {
 		return false
 	}
 	_, err := fromVestaAffine(x, y)
-	return err != nil
+	return err == nil
 }
 
 // Add sets the receiver to lhs + rhs.

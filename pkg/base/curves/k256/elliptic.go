@@ -36,7 +36,7 @@ func (*ellipticK256) IsOnCurve(x, y *big.Int) bool {
 		return false
 	}
 	_, err := fromAffine(x, y)
-	return err != nil
+	return err == nil
 }
 
 // Add sets the receiver to lhs + rhs.

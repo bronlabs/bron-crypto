@@ -2,6 +2,7 @@ package k256_test
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -254,4 +255,21 @@ func BenchmarkMultiScalarMul(b *testing.B) {
 			}
 		})
 	}
+}
+
+func Test_EllipticPointOnCurve(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	ellipticCurve := k256.NewCurve().ToElliptic()
+	p, err := k256.NewCurve().Random(prng)
+	require.NoError(t, err)
+	x, err := p.AffineX()
+	require.NoError(t, err)
+	y, err := p.AffineY()
+	require.NoError(t, err)
+	xInt := new(big.Int).SetBytes(x.BytesBE())
+	yInt := new(big.Int).SetBytes(y.BytesBE())
+	ok := ellipticCurve.IsOnCurve(xInt, yInt)
+	require.True(t, ok)
 }
