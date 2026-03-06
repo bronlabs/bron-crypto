@@ -1,6 +1,7 @@
 package pasta_test
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -92,4 +93,38 @@ func Test_VestaPointCBORRoundTrip(t *testing.T) {
 	err = cbor.Unmarshal(serialised, &deserialized)
 	require.NoError(t, err)
 	require.True(t, deserialized.Equal(e))
+}
+
+func Test_PallasEllipticPointOnCurve(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	ellipticCurve := pasta.NewPallasCurve().ToElliptic()
+	p, err := pasta.NewPallasCurve().Random(prng)
+	require.NoError(t, err)
+	x, err := p.AffineX()
+	require.NoError(t, err)
+	y, err := p.AffineY()
+	require.NoError(t, err)
+	xInt := new(big.Int).SetBytes(x.BytesBE())
+	yInt := new(big.Int).SetBytes(y.BytesBE())
+	ok := ellipticCurve.IsOnCurve(xInt, yInt)
+	require.True(t, ok)
+}
+
+func Test_VestaEllipticPointOnCurve(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	ellipticCurve := pasta.NewVestaCurve().ToElliptic()
+	p, err := pasta.NewVestaCurve().Random(prng)
+	require.NoError(t, err)
+	x, err := p.AffineX()
+	require.NoError(t, err)
+	y, err := p.AffineY()
+	require.NoError(t, err)
+	xInt := new(big.Int).SetBytes(x.BytesBE())
+	yInt := new(big.Int).SetBytes(y.BytesBE())
+	ok := ellipticCurve.IsOnCurve(xInt, yInt)
+	require.True(t, ok)
 }
