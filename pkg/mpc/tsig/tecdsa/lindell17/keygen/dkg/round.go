@@ -249,7 +249,7 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 		theirCKeyDoublePrime := message.CKeyDoublePrime
 
 		// 4.i. calculate and store ckey_j = 3 (*) ckey'_j (+) ckey''_j
-		p.state.theirPaillierEncryptedShares[id] = theirCKeyPrime.HomAdd(theirCKeyDoublePrime).HomAdd(theirCKeyDoublePrime).HomAdd(theirCKeyDoublePrime)
+		p.state.theirPaillierEncryptedShares[id] = theirCKeyDoublePrime.HomAdd(theirCKeyPrime).HomAdd(theirCKeyPrime).HomAdd(theirCKeyPrime)
 
 		// 4.ii. LP and LPDL continue
 		// Share single transcript clone across all verifiers to preserve state
@@ -458,7 +458,7 @@ func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, 
 }
 
 func dlogProve[
-	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
+P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
 ](c *Participant[P, B, S], bigQ, bigQTwin P, x S, tape transcripts.Transcript) (compiler.NIZKPoKProof, error) {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)
@@ -482,7 +482,7 @@ func dlogProve[
 }
 
 func dlogVerify[
-	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
+P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
 ](c *Participant[P, B, S], proverID sharing.ID, proof compiler.NIZKPoKProof, bigQ, bigQTwin P, tape transcripts.Transcript) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)

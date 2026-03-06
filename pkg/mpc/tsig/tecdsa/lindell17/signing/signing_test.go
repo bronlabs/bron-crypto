@@ -18,6 +18,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/dkg/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/signing"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -51,6 +53,36 @@ func TestHappyPath(t *testing.T) {
 						suite, err := ecdsa.NewSuite(curve, hashFunc)
 						require.NoError(t, err)
 						testHappyPath(t, total, suite)
+					})
+				})
+			}
+		})
+	}
+}
+
+func TestHappyPathWithDKG(t *testing.T) {
+	t.Parallel()
+
+	for _, total := range testAccessStructure {
+		t.Run(fmt.Sprintf("total=%d", total), func(t *testing.T) {
+			t.Parallel()
+			for _, ch := range testHashFuncs {
+				t.Run(fmt.Sprintf("hash func=%s", ch.String()), func(t *testing.T) {
+					t.Parallel()
+					hashFunc := ch.New
+					t.Run("secp256k1", func(t *testing.T) {
+						t.Parallel()
+						curve := k256.NewCurve()
+						suite, err := ecdsa.NewSuite(curve, hashFunc)
+						require.NoError(t, err)
+						testHappyPathWithDKG(t, total, suite)
+					})
+					t.Run("P256", func(t *testing.T) {
+						t.Parallel()
+						curve := p256.NewCurve()
+						suite, err := ecdsa.NewSuite(curve, hashFunc)
+						require.NoError(t, err)
+						testHappyPathWithDKG(t, total, suite)
 					})
 				})
 			}
@@ -102,5 +134,54 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 		secondaryTapeCheck, err := ctxs[secondaryID].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.True(t, bytes.Equal(primaryTapeCheck, secondaryTapeCheck))
+	}
+}
+
+func testHappyPathWithDKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, total int, suite *ecdsa.Suite[P, B, S]) {
+	tb.Helper()
+
+	prng := pcg.NewRandomised()
+	shareholders := sharing.NewOrdinalShareholderSet(uint(total))
+	accessStructure, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	require.NoError(tb, err)
+	shards := testutils.RunLindell17DKG(tb, suite.Curve(), accessStructure)
+	publicKey := shards[shareholders.List()[0]].PublicKey()
+
+	for subShareHolders := range sliceutils.KCoveringCombinations(shareholders.List(), 2) {
+		primaryID := subShareHolders[0]
+		secondaryID := subShareHolders[1]
+		primaryShard, ok := shards[primaryID]
+		require.True(tb, ok)
+		secondaryShard, ok := shards[secondaryID]
+		require.True(tb, ok)
+
+		ctxs := session_testutils.MakeRandomContexts(tb, hashset.NewComparable[sharing.ID](primaryID, secondaryID).Freeze(), prng)
+		primaryCosigner, err := signing.NewPrimaryCosigner(ctxs[primaryID], suite, secondaryID, primaryShard, fiatshamir.Name, prng)
+		require.NoError(tb, err)
+		secondaryCosigner, err := signing.NewSecondaryCosigner(ctxs[secondaryID], suite, primaryID, secondaryShard, fiatshamir.Name, prng)
+		require.NoError(tb, err)
+
+		message := []byte("hello world")
+		r1, err := primaryCosigner.Round1()
+		require.NoError(tb, err)
+		r2, err := secondaryCosigner.Round2(ntu.CBORRoundTrip(tb, r1))
+		require.NoError(tb, err)
+		r3, err := primaryCosigner.Round3(ntu.CBORRoundTrip(tb, r2))
+		require.NoError(tb, err)
+		r4, err := secondaryCosigner.Round4(ntu.CBORRoundTrip(tb, r3), message)
+		require.NoError(tb, err)
+		signature, err := primaryCosigner.Round5(ntu.CBORRoundTrip(tb, r4), message)
+		require.NoError(tb, err)
+
+		verifier, err := ecdsa.NewVerifier(suite)
+		require.NoError(tb, err)
+		err = verifier.Verify(ntu.CBORRoundTrip(tb, signature), publicKey, message)
+		require.NoError(tb, err)
+
+		primaryTapeCheck, err := ctxs[primaryID].Transcript().ExtractBytes("test", 32)
+		require.NoError(tb, err)
+		secondaryTapeCheck, err := ctxs[secondaryID].Transcript().ExtractBytes("test", 32)
+		require.NoError(tb, err)
+		require.True(tb, bytes.Equal(primaryTapeCheck, secondaryTapeCheck))
 	}
 }
