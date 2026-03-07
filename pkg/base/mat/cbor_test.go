@@ -96,6 +96,105 @@ func TestMatrixCBOR(t *testing.T) {
 	})
 }
 
+// --- ModuleValuedMatrix CBOR ---
+
+func TestModuleValuedMatrixCBOR(t *testing.T) {
+	t.Parallel()
+
+	t.Run("roundtrip_2x3", func(t *testing.T) {
+		t.Parallel()
+		orig := newMVMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+		data, err := orig.MarshalCBOR()
+		require.NoError(t, err)
+		require.NotEmpty(t, data)
+
+		var recovered mat.ModuleValuedMatrix[P, S]
+		require.NoError(t, recovered.UnmarshalCBOR(data))
+		require.True(t, orig.Equal(&recovered))
+	})
+
+	t.Run("roundtrip_1x1", func(t *testing.T) {
+		t.Parallel()
+		orig := newMVMatrix(t, [][]uint64{{42}})
+		data, err := orig.MarshalCBOR()
+		require.NoError(t, err)
+
+		var recovered mat.ModuleValuedMatrix[P, S]
+		require.NoError(t, recovered.UnmarshalCBOR(data))
+		require.True(t, orig.Equal(&recovered))
+	})
+
+	t.Run("roundtrip_3x1", func(t *testing.T) {
+		t.Parallel()
+		orig := newMVMatrix(t, [][]uint64{{7}, {8}, {9}})
+		data, err := orig.MarshalCBOR()
+		require.NoError(t, err)
+
+		var recovered mat.ModuleValuedMatrix[P, S]
+		require.NoError(t, recovered.UnmarshalCBOR(data))
+		require.True(t, orig.Equal(&recovered))
+	})
+
+	t.Run("preserves_dimensions", func(t *testing.T) {
+		t.Parallel()
+		orig := newMVMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+		data, err := orig.MarshalCBOR()
+		require.NoError(t, err)
+
+		var recovered mat.ModuleValuedMatrix[P, S]
+		require.NoError(t, recovered.UnmarshalCBOR(data))
+		r, c := recovered.Dimensions()
+		require.Equal(t, 2, r)
+		require.Equal(t, 3, c)
+	})
+
+	t.Run("deterministic", func(t *testing.T) {
+		t.Parallel()
+		m := newMVMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		data1, err := m.MarshalCBOR()
+		require.NoError(t, err)
+		data2, err := m.MarshalCBOR()
+		require.NoError(t, err)
+		require.Equal(t, data1, data2)
+	})
+
+	t.Run("operations_after_unmarshal", func(t *testing.T) {
+		t.Parallel()
+		orig := newMVMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		data, err := orig.MarshalCBOR()
+		require.NoError(t, err)
+
+		var recovered mat.ModuleValuedMatrix[P, S]
+		require.NoError(t, recovered.UnmarshalCBOR(data))
+
+		scaled := recovered.ScalarOp(scalar(2))
+		require.True(t, scaled.Equal(newMVMatrix(t, [][]uint64{{2, 4}, {6, 8}})))
+	})
+
+	t.Run("roundtrip_zero_matrix", func(t *testing.T) {
+		t.Parallel()
+		orig := newMVModule(t, 2, 2).Zero()
+		data, err := orig.MarshalCBOR()
+		require.NoError(t, err)
+
+		var recovered mat.ModuleValuedMatrix[P, S]
+		require.NoError(t, recovered.UnmarshalCBOR(data))
+		require.True(t, recovered.IsOpIdentity())
+	})
+
+	t.Run("invalid_cbor", func(t *testing.T) {
+		t.Parallel()
+		var m mat.ModuleValuedMatrix[P, S]
+		require.Error(t, m.UnmarshalCBOR([]byte{0xff, 0xfe}))
+	})
+
+	t.Run("empty_data", func(t *testing.T) {
+		t.Parallel()
+		var m mat.ModuleValuedMatrix[P, S]
+		require.Error(t, m.UnmarshalCBOR([]byte{}))
+	})
+}
+
 // --- SquareMatrix CBOR ---
 
 func TestSquareMatrixCBOR(t *testing.T) {

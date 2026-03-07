@@ -15,19 +15,19 @@ func NewMatrixAlgebra[S algebra.RingElement[S]](n uint, ring algebra.FiniteRing[
 		return nil, ErrFailed.WithMessage("ring cannot be nil")
 	}
 	return &MatrixAlgebra[S]{
-		MatrixModuleTrait: MatrixModuleTrait[S, *SquareMatrix[S], SquareMatrix[S]]{
-			rows: int(n),
-			cols: int(n),
-			ring: ring,
+		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]{
+			rows:      int(n),
+			cols:      int(n),
+			structure: ring,
 		},
 	}, nil
 }
 
 // MatrixAlgebra is the algebraic structure (algebra) for square matrices over a finite ring.
-// It extends [MatrixModuleTrait] with multiplicative structure: identity element,
+// It extends [MatrixGroupTrait] with multiplicative structure: identity element,
 // characteristic, and domain detection. Use it as a factory for [SquareMatrix] instances.
 type MatrixAlgebra[S algebra.RingElement[S]] struct {
-	MatrixModuleTrait[S, *SquareMatrix[S], SquareMatrix[S]]
+	MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]
 }
 
 // N returns the dimension of the square matrices in this algebra.
@@ -38,7 +38,7 @@ func (a *MatrixAlgebra[S]) N() int {
 
 // Characteristic returns the characteristic of the underlying scalar ring.
 func (a *MatrixAlgebra[S]) Characteristic() algebra.Cardinal {
-	return a.ring.Characteristic()
+	return a.structure.Characteristic()
 }
 
 // Identity returns the n×n identity matrix.
@@ -46,7 +46,7 @@ func (a *MatrixAlgebra[S]) Identity() *SquareMatrix[S] {
 	identity := a.OpIdentity()
 	n := a.N()
 	for i := range n {
-		identity.v[identity.idx(i, i)] = a.ring.One()
+		identity.v[identity.idx(i, i)] = a.structure.One()
 	}
 	return identity
 }
@@ -54,7 +54,7 @@ func (a *MatrixAlgebra[S]) Identity() *SquareMatrix[S] {
 // IsDomain reports whether the matrix algebra is an integral domain.
 // This is only true for 1×1 matrices over a domain.
 func (a *MatrixAlgebra[S]) IsDomain() bool {
-	return a.N() == 1 && a.ring.IsDomain()
+	return a.N() == 1 && a.structure.IsDomain()
 }
 
 // One returns the multiplicative identity (alias for [MatrixAlgebra.Identity]).
@@ -62,7 +62,12 @@ func (a *MatrixAlgebra[S]) One() *SquareMatrix[S] {
 	return a.Identity()
 }
 
-// SquareMatrix is an n×n matrix over a finite ring. It embeds [MatrixTrait] for shared
+// ScalarRing returns the underlying finite ring of scalars.
+func (a *MatrixAlgebra[S]) ScalarRing() algebra.FiniteRing[S] {
+	return a.structure
+}
+
+// SquareMatrix is an n×n matrix over a finite ring. It embeds [MatrixGroupElementTrait] for shared
 // operations and adds square-matrix-specific methods: multiplication, determinant,
 // inverse, trace, and identity testing. The RectW type parameter is [*Matrix] so
 // that operations like Augment return rectangular matrices.
@@ -74,7 +79,7 @@ func (m *SquareMatrix[S]) init(rows, cols int) {
 	if rows != cols {
 		panic(ErrDimension.WithMessage("square matrix must have equal number of rows and columns"))
 	}
-	m.MatrixTrait = MatrixTrait[S, *SquareMatrix[S], SquareMatrix[S], *Matrix[S], Matrix[S]]{
+	m.MatrixGroupElementTrait = MatrixGroupElementTrait[S, *SquareMatrix[S], SquareMatrix[S], *Matrix[S], Matrix[S]]{
 		self: m,
 		m:    rows,
 		n:    cols,
@@ -111,10 +116,10 @@ func (m *SquareMatrix[S]) AsRectangular() *Matrix[S] {
 // Algebra returns the MatrixAlgebra that this square matrix belongs to.
 func (m *SquareMatrix[S]) Algebra() *MatrixAlgebra[S] {
 	return &MatrixAlgebra[S]{
-		MatrixModuleTrait: MatrixModuleTrait[S, *SquareMatrix[S], SquareMatrix[S]]{
-			rows: m.rows(),
-			cols: m.cols(),
-			ring: m.scalarRing(),
+		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]{
+			rows:      m.rows(),
+			cols:      m.cols(),
+			structure: algebra.StructureMustBeAs[algebra.FiniteRing[S]](m.scalarGroup()),
 		},
 	}
 }
@@ -134,7 +139,7 @@ func (m *SquareMatrix[S]) MulAssign(other *SquareMatrix[S]) {
 	if m.n != other.N() {
 		panic(ErrDimension.WithMessage("incompatible dimensions for multiplication: %dx%d and %dx%d", m.rows(), m.cols(), other.rows(), other.cols()))
 	}
-	ring := m.Algebra().ring
+	ring := m.Algebra().ScalarRing()
 	n := m.n
 	result := make([]S, n*n)
 	for i := range n {
@@ -173,9 +178,9 @@ func (m *SquareMatrix[S]) IsIdentity() bool {
 	n := m.Algebra().N()
 	for i := range n {
 		for j := range n {
-			expected := m.Algebra().ring.Zero()
+			expected := m.Algebra().ScalarRing().Zero()
 			if i == j {
-				expected = m.Algebra().ring.One()
+				expected = m.Algebra().ScalarRing().One()
 			}
 			if !m.v[m.idx(i, j)].Equal(expected) {
 				return false
@@ -193,7 +198,7 @@ func (m *SquareMatrix[S]) IsOne() bool {
 // Trace returns the sum of the diagonal elements.
 func (m *SquareMatrix[S]) Trace() S {
 	alg := m.Algebra()
-	trace := alg.ring.Zero()
+	trace := alg.ScalarRing().Zero()
 	n := alg.N()
 	for i := range n {
 		trace = trace.Add(m.v[m.idx(i, i)])
@@ -220,7 +225,7 @@ func (m *SquareMatrix[S]) TryInv() (*SquareMatrix[S], error) {
 		}
 
 		pivotVal := a.v[a.idx(k, k)]
-		invPivot, err := alg.ring.One().TryDiv(pivotVal)
+		invPivot, err := alg.ScalarRing().One().TryDiv(pivotVal)
 		if err != nil {
 			return nil, ErrFailed.WithMessage("matrix is singular")
 		}
@@ -266,13 +271,13 @@ func (m *SquareMatrix[S]) TryDiv(other *SquareMatrix[S]) (*SquareMatrix[S], erro
 func (m *SquareMatrix[S]) Determinant() S {
 	a := m.Clone()
 	n := m.Algebra().N()
-	sign := m.Algebra().ring.One()
-	det := m.Algebra().ring.One()
+	sign := m.Algebra().ScalarRing().One()
+	det := m.Algebra().ScalarRing().One()
 
 	for k := range n {
 		pivot := a.findPivotRow(k, k)
 		if pivot < 0 {
-			return m.Algebra().ring.Zero()
+			return m.Algebra().ScalarRing().Zero()
 		}
 		if pivot != k {
 			a.SwapRowAssign(k, pivot)
@@ -286,13 +291,13 @@ func (m *SquareMatrix[S]) Determinant() S {
 		for i := k + 1; i < n; i++ {
 			factor, err := a.v[a.idx(i, k)].TryDiv(pivotVal)
 			if err != nil {
-				return m.Algebra().ring.Zero()
+				return m.Algebra().ScalarRing().Zero()
 			}
 			for j := k + 1; j < n; j++ {
 				t := factor.Mul(a.v[a.idx(k, j)])
 				a.v[a.idx(i, j)] = a.v[a.idx(i, j)].Sub(t)
 			}
-			a.v[a.idx(i, k)] = m.Algebra().ring.Zero()
+			a.v[a.idx(i, k)] = m.Algebra().ScalarRing().Zero()
 		}
 	}
 	return det.Mul(sign)
