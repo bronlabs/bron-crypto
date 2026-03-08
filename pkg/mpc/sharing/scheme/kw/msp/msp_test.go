@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/msp"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
 var field = k256.NewScalarField()
