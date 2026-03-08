@@ -3,12 +3,13 @@ package dkg_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23/keygen/dkg/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -22,7 +23,7 @@ func Test_HappyPath(t *testing.T) {
 	for i := 1; i <= TOTAL; i++ {
 		shareholders.Add(sharing.ID(i))
 	}
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
+	accessStructure, err := threshold.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
 	require.NoError(t, err)
 
 	// everything is checked inside testutils

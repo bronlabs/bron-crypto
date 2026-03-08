@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
@@ -26,7 +26,7 @@ type PublicMaterial[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	publicKey         *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]
-	accessStructure   *accessstructures.Threshold
+	accessStructure   *threshold.Threshold
 	fv                *feldman.VerificationVector[PK, S]
 	partialPublicKeys ds.Map[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]]
 }
@@ -42,7 +42,7 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[
 
 // AccessStructure returns the threshold access structure defining which subsets of parties
 // are authorized to produce valid signatures. Returns nil if the receiver is nil.
-func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AccessStructure() *accessstructures.Threshold {
+func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AccessStructure() *threshold.Threshold {
 	if spm == nil {
 		return nil
 	}
@@ -194,7 +194,7 @@ func NewShortKeyShard[
 	share *feldman.Share[S],
 	publicKey *bls.PublicKey[P1, FE1, P2, FE2, E, S],
 	vector feldman.VerificationVector[P1, S],
-	accessStructure *accessstructures.Threshold,
+	accessStructure *threshold.Threshold,
 ) (*Shard[P1, FE1, P2, FE2, E, S], error) {
 	if share == nil {
 		return nil, ErrIsNil.WithMessage("share")
@@ -258,7 +258,7 @@ func NewLongKeyShard[
 	share *feldman.Share[S],
 	publicKey *bls.PublicKey[P2, FE2, P1, FE1, E, S],
 	vector feldman.VerificationVector[P2, S],
-	accessStructure *accessstructures.Threshold,
+	accessStructure *threshold.Threshold,
 ) (*Shard[P2, FE2, P1, FE1, E, S], error) {
 	if share == nil {
 		return nil, ErrIsNil.WithMessage("share")

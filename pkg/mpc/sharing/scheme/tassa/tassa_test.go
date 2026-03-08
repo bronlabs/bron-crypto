@@ -10,7 +10,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/tassa"
 )
@@ -19,9 +20,9 @@ func TestSchemeHappyPath(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
 
-	accessStructure, err := accessstructures.NewHierarchicalConjunctiveThresholdAccessStructure(
-		accessstructures.WithLevel(2, 1, 2, 3, 4),
-		accessstructures.WithLevel(4, 5, 6, 7, 8),
+	accessStructure, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(2, 1, 2, 3, 4),
+		hierarchical.WithLevel(4, 5, 6, 7, 8),
 	)
 	require.NoError(t, err)
 
@@ -63,9 +64,9 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
 
-	accessStructure, err := accessstructures.NewHierarchicalConjunctiveThresholdAccessStructure(
-		accessstructures.WithLevel(2, 1, 2, 3, 4),
-		accessstructures.WithLevel(4, 5, 6, 7, 8),
+	accessStructure, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(2, 1, 2, 3, 4),
+		hierarchical.WithLevel(4, 5, 6, 7, 8),
 	)
 	require.NoError(t, err)
 
@@ -87,7 +88,7 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 		for l2 := range sliceutils.KCoveringCombinations(remaining.List(), uint(4-len(l1))) {
 			ids := append(l1, l2...)
 			require.True(t, accessStructure.IsQualified(ids...))
-			additiveAccessStructure, err := accessstructures.NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
+			additiveAccessStructure, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
 			require.NoError(t, err)
 
 			subShares := []*additive.Share[*k256.Scalar]{}
@@ -112,9 +113,9 @@ func TestScheme_ShareToAdditiveShare(t *testing.T) {
 func TestSchemeDealAndReconstructErrors(t *testing.T) {
 	t.Parallel()
 
-	accessStructure, err := accessstructures.NewHierarchicalConjunctiveThresholdAccessStructure(
-		accessstructures.WithLevel(2, 1, 2, 3, 4),
-		accessstructures.WithLevel(4, 5, 6, 7, 8),
+	accessStructure, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(2, 1, 2, 3, 4),
+		hierarchical.WithLevel(4, 5, 6, 7, 8),
 	)
 	require.NoError(t, err)
 

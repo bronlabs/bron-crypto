@@ -1,4 +1,4 @@
-package accessstructures
+package unanimity
 
 import (
 	"iter"
@@ -7,13 +7,18 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/msp"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
-var _ Monotone = (*Unanimity)(nil)
+// ID uniquely identifies a shareholder.
+type ID = internal.ID
 
 // Unanimity represents an n-of-n access structure where
 // all shareholders must participate to reconstruct the secret. This is the
@@ -123,4 +128,22 @@ func (u *Unanimity) UnmarshalCBOR(data []byte) error {
 	}
 	*u = *u2
 	return nil
+}
+
+// InducedByUnanimity constructs a monotone span programme from a unanimity
+// access structure by converting to CNF form.
+func InducedByUnanimity[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Unanimity) (*msp.MSP[E], error) {
+	if f == nil {
+		return nil, ErrIsNil.WithMessage("field cannot be nil")
+	}
+	if ac == nil {
+		return nil, ErrIsNil.WithMessage("access structure cannot be nil")
+	}
+	// For unanimity with n shareholders, the CNF has n maximal unqualified sets,
+	// each clause is a singleton, so MSP has n rows and n columns, which is already minimal.
+	ascnf, err := cnf.ConvertToCNF(ac)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to convert unanimity to CNF")
+	}
+	return cnf.InducedMSPByCNF(f, ascnf)
 }

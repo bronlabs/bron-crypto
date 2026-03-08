@@ -5,19 +5,20 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/stretchr/testify/require"
 )
 
-func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, ctxs map[sharing.ID]*session.Context, accessStructure *accessstructures.Threshold, niCompiler compiler.Name, group algebra.PrimeGroup[G, S]) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, ctxs map[sharing.ID]*session.Context, accessStructure *threshold.Threshold, niCompiler compiler.Name, group algebra.PrimeGroup[G, S]) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
 	tb.Helper()
 
 	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])

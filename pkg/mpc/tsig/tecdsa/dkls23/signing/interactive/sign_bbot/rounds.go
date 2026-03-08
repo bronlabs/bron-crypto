@@ -14,7 +14,7 @@ import (
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -128,7 +128,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
-	quorum, err := accessstructures.NewUnanimityAccessStructure(c.ctx.Quorum())
+	quorum, err := unanimity.NewUnanimityAccessStructure(c.ctx.Quorum())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}

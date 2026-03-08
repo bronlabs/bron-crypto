@@ -8,8 +8,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 )
 
@@ -27,7 +29,7 @@ type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
 
 // NewShare creates a new Shamir share with the given ID and value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *accessstructures.Threshold) (*Share[FE], error) {
+func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *threshold.Threshold) (*Share[FE], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
@@ -40,7 +42,7 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *acc
 // ToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (s *Share[FE]) ToAdditive(qualifiedSet *accessstructures.Unanimity) (*additive.Share[FE], error) {
+func (s *Share[FE]) ToAdditive(qualifiedSet *unanimity.Unanimity) (*additive.Share[FE], error) {
 	field, ok := s.v.Structure().(algebra.PrimeField[FE])
 	if !ok {
 		return nil, sharing.ErrType.WithMessage("share value does not implement Field interface")
@@ -105,15 +107,15 @@ func (s *Share[FE]) SubPlain(other FE) *Share[FE] {
 }
 
 // ScalarOp is an alias for ScalarMul.
-func (s *Share[FE]) ScalarOp(scalar FE) *Share[FE] {
+func (s *Share[FE]) ScalarOp(scalar algebra.Numeric) *Share[FE] {
 	return s.ScalarMul(scalar)
 }
 
 // ScalarMul returns a new share with the value multiplied by a scalar.
-func (s *Share[FE]) ScalarMul(scalar FE) *Share[FE] {
+func (s *Share[FE]) ScalarMul(scalar algebra.Numeric) *Share[FE] {
 	return &Share[FE]{
 		id: s.id,
-		v:  s.v.Mul(scalar),
+		v:  algebrautils.ScalarMul(s.v, scalar),
 	}
 }
 
@@ -127,7 +129,7 @@ func (s *Share[FE]) Clone() *Share[FE] {
 
 // HashCode returns a hash code for this share, for use in hash-based collections.
 func (s *Share[FE]) HashCode() base.HashCode {
-	return base.HashCode(s.id) ^ s.v.HashCode()
+	return base.HashCode(s.id).Combine(s.v.HashCode())
 }
 
 // Bytes returns the canonical byte representation of this share.

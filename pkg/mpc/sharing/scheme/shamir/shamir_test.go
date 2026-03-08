@@ -16,17 +16,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 )
 
 func newShamirScheme[FE algebra.PrimeFieldElement[FE]](
 	field algebra.PrimeField[FE],
-	threshold uint,
+	thresh uint,
 	shareholders ds.Set[sharing.ID],
 ) (*shamir.Scheme[FE], error) {
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	if err != nil {
 		return nil, err
 	}
@@ -857,7 +858,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
 		t.Parallel()
 		// Create a qualified set with all shareholders
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -893,7 +894,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 			qualifiedIds.Add(id)
 		}
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
 			qualifiedIds.Freeze(),
 		)
 		require.NoError(t, err)
@@ -929,7 +930,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 			qualifiedIds.Add(allIds[i])
 		}
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
 			qualifiedIds.Freeze(),
 		)
 		require.NoError(t, err)
@@ -946,7 +947,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
 		t.Parallel()
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -1052,7 +1053,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		shares, err := scheme.Deal(zeroSecret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -1080,7 +1081,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		singleID := hashset.NewComparable[sharing.ID]()
 		singleID.Add(sharing.ID(1))
 
-		_, err := accessstructures.NewUnanimityAccessStructure(
+		_, err := unanimity.NewUnanimityAccessStructure(
 			singleID.Freeze(),
 		)
 		require.Error(t, err)
@@ -1097,7 +1098,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		out, err := scheme.Deal(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
 		require.NoError(t, err)
@@ -1154,7 +1155,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			out, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
-			qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(
+			qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
 				scheme.AccessStructure().Shareholders(),
 			)
 			require.NoError(b, err)
@@ -1244,7 +1245,7 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 	require.ErrorIs(t, err, sharing.ErrFailed)
 
 	// Test ToAdditive conversion with arbitrary IDs
-	qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(shareholders)
+	qualifiedSet, err := unanimity.NewUnanimityAccessStructure(shareholders)
 	require.NoError(t, err)
 
 	additiveShares := make([]*additive.Share[*k256.Scalar], 0)

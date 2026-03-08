@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
@@ -111,7 +111,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	// aggregated signature verification failed, now doing identifiable abort
 
 	identityAborts := []error{}
-	quorumAsUnanimitySet, err := accessstructures.NewUnanimityAccessStructure(quorum)
+	quorumAsUnanimitySet, err := unanimity.NewUnanimityAccessStructure(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create minimal qualified access structure")
 	}

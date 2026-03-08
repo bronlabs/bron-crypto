@@ -4,18 +4,19 @@ import (
 	"io"
 	"maps"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
-	"github.com/bronlabs/errs-go/errs"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
 // DealRandom creates Lindell17 shards using a trusted dealer.
@@ -23,7 +24,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	if curve == nil || shareholder == nil || shareholder.Size() == 0 || prng == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid input to trusted dealer")
 	}
-	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholder)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholder)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create access structure")
 	}

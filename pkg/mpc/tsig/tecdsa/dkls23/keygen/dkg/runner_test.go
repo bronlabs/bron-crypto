@@ -6,17 +6,18 @@ import (
 	"slices"
 	"testing"
 
-	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/stretchr/testify/require"
+
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	gennaroTU "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
@@ -30,12 +31,12 @@ func TestRunner_HappyPath(t *testing.T) {
 	t.Parallel()
 	var err error
 
-	const threshold = 2
+	const thresh = 2
 	const total = 3
 
 	curve := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
+	accessStructure, err := threshold.NewThresholdAccessStructure(thresh, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, accessStructure.Shareholders(), prng)
 

@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/signing"
 	ltu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/testutils"
@@ -25,7 +25,7 @@ import (
 func TestRunnerHappyPath_BIP340(t *testing.T) {
 	t.Parallel()
 
-	const threshold = 2
+	const thresh = 2
 	const total = 3
 
 	prng := pcg.NewRandomised()
@@ -35,7 +35,7 @@ func TestRunnerHappyPath_BIP340(t *testing.T) {
 	scheme, err := bip340.NewScheme(prng)
 	require.NoError(t, err)
 
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	accessStructure, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 
 	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])

@@ -18,7 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/dkg/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/signing"
@@ -142,7 +142,7 @@ func testHappyPathWithDKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 
 	prng := pcg.NewRandomised()
 	shareholders := sharing.NewOrdinalShareholderSet(uint(total))
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	accessStructure, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(tb, err)
 	shards := testutils.RunLindell17DKG(tb, suite.Curve(), accessStructure)
 	publicKey := shards[shareholders.List()[0]].PublicKey()

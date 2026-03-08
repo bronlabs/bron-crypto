@@ -13,9 +13,6 @@ func InterpolateAt[FE algebra.FiniteFieldElement[FE]](nodes, values []FE, at FE)
 	if len(nodes) != len(values) {
 		return nilFE, polynomials.ErrLengthMismatch.WithMessage("nodes and values")
 	}
-	if field == nil {
-		return nilFE, polynomials.ErrValidation.WithMessage("field is nil")
-	}
 	basis, err := BasisAt(nodes, at)
 	if err != nil {
 		return *new(FE), errs.Wrap(err).WithMessage("could not create basis set")

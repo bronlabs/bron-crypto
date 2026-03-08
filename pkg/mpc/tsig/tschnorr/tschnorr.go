@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
@@ -120,7 +120,7 @@ func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 }
 
 // Equal returns true if this shard equals another shard.
-func (sh *Shard[E, S]) Equal(other tsig.Shard[*schnorrlike.PublicKey[E, S], *feldman.Share[S], *accessstructures.Threshold]) bool {
+func (sh *Shard[E, S]) Equal(other tsig.Shard[*schnorrlike.PublicKey[E, S], *feldman.Share[S], *threshold.Threshold]) bool {
 	o, ok := other.(*Shard[E, S])
 	return ok && sh.BaseShard.Equal(&o.BaseShard)
 }
@@ -141,7 +141,7 @@ func (sh *Shard[E, S]) AsSchnorrPrivateKey() (*schnorrlike.PrivateKey[E, S], err
 func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv feldman.VerificationVector[E, S],
-	accessStructure *accessstructures.Threshold,
+	accessStructure *threshold.Threshold,
 ) (*Shard[E, S], error) {
 	if share == nil || fv == nil || accessStructure == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil input parameters")

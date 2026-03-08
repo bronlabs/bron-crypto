@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -96,7 +96,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	}
 
 	// step 3.7.1: compute additive share d_i'
-	quorum, err := accessstructures.NewUnanimityAccessStructure(c.Quorum())
+	quorum, err := unanimity.NewUnanimityAccessStructure(c.Quorum())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.Quorum())
 	}

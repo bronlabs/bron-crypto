@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17/keygen/dkg/testutils"
 )
 
@@ -24,7 +24,7 @@ func Test_Lindell17DKG_K256_2of3(t *testing.T) {
 	for i := sharing.ID(1); i <= TOTAL; i++ {
 		shareholders.Add(i)
 	}
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
+	accessStructure, err := threshold.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
 	require.NoError(t, err)
 
 	// Run DKG - all verification is done inside testutils
@@ -58,7 +58,7 @@ func Test_Lindell17DKG_P256_2of3(t *testing.T) {
 	for i := sharing.ID(1); i <= TOTAL; i++ {
 		shareholders.Add(i)
 	}
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
+	accessStructure, err := threshold.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
 	require.NoError(t, err)
 
 	// Run DKG - all verification is done inside testutils
@@ -84,7 +84,7 @@ func Test_Lindell17DKG_K256_2of2(t *testing.T) {
 	for i := sharing.ID(1); i <= TOTAL; i++ {
 		shareholders.Add(i)
 	}
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
+	accessStructure, err := threshold.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
 	require.NoError(t, err)
 
 	// Run DKG

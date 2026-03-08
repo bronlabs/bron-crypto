@@ -13,10 +13,12 @@ func NewMatrixModule[S algebra.RingElement[S]](rows, cols uint, ring algebra.Fin
 		return nil, ErrFailed.WithMessage("ring cannot be nil")
 	}
 	return &MatrixModule[S]{
-		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]{
-			rows:      int(rows),
-			cols:      int(cols),
-			structure: ring,
+		MatrixModuleTrait: MatrixModuleTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S], *Matrix[S], Matrix[S]]{
+			MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]{
+				rows:          int(rows),
+				cols:          int(cols),
+				baseStructure: ring,
+			},
 		},
 	}, nil
 }
@@ -25,16 +27,16 @@ func NewMatrixModule[S algebra.RingElement[S]](rows, cols uint, ring algebra.Fin
 // It serves as a factory for [Matrix] instances and provides module-level properties
 // like dimensions, element size, and serialisation.
 type MatrixModule[S algebra.RingElement[S]] struct {
-	MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]
+	MatrixModuleTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S], *Matrix[S], Matrix[S]]
 }
 
 // ScalarRing returns the underlying finite ring of scalars.
 func (m *MatrixModule[S]) ScalarRing() algebra.FiniteRing[S] {
-	return m.structure
+	return m.baseStructure
 }
 
 // Matrix is a generic rectangular matrix over a finite ring. Elements are stored in
-// row-major order. Arithmetic operations are inherited from [MatrixGroupElementTrait].
+// row-major order. Arithmetic operations are inherited from [MatrixTrait].
 type Matrix[S algebra.RingElement[S]] struct {
 	MatrixTrait[S, *Matrix[S], Matrix[S], *Matrix[S], Matrix[S]]
 }
@@ -63,10 +65,12 @@ func (m *Matrix[S]) data() []S {
 // Module returns the MatrixModule that this matrix belongs to.
 func (m *Matrix[S]) Module() *MatrixModule[S] {
 	return &MatrixModule[S]{
-		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]{
-			rows:      m.rows(),
-			cols:      m.cols(),
-			structure: algebra.StructureMustBeAs[algebra.FiniteRing[S]](m.scalarGroup()),
+		MatrixModuleTrait: MatrixModuleTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S], *Matrix[S], Matrix[S]]{
+			MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *Matrix[S], Matrix[S]]{
+				rows:          m.rows(),
+				cols:          m.cols(),
+				baseStructure: m.scalarRing(),
+			},
 		},
 	}
 }

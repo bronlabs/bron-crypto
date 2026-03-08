@@ -11,7 +11,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 )
 
@@ -19,7 +20,7 @@ import (
 type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 	f        algebra.PrimeField[FE]
 	polyRing *polynomials.PolynomialRing[FE]
-	ac       *accessstructures.Threshold
+	ac       *threshold.Threshold
 }
 
 // NewScheme creates a new Shamir secret sharing scheme.
@@ -27,7 +28,7 @@ type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 // Parameters:
 //   - f: The prime field over which sharing is performed
 //   - accessStructure: Threshold access structure defining quorum requirements
-func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], accessStructure *accessstructures.Threshold) (*Scheme[FE], error) {
+func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], accessStructure *threshold.Threshold) (*Scheme[FE], error) {
 	if f == nil {
 		return nil, sharing.ErrIsNil.WithMessage("invalid field")
 	}
@@ -57,7 +58,7 @@ func (d *Scheme[FE]) SharingIDToLagrangeNode(id sharing.ID) FE {
 }
 
 // AccessStructure returns the threshold access structure for this scheme.
-func (d *Scheme[FE]) AccessStructure() *accessstructures.Threshold {
+func (d *Scheme[FE]) AccessStructure() *threshold.Threshold {
 	return d.ac
 }
 
@@ -160,6 +161,6 @@ func (d *Scheme[FE]) Field() algebra.PrimeField[FE] {
 // ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[FE]) ConvertShareToAdditive(s *Share[FE], quorum *accessstructures.Unanimity) (*additive.Share[FE], error) {
+func (*Scheme[FE]) ConvertShareToAdditive(s *Share[FE], quorum *unanimity.Unanimity) (*additive.Share[FE], error) {
 	return s.ToAdditive(quorum)
 }

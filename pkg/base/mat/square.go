@@ -15,19 +15,21 @@ func NewMatrixAlgebra[S algebra.RingElement[S]](n uint, ring algebra.FiniteRing[
 		return nil, ErrFailed.WithMessage("ring cannot be nil")
 	}
 	return &MatrixAlgebra[S]{
-		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]{
-			rows:      int(n),
-			cols:      int(n),
-			structure: ring,
+		MatrixModuleTrait: MatrixModuleTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S], *Matrix[S], Matrix[S]]{
+			MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]{
+				rows:          int(n),
+				cols:          int(n),
+				baseStructure: ring,
+			},
 		},
 	}, nil
 }
 
 // MatrixAlgebra is the algebraic structure (algebra) for square matrices over a finite ring.
-// It extends [MatrixGroupTrait] with multiplicative structure: identity element,
+// It extends [MatrixModuleTrait] with multiplicative structure: identity element,
 // characteristic, and domain detection. Use it as a factory for [SquareMatrix] instances.
 type MatrixAlgebra[S algebra.RingElement[S]] struct {
-	MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]
+	MatrixModuleTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S], *Matrix[S], Matrix[S]]
 }
 
 // N returns the dimension of the square matrices in this algebra.
@@ -38,7 +40,7 @@ func (a *MatrixAlgebra[S]) N() int {
 
 // Characteristic returns the characteristic of the underlying scalar ring.
 func (a *MatrixAlgebra[S]) Characteristic() algebra.Cardinal {
-	return a.structure.Characteristic()
+	return a.baseStructure.Characteristic()
 }
 
 // Identity returns the n×n identity matrix.
@@ -46,7 +48,7 @@ func (a *MatrixAlgebra[S]) Identity() *SquareMatrix[S] {
 	identity := a.OpIdentity()
 	n := a.N()
 	for i := range n {
-		identity.v[identity.idx(i, i)] = a.structure.One()
+		identity.v[identity.idx(i, i)] = a.baseStructure.One()
 	}
 	return identity
 }
@@ -54,7 +56,7 @@ func (a *MatrixAlgebra[S]) Identity() *SquareMatrix[S] {
 // IsDomain reports whether the matrix algebra is an integral domain.
 // This is only true for 1×1 matrices over a domain.
 func (a *MatrixAlgebra[S]) IsDomain() bool {
-	return a.N() == 1 && a.structure.IsDomain()
+	return a.N() == 1 && a.baseStructure.IsDomain()
 }
 
 // One returns the multiplicative identity (alias for [MatrixAlgebra.Identity]).
@@ -64,7 +66,7 @@ func (a *MatrixAlgebra[S]) One() *SquareMatrix[S] {
 
 // ScalarRing returns the underlying finite ring of scalars.
 func (a *MatrixAlgebra[S]) ScalarRing() algebra.FiniteRing[S] {
-	return a.structure
+	return a.baseStructure
 }
 
 // SquareMatrix is an n×n matrix over a finite ring. It embeds [MatrixGroupElementTrait] for shared
@@ -116,10 +118,12 @@ func (m *SquareMatrix[S]) AsRectangular() *Matrix[S] {
 // Algebra returns the MatrixAlgebra that this square matrix belongs to.
 func (m *SquareMatrix[S]) Algebra() *MatrixAlgebra[S] {
 	return &MatrixAlgebra[S]{
-		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]{
-			rows:      m.rows(),
-			cols:      m.cols(),
-			structure: algebra.StructureMustBeAs[algebra.FiniteRing[S]](m.scalarGroup()),
+		MatrixModuleTrait: MatrixModuleTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S], *Matrix[S], Matrix[S]]{
+			MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteRing[S], S, *SquareMatrix[S], SquareMatrix[S]]{
+				rows:          m.rows(),
+				cols:          m.cols(),
+				baseStructure: m.scalarRing(),
+			},
 		},
 	}
 }

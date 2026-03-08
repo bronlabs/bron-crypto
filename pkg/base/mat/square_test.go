@@ -65,6 +65,61 @@ func TestMatrixAlgebraNewRowMajor(t *testing.T) {
 	})
 }
 
+// --- NewStandardUnit ---
+
+func TestMatrixAlgebraNewStandardUnit(t *testing.T) {
+	t.Parallel()
+	alg := newAlgebra(t, 3)
+
+	t.Run("first", func(t *testing.T) {
+		t.Parallel()
+		e, err := alg.NewStandardUnit(0)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{1, 0, 0}})))
+	})
+
+	t.Run("middle", func(t *testing.T) {
+		t.Parallel()
+		e, err := alg.NewStandardUnit(1)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{0, 1, 0}})))
+	})
+
+	t.Run("last", func(t *testing.T) {
+		t.Parallel()
+		e, err := alg.NewStandardUnit(2)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{0, 0, 1}})))
+	})
+
+	t.Run("1x1", func(t *testing.T) {
+		t.Parallel()
+		alg1 := newAlgebra(t, 1)
+		e, err := alg1.NewStandardUnit(0)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{1}})))
+	})
+
+	t.Run("is_row_vector", func(t *testing.T) {
+		t.Parallel()
+		e, err := alg.NewStandardUnit(1)
+		require.NoError(t, err)
+		require.True(t, e.IsRowVector())
+	})
+
+	t.Run("negative_index", func(t *testing.T) {
+		t.Parallel()
+		_, err := alg.NewStandardUnit(-1)
+		require.Error(t, err)
+	})
+
+	t.Run("out_of_bounds", func(t *testing.T) {
+		t.Parallel()
+		_, err := alg.NewStandardUnit(3)
+		require.Error(t, err)
+	})
+}
+
 // --- Identity ---
 
 func TestSquareIdentity(t *testing.T) {

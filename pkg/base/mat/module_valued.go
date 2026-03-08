@@ -17,9 +17,9 @@ func NewModuleValuedMatrixModule[E algebra.ModuleElement[E, S], S algebra.RingEl
 	}
 	return &ModuleValuedMatrixModule[E, S]{
 		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteModule[E, S], E, *ModuleValuedMatrix[E, S], ModuleValuedMatrix[E, S]]{
-			rows:      int(rows),
-			cols:      int(cols),
-			structure: module,
+			rows:          int(rows),
+			cols:          int(cols),
+			baseStructure: module,
 		},
 	}, nil
 }
@@ -56,7 +56,7 @@ type ModuleValuedMatrixModule[E algebra.ModuleElement[E, S], S algebra.RingEleme
 
 // ScalarStructure returns the algebraic structure of the scalar ring.
 func (m *ModuleValuedMatrixModule[E, S]) ScalarStructure() algebra.Structure[S] {
-	return m.structure.ScalarStructure()
+	return m.baseStructure.ScalarStructure()
 }
 
 // ModuleValuedMatrix is a generic rectangular matrix over a finite module. Elements are stored in
@@ -90,9 +90,9 @@ func (m *ModuleValuedMatrix[E, S]) data() []E {
 func (m *ModuleValuedMatrix[E, S]) Module() *ModuleValuedMatrixModule[E, S] {
 	return &ModuleValuedMatrixModule[E, S]{
 		MatrixGroupTrait: MatrixGroupTrait[algebra.FiniteModule[E, S], E, *ModuleValuedMatrix[E, S], ModuleValuedMatrix[E, S]]{
-			rows:      m.rows(),
-			cols:      m.cols(),
-			structure: algebra.StructureMustBeAs[algebra.FiniteModule[E, S]](m.scalarGroup()),
+			rows:          m.rows(),
+			cols:          m.cols(),
+			baseStructure: algebra.StructureMustBeAs[algebra.FiniteModule[E, S]](m.scalarGroup()),
 		},
 	}
 }

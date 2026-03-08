@@ -17,7 +17,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
@@ -25,10 +26,10 @@ import (
 
 func newFeldmanScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](
 	basePoint E,
-	threshold uint,
+	thresh uint,
 	shareholders ds.Set[sharing.ID],
 ) (*feldman.Scheme[E, FE], error) {
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	if err != nil {
 		return nil, err
 	}
@@ -41,10 +42,10 @@ func TestSanity(t *testing.T) {
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	basePoint := curve.Generator()
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(5)
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	scheme, err := newFeldmanScheme(basePoint, threshold, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, thresh, shareholders)
 	require.NoError(t, err, "could not create scheme")
 
 	secret := feldman.NewSecret(field.FromUint64(42))
@@ -82,7 +83,7 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 	randomSecret := feldman.NewSecret(field.FromUint64(12345))
 
 	// Get scheme parameters
-	threshold := scheme.AccessStructure().Threshold()
+	thresh := scheme.AccessStructure().Threshold()
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
@@ -196,18 +197,18 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 				require.NoError(t, err)
 				require.True(t, tc.secret.Equal(reconstructed), "reconstructed secret should match original")
 
-				// Verify threshold property: any t shares can reconstruct
+				// Verify thresh property: any t shares can reconstruct
 				shareSlice := shares.Shares().Values()
-				if len(shareSlice) >= int(threshold) {
-					subsetShares := shareSlice[:threshold]
+				if len(shareSlice) >= int(thresh) {
+					subsetShares := shareSlice[:thresh]
 					reconstructed, err = scheme.Reconstruct(subsetShares...)
 					require.NoError(t, err)
 					require.True(t, tc.secret.Equal(reconstructed), "subset reconstruction should match original")
 				}
 
 				// Verify that t-1 shares cannot reconstruct
-				if int(threshold) > 1 && len(shareSlice) >= int(threshold) {
-					insufficientShares := shareSlice[:threshold-1]
+				if int(thresh) > 1 && len(shareSlice) >= int(thresh) {
+					insufficientShares := shareSlice[:thresh-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
 					require.ErrorIs(t, err, sharing.ErrFailed)
@@ -227,7 +228,7 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *feldman.Scheme[E, FE]) {
 	t.Helper()
 
-	threshold := scheme.AccessStructure().Threshold()
+	thresh := scheme.AccessStructure().Threshold()
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
@@ -320,10 +321,10 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 				require.NoError(t, err)
 				require.True(t, secret.Equal(reconstructed))
 
-				// Verify threshold property
-				if shares.Shares().Size() >= int(threshold) {
+				// Verify thresh property
+				if shares.Shares().Size() >= int(thresh) {
 					shareSlice := shares.Shares().Values()
-					subsetShares := shareSlice[:threshold]
+					subsetShares := shareSlice[:thresh]
 					reconstructed, err = scheme.Reconstruct(subsetShares...)
 					require.NoError(t, err)
 					require.True(t, secret.Equal(reconstructed))
@@ -363,23 +364,23 @@ func TestDeal(t *testing.T) {
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
-			errors    bool
+			name   string
+			thresh uint
+			total  uint
+			errors bool
 		}{
 			{"2-of-3", 2, 3, false},
 			{"3-of-5", 3, 5, false},
 			{"5-of-10", 5, 10, false},
 			{"1-of-5", 1, 5, true},
-			{"threshold equals total", 5, 5, false},
+			{"thresh equals total", 5, 5, false},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
 				if config.errors {
 					require.Error(t, err, "should return error for invalid configuration")
 					return
@@ -397,9 +398,9 @@ func TestDeal(t *testing.T) {
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-4", 2, 4},
 			{"4-of-7", 4, 7},
@@ -409,7 +410,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
 				require.NoError(t, err)
 				dealCases(t, scheme, field)
 			})
@@ -426,20 +427,20 @@ func TestDealRandom(t *testing.T) {
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
 				require.NoError(t, err)
 				dealRandomCases(t, scheme)
 			})
@@ -465,9 +466,9 @@ func BenchmarkDeal(b *testing.B) {
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -479,7 +480,7 @@ func BenchmarkDeal(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))
@@ -501,9 +502,9 @@ func BenchmarkDealRandom(b *testing.B) {
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -514,7 +515,7 @@ func BenchmarkDealRandom(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -625,9 +626,9 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 		require.True(t, secret.Equal(reconstructed))
 
 		// Try with subset of shares
-		threshold := scheme.AccessStructure().Threshold()
-		if shares.Shares().Size() >= int(threshold) {
-			subsetShares := shares.Shares().Values()[:threshold]
+		thresh := scheme.AccessStructure().Threshold()
+		if shares.Shares().Size() >= int(thresh) {
+			subsetShares := shares.Shares().Values()[:thresh]
 			reconstructed, err = scheme.ReconstructAndVerify(reference, subsetShares...)
 			require.NoError(t, err)
 			require.True(t, secret.Equal(reconstructed))
@@ -666,13 +667,13 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 		)
 		require.NoError(t, err)
 
-		// Use only threshold shares to ensure reconstruction works
-		threshold := scheme.AccessStructure().Threshold()
+		// Use only thresh shares to ensure reconstruction works
+		thresh := scheme.AccessStructure().Threshold()
 		tamperedShares := make([]*feldman.Share[FE], 0)
 		tamperedShares = append(tamperedShares, tamperedShare)
 
-		// Add remaining shares up to threshold
-		for i := 1; i < int(threshold); i++ {
+		// Add remaining shares up to thresh
+		for i := 1; i < int(thresh); i++ {
 			tamperedShares = append(tamperedShares, shares.Shares().Values()[i])
 		}
 
@@ -719,20 +720,20 @@ func TestVerification(t *testing.T) {
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
 				require.NoError(t, err)
 				verificationCases(t, scheme, field)
 			})
@@ -989,20 +990,20 @@ func TestHomomorphicOperations(t *testing.T) {
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
 				require.NoError(t, err)
 				homomorphicOpsCases(t, scheme, field)
 			})
@@ -1070,12 +1071,12 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 	// Get all shareholder IDs for creating qualified sets
 	allIds := shares.Shares().Keys()
-	threshold := scheme.AccessStructure().Threshold()
+	thresh := scheme.AccessStructure().Threshold()
 
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
 		t.Parallel()
 		// Create a qualified set with all shareholders
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		// Convert each share to additive
@@ -1099,17 +1100,17 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		require.True(t, secret.Value().Equal(reconstructed.Value()))
 	})
 
-	t.Run("valid conversion with threshold qualified set", func(t *testing.T) {
+	t.Run("valid conversion with thresh qualified set", func(t *testing.T) {
 		t.Parallel()
-		// Create a qualified set with exactly threshold shareholders
-		thresholdIds := allIds[:threshold]
+		// Create a qualified set with exactly thresh shareholders
+		thresholdIds := allIds[:thresh]
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
 
 		for _, id := range thresholdIds {
 			qualifiedIds.Add(id)
 		}
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(qualifiedIds.Freeze())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
 		require.NoError(t, err)
 
 		// Convert shares in the qualified set
@@ -1143,7 +1144,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 			qualifiedIds.Add(allIds[i])
 		}
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(qualifiedIds.Freeze())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
 		require.NoError(t, err)
 
 		// Try to convert share with ID 1 (not in qualified set)
@@ -1158,7 +1159,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
 		t.Parallel()
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		share, exists := shares.Shares().Get(allIds[0])
@@ -1201,21 +1202,21 @@ func TestToAdditive(t *testing.T) {
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
 			{"5-of-10", 5, 10},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1229,9 +1230,9 @@ func TestToAdditive(t *testing.T) {
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-4", 2, 4},
 			{"4-of-7", 4, 7},
@@ -1241,7 +1242,7 @@ func TestToAdditive(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.threshold, shareholders)
+				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1268,7 +1269,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		shares, err := scheme.Deal(zeroSecret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		// Convert all shares
@@ -1294,7 +1295,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		singleID := hashset.NewComparable[sharing.ID]()
 		singleID.Add(sharing.ID(1))
 
-		_, err := accessstructures.NewUnanimityAccessStructure(singleID.Freeze())
+		_, err := unanimity.NewUnanimityAccessStructure(singleID.Freeze())
 		require.Error(t, err)
 		require.ErrorIs(t, err, sharing.ErrValue)
 	})
@@ -1309,7 +1310,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		shares, err := scheme.Deal(secret, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		// Get a share and modify its value
@@ -1346,9 +1347,9 @@ func BenchmarkToAdditive(b *testing.B) {
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -1359,14 +1360,14 @@ func BenchmarkToAdditive(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))
 			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
-			qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+			qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 			require.NoError(b, err)
 
 			share, exists := shares.Shares().Get(sharing.ID(1))
@@ -1389,17 +1390,17 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	// Setup
 	curve := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	threshold := uint(3)
+	thresh := uint(3)
 	total := uint(5)
 
 	// Create shareholders and access structure
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	_, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	_, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 
 	// Create Feldman scheme
 	basePoint := curve.PrimeSubGroupGenerator()
-	scheme, err := newFeldmanScheme(basePoint, threshold, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, thresh, shareholders)
 	require.NoError(t, err)
 
 	// Deal shares
@@ -1427,11 +1428,11 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
 	})
 
-	t.Run("reconstruct from threshold shares", func(t *testing.T) {
+	t.Run("reconstruct from thresh shares", func(t *testing.T) {
 		t.Parallel()
-		// Select threshold shares (IDs 1, 2, 3)
+		// Select thresh shares (IDs 1, 2, 3)
 		selectedIDs := []sharing.ID{1, 2, 3}
-		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
+		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, thresh)
 
 		for _, id := range selectedIDs {
 			share, exists := shares.Shares().Get(id)
@@ -1444,7 +1445,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 			liftedShares = append(liftedShares, lifted)
 		}
 
-		// Reconstruct from threshold shares
+		// Reconstruct from thresh shares
 		reconstructed, err := liftedShares.ReconstructAsAdditive()
 		require.NoError(t, err)
 
@@ -1453,11 +1454,11 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
 	})
 
-	t.Run("different threshold sets yield same result", func(t *testing.T) {
+	t.Run("different thresh sets yield same result", func(t *testing.T) {
 		t.Parallel()
 		// First set: IDs 1, 2, 3
 		set1IDs := []sharing.ID{1, 2, 3}
-		liftedSet1 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
+		liftedSet1 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, thresh)
 
 		for _, id := range set1IDs {
 			share, exists := shares.Shares().Get(id)
@@ -1473,7 +1474,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 
 		// Second set: IDs 1, 3, 4
 		set2IDs := []sharing.ID{1, 3, 4}
-		liftedSet2 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
+		liftedSet2 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, thresh)
 
 		for _, id := range set2IDs {
 			share, exists := shares.Shares().Get(id)
@@ -1488,7 +1489,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		require.NoError(t, err)
 
 		// Both should equal the same value
-		require.True(t, reconstructed1.Equal(reconstructed2), "different threshold sets yielded different results")
+		require.True(t, reconstructed1.Equal(reconstructed2), "different thresh sets yielded different results")
 	})
 
 	t.Run("share lift method", func(t *testing.T) {
@@ -1513,7 +1514,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 
 	t.Run("insufficient shares error", func(t *testing.T) {
 		t.Parallel()
-		// Try with only 2 shares (below threshold)
+		// Try with only 2 shares (below thresh)
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, 2)
 
 		for i := range 2 {
@@ -1523,11 +1524,11 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 			liftedShares = append(liftedShares, lifted)
 		}
 
-		// This should still work since ReconstructAsAdditive doesn't check threshold
+		// This should still work since ReconstructAsAdditive doesn't check thresh
 		// It just uses whatever shares are provided
 		_, err := liftedShares.ReconstructAsAdditive()
 		require.NoError(t, err)
-		// But the result won't be correct unless we have threshold shares
+		// But the result won't be correct unless we have thresh shares
 	})
 
 	t.Run("empty shares error", func(t *testing.T) {
@@ -1542,7 +1543,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		t.Parallel()
 		// Create a qualified set
 		selectedIDs := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(selectedIDs)
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(selectedIDs)
 		require.NoError(t, err)
 
 		// Get a share and lift it
@@ -1574,15 +1575,15 @@ func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	// Create a simple 2-of-3 scheme
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(3)
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	_, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	_, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 
 	// Create Feldman scheme
 	basePoint := curve.PrimeSubGroupGenerator()
-	scheme, err := newFeldmanScheme(basePoint, threshold, shareholders)
+	scheme, err := newFeldmanScheme(basePoint, thresh, shareholders)
 	require.NoError(t, err)
 
 	// Create a known secret
@@ -1637,9 +1638,9 @@ func BenchmarkVerification(b *testing.B) {
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -1650,7 +1651,7 @@ func BenchmarkVerification(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.threshold, shareHolders)
+			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
 			require.NoError(b, err)
 
 			secret := feldman.NewSecret(field.FromUint64(42))

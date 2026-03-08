@@ -14,7 +14,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -204,7 +204,7 @@ func SampleZeroShare[GE algebra.GroupElement[GE]](ctx *Context, g algebra.Finite
 		value = value.Op(v)
 	}
 
-	as, err := accessstructures.NewUnanimityAccessStructure(hashset.NewComparable(ctx.sortedQuorum...).Freeze())
+	as, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable(ctx.sortedQuorum...).Freeze())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create access structure")
 	}
