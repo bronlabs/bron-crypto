@@ -12,8 +12,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
 // ID uniquely identifies a shareholder.
