@@ -292,7 +292,7 @@ func TestInducedMSPByThreshold_RowMapping(t *testing.T) {
 
 	// Each row maps to exactly one shareholder.
 	require.Len(t, rth, len(ids))
-	for i := range len(ids) {
+	for i := range ids {
 		id, ok := rth[i]
 		require.True(t, ok, "row %d must have a holder mapping", i)
 		require.Contains(t, ids, id)

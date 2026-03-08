@@ -26,7 +26,7 @@ func WithLevel(threshold int, parties ...ID) *ThresholdLevel {
 // HierarchicalConjunctiveThreshold is a monotone access
 // structure composed of ordered levels and strictly increasing cumulative
 // thresholds.
-type HierarchicalConjunctiveThreshold struct {
+type HierarchicalConjunctiveThreshold struct { //nolint:revive // keep the Hierarchical prefix for clarity.
 	levels []*ThresholdLevel
 }
 
@@ -201,7 +201,7 @@ func (l *ThresholdLevel) UnmarshalCBOR(data []byte) error {
 // 		return nil, errs.Wrap(err).WithMessage("could not create birkhoff matrix")
 // 	}
 // 	return m, nil
-// }
+// }.
 
 // func Rank(accessStructure *HierarchicalConjunctiveThreshold, id ID) (int, bool) {
 // 	if accessStructure == nil {
@@ -215,7 +215,7 @@ func (l *ThresholdLevel) UnmarshalCBOR(data []byte) error {
 // 		r = level.Threshold()
 // 	}
 // 	return 0, false
-// }
+// }.
 
 // InducedMSPByHierarchicalConjunctiveThreshold constructs a monotone span
 // programme from a hierarchical conjunctive threshold access structure.

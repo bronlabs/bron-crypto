@@ -3,10 +3,11 @@ package vandermonde
 import (
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Interpolate computes the unique polynomial of degree < len(nodes) that evaluates to values[i] at nodes[i] for each i.
@@ -67,7 +68,7 @@ func BuildVandermondeMatrix[E algebra.RingElement[E]](nodes []E, cols uint) (*ma
 	}
 	mod, err := mat.NewMatrixModule(uint(n), cols, ring)
 	if err != nil {
-		return nil, err
+		return nil, errs.Wrap(err).WithMessage("could not create matrix module for vandermonde matrix")
 	}
 	out, err := mod.NewRowMajor(input...)
 	if err != nil {

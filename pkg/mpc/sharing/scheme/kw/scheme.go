@@ -29,18 +29,18 @@ type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 // NewScheme constructs a KW sharing scheme by inducing an MSP from the given
 // linear access structure over the prime field f.
 func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], ac accessstructures.Linear) (*Scheme[FE], error) {
-	msp, err := accessstructures.InducedMSP(f, ac)
+	m, err := accessstructures.InducedMSP(f, ac)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create MSP for access structure")
 	}
 	return &Scheme[FE]{
-		msp: msp,
+		msp: m,
 		ac:  ac,
 	}, nil
 }
 
 // Name returns the canonical name of this scheme.
-func (s *Scheme[FE]) Name() sharing.Name {
+func (*Scheme[FE]) Name() sharing.Name {
 	return Name
 }
 
@@ -122,7 +122,6 @@ func (s *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 	return &DealerOutput[FE]{
 		shares: shares.Freeze(),
 	}, lambda, nil
-
 }
 
 // Deal distributes shares of the given secret to all shareholders.

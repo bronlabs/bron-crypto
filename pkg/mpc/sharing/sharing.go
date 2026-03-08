@@ -90,5 +90,5 @@ type LSSS[
 	SSS[S, W, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
-	ConvertShareToAdditive(input S, unanimity *unanimity.Unanimity) (*internal.AdditiveShare[WV], error)
+	ConvertShareToAdditive(S, *unanimity.Unanimity) (*internal.AdditiveShare[WV], error)
 }

@@ -3,6 +3,8 @@ package accessstructures
 import (
 	"iter"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
@@ -11,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Monotone defines the common API for monotone sharing access
@@ -38,20 +39,27 @@ type ID = internal.ID
 // structure. It dispatches to the most efficient construction for known
 // concrete types and falls back to CNF conversion for unknown implementations.
 func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac Linear) (*msp.MSP[E], error) {
+	var out *msp.MSP[E]
+	var err error
 	switch ac := ac.(type) {
 	case *unanimity.Unanimity:
-		return unanimity.InducedByUnanimity(f, ac)
+		out, err = unanimity.InducedByUnanimity(f, ac)
 	case *threshold.Threshold:
-		return threshold.InducedMSPByThreshold(f, ac)
+		out, err = threshold.InducedMSPByThreshold(f, ac)
 	case *hierarchical.HierarchicalConjunctiveThreshold:
-		return hierarchical.InducedMSPByHierarchicalConjunctiveThreshold(f, ac)
+		out, err = hierarchical.InducedMSPByHierarchicalConjunctiveThreshold(f, ac)
 	case *cnf.CNF:
-		return cnf.InducedMSPByCNF(f, ac)
+		out, err = cnf.InducedMSPByCNF(f, ac)
 	default:
-		ascnf, err := cnf.ConvertToCNF(ac)
+		var ascnf *cnf.CNF
+		ascnf, err = cnf.ConvertToCNF(ac)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to convert access structure to CNF for MSP induction")
 		}
-		return cnf.InducedMSPByCNF(f, ascnf)
+		out, err = cnf.InducedMSPByCNF(f, ascnf)
 	}
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to induce MSP from unanimity access structure")
+	}
+	return out, nil
 }

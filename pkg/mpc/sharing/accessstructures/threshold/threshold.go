@@ -168,7 +168,7 @@ func InducedMSPByThreshold[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[
 	for i, id := range shareHolders {
 		nodes[i] = f.FromUint64(uint64(id))
 	}
-	matrix, err := vandermonde.BuildVandermondeMatrix(nodes, uint(ac.Threshold()))
+	matrix, err := vandermonde.BuildVandermondeMatrix(nodes, ac.Threshold())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to build Vandermonde matrix for threshold MSP")
 	}
@@ -181,5 +181,9 @@ func InducedMSPByThreshold[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create target vector")
 	}
-	return msp.NewMSP(matrix, rowsToHolders, targetVector)
+	out, err := msp.NewMSP(matrix, rowsToHolders, targetVector)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create MSP from threshold access structure")
+	}
+	return out, nil
 }

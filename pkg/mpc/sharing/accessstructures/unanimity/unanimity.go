@@ -145,5 +145,9 @@ func InducedByUnanimity[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E],
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert unanimity to CNF")
 	}
-	return cnf.InducedMSPByCNF(f, ascnf)
+	out, err := cnf.InducedMSPByCNF(f, ascnf)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to induce MSP from CNF conversion of unanimity")
+	}
+	return out, nil
 }

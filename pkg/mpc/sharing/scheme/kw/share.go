@@ -37,7 +37,7 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v ...FE) (*Share[
 }
 
 // ToAdditive converts this share to an additive share. Not yet implemented.
-func (s *Share[FE]) ToAdditive(ac *unanimity.Unanimity) (*additive.Share[FE], error) {
+func (*Share[FE]) ToAdditive(ac *unanimity.Unanimity) (*additive.Share[FE], error) {
 	panic("implement me")
 }
 
