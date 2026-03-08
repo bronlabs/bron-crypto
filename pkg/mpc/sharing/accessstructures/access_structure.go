@@ -9,10 +9,10 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
 // Monotone defines the common API for monotone sharing access
