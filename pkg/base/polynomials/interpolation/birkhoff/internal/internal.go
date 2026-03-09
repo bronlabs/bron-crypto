@@ -24,8 +24,8 @@ func (n Nodes[F, G]) Len() int {
 }
 
 func (n Nodes[F, G]) Less(i, j int) bool {
-	xi, _ := num.N().FromBytesBE(n[i].X.Cardinal().BytesBE())
-	xj, _ := num.N().FromBytesBE(n[j].X.Cardinal().BytesBE())
+	xi, _ := num.N().FromCardinal(n[i].X.Cardinal())
+	xj, _ := num.N().FromCardinal(n[j].X.Cardinal())
 	if xi.Compare(xj) < 0 {
 		return true
 	}

@@ -207,9 +207,9 @@ func normaliseCNF(unqualifiedSets ...ds.Set[ID]) ([]ds.Set[ID], error) {
 	return maximalSets, nil
 }
 
-// InducedMSPByCNF constructs a monotone span programme from a CNF access
+// InducedMSP constructs a monotone span programme from a CNF access
 // structure. Each clause yields one block of rows, one per clause member.
-func InducedMSPByCNF[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], c *CNF) (*msp.MSP[E], error) {
+func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], c *CNF) (*msp.MSP[E], error) {
 	if f == nil {
 		return nil, ErrIsNil.WithMessage("field cannot be nil")
 	}

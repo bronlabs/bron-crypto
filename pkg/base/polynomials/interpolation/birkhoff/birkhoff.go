@@ -13,18 +13,22 @@ import (
 // where values are group elements (i.e. interpolation in the exponent).
 func InterpolateInExponent[G algebra.PrimeGroupElement[G, F], F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []G) (*polynomials.ModuleValuedPolynomial[G, F], error) {
 	if len(xs) != len(js) || len(xs) != len(ys) {
-		return nil, errs.New("validation failed").WithMessage("x, j, and y must have the same length")
+		return nil, polynomials.ErrValidation.WithMessage("x, j, and y must have the same length")
 	}
 	if len(xs) == 0 {
 		return nil, polynomials.ErrValidation.WithMessage("no nodes")
 	}
 
 	xs, js, ys = internal.SortNodes(xs, js, ys)
-	denMatrix, err := BuildVandermondeMatrix(xs, js)
+	denMatrix, err := BuildVandermondeMatrix(xs, js, len(xs))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not build vandermonde matrix")
 	}
-	den := denMatrix.Determinant()
+	denMatrixSquare, err := denMatrix.AsSquare()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert to square matrix")
+	}
+	den := denMatrixSquare.Determinant()
 	if den.IsZero() {
 		return nil, polynomials.ErrFailed.WithMessage("determinant is zero")
 	}
@@ -38,7 +42,7 @@ func InterpolateInExponent[G algebra.PrimeGroupElement[G, F], F algebra.PrimeFie
 	for c := range xs {
 		num := group.OpIdentity()
 		for r, y := range ys {
-			m, err := denMatrix.Minor(r, c)
+			m, err := denMatrixSquare.Minor(r, c)
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("could not compute minor")
 			}
@@ -69,7 +73,7 @@ func InterpolateInExponent[G algebra.PrimeGroupElement[G, F], F algebra.PrimeFie
 // of the polynomial evaluated at xs[i].
 func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*polynomials.Polynomial[F], error) {
 	if len(xs) != len(js) || len(xs) != len(ys) {
-		return nil, errs.New("validation failed").WithMessage("x, j, and y must have the same length")
+		return nil, polynomials.ErrValidation.WithMessage("x, j, and y must have the same length")
 	}
 	if len(xs) == 0 {
 		return nil, polynomials.ErrValidation.WithMessage("no nodes")
@@ -77,18 +81,22 @@ func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*
 
 	xs, js, ys = internal.SortNodes(xs, js, ys)
 	field := algebra.StructureMustBeAs[algebra.PrimeField[F]](xs[0].Structure())
-	denMatrix, err := BuildVandermondeMatrix(xs, js)
+	denMatrix, err := BuildVandermondeMatrix(xs, js, len(xs))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not build vandermonde matrix")
 	}
-	den := denMatrix.Determinant()
+	denMatrixSquare, err := denMatrix.AsSquare()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert to square matrix")
+	}
+	den := denMatrixSquare.Determinant()
 	if den.IsZero() {
 		return nil, polynomials.ErrFailed.WithMessage("determinant is zero")
 	}
 
 	coeffs := make([]F, 0, len(xs))
 	for c := range xs {
-		numMatrix, err := denMatrix.SetColumn(c, ys)
+		numMatrix, err := denMatrixSquare.SetColumn(c, ys)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not set column")
 		}
@@ -113,14 +121,17 @@ func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*
 
 // BuildVandermondeMatrix constructs the generalised Vandermonde matrix used by
 // Birkhoff interpolation for nodes (xs[i], js[i]).
-func BuildVandermondeMatrix[F algebra.PrimeFieldElement[F]](xs []F, js []uint64) (*mat.SquareMatrix[F], error) {
+func BuildVandermondeMatrix[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, cols int) (*mat.Matrix[F], error) {
 	if len(xs) != len(js) {
-		return nil, errs.New("validation failed").WithMessage("x and j must have the same length")
+		return nil, polynomials.ErrValidation.WithMessage("x and j must have the same length")
+	}
+	if cols <= 0 {
+		return nil, polynomials.ErrValidation.WithMessage("cols must be positive")
 	}
 
-	coeffs := make([]F, 0, len(xs)*len(xs))
+	coeffs := make([]F, 0, len(xs)*cols)
 	for r := range xs {
-		for c := range xs {
+		for c := range cols {
 			coeff, err := internal.Phi(c, xs[r], js[r])
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("could not compute phi")
@@ -130,7 +141,7 @@ func BuildVandermondeMatrix[F algebra.PrimeFieldElement[F]](xs []F, js []uint64)
 	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[F]](xs[0].Structure())
-	matrices, err := mat.NewMatrixAlgebra(uint(len(xs)), field)
+	matrices, err := mat.NewMatrixModule(uint(len(xs)), uint(cols), field)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create matrix algebra")
 	}

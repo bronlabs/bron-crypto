@@ -200,14 +200,14 @@ func TestInducedByUnanimity_Errors(t *testing.T) {
 
 	t.Run("nil field", func(t *testing.T) {
 		t.Parallel()
-		m, err := InducedByUnanimity[*k256.Scalar](nil, ac)
+		m, err := InducedMSP[*k256.Scalar](nil, ac)
 		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, m)
 	})
 
 	t.Run("nil access structure", func(t *testing.T) {
 		t.Parallel()
-		m, err := InducedByUnanimity(field, nil)
+		m, err := InducedMSP(field, nil)
 		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, m)
 	})
@@ -235,7 +235,7 @@ func TestInducedByUnanimity_AcceptsAndRejects(t *testing.T) {
 			ac, err := NewUnanimityAccessStructure(hashset.NewComparable(tc.ids...).Freeze())
 			require.NoError(t, err)
 
-			m, err := InducedByUnanimity(field, ac)
+			m, err := InducedMSP(field, ac)
 			require.NoError(t, err)
 
 			// Only the full set should be accepted.
@@ -261,7 +261,7 @@ func TestInducedByUnanimity_ReconstructionVector(t *testing.T) {
 	ac, err := NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
 	require.NoError(t, err)
 
-	m, err := InducedByUnanimity(field, ac)
+	m, err := InducedMSP(field, ac)
 	require.NoError(t, err)
 
 	t.Run("full set succeeds", func(t *testing.T) {
@@ -286,7 +286,7 @@ func TestInducedByUnanimity_Dimensions(t *testing.T) {
 	ac, err := NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
 	require.NoError(t, err)
 
-	m, err := InducedByUnanimity(field, ac)
+	m, err := InducedMSP(field, ac)
 	require.NoError(t, err)
 
 	// For unanimity with n shareholders, the CNF has n maximal unqualified sets,
