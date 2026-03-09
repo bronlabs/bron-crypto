@@ -3,19 +3,20 @@ package testutils
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/recovery"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/recovery"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/stretchr/testify/require"
 )
 
-func MakeRunners(tb testing.TB, ac *accessstructures.Threshold, mislayerID sharing.ID) (mislayerShard *tsig.BaseShard[*k256.Point, *k256.Scalar], mislayers map[sharing.ID]network.Runner[*recovery.Output[*k256.Point, *k256.Scalar]], recoverers map[sharing.ID]network.Runner[any]) {
+func MakeRunners(tb testing.TB, ac *threshold.Threshold, mislayerID sharing.ID) (mislayerShard *tsig.BaseShard[*k256.Point, *k256.Scalar], mislayers map[sharing.ID]network.Runner[*recovery.Output[*k256.Point, *k256.Scalar]], recoverers map[sharing.ID]network.Runner[any]) {
 	tb.Helper()
 	prng := pcg.NewRandomised()
 	ctxs := session_testutils.MakeRandomContexts(tb, ac.Shareholders(), prng)

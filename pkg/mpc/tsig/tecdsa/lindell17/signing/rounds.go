@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -152,7 +152,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	k2 := sc.state.k2
 
 	quorum := hashset.NewComparable(sc.SharingID(), sc.primarySharingID)
-	ac, err := accessstructures.NewUnanimityAccessStructure(quorum.Freeze())
+	ac, err := unanimity.NewUnanimityAccessStructure(quorum.Freeze())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create access structure for additive sharing")
 	}

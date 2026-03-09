@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23/keygen/trusted_dealer"
@@ -30,7 +30,7 @@ func Test_HappyPath(t *testing.T) {
 
 	shards, pk, err := trusted_dealer.DealRandom(curve, THRESHOLD, shareholders.Freeze(), prng)
 	require.NoError(t, err)
-	ac, err := accessstructures.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
+	ac, err := threshold.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
 	require.NoError(t, err)
 
 	t.Run("shares match", func(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
@@ -31,7 +31,7 @@ const Name sharing.Name = "Additive Secret Sharing Scheme"
 // Parameters:
 //   - g: The group over which sharing is performed
 //   - accessStructure: Unanimity access structure (all members are required for reconstruction)
-func NewScheme[E GroupElement[E]](g Group[E], accessStructure *accessstructures.Unanimity) (*Scheme[E], error) {
+func NewScheme[E GroupElement[E]](g Group[E], accessStructure *unanimity.Unanimity) (*Scheme[E], error) {
 	if g == nil {
 		return nil, sharing.ErrIsNil.WithMessage("group is nil")
 	}
@@ -47,7 +47,7 @@ func NewScheme[E GroupElement[E]](g Group[E], accessStructure *accessstructures.
 // Scheme implements additive secret sharing over a finite group.
 type Scheme[E GroupElement[E]] struct {
 	g  Group[E]
-	ac *accessstructures.Unanimity
+	ac *unanimity.Unanimity
 }
 
 // Name returns the canonical name of this scheme.
@@ -56,7 +56,7 @@ func (*Scheme[E]) Name() sharing.Name {
 }
 
 // AccessStructure returns the access structure (all shareholders required).
-func (d *Scheme[E]) AccessStructure() *accessstructures.Unanimity {
+func (d *Scheme[E]) AccessStructure() *unanimity.Unanimity {
 	return d.ac
 }
 
@@ -160,7 +160,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 
 type Share[E GroupElement[E]] = internal.AdditiveShare[E]
 
-func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *accessstructures.Unanimity) (*Share[E], error) {
+func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *unanimity.Unanimity) (*Share[E], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}

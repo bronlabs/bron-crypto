@@ -6,8 +6,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
@@ -62,7 +63,7 @@ type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOu
 }
 
 // ThresholdSSS is a secret sharing scheme with a threshold access structure.
-type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *accessstructures.Threshold]
+type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *threshold.Threshold]
 
 // LinearShare extends HomomorphicShare with scalar operation and conversion
 // to additive shares. This enables threshold-to-additive share conversion using
@@ -70,37 +71,24 @@ type ThresholdSSS[S Share[S], W Secret[W], DO DealerOutput[S]] SSS[S, W, DO, *ac
 type LinearShare[S interface {
 	Share[S]
 	algebra.HomomorphicLike[S, SV]
-	algebra.Actable[S, SC]
 }, SV any,
-	SC any, // To support packed variants, scalar type is not constrained.
 ] interface {
 	Share[S]
 	algebra.HomomorphicLike[S, SV]
-	algebra.Actable[S, SC]
+	algebra.Actable[S, algebra.Numeric]
 }
 
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.
 // It supports revealing the dealer function (polynomial) for protocols that need it.
 type LSSS[
-	S LinearShare[S, SV, SC], SV any,
+	S LinearShare[S, SV], SV any,
 	W interface {
 		Secret[W]
 		base.Transparent[WV]
-	}, WV algebra.GroupElement[WV], DO DealerOutput[S], SC any, AC accessstructures.Monotone, DF any,
+	}, WV algebra.GroupElement[WV], DO DealerOutput[S], AC accessstructures.Linear, DF any,
 ] interface {
 	SSS[S, W, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
 	DealRandomAndRevealDealerFunc(prng io.Reader) (DO, W, DF, error)
-	ConvertShareToAdditive(input S, unanimity *accessstructures.Unanimity) (*internal.AdditiveShare[WV], error)
+	ConvertShareToAdditive(S, *unanimity.Unanimity) (*internal.AdditiveShare[WV], error)
 }
-
-// PolynomialLSSS is an LSSS based on polynomial evaluation, such as Shamir's scheme.
-// The dealer function is a polynomial f(x) where f(0) is the secret and f(i) is
-// shareholder i's share.
-type PolynomialLSSS[
-	S LinearShare[S, SV, SC], SV algebra.PrimeFieldElement[SV],
-	W interface {
-		Secret[W]
-		base.Transparent[WV]
-	}, WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], SC any, AC accessstructures.Monotone,
-] LSSS[S, SV, W, WV, DO, SC, AC, *polynomials.Polynomial[SV]]

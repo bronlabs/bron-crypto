@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -11,14 +13,13 @@ import (
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 type (
@@ -45,7 +46,7 @@ type (
 		publicKeyValue         E
 		partialPublicKeyValues ds.Map[sharing.ID, E]
 		fv                     feldman.VerificationVector[E, S]
-		accessStructure        *accessstructures.Threshold
+		accessStructure        *threshold.Threshold
 	}
 )
 
@@ -60,7 +61,7 @@ type Participant[E GroupElement[E, S], S Scalar[S]] struct {
 	group          Group[E, S]
 	scalarField    ScalarField[S]
 	prng           io.Reader
-	ac             *accessstructures.Threshold
+	ac             *threshold.Threshold
 	niCompilerName compiler.Name
 	state          *State[E, S]
 	round          network.Round
@@ -72,7 +73,7 @@ func (p *Participant[E, S]) SharingID() sharing.ID {
 }
 
 // AccessStructure returns the access structure enforced by the DKG.
-func (p *Participant[E, S]) AccessStructure() *accessstructures.Threshold {
+func (p *Participant[E, S]) AccessStructure() *threshold.Threshold {
 	return p.ac
 }
 
@@ -94,7 +95,7 @@ type State[E GroupElement[E, S], S Scalar[S]] struct {
 func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	ctx *session.Context,
 	group Group[E, S],
-	ac *accessstructures.Threshold,
+	ac *threshold.Threshold,
 	niCompilerName compiler.Name,
 	prng io.Reader,
 ) (*Participant[E, S], error) {
@@ -161,7 +162,7 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 func NewDKGOutput[E GroupElement[E, S], S Scalar[S]](
 	share *feldman.Share[S],
 	vector feldman.VerificationVector[E, S],
-	accessStructure *accessstructures.Threshold,
+	accessStructure *threshold.Threshold,
 ) (*DKGOutput[E, S], error) {
 	if share == nil {
 		return nil, ErrInvalidArgument.WithMessage("share is nil")
@@ -230,7 +231,7 @@ func (o *DKGPublicOutput[E, S]) PartialPublicKeyValues() ds.Map[sharing.ID, E] {
 }
 
 // AccessStructure returns the access structure associated with the DKG output.
-func (o *DKGPublicOutput[E, S]) AccessStructure() *accessstructures.Threshold {
+func (o *DKGPublicOutput[E, S]) AccessStructure() *threshold.Threshold {
 	if o == nil {
 		return nil
 	}

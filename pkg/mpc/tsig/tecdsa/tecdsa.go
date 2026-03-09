@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -63,7 +63,7 @@ func (sh *Shard[P, B, S]) PublicKey() *ecdsa.PublicKey[P, B, S] {
 }
 
 // Equal reports whether the value equals other.
-func (sh *Shard[P, B, S]) Equal(other tsig.Shard[*ecdsa.PublicKey[P, B, S], *feldman.Share[S], *accessstructures.Threshold]) bool {
+func (sh *Shard[P, B, S]) Equal(other tsig.Shard[*ecdsa.PublicKey[P, B, S], *feldman.Share[S], *threshold.Threshold]) bool {
 	o, ok := other.(*Shard[P, B, S])
 	return ok && sh.BaseShard.Equal(&o.BaseShard)
 }
@@ -72,7 +72,7 @@ func (sh *Shard[P, B, S]) Equal(other tsig.Shard[*ecdsa.PublicKey[P, B, S], *fel
 func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv feldman.VerificationVector[P, S],
-	accessStructure *accessstructures.Threshold,
+	accessStructure *threshold.Threshold,
 ) (*Shard[P, B, S], error) {
 	if share == nil || fv == nil || accessStructure == nil {
 		return nil, ErrNil.WithMessage("nil input parameters")

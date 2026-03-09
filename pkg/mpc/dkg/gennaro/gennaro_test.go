@@ -6,6 +6,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -14,19 +16,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 )
 
-func setup[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, accessStructure *accessstructures.Threshold, group gennaro.Group[E, S], prng io.Reader) map[sharing.ID]*gennaro.Participant[E, S] {
+func setup[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, accessStructure *threshold.Threshold, group gennaro.Group[E, S], prng io.Reader) map[sharing.ID]*gennaro.Participant[E, S] {
 	tb.Helper()
 	ctxs := session_testutils.MakeRandomContexts(tb, accessStructure.Shareholders(), prng)
 	parties := make(map[sharing.ID]*gennaro.Participant[E, S])
@@ -38,15 +39,15 @@ func setup[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, acc
 	return parties
 }
 
-// TestDKGWithVariousThresholds tests DKG with different threshold configurations
+// TestDKGWithVariousThresholds tests DKG with different thresh configurations
 func TestDKGWithVariousThresholds(t *testing.T) {
 	t.Parallel()
 
 	prng := pcg.NewRandomised()
 	testCases := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"minimal 2-of-3", 2, 3},
 		{"standard 3-of-5", 3, 5},
@@ -59,7 +60,7 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 			group := k256.NewCurve()
 
 			quorum := ntu.MakeRandomQuorum(t, prng, int(tc.total))
-			ac, err := accessstructures.NewThresholdAccessStructure(tc.threshold, quorum)
+			ac, err := threshold.NewThresholdAccessStructure(tc.thresh, quorum)
 			require.NoError(t, err)
 			parties := setup(t, ac, group, prng)
 
@@ -69,7 +70,7 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 			// Verify all outputs have correct access structure
 			for id, output := range outputs {
 				require.NotNil(t, output.AccessStructure())
-				require.Equal(t, tc.threshold, output.AccessStructure().Threshold())
+				require.Equal(t, tc.thresh, output.AccessStructure().Threshold())
 				require.Equal(t, int(tc.total), output.AccessStructure().Shareholders().Size())
 				require.Equal(t, id, output.Share().ID())
 			}
@@ -98,9 +99,9 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 			require.NotNil(t, secret)
 			require.False(t, secret.Value().IsZero())
 
-			// Test reconstruction with exactly threshold shares
-			if tc.threshold < tc.total {
-				thresholdShares := shares[:tc.threshold]
+			// Test reconstruction with exactly thresh shares
+			if tc.thresh < tc.total {
+				thresholdShares := shares[:tc.thresh]
 				secretFromThreshold, err := feldmanScheme.ReconstructAndVerify(referenceVV, thresholdShares...)
 				require.NoError(t, err)
 				require.True(t, secret.Equal(secretFromThreshold))
@@ -112,12 +113,12 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 func TestDKGPublicKeyFields(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(3)
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := ntu.MakeRandomQuorum(t, prng, int(total))
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, quorum)
 	require.NoError(t, err)
 
 	parties := setup(t, ac, group, prng)
@@ -192,12 +193,12 @@ func TestDKGPublicKeyFields(t *testing.T) {
 func TestDKGShareProperties(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(3)
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := ntu.MakeRandomQuorum(t, prng, int(total))
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, quorum)
 	require.NoError(t, err)
 
 	parties := setup(t, ac, group, prng)
@@ -253,7 +254,7 @@ func TestDKGShareProperties(t *testing.T) {
 		}
 
 		var reconstructedSecrets []*feldman.Secret[*k256.Scalar]
-		for combo := range sliceutils.KCoveringCombinations(shares, threshold) {
+		for combo := range sliceutils.KCoveringCombinations(shares, thresh) {
 			secret, err := feldmanScheme.ReconstructAndVerify(referenceVV, combo...)
 			require.NoError(t, err)
 			reconstructedSecrets = append(reconstructedSecrets, secret)
@@ -268,12 +269,12 @@ func TestDKGShareProperties(t *testing.T) {
 func TestDKGRoundMessages(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(3)
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := ntu.MakeRandomQuorum(t, prng, int(total))
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, quorum)
 	require.NoError(t, err)
 
 	t.Run("round 1 broadcasts and unicasts", func(t *testing.T) {
@@ -321,7 +322,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := ntu.MakeRandomQuorum(t, prng, 3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	parties := setup(t, ac, group, prng)
 
@@ -357,7 +358,7 @@ func TestParticipantCreation(t *testing.T) {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 	ctx := ctxs[1]
@@ -397,7 +398,7 @@ func TestParticipantCreation(t *testing.T) {
 
 	t.Run("access structure mismatch with context", func(t *testing.T) {
 		t.Parallel()
-		mismatch, err := accessstructures.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 4).Freeze())
+		mismatch, err := threshold.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 4).Freeze())
 		require.NoError(t, err)
 		p, err := gennaro.NewParticipant(ctx, group, mismatch, fiatshamir.Name, prng)
 		require.Error(t, err)
@@ -416,7 +417,7 @@ func firstOutput(outputs map[sharing.ID]*gennaro.DKGOutput[*k256.Point, *k256.Sc
 
 type securityFixture struct {
 	group   *k256.Curve
-	ac      *accessstructures.Threshold
+	ac      *threshold.Threshold
 	quorum  network.Quorum
 	parties map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar]
 	ids     []sharing.ID // sorted
@@ -432,7 +433,7 @@ func newSecurityFixture(t *testing.T) *securityFixture {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	parties := setup(t, ac, group, prng)
 	participants := slices.Collect(maps.Values(parties))
@@ -670,7 +671,7 @@ func TestFeldmanPedersenConsistencyCheck(t *testing.T) {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 
 	// DKG 1: the real one
@@ -711,7 +712,7 @@ func TestShareReconstructionYieldsMatchingPublicKey(t *testing.T) {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 
 	parties := setup(t, ac, group, prng)

@@ -3,12 +3,14 @@ package trusted_dealer
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
@@ -16,12 +18,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // DealRandom deals random shares from a trusted dealer.
-func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *dkls23.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholder)
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], thresh uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *dkls23.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholder)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create access structure")
 	}

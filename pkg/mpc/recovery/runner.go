@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
@@ -41,7 +41,7 @@ func NewRecovererRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldE
 }
 
 // NewMislayerRunner constructs a network runner that drives the three DKG rounds.
-func NewMislayerRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *accessstructures.Threshold, group algebra.PrimeGroup[G, S]) (network.Runner[*Output[G, S]], error) {
+func NewMislayerRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *threshold.Threshold, group algebra.PrimeGroup[G, S]) (network.Runner[*Output[G, S]], error) {
 	party, err := NewMislayer(ctx, as, group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create mislayer")

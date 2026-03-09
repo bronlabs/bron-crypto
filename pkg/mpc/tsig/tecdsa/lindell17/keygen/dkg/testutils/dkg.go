@@ -5,16 +5,17 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
-	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/maputils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
@@ -32,7 +33,7 @@ const paillierKeyLen = 1024
 func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
 	curve ecdsa.Curve[P, B, S],
-	accessStructure *accessstructures.Threshold,
+	accessStructure *threshold.Threshold,
 ) map[sharing.ID]*lindell17.Shard[P, B, S] {
 	tb.Helper()
 

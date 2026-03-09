@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/recovery"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/recovery/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 )
@@ -30,7 +30,7 @@ func (a outputlessRunnerAdapter) Run(rt *network.Router) (*recovery.Output[*k256
 func TestRunnerHappyPath(t *testing.T) {
 	t.Parallel()
 
-	ac, err := accessstructures.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 3, 4).Freeze())
+	ac, err := threshold.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 3, 4).Freeze())
 	require.NoError(t, err)
 	mislayerId := sharing.ID(3)
 	shard, mislayers, recoverers := testutils.MakeRunners(t, ac, mislayerId)

@@ -30,19 +30,19 @@ type matrixWrapperPtrConstraint[S algebra.GroupElement[S], WT any] interface {
 	Clone() *WT
 }
 
-// MatrixGroupTrait provides shared implementation for matrix module structures.
-// It is embedded by [MatrixModule], [MatrixAlgebra], and [ModuleValuedMatrixModule]
-// to provide common module-level operations: dimensions, serialisation, and
-// zero/identity construction.
+// MatrixGroupTrait provides shared implementation for matrix structure types.
+// It is embedded by [MatrixModuleTrait] (for ring-valued matrices) and
+// [ModuleValuedMatrixModule] (for module-valued matrices) to provide common
+// operations: dimensions, serialisation, and zero/identity construction.
 type MatrixGroupTrait[G algebra.FiniteGroup[S], S algebra.GroupElement[S], W matrixWrapperPtrConstraint[S, WT], WT any] struct {
-	structure G
-	rows      int
-	cols      int
+	baseStructure G
+	rows          int
+	cols          int
 }
 
 // Name returns a human-readable name for the module, e.g. "M_2x3(groupName)".
 func (mm *MatrixGroupTrait[G, S, W, WT]) Name() string {
-	return fmt.Sprintf("M_%dx%d(%s)", mm.rows, mm.cols, mm.structure.Name())
+	return fmt.Sprintf("M_%dx%d(%s)", mm.rows, mm.cols, mm.baseStructure.Name())
 }
 
 // Dimensions returns the number of rows and columns.
@@ -52,12 +52,12 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) Dimensions() (m, n int) {
 
 // Order returns the cardinality of the matrix module.
 func (mm *MatrixGroupTrait[G, S, W, WT]) Order() algebra.Cardinal {
-	return cardinal.New(uint64(mm.rows) * uint64(mm.cols)).Mul(mm.structure.Order())
+	return cardinal.New(uint64(mm.rows) * uint64(mm.cols)).Mul(mm.baseStructure.Order())
 }
 
 // ElementSize returns the byte size of a single matrix (rows * cols * scalar size).
 func (mm *MatrixGroupTrait[G, S, W, WT]) ElementSize() int {
-	return mm.rows * mm.cols * mm.structure.ElementSize()
+	return mm.rows * mm.cols * mm.baseStructure.ElementSize()
 }
 
 // IsSquare reports whether the module's matrices are square.
@@ -72,13 +72,13 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) FromBytes(data []byte) (W, error) {
 	}
 	var matrix WT
 	W(&matrix).init(mm.rows, mm.cols)
-	elementSize := mm.structure.ElementSize()
+	elementSize := mm.baseStructure.ElementSize()
 	d := W(&matrix).data()
 	for i := range mm.rows * mm.cols {
 		start := i * elementSize
 		end := start + elementSize
 		elementData := data[start:end]
-		element, err := mm.structure.FromBytes(elementData)
+		element, err := mm.baseStructure.FromBytes(elementData)
 		if err != nil {
 			return nil, ErrFailed.WithMessage("failed to parse element at index %d: %v", i, err)
 		}
@@ -93,7 +93,7 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) OpIdentity() W {
 	W(&matrix).init(mm.rows, mm.cols)
 	d := W(&matrix).data()
 	for i := range d {
-		d[i] = mm.structure.OpIdentity()
+		d[i] = mm.baseStructure.OpIdentity()
 	}
 	return W(&matrix)
 }
@@ -140,7 +140,7 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) Random(prng io.Reader) (W, error) {
 	values := make([]S, mm.rows*mm.cols)
 	var err error
 	for i := range values {
-		values[i], err = mm.structure.Random(prng)
+		values[i], err = mm.baseStructure.Random(prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to generate random element for matrix")
 		}
@@ -162,7 +162,7 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) Hash(data []byte) (W, error) {
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to hash data for matrix element %d", i)
 		}
-		values[i], err = mm.structure.Hash(di)
+		values[i], err = mm.baseStructure.Hash(di)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to hash element for matrix")
 		}
@@ -176,7 +176,35 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) Hash(data []byte) (W, error) {
 
 // ScalarStructure returns the algebraic structure of the element group.
 func (mm *MatrixGroupTrait[G, S, W, WT]) ScalarStructure() algebra.Structure[S] {
-	return mm.structure
+	return mm.baseStructure
+}
+
+// MatrixModuleTrait extends [MatrixGroupTrait] with ring-specific structure operations.
+// It is embedded by [MatrixModule] and [MatrixAlgebra] to provide access to the
+// scalar ring and standard basis vector construction.
+type MatrixModuleTrait[R algebra.FiniteRing[S], S algebra.RingElement[S], W matrixWrapperPtrConstraint[S, WT], WT any, RectW matrixWrapperPtrConstraint[S, RectWT], RectWT any] struct {
+	MatrixGroupTrait[R, S, W, WT]
+}
+
+// ScalarRing returns the underlying ring of scalars.
+func (mm *MatrixModuleTrait[R, S, W, WT, RectW, RectWT]) ScalarRing() algebra.Ring[S] {
+	return mm.baseStructure
+}
+
+// NewStandardUnit returns the i-th standard basis row vector: a 1×cols matrix
+// with one in column i and zero elsewhere.
+func (mm *MatrixModuleTrait[R, S, W, WT, RectW, RectWT]) NewStandardUnit(i int) (RectW, error) {
+	if i < 0 || i >= mm.cols {
+		return nil, ErrDimension.WithMessage("standard unit index out of bounds: %d for module with %d columns", i, mm.cols)
+	}
+	var matrix RectWT
+	RectW(&matrix).init(1, mm.cols)
+	d := RectW(&matrix).data()
+	for j := range d {
+		d[j] = mm.baseStructure.Zero()
+	}
+	d[i] = mm.baseStructure.One()
+	return RectW(&matrix), nil
 }
 
 // MatrixGroupElementTrait provides shared implementation for matrix element types.
@@ -240,6 +268,21 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IterRows() iter.Seq[R
 	}
 }
 
+// IterInRow yields each element in the i-th row in sequence. The yielded elements are copies and can be safely modified by the caller.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IterInRow(i int) iter.Seq[S] {
+	return func(yield func(S) bool) {
+		row, err := m.GetRow(i)
+		if err != nil {
+			return
+		}
+		for _, ri := range row.data() {
+			if !yield(ri.Clone()) {
+				return
+			}
+		}
+	}
+}
+
 // GetColumn returns a copy of the j-th column.
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) GetColumn(j int) (RectW, error) {
 	if j < 0 || j >= m.n {
@@ -262,6 +305,32 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IterColumns() iter.Se
 				panic(errs.Wrap(err).WithMessage("failed to get column %d during IterColumns", j))
 			}
 			if !yield(colj) {
+				return
+			}
+		}
+	}
+}
+
+// IterInColumn yields each element in the j-th column in sequence. The yielded elements are copies and can be safely modified by the caller.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IterInColumn(j int) iter.Seq[S] {
+	return func(yield func(S) bool) {
+		column, err := m.GetColumn(j)
+		if err != nil {
+			return
+		}
+		for _, ci := range column.data() {
+			if !yield(ci.Clone()) {
+				return
+			}
+		}
+	}
+}
+
+// Iter yields each element in the matrix in row-major order. The yielded elements are copies and can be safely modified by the caller.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Iter() iter.Seq[S] {
+	return func(yield func(S) bool) {
+		for i := range m.v {
+			if !yield(m.v[i].Clone()) {
 				return
 			}
 		}
@@ -562,56 +631,71 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Clone() W {
 	return W(&cloned)
 }
 
-// SetColumn returns a new matrix with column c set to data.
-func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SetColumn(c int, data []S) (W, error) {
+// SetColumnAssign sets column c to the given data in place.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SetColumnAssign(c int, data []S) error {
 	if c < 0 || c >= m.n {
-		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", c, m.n)
+		return ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", c, m.n)
 	}
 	if len(data) != m.m {
-		return nil, ErrDimension.WithMessage("column length %d does not match matrix row count %d", len(data), m.m)
+		return ErrDimension.WithMessage("column length %d does not match matrix row count %d", len(data), m.m)
 	}
-
-	var out WT
-	W(&out).init(m.m, m.n)
-	copy(W(&out).data(), m.v)
 	for r, d := range data {
-		W(&out).data()[m.idx(r, c)] = d.Clone()
+		m.v[m.idx(r, c)] = d.Clone()
 	}
-	return &out, nil
+	return nil
+}
+
+// SetColumn returns a new matrix with column c set to data.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SetColumn(c int, data []S) (W, error) {
+	out := m.clone()
+	if err := out.SetColumnAssign(c, data); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to set column %d", c)
+	}
+	return out.self, nil
+}
+
+// SetRowAssign sets row r to the given data in place.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SetRowAssign(r int, data []S) error {
+	if r < 0 || r >= m.m {
+		return ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", r, m.m)
+	}
+	if len(data) != m.n {
+		return ErrDimension.WithMessage("row length %d does not match matrix column count %d", len(data), m.n)
+	}
+	for c, d := range data {
+		m.v[m.idx(r, c)] = d.Clone()
+	}
+	return nil
 }
 
 // SetRow returns a new matrix with row r set to data.
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SetRow(r int, data []S) (W, error) {
-	if r < 0 || r >= m.m {
-		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", r, m.m)
+	out := m.clone()
+	if err := out.SetRowAssign(r, data); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to set row %d", r)
 	}
-	if len(data) != m.n {
-		return nil, ErrDimension.WithMessage("row length %d does not match matrix column count %d", len(data), m.n)
-	}
+	return out.self, nil
+}
 
-	var out WT
-	W(&out).init(m.m, m.n)
-	copy(W(&out).data(), m.v)
-	for c, d := range data {
-		W(&out).data()[m.idx(r, c)] = d.Clone()
+// SetAssign sets the element at (r, c) to data in place.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SetAssign(r, c int, data S) error {
+	if r < 0 || r >= m.m {
+		return ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", r, m.m)
 	}
-	return &out, nil
+	if c < 0 || c >= m.n {
+		return ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", c, m.n)
+	}
+	m.v[m.idx(r, c)] = data.Clone()
+	return nil
 }
 
 // Set returns a new matrix with an element at (r, c) set to data.
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Set(r, c int, data S) (W, error) {
-	if r < 0 || r >= m.m {
-		return nil, ErrDimension.WithMessage("row index out of bounds: %d for matrix with %d rows", r, m.m)
+	out := m.clone()
+	if err := out.SetAssign(r, c, data); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to set element at row %d, column %d", r, c)
 	}
-	if c < 0 || c >= m.n {
-		return nil, ErrDimension.WithMessage("column index out of bounds: %d for matrix with %d columns", c, m.n)
-	}
-
-	var out WT
-	W(&out).init(m.m, m.n)
-	copy(W(&out).data(), m.v)
-	W(&out).data()[m.idx(r, c)] = data.Clone()
-	return &out, nil
+	return out.self, nil
 }
 
 // IsColumnVector returns true if this matrix has exactly one column.
@@ -622,6 +706,11 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IsColumnVector() bool
 // IsRowVector returns true if this matrix has exactly one row.
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IsRowVector() bool {
 	return m.m == 1
+}
+
+// IsNumber reports whether this matrix is 1×1.
+func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IsNumber() bool {
+	return m.n == 1 && m.m == 1
 }
 
 // vectorLength returns the length of a row or column vector, or -1 if the matrix is not a vector.

@@ -22,7 +22,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/signing"
@@ -39,9 +39,9 @@ func TestLindell22DKGAndSign(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"MinimalQuorum_2of3", 2, 3},
 		{"StandardQuorum_3of5", 3, 5},
@@ -54,7 +54,7 @@ func TestLindell22DKGAndSign(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
-				runTestWithBIP340(t, tc.threshold, tc.total)
+				runTestWithBIP340(t, tc.thresh, tc.total)
 			})
 		}
 	})
@@ -65,13 +65,13 @@ func TestLindell22DKGAndSign(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
-				runTestWithVanillaSchnorr(t, tc.threshold, tc.total)
+				runTestWithVanillaSchnorr(t, tc.thresh, tc.total)
 			})
 		}
 	})
 }
 
-func runTestWithBIP340(t *testing.T, threshold, total uint) {
+func runTestWithBIP340(t *testing.T, thresh, total uint) {
 	t.Helper()
 	// Setup
 	group := k256.NewCurve()
@@ -83,7 +83,7 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -98,12 +98,12 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 	shards := ltu.DoLindell22DKG(t, parties)
 	require.Len(t, shards, int(total))
 
-	// Test threshold signing with a quorum
+	// Test thresh signing with a quorum
 	t.Run("threshold_signing", func(t *testing.T) {
 		t.Parallel()
-		// Select a quorum (threshold participants)
+		// Select a quorum (thresh participants)
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range threshold {
+		for i := range thresh {
 			quorumSet.Add(sharing.ID(i + 1))
 		}
 		quorum := quorumSet.Freeze()
@@ -168,11 +168,11 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 		err = verifier.Verify(aggregatedSig, publicMaterial.PublicKey(), message)
 		require.NoError(t, err)
 
-		t.Logf("✅ Lindell22 threshold signing works with BIP340! Successfully signed and verified a message using the 3-round protocol.")
+		t.Logf("✅ Lindell22 thresh signing works with BIP340! Successfully signed and verified a message using the 3-round protocol.")
 	})
 }
 
-func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
+func runTestWithVanillaSchnorr(t *testing.T, thresh, total uint) {
 	t.Helper()
 	// Setup
 	group := k256.NewCurve()
@@ -184,7 +184,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -199,12 +199,12 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 	shards := ltu.DoLindell22DKG(t, parties)
 	require.Len(t, shards, int(total))
 
-	// Test threshold signing with a quorum
+	// Test thresh signing with a quorum
 	t.Run("threshold_signing", func(t *testing.T) {
 		t.Parallel()
-		// Select a quorum (threshold participants)
+		// Select a quorum (thresh participants)
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range threshold {
+		for i := range thresh {
 			quorumSet.Add(sharing.ID(i + 1))
 		}
 		quorum := quorumSet.Freeze()
@@ -269,7 +269,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 		err = verifier.Verify(aggregatedSig, publicMaterial.PublicKey(), message)
 		require.NoError(t, err)
 
-		t.Logf("✅ Lindell22 threshold signing works with Vanilla Schnorr! Successfully signed and verified a message using the 3-round protocol.")
+		t.Logf("✅ Lindell22 thresh signing works with Vanilla Schnorr! Successfully signed and verified a message using the 3-round protocol.")
 	})
 }
 
@@ -291,7 +291,7 @@ func TestIdentifiableAbort(t *testing.T) {
 func testIdentifiableAbortWithBIP340(t *testing.T) {
 	t.Helper()
 	// Setup
-	threshold := uint(3)
+	thresh := uint(3)
 	total := uint(5)
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
@@ -302,7 +302,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -318,7 +318,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 
 	// Create signing session
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range threshold {
+	for i := range thresh {
 		quorumSet.Add(sharing.ID(i + 1))
 	}
 	quorum := quorumSet.Freeze()
@@ -389,7 +389,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	t.Helper()
 	// Setup
-	threshold := uint(3)
+	thresh := uint(3)
 	total := uint(5)
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
@@ -400,7 +400,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -416,7 +416,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 
 	// Create signing session
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range threshold {
+	for i := range thresh {
 		quorumSet.Add(sharing.ID(i + 1))
 	}
 	quorum := quorumSet.Freeze()
@@ -517,7 +517,7 @@ func TestLindell22ConcurrentSigning(t *testing.T) {
 
 func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
 	t.Helper()
-	threshold := uint(3)
+	thresh := uint(3)
 	total := uint(5)
 	numMessages := 5
 
@@ -531,7 +531,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -547,7 +547,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range threshold {
+	for i := range thresh {
 		quorumSet.Add(sharing.ID(i + 1))
 	}
 	quorum := quorumSet.Freeze()
@@ -658,7 +658,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 func TestLindell22DifferentQuorums(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(3)
+	thresh := uint(3)
 	total := uint(5)
 
 	// Test different quorum combinations
@@ -666,7 +666,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 		{1, 2, 3},    // First three
 		{3, 4, 5},    // Last three
 		{1, 3, 4},    // Mixed
-		{1, 2, 3, 4}, // Larger than a threshold
+		{1, 2, 3, 4}, // Larger than a thresh
 	}
 
 	t.Run("BIP340", func(t *testing.T) {
@@ -674,7 +674,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 		for i, quorumIDs := range quorumCombinations {
 			t.Run(string(rune('A'+i)), func(t *testing.T) {
 				t.Parallel()
-				testDifferentQuorumsWithScheme(t, threshold, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+				testDifferentQuorumsWithScheme(t, thresh, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					scheme, err := bip340.NewScheme(prng)
 					if err != nil {
 						return nil, nil, err
@@ -691,7 +691,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 		for i, quorumIDs := range quorumCombinations {
 			t.Run(string(rune('A'+i)), func(t *testing.T) {
 				t.Parallel()
-				testDifferentQuorumsWithScheme(t, threshold, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+				testDifferentQuorumsWithScheme(t, thresh, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					group := k256.NewCurve()
 					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 					if err != nil {
@@ -705,7 +705,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 	})
 }
 
-func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumIDs []sharing.ID, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+func testDifferentQuorumsWithScheme(t *testing.T, thresh, total uint, quorumIDs []sharing.ID, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
 	t.Helper()
 	// Setup
 	group := k256.NewCurve()
@@ -717,7 +717,7 @@ func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumI
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -853,7 +853,7 @@ func TestLindell22EdgeCases(t *testing.T) {
 
 func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
 	t.Helper()
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(3)
 
 	// Setup
@@ -866,7 +866,7 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -882,7 +882,7 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range threshold {
+	for i := range thresh {
 		quorumSet.Add(sharing.ID(i + 1))
 	}
 	quorum := quorumSet.Freeze()
@@ -947,7 +947,7 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 func TestLindell22DeterministicSigning(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(3)
 
 	// Setup with fixed seed
@@ -974,7 +974,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 		// Setup DKG (run twice with same inputs)
 		runDKGAndSign := func(scheme *bip340.Scheme, prng io.Reader) *schnorrlike.Signature[*k256.Point, *k256.Scalar] {
 			shareholders := sharing.NewOrdinalShareholderSet(total)
-			ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+			ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 			require.NoError(t, err)
 			ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -990,7 +990,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 
 			// Select same quorum
 			quorumSet := hashset.NewComparable[sharing.ID]()
-			for i := range threshold {
+			for i := range thresh {
 				quorumSet.Add(sharing.ID(i + 1))
 			}
 			quorum := quorumSet.Freeze()
@@ -1051,7 +1051,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 	t.Parallel()
 
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(3)
 
 	// Setup
@@ -1064,7 +1064,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -1090,7 +1090,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 		t.Parallel()
 		// Select quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range threshold {
+		for i := range thresh {
 			quorumSet.Add(sharing.ID(i + 1))
 		}
 		quorum := quorumSet.Freeze()
@@ -1132,7 +1132,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 // BenchmarkLindell22Signing benchmarks the performance of the protocol
 func BenchmarkLindell22Signing(b *testing.B) {
 	// Setup
-	threshold := uint(3)
+	thresh := uint(3)
 	total := uint(5)
 
 	group := k256.NewCurve()
@@ -1146,7 +1146,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1166,7 +1166,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range threshold {
+	for i := range thresh {
 		quorumSet.Add(sharing.ID(i + 1))
 	}
 	quorum := quorumSet.Freeze()

@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/signing"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/testutils"
@@ -26,7 +26,7 @@ import (
 func TestBoldyrevaDKGAndSign(t *testing.T) {
 	t.Parallel()
 
-	const threshold = 3
+	const thresh = 3
 	const total = 5
 
 	// Use BLS12-381 G1 for short key (public keys in G1, signatures in G2)
@@ -36,7 +36,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 
 	parties := make(map[sharing.ID]*gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar])
@@ -70,19 +70,19 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 		}
 	}
 
-	// Test threshold signing with a quorum
-	t.Run("threshold signing", func(t *testing.T) {
+	// Test thresh signing with a quorum
+	t.Run("thresh signing", func(t *testing.T) {
 		t.Parallel()
-		// Select a quorum (threshold participants)
+		// Select a quorum (thresh participants)
 		quorumSet := hashset.NewComparable[sharing.ID]()
 		// Sharing IDs start from 1
-		for i := range threshold {
+		for i := range thresh {
 			quorumSet.Add(sharing.ID(i + 1))
 		}
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners for the quorum
-		cosigners := make([]*signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar], 0, threshold)
+		cosigners := make([]*signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar], 0, thresh)
 		for id := range quorum.Iter() {
 			shard, ok := shards[id]
 			require.True(t, ok)
@@ -111,7 +111,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 		require.NoError(t, err)
 
 		// Sign a message
-		message := []byte("Hello, threshold BLS!")
+		message := []byte("Hello, thresh BLS!")
 		scheme, err := bls.NewShortKeyScheme(curveFamily, bls.Basic)
 		require.NoError(t, err)
 		signature, err := tu.DoThresholdSign(t, cosigners, scheme, message, aggregator)
@@ -123,7 +123,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 		require.NoError(t, err)
 
 		err = verifier.Verify(signature, commonPublicKey, message)
-		require.NoError(t, err, "threshold signature verification failed")
+		require.NoError(t, err, "thresh signature verification failed")
 	})
 }
 
@@ -161,7 +161,7 @@ func TestAllRogueKeyPreventionModes(t *testing.T) {
 func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg bls.RogueKeyPreventionAlgorithm) {
 	t.Helper()
 
-	threshold := uint(3)
+	thresh := uint(3)
 	total := uint(5)
 
 	var curveFamily curves.PairingFriendlyFamily[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar] = &bls12381.FamilyTrait{}
@@ -169,7 +169,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
 
@@ -185,13 +185,13 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 
 		// Select a quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range threshold {
+		for i := range thresh {
 			quorumSet.Add(sharing.ID(i + 1))
 		}
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners
-		cosigners := make([]*signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar], 0, threshold)
+		cosigners := make([]*signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar], 0, thresh)
 		for id := range quorum.Iter() {
 			shard := shards[id]
 			dkgCtx := ctxs[id]
@@ -232,13 +232,13 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 
 		// Select a quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range threshold {
+		for i := range thresh {
 			quorumSet.Add(sharing.ID(i + 1))
 		}
 		quorum := quorumSet.Freeze()
 
 		// Create cosigners
-		cosigners := make([]*signing.Cosigner[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar], 0, threshold)
+		cosigners := make([]*signing.Cosigner[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar], 0, thresh)
 		for id := range quorum.Iter() {
 			shard := shards[id]
 			dkgCtx := ctxs[id]
@@ -274,7 +274,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 func TestPartialSignatureVerification(t *testing.T) {
 	t.Parallel()
 
-	const threshold = 2
+	const thresh = 2
 	const total = 3
 
 	// Use BLS12-381 G2 for long key (public keys in G2, signatures in G1)
@@ -284,7 +284,7 @@ func TestPartialSignatureVerification(t *testing.T) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
@@ -378,7 +378,7 @@ func TestCosignerCreationErrors(t *testing.T) {
 	// Create a valid shard for testing
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 	parties := make(map[sharing.ID]*gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar], 3)
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
@@ -427,9 +427,9 @@ func TestCosignerCreationErrors(t *testing.T) {
 
 	t.Run("UnauthorizedQuorum", func(t *testing.T) {
 		t.Parallel()
-		// Create a quorum that doesn't meet the threshold
+		// Create a quorum that doesn't meet the thresh
 		invalidQuorum := hashset.NewComparable[sharing.ID]()
-		invalidQuorum.Add(sharing.ID(1)) // Only 1 member, but threshold is 2
+		invalidQuorum.Add(sharing.ID(1)) // Only 1 member, but thresh is 2
 		dkgCtx := ctxs[shard.Share().ID()]
 		signCtx, err := dkgCtx.SubContext(invalidQuorum.Freeze())
 		require.NoError(t, err)
@@ -449,7 +449,7 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	parties := make(map[sharing.ID]*gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar], 3)
@@ -504,7 +504,7 @@ func TestAggregatorCreationErrors(t *testing.T) {
 	// Create valid public material
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	parties := make(map[sharing.ID]*gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar], 3)
@@ -549,7 +549,7 @@ func TestAggregationErrors(t *testing.T) {
 	prng := pcg.NewRandomised()
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
@@ -624,7 +624,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 	testCases := []struct {
 		name      string
 		total     uint
-		threshold uint
+		thresh    uint
 		quorumIDs []sharing.ID
 	}{
 		{"MinimalQuorum_2of3", 3, 2, []sharing.ID{1, 2}},
@@ -642,7 +642,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 			// Setup DKG
 			group := bls12381.NewG1()
 			shareholders := sharing.NewOrdinalShareholderSet(tc.total)
-			ac, err := accessstructures.NewThresholdAccessStructure(tc.threshold, shareholders)
+			ac, err := threshold.NewThresholdAccessStructure(tc.thresh, shareholders)
 			require.NoError(t, err)
 
 			parties := make(map[sharing.ID]*gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar], tc.total)
@@ -703,7 +703,7 @@ func TestCosignerGetters(t *testing.T) {
 
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	parties := make(map[sharing.ID]*gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar], 3)

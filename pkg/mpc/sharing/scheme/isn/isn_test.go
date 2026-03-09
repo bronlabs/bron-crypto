@@ -15,6 +15,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/isn"
 )
@@ -25,16 +28,11 @@ func TestNewFiniteScheme_WithDifferentAccessStructures(t *testing.T) {
 	group := k256.NewScalarField()
 	shareholders := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
 
-	thresholdAS, err := accessstructures.NewThresholdAccessStructure(2, shareholders)
+	thresholdAS, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
-	unanimityAS, err := accessstructures.NewUnanimityAccessStructure(shareholders)
+	unanimityAS, err := unanimity.NewUnanimityAccessStructure(shareholders)
 	require.NoError(t, err)
-	dnfAS, err := accessstructures.NewDNFAccessStructure(
-		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
-		hashset.NewComparable[sharing.ID](2, 3).Freeze(),
-	)
-	require.NoError(t, err)
-	cnfAS, err := accessstructures.NewCNFAccessStructure(
+	cnfAS, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1).Freeze(),
 		hashset.NewComparable[sharing.ID](2).Freeze(),
 		hashset.NewComparable[sharing.ID](3).Freeze(),
@@ -43,12 +41,11 @@ func TestNewFiniteScheme_WithDifferentAccessStructures(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		ac           accessstructures.Monotone
+		ac           accessstructures.Linear
 		qualifiedIDs []sharing.ID
 	}{
 		{name: "threshold", ac: thresholdAS, qualifiedIDs: []sharing.ID{1, 2}},
 		{name: "unanimity", ac: unanimityAS, qualifiedIDs: []sharing.ID{1, 2, 3}},
-		{name: "dnf", ac: dnfAS, qualifiedIDs: []sharing.ID{1, 2}},
 		{name: "cnf", ac: cnfAS, qualifiedIDs: []sharing.ID{1, 2}},
 	}
 
@@ -92,7 +89,7 @@ func TestCNFSanity(t *testing.T) {
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
 	}
-	ac, err := accessstructures.NewCNFAccessStructure(maximalUnqualifiedSets...)
+	ac, err := cnf.NewCNFAccessStructure(maximalUnqualifiedSets...)
 	require.NoError(t, err)
 
 	scheme, err := isn.NewFiniteScheme(group, ac)
@@ -135,7 +132,7 @@ func TestCNFDeal(t *testing.T) {
 	group := k256.NewScalarField()
 
 	// Maximal unqualified sets: {1,2} and {3,4,5}
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4, 5).Freeze(),
 	)
@@ -226,7 +223,7 @@ func TestCNFDealRandom(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewScalarField()
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
 	)
@@ -288,7 +285,7 @@ func TestCNFReconstruct_Authorization(t *testing.T) {
 	// Unauthorised: {1,2} (contained in first maximal unqualified set)
 	// Unauthorised: {3,4} (contained in second maximal unqualified set)
 	// Unauthorised: {1}, {2}, {3}, {4} (single parties)
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
 	)
@@ -416,7 +413,7 @@ func TestCNFShareHomomorphism(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewScalarField()
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
 	)
@@ -461,7 +458,7 @@ func TestCNF_BLS12381(t *testing.T) {
 	// Test with a different group (BLS12-381 scalar field)
 	group := bls12381.NewScalarField()
 
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2, 3).Freeze(),
 		hashset.NewComparable[sharing.ID](4, 5).Freeze(),
 	)
@@ -494,7 +491,7 @@ func TestCNFDealAndRevealDealerFunc(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewScalarField()
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
 	)
@@ -554,7 +551,7 @@ func TestCNFDealRandomAndRevealDealerFunc(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewScalarField()
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
 	)
@@ -643,7 +640,7 @@ func TestCNF_ThreeClausesAccessStructure(t *testing.T) {
 	// More complex access structure with three maximal unqualified sets
 	// Maximal unqualified: {1,2}, {3,4}, {5,6}
 	// Authorized: need at least one from each complement
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
 		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
 		hashset.NewComparable[sharing.ID](5, 6).Freeze(),
@@ -766,7 +763,7 @@ func TestCNFShare_ToAdditive(t *testing.T) {
 	group := k256.NewScalarField()
 
 	// 2-out-of-3 threshold
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1).Freeze(),
 		hashset.NewComparable[sharing.ID](2).Freeze(),
 		hashset.NewComparable[sharing.ID](3).Freeze(),
@@ -780,7 +777,7 @@ func TestCNFShare_ToAdditive(t *testing.T) {
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
-	minAS, err := accessstructures.NewUnanimityAccessStructure(hashset.NewComparable[sharing.ID](1, 3).Freeze())
+	minAS, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable[sharing.ID](1, 3).Freeze())
 	require.NoError(t, err)
 
 	additiveScheme, err := additive.NewScheme(group, minAS)
@@ -806,7 +803,7 @@ func TestCNFShareCBOR(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewScalarField()
-	ac, err := accessstructures.NewCNFAccessStructure(
+	ac, err := cnf.NewCNFAccessStructure(
 		hashset.NewComparable[sharing.ID](1).Freeze(),
 		hashset.NewComparable[sharing.ID](2).Freeze(),
 		hashset.NewComparable[sharing.ID](3).Freeze(),
@@ -851,26 +848,4 @@ func TestCNFShareCBOR(t *testing.T) {
 		err := decoded.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
 		require.Error(t, err)
 	})
-}
-
-func TestDNF_ChronoVault(t *testing.T) {
-	t.Parallel()
-
-	ac, err := accessstructures.NewDNFAccessStructure(
-		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
-		hashset.NewComparable[sharing.ID](1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
-		hashset.NewComparable[sharing.ID](2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).Freeze(),
-	)
-	require.NoError(t, err)
-
-	field := k256.NewScalarField()
-	scheme, err := isn.NewFiniteScheme(field, ac)
-	require.NoError(t, err)
-
-	prng := pcg.NewRandomised()
-	output, _, err := scheme.DealRandom(prng)
-	require.NoError(t, err)
-	for id, share := range output.Shares().Iter() {
-		t.Logf("%d: %d", id, share.Value().Size())
-	}
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/refresh"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -24,7 +24,7 @@ func TestRunner_HappyPath(t *testing.T) {
 
 	prng := pcg.NewRandomised()
 	quorum := ntu.MakeRandomQuorum(t, prng, 3)
-	as, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	as, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 

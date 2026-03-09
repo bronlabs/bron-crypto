@@ -1,5 +1,5 @@
 //nolint:testpackage // White-box tests validate internal access-structure state.
-package accessstructures
+package unanimity
 
 import (
 	"fmt"
@@ -9,9 +9,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 func TestNewUnanimity(t *testing.T) {
@@ -187,6 +189,110 @@ func TestUnanimityUnmarshalCBOR(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrValue)
 	})
+}
+
+func TestInducedByUnanimity_Errors(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	ac, err := NewUnanimityAccessStructure(hashset.NewComparable[ID](1, 2, 3).Freeze())
+	require.NoError(t, err)
+
+	t.Run("nil field", func(t *testing.T) {
+		t.Parallel()
+		m, err := InducedByUnanimity[*k256.Scalar](nil, ac)
+		require.ErrorIs(t, err, ErrIsNil)
+		require.Nil(t, m)
+	})
+
+	t.Run("nil access structure", func(t *testing.T) {
+		t.Parallel()
+		m, err := InducedByUnanimity(field, nil)
+		require.ErrorIs(t, err, ErrIsNil)
+		require.Nil(t, m)
+	})
+}
+
+func TestInducedByUnanimity_AcceptsAndRejects(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+
+	tests := []struct {
+		name string
+		ids  []ID
+	}{
+		{name: "3 shareholders", ids: []ID{1, 2, 3}},
+		{name: "4 shareholders", ids: []ID{1, 2, 3, 4}},
+		{name: "2 shareholders", ids: []ID{1, 2}},
+		{name: "non-contiguous IDs", ids: []ID{10, 20, 30}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ac, err := NewUnanimityAccessStructure(hashset.NewComparable(tc.ids...).Freeze())
+			require.NoError(t, err)
+
+			m, err := InducedByUnanimity(field, ac)
+			require.NoError(t, err)
+
+			// Only the full set should be accepted.
+			require.True(t, m.Accepts(tc.ids...), "MSP should accept the full shareholder set")
+
+			// Every proper subset should be rejected.
+			n := uint(len(tc.ids))
+			for k := uint(1); k < n; k++ {
+				for combo := range sliceutils.Combinations(tc.ids, k) {
+					require.False(t, m.Accepts(combo...),
+						"MSP should reject proper subset of size %d: %v", k, combo)
+				}
+			}
+		})
+	}
+}
+
+func TestInducedByUnanimity_ReconstructionVector(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	ids := []ID{1, 2, 3}
+	ac, err := NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
+	require.NoError(t, err)
+
+	m, err := InducedByUnanimity(field, ac)
+	require.NoError(t, err)
+
+	t.Run("full set succeeds", func(t *testing.T) {
+		t.Parallel()
+		rv, err := m.ReconstructionVector(ids...)
+		require.NoError(t, err)
+		require.NotNil(t, rv)
+	})
+
+	t.Run("missing one shareholder fails", func(t *testing.T) {
+		t.Parallel()
+		_, err := m.ReconstructionVector(1, 2)
+		require.Error(t, err)
+	})
+}
+
+func TestInducedByUnanimity_Dimensions(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	ids := []ID{1, 2, 3, 4}
+	ac, err := NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
+	require.NoError(t, err)
+
+	m, err := InducedByUnanimity(field, ac)
+	require.NoError(t, err)
+
+	// For unanimity with n shareholders, the CNF has n maximal unqualified sets,
+	// each clause is a singleton, so MSP has n rows and n columns.
+	require.Equal(t, uint(len(ids)), m.Size(), "MSP should have one row per shareholder")
+	require.Equal(t, uint(len(ids)), m.D(), "MSP dimension should equal number of shareholders")
 }
 
 func canonicalIDs(s ds.Set[ID]) string {

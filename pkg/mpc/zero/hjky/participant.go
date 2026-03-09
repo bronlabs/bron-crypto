@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -23,7 +23,7 @@ const (
 // Participant executes the HJKY zero-sharing protocol.
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	ctx             *session.Context
-	accessStructure *accessstructures.Threshold
+	accessStructure *threshold.Threshold
 	group           algebra.PrimeGroup[G, S]
 	field           algebra.PrimeField[S]
 	scheme          *feldman.Scheme[G, S]
@@ -39,7 +39,7 @@ type State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 }
 
 // NewParticipant creates a zero-sharing participant bound to the given session and access structure.
-func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *accessstructures.Threshold, g algebra.PrimeGroup[G, S], prng io.Reader) (*Participant[G, S], error) {
+func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *threshold.Threshold, g algebra.PrimeGroup[G, S], prng io.Reader) (*Participant[G, S], error) {
 	if ctx == nil || prng == nil || as == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}

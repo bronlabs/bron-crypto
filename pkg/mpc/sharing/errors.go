@@ -3,7 +3,6 @@ package sharing
 import (
 	"github.com/bronlabs/errs-go/errs"
 
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
@@ -11,9 +10,9 @@ var (
 	// ErrIsNil indicates a required value was nil.
 	ErrIsNil = internal.ErrIsNil
 	// ErrValue indicates an invalid value.
-	ErrValue = accessstructures.ErrValue
+	ErrValue = internal.ErrValue
 	// ErrMembership indicates an invalid shareholder membership relation.
-	ErrMembership = accessstructures.ErrMembership
+	ErrMembership = internal.ErrMembership
 	// ErrFailed indicates an operation failed.
 	ErrFailed = errs.New("failed")
 	// ErrArgument indicates invalid function arguments.
@@ -21,7 +20,7 @@ var (
 	// ErrVerification indicates share or proof verification failed.
 	ErrVerification = errs.New("verification failed")
 	// ErrType indicates a type mismatch.
-	ErrType = errs.New("type error")
+	ErrType = internal.ErrType
 	// ErrUnauthorized indicates an unauthorised operation.
 	ErrUnauthorized = errs.New("unauthorised")
 	// ErrIsZero indicates a forbidden zero value.

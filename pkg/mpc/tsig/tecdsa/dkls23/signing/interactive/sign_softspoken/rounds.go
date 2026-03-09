@@ -15,7 +15,7 @@ import (
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -88,7 +88,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		mulR1[id] = message.p2p.MulR1
 	}
 
-	quorum, err := accessstructures.NewUnanimityAccessStructure(c.ctx.Quorum())
+	quorum, err := unanimity.NewUnanimityAccessStructure(c.ctx.Quorum())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}

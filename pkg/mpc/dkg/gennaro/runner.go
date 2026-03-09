@@ -3,13 +3,14 @@ package gennaro
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 type runner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
@@ -17,7 +18,7 @@ type runner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] s
 }
 
 // NewRunner constructs a network runner that drives the three DKG rounds.
-func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, group algebra.PrimeGroup[G, S], accessStructure *accessstructures.Threshold, niCompilerName compiler.Name, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
+func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, group algebra.PrimeGroup[G, S], accessStructure *threshold.Threshold, niCompilerName compiler.Name, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
 	party, err := NewParticipant(ctx, group, accessStructure, niCompilerName, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")

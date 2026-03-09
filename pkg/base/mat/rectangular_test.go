@@ -187,6 +187,61 @@ func TestMatrixNewRowMajor(t *testing.T) {
 	})
 }
 
+// --- NewStandardUnit ---
+
+func TestMatrixModuleNewStandardUnit(t *testing.T) {
+	t.Parallel()
+	mod := newModule(t, 1, 3)
+
+	t.Run("first", func(t *testing.T) {
+		t.Parallel()
+		e, err := mod.NewStandardUnit(0)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{1, 0, 0}})))
+	})
+
+	t.Run("middle", func(t *testing.T) {
+		t.Parallel()
+		e, err := mod.NewStandardUnit(1)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{0, 1, 0}})))
+	})
+
+	t.Run("last", func(t *testing.T) {
+		t.Parallel()
+		e, err := mod.NewStandardUnit(2)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{0, 0, 1}})))
+	})
+
+	t.Run("1x1", func(t *testing.T) {
+		t.Parallel()
+		mod1 := newModule(t, 1, 1)
+		e, err := mod1.NewStandardUnit(0)
+		require.NoError(t, err)
+		require.True(t, e.Equal(newMatrix(t, [][]uint64{{1}})))
+	})
+
+	t.Run("is_row_vector", func(t *testing.T) {
+		t.Parallel()
+		e, err := mod.NewStandardUnit(1)
+		require.NoError(t, err)
+		require.True(t, e.IsRowVector())
+	})
+
+	t.Run("negative_index", func(t *testing.T) {
+		t.Parallel()
+		_, err := mod.NewStandardUnit(-1)
+		require.Error(t, err)
+	})
+
+	t.Run("out_of_bounds", func(t *testing.T) {
+		t.Parallel()
+		_, err := mod.NewStandardUnit(3)
+		require.Error(t, err)
+	})
+}
+
 // --- Arithmetic ---
 
 func TestMatrixAdd(t *testing.T) {
@@ -1057,6 +1112,200 @@ func TestMatrixIterColumns(t *testing.T) {
 		}
 		require.Len(t, cols, 1)
 		require.True(t, cols[0].Equal(m1))
+	})
+}
+
+func TestMatrixIterInRow(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+
+	t.Run("yields_all_elements", func(t *testing.T) {
+		t.Parallel()
+		var elems []S
+		for e := range m.IterInRow(0) {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 3)
+		require.True(t, elems[0].Equal(scalar(1)))
+		require.True(t, elems[1].Equal(scalar(2)))
+		require.True(t, elems[2].Equal(scalar(3)))
+	})
+
+	t.Run("second_row", func(t *testing.T) {
+		t.Parallel()
+		var elems []S
+		for e := range m.IterInRow(1) {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 3)
+		require.True(t, elems[0].Equal(scalar(4)))
+		require.True(t, elems[1].Equal(scalar(5)))
+		require.True(t, elems[2].Equal(scalar(6)))
+	})
+
+	t.Run("elements_are_copies", func(t *testing.T) {
+		t.Parallel()
+		for e := range m.IterInRow(0) {
+			_ = e.Add(scalar(100)) // modify yielded element
+		}
+		v, _ := m.Get(0, 0)
+		require.True(t, v.Equal(scalar(1)))
+	})
+
+	t.Run("break_early", func(t *testing.T) {
+		t.Parallel()
+		count := 0
+		for range m.IterInRow(0) {
+			count++
+			break
+		}
+		require.Equal(t, 1, count)
+	})
+
+	t.Run("out_of_bounds_yields_nothing", func(t *testing.T) {
+		t.Parallel()
+		count := 0
+		for range m.IterInRow(5) {
+			count++
+		}
+		require.Equal(t, 0, count)
+	})
+
+	t.Run("single_element_row", func(t *testing.T) {
+		t.Parallel()
+		m1 := newMatrix(t, [][]uint64{{7}, {8}})
+		var elems []S
+		for e := range m1.IterInRow(0) {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 1)
+		require.True(t, elems[0].Equal(scalar(7)))
+	})
+}
+
+func TestMatrixIterInColumn(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+
+	t.Run("yields_all_elements", func(t *testing.T) {
+		t.Parallel()
+		var elems []S
+		for e := range m.IterInColumn(0) {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 2)
+		require.True(t, elems[0].Equal(scalar(1)))
+		require.True(t, elems[1].Equal(scalar(4)))
+	})
+
+	t.Run("middle_column", func(t *testing.T) {
+		t.Parallel()
+		var elems []S
+		for e := range m.IterInColumn(1) {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 2)
+		require.True(t, elems[0].Equal(scalar(2)))
+		require.True(t, elems[1].Equal(scalar(5)))
+	})
+
+	t.Run("last_column", func(t *testing.T) {
+		t.Parallel()
+		var elems []S
+		for e := range m.IterInColumn(2) {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 2)
+		require.True(t, elems[0].Equal(scalar(3)))
+		require.True(t, elems[1].Equal(scalar(6)))
+	})
+
+	t.Run("elements_are_copies", func(t *testing.T) {
+		t.Parallel()
+		for e := range m.IterInColumn(0) {
+			_ = e.Add(scalar(100))
+		}
+		v, _ := m.Get(0, 0)
+		require.True(t, v.Equal(scalar(1)))
+	})
+
+	t.Run("break_early", func(t *testing.T) {
+		t.Parallel()
+		count := 0
+		for range m.IterInColumn(0) {
+			count++
+			break
+		}
+		require.Equal(t, 1, count)
+	})
+
+	t.Run("out_of_bounds_yields_nothing", func(t *testing.T) {
+		t.Parallel()
+		count := 0
+		for range m.IterInColumn(5) {
+			count++
+		}
+		require.Equal(t, 0, count)
+	})
+
+	t.Run("single_element_column", func(t *testing.T) {
+		t.Parallel()
+		m1 := newMatrix(t, [][]uint64{{7, 8}})
+		var elems []S
+		for e := range m1.IterInColumn(0) {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 1)
+		require.True(t, elems[0].Equal(scalar(7)))
+	})
+}
+
+func TestMatrixIter(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+
+	t.Run("yields_all_elements_row_major", func(t *testing.T) {
+		t.Parallel()
+		var elems []S
+		for e := range m.Iter() {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 6)
+		for i, want := range []uint64{1, 2, 3, 4, 5, 6} {
+			require.True(t, elems[i].Equal(scalar(want)), "element %d: got %v, want %d", i, elems[i], want)
+		}
+	})
+
+	t.Run("elements_are_copies", func(t *testing.T) {
+		t.Parallel()
+		for e := range m.Iter() {
+			_ = e.Add(scalar(100))
+		}
+		v, _ := m.Get(0, 0)
+		require.True(t, v.Equal(scalar(1)))
+	})
+
+	t.Run("break_early", func(t *testing.T) {
+		t.Parallel()
+		count := 0
+		for range m.Iter() {
+			count++
+			if count == 3 {
+				break
+			}
+		}
+		require.Equal(t, 3, count)
+	})
+
+	t.Run("single_element", func(t *testing.T) {
+		t.Parallel()
+		m1 := newMatrix(t, [][]uint64{{42}})
+		var elems []S
+		for e := range m1.Iter() {
+			elems = append(elems, e)
+		}
+		require.Len(t, elems, 1)
+		require.True(t, elems[0].Equal(scalar(42)))
 	})
 }
 

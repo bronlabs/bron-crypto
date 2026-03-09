@@ -5,14 +5,15 @@ import (
 	"slices"
 	"testing"
 
-	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/stretchr/testify/require"
+
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
@@ -25,14 +26,14 @@ import (
 func TestRunnerHappyPath_K256_2of3(t *testing.T) {
 	t.Parallel()
 
-	const threshold = 2
+	const thresh = 2
 	const total = 3
 	const paillierKeyLen = 1024
 
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 	shareholders := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
-	accessStructure, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	accessStructure, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	require.NoError(t, err)
 
 	feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure)
@@ -84,7 +85,7 @@ func TestRunnerHappyPath_K256_2of3(t *testing.T) {
 	recoveredPk := curve.ScalarBaseMul(recovered.Value())
 	require.True(t, recoveredPk.Equal(publicKeys[0]))
 
-	// For threshold-sized subsets, reconstruction must yield the same public key.
+	// For thresh-sized subsets, reconstruction must yield the same public key.
 	ids := slices.Collect(maps.Keys(outputs))
 	for i := range ids {
 		for j := i + 1; j < len(ids); j++ {

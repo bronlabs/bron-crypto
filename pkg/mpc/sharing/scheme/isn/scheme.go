@@ -3,16 +3,21 @@ package isn
 import (
 	"io"
 	"maps"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 )
 
@@ -20,9 +25,10 @@ import (
 // a monotone access structure represented via maximal unqualified sets.
 // Each share is a vector with one component per maximal unqualified set.
 type Scheme[E algebra.GroupElement[E]] struct {
-	g       algebra.Group[E]
-	sampler *sampler[E]
-	ac      accessstructures.Monotone
+	g                      algebra.Group[E]
+	sampler                *sampler[E]
+	ac                     *cnf.CNF
+	maximalUnqualifiedSets []bitset.ImmutableBitSet[sharing.ID]
 }
 
 // NewFiniteScheme creates a new ISN scheme over the given finite group
@@ -35,7 +41,7 @@ type Scheme[E algebra.GroupElement[E]] struct {
 // Returns the initialised scheme.
 func NewFiniteScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
-	ac accessstructures.Monotone,
+	ac accessstructures.Linear,
 ) (*Scheme[E], error) {
 	if ac == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
@@ -45,10 +51,22 @@ func NewFiniteScheme[E algebra.GroupElement[E]](
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create sampler")
 	}
+	ascnf, err := cnf.ConvertToCNF(ac)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert access structure to CNF")
+	}
+	maximalUnqualifiedSets := sliceutils.Map(
+		slices.Collect(ac.MaximalUnqualifiedSetsIter()),
+		func(u ds.Set[sharing.ID]) bitset.ImmutableBitSet[sharing.ID] {
+			return bitset.NewImmutableBitSet[sharing.ID](u.List()...)
+		},
+	)
+
 	return &Scheme[E]{
-		g:       g,
-		sampler: sampler,
-		ac:      ac,
+		g:                      g,
+		sampler:                sampler,
+		ac:                     ascnf,
+		maximalUnqualifiedSets: maximalUnqualifiedSets,
 	}, nil
 }
 
@@ -58,7 +76,7 @@ func (*Scheme[E]) Name() sharing.Name {
 }
 
 // AccessStructure returns the scheme access structure.
-func (c *Scheme[E]) AccessStructure() accessstructures.Monotone {
+func (c *Scheme[E]) AccessStructure() *cnf.CNF {
 	return c.ac
 }
 
@@ -150,8 +168,7 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (
 	if secret == nil {
 		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
-	clauses := c.clauses()
-	l := len(clauses) // number of maximal unqualified sets / clauses
+	l := len(c.maximalUnqualifiedSets) // number of maximal unqualified sets
 	if l == 0 {
 		return nil, nil, sharing.ErrFailed.WithMessage("access structure has no maximal unqualified sets")
 	}
@@ -162,8 +179,8 @@ func (c *Scheme[E]) DealAndRevealDealerFunc(secret *Secret[E], prng io.Reader) (
 		return nil, nil, errs.Wrap(err).WithMessage("could not create additive sharing of secret")
 	}
 	dealerFunc := make(DealerFunc[E])
-	for i, clause := range clauses {
-		dealerFunc[clause] = rs[i]
+	for i, bi := range c.maximalUnqualifiedSets {
+		dealerFunc[bi] = rs[i]
 	}
 
 	// step 3: distribute: party p gets piece rj (with key Tj) iff p ∉ Tj
@@ -200,18 +217,16 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 		return nil, sharing.ErrUnauthorized.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 
-	clauses := c.clauses()
 	chunks := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 	for _, share := range shares {
 		if share == nil {
 			return nil, sharing.ErrFailed.WithMessage("nil share provided")
 		}
 
-		for _, maxUnqualifiedSet := range clauses {
+		for _, maxUnqualifiedSet := range c.maximalUnqualifiedSets {
 			if maxUnqualifiedSet.Contains(share.id) {
 				continue
 			}
-
 			chunk, ok := share.v[maxUnqualifiedSet]
 			if !ok || utils.IsNil(chunk) {
 				return nil, sharing.ErrFailed.WithMessage("share for ID %d does not contain piece for maximal unqualified set %v", share.id, maxUnqualifiedSet.List())
@@ -232,21 +247,8 @@ func (c *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 // ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
 // by the appropriate Lagrange coefficient. The resulting additive shares can
 // be summed to reconstruct the secret.
-func (*Scheme[E]) ConvertShareToAdditive(s *Share[E], quorum *accessstructures.Unanimity) (*additive.Share[E], error) {
+func (*Scheme[E]) ConvertShareToAdditive(s *Share[E], quorum *unanimity.Unanimity) (*additive.Share[E], error) {
 	return s.ToAdditive(quorum)
-}
-
-func (c *Scheme[E]) clauses() []bitset.ImmutableBitSet[sharing.ID] {
-	clausesCount := 0
-	for range c.ac.MaximalUnqualifiedSetsIter() {
-		clausesCount++
-	}
-
-	clauses := make([]bitset.ImmutableBitSet[sharing.ID], 0, clausesCount)
-	for set := range c.ac.MaximalUnqualifiedSetsIter() {
-		clauses = append(clauses, bitset.NewImmutableBitSet(set.List()...))
-	}
-	return clauses
 }
 
 // sampler provides functions to sample secrets and shares for ISN schemes. It abstracts the randomness source and allows for flexible sampling strategies.

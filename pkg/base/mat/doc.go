@@ -36,7 +36,8 @@
 // and an in-place version suffixed with Assign (e.g. AddAssign).
 //
 // The implementation uses a trait-based generic design via [MatrixGroupTrait],
-// [MatrixGroupElementTrait], and [MatrixTrait] to share code between all matrix types.
+// [MatrixModuleTrait], [MatrixGroupElementTrait], and [MatrixTrait] to share
+// code between all matrix types.
 // Square matrices use a RectW type parameter so that operations like Augment
 // and Stack can return rectangular matrices even when called on square matrices.
 package mat

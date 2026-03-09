@@ -10,7 +10,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 )
@@ -31,7 +32,7 @@ type shareDTO[S algebra.PrimeFieldElement[S]] struct {
 
 // NewShare creates a new Pedersen share with the given ID, secret, and blinding value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *accessstructures.Threshold) (*Share[S], error) {
+func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *threshold.Threshold) (*Share[S], error) {
 	if secret == nil {
 		return nil, sharing.ErrIsNil.WithMessage("secret cannot be nil")
 	}
@@ -94,7 +95,12 @@ func (s *Share[S]) Add(other *Share[S]) *Share[S] {
 
 // ScalarOp is an alias for ScalarMul.
 // Panics if scalar is zero since Pedersen requires non-zero blinding factors.
-func (s *Share[S]) ScalarOp(scalar S) *Share[S] {
+func (s *Share[S]) ScalarOp(sc algebra.Numeric) *Share[S] {
+	primeField := algebra.StructureMustBeAs[algebra.PrimeField[S]](s.secret.Value().Structure())
+	scalar, err := primeField.FromBytesBE(sc.BytesBE())
+	if err != nil {
+		panic(err)
+	}
 	// Special case: multiplying by zero is not supported in Pedersen VSS
 	// because it would require a zero blinding factor, which is not allowed
 	if scalar.IsZero() {
@@ -114,13 +120,13 @@ func (s *Share[S]) ScalarOp(scalar S) *Share[S] {
 }
 
 // ScalarMul returns a new share with both components multiplied by a scalar.
-func (s *Share[S]) ScalarMul(scalar S) *Share[S] {
+func (s *Share[S]) ScalarMul(scalar algebra.Numeric) *Share[S] {
 	return s.ScalarOp(scalar)
 }
 
 // HashCode returns a hash code for this share, for use in hash-based collections.
 func (s *Share[S]) HashCode() base.HashCode {
-	return s.secret.HashCode() ^ s.blinding.HashCode()
+	return s.secret.HashCode().Combine(s.blinding.HashCode())
 }
 
 // Equal returns true if two shares have the same secret and blinding components.
@@ -143,7 +149,7 @@ func (s *Share[S]) Bytes() []byte {
 // the secret component by the appropriate Lagrange coefficient. The blinding
 // component is discarded. The resulting additive shares can be summed to
 // reconstruct the secret.
-func (s *Share[S]) ToAdditive(qualifiedSet *accessstructures.Unanimity) (*additive.Share[S], error) {
+func (s *Share[S]) ToAdditive(qualifiedSet *unanimity.Unanimity) (*additive.Share[S], error) {
 	ss, err := shamir.NewShare(s.id, s.secret.Value(), nil)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create shamir share from share")

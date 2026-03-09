@@ -1,5 +1,5 @@
 //nolint:testpackage // White-box tests validate internal access-structure state.
-package accessstructures
+package hierarchical
 
 import (
 	"testing"
@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 func TestNewHierarchicalConjunctiveThresholdAccessStructure(t *testing.T) {
@@ -101,6 +102,60 @@ func TestHierarchicalConjunctiveThresholdIsQualified(t *testing.T) {
 			require.Equal(t, tc.qualified, h.IsQualified(tc.ids...))
 		})
 	}
+}
+
+func TestHierarchicalConjunctiveThresholdCBORRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	original, err := NewHierarchicalConjunctiveThresholdAccessStructure(
+		WithLevel(1, 1, 2),
+		WithLevel(2, 3, 4),
+		WithLevel(4, 5, 6),
+	)
+	require.NoError(t, err)
+
+	data, err := serde.MarshalCBOR(original)
+	require.NoError(t, err)
+
+	decoded, err := serde.UnmarshalCBOR[HierarchicalConjunctiveThreshold](data)
+	require.NoError(t, err)
+	require.True(t, original.Shareholders().Equal(decoded.Shareholders()))
+
+	cases := [][]ID{{1, 3, 5, 6}, {1, 3, 4}, {3, 4, 5, 6}, {1, 2, 3, 4, 5, 6}}
+	for _, ids := range cases {
+		require.Equal(t, original.IsQualified(ids...), decoded.IsQualified(ids...),
+			"disagree on %v", ids)
+	}
+}
+
+func TestHierarchicalConjunctiveThresholdUnmarshalCBOR(t *testing.T) {
+	t.Parallel()
+
+	t.Run("invalid bytes", func(t *testing.T) {
+		t.Parallel()
+
+		var h HierarchicalConjunctiveThreshold
+		err := h.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
+		require.Error(t, err)
+	})
+
+	t.Run("decoded payload fails validation", func(t *testing.T) {
+		t.Parallel()
+
+		// Non-increasing thresholds should fail validation.
+		data, err := serde.MarshalCBOR(hierarchicalConjunctiveThresholdDTO{
+			Levels: []*ThresholdLevel{
+				{threshold: 2, parties: []ID{1, 2}},
+				{threshold: 1, parties: []ID{3, 4}},
+			},
+		})
+		require.NoError(t, err)
+
+		var h HierarchicalConjunctiveThreshold
+		err = h.UnmarshalCBOR(data)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrValue)
+	})
 }
 
 func TestHierarchicalConjunctiveThresholdShareholders(t *testing.T) {

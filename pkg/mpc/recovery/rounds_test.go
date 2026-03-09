@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/recovery"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -26,7 +26,7 @@ func Test_HappyPath(t *testing.T) {
 
 	prng := pcg.NewRandomised()
 	group := k256.NewCurve()
-	as, err := accessstructures.NewThresholdAccessStructure(THRESHOLD, sharing.NewOrdinalShareholderSet(TOTAL))
+	as, err := threshold.NewThresholdAccessStructure(THRESHOLD, sharing.NewOrdinalShareholderSet(TOTAL))
 	require.NoError(t, err)
 	scheme, err := feldman.NewScheme(group.Generator(), as)
 	require.NoError(t, err)

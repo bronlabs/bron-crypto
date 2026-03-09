@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -24,7 +24,7 @@ func Test_HappyPath(t *testing.T) {
 	prng := pcg.NewRandomised()
 	quorum := ntu.MakeRandomQuorum(t, prng, 3)
 	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-	as, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	as, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
 

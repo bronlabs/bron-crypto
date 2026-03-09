@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 )
 
@@ -104,7 +104,7 @@ func (s *Share[E]) HashCode() base.HashCode {
 // using Lagrange coefficients for MPC protocols.
 //
 // Currently unimplemented and will panic if called.
-func (s *Share[E]) ToAdditive(to *accessstructures.Unanimity) (*additive.Share[E], error) {
+func (s *Share[E]) ToAdditive(to *unanimity.Unanimity) (*additive.Share[E], error) {
 	if s == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share is nil")
 	}
@@ -182,7 +182,7 @@ func (s *Share[E]) group() algebra.Group[E] {
 	return v
 }
 
-func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *accessstructures.Unanimity) (sharing.ID, error) {
+func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *unanimity.Unanimity) (sharing.ID, error) {
 	sortedIds := target.Shareholders().List()
 	slices.Sort(sortedIds)
 	for _, id := range sortedIds {

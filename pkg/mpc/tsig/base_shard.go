@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -18,19 +18,19 @@ import (
 // BasePublicMaterial contains the public information for threshold signature verification,
 // including the access structure, verification vector, and partial public keys for each party.
 type BasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	accessStructure   *accessstructures.Threshold
+	accessStructure   *threshold.Threshold
 	fv                feldman.VerificationVector[E, S]
 	partialPublicKeys ds.Map[sharing.ID, *schnorrlike.PublicKey[E, S]]
 }
 
 type basePublicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	AccessStructure   *accessstructures.Threshold                 `cbor:"accessStructure"`
+	AccessStructure   *threshold.Threshold                        `cbor:"accessStructure"`
 	FV                feldman.VerificationVector[E, S]            `cbor:"verificationVector"`
 	PartialPublicKeys map[sharing.ID]*schnorrlike.PublicKey[E, S] `cbor:"partialPublicKeys"`
 }
 
 // AccessStructure returns the threshold access structure defining authorized quorums.
-func (spm *BasePublicMaterial[E, S]) AccessStructure() *accessstructures.Threshold {
+func (spm *BasePublicMaterial[E, S]) AccessStructure() *threshold.Threshold {
 	if spm == nil {
 		return nil
 	}
@@ -196,7 +196,7 @@ func (sh *BaseShard[E, S]) UnmarshalCBOR(data []byte) error {
 func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv feldman.VerificationVector[E, S],
-	accessStructure *accessstructures.Threshold,
+	accessStructure *threshold.Threshold,
 ) (*BaseShard[E, S], error) {
 	if share == nil || fv == nil || accessStructure == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil input parameters")

@@ -3,6 +3,7 @@ package tassa
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
@@ -51,9 +52,9 @@ func (s *Share[F]) Op(e *Share[F]) *Share[F] {
 }
 
 // ScalarOp multiplies the share value by a field scalar.
-func (s *Share[F]) ScalarOp(actor F) *Share[F] {
+func (s *Share[F]) ScalarOp(actor algebra.Numeric) *Share[F] {
 	return &Share[F]{
 		id:    s.id,
-		value: s.value.Mul(actor),
+		value: algebrautils.ScalarMul(s.value, actor),
 	}
 }

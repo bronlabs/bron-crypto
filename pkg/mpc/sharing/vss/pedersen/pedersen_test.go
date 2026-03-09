@@ -17,7 +17,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
@@ -26,12 +27,12 @@ import (
 func newPedersenScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
 	key *pedcom.Key[E, S],
-	threshold uint,
+	thresh uint,
 	shareholders ds.Set[sharing.ID],
 ) (*pedersen.Scheme[E, S], error) {
 	tb.Helper()
 
-	ac, err := accessstructures.NewThresholdAccessStructure(threshold, shareholders)
+	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
 	if err != nil {
 		return nil, err
 	}
@@ -53,30 +54,30 @@ func TestSchemeCreation(t *testing.T) {
 	t.Run("valid scheme creation", func(t *testing.T) {
 		t.Parallel()
 		testCases := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
 			{"5-of-10", 5, 10},
-			{"threshold equals total", 5, 5},
+			{"thresh equals total", 5, 5},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(tc.total)
-				scheme, err := newPedersenScheme(t, key, tc.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, tc.thresh, shareholders)
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
-				require.Equal(t, tc.threshold, scheme.AccessStructure().Threshold())
+				require.Equal(t, tc.thresh, scheme.AccessStructure().Threshold())
 				require.Equal(t, int(tc.total), scheme.AccessStructure().Shareholders().Size())
 			})
 		}
 	})
 
-	t.Run("invalid threshold", func(t *testing.T) {
+	t.Run("invalid thresh", func(t *testing.T) {
 		t.Parallel()
 		// Threshold of 0
 		shareholders := sharing.NewOrdinalShareholderSet(5)
@@ -131,10 +132,10 @@ func TestSanity(t *testing.T) {
 	key, err := pedcom.NewCommitmentKey(g, h)
 	require.NoError(t, err, "could not create key")
 
-	threshold := uint(2)
+	thresh := uint(2)
 	total := uint(5)
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	scheme, err := newPedersenScheme(t, key, threshold, shareholders)
+	scheme, err := newPedersenScheme(t, key, thresh, shareholders)
 	require.NoError(t, err, "could not create scheme")
 
 	secret := pedersen.NewSecret(field.FromUint64(42))
@@ -170,7 +171,7 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 	randomSecret := pedersen.NewSecret(field.FromUint64(12345))
 
 	// Get scheme parameters
-	threshold := scheme.AccessStructure().Threshold()
+	thresh := scheme.AccessStructure().Threshold()
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
@@ -282,18 +283,18 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 				require.NoError(t, err)
 				require.True(t, tc.secret.Equal(reconstructed), "reconstructed secret should match original")
 
-				// Verify threshold property: any t shares can reconstruct
+				// Verify thresh property: any t shares can reconstruct
 				shareSlice := shares.Shares().Values()
-				if len(shareSlice) >= int(threshold) {
-					subsetShares := shareSlice[:threshold]
+				if len(shareSlice) >= int(thresh) {
+					subsetShares := shareSlice[:thresh]
 					reconstructed, err = scheme.Reconstruct(subsetShares...)
 					require.NoError(t, err)
 					require.True(t, tc.secret.Equal(reconstructed), "subset reconstruction should match original")
 				}
 
 				// Verify that t-1 shares cannot reconstruct
-				if int(threshold) > 1 && len(shareSlice) >= int(threshold) {
-					insufficientShares := shareSlice[:threshold-1]
+				if int(thresh) > 1 && len(shareSlice) >= int(thresh) {
+					insufficientShares := shareSlice[:thresh-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
 					require.ErrorIs(t, err, sharing.ErrFailed)
@@ -313,7 +314,7 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S]) {
 	t.Helper()
 
-	threshold := scheme.AccessStructure().Threshold()
+	thresh := scheme.AccessStructure().Threshold()
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
@@ -404,10 +405,10 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 				require.NoError(t, err)
 				require.True(t, secret.Equal(reconstructed))
 
-				// Verify threshold property
-				if shares.Shares().Size() >= int(threshold) {
+				// Verify thresh property
+				if shares.Shares().Size() >= int(thresh) {
 					shareSlice := shares.Shares().Values()
-					subsetShares := shareSlice[:threshold]
+					subsetShares := shareSlice[:thresh]
 					reconstructed, err = scheme.Reconstruct(subsetShares...)
 					require.NoError(t, err)
 					require.True(t, secret.Equal(reconstructed))
@@ -452,23 +453,23 @@ func TestDeal(t *testing.T) {
 		require.NoError(t, err)
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
-			errors    bool
+			name   string
+			thresh uint
+			total  uint
+			errors bool
 		}{
 			{"2-of-3", 2, 3, false},
 			{"3-of-5", 3, 5, false},
 			{"5-of-10", 5, 10, false},
 			{"1-of-5", 1, 5, true},
-			{"threshold equals total", 5, 5, false},
+			{"thresh equals total", 5, 5, false},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
 				if config.errors {
 					require.Error(t, err, "should return error for invalid configuration")
 					return
@@ -491,9 +492,9 @@ func TestDeal(t *testing.T) {
 		require.NoError(t, err)
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-4", 2, 4},
 			{"4-of-7", 4, 7},
@@ -503,7 +504,7 @@ func TestDeal(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
 				require.NoError(t, err)
 				dealCases(t, scheme, field)
 			})
@@ -525,20 +526,20 @@ func TestDealRandom(t *testing.T) {
 		require.NoError(t, err)
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
 				require.NoError(t, err)
 				dealRandomCases(t, scheme)
 			})
@@ -589,9 +590,9 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		require.True(t, secret.Equal(reconstructed))
 
 		// Try with subset of shares
-		threshold := scheme.AccessStructure().Threshold()
-		if shares.Shares().Size() >= int(threshold) {
-			subsetShares := shares.Shares().Values()[:threshold]
+		thresh := scheme.AccessStructure().Threshold()
+		if shares.Shares().Size() >= int(thresh) {
+			subsetShares := shares.Shares().Values()[:thresh]
 			reconstructed, err = scheme.ReconstructAndVerify(reference, subsetShares...)
 			require.NoError(t, err)
 			require.True(t, secret.Equal(reconstructed))
@@ -662,13 +663,13 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		)
 		require.NoError(t, err)
 
-		// Use only threshold shares to ensure reconstruction works
-		threshold := scheme.AccessStructure().Threshold()
+		// Use only thresh shares to ensure reconstruction works
+		thresh := scheme.AccessStructure().Threshold()
 		tamperedShares := make([]*pedersen.Share[S], 0)
 		tamperedShares = append(tamperedShares, tamperedShare)
 
-		// Add remaining shares up to threshold
-		for i := 1; i < int(threshold); i++ {
+		// Add remaining shares up to thresh
+		for i := 1; i < int(thresh); i++ {
 			tamperedShares = append(tamperedShares, shares.Shares().Values()[i])
 		}
 
@@ -743,20 +744,20 @@ func TestVerification(t *testing.T) {
 		require.NoError(t, err)
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
 				require.NoError(t, err)
 				verificationCases(t, scheme, field)
 			})
@@ -1035,20 +1036,20 @@ func TestHomomorphicOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
 				require.NoError(t, err)
 				homomorphicOpsCases(t, scheme, field)
 			})
@@ -1084,12 +1085,12 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 	// Get all shareholder IDs for creating qualified sets
 	allIds := shares.Shares().Keys()
-	threshold := scheme.AccessStructure().Threshold()
+	thresh := scheme.AccessStructure().Threshold()
 
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
 		t.Parallel()
 		// Create a qualified set with all shareholders
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		// Convert each share to additive
@@ -1113,17 +1114,17 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		require.True(t, secret.Value().Equal(reconstructed.Value()))
 	})
 
-	t.Run("valid conversion with threshold qualified set", func(t *testing.T) {
+	t.Run("valid conversion with thresh qualified set", func(t *testing.T) {
 		t.Parallel()
-		// Create a qualified set with exactly threshold shareholders
-		thresholdIds := allIds[:threshold]
+		// Create a qualified set with exactly thresh shareholders
+		thresholdIds := allIds[:thresh]
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
 
 		for _, id := range thresholdIds {
 			qualifiedIds.Add(id)
 		}
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(qualifiedIds.Freeze())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
 		require.NoError(t, err)
 
 		// Convert shares in the qualified set
@@ -1157,7 +1158,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 			qualifiedIds.Add(allIds[i])
 		}
 
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(qualifiedIds.Freeze())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
 		require.NoError(t, err)
 
 		// Try to convert share with ID 1 (not in qualified set)
@@ -1172,7 +1173,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
 		t.Parallel()
-		qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		share, exists := shares.Shares().Get(allIds[0])
@@ -1220,21 +1221,21 @@ func TestToAdditive(t *testing.T) {
 		require.NoError(t, err)
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-3", 2, 3},
 			{"3-of-5", 3, 5},
 			{"5-of-10", 5, 10},
-			{"threshold equals total", 4, 4},
+			{"thresh equals total", 4, 4},
 		}
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1253,9 +1254,9 @@ func TestToAdditive(t *testing.T) {
 		require.NoError(t, err)
 
 		testConfigs := []struct {
-			name      string
-			threshold uint
-			total     uint
+			name   string
+			thresh uint
+			total  uint
 		}{
 			{"2-of-4", 2, 4},
 			{"4-of-7", 4, 7},
@@ -1265,7 +1266,7 @@ func TestToAdditive(t *testing.T) {
 			t.Run(config.name, func(t *testing.T) {
 				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.threshold, shareholders)
+				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
 				require.NoError(t, err)
 				toAdditiveCases(t, scheme, field)
 			})
@@ -1300,8 +1301,8 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		require.Equal(t, 5, shares.Shares().Size())
 
 		// Verify polynomial degrees
-		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = thresh - 1
+		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = thresh - 1
 
 		// Verify that the constant term of the first polynomial is the secret
 		secretCoeff := dealerFunc.Components()[0].ConstantTerm()
@@ -1386,8 +1387,8 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 		require.Equal(t, 5, shares.Shares().Size())
 
 		// Verify polynomial degrees
-		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = thresh - 1
+		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = thresh - 1
 
 		// Verify that the constant term of the first polynomial is the secret
 		secretCoeff := dealerFunc.Components()[0].ConstantTerm()
@@ -1692,9 +1693,9 @@ func BenchmarkDeal(b *testing.B) {
 	require.NoError(b, err)
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -1706,7 +1707,7 @@ func BenchmarkDeal(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
@@ -1732,9 +1733,9 @@ func BenchmarkDealRandom(b *testing.B) {
 	require.NoError(b, err)
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -1745,7 +1746,7 @@ func BenchmarkDealRandom(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -1770,9 +1771,9 @@ func BenchmarkReconstruct(b *testing.B) {
 	require.NoError(b, err)
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -1783,14 +1784,14 @@ func BenchmarkReconstruct(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
 			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
-			shareSlice := shares.Shares().Values()[:config.threshold]
+			shareSlice := shares.Shares().Values()[:config.thresh]
 
 			b.ResetTimer()
 			for range b.N {
@@ -1814,9 +1815,9 @@ func BenchmarkVerification(b *testing.B) {
 	require.NoError(b, err)
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -1827,7 +1828,7 @@ func BenchmarkVerification(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
@@ -1901,9 +1902,9 @@ func BenchmarkToAdditive(b *testing.B) {
 	require.NoError(b, err)
 
 	benchConfigs := []struct {
-		name      string
-		threshold uint
-		total     uint
+		name   string
+		thresh uint
+		total  uint
 	}{
 		{"2-of-3", 2, 3},
 		{"3-of-5", 3, 5},
@@ -1914,14 +1915,14 @@ func BenchmarkToAdditive(b *testing.B) {
 	for _, config := range benchConfigs {
 		b.Run(config.name, func(b *testing.B) {
 			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.threshold, shareholders)
+			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
 			require.NoError(b, err)
 
 			secret := pedersen.NewSecret(field.FromUint64(42))
 			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 
-			qualifiedSet, err := accessstructures.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
+			qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
 			require.NoError(b, err)
 
 			share, exists := shares.Shares().Get(sharing.ID(1))

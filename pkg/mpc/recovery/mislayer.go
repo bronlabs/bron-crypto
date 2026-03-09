@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 )
 
@@ -18,7 +18,7 @@ type Mislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 }
 
 // NewMislayer constructs a mislayer helper used to validate and interpolate recovered shares.
-func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *accessstructures.Threshold, group algebra.PrimeGroup[G, S]) (*Mislayer[G, S], error) {
+func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, as *threshold.Threshold, group algebra.PrimeGroup[G, S]) (*Mislayer[G, S], error) {
 	if ctx == nil || as == nil || group == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}

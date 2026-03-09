@@ -1,4 +1,4 @@
-package accessstructures
+package threshold
 
 import (
 	"iter"
@@ -7,13 +7,18 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/vandermonde"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
-var _ Monotone = (*Threshold)(nil)
+// ID uniquely identifies a shareholder.
+type ID = internal.ID
 
 // Threshold represents a (t,n) threshold access structure where
 // any subset of at least t shareholders (out of n total) is authorized to
@@ -76,7 +81,7 @@ func (a *Threshold) IsQualified(ids ...ID) bool {
 func (a *Threshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	return func(yield func(ds.Set[ID]) bool) {
 		for c := range sliceutils.Combinations(a.ps.List(), a.t-1) {
-			s := hashset.NewComparable[ID](c...)
+			s := hashset.NewComparable(c...)
 			if cont := yield(s.Freeze()); !cont {
 				break
 			}
@@ -141,4 +146,44 @@ func (a *Threshold) UnmarshalCBOR(data []byte) error {
 
 	*a = *a2
 	return nil
+}
+
+// InducedMSPByThreshold constructs an ideal monotone span programme from a
+// threshold access structure using a Vandermonde matrix.
+func InducedMSPByThreshold[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Threshold) (*msp.MSP[E], error) {
+	if f == nil {
+		return nil, ErrIsNil.WithMessage("base field cannot be nil")
+	}
+	if ac == nil {
+		return nil, ErrIsNil.WithMessage("access structure cannot be nil")
+	}
+
+	shareHolders := ac.Shareholders().List()
+
+	// Build the n × t Vandermonde matrix where M[i,j] = α_i^j.
+	// Each α_i is the field element corresponding to shareholder ID i.
+	// Any t rows with distinct α_i form an invertible t×t Vandermonde,
+	// so the target e₀ = (1,0,…,0) is in their row span.
+	nodes := make([]E, len(shareHolders))
+	for i, id := range shareHolders {
+		nodes[i] = f.FromUint64(uint64(id))
+	}
+	matrix, err := vandermonde.BuildVandermondeMatrix(nodes, ac.Threshold())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to build Vandermonde matrix for threshold MSP")
+	}
+
+	rowsToHolders := make(map[int]ID)
+	for i, id := range shareHolders {
+		rowsToHolders[i] = id
+	}
+	targetVector, err := matrix.Module().NewStandardUnit(0)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create target vector")
+	}
+	out, err := msp.NewMSP(matrix, rowsToHolders, targetVector)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create MSP from threshold access structure")
+	}
+	return out, nil
 }
