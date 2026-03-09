@@ -103,7 +103,7 @@ func Interpolate[F algebra.PrimeFieldElement[F]](xs []F, js []uint64, ys []F) (*
 		num := numMatrix.Determinant()
 		coeff, err := num.TryDiv(den)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cdivision by zero")
+			return nil, errs.Wrap(err).WithMessage("division by zero")
 		}
 		coeffs = append(coeffs, coeff)
 	}
