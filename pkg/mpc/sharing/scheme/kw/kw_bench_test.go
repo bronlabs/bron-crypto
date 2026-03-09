@@ -1,6 +1,7 @@
 package kw_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -8,6 +9,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
@@ -18,27 +21,57 @@ import (
 // ---------------------------------------------------------------------------
 
 type benchConfig struct {
-	name      string
-	threshold uint
-	total     uint
+	name string
+	ac   func(b *testing.B) accessstructures.Linear
+}
+
+func thresholdAC(t uint, n uint) func(b *testing.B) accessstructures.Linear {
+	return func(b *testing.B) accessstructures.Linear {
+		b.Helper()
+		ac, err := threshold.NewThresholdAccessStructure(t, sharing.NewOrdinalShareholderSet(n))
+		require.NoError(b, err)
+		return ac
+	}
+}
+
+func hierarchicalAC(levels ...*hierarchical.ThresholdLevel) func(b *testing.B) accessstructures.Linear {
+	return func(b *testing.B) accessstructures.Linear {
+		b.Helper()
+		ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(levels...)
+		require.NoError(b, err)
+		return ac
+	}
 }
 
 var benchConfigs = []benchConfig{
-	{"2-of-3", 2, 3},
-	{"3-of-5", 3, 5},
-	{"5-of-10", 5, 10},
-	{"10-of-20", 10, 20},
+	{"threshold/2-of-3", thresholdAC(2, 3)},
+	{"threshold/3-of-5", thresholdAC(3, 5)},
+	{"threshold/5-of-10", thresholdAC(5, 10)},
+	{"threshold/10-of-20", thresholdAC(10, 20)},
+	{
+		"hierarchical/2-level(2,4)_8p",
+		hierarchicalAC(
+			hierarchical.WithLevel(2, 1, 2, 3, 4),
+			hierarchical.WithLevel(4, 5, 6, 7, 8),
+		),
+	},
+	{
+		"hierarchical/3-level(1,2,4)_6p",
+		hierarchicalAC(
+			hierarchical.WithLevel(1, 1, 2),
+			hierarchical.WithLevel(2, 3, 4),
+			hierarchical.WithLevel(4, 5, 6),
+		),
+	},
 }
 
 func BenchmarkDeal(b *testing.B) {
 	field := k256.NewScalarField()
 
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			ac, err := threshold.NewThresholdAccessStructure(config.threshold, sharing.NewOrdinalShareholderSet(config.total))
-			require.NoError(b, err)
+	for _, cfg := range benchConfigs {
+		b.Run(cfg.name, func(b *testing.B) {
+			ac := cfg.ac(b)
 			scheme := newKWScheme(b, field, ac)
-
 			secret := kw.NewSecret(field.FromUint64(42))
 
 			b.ResetTimer()
@@ -52,26 +85,37 @@ func BenchmarkDeal(b *testing.B) {
 	}
 }
 
+func BenchmarkDealRandom(b *testing.B) {
+	field := k256.NewScalarField()
+
+	for _, cfg := range benchConfigs {
+		b.Run(cfg.name, func(b *testing.B) {
+			ac := cfg.ac(b)
+			scheme := newKWScheme(b, field, ac)
+
+			b.ResetTimer()
+			for range b.N {
+				_, _, err := scheme.DealRandom(pcg.NewRandomised())
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 func BenchmarkReconstruct(b *testing.B) {
 	field := k256.NewScalarField()
 
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			ac, err := threshold.NewThresholdAccessStructure(config.threshold, sharing.NewOrdinalShareholderSet(config.total))
-			require.NoError(b, err)
+	for _, cfg := range benchConfigs {
+		b.Run(cfg.name, func(b *testing.B) {
+			ac := cfg.ac(b)
 			scheme := newKWScheme(b, field, ac)
 
 			secret := kw.NewSecret(field.FromUint64(42))
 			shares := dealAndCollect(b, scheme, secret)
 
-			// Pick exactly threshold shares.
-			qualifiedIDs := make([]sharing.ID, 0, config.threshold)
-			for id := range shares {
-				qualifiedIDs = append(qualifiedIDs, id)
-				if uint(len(qualifiedIDs)) == config.threshold {
-					break
-				}
-			}
+			qualifiedIDs := minimalQualifiedIDs(ac)
 			qualifiedShares := pickShares(shares, qualifiedIDs...)
 
 			b.ResetTimer()
@@ -88,19 +132,19 @@ func BenchmarkReconstruct(b *testing.B) {
 func BenchmarkConvertShareToAdditive(b *testing.B) {
 	field := k256.NewScalarField()
 
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			ac, err := threshold.NewThresholdAccessStructure(config.threshold, sharing.NewOrdinalShareholderSet(config.total))
-			require.NoError(b, err)
+	for _, cfg := range benchConfigs {
+		b.Run(cfg.name, func(b *testing.B) {
+			ac := cfg.ac(b)
 			scheme := newKWScheme(b, field, ac)
 
 			secret := kw.NewSecret(field.FromUint64(42))
 			shares := dealAndCollect(b, scheme, secret)
 
-			quorum, err := unanimity.NewUnanimityAccessStructure(ac.Shareholders())
+			qualifiedIDs := minimalQualifiedIDs(ac)
+			quorum, err := unanimity.NewUnanimityAccessStructure(shareholders(qualifiedIDs...))
 			require.NoError(b, err)
 
-			share := shares[sharing.ID(1)]
+			share := shares[qualifiedIDs[0]]
 
 			b.ResetTimer()
 			for range b.N {
@@ -110,6 +154,32 @@ func BenchmarkConvertShareToAdditive(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+// minimalQualifiedIDs returns a minimal set of shareholder IDs that satisfies
+// the access structure. For threshold it picks the first t IDs; for hierarchical
+// it picks enough from each level.
+func minimalQualifiedIDs(ac accessstructures.Linear) []sharing.ID {
+	switch a := ac.(type) {
+	case *threshold.Threshold:
+		ids := a.Shareholders().List()
+		slices.Sort(ids)
+		return ids[:a.Threshold()]
+	case *hierarchical.HierarchicalConjunctiveThreshold:
+		var ids []sharing.ID
+		prevThreshold := 0
+		for _, level := range a.Levels() {
+			need := level.Threshold() - prevThreshold
+			members := level.Shareholders().List()
+			slices.Sort(members)
+			ids = append(ids, members[:need]...)
+			prevThreshold = level.Threshold()
+		}
+		return ids
+	default:
+		// Fallback: return all shareholders.
+		return ac.Shareholders().List()
 	}
 }
 
