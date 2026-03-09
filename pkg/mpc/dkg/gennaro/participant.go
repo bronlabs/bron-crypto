@@ -51,13 +51,14 @@ type (
 
 const (
 	transcriptLabel              = "BRON_CRYPTO_DKG_GENNARO-"
-	proverIDLabel                = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
 	secondPedersenGeneratorLabel = "second generator of pedersen key"
 )
 
 // Participant orchestrates the Gennaro DKG protocol for one party.
 type Participant[E GroupElement[E, S], S Scalar[S]] struct {
 	ctx            *session.Context
+	group          Group[E, S]
+	scalarField    ScalarField[S]
 	prng           io.Reader
 	ac             *threshold.Threshold
 	niCompilerName compiler.Name
@@ -80,14 +81,13 @@ type State[E GroupElement[E, S], S Scalar[S]] struct {
 	pedersenVSS *pedersen.Scheme[E, S]
 	feldmanVSS  *feldman.Scheme[E, S]
 
-	receivedPedersenVerificationVectors ds.MutableMap[sharing.ID, pedersen.VerificationVector[E, S]]
-	receivedFeldmanVerificationVectors  ds.MutableMap[sharing.ID, feldman.VerificationVector[E, S]]
-
 	localPedersenDealerOutput      *pedersen.DealerOutput[E, S]
 	pedersenDealerFunc             *polynomials.DirectSumOfPolynomials[S]
 	localFeldmanVerificationVector feldman.VerificationVector[E, S]
 	localSecret                    *pedersen.Secret[S]
 	localShare                     *pedersen.Share[S]
+	receivedShares                 map[sharing.ID]*pedersen.Share[S]
+	summedShareValue               S
 }
 
 // NewParticipant constructs a participant for the Gennaro DKG protocol.
@@ -135,18 +135,23 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create feldman VSS scheme")
 	}
+	scalarField, err := algebra.StructureAs[ScalarField[S]](group.ScalarStructure())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to assert scalar field structure")
+	}
 	return &Participant[E, S]{
 		ctx:            ctx,
+		group:          group,
+		scalarField:    scalarField,
 		prng:           prng,
 		ac:             ac,
 		niCompilerName: niCompilerName,
 		//nolint:exhaustruct // initially partially empty state
 		state: &State[E, S]{
-			key:                                 key,
-			pedersenVSS:                         pedersenVSS,
-			feldmanVSS:                          feldmanVSS,
-			receivedPedersenVerificationVectors: hashmap.NewComparable[sharing.ID, pedersen.VerificationVector[E, S]](),
-			receivedFeldmanVerificationVectors:  hashmap.NewComparable[sharing.ID, feldman.VerificationVector[E, S]](),
+			key:            key,
+			pedersenVSS:    pedersenVSS,
+			feldmanVSS:     feldmanVSS,
+			receivedShares: make(map[sharing.ID]*pedersen.Share[S]),
 		},
 		round: 1,
 	}, nil
@@ -172,15 +177,18 @@ func NewDKGOutput[E GroupElement[E, S], S Scalar[S]](
 		return nil, ErrInvalidArgument.WithMessage("share value structure is not a scalar field")
 	}
 	publicKeyValue := vector.Eval(sf.Zero())
-	partialPublicKeys, err := ComputePartialPublicKey(sf, share, vector, accessStructure)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to compute partial public keys from share")
+	partialPublicKeys := hashmap.NewComparable[sharing.ID, E]()
+	for id := range accessStructure.Shareholders().Iter() {
+		partialPublicKeys.Put(
+			id,
+			vector.Eval(shamir.SharingIDToLagrangeNode(sf, id)),
+		)
 	}
 	return &DKGOutput[E, S]{
 		share: share,
 		DKGPublicOutput: DKGPublicOutput[E, S]{
 			publicKeyValue:         publicKeyValue,
-			partialPublicKeyValues: partialPublicKeys,
+			partialPublicKeyValues: partialPublicKeys.Freeze(),
 			fv:                     vector,
 			accessStructure:        accessStructure,
 		},

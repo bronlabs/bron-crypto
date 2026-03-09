@@ -1,18 +1,19 @@
 package gennaro
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
 // Round1Broadcast carries the dealer’s Pedersen VSS verification vector.
 type Round1Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 	PedersenVerificationVector pedersenVSS.VerificationVector[E, S] `cbor:"verificationVector"`
+	Proof                      compiler.NIZKPoKProof                `cbor:"proof"`
 }
 
-// Round2Unicast carries the dealer’s Pedersen share to a specific party.
-type Round2Unicast[E GroupElement[E, S], S Scalar[S]] struct {
+// Round1Unicast carries the dealer’s Pedersen share to a specific party.
+type Round1Unicast[E GroupElement[E, S], S Scalar[S]] struct {
 	Share *pedersenVSS.Share[S] `cbor:"share"`
 }
 

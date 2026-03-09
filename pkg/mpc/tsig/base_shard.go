@@ -8,7 +8,6 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
@@ -205,12 +204,9 @@ func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement
 	if !ok {
 		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
 	}
-	partialPublicKeyValues, err := gennaro.ComputePartialPublicKey(sf, share, fv, accessStructure)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to compute partial public keys from share")
-	}
 	partialPublicKeys := hashmap.NewComparable[sharing.ID, *schnorrlike.PublicKey[E, S]]()
-	for id, value := range partialPublicKeyValues.Iter() {
+	for id := range accessStructure.Shareholders().Iter() {
+		value := fv.Eval(shamir.SharingIDToLagrangeNode(sf, id))
 		pk, err := schnorrlike.NewPublicKey(value)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create public key for party %d", id)
