@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -415,7 +417,7 @@ func firstOutput(outputs map[sharing.ID]*gennaro.DKGOutput[*k256.Point, *k256.Sc
 
 type securityFixture struct {
 	group   *k256.Curve
-	ac      *accessstructures.Threshold
+	ac      *threshold.Threshold
 	quorum  network.Quorum
 	parties map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar]
 	ids     []sharing.ID // sorted
@@ -431,7 +433,7 @@ func newSecurityFixture(t *testing.T) *securityFixture {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	parties := setup(t, ac, group, prng)
 	participants := slices.Collect(maps.Values(parties))
@@ -669,7 +671,7 @@ func TestFeldmanPedersenConsistencyCheck(t *testing.T) {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 
 	// DKG 1: the real one
@@ -710,7 +712,7 @@ func TestShareReconstructionYieldsMatchingPublicKey(t *testing.T) {
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := accessstructures.NewThresholdAccessStructure(2, quorum)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 
 	parties := setup(t, ac, group, prng)
