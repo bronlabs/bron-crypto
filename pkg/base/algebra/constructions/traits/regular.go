@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
@@ -87,6 +88,10 @@ func (m *RegularModule[R, E, W, WT]) ElementSize() int {
 
 type RegularModuleElement[E algebra.RingElement[E], W RingElementInheritterPtrConstraint[E, WT], WT any] struct {
 	v E
+}
+
+type regularModuleElementDTO[E algebra.RingElement[E]] struct {
+	V E `cbor:"value"`
 }
 
 func (m *RegularModuleElement[E, W, WT]) set(v E) error {
@@ -226,6 +231,28 @@ func (m *RegularModuleElement[E, W, WT]) Clone() W {
 
 func (m *RegularModuleElement[E, W, WT]) ScalarStructure() algebra.Structure[E] {
 	return m.v.Structure()
+}
+
+func (m *RegularModuleElement[E, W, WT]) MarshalCBOR() ([]byte, error) {
+	dto := regularModuleElementDTO[E]{
+		V: m.v,
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal RegularModuleElement to CBOR")
+	}
+	return out, nil
+}
+
+func (m *RegularModuleElement[E, W, WT]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[regularModuleElementDTO[E]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal RegularModuleElement from CBOR")
+	}
+	if err := m.set(dto.V); err != nil {
+		return errs.Wrap(err).WithMessage("failed to set RegularModuleElement from unmarshaled DTO")
+	}
+	return nil
 }
 
 type RegularAlgebra[R algebra.Ring[E], E algebra.RingElement[E], W RingElementInheritterPtrConstraint[E, WT], WT any] struct {
