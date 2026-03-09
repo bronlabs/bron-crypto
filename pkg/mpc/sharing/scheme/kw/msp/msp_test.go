@@ -172,17 +172,29 @@ func TestMSP_Accessors(t *testing.T) {
 	t.Run("RowsToHolders", func(t *testing.T) {
 		t.Parallel()
 		got := sp.RowsToHolders()
-		require.Equal(t, msp.ID(10), got[0])
-		require.Equal(t, msp.ID(20), got[1])
-		require.Equal(t, msp.ID(30), got[2])
+		got0, ok0 := got.Get(0)
+		got1, ok1 := got.Get(1)
+		got2, ok2 := got.Get(2)
+		require.True(t, ok0)
+		require.True(t, ok1)
+		require.True(t, ok2)
+		require.Equal(t, msp.ID(10), got0)
+		require.Equal(t, msp.ID(20), got1)
+		require.Equal(t, msp.ID(30), got2)
 	})
 
 	t.Run("HoldersToRows", func(t *testing.T) {
 		t.Parallel()
 		got := sp.HoldersToRows()
-		require.Equal(t, []int{0}, got[10])
-		require.Equal(t, []int{1}, got[20])
-		require.Equal(t, []int{2}, got[30])
+		got10, ok10 := got.Get(10)
+		got20, ok20 := got.Get(20)
+		got30, ok30 := got.Get(30)
+		require.True(t, ok10)
+		require.True(t, ok20)
+		require.True(t, ok30)
+		require.Equal(t, []int{0}, got10.List())
+		require.Equal(t, []int{1}, got20.List())
+		require.Equal(t, []int{2}, got30.List())
 	})
 
 	t.Run("IsIdeal", func(t *testing.T) {
@@ -307,7 +319,9 @@ func TestMSP_MultiRowHolder(t *testing.T) {
 	require.Equal(t, uint(2), sp.D())
 
 	htr := sp.HoldersToRows()
-	require.Len(t, htr[1], 2)
+	got1, ok1 := htr.Get(1)
+	require.True(t, ok1)
+	require.Len(t, got1.List(), 2)
 }
 
 // --- Custom target vector tests ---

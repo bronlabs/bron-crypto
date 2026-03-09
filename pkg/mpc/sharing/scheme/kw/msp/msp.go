@@ -1,15 +1,16 @@
 package msp
 
 import (
-	"maps"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
@@ -71,19 +72,24 @@ func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map
 		}
 	}
 
-	holdersToRows := make(map[ID][]int)
+	holdersToRowsMutable := hashmap.NewComparable[ID, ds.MutableSet[int]]()
 	for rowIndex, id := range rowsToHolders {
-		if _, exists := holdersToRows[id]; !exists {
-			holdersToRows[id] = []int{rowIndex}
+		if exists := holdersToRowsMutable.ContainsKey(id); !exists {
+			holdersToRowsMutable.Put(id, hashset.NewComparable(rowIndex))
 		} else {
-			holdersToRows[id] = append(holdersToRows[id], rowIndex)
+			el, _ := holdersToRowsMutable.Get(id)
+			el.Add(rowIndex)
 		}
+	}
+	holdersToRows := hashmap.NewComparable[ID, ds.Set[int]]()
+	for id, rowsSet := range holdersToRowsMutable.Iter() {
+		holdersToRows.Put(id, rowsSet.Freeze())
 	}
 
 	return &MSP[E]{
 		matrix:          m.Clone(),
-		rowsToHolders:   rowsToHolders,
-		holdersToRows:   holdersToRows,
+		rowsToHolders:   hashmap.NewComparableFromNativeLike(rowsToHolders).Freeze(),
+		holdersToRows:   holdersToRows.Freeze(),
 		targetRowVector: targetVector,
 		f:               algebra.StructureMustBeAs[algebra.FiniteField[E]](m.Module().ScalarStructure()),
 	}, nil
@@ -94,8 +100,8 @@ func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map
 // to shareholder IDs.
 type MSP[E algebra.FiniteFieldElement[E]] struct {
 	matrix          *mat.Matrix[E]
-	rowsToHolders   map[int]ID
-	holdersToRows   map[ID][]int
+	rowsToHolders   ds.Map[int, ID]
+	holdersToRows   ds.Map[ID, ds.Set[int]]
 	targetRowVector *mat.Matrix[E]
 	f               algebra.FiniteField[E]
 }
@@ -111,13 +117,13 @@ func (m *MSP[E]) BaseField() algebra.FiniteField[E] {
 }
 
 // RowsToHolders returns a copy of the mapping from matrix row indices to shareholder IDs.
-func (m *MSP[E]) RowsToHolders() map[int]ID {
-	return maps.Clone(m.rowsToHolders)
+func (m *MSP[E]) RowsToHolders() ds.Map[int, ID] {
+	return m.rowsToHolders
 }
 
 // HoldersToRows returns a copy of the reverse mapping from shareholder IDs to their row indices.
-func (m *MSP[E]) HoldersToRows() map[ID][]int {
-	return maps.Clone(m.holdersToRows)
+func (m *MSP[E]) HoldersToRows() ds.Map[ID, ds.Set[int]] {
+	return m.holdersToRows
 }
 
 // TargetVector returns the target row vector of the MSP.
@@ -139,7 +145,7 @@ func (m *MSP[E]) D() uint {
 
 // IsIdeal reports whether the MSP assigns exactly one row to each shareholder.
 func (m *MSP[E]) IsIdeal() bool {
-	return iterutils.All(maps.Values(m.holdersToRows), func(rows []int) bool { return len(rows) == 1 })
+	return sliceutils.All(m.holdersToRows.Values(), func(rows ds.Set[int]) bool { return rows.Size() == 1 })
 }
 
 // ReconstructionVector computes the linear combination coefficients that
@@ -150,13 +156,13 @@ func (m *MSP[E]) ReconstructionVector(IDs ...ID) (*mat.Matrix[E], error) {
 	idSet := hashset.NewComparable(IDs...)
 	sortedIDs := idSet.List()
 	slices.Sort(sortedIDs)
-	rows := make([]int, 0, len(m.holdersToRows))
+	rows := make([]int, 0, m.holdersToRows.Size())
 	for _, id := range sortedIDs {
-		rowsID, ok := m.holdersToRows[id]
+		rowsID, ok := m.holdersToRows.Get(id)
 		if !ok {
 			return nil, ErrValue.WithMessage("ID %d is not associated with any row in the MSP", id)
 		}
-		rows = append(rows, rowsID...)
+		rows = append(rows, rowsID.List()...)
 	}
 	if len(rows) == 0 {
 		return nil, ErrValue.WithMessage("no rows selected for given IDs")

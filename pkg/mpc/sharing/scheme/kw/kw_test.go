@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
@@ -52,6 +53,13 @@ func pickShares[FE algebra.PrimeFieldElement[FE]](m map[sharing.ID]*kw.Share[FE]
 		out[i] = m[id]
 	}
 	return out
+}
+
+func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
+	t.Helper()
+	q, err := unanimity.NewUnanimityAccessStructure(shareholders(ids...))
+	require.NoError(t, err)
+	return q
 }
 
 // ---------------------------------------------------------------------------
@@ -851,6 +859,309 @@ func TestNewShare(t *testing.T) {
 		_, err := kw.NewShare[*k256.Scalar](1)
 		require.Error(t, err)
 	})
+}
+
+// ---------------------------------------------------------------------------
+// ConvertShareToAdditive – sum of additive shares recovers the secret
+// ---------------------------------------------------------------------------
+
+func TestConvertShareToAdditive_SumRecoversSecret(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newKWScheme(t, field, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+			shares := dealAndCollect(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					sum := field.Zero()
+					for _, id := range qset {
+						addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						sum = sum.Add(addShare.Value())
+					}
+					require.True(t, secret.Value().Equal(sum),
+						"sum of additive shares must equal the secret")
+				})
+			}
+		})
+	}
+}
+
+func TestConvertShareToAdditive_RandomSecrets(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newKWScheme(t, field, fx.ac)
+			prng := pcg.NewRandomised()
+
+			for range 5 {
+				val, err := field.Random(prng)
+				require.NoError(t, err)
+				secret := kw.NewSecret(val)
+				shares := dealAndCollect(t, scheme, secret)
+
+				for _, qset := range fx.qualified {
+					quorum := newUnanimity(t, qset...)
+
+					sum := field.Zero()
+					for _, id := range qset {
+						addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						sum = sum.Add(addShare.Value())
+					}
+					require.True(t, secret.Value().Equal(sum),
+						"sum of additive shares must equal the secret for quorum %v", qset)
+				}
+			}
+		})
+	}
+}
+
+func TestConvertShareToAdditive_ConsistentAcrossQuorums(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t) // has multiple qualified sets
+	scheme := newKWScheme(t, field, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(999))
+	shares := dealAndCollect(t, scheme, secret)
+
+	// Every qualified quorum should produce additive shares that sum to
+	// the same original secret.
+	for _, qset := range fx.qualified {
+		quorum := newUnanimity(t, qset...)
+
+		sum := field.Zero()
+		for _, id := range qset {
+			addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+			require.NoError(t, err)
+			sum = sum.Add(addShare.Value())
+		}
+		require.True(t, secret.Value().Equal(sum),
+			"quorum %v must reconstruct the same secret", qset)
+	}
+}
+
+func TestConvertShareToAdditive_ViaAdditiveReconstruct(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newKWScheme(t, field, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(77))
+	shares := dealAndCollect(t, scheme, secret)
+
+	for _, qset := range fx.qualified {
+		t.Run(formatIDs(qset), func(t *testing.T) {
+			t.Parallel()
+			quorum := newUnanimity(t, qset...)
+
+			additiveScheme, err := additive.NewScheme[*k256.Scalar](field, quorum)
+			require.NoError(t, err)
+
+			additiveShares := make([]*additive.Share[*k256.Scalar], len(qset))
+			for i, id := range qset {
+				addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+				require.NoError(t, err)
+				additiveShares[i] = addShare
+			}
+
+			reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
+			require.NoError(t, err)
+			require.True(t, secret.Value().Equal(reconstructed.Value()),
+				"additive reconstruction must recover the KW secret")
+		})
+	}
+}
+
+func TestConvertShareToAdditive_ZeroSecret(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newKWScheme(t, field, fx.ac)
+	secret := kw.NewSecret(field.Zero())
+	shares := dealAndCollect(t, scheme, secret)
+
+	qset := fx.qualified[0]
+	quorum := newUnanimity(t, qset...)
+
+	sum := field.Zero()
+	for _, id := range qset {
+		addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+		require.NoError(t, err)
+		sum = sum.Add(addShare.Value())
+	}
+	require.True(t, field.Zero().Equal(sum),
+		"additive shares of a zero secret must sum to zero")
+}
+
+func TestConvertShareToAdditive_IndividualShareRevealsNothing(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newKWScheme(t, field, fx.ac)
+
+	// Deal two different secrets.
+	s1 := kw.NewSecret(field.FromUint64(100))
+	s2 := kw.NewSecret(field.FromUint64(200))
+
+	shares1 := dealAndCollect(t, scheme, s1)
+	shares2 := dealAndCollect(t, scheme, s2)
+
+	qset := fx.qualified[0]
+	quorum := newUnanimity(t, qset...)
+
+	// Each shareholder's additive share should differ between the two dealings
+	// (with overwhelming probability) — it inherits fresh randomness.
+	for _, id := range qset {
+		a1, err := scheme.ConvertShareToAdditive(shares1[id], quorum)
+		require.NoError(t, err)
+		a2, err := scheme.ConvertShareToAdditive(shares2[id], quorum)
+		require.NoError(t, err)
+		require.False(t, a1.Value().Equal(a2.Value()),
+			"additive share for ID %d should differ between dealings", id)
+	}
+}
+
+func TestConvertShareToAdditive_BLS12381(t *testing.T) {
+	t.Parallel()
+
+	field := bls12381.NewScalarField()
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+	require.NoError(t, err)
+	scheme := newKWScheme(t, field, ac)
+
+	secret := kw.NewSecret(field.FromUint64(12345))
+	shares := dealAndCollect(t, scheme, secret)
+
+	for _, qset := range [][]sharing.ID{{1, 2}, {1, 3}, {2, 3}, {1, 2, 3}} {
+		quorum := newUnanimity(t, qset...)
+
+		sum := field.Zero()
+		for _, id := range qset {
+			addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+			require.NoError(t, err)
+			sum = sum.Add(addShare.Value())
+		}
+		require.True(t, secret.Value().Equal(sum),
+			"BLS12-381 additive shares must sum to the secret for quorum %v", qset)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ConvertShareToAdditive – error cases
+// ---------------------------------------------------------------------------
+
+func TestConvertShareToAdditive_NilShare(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newKWScheme(t, field, fx.ac)
+	quorum := newUnanimity(t, fx.qualified[0]...)
+
+	_, err := scheme.ConvertShareToAdditive(nil, quorum)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestConvertShareToAdditive_NilQuorum(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newKWScheme(t, field, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(1))
+	shares := dealAndCollect(t, scheme, secret)
+
+	_, err := scheme.ConvertShareToAdditive(shares[1], nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestConvertShareToAdditive_ShareNotInQuorum(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t) // shareholders {1,2,3}
+	scheme := newKWScheme(t, field, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(1))
+	shares := dealAndCollect(t, scheme, secret)
+
+	// Build a quorum that does not include shareholder 3.
+	quorum := newUnanimity(t, 1, 2)
+
+	_, err := scheme.ConvertShareToAdditive(shares[3], quorum)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrMembership)
+}
+
+func TestConvertShareToAdditive_MultiRowShareholders(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+
+	// cnf({1,2},{3,4},{5}) gives every shareholder ≥ 2 MSP rows because each
+	// shareholder appears in at least two of the three clause complements.
+	fx := cnfThreeClauseFixture(t)
+	scheme := newKWScheme(t, field, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(31337))
+	shares := dealAndCollect(t, scheme, secret)
+
+	// Verify that shareholders actually own multiple rows.
+	for _, id := range fx.shareholders {
+		require.Greater(t, len(shares[id].Value()), 1,
+			"shareholder %d should own more than one MSP row", id)
+	}
+
+	for _, qset := range fx.qualified {
+		t.Run(formatIDs(qset), func(t *testing.T) {
+			t.Parallel()
+			quorum := newUnanimity(t, qset...)
+
+			sum := field.Zero()
+			for _, id := range qset {
+				addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+				require.NoError(t, err)
+				sum = sum.Add(addShare.Value())
+			}
+			require.True(t, secret.Value().Equal(sum),
+				"additive shares from multi-row holders must still sum to the secret")
+		})
+	}
+}
+
+func TestConvertShareToAdditive_QuorumNotQualified(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	// cnf({1,2},{3,4}): {1,2} is unqualified (subset of first MUS).
+	fx := cnfFixture(t)
+	scheme := newKWScheme(t, field, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(1))
+	shares := dealAndCollect(t, scheme, secret)
+
+	// {1,2} has 2 members but is unqualified under this CNF structure.
+	quorum := newUnanimity(t, 1, 2)
+
+	_, err := scheme.ConvertShareToAdditive(shares[1], quorum)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrMembership)
 }
 
 // ---------------------------------------------------------------------------

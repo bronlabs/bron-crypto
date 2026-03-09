@@ -8,8 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 )
 
 // Share is a single shareholder's portion of a KW secret. It consists of the
@@ -34,11 +32,6 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v ...FE) (*Share[
 		id: id,
 		v:  v,
 	}, nil
-}
-
-// ToAdditive converts this share to an additive share. Not yet implemented.
-func (*Share[FE]) ToAdditive(ac *unanimity.Unanimity) (*additive.Share[FE], error) {
-	panic("implement me")
 }
 
 // ID returns the shareholder identifier.

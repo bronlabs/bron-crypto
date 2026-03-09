@@ -106,7 +106,12 @@ func (s *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 
 	shares := hashmap.NewComparable[sharing.ID, *Share[FE]]()
 	for id := range s.ac.Shareholders().Iter() {
-		lambdaI, err := lambda.SubMatrixGivenRows(s.msp.HoldersToRows()[id]...)
+		rowsi, exists := s.msp.HoldersToRows().Get(id)
+		if !exists {
+			return nil, nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", id)
+		}
+		sortedRows := slices.Sorted(slices.Values(rowsi.List()))
+		lambdaI, err := lambda.SubMatrixGivenRows(sortedRows...)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("failed to extract lambda_i for shareholder %d", id)
 		}
@@ -171,7 +176,11 @@ func (s *Scheme[FE]) shareColumn(shares ...*Share[FE]) (*mat.Matrix[FE], error) 
 	htr := s.msp.HoldersToRows()
 	nRows := 0
 	for _, sh := range shares {
-		nRows += len(htr[sh.id])
+		rowsi, exists := htr.Get(sh.id)
+		if !exists {
+			return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", sh.id)
+		}
+		nRows += len(rowsi.List())
 	}
 	columnFactory, err := mat.NewMatrixModule(uint(nRows), 1, s.msp.BaseField())
 	if err != nil {
@@ -180,9 +189,16 @@ func (s *Scheme[FE]) shareColumn(shares ...*Share[FE]) (*mat.Matrix[FE], error) 
 
 	// Assemble share values as a column vector in ascending row order,
 	// matching the ordering used by ReconstructionVector.
+	// share.v was stored in sorted row order during dealing, so we must
+	// sort the row indices here to maintain the same correspondence.
 	lambdaByRow := make(map[int]FE)
 	for _, sh := range shares {
-		for i, r := range htr[sh.id] {
+		rowsi, exists := htr.Get(sh.id)
+		if !exists {
+			return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", sh.id)
+		}
+		sortedRows := slices.Sorted(slices.Values(rowsi.List()))
+		for i, r := range sortedRows {
 			lambdaByRow[r] = sh.v[i]
 		}
 	}
@@ -197,6 +213,90 @@ func (s *Scheme[FE]) shareColumn(shares ...*Share[FE]) (*mat.Matrix[FE], error) 
 
 // ConvertShareToAdditive converts a KW share into an additive share under the
 // given unanimity quorum. Not yet implemented.
-func (*Scheme[FE]) ConvertShareToAdditive(s *Share[FE], quorum *unanimity.Unanimity) (*additive.Share[FE], error) {
-	panic("not implemented")
+func (s *Scheme[FE]) ConvertShareToAdditive(share *Share[FE], quorum *unanimity.Unanimity) (*additive.Share[FE], error) {
+	if share == nil {
+		return nil, sharing.ErrIsNil.WithMessage("share cannot be nil")
+	}
+	if quorum == nil {
+		return nil, sharing.ErrIsNil.WithMessage("quorum cannot be nil")
+	}
+	if !quorum.Shareholders().Contains(share.ID()) {
+		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the unanimity quorum", share.ID())
+	}
+	quorumIDs := quorum.Shareholders().List()
+	if !s.ac.IsQualified(quorumIDs...) {
+		return nil, sharing.ErrMembership.WithMessage("quorum shareholders are not qualified by the access structure")
+	}
+
+	reconVec, err := s.msp.ReconstructionVector(quorumIDs...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector for unanimity quorum")
+	}
+	shareCol, err := s.shareColumn(share)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to assemble share column vector for conversion")
+	}
+
+	// reconVec is indexed 0..len(allQuorumRows)-1, with entries ordered by
+	// ascending absolute MSP row index across all quorum members. Map this
+	// shareholder's absolute row indices to their positions in reconVec.
+	htr := s.msp.HoldersToRows()
+	var allQuorumRows []int
+	for _, id := range quorumIDs {
+		rows, ok := htr.Get(id)
+		if !ok {
+			return nil, sharing.ErrMembership.WithMessage("quorum shareholder %d is not in the MSP holders mapping", id)
+		}
+		allQuorumRows = append(allQuorumRows, rows.List()...)
+	}
+	slices.Sort(allQuorumRows)
+
+	shareholderAbsRowsSet, ok := htr.Get(share.ID())
+	if !ok {
+		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", share.ID())
+	}
+	shareholderAbsRows := shareholderAbsRowsSet.List()
+	slices.Sort(shareholderAbsRows)
+	reconPositions := make([]int, len(shareholderAbsRows))
+
+	// Say the full MSP has 10 rows, quorum is {1, 3}, and:
+	// - Shareholder 1 owns absolute rows [3, 6]
+	// - Shareholder 3 owns absolute rows [0, 8]
+	// Then:
+	//   allQuorumRows = [0, 3, 6, 8]   (sorted)
+	//   reconVec      has 4 entries, indexed 0..3
+	//     reconVec[0] = coeff for abs row 0
+	//     reconVec[1] = coeff for abs row 3
+	//     reconVec[2] = coeff for abs row 6
+	//     reconVec[3] = coeff for abs row 8
+	//   For shareholder 1 with shareholderAbsRows = [3, 6]:
+	//   BinarySearch([0,3,6,8], 3) → pos=1
+	//   BinarySearch([0,3,6,8], 6) → pos=2
+	//   reconPositions = [1, 2]
+	// BinarySearch returns the position of the value within allQuorumRows,
+	for i, absRow := range shareholderAbsRows {
+		pos, found := slices.BinarySearch(allQuorumRows, absRow)
+		if !found {
+			return nil, sharing.ErrFailed.WithMessage("shareholder row %d not found in quorum rows", absRow)
+		}
+		reconPositions[i] = pos
+	}
+
+	reconSubVec, err := reconVec.SubMatrixGivenRows(reconPositions...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to extract reconstruction vector coefficients for share's rows")
+	}
+
+	// shareCol already contains exactly this shareholder's values in ascending
+	// row order, so the dot product pairs entries correctly.
+	additiveShareValue, err := reconSubVec.DotProduct(shareCol)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute additive share value as dot product")
+	}
+
+	additiveShare, err := additive.NewShare(share.ID(), additiveShareValue, quorum)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create additive share from converted value")
+	}
+	return additiveShare, nil
 }
