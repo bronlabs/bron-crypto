@@ -291,7 +291,7 @@ func TestInducedMSPByThreshold_RowMapping(t *testing.T) {
 	htr := m.HoldersToRows()
 
 	// Each row maps to exactly one shareholder.
-	require.Equal(t, rth.Size(), len(ids))
+	require.Len(t, ids, rth.Size())
 	for i := range ids {
 		id, ok := rth.Get(i)
 		require.True(t, ok, "row %d must have a holder mapping", i)
@@ -301,7 +301,7 @@ func TestInducedMSPByThreshold_RowMapping(t *testing.T) {
 	// Each shareholder maps to exactly one row (threshold MSP is one-row-per-party).
 	holderSet := hashset.NewComparable[ID]()
 	for id, rows := range htr.Iter() {
-		require.Equal(t, rows.Size(), 1, "shareholder %d should own exactly one row", id)
+		require.Equal(t, 1, rows.Size(), "shareholder %d should own exactly one row", id)
 		holderSet.Add(id)
 	}
 	require.True(t, holderSet.Freeze().Equal(ac.Shareholders()))
