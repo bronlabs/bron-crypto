@@ -75,14 +75,17 @@ func Test_Interpolate_InputValidation(t *testing.T) {
 	one := field.FromUint64(1)
 
 	t.Run("empty_inputs", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.Interpolate([]*k256.Scalar{}, []uint64{}, []*k256.Scalar{})
 		require.Error(t, err)
 	})
 	t.Run("mismatched_xs_js", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.Interpolate([]*k256.Scalar{one}, []uint64{0, 1}, []*k256.Scalar{one})
 		require.Error(t, err)
 	})
 	t.Run("mismatched_xs_ys", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.Interpolate([]*k256.Scalar{one}, []uint64{0}, []*k256.Scalar{one, one})
 		require.Error(t, err)
 	})
@@ -96,14 +99,17 @@ func Test_InterpolateInExponent_InputValidation(t *testing.T) {
 	g := group.Generator()
 
 	t.Run("empty_inputs", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.InterpolateInExponent([]*k256.Scalar{}, []uint64{}, []*k256.Point{})
 		require.Error(t, err)
 	})
 	t.Run("mismatched_xs_js", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.InterpolateInExponent([]*k256.Scalar{one}, []uint64{0, 1}, []*k256.Point{g})
 		require.Error(t, err)
 	})
 	t.Run("mismatched_xs_ys", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.InterpolateInExponent([]*k256.Scalar{one}, []uint64{0}, []*k256.Point{g, g})
 		require.Error(t, err)
 	})
@@ -116,14 +122,17 @@ func Test_BuildVandermondeMatrix_InputValidation(t *testing.T) {
 	one := field.FromUint64(1)
 
 	t.Run("mismatched_lengths", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.BuildVandermondeMatrix([]*k256.Scalar{one}, []uint64{0, 1}, 2)
 		require.Error(t, err)
 	})
 	t.Run("zero_cols", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.BuildVandermondeMatrix([]*k256.Scalar{one}, []uint64{0}, 0)
 		require.Error(t, err)
 	})
 	t.Run("negative_cols", func(t *testing.T) {
+		t.Parallel()
 		_, err := birkhoff.BuildVandermondeMatrix([]*k256.Scalar{one}, []uint64{0}, -1)
 		require.Error(t, err)
 	})

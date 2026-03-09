@@ -276,5 +276,4 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Hie
 		return nil, errs.Wrap(err).WithMessage("failed to create MSP from threshold access structure")
 	}
 	return out, nil
-
 }

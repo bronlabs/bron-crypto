@@ -376,7 +376,7 @@ func TestInducedMSP_ReconstructionVectorValid(t *testing.T) {
 
 					rows, cols := recVec.Dimensions()
 					require.Equal(t, 1, cols)
-					require.Greater(t, rows, 0)
+					require.Positive(t, rows)
 				})
 			}
 		})
