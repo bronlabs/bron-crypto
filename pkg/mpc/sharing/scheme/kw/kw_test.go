@@ -29,17 +29,17 @@ func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
 	return hashset.NewComparable(ids...).Freeze()
 }
 
-func newKWScheme[FE algebra.PrimeFieldElement[FE]](t *testing.T, f algebra.PrimeField[FE], ac accessstructures.Linear) *kw.Scheme[FE] {
-	t.Helper()
+func newKWScheme[FE algebra.PrimeFieldElement[FE]](tb testing.TB, f algebra.PrimeField[FE], ac accessstructures.Linear) *kw.Scheme[FE] {
+	tb.Helper()
 	scheme, err := kw.NewScheme(f, ac)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return scheme
 }
 
-func dealAndCollect[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *kw.Scheme[FE], secret *kw.Secret[FE]) map[sharing.ID]*kw.Share[FE] {
-	t.Helper()
+func dealAndCollect[FE algebra.PrimeFieldElement[FE]](tb testing.TB, scheme *kw.Scheme[FE], secret *kw.Secret[FE]) map[sharing.ID]*kw.Share[FE] {
+	tb.Helper()
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	m := make(map[sharing.ID]*kw.Share[FE])
 	for id, sh := range out.Shares().Iter() {
 		m[id] = sh

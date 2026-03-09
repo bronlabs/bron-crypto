@@ -36,7 +36,7 @@ func BenchmarkDeal(b *testing.B) {
 		b.Run(config.name, func(b *testing.B) {
 			ac, err := threshold.NewThresholdAccessStructure(config.threshold, sharing.NewOrdinalShareholderSet(config.total))
 			require.NoError(b, err)
-			scheme := newKWScheme(&testing.T{}, field, ac)
+			scheme := newKWScheme(b, field, ac)
 
 			secret := kw.NewSecret(field.FromUint64(42))
 
@@ -58,10 +58,10 @@ func BenchmarkReconstruct(b *testing.B) {
 		b.Run(config.name, func(b *testing.B) {
 			ac, err := threshold.NewThresholdAccessStructure(config.threshold, sharing.NewOrdinalShareholderSet(config.total))
 			require.NoError(b, err)
-			scheme := newKWScheme(&testing.T{}, field, ac)
+			scheme := newKWScheme(b, field, ac)
 
 			secret := kw.NewSecret(field.FromUint64(42))
-			shares := dealAndCollect(&testing.T{}, scheme, secret)
+			shares := dealAndCollect(b, scheme, secret)
 
 			// Pick exactly threshold shares.
 			qualifiedIDs := make([]sharing.ID, 0, config.threshold)
@@ -91,10 +91,10 @@ func BenchmarkConvertShareToAdditive(b *testing.B) {
 		b.Run(config.name, func(b *testing.B) {
 			ac, err := threshold.NewThresholdAccessStructure(config.threshold, sharing.NewOrdinalShareholderSet(config.total))
 			require.NoError(b, err)
-			scheme := newKWScheme(&testing.T{}, field, ac)
+			scheme := newKWScheme(b, field, ac)
 
 			secret := kw.NewSecret(field.FromUint64(42))
-			shares := dealAndCollect(&testing.T{}, scheme, secret)
+			shares := dealAndCollect(b, scheme, secret)
 
 			quorum, err := unanimity.NewUnanimityAccessStructure(ac.Shareholders())
 			require.NoError(b, err)
