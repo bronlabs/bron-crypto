@@ -18,7 +18,11 @@ ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
 
 ## Status
 
-MSP induction and maximal unqualified set enumeration are not yet implemented.
+MSP induction is implemented via `InducedMSP`, which constructs a monotone span programme
+from the Birkhoff-Vandermonde matrix. This enables hierarchical access structures to be
+used with the KW MSP-based secret sharing scheme.
+
+Maximal unqualified set enumeration is not yet implemented.
 
 ## Reference
 

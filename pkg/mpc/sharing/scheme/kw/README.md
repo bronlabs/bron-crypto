@@ -17,8 +17,7 @@ Any `accessstructures.Linear` implementation, including:
 - **Threshold** — (t, n) quorums
 - **Unanimity** — all-or-nothing (n-of-n)
 - **CNF** — conjunctive normal form (specified by maximal unqualified sets)
-
-Hierarchical conjunctive threshold structures are not yet supported (MSP induction pending).
+- **Hierarchical** — hierarchical conjunctive threshold (via Birkhoff-Vandermonde MSP induction)
 
 ## Homomorphic Properties
 
