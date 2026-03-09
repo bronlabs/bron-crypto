@@ -1163,39 +1163,3 @@ func TestConvertShareToAdditive_QuorumNotQualified(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, sharing.ErrMembership)
 }
-
-// ---------------------------------------------------------------------------
-// formatting helper
-// ---------------------------------------------------------------------------
-
-func formatIDs(ids []sharing.ID) string {
-	s := "{"
-	for i, id := range ids {
-		if i > 0 {
-			s += ","
-		}
-		s += string(rune('0' + id%10))
-		if id >= 10 {
-			// just use Sprintf for multi-digit
-			s = ""
-			for j, jd := range ids {
-				if j > 0 {
-					s += ","
-				}
-				s += func(n sharing.ID) string {
-					if n == 0 {
-						return "0"
-					}
-					r := ""
-					for n > 0 {
-						r = string(rune('0'+n%10)) + r
-						n /= 10
-					}
-					return r
-				}(jd)
-			}
-			return "{" + s + "}"
-		}
-	}
-	return s + "}"
-}
