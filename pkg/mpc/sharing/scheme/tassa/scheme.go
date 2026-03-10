@@ -138,8 +138,8 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 	var ys []F
 	for _, id := range quorum {
 		xs = append(xs, field.FromUint64(uint64(id)))
-		j, ok := s.accessStructure.Rank(id)
-		if !ok {
+		j, err := s.accessStructure.Rank(id)
+		if err != nil {
 			return nil, sharing.ErrFailed.WithMessage("invalid shareholder ID %d", id)
 		}
 		js = append(js, uint64(j))
@@ -291,8 +291,8 @@ func (s *Scheme[F]) buildMatrix(sortedQuorum []sharing.ID) (*mat.SquareMatrix[F]
 	var jays []uint64
 	for _, id := range sortedQuorum {
 		eyes = append(eyes, s.field.FromUint64(uint64(id)))
-		j, ok := s.accessStructure.Rank(id)
-		if !ok {
+		j, err := s.accessStructure.Rank(id)
+		if err != nil {
 			return nil, sharing.ErrFailed.WithMessage("invalid shareholder ID %d", id)
 		}
 		jays = append(jays, uint64(j))

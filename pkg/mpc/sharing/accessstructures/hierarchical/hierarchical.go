@@ -119,16 +119,15 @@ func (*HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[d
 	panic("not implemented")
 }
 
-// Rank returns the hierarchical level of a shareholder ID, or false if not found.
-func (h *HierarchicalConjunctiveThreshold) Rank(id ID) (int, bool) {
+func (h *HierarchicalConjunctiveThreshold) Rank(id ID) (int, error) {
 	r := 0
 	for _, level := range h.Levels() {
 		if level.Shareholders().Contains(id) {
-			return r, true
+			return r, nil
 		}
 		r = level.Threshold()
 	}
-	return 0, false
+	return 0, ErrMembership.WithMessage("shareholder ID not found")
 }
 
 // MarshalCBOR serialises the hierarchical access structure.
@@ -253,8 +252,8 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Hie
 	var jays []uint64
 	for _, id := range shareHolders {
 		eyes = append(eyes, f.FromUint64(uint64(id)))
-		j, ok := ac.Rank(id)
-		if !ok {
+		j, err := ac.Rank(id)
+		if err != nil {
 			return nil, ErrMembership.WithMessage("invalid shareholder ID %d", id)
 		}
 		jays = append(jays, uint64(j))

@@ -479,8 +479,8 @@ func TestInducedMSP_RankConsistency(t *testing.T) {
 		5: 2, 6: 2,
 	}
 	for id, expectedRank := range expectedRanks {
-		rank, ok := fx.ac.Rank(id)
-		require.True(t, ok, "rank should exist for ID %d", id)
+		rank, err := fx.ac.Rank(id)
+		require.NoError(t, err, "Rank should not error for valid ID %d", id)
 		require.Equal(t, expectedRank, rank, "rank mismatch for ID %d", id)
 	}
 }
