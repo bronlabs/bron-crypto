@@ -7,6 +7,6 @@
 //
 // CNF is the canonical target representation for MSP induction of arbitrary
 // linear access structures: [ConvertToCNF] materialises any [Linear] access
-// structure into CNF, and [InducedMSPByCNF] builds the corresponding monotone
+// structure into CNF, and [InducedMSP] builds the corresponding monotone
 // span programme.
 package cnf

@@ -2,13 +2,18 @@ package hierarchical
 
 import (
 	"iter"
+	"math"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/birkhoff"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
@@ -82,6 +87,10 @@ func (h *HierarchicalConjunctiveThreshold) Levels() []*ThresholdLevel {
 	return h.levels
 }
 
+func (h *HierarchicalConjunctiveThreshold) Thresholds() []int {
+	return sliceutils.Map(h.levels, func(l *ThresholdLevel) int { return l.Threshold() })
+}
+
 // IsQualified reports whether ids satisfy every cumulative level threshold.
 func (h *HierarchicalConjunctiveThreshold) IsQualified(ids ...ID) bool {
 	partiesSet := hashset.NewComparable(ids...)
@@ -108,6 +117,17 @@ func (h *HierarchicalConjunctiveThreshold) Shareholders() ds.Set[ID] {
 // MaximalUnqualifiedSetsIter streams all maximal unqualified sets.
 func (*HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
 	panic("not implemented")
+}
+
+func (h *HierarchicalConjunctiveThreshold) Rank(id ID) (int, error) {
+	r := 0
+	for _, level := range h.Levels() {
+		if level.Shareholders().Contains(id) {
+			return r, nil
+		}
+		r = level.Threshold()
+	}
+	return 0, ErrMembership.WithMessage("shareholder ID not found")
 }
 
 // MarshalCBOR serialises the hierarchical access structure.
@@ -182,44 +202,77 @@ func (l *ThresholdLevel) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// func BuildMatrix[E algebra.PrimeFieldElement[E]](field algebra.PrimeField[E], ac *HierarchicalConjunctiveThreshold, quorum ds.Set[ID]) (*mat.SquareMatrix[E], error) {
-// 	sortedQuorum := quorum.List()
-// 	slices.Sort(sortedQuorum)
+// CheckConstraints verifies that the hierarchical access structure satisfies necessary constraints for the sharing scheme to work correctly.
+func CheckConstraints[F algebra.PrimeFieldElement[F]](ac *HierarchicalConjunctiveThreshold, field algebra.PrimeField[F]) error {
+	// constraint 1: ids from lower level are strictly greater than ids from higher levels
+	prevMax := ID(0)
+	cummulativeIds := hashset.NewComparable[ID]()
+	for _, level := range ac.Levels() {
+		for id := range level.Shareholders().Iter() {
+			if id <= prevMax {
+				return ErrMembership.WithMessage("invalid shareholder ID %d", id)
+			}
+			cummulativeIds.Add(id)
+		}
+		allIds := cummulativeIds.List()
+		slices.Sort(allIds)
+		prevMax = allIds[len(allIds)-1]
+	}
 
-// 	var eyes []E
-// 	var jays []uint64
-// 	for _, id := range sortedQuorum {
-// 		eyes = append(eyes, field.FromUint64(uint64(id)))
-// 		j, ok := Rank(ac, id)
-// 		if !ok {
-// 			return nil, ErrMembership.WithMessage("invalid shareholder ID %d", id)
-// 		}
-// 		jays = append(jays, uint64(j))
-// 	}
-// 	m, err := birkhoff.BuildVandermondeMatrix(eyes, jays)
-// 	if err != nil {
-// 		return nil, errs.Wrap(err).WithMessage("could not create birkhoff matrix")
-// 	}
-// 	return m, nil
-// }.
+	// we increase n and k by one to accommodate "off by one error" caused by precision lost with float64
+	n := uint64(prevMax) + 1
+	k := uint64(ac.Levels()[len(ac.Levels())-1].Threshold()) + 1
+	q, _ := field.Order().Big().Float64()
 
-// func Rank(accessStructure *HierarchicalConjunctiveThreshold, id ID) (int, bool) {
-// 	if accessStructure == nil {
-// 		return 0, false
-// 	}
-// 	r := 0
-// 	for _, level := range accessStructure.Levels() {
-// 		if level.Shareholders().Contains(id) {
-// 			return r, true
-// 		}
-// 		r = level.Threshold()
-// 	}
-// 	return 0, false
-// }.
+	// for k > 20, k! overflows uint64. Since we do not work with big enough fields to support such a big k anyway,
+	// we reject.
+	if k > 20 {
+		// this will overflow factorial anyway
+		return ErrFailed.WithMessage("too big threshold")
+	}
 
-// InducedMSPByHierarchicalConjunctiveThreshold constructs a monotone span
-// programme from a hierarchical conjunctive threshold access structure.
-// Not yet implemented.
-func InducedMSPByHierarchicalConjunctiveThreshold[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *HierarchicalConjunctiveThreshold) (*msp.MSP[E], error) {
-	panic("not implemented")
+	// constraint 3 (equation 35): α(k)N^((k−1)(k−2)/2) < q = |F| where α(k) := 2^(−k+2) ·(k−1)^((k−1)/2) ·(k−1)!
+	alpha := math.Pow(2.0, 2.0-float64(k)) * math.Pow(float64(k-1), (float64(k)-1.0)/2.0) * float64(errs.Must1(mathutils.FactorialUint64(k-1)))
+	if (alpha * math.Pow(float64(n), (float64(k)-1.0)*(float64(k)-2)/2.0)) >= q {
+		return ErrFailed.WithMessage("constraint failed")
+	}
+
+	return nil
+}
+
+// InducedMSP constructs a monotone span programme from a hierarchical conjunctive threshold access structure.
+func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *HierarchicalConjunctiveThreshold) (*msp.MSP[E], error) {
+	shareHolders := ac.Shareholders().List()
+	slices.Sort(shareHolders)
+
+	thresholds := ac.Thresholds()
+	largestThreshold := thresholds[len(thresholds)-1]
+
+	var eyes []E
+	var jays []uint64
+	for _, id := range shareHolders {
+		eyes = append(eyes, f.FromUint64(uint64(id)))
+		j, err := ac.Rank(id)
+		if err != nil {
+			return nil, ErrMembership.WithMessage("invalid shareholder ID %d", id)
+		}
+		jays = append(jays, uint64(j))
+	}
+	matrix, err := birkhoff.BuildVandermondeMatrix(eyes, jays, largestThreshold)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create birkhoff matrix")
+	}
+	rowsToHolders := make(map[int]ID)
+	for i, id := range shareHolders {
+		rowsToHolders[i] = id
+	}
+	targetVector, err := matrix.Module().NewStandardUnit(0)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create target vector")
+	}
+	out, err := msp.NewMSP(matrix, rowsToHolders, targetVector)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create MSP from threshold access structure")
+	}
+	return out, nil
 }

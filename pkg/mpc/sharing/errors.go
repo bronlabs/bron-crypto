@@ -14,7 +14,7 @@ var (
 	// ErrMembership indicates an invalid shareholder membership relation.
 	ErrMembership = internal.ErrMembership
 	// ErrFailed indicates an operation failed.
-	ErrFailed = errs.New("failed")
+	ErrFailed = internal.ErrFailed
 	// ErrArgument indicates invalid function arguments.
 	ErrArgument = errs.New("invalid argument")
 	// ErrVerification indicates share or proof verification failed.

@@ -130,9 +130,9 @@ func (u *Unanimity) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// InducedByUnanimity constructs a monotone span programme from a unanimity
+// InducedMSP constructs a monotone span programme from a unanimity
 // access structure by converting to CNF form.
-func InducedByUnanimity[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Unanimity) (*msp.MSP[E], error) {
+func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Unanimity) (*msp.MSP[E], error) {
 	if f == nil {
 		return nil, ErrIsNil.WithMessage("field cannot be nil")
 	}
@@ -145,7 +145,7 @@ func InducedByUnanimity[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E],
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert unanimity to CNF")
 	}
-	out, err := cnf.InducedMSPByCNF(f, ascnf)
+	out, err := cnf.InducedMSP(f, ascnf)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to induce MSP from CNF conversion of unanimity")
 	}

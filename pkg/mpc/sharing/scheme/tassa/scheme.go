@@ -3,7 +3,6 @@ package tassa
 import (
 	"io"
 	"maps"
-	"math"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -16,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/birkhoff"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
@@ -76,7 +74,7 @@ func NewScheme[F algebra.PrimeFieldElement[F]](accessStructure *hierarchical.Hie
 	if accessStructure == nil || field == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure or field is nil")
 	}
-	if err := checkConstraints(accessStructure, field); err != nil {
+	if err := hierarchical.CheckConstraints(accessStructure, field); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid access structure")
 	}
 
@@ -140,8 +138,8 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 	var ys []F
 	for _, id := range quorum {
 		xs = append(xs, field.FromUint64(uint64(id)))
-		j, ok := s.rank(id)
-		if !ok {
+		j, err := s.accessStructure.Rank(id)
+		if err != nil {
 			return nil, sharing.ErrFailed.WithMessage("invalid shareholder ID %d", id)
 		}
 		js = append(js, uint64(j))
@@ -293,63 +291,19 @@ func (s *Scheme[F]) buildMatrix(sortedQuorum []sharing.ID) (*mat.SquareMatrix[F]
 	var jays []uint64
 	for _, id := range sortedQuorum {
 		eyes = append(eyes, s.field.FromUint64(uint64(id)))
-		j, ok := s.rank(id)
-		if !ok {
+		j, err := s.accessStructure.Rank(id)
+		if err != nil {
 			return nil, sharing.ErrFailed.WithMessage("invalid shareholder ID %d", id)
 		}
 		jays = append(jays, uint64(j))
 	}
-	m, err := birkhoff.BuildVandermondeMatrix(eyes, jays)
+	m, err := birkhoff.BuildVandermondeMatrix(eyes, jays, len(eyes))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create birkhoff matrix")
 	}
-	return m, nil
-}
-
-func (s *Scheme[F]) rank(id sharing.ID) (int, bool) {
-	r := 0
-	for _, level := range s.accessStructure.Levels() {
-		if level.Shareholders().Contains(id) {
-			return r, true
-		}
-		r = level.Threshold()
+	out, err := m.AsSquare()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert to square matrix")
 	}
-	return 0, false
-}
-
-func checkConstraints[F algebra.PrimeFieldElement[F]](ac *hierarchical.HierarchicalConjunctiveThreshold, field algebra.PrimeField[F]) error {
-	// constraint 1: ids from lower level are strictly greater than ids from higher levels
-	prevMax := sharing.ID(0)
-	cummulativeIds := hashset.NewComparable[sharing.ID]()
-	for _, level := range ac.Levels() {
-		for id := range level.Shareholders().Iter() {
-			if id <= prevMax {
-				return sharing.ErrMembership.WithMessage("invalid shareholder ID %d", id)
-			}
-			cummulativeIds.Add(id)
-		}
-		allIds := cummulativeIds.List()
-		slices.Sort(allIds)
-		prevMax = allIds[len(allIds)-1]
-	}
-
-	// we increase n and k by one to accommodate "off by one error" caused by precision lost with float64
-	n := uint64(prevMax) + 1
-	k := uint64(ac.Levels()[len(ac.Levels())-1].Threshold()) + 1
-	q, _ := field.Order().Big().Float64()
-
-	// for k > 20, k! overflows uint64. Since we do not work with big enough fields to support such a big k anyway,
-	// we reject.
-	if k > 20 {
-		// this will overflow factorial anyway
-		return sharing.ErrFailed.WithMessage("too big threshold")
-	}
-
-	// constraint 3 (equation 35): α(k)N^((k−1)(k−2)/2) < q = |F| where α(k) := 2^(−k+2) ·(k−1)^((k−1)/2) ·(k−1)!
-	alpha := math.Pow(2.0, 2.0-float64(k)) * math.Pow(float64(k-1), (float64(k)-1.0)/2.0) * float64(errs.Must1(mathutils.FactorialUint64(k-1)))
-	if (alpha * math.Pow(float64(n), (float64(k)-1.0)*(float64(k)-2)/2.0)) >= q {
-		return sharing.ErrFailed.WithMessage("constraint failed")
-	}
-
-	return nil
+	return out, nil
 }

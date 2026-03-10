@@ -148,9 +148,9 @@ func (a *Threshold) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// InducedMSPByThreshold constructs an ideal monotone span programme from a
+// InducedMSP constructs an ideal monotone span programme from a
 // threshold access structure using a Vandermonde matrix.
-func InducedMSPByThreshold[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Threshold) (*msp.MSP[E], error) {
+func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Threshold) (*msp.MSP[E], error) {
 	if f == nil {
 		return nil, ErrIsNil.WithMessage("base field cannot be nil")
 	}

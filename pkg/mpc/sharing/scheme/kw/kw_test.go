@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
@@ -202,6 +203,61 @@ func largeThresholdFixture(t *testing.T) acFixture {
 	}
 }
 
+func hierarchicalTwoLevelFixture(t *testing.T) acFixture {
+	t.Helper()
+	// L0 {1,2,3} cumulative threshold=2, L1 {4,5,6} cumulative threshold=4.
+	ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(2, 1, 2, 3),
+		hierarchical.WithLevel(4, 4, 5, 6),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "hierarchical(2,4)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},       // 2 from L0, 2 from L1
+			{1, 2, 3, 4},       // 3 from L0, 1 from L1
+			{2, 3, 5, 6},       // 2 from L0, 2 from L1
+			{1, 2, 3, 4, 5, 6}, // everyone
+		},
+		unqualified: [][]sharing.ID{
+			{1, 4, 5},    // only 1 from L0
+			{4, 5, 6},    // 0 from L0
+			{1, 2, 3},    // only 3 total, need 4
+			{3, 4, 5, 6}, // only 1 from L0
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6},
+	}
+}
+
+func hierarchicalThreeLevelFixture(t *testing.T) acFixture {
+	t.Helper()
+	// L0 {1,2} t=1, L1 {3,4} t=2, L2 {5,6} t=4.
+	ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(1, 1, 2),
+		hierarchical.WithLevel(2, 3, 4),
+		hierarchical.WithLevel(4, 5, 6),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "hierarchical(1,2,4)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 3, 5, 6},       // 1+1+2
+			{2, 4, 5, 6},       // 1+1+2
+			{1, 2, 3, 4},       // 2+2+0
+			{1, 2, 3, 4, 5, 6}, // everyone
+		},
+		unqualified: [][]sharing.ID{
+			{3, 5, 6}, // 0 from L0
+			{1, 5, 6}, // only 1 from L0∪L1
+			{5, 6},    // 0 from L0
+			{1, 3, 5}, // only 3 total, need 4
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6},
+	}
+}
+
 func allFixtures(t *testing.T) []acFixture {
 	t.Helper()
 	return []acFixture{
@@ -210,6 +266,8 @@ func allFixtures(t *testing.T) []acFixture {
 		cnfFixture(t),
 		cnfThreeClauseFixture(t),
 		largeThresholdFixture(t),
+		hierarchicalTwoLevelFixture(t),
+		hierarchicalThreeLevelFixture(t),
 	}
 }
 

@@ -157,14 +157,14 @@ func TestInducedMSPByCNF_Errors(t *testing.T) {
 
 	t.Run("nil field", func(t *testing.T) {
 		t.Parallel()
-		m, err := InducedMSPByCNF[*k256.Scalar](nil, c)
+		m, err := InducedMSP[*k256.Scalar](nil, c)
 		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, m)
 	})
 
 	t.Run("nil access structure", func(t *testing.T) {
 		t.Parallel()
-		m, err := InducedMSPByCNF(field, nil)
+		m, err := InducedMSP(field, nil)
 		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, m)
 	})
@@ -186,7 +186,7 @@ func TestInducedMSPByCNF_AcceptsAndRejects(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		m, err := InducedMSPByCNF(field, c)
+		m, err := InducedMSP(field, c)
 		require.NoError(t, err)
 
 		require.True(t, m.Accepts(1, 3))
@@ -213,7 +213,7 @@ func TestInducedMSPByCNF_AcceptsAndRejects(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		m, err := InducedMSPByCNF(field, c)
+		m, err := InducedMSP(field, c)
 		require.NoError(t, err)
 
 		// Exhaustively check: MSP acceptance matches CNF IsQualified.
@@ -235,7 +235,7 @@ func TestInducedMSPByCNF_AcceptsAndRejects(t *testing.T) {
 		c, err := ConvertToCNF(ac)
 		require.NoError(t, err)
 
-		m, err := InducedMSPByCNF(field, c)
+		m, err := InducedMSP(field, c)
 		require.NoError(t, err)
 
 		ids := []ID{1, 2, 3}
@@ -258,7 +258,7 @@ func TestInducedMSPByCNF_ReconstructionVector(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	m, err := InducedMSPByCNF(field, c)
+	m, err := InducedMSP(field, c)
 	require.NoError(t, err)
 
 	t.Run("qualified set succeeds", func(t *testing.T) {

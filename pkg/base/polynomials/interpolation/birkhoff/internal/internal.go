@@ -24,8 +24,14 @@ func (n Nodes[F, G]) Len() int {
 }
 
 func (n Nodes[F, G]) Less(i, j int) bool {
-	xi, _ := num.N().FromBytesBE(n[i].X.Cardinal().BytesBE())
-	xj, _ := num.N().FromBytesBE(n[j].X.Cardinal().BytesBE())
+	xi, err := num.N().FromCardinal(n[i].X.Cardinal())
+	if err != nil {
+		panic("birkhoff: could not convert cardinal to natural number: " + err.Error())
+	}
+	xj, err := num.N().FromCardinal(n[j].X.Cardinal())
+	if err != nil {
+		panic("birkhoff: could not convert cardinal to natural number: " + err.Error())
+	}
 	if xi.Compare(xj) < 0 {
 		return true
 	}

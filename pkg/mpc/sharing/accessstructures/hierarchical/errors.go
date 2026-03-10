@@ -11,6 +11,6 @@ var (
 	ErrValue = internal.ErrValue
 	// ErrMembership indicates an invalid shareholder membership relation.
 	ErrMembership = internal.ErrMembership
-	// ErrType indicates a type error.
-	ErrType = internal.ErrType
+	// ErrFailed indicates an operation failed.
+	ErrFailed = internal.ErrFailed
 )

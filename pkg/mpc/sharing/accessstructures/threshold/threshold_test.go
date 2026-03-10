@@ -226,14 +226,14 @@ func TestInducedMSPByThreshold_Errors(t *testing.T) {
 
 	t.Run("nil field", func(t *testing.T) {
 		t.Parallel()
-		m, err := InducedMSPByThreshold[*k256.Scalar](nil, ac)
+		m, err := InducedMSP[*k256.Scalar](nil, ac)
 		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, m)
 	})
 
 	t.Run("nil access structure", func(t *testing.T) {
 		t.Parallel()
-		m, err := InducedMSPByThreshold(field, nil)
+		m, err := InducedMSP(field, nil)
 		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, m)
 	})
@@ -262,7 +262,7 @@ func TestInducedMSPByThreshold_Dimensions(t *testing.T) {
 			ac, err := NewThresholdAccessStructure(tc.t_, hashset.NewComparable(tc.ids...).Freeze())
 			require.NoError(t, err)
 
-			m, err := InducedMSPByThreshold(field, ac)
+			m, err := InducedMSP(field, ac)
 			require.NoError(t, err)
 
 			n := len(tc.ids)
@@ -284,7 +284,7 @@ func TestInducedMSPByThreshold_RowMapping(t *testing.T) {
 	ac, err := NewThresholdAccessStructure(3, hashset.NewComparable(ids...).Freeze())
 	require.NoError(t, err)
 
-	m, err := InducedMSPByThreshold(field, ac)
+	m, err := InducedMSP(field, ac)
 	require.NoError(t, err)
 
 	rth := m.RowsToHolders()
@@ -314,7 +314,7 @@ func TestInducedMSPByThreshold_TargetVector(t *testing.T) {
 	ac, err := NewThresholdAccessStructure(2, hashset.NewComparable[ID](1, 2, 3).Freeze())
 	require.NoError(t, err)
 
-	m, err := InducedMSPByThreshold(field, ac)
+	m, err := InducedMSP(field, ac)
 	require.NoError(t, err)
 
 	tv := m.TargetVector()
@@ -355,7 +355,7 @@ func TestInducedMSPByThreshold_AcceptsQualifiedSets(t *testing.T) {
 
 			ac, err := NewThresholdAccessStructure(tc.t_, hashset.NewComparable(tc.ids...).Freeze())
 			require.NoError(t, err)
-			m, err := InducedMSPByThreshold(field, ac)
+			m, err := InducedMSP(field, ac)
 			require.NoError(t, err)
 
 			// Every subset of size >= t should be accepted.
@@ -390,7 +390,7 @@ func TestInducedMSPByThreshold_RejectsUnqualifiedSets(t *testing.T) {
 
 			ac, err := NewThresholdAccessStructure(tc.t_, hashset.NewComparable(tc.ids...).Freeze())
 			require.NoError(t, err)
-			m, err := InducedMSPByThreshold(field, ac)
+			m, err := InducedMSP(field, ac)
 			require.NoError(t, err)
 
 			// Every subset of size < t should be rejected.
@@ -411,7 +411,7 @@ func TestInducedMSPByThreshold_ReconstructionVector(t *testing.T) {
 	ids := []ID{1, 2, 3, 4}
 	ac, err := NewThresholdAccessStructure(3, hashset.NewComparable(ids...).Freeze())
 	require.NoError(t, err)
-	m, err := InducedMSPByThreshold(field, ac)
+	m, err := InducedMSP(field, ac)
 	require.NoError(t, err)
 
 	t.Run("qualified set succeeds", func(t *testing.T) {
@@ -452,7 +452,7 @@ func TestInducedMSPByThreshold_LargerIDs(t *testing.T) {
 	ac, err := NewThresholdAccessStructure(3, hashset.NewComparable(ids...).Freeze())
 	require.NoError(t, err)
 
-	m, err := InducedMSPByThreshold(field, ac)
+	m, err := InducedMSP(field, ac)
 	require.NoError(t, err)
 
 	// Spot-check: all 3-subsets accepted, all 2-subsets rejected.

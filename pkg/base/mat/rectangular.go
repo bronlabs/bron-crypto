@@ -80,6 +80,18 @@ func (m *Matrix[S]) Structure() algebra.Structure[*Matrix[S]] {
 	return m.Module()
 }
 
+// AsSquare returns a square [SquareMatrix] view sharing the same data.
+// Mutations to either matrix will be visible in both.
+func (m *Matrix[S]) AsSquare() (*SquareMatrix[S], error) {
+	if !m.IsSquare() {
+		return nil, ErrDimension.WithMessage("cannot view a non-square matrix as square: got %dx%d", m.m, m.n)
+	}
+	square := &SquareMatrix[S]{}
+	square.init(m.m, m.n)
+	square.v = m.v // note that we are not copying
+	return square, nil
+}
+
 // DotProduct computes the dot product of two vectors (row or column).
 // Both m and vector must be vectors (single row or single column) of the same length.
 func (m *Matrix[S]) DotProduct(vector *Matrix[S]) (S, error) {

@@ -43,23 +43,23 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac Line
 	var err error
 	switch ac := ac.(type) {
 	case *unanimity.Unanimity:
-		out, err = unanimity.InducedByUnanimity(f, ac)
+		out, err = unanimity.InducedMSP(f, ac)
 	case *threshold.Threshold:
-		out, err = threshold.InducedMSPByThreshold(f, ac)
+		out, err = threshold.InducedMSP(f, ac)
 	case *hierarchical.HierarchicalConjunctiveThreshold:
-		out, err = hierarchical.InducedMSPByHierarchicalConjunctiveThreshold(f, ac)
+		out, err = hierarchical.InducedMSP(f, ac)
 	case *cnf.CNF:
-		out, err = cnf.InducedMSPByCNF(f, ac)
+		out, err = cnf.InducedMSP(f, ac)
 	default:
 		var ascnf *cnf.CNF
 		ascnf, err = cnf.ConvertToCNF(ac)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to convert access structure to CNF for MSP induction")
 		}
-		out, err = cnf.InducedMSPByCNF(f, ascnf)
+		out, err = cnf.InducedMSP(f, ascnf)
 	}
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to induce MSP from unanimity access structure")
+		return nil, errs.Wrap(err).WithMessage("failed to induce MSP from access structure")
 	}
 	return out, nil
 }

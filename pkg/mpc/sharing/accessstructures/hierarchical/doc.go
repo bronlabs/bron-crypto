@@ -7,6 +7,7 @@
 // level and all preceding levels meets the level's threshold.
 //
 // This access structure is used by the Tassa hierarchical secret sharing
-// scheme. MSP induction and maximal unqualified set enumeration are not yet
-// implemented.
+// scheme and by the KW MSP-based scheme (via [InducedMSP], which constructs
+// an MSP from the Birkhoff-Vandermonde matrix). Maximal unqualified set
+// enumeration is not yet implemented.
 package hierarchical
