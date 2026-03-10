@@ -169,12 +169,18 @@ func reversedBytes(b []byte) []byte {
 func hashWithPrefix(prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Scalar, error) {
 	h := poseidon.NewLegacy()
 
-	// salt
+	// The prefix is absorbed as its own salted block in Mina's legacy construction.
+	// Make that block boundary explicit
 	pfe, err := prefix.ToBaseFieldElement()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not convert prefix to base field element")
 	}
-	h.Update(pfe)
+	prefixElements := make([]*pasta.PallasBaseFieldElement, h.Rate())
+	prefixElements[0] = pfe
+	for i := 1; i < h.Rate(); i++ {
+		prefixElements[i] = pasta.NewPallasBaseField().Zero()
+	}
+	h.Update(pfe, pasta.NewPallasBaseField().Zero())
 
 	// hashWithPrefix itself
 	h.Update(inputs...)

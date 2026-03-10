@@ -2,6 +2,7 @@ package poseidon
 
 import (
 	"hash"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -12,35 +13,33 @@ import (
 var ErrInvalidDataLength = errs.New("invalid data length")
 
 var (
-	_ hash.Hash = (*Poseidon)(nil)
+	_ hash.Cloner = (*Poseidon)(nil)
 )
 
 // Poseidon implements the Poseidon hash function over the Pallas base field.
 // It provides a sponge-based construction suitable for zero-knowledge proof systems.
 type Poseidon struct {
-	state  *state
-	offset int
+	pristine bool
+	state    *state
+	buf      []*pasta.PallasBaseFieldElement
 }
 
 // NewKimchi creates a new Poseidon hasher with Kimchi parameters used by Mina Protocol.
 func NewKimchi() *Poseidon {
 	return &Poseidon{
-		state:  newInitialState(poseidonParamsKimchiFp),
-		offset: 0,
+		pristine: true,
+		state:    newInitialState(poseidonParamsKimchiFp),
+		buf:      nil,
 	}
 }
 
 // NewLegacy creates a new Poseidon hasher with legacy parameters.
 func NewLegacy() *Poseidon {
 	return &Poseidon{
-		state:  newInitialState(poseidonParamsLegacyFp),
-		offset: 0,
+		pristine: true,
+		state:    newInitialState(poseidonParamsLegacyFp),
+		buf:      nil,
 	}
-}
-
-// NewLegacyHash creates a new Poseidon hasher with legacy parameters that implements hash.Hash.
-func NewLegacyHash() hash.Hash {
-	return NewLegacy()
 }
 
 // Rate returns the rate of the sponge construction (number of field elements absorbed per permutation).
@@ -51,32 +50,43 @@ func (p *Poseidon) Rate() int {
 // Update absorbs field elements into the sponge state and applies the permutation.
 func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) {
 	if len(xs) == 0 {
-		p.state.Permute()
 		return
 	}
 
-	for range len(xs) % p.Rate() {
-		xs = append(xs, pasta.NewPallasBaseField().Zero())
-	}
-
-	for blockIndex := 0; blockIndex < len(xs); blockIndex += p.Rate() {
+	p.pristine = false
+	p.buf = append(p.buf, xs...)
+	for len(p.buf) >= p.Rate() {
 		for i := range p.Rate() {
-			p.state.v[i] = p.state.v[i].Add(xs[blockIndex+i])
+			p.state.v[i] = p.state.v[i].Add(p.buf[i])
 		}
 		p.state.Permute()
+		p.buf = p.buf[p.Rate():]
 	}
-}
-
-// Hash resets the state, absorbs the input field elements, and returns the digest.
-func (p *Poseidon) Hash(xs ...*pasta.PallasBaseFieldElement) *pasta.PallasBaseFieldElement {
-	p.state = newInitialState(p.state.parameters)
-	p.Update(xs...)
-	return p.Digest()
 }
 
 // Digest returns the current hash output as the first element of the state.
 func (p *Poseidon) Digest() *pasta.PallasBaseFieldElement {
-	return p.state.v[0]
+	stateClone := p.state.Clone()
+	if p.pristine {
+		stateClone.Permute()
+		return stateClone.v[0]
+	}
+
+	if len(p.buf) > 0 {
+		for i, b := range p.buf {
+			stateClone.v[i] = stateClone.v[i].Add(b)
+		}
+		stateClone.Permute()
+	}
+	return stateClone.v[0]
+}
+
+func (p *Poseidon) CloneHasher() *Poseidon {
+	return &Poseidon{
+		pristine: p.pristine,
+		state:    p.state.Clone(),
+		buf:      slices.Clone(p.buf),
+	}
 }
 
 // Write implements io.Writer by converting bytes to field elements and hashing them.
@@ -95,23 +105,21 @@ func (p *Poseidon) Write(data []byte) (n int, err error) {
 		}
 		elems = append(elems, fe)
 	}
-	p.Hash(elems...)
+	p.Update(elems...)
 	return len(data), nil
 }
 
 // Sum appends the current hash to b and returns the resulting slice.
 // It implements hash.Hash.
 func (p *Poseidon) Sum(data []byte) []byte {
-	_, err := p.Write(data)
-	if err != nil {
-		panic(err)
-	}
-	return p.Digest().Bytes()
+	return append(data, p.Digest().Bytes()...)
 }
 
 // Reset resets the hasher to its initial state.
 func (p *Poseidon) Reset() {
+	p.pristine = true
 	p.state = newInitialState(p.state.parameters)
+	p.buf = nil
 }
 
 // Size returns the number of bytes in the hash output (32 bytes for a field element).
@@ -124,113 +132,6 @@ func (*Poseidon) BlockSize() int {
 	return 32
 }
 
-// exp mutates f by computing x^3, x^5, x^7 or x^-1 as described in
-// https://eprint.iacr.org/2019/458.pdf page 8
-func exp(f *pasta.PallasBaseFieldElement, power int) *pasta.PallasBaseFieldElement {
-	if power == 3 {
-		f2 := f.Square()
-		f3 := f.Mul(f2)
-		return f3
-	}
-	if power == 5 {
-		f2 := f.Square()
-		f4 := f2.Square()
-		f5 := f.Mul(f4)
-		return f5
-	}
-	if power == 7 {
-		f2 := f.Square()
-		f4 := f2.Square()
-		f6 := f2.Mul(f4)
-		f7 := f.Mul(f6)
-		return f7
-	}
-	if power == -1 {
-		fInv, err := f.TryInv()
-		if err != nil {
-			return pasta.NewPallasBaseField().Zero()
-		}
-		return fInv
-	}
-	return pasta.NewPallasBaseField().Zero()
-}
-
-type state struct {
-	v          []*pasta.PallasBaseFieldElement
-	parameters *Parameters
-}
-
-func newInitialState(parameters *Parameters) *state {
-	s := &state{
-		v:          make([]*pasta.PallasBaseFieldElement, parameters.stateSize),
-		parameters: parameters,
-	}
-	for i := range s.v {
-		s.v[i] = pasta.NewPallasBaseField().Zero()
-	}
-	return s
-}
-
-// Permute from: https://github.com/o1-labs/o1js-bindings/blob/df8c87ed6804465f79196fdff84e5147ae71e92d/crypto/poseidon.ts#L125
-// Standard Poseidon (without "partial rounds") goes like this:
-//
-//	ARK_0 -> SBOX -> MDS
-//
-// -> ARK_1 -> SBOX -> MDS
-// -> ...
-// -> ARK_{rounds - 1} -> SBOX -> MDS
-//
-// where all computation operates on a vector of field elements, the "state", and
-// - ARK  ... add vector of round constants to the state, element-wise (different vector in each round)
-// - SBOX ... raise state to a power, element-wise
-// - MDS  ... multiply the state by a constant matrix (same matrix every round)
-// (these operations are done modulo p of course)
-//
-// For constraint efficiency reasons, in Mina's implementation the first round constant addition is left out
-// and is done at the end instead, so that effectively the order of operations in each iteration is rotated:
-//
-//	SBOX -> MDS -> ARK_0
-//
-// -> SBOX -> MDS -> ARK_1
-// -> ...
-// -> SBOX -> MDS -> ARK_{rounds - 1}
-//
-// If `hasInitialRoundConstant` is true, another ARK step is added at the beginning.
-//
-// See also Snarky.Sponge.Poseidon.block_cipher.
-func (s *state) Permute() {
-	roundKeysOffset := 0
-	if s.parameters.hashInitialRoundConstant {
-		for i := range s.parameters.stateSize {
-			s.v[i] = s.v[i].Add(s.parameters.roundConstants[0][i])
-		}
-		roundKeysOffset = 1
-	}
-	for round := range s.parameters.fullRounds {
-		s.sbox()
-		s.mds()
-		s.ark(round, roundKeysOffset)
-	}
-}
-
-func (s *state) sbox() {
-	for i := range s.parameters.stateSize {
-		s.v[i] = exp(s.v[i], s.parameters.power)
-	}
-}
-
-func (s *state) mds() {
-	state2 := newInitialState(s.parameters)
-	for row := range s.parameters.stateSize {
-		for col := range s.parameters.stateSize {
-			state2.v[row] = state2.v[row].Add(s.v[col].Mul(s.parameters.mds[row][col]))
-		}
-	}
-	copy(s.v, state2.v)
-}
-
-func (s *state) ark(round, offset int) {
-	for i := range s.parameters.stateSize {
-		s.v[i] = s.v[i].Add(s.parameters.roundConstants[round+offset][i])
-	}
+func (p *Poseidon) Clone() (hash.Cloner, error) {
+	return p.CloneHasher(), nil
 }

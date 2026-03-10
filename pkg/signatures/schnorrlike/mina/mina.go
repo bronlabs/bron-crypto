@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -34,7 +35,7 @@ type (
 )
 
 var (
-	hashFunc = poseidon.NewLegacyHash
+	hashFunc = hashing.HashFuncTypeErase(poseidon.NewLegacy)
 	group    = pasta.NewPallasCurve()
 	sf       = pasta.NewPallasScalarField()
 
