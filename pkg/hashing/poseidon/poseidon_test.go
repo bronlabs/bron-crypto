@@ -4,100 +4,34 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
+
+	_ "embed"
 )
 
-const vectorsDir = "./vectors"
+//go:embed vectors/legacy.json
+var legacyVectors string
 
-type testVectorFile struct {
-	Name        string       `json:"name"`
-	Source      string       `json:"source"`
-	TestVectors []testVector `json:"test_vectors"`
-}
-
-type testVector struct {
-	Input  []string `json:"input"`
-	Output string   `json:"output"`
-}
+//go:embed vectors/kimchi.json
+var kimchiVectors string
 
 func TestPoseidonLegacy(t *testing.T) {
 	t.Parallel()
-	runTestVectors(t, "legacy.json", poseidon.NewLegacy)
+	runTestVectors(t, legacyVectors, poseidon.NewLegacy)
 }
 
 func TestPoseidonKimchi(t *testing.T) {
 	t.Parallel()
 	t.Skip("fails for now - known issue with round constants count")
-	runTestVectors(t, "kimchi.json", poseidon.NewKimchi)
-}
-
-func runTestVectors(t *testing.T, fileName string, hasherFactory func() *poseidon.Poseidon) {
-	t.Helper()
-
-	// Load test vectors
-	content, err := os.ReadFile(filepath.Join(vectorsDir, fileName))
-	require.NoError(t, err, "failed to read test vector file")
-
-	var vectors testVectorFile
-	err = json.Unmarshal(content, &vectors)
-	require.NoError(t, err, "failed to unmarshal test vectors")
-
-	t.Logf("Running %s test vectors from %s", vectors.Name, vectors.Source)
-
-	// Run each test vector
-	for i, vector := range vectors.TestVectors {
-		t.Run(fmt.Sprintf("vector_%d_inputs_%d", i, len(vector.Input)), func(t *testing.T) {
-			// Parse input field elements
-			inputs := make([]*pasta.PallasBaseFieldElement, len(vector.Input))
-			for j, inputHex := range vector.Input {
-				inputs[j] = parseFieldElement(t, inputHex)
-			}
-
-			// Parse expected output
-			expected := parseFieldElement(t, vector.Output)
-
-			// Create hasher and compute hash
-			hasher := hasherFactory()
-			actual := hasher.Hash(inputs...)
-
-			// Verify result
-			require.True(t, actual.Equal(expected),
-				"hash mismatch for test vector %d: expected %s, got %s",
-				i, vector.Output, hex.EncodeToString(reverseBytes(actual.Bytes())))
-		})
-	}
-}
-
-func parseFieldElement(t *testing.T, hexStr string) *pasta.PallasBaseFieldElement {
-	t.Helper()
-
-	// Decode hex string
-	bytes, err := hex.DecodeString(hexStr)
-	require.NoError(t, err, "failed to decode hex string: %s", hexStr)
-
-	// Reverse bytes for little-endian encoding
-	reversed := reverseBytes(bytes)
-
-	// Create field element from bytes
-	fe, err := pasta.NewPallasBaseField().FromWideBytes(reversed)
-	require.NoError(t, err, "failed to create field element from bytes")
-
-	return fe
-}
-
-func reverseBytes(b []byte) []byte {
-	result := make([]byte, len(b))
-	for i := range b {
-		result[i] = b[len(b)-1-i]
-	}
-	return result
+	runTestVectors(t, kimchiVectors, poseidon.NewKimchi)
 }
 
 // Additional test for standard hash.Hash interface
@@ -127,6 +61,62 @@ func TestPoseidonHashInterface(t *testing.T) {
 	// Test Sum
 	sum := h.Sum(nil)
 	require.Len(t, sum, 32)
+
+	t.Run("should accumulate", func(t *testing.T) {
+		t.Parallel()
+
+		prng := pcg.NewRandomised()
+		x1, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
+		x2, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
+
+		h1 := hashing.HashFuncTypeErase(poseidon.NewLegacy)()
+		h1.Write(slices.Concat(x1.Bytes(), x2.Bytes()))
+		d1 := h1.Sum(nil)
+
+		h2 := hashing.HashFuncTypeErase(poseidon.NewLegacy)()
+		h2.Write(x1.Bytes())
+		h2.Write(x2.Bytes())
+		d2 := h2.Sum(nil)
+
+		require.Equal(t, d1, d2)
+	})
+
+	t.Run("should preserve state", func(t *testing.T) {
+		t.Parallel()
+
+		prng := pcg.NewRandomised()
+		x1, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
+		x2, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
+
+		p := poseidon.NewLegacy()
+		p.Update(x1, x2)
+		d1 := p.Digest()
+		p.Sum([]byte("qwertyuiqwertyuiqwertyuiqwertyui"))
+		d2 := p.Digest()
+
+		require.Equal(t, d1, d2)
+	})
+
+	t.Run("should prepend prefix", func(t *testing.T) {
+		t.Parallel()
+
+		prng := pcg.NewRandomised()
+		x1, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
+		x2, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
+
+		prefix := []byte("qwertyuiqwertyuiqwertyuiqwertyui")
+		p := poseidon.NewLegacy()
+		p.Update(x1, x2)
+		d := p.Sum([]byte("qwertyuiqwertyuiqwertyuiqwertyui"))
+
+		require.Equal(t, d[:32], prefix)
+	})
 }
 
 // Test empty input edge case specifically
@@ -155,7 +145,7 @@ func TestPoseidonEmptyInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			hasher := tc.hasher()
-			result := hasher.Hash()
+			result := hasher.Digest()
 			expected := parseFieldElement(t, tc.expected)
 			require.True(t, result.Equal(expected))
 		})
@@ -169,6 +159,51 @@ func BenchmarkPoseidonLegacy(b *testing.B) {
 
 func BenchmarkPoseidonKimchi(b *testing.B) {
 	benchmarkPoseidon(b, poseidon.NewKimchi)
+}
+
+type testVectorFile struct {
+	Name        string       `json:"name"`
+	Source      string       `json:"source"`
+	TestVectors []testVector `json:"test_vectors"`
+}
+
+type testVector struct {
+	Input  []string `json:"input"`
+	Output string   `json:"output"`
+}
+
+func runTestVectors(t *testing.T, content string, hasherFactory func() *poseidon.Poseidon) {
+	t.Helper()
+
+	var vectors testVectorFile
+	err := json.Unmarshal([]byte(content), &vectors)
+	require.NoError(t, err, "failed to unmarshal test vectors")
+
+	t.Logf("Running %s test vectors from %s", vectors.Name, vectors.Source)
+
+	// Run each test vector
+	for i, vector := range vectors.TestVectors {
+		t.Run(fmt.Sprintf("vector_%d_inputs_%d", i, len(vector.Input)), func(t *testing.T) {
+			// Parse input field elements
+			inputs := make([]*pasta.PallasBaseFieldElement, len(vector.Input))
+			for j, inputHex := range vector.Input {
+				inputs[j] = parseFieldElement(t, inputHex)
+			}
+
+			// Parse expected output
+			expected := parseFieldElement(t, vector.Output)
+
+			// Create hasher and compute hash
+			hasher := hasherFactory()
+			hasher.Update(inputs...)
+			actual := hasher.Digest()
+
+			// Verify result
+			require.True(t, actual.Equal(expected),
+				"hash mismatch for test vector %d: expected %s, got %s",
+				i, vector.Output, hex.EncodeToString(reverseBytes(actual.Bytes())))
+		})
+	}
 }
 
 func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
@@ -186,8 +221,34 @@ func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
 			b.ResetTimer()
 			for range b.N {
 				hasher := hasherFactory()
-				_ = hasher.Hash(inputs...)
+				hasher.Update(inputs...)
+				_ = hasher.Digest()
 			}
 		})
 	}
+}
+
+func parseFieldElement(t *testing.T, hexStr string) *pasta.PallasBaseFieldElement {
+	t.Helper()
+
+	// Decode hex string
+	bytes, err := hex.DecodeString(hexStr)
+	require.NoError(t, err, "failed to decode hex string: %s", hexStr)
+
+	// Reverse bytes for little-endian encoding
+	reversed := reverseBytes(bytes)
+
+	// Create field element from bytes
+	fe, err := pasta.NewPallasBaseField().FromWideBytes(reversed)
+	require.NoError(t, err, "failed to create field element from bytes")
+
+	return fe
+}
+
+func reverseBytes(b []byte) []byte {
+	result := make([]byte, len(b))
+	for i := range b {
+		result[i] = b[len(b)-1-i]
+	}
+	return result
 }
