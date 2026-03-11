@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
@@ -50,6 +51,8 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac Line
 		out, err = hierarchical.InducedMSP(f, ac)
 	case *cnf.CNF:
 		out, err = cnf.InducedMSP(f, ac)
+	case *boolexpr.ThresholdGateAccessStructure:
+		out, err = boolexpr.InducedMSP(f, ac)
 	default:
 		var ascnf *cnf.CNF
 		ascnf, err = cnf.ConvertToCNF(ac)
