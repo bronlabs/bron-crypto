@@ -6,9 +6,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
 func TestThresholdGateAccessStructureIsQualified(t *testing.T) {
@@ -104,6 +108,69 @@ func TestConvertExampleC(t *testing.T) {
 			a := as.IsQualified(ids...)
 			b := program.Accepts(ids...)
 			require.Equal(t, a, b)
+		}
+	})
+
+	t.Run("should share and reconstruct", func(t *testing.T) {
+		t.Parallel()
+
+		prng := pcg.NewRandomised()
+		scheme, err := kw.NewScheme(field, as)
+		require.NoError(t, err)
+
+		secretValue, err := field.Random(prng)
+		require.NoError(t, err)
+		dealerOutput, err := scheme.Deal(kw.NewSecret(secretValue), prng)
+		require.NoError(t, err)
+
+		// check all possibilities
+		for ids := range sliceutils.KCoveringCombinations(as.Shareholders().List(), 1) {
+			shares := make([]*kw.Share[*k256.Scalar], 0, len(ids))
+			for _, id := range ids {
+				share, ok := dealerOutput.Shares().Get(id)
+				require.True(t, ok)
+				shares = append(shares, share)
+			}
+
+			reconstructed, err := scheme.Reconstruct(shares...)
+			if as.IsQualified(ids...) {
+				require.NoError(t, err)
+				require.True(t, reconstructed.Value().Equal(secretValue))
+			} else {
+				require.Error(t, err)
+			}
+		}
+	})
+
+	t.Run("should convert to additive", func(t *testing.T) {
+		t.Parallel()
+
+		prng := pcg.NewRandomised()
+		scheme, err := kw.NewScheme(field, as)
+		require.NoError(t, err)
+
+		secretValue, err := field.Random(prng)
+		require.NoError(t, err)
+		dealerOutput, err := scheme.Deal(kw.NewSecret(secretValue), prng)
+		require.NoError(t, err)
+
+		// check all possibilities
+		for ids := range sliceutils.KCoveringCombinations(as.Shareholders().List(), 1) {
+			if !as.IsQualified(ids...) {
+				continue
+			}
+
+			sum := k256.NewScalarField().Zero()
+			quorum, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
+			require.NoError(t, err)
+			for _, id := range ids {
+				share, ok := dealerOutput.Shares().Get(id)
+				require.True(t, ok)
+				additiveShare, err := scheme.ConvertShareToAdditive(share, quorum)
+				require.NoError(t, err)
+				sum = sum.Add(additiveShare.Value())
+			}
+			require.True(t, secretValue.Equal(sum))
 		}
 	})
 }
