@@ -5,6 +5,8 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -44,9 +46,7 @@ func ID(id internal.ID) *Node {
 // Threshold constructs an internal threshold gate with the given threshold and
 // ordered children.
 //
-// The gate is satisfied when at least `threshold` of its children are
-// satisfied. The child order is significant for MSP induction because the
-// local interpolation points are assigned as 1, 2, ..., len(children).
+// The gate is satisfied when at least `threshold` of its children is satisfied.
 func Threshold(threshold int, children ...*Node) *Node {
 	//nolint:exhaustruct // only gate properties set
 	return &Node{
@@ -71,8 +71,7 @@ func Or(nodes ...*Node) *Node {
 	return Threshold(1, nodes...)
 }
 
-// ThresholdGateAccessStructure is an access structure represented as a rooted
-// threshold-gate tree.
+// ThresholdGateAccessStructure is an access structure represented as a threshold-gate tree.
 //
 // Internal nodes are threshold gates, leaves are shareholder attributes, and a
 // coalition is qualified when it satisfies the root gate.
@@ -82,22 +81,24 @@ type ThresholdGateAccessStructure struct {
 }
 
 // NewThresholdGateAccessStructure constructs an access structure from a
-// threshold-gate tree root.
+// threshold-gate tree.
 //
-// The shareholder universe is derived from all attribute leaves reachable from
-// the root.
-func NewThresholdGateAccessStructure(thresholdGateTreeRoot *Node) *ThresholdGateAccessStructure {
+// The shareholder universe is derived from all attribute leaves reachable from the root.
+func NewThresholdGateAccessStructure(thresholdGateTreeRoot *Node) (*ThresholdGateAccessStructure, error) {
+	if err := checkTree(thresholdGateTreeRoot); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid threshold-gate tree")
+	}
+
 	shareholders := make(map[internal.ID]bool)
 	allShareholders(thresholdGateTreeRoot, shareholders)
-
-	return &ThresholdGateAccessStructure{
+	as := &ThresholdGateAccessStructure{
 		root:         thresholdGateTreeRoot,
 		shareholders: shareholders,
 	}
+	return as, nil
 }
 
-// IsQualified reports whether the given shareholder IDs satisfy the threshold
-// gates from the leaves up to the root.
+// IsQualified reports whether the given shareholder IDs satisfy the threshold gates.
 func (a *ThresholdGateAccessStructure) IsQualified(ids ...internal.ID) bool {
 	shareholders := map[internal.ID]bool{}
 	for _, id := range ids {
@@ -112,10 +113,7 @@ func (a *ThresholdGateAccessStructure) Shareholders() ds.Set[internal.ID] {
 	return hashset.NewComparable(slices.Collect(maps.Keys(a.shareholders))...).Freeze()
 }
 
-// MaximalUnqualifiedSetsIter streams maximal unqualified sets of the access
-// structure.
-//
-// This method is not implemented yet and currently panics.
+// MaximalUnqualifiedSetsIter streams maximal unqualified sets of the access structure.
 func (*ThresholdGateAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[internal.ID]] {
 	// TODO implement me
 	panic("implement me")
@@ -127,6 +125,44 @@ func (*ThresholdGateAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Se
 // This equals the number of rows in the MSP produced by [InducedMSP].
 func (a *ThresholdGateAccessStructure) CountLeaves() int {
 	return treeCountLeaves(a.root)
+}
+
+func checkTree(node *Node) error {
+	if node == nil {
+		return internal.ErrIsNil.WithMessage("node is nil")
+	}
+	if node.kind == attribute {
+		if node.attr == 0 {
+			return internal.ErrValue.WithMessage("sharing ID cannot be 0")
+		}
+		return nil
+	}
+	if node.kind == gate {
+		if node.threshold <= 0 {
+			return internal.ErrValue.WithMessage("threshold must be positive")
+		}
+		if node.threshold > len(node.children) {
+			return internal.ErrValue.WithMessage("threshold must be less than or equal to the number of children")
+		}
+		attrChildren := sliceutils.Filter(node.children, func(child *Node) bool { return child.kind == attribute })
+		uniqueAttrChildren := make(map[internal.ID]bool)
+		for _, child := range attrChildren {
+			uniqueAttrChildren[child.attr] = true
+		}
+		if len(uniqueAttrChildren) != len(attrChildren) {
+			return internal.ErrValue.WithMessage("threshold-gate tree must not contain duplicate attribute nodes")
+		}
+
+		for _, child := range node.children {
+			if err := checkTree(child); err != nil {
+
+				return err
+			}
+		}
+		return nil
+	}
+
+	return internal.ErrValue.WithMessage("unknown node kind")
 }
 
 func allShareholders(node *Node, shareholders map[internal.ID]bool) {

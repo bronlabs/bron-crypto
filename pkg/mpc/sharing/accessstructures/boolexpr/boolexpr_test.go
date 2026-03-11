@@ -14,7 +14,7 @@ import (
 func TestThresholdGateAccessStructureIsQualified(t *testing.T) {
 	t.Parallel()
 
-	as := boolexpr.NewThresholdGateAccessStructure(
+	as, err := boolexpr.NewThresholdGateAccessStructure(
 		boolexpr.Threshold(2,
 			boolexpr.Threshold(2,
 				boolexpr.ID(1),
@@ -33,14 +33,16 @@ func TestThresholdGateAccessStructureIsQualified(t *testing.T) {
 			),
 		),
 	)
-
+	require.NoError(t, err)
 	require.Equal(t, 9, as.Shareholders().Size())
 	require.True(t, as.IsQualified(1, 2, 5, 6))
 	require.False(t, as.IsQualified(1, 2, 3, 4))
 }
 
 func TestConvertExampleC(t *testing.T) {
-	as := boolexpr.NewThresholdGateAccessStructure(
+	t.Parallel()
+
+	as, err := boolexpr.NewThresholdGateAccessStructure(
 		boolexpr.Threshold(2,
 			boolexpr.Threshold(2,
 				boolexpr.ID(1),
@@ -62,6 +64,7 @@ func TestConvertExampleC(t *testing.T) {
 			),
 		),
 	)
+	require.NoError(t, err)
 
 	field := k256.NewScalarField()
 	program, err := boolexpr.InducedMSP(field, as)
