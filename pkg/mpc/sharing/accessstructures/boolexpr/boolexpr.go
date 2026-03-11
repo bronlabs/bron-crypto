@@ -29,6 +29,10 @@ type Node struct {
 	children  []*Node
 }
 
+// ID constructs an attribute leaf labelled by the given shareholder ID.
+//
+// Attribute leaves are the terminal nodes of a threshold-gate access tree and
+// correspond to the rows of the induced MSP.
 func ID(id internal.ID) *Node {
 	//nolint:exhaustruct // only attribute properties set
 	return &Node{
@@ -37,6 +41,12 @@ func ID(id internal.ID) *Node {
 	}
 }
 
+// Threshold constructs an internal threshold gate with the given threshold and
+// ordered children.
+//
+// The gate is satisfied when at least `threshold` of its children are
+// satisfied. The child order is significant for MSP induction because the
+// local interpolation points are assigned as 1, 2, ..., len(children).
 func Threshold(threshold int, children ...*Node) *Node {
 	//nolint:exhaustruct // only gate properties set
 	return &Node{
@@ -46,19 +56,36 @@ func Threshold(threshold int, children ...*Node) *Node {
 	}
 }
 
+// And constructs an AND gate over the provided children.
+//
+// This is shorthand for a threshold gate whose threshold equals the number of
+// children.
 func And(nodes ...*Node) *Node {
 	return Threshold(len(nodes), nodes...)
 }
 
+// Or constructs an OR gate over the provided children.
+//
+// This is shorthand for a 1-of-n threshold gate.
 func Or(nodes ...*Node) *Node {
 	return Threshold(1, nodes...)
 }
 
+// ThresholdGateAccessStructure is an access structure represented as a rooted
+// threshold-gate tree.
+//
+// Internal nodes are threshold gates, leaves are shareholder attributes, and a
+// coalition is qualified when it satisfies the root gate.
 type ThresholdGateAccessStructure struct {
 	root         *Node
 	shareholders map[internal.ID]bool
 }
 
+// NewThresholdGateAccessStructure constructs an access structure from a
+// threshold-gate tree root.
+//
+// The shareholder universe is derived from all attribute leaves reachable from
+// the root.
 func NewThresholdGateAccessStructure(thresholdGateTreeRoot *Node) *ThresholdGateAccessStructure {
 	shareholders := make(map[internal.ID]bool)
 	allShareholders(thresholdGateTreeRoot, shareholders)
@@ -69,6 +96,8 @@ func NewThresholdGateAccessStructure(thresholdGateTreeRoot *Node) *ThresholdGate
 	}
 }
 
+// IsQualified reports whether the given shareholder IDs satisfy the threshold
+// gates from the leaves up to the root.
 func (a *ThresholdGateAccessStructure) IsQualified(ids ...internal.ID) bool {
 	shareholders := map[internal.ID]bool{}
 	for _, id := range ids {
@@ -77,15 +106,25 @@ func (a *ThresholdGateAccessStructure) IsQualified(ids ...internal.ID) bool {
 	return treeEval(a.root, shareholders)
 }
 
+// Shareholders returns the set of all shareholder IDs that occur as attribute
+// leaves in the tree.
 func (a *ThresholdGateAccessStructure) Shareholders() ds.Set[internal.ID] {
 	return hashset.NewComparable(slices.Collect(maps.Keys(a.shareholders))...).Freeze()
 }
 
+// MaximalUnqualifiedSetsIter streams maximal unqualified sets of the access
+// structure.
+//
+// This method is not implemented yet and currently panics.
 func (*ThresholdGateAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[internal.ID]] {
 	// TODO implement me
 	panic("implement me")
 }
 
+// CountLeaves returns the number of attribute leaves in the threshold-gate
+// tree.
+//
+// This equals the number of rows in the MSP produced by [InducedMSP].
 func (a *ThresholdGateAccessStructure) CountLeaves() int {
 	return treeCountLeaves(a.root)
 }

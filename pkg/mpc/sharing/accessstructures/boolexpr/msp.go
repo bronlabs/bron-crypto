@@ -11,6 +11,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
+// InducedMSP constructs a monotone span programme induced by a threshold-gate
+// access tree.
+//
+// The construction follows Algorithm 1 of Liu, Cao, and Wong (ePrint
+// 2010/374): each threshold gate is expanded into a local Vandermonde-style
+// block, and the resulting matrix has one row per attribute leaf.
 func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *ThresholdGateAccessStructure) (*msp.MSP[E], error) {
 	m, rho, err := convert(f, ac)
 	if err != nil {
