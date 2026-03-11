@@ -12,6 +12,7 @@
 //   - [unanimity]: n-of-n access structures (all shareholders required)
 //   - [cnf]: access structures in conjunctive normal form
 //   - [hierarchical]: hierarchical conjunctive threshold access structures
+//   - [boolexpr]: access structures defined by threshold/and/or gate access trees
 //
 // The [InducedMSP] function dispatches to the appropriate MSP construction for
 // any Linear access structure.
