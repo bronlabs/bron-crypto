@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
@@ -258,6 +259,93 @@ func hierarchicalThreeLevelFixture(t *testing.T) acFixture {
 	}
 }
 
+func boolexprThreeBranchFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Threshold(2,
+			boolexpr.Threshold(2,
+				boolexpr.ID(1),
+				boolexpr.ID(2),
+				boolexpr.ID(3),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(4),
+				boolexpr.ID(5),
+				boolexpr.ID(6),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(7),
+				boolexpr.ID(8),
+				boolexpr.ID(9),
+			),
+		),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr(2-of-3 branches)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},
+			{1, 3, 7, 8},
+			{4, 5, 7, 9},
+			{1, 2, 4, 5, 7, 8},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{1, 2},
+			{1, 2, 3, 4},
+			{4, 7, 8},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	}
+}
+
+func boolexprExampleCFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Threshold(2,
+			boolexpr.Threshold(2,
+				boolexpr.ID(1),
+				boolexpr.ID(2),
+				boolexpr.ID(3),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(4),
+				boolexpr.ID(5),
+				boolexpr.ID(6),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(7),
+				boolexpr.ID(8),
+				boolexpr.Threshold(3,
+					boolexpr.ID(9),
+					boolexpr.ID(10),
+					boolexpr.ID(11),
+					boolexpr.ID(12),
+				),
+			),
+		),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr(example-c)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},
+			{1, 2, 7, 8},
+			{4, 5, 7, 9, 10, 11},
+			{1, 2, 8, 9, 10, 11},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 2, 3, 4},
+			{7, 9, 10, 11},
+			{1, 4, 7, 8},
+			{8, 9, 10},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+	}
+}
+
 func allFixtures(t *testing.T) []acFixture {
 	t.Helper()
 	return []acFixture{
@@ -268,6 +356,8 @@ func allFixtures(t *testing.T) []acFixture {
 		largeThresholdFixture(t),
 		hierarchicalTwoLevelFixture(t),
 		hierarchicalThreeLevelFixture(t),
+		boolexprThreeBranchFixture(t),
+		boolexprExampleCFixture(t),
 	}
 }
 
