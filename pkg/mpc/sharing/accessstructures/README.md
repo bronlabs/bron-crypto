@@ -18,6 +18,7 @@ An access structure specifies which subsets of shareholders are authorized to re
 | `cnf` | Conjunctive normal form | Specified by maximal unqualified sets |
 | `hierarchical` | Hierarchical conjunctive threshold | Ordered levels with cumulative thresholds |
 | `msp` | Monotone span programme | Linear-algebraic representation of access structures |
+| `booleanexpr` | Generalized Boolean Expressions | Threshold/AND/OR-gate access trees |
 
 ## MSP Induction
 

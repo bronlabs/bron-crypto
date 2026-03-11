@@ -203,7 +203,13 @@ func (l *ThresholdLevel) UnmarshalCBOR(data []byte) error {
 }
 
 // CheckConstraints verifies that the hierarchical access structure satisfies necessary constraints for the sharing scheme to work correctly.
-func CheckConstraints[F algebra.PrimeFieldElement[F]](ac *HierarchicalConjunctiveThreshold, field algebra.PrimeField[F]) error {
+func CheckConstraints[F algebra.PrimeFieldElement[F]](field algebra.PrimeField[F], ac *HierarchicalConjunctiveThreshold) error {
+	if field == nil {
+		return ErrIsNil.WithMessage("field cannot be nil")
+	}
+	if ac == nil {
+		return ErrIsNil.WithMessage("access structure cannot be nil")
+	}
 	// constraint 1: ids from lower level are strictly greater than ids from higher levels
 	prevMax := ID(0)
 	cummulativeIds := hashset.NewComparable[ID]()
@@ -242,6 +248,10 @@ func CheckConstraints[F algebra.PrimeFieldElement[F]](ac *HierarchicalConjunctiv
 
 // InducedMSP constructs a monotone span programme from a hierarchical conjunctive threshold access structure.
 func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *HierarchicalConjunctiveThreshold) (*msp.MSP[E], error) {
+	if err := CheckConstraints(f, ac); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid access structure for MSP induction")
+	}
+
 	shareHolders := ac.Shareholders().List()
 	slices.Sort(shareHolders)
 

@@ -74,7 +74,7 @@ func NewScheme[F algebra.PrimeFieldElement[F]](accessStructure *hierarchical.Hie
 	if accessStructure == nil || field == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure or field is nil")
 	}
-	if err := hierarchical.CheckConstraints(accessStructure, field); err != nil {
+	if err := hierarchical.CheckConstraints(field, accessStructure); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid access structure")
 	}
 
