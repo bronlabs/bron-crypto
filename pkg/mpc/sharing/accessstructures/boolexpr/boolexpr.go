@@ -155,7 +155,6 @@ func checkTree(node *Node) error {
 
 		for _, child := range node.children {
 			if err := checkTree(child); err != nil {
-
 				return err
 			}
 		}
