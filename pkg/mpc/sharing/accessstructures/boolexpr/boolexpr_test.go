@@ -43,6 +43,7 @@ func TestThresholdGateAccessStructureIsQualified(t *testing.T) {
 	require.False(t, as.IsQualified(1, 2, 3, 4))
 }
 
+// test against example from the paper (section C, page 22)
 func TestConvertExampleC(t *testing.T) {
 	t.Parallel()
 
