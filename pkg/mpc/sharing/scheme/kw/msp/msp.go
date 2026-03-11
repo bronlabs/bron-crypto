@@ -95,7 +95,7 @@ func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map
 	}, nil
 }
 
-// MSP is a monotone span program over a finite field. It encodes a monotone
+// MSP is a monotone span programme over a finite field. It encodes a monotone
 // access structure via a matrix M, a target vector t, and a labelling of rows
 // to shareholder IDs.
 type MSP[E algebra.FiniteFieldElement[E]] struct {
