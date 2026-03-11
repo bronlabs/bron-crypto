@@ -47,6 +47,7 @@ func convert[F algebra.PrimeFieldElement[F]](field algebra.PrimeField[F], as *Th
 		bigM[i] = field.Zero()
 	}
 	bigM[0] = field.One()
+
 	l := make([]*Node, leaves)
 	l[0] = as.root
 	m := 1
