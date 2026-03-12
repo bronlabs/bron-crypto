@@ -306,3 +306,14 @@ func (m *SquareMatrix[S]) Determinant() S {
 	}
 	return det.Mul(sign)
 }
+
+// findPivotRow returns the first row at or below startRow with a non-zero entry
+// in the given column, or -1 if none exists.
+func (m *SquareMatrix[S]) findPivotRow(col, startRow int) int {
+	for r := startRow; r < m.m; r++ {
+		if !m.v[m.idx(r, col)].IsZero() {
+			return r
+		}
+	}
+	return -1
+}

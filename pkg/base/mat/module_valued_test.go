@@ -651,6 +651,161 @@ func TestLiftMatrix(t *testing.T) {
 	})
 }
 
+// --- LeftAction ---
+
+func TestLeftAction(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+		// actor = [[1, 2], [3, 4]], x = [[G, 2G], [3G, 4G]]
+		// result[0,0] = x[0,0]·1 + x[1,0]·2 = G + 6G = 7G
+		// result[0,1] = x[0,1]·1 + x[1,1]·2 = 2G + 8G = 10G
+		// result[1,0] = x[0,0]·3 + x[1,0]·4 = 3G + 12G = 15G
+		// result[1,1] = x[0,1]·3 + x[1,1]·4 = 6G + 16G = 22G
+		actor := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		x := newMVMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		got, err := mat.LeftAction[P](actor, x)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMVMatrix(t, [][]uint64{{7, 10}, {15, 22}})))
+	})
+
+	t.Run("non_square", func(t *testing.T) {
+		t.Parallel()
+		// actor 2x3, x 3x1 → result 2x1
+		actor := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
+		x := newMVMatrix(t, [][]uint64{{1}, {2}, {3}})
+		got, err := mat.LeftAction[P](actor, x)
+		require.NoError(t, err)
+		// result[0,0] = 1·G + 2·2G + 3·3G = G + 4G + 9G = 14G
+		// result[1,0] = 4·G + 5·2G + 6·3G = 4G + 10G + 18G = 32G
+		require.True(t, got.Equal(newMVMatrix(t, [][]uint64{{14}, {32}})))
+	})
+
+	t.Run("identity_actor", func(t *testing.T) {
+		t.Parallel()
+		actor := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
+		x := newMVMatrix(t, [][]uint64{{5, 6}, {7, 8}})
+		got, err := mat.LeftAction[P](actor, x)
+		require.NoError(t, err)
+		require.True(t, got.Equal(x))
+	})
+
+	t.Run("zero_actor", func(t *testing.T) {
+		t.Parallel()
+		actor := newMatrix(t, [][]uint64{{0, 0}, {0, 0}})
+		x := newMVMatrix(t, [][]uint64{{5, 6}, {7, 8}})
+		got, err := mat.LeftAction[P](actor, x)
+		require.NoError(t, err)
+		require.True(t, got.IsOpIdentity())
+	})
+
+	t.Run("dimension_mismatch", func(t *testing.T) {
+		t.Parallel()
+		actor := newMatrix(t, [][]uint64{{1, 2}})
+		x := newMVMatrix(t, [][]uint64{{1, 2}, {3, 4}, {5, 6}})
+		_, err := mat.LeftAction[P](actor, x)
+		require.Error(t, err)
+	})
+
+	t.Run("nil_actor", func(t *testing.T) {
+		t.Parallel()
+		x := newMVMatrix(t, [][]uint64{{1, 2}})
+		_, err := mat.LeftAction[P](nil, x)
+		require.Error(t, err)
+	})
+
+	t.Run("nil_x", func(t *testing.T) {
+		t.Parallel()
+		actor := newMatrix(t, [][]uint64{{1, 2}})
+		_, err := mat.LeftAction[P](actor, nil)
+		require.Error(t, err)
+	})
+}
+
+// --- RightAction ---
+
+func TestRightAction(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+		// x = [[G, 2G], [3G, 4G]], actor = [[1, 2], [3, 4]]
+		// result[0,0] = x[0,0]·1 + x[0,1]·3 = G + 6G = 7G
+		// result[0,1] = x[0,0]·2 + x[0,1]·4 = 2G + 8G = 10G
+		// result[1,0] = x[1,0]·1 + x[1,1]·3 = 3G + 12G = 15G
+		// result[1,1] = x[1,0]·2 + x[1,1]·4 = 6G + 16G = 22G
+		x := newMVMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		actor := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
+		got, err := mat.RightAction[P](x, actor)
+		require.NoError(t, err)
+		require.True(t, got.Equal(newMVMatrix(t, [][]uint64{{7, 10}, {15, 22}})))
+	})
+
+	t.Run("non_square", func(t *testing.T) {
+		t.Parallel()
+		// x 1x3, actor 3x2 → result 1x2
+		x := newMVMatrix(t, [][]uint64{{1, 2, 3}})
+		actor := newMatrix(t, [][]uint64{{1, 4}, {2, 5}, {3, 6}})
+		got, err := mat.RightAction[P](x, actor)
+		require.NoError(t, err)
+		// result[0,0] = 1·G + 2·2G + 3·3G = G + 4G + 9G = 14G
+		// result[0,1] = 4·G + 5·2G + 6·3G = 4G + 10G + 18G = 32G
+		require.True(t, got.Equal(newMVMatrix(t, [][]uint64{{14, 32}})))
+	})
+
+	t.Run("identity_actor", func(t *testing.T) {
+		t.Parallel()
+		x := newMVMatrix(t, [][]uint64{{5, 6}, {7, 8}})
+		actor := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
+		got, err := mat.RightAction[P](x, actor)
+		require.NoError(t, err)
+		require.True(t, got.Equal(x))
+	})
+
+	t.Run("zero_actor", func(t *testing.T) {
+		t.Parallel()
+		x := newMVMatrix(t, [][]uint64{{5, 6}, {7, 8}})
+		actor := newMatrix(t, [][]uint64{{0, 0}, {0, 0}})
+		got, err := mat.RightAction[P](x, actor)
+		require.NoError(t, err)
+		require.True(t, got.IsOpIdentity())
+	})
+
+	t.Run("dimension_mismatch", func(t *testing.T) {
+		t.Parallel()
+		x := newMVMatrix(t, [][]uint64{{1, 2}})
+		actor := newMatrix(t, [][]uint64{{1, 2}, {3, 4}, {5, 6}})
+		_, err := mat.RightAction[P](x, actor)
+		require.Error(t, err)
+	})
+
+	t.Run("nil_x", func(t *testing.T) {
+		t.Parallel()
+		actor := newMatrix(t, [][]uint64{{1, 2}})
+		_, err := mat.RightAction[P](nil, actor)
+		require.Error(t, err)
+	})
+
+	t.Run("nil_actor", func(t *testing.T) {
+		t.Parallel()
+		x := newMVMatrix(t, [][]uint64{{1, 2}})
+		_, err := mat.RightAction[P](x, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("scalar_op_consistency", func(t *testing.T) {
+		t.Parallel()
+		// RightAction by a 1x1 scalar matrix [[s]] on a column vector
+		// should equal ScalarOp(s).
+		x := newMVMatrix(t, [][]uint64{{2}, {3}, {5}})
+		actor := newMatrix(t, [][]uint64{{7}})
+		got, err := mat.RightAction[P](x, actor)
+		require.NoError(t, err)
+		require.True(t, got.Equal(x.ScalarOp(scalar(7))))
+	})
+}
+
 // --- IsTorsionFree ---
 
 func TestModuleValuedMatrixIsTorsionFree(t *testing.T) {
