@@ -29,9 +29,10 @@
 //
 // # Security
 //
-// The scheme provides computational hiding (secret is hidden under the discrete
-// logarithm assumption) and public verifiability (any party can check shares
-// given the verification vector). Like classical Feldman, it does not provide
-// information-theoretic binding: a malicious dealer can potentially equivocate.
-// For unconditional binding, see Pedersen VSS.
+// The verification vector V = [r]G is not hiding: V[0] = [secret]G directly
+// reveals the secret in the exponent. The commitment is computationally binding
+// (opening it to a different secret requires breaking DLog) and not equivocable
+// (a simulator cannot produce V and later choose which secret to open it to).
+// Shares are publicly verifiable: any party can check a share against V using
+// only the public MSP. For a hiding commitment scheme, see Pedersen VSS.
 package feldman

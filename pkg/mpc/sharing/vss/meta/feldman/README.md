@@ -19,7 +19,9 @@ The two are algebraically equivalent for threshold access structures: the Vander
 
 ## Security
 
-- **Computational hiding**: secret hidden under the discrete logarithm assumption.
+- **Not hiding**: V[0] = [secret]G directly reveals the secret in the exponent.
+- **Computationally binding**: opening the commitment to a different secret requires breaking DLog.
+- **Not equivocable**: a simulator cannot produce V and later choose which secret to open it to. For a hiding, equivocable scheme, see Pedersen VSS.
 - **Public verifiability**: any party can verify shares given the verification vector.
 - **Dahlgren attack prevention**: the left module action enforces dim(V) = D, rejecting extended verification vectors. This is the generalisation of the polynomial degree check.
 
