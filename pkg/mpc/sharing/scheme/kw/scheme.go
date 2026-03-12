@@ -49,6 +49,11 @@ func (s *Scheme[FE]) AccessStructure() accessstructures.Linear {
 	return s.ac
 }
 
+// MSP returns the monotone span program induced by the scheme's access structure.
+func (s *Scheme[FE]) MSP() *msp.MSP[FE] {
+	return s.msp
+}
+
 // DealRandomAndRevealDealerFunc samples a uniformly random secret, deals shares
 // for it, and returns the shares, the secret, and the dealer function (lambda
 // column vector). This is the most general dealing entry point.
@@ -99,34 +104,22 @@ func (s *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 	if err := randomColumn.SetAssign(0, 0, secret.Value()); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to set secret value in random column vector")
 	}
-	lambda, err := s.msp.Matrix().TryMul(randomColumn)
+	df, err := NewDealerFunc(randomColumn, s.msp)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("failed to compute lambda = M * r")
+		return nil, nil, errs.Wrap(err).WithMessage("failed to create dealer function from random column")
 	}
-
 	shares := hashmap.NewComparable[sharing.ID, *Share[FE]]()
 	for id := range s.ac.Shareholders().Iter() {
-		rowsi, exists := s.msp.HoldersToRows().Get(id)
-		if !exists {
-			return nil, nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", id)
-		}
-		sortedRows := slices.Sorted(slices.Values(rowsi.List()))
-		lambdaI, err := lambda.SubMatrixGivenRows(sortedRows...)
+		share, err := df.ShareOf(id)
 		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("failed to extract lambda_i for shareholder %d", id)
+			return nil, nil, errs.Wrap(err).WithMessage("failed to get share for shareholder %d", id)
 		}
-		shares.Put(
-			id,
-			&Share[FE]{
-				id: id,
-				v:  slices.Collect(lambdaI.Iter()),
-			},
-		)
+		shares.Put(id, share)
 	}
 
 	return &DealerOutput[FE]{
 		shares: shares.Freeze(),
-	}, lambda, nil
+	}, df, nil
 }
 
 // Deal distributes shares of the given secret to all shareholders.
@@ -212,7 +205,10 @@ func (s *Scheme[FE]) shareColumn(shares ...*Share[FE]) (*mat.Matrix[FE], error) 
 }
 
 // ConvertShareToAdditive converts a KW share into an additive share under the
-// given unanimity quorum. Not yet implemented.
+// given unanimity quorum. It computes the dot product of the shareholder's
+// reconstruction-vector coefficients with their share components, producing a
+// single field element. The sum of all such additive shares across the quorum
+// recovers the original secret.
 func (s *Scheme[FE]) ConvertShareToAdditive(share *Share[FE], quorum *unanimity.Unanimity) (*additive.Share[FE], error) {
 	if share == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share cannot be nil")

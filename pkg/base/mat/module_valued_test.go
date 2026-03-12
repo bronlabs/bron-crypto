@@ -616,7 +616,7 @@ func TestLiftMatrix(t *testing.T) {
 		// Create a scalar matrix [[2, 3], [4, 5]] and lift with generator.
 		scalarMat := newMatrix(t, [][]uint64{{2, 3}, {4, 5}})
 		g := generator()
-		lifted, err := mat.LiftMatrix[P](scalarMat, g)
+		lifted, err := mat.Lift[P](scalarMat, g)
 		require.NoError(t, err)
 		require.True(t, lifted.Equal(newMVMatrix(t, [][]uint64{{2, 3}, {4, 5}})))
 	})
@@ -626,14 +626,14 @@ func TestLiftMatrix(t *testing.T) {
 		// Lift with 2*G as base point: each scalar s maps to s*(2G) = (2s)*G.
 		scalarMat := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
 		base := point(2)
-		lifted, err := mat.LiftMatrix[P](scalarMat, base)
+		lifted, err := mat.Lift[P](scalarMat, base)
 		require.NoError(t, err)
 		require.True(t, lifted.Equal(newMVMatrix(t, [][]uint64{{2, 4}, {6, 8}})))
 	})
 
 	t.Run("nil_matrix", func(t *testing.T) {
 		t.Parallel()
-		_, err := mat.LiftMatrix[P](nil, generator())
+		_, err := mat.Lift[P](nil, generator())
 		require.Error(t, err)
 	})
 
@@ -641,7 +641,7 @@ func TestLiftMatrix(t *testing.T) {
 		t.Parallel()
 		scalarMat := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
 		g := generator()
-		lifted, err := mat.LiftMatrix[P](scalarMat, g)
+		lifted, err := mat.Lift[P](scalarMat, g)
 		require.NoError(t, err)
 		// Diagonal should be G, off-diagonal should be identity point.
 		diag, _ := lifted.Get(0, 0)

@@ -7,14 +7,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
-// DealerOutput contains the result of a Feldman VSS dealing operation:
-// a map of shares and the verification vector for share verification.
+// DealerOutput contains the result of a Feldman VSS dealing operation: a map
+// from shareholder IDs to their KW shares, and the public verification vector
+// V = [r]G.
 type DealerOutput[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
 	shares ds.Map[sharing.ID, *kw.Share[FE]]
-	v      *VerificationMatrix[E, FE]
+	v      *VerificationVector[E, FE]
 }
 
-// Shares returns the map of shareholder IDs to their corresponding shares.
+// Shares returns the map of shareholder IDs to their corresponding KW shares.
 func (d *DealerOutput[E, FE]) Shares() ds.Map[sharing.ID, *kw.Share[FE]] {
 	if d == nil {
 		return nil
@@ -22,9 +23,10 @@ func (d *DealerOutput[E, FE]) Shares() ds.Map[sharing.ID, *kw.Share[FE]] {
 	return d.shares
 }
 
-// VerificationMaterial returns the verification matrix V = (g^{a_0}, g^{a_1}, ..., g^{a_{t-1}})
-// which allows shareholders to verify their shares without revealing the secret.
-func (d *DealerOutput[E, FE]) VerificationMaterial() *VerificationMatrix[E, FE] {
+// VerificationMaterial returns the public verification vector V = [r]G. This
+// is the commitment that shareholders use to verify their shares without
+// learning the secret or the random column r.
+func (d *DealerOutput[E, FE]) VerificationMaterial() *VerificationVector[E, FE] {
 	if d == nil {
 		return nil
 	}

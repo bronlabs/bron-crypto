@@ -8,8 +8,16 @@ import (
 )
 
 type (
-	DealerFunc[FE algebra.PrimeFieldElement[FE]]                                             = kw.DealerFunc[FE]
-	VerificationMatrix[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] = mat.ModuleValuedMatrix[E, FE]
+	// DealerFunc holds the dealer's secret state after dealing: the random
+	// column vector r and the share vector λ = M · r. It is an alias for
+	// kw.DealerFunc.
+	DealerFunc[FE algebra.PrimeFieldElement[FE]] = kw.DealerFunc[FE]
+
+	// VerificationVector is the public commitment V = [r]G, a module-valued
+	// column matrix whose entries are the group-element lifts of the random
+	// column: V_j = [r_j]G for j = 0, …, D−1. It is an alias for
+	// mat.ModuleValuedMatrix.
+	VerificationVector[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] = mat.ModuleValuedMatrix[E, FE]
 )
 
 // Name is the canonical name of this secret sharing scheme.

@@ -24,10 +24,10 @@ func NewModuleValuedMatrixModule[E algebra.ModuleElement[E, S], S algebra.RingEl
 	}, nil
 }
 
-// LiftMatrix lifts a scalar [Matrix] into a [ModuleValuedMatrix] by applying the
+// Lift lifts a scalar [Matrix] into a [ModuleValuedMatrix] by applying the
 // scalar action of each entry on the given base point.
 // Entry (i,j) of the result is basePoint.ScalarOp(m[i,j]).
-func LiftMatrix[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m *Matrix[S], basePoint E) (*ModuleValuedMatrix[E, S], error) {
+func Lift[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m *Matrix[S], basePoint E) (*ModuleValuedMatrix[E, S], error) {
 	if m == nil {
 		return nil, ErrFailed.WithMessage("matrix cannot be nil")
 	}
