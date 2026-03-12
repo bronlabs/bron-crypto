@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
@@ -57,6 +58,47 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PartialPublicKeys() ds.Map[
 		return nil
 	}
 	return spm.partialPublicKeys
+}
+
+// AdditivePartialPublicKeys returns the map of partial public keys indexed by party ID.
+// Each partial public key can be used to verify partial signatures from the corresponding party.
+// Returns nil if the receiver is nil.
+func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AdditivePartialPublicKeys(quorum *unanimity.Unanimity) (ds.Map[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]], error) {
+	if spm == nil {
+		return nil, ErrIsNil.WithMessage("PublicMaterial is nil")
+	}
+	if quorum == nil {
+		return nil, ErrIsNil.WithMessage("quorum is nil")
+	}
+	if !spm.accessStructure.IsQualified(quorum.Shareholders().List()...) {
+		return nil, ErrInvalidArgument.WithMessage("unqualified quorum")
+	}
+
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](spm.PublicKey().Group().ScalarStructure())
+	lagrangeCoefficients, err := shamir.LagrangeCoefficients(field, quorum.Shareholders().List()...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute lagrange coefficients")
+	}
+
+	result := hashmap.NewComparable[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]]()
+	for id := range quorum.Shareholders().Iter() {
+		c, ok := lagrangeCoefficients.Get(id)
+		if !ok {
+			return nil, ErrInvalidArgument.WithMessage("missing lagrange coefficient for party %d", id)
+		}
+		ppk, ok := spm.partialPublicKeys.Get(id)
+		if !ok {
+			return nil, ErrInvalidArgument.WithMessage("missing partial public key for party %d", id)
+		}
+		appkValue := ppk.Value().ScalarMul(c)
+		appk, err := bls.NewPublicKey(appkValue)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create additive partial public key for party %d", id)
+		}
+		result.Put(id, appk)
+	}
+
+	return result.Freeze(), nil
 }
 
 // VerificationVector returns the Feldman verification vector used to verify
@@ -159,7 +201,7 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 	return s.share.HashCode() ^ s.publicKey.HashCode()
 }
 
-// AsBLSPrivateKey converts the shard to a BLS private key.
+// AsBLSPrivateKey converts the shard to a BLS private key share.
 // This is useful for signing operations where the shard holder can produce partial signatures.
 // Returns an error if the shard is nil or if the private key creation fails.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsBLSPrivateKey() (*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S], error) {
@@ -167,6 +209,31 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsBLSPrivateKey() (*bls.PrivateKey[PK,
 		return nil, ErrIsNil.WithMessage("Shard is nil")
 	}
 	out, err := bls.NewPrivateKey(s.publicKey.Group(), s.share.Value())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS private key from shard")
+	}
+	return out, nil
+}
+
+// AsAdditiveBLSPrivateKey converts the shard to an additive BLS private key share.
+// This is useful for signing operations where the shard holder can produce partial signatures.
+// Returns an error if the shard is nil or if the private key creation fails.
+func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsAdditiveBLSPrivateKey(quorum *unanimity.Unanimity) (*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S], error) {
+	if s == nil {
+		return nil, ErrIsNil.WithMessage("Shard is nil")
+	}
+	if !quorum.Shareholders().Contains(s.share.ID()) {
+		return nil, ErrInvalidArgument.WithMessage("id not in quorum")
+	}
+	if !s.AccessStructure().IsQualified(quorum.Shareholders().List()...) {
+		return nil, ErrInvalidArgument.WithMessage("unqualified quorum")
+	}
+
+	additiveShare, err := s.share.ToAdditive(quorum)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot convert to additive")
+	}
+	out, err := bls.NewPrivateKey(s.publicKey.Group(), additiveShare.Value())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS private key from shard")
 	}

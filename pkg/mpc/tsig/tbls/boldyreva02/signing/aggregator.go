@@ -6,6 +6,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -141,10 +143,18 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create verifier for partial signature")
 	}
+	quorum, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable(partialSigs.Keys()...).Freeze())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
+	}
+	additivePartialPublicKeys, err := A.publicMaterial.AdditivePartialPublicKeys(quorum)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create additive partial public keys")
+	}
 	sigShares := feldman.SharesInExponent[SG, S]{}
 	popShares := feldman.SharesInExponent[SG, S]{}
 	for sender, psig := range partialSigs.Iter() {
-		partialPublicKey, exists := A.publicMaterial.PartialPublicKeys().Get(sender)
+		partialPublicKey, exists := additivePartialPublicKeys.Get(sender)
 		if !exists {
 			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d does not exist in public material", sender)
 		}
@@ -189,24 +199,30 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		}
 	}
 
-	reconstructedSignatureValue, err := sigShares.ReconstructAsAdditive()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to reconstruct signature value from shares")
+	aggregatedSignatureValue := A.scheme.SignatureSubGroup().OpIdentity()
+	aggregatedPopValue := A.scheme.SignatureSubGroup().OpIdentity()
+	for i, psig := range sigShares {
+		aggregatedSignatureValue = aggregatedSignatureValue.Op(psig.Value())
+		if A.targetRogueKeyAlg == bls.POP {
+			pPopShare := popShares[i]
+			aggregatedPopValue = aggregatedPopValue.Op(pPopShare.Value())
+		}
 	}
-	var pop *bls.ProofOfPossession[SG, SGFE, PK, PKFE, E, S]
 	if A.targetRogueKeyAlg == bls.POP {
-		reconstructedPopValue, err := popShares.ReconstructAsAdditive()
+		pop, err := bls.NewProofOfPossession(aggregatedPopValue)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to reconstruct POP value from shares")
+			return nil, errs.Wrap(err).WithMessage("failed to create POP from aggregated value")
 		}
-		pop, err = bls.NewProofOfPossession(reconstructedPopValue)
+		sig, err := bls.NewSignature(aggregatedSignatureValue, pop)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create POP from reconstructed value")
+			return nil, errs.Wrap(err).WithMessage("failed to create signature from aggregated value")
 		}
+		return sig, nil
 	}
-	aggregatedSignature, err := bls.NewSignature(reconstructedSignatureValue, pop)
+
+	sig, err := bls.NewSignature(aggregatedSignatureValue, nil)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create signature from reconstructed value")
+		return nil, errs.Wrap(err).WithMessage("failed to create signature from aggregated value")
 	}
-	return aggregatedSignature, nil
+	return sig, nil
 }
