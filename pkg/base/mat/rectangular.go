@@ -91,22 +91,3 @@ func (m *Matrix[S]) AsSquare() (*SquareMatrix[S], error) {
 	square.v = m.v // note that we are not copying
 	return square, nil
 }
-
-// DotProduct computes the dot product of two vectors (row or column).
-// Both m and vector must be vectors (single row or single column) of the same length.
-func (m *Matrix[S]) DotProduct(vector *Matrix[S]) (S, error) {
-	ring := m.scalarRing()
-	mLen := m.vectorLength()
-	vLen := vector.vectorLength()
-	if mLen < 0 || vLen < 0 {
-		return ring.Zero(), ErrDimension.WithMessage("dot product requires vectors: got %dx%d and %dx%d", m.m, m.n, vector.m, vector.n)
-	}
-	if mLen != vLen {
-		return ring.Zero(), ErrDimension.WithMessage("incompatible vector lengths for dot product: %d and %d", mLen, vLen)
-	}
-	result := ring.Zero()
-	for i := range mLen {
-		result = result.Add(m.v[i].Mul(vector.v[i]))
-	}
-	return result, nil
-}

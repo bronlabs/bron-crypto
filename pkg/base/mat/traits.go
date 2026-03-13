@@ -973,14 +973,3 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) ScalarMul(scalar S) W {
 func (m *MatrixTrait[S, W, WT, RectW, RectWT]) IsTorsionFree() bool {
 	return m.m == 1 && m.n == 1 && m.scalarRing().IsDomain()
 }
-
-// findPivotRow returns the first row at or below startRow with a non-zero entry
-// in the given column, or -1 if none exists.
-func (m *MatrixTrait[S, W, WT, RectW, RectWT]) findPivotRow(col, startRow int) int {
-	for r := startRow; r < m.m; r++ {
-		if !m.v[m.idx(r, col)].IsZero() {
-			return r
-		}
-	}
-	return -1
-}

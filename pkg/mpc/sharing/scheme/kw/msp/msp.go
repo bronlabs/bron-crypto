@@ -35,7 +35,7 @@ func NewStandardMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHol
 
 // NewMSP constructs a monotone span programme from a matrix, a row-to-holder
 // labelling, and an explicit target vector.
-func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map[int]ID, targetVector *mat.Matrix[E]) (*MSP[E], error) {
+func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map[int]ID, targetVector *mat.RowVector[E]) (*MSP[E], error) {
 	if m == nil {
 		return nil, ErrIsNil.WithMessage("matrix cannot be nil")
 	}

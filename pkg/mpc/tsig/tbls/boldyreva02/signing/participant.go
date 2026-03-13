@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
@@ -119,7 +120,11 @@ func NewShortKeyCosigner[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
 	}
-	shareAsPrivateKey, err := shard.AsBLSPrivateKey()
+	quorum, err := unanimity.NewUnanimityAccessStructure(ctx.Quorum())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
+	}
+	shareAsPrivateKey, err := shard.AsAdditiveBLSPrivateKey(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
 	}
@@ -182,7 +187,11 @@ func NewLongKeyCosigner[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS long key scheme")
 	}
-	shareAsPrivateKey, err := shard.AsBLSPrivateKey()
+	quorum, err := unanimity.NewUnanimityAccessStructure(ctx.Quorum())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
+	}
+	shareAsPrivateKey, err := shard.AsAdditiveBLSPrivateKey(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
 	}
@@ -222,7 +231,7 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) ProducePartialSignature(message []b
 			return nil, errs.Wrap(err).WithMessage("failed to augment message")
 		}
 	case bls.POP:
-		popMsg := c.Shard().PublicKey().Bytes()
+		popMsg := c.shard.PublicKey().Bytes()
 		popDst := c.scheme.CipherSuite().GetPopDst(c.Variant())
 		popSigner, err := c.scheme.Signer(c.shareAsPrivateKey, bls.SignWithCustomDST[PK](popDst))
 		if err != nil {
