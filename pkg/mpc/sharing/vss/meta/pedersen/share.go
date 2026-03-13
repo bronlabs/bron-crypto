@@ -13,8 +13,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
-// Share represents a Pedersen VSS share consisting of a secret component f(i)
-// and a blinding component r(i), where f and r are the dealing polynomials.
+// Share represents a Pedersen VSS share for a single shareholder. It consists
+// of a secret component λ_g = M_i · r_g and a blinding component λ_h = M_i · r_h,
+// where r_g and r_h are the secret and blinding random columns respectively.
+// For non-ideal MSPs (e.g. CNF access structures), a shareholder may own
+// multiple MSP rows, so both components are slices of equal length.
 type Share[S algebra.PrimeFieldElement[S]] struct {
 	id       sharing.ID
 	secret   []*pedcom.Message[S]
@@ -62,12 +65,12 @@ func (s *Share[S]) ID() sharing.ID {
 	return s.id
 }
 
-// Value returns the secret component f(i) of this share.
+// Value returns the secret component λ_g of this share as raw field elements.
 func (s *Share[S]) Value() []S {
 	return sliceutils.Map(s.secret, func(m *pedcom.Message[S]) S { return m.Value() })
 }
 
-// Blinding returns the blinding component r(i) of this share.
+// Blinding returns the blinding component λ_h of this share as Pedersen witnesses.
 func (s *Share[S]) Blinding() []*pedcom.Witness[S] {
 	if s == nil {
 		return nil
@@ -75,7 +78,7 @@ func (s *Share[S]) Blinding() []*pedcom.Witness[S] {
 	return s.blinding
 }
 
-// Secret returns the secret component as a Pedersen message.
+// Secret returns the secret component λ_g as Pedersen messages.
 func (s *Share[S]) Secret() []*pedcom.Message[S] {
 	if s == nil {
 		return nil
@@ -110,8 +113,9 @@ func (s *Share[S]) Add(other *Share[S]) *Share[S] {
 	return s.Op(other)
 }
 
-// ScalarOp is an alias for ScalarMul.
-// Panics if scalar is zero since Pedersen requires non-zero blinding factors.
+// ScalarOp multiplies both the secret and blinding components of the share by
+// a scalar. This preserves the Pedersen commitment structure:
+// Com(c·m, c·r) = [c·m]G + [c·r]H = c·([m]G + [r]H) = c·Com(m, r).
 func (s *Share[S]) ScalarOp(sc algebra.Numeric) *Share[S] {
 	primeField := algebra.StructureMustBeAs[algebra.PrimeField[S]](s.secret[0].Value().Structure())
 	scalar, err := primeField.FromBytesBE(sc.BytesBE())
@@ -130,7 +134,7 @@ func (s *Share[S]) ScalarOp(sc algebra.Numeric) *Share[S] {
 	}
 }
 
-// ScalarMul returns a new share with both components multiplied by a scalar.
+// ScalarMul is an alias for ScalarOp.
 func (s *Share[S]) ScalarMul(scalar algebra.Numeric) *Share[S] {
 	return s.ScalarOp(scalar)
 }
@@ -195,6 +199,9 @@ func (s *Share[S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// NewLiftedShare creates a lifted share from a vector of Pedersen commitments,
+// one per MSP row owned by the shareholder. Each commitment is
+// Com(secret_j, blinding_j) = [secret_j]G + [blinding_j]H.
 func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v []*pedcom.Commitment[E, FE]) (*LiftedShare[E, FE], error) {
 	if v == nil {
 		return nil, sharing.ErrIsNil.WithMessage("commitments cannot be nil")
@@ -208,6 +215,10 @@ func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 	}, nil
 }
 
+// LiftShare lifts a scalar share into the group by computing the Pedersen
+// commitment Com(secret_j, blinding_j) = [secret_j]G + [blinding_j]H for
+// each MSP row component. The result can be compared against the expected
+// lifted share M_i · V during verification.
 func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](share *Share[FE], key *pedcom.Key[E, FE]) (*LiftedShare[E, FE], error) {
 	if share == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share cannot be nil")
@@ -233,6 +244,10 @@ func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 	return NewLiftedShare(share.ID(), v)
 }
 
+// LiftedShare is a share lifted into the group: each scalar component pair
+// (secret_j, blinding_j) is replaced by the Pedersen commitment
+// Com(secret_j, blinding_j) = [secret_j]G + [blinding_j]H. For ideal MSPs
+// (one row per shareholder) the vector has length one.
 type LiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
 	id sharing.ID
 	v  []*pedcom.Commitment[E, FE]
@@ -243,14 +258,17 @@ type liftedShareDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 	V  []*pedcom.Commitment[E, FE] `cbor:"value"`
 }
 
+// ID returns the shareholder identifier.
 func (s *LiftedShare[E, FE]) ID() sharing.ID {
 	return s.id
 }
 
+// Value returns the vector of Pedersen commitments [Com(secret_j, blinding_j)].
 func (s *LiftedShare[E, FE]) Value() []*pedcom.Commitment[E, FE] {
 	return s.v
 }
 
+// Equal returns true if two lifted shares have the same ID and commitments.
 func (s *LiftedShare[E, FE]) Equal(other *LiftedShare[E, FE]) bool {
 	if s == nil || other == nil {
 		return s == other
@@ -269,6 +287,7 @@ func (s *LiftedShare[E, FE]) Equal(other *LiftedShare[E, FE]) bool {
 	return true
 }
 
+// MarshalCBOR serialises the lifted share to CBOR.
 func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 	dto := liftedShareDTO[E, FE]{
 		ID: s.id,
@@ -281,6 +300,7 @@ func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises a lifted share from CBOR.
 func (s *LiftedShare[E, FE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*liftedShareDTO[E, FE]](data)
 	if err != nil {

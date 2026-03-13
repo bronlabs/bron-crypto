@@ -1,4 +1,4 @@
-# Meta Feldman Verifiable Secret Sharing
+# Feldman Verifiable Secret Sharing
 
 Generalised Feldman VSS over a Karchmer-Wigderson MSP-based LSSS.
 
