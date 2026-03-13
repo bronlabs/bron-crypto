@@ -3,12 +3,13 @@ package kw
 import (
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewDealerFunc constructs a dealer function from a random column vector r and
@@ -16,8 +17,8 @@ import (
 // matrix. The random column must have dimension D x 1, where D is the number
 // of columns in M. The secret is implicitly defined as target * r, where
 // target is the MSP's target (row) vector.
-func NewDealerFunc[FE algebra.PrimeFieldElement[FE]](randomColumn *mat.ColumnVector[FE], msp *msp.MSP[FE]) (*DealerFunc[FE], error) {
-	if msp == nil {
+func NewDealerFunc[FE algebra.PrimeFieldElement[FE]](randomColumn *mat.ColumnVector[FE], mspMatrix *msp.MSP[FE]) (*DealerFunc[FE], error) {
+	if mspMatrix == nil {
 		return nil, sharing.ErrIsNil.WithMessage("MSP cannot be nil")
 	}
 	if randomColumn == nil {
@@ -30,13 +31,13 @@ func NewDealerFunc[FE algebra.PrimeFieldElement[FE]](randomColumn *mat.ColumnVec
 	if rows < 2 {
 		return nil, sharing.ErrValue.WithMessage("randomColumn must have at least 2 rows")
 	}
-	lambda, err := msp.Matrix().TryMul(randomColumn)
+	lambda, err := mspMatrix.Matrix().TryMul(randomColumn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute lambda = M * r")
 	}
 	return &DealerFunc[FE]{
 		randomColumn: randomColumn,
-		msp:          msp,
+		msp:          mspMatrix,
 		lambda:       lambda,
 	}, nil
 }
@@ -206,7 +207,6 @@ func (d *LiftedDealerFunc[E, FE]) ShareOf(id sharing.ID) (*LiftedShare[E, FE], e
 		id: id,
 		v:  slices.Collect(lambdaI.Iter()),
 	}, nil
-
 }
 
 // MSP returns the monotone span programme associated with this dealing.

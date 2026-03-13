@@ -3,6 +3,8 @@ package pedersen
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -12,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Scheme implements Pedersen's verifiable secret sharing over a
@@ -62,7 +63,7 @@ func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 }
 
 // Name returns the canonical name of this scheme.
-func (s *Scheme[E, S]) Name() sharing.Name {
+func (*Scheme[E, S]) Name() sharing.Name {
 	return Name
 }
 
@@ -203,11 +204,6 @@ func (s *Scheme[E, S]) ReconstructAndVerify(reference *VerificationVector[E, S],
 // the Pedersen commitments Com(secret_j, blinding_j) = [secret_j]G +
 // [blinding_j]H computed from the share's scalar components. Returns nil if
 // and only if the two agree.
-//
-// Dimension enforcement in the left module action implicitly rejects
-// verification vectors whose length does not match the MSP column count D,
-// preventing the Dahlgren attack
-// (https://blog.trailofbits.com/2024/02/20/breaking-the-shared-key-in-threshold-signature-schemes/).
 func (s *Scheme[E, S]) Verify(share *Share[S], vector *VerificationVector[E, S]) error {
 	if share == nil {
 		return sharing.ErrIsNil.WithMessage("share is nil")

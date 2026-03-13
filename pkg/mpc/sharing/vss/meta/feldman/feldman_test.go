@@ -1176,7 +1176,7 @@ func TestLiftedShare_CBOR(t *testing.T) {
 			err = decoded.UnmarshalCBOR(data)
 			require.NoError(t, err)
 			require.Equal(t, fls.ID(), decoded.ID())
-			require.Equal(t, len(fls.Value()), len(decoded.Value()))
+			require.Len(t, decoded.Value(), len(fls.Value()))
 			for i := range fls.Value() {
 				require.True(t, fls.Value()[i].Equal(decoded.Value()[i]))
 			}

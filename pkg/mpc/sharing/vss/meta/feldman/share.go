@@ -1,10 +1,11 @@
 package feldman
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewLiftedShare creates a lifted share for the given shareholder with the

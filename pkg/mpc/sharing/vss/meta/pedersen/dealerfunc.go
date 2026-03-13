@@ -1,13 +1,14 @@
 package pedersen
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewDealerFunc creates a Pedersen dealer function from the secret (g) and
@@ -76,11 +77,11 @@ func LiftDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 	}
 	g, err := kw.LiftDealerFunc(df.g, key.G())
 	if err != nil {
-		return nil, err
+		return nil, errs.Wrap(err).WithMessage("failed to lift g dealer func")
 	}
 	h, err := kw.LiftDealerFunc(df.h, key.H())
 	if err != nil {
-		return nil, err
+		return nil, errs.Wrap(err).WithMessage("failed to lift h dealer func")
 	}
 	out, err := kw.NewLiftedDealerFunc(g.VerificationVector().Op(h.VerificationVector()), g.MSP())
 	if err != nil {
@@ -119,7 +120,7 @@ func (df *LiftedDealerFunc[E, FE]) ShareOf(id sharing.ID) (*LiftedShare[E, FE], 
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not get lifted share from lifted kw dealer func")
 	}
-	v, err := sliceutils.MapOrError(kwShare.Value(), func(elem E) (*pedcom.Commitment[E, FE], error) { return pedcom.NewCommitment(elem) })
+	v, err := sliceutils.MapOrError(kwShare.Value(), pedcom.NewCommitment)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Pedersen commitment from lifted lambda element")
 	}
