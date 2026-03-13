@@ -766,7 +766,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, out)
 			require.NotNil(t, df)
-			require.True(t, secret.Value().Equal(df.Secret()),
+			require.True(t, secret.Equal(df.Secret()),
 				"dealer func secret must match the dealt secret")
 		})
 	}
@@ -1359,7 +1359,7 @@ func TestDealRandomAndRevealDealerFunc_LiftedSecret(t *testing.T) {
 			require.NoError(t, err)
 			liftedSecret := ldf.LiftedSecret()
 			expected := gen.ScalarOp(secret.Value())
-			require.True(t, expected.Equal(liftedSecret),
+			require.True(t, expected.Equal(liftedSecret.Value()),
 				"V[0] must equal [secret]G")
 		})
 	}

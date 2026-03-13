@@ -17,7 +17,7 @@ type (
 	// column matrix whose entries are the group-element lifts of the random
 	// column: V_j = [r_j]G for j = 0, …, D−1. It is an alias for
 	// mat.ModuleValuedMatrix.
-	VerificationVector[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] = mat.ModuleValuedMatrix[E, FE]
+	VerificationVector[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] = mat.ModuleValuedColumnVector[E, FE]
 )
 
 // Name is the canonical name of this secret sharing scheme.

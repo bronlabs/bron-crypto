@@ -92,7 +92,7 @@ func (s *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 	if prng == nil {
 		return nil, nil, sharing.ErrIsNil.WithMessage("prng cannot be nil")
 	}
-	columnFactory, err := mat.NewMatrixModule(s.msp.D(), 1, s.msp.BaseField())
+	columnFactory, err := mat.NewColumnVectorModule(s.msp.D(), s.msp.BaseField())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create column vector factory")
 	}
@@ -156,7 +156,7 @@ func (s *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 		return nil, errs.Wrap(err).WithMessage("failed to assemble share column vector for reconstruction")
 	}
 
-	secret, err := reconVec.DotProduct(shareCol)
+	secret, err := mat.DotProduct(reconVec, shareCol)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction dot product")
 	}
@@ -285,7 +285,7 @@ func (s *Scheme[FE]) ConvertShareToAdditive(share *Share[FE], quorum *unanimity.
 
 	// shareCol already contains exactly this shareholder's values in ascending
 	// row order, so the dot product pairs entries correctly.
-	additiveShareValue, err := reconSubVec.DotProduct(shareCol)
+	additiveShareValue, err := mat.DotProduct(reconSubVec, shareCol)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute additive share value as dot product")
 	}

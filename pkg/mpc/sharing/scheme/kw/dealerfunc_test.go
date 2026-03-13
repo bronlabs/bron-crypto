@@ -115,7 +115,7 @@ func TestDealerFunc_SecretMatchesReconstruction(t *testing.T) {
 			require.NoError(t, err)
 
 			// DealerFunc.Secret() should return the same secret value
-			require.True(t, secret.Value().Equal(df.Secret()),
+			require.True(t, secret.Equal(df.Secret()),
 				"DealerFunc.Secret() must match the dealt secret")
 		})
 	}
@@ -285,7 +285,7 @@ func TestLiftDealerFunc_LiftedSecretMatchesScalarMul(t *testing.T) {
 
 			// LiftedSecret should equal gen * secret
 			expected := gen.ScalarOp(secret.Value())
-			require.True(t, expected.Equal(ldf.LiftedSecret()),
+			require.True(t, expected.Equal(ldf.LiftedSecret().Value()),
 				"lifted secret should be basePoint * secret")
 		})
 	}
@@ -511,7 +511,7 @@ func TestDealerFunc_RandomSecretsRoundTrip(t *testing.T) {
 				require.NotNil(t, secret)
 
 				// DealerFunc.Secret() must match the returned secret
-				require.True(t, secret.Value().Equal(df.Secret()))
+				require.True(t, secret.Equal(df.Secret()))
 
 				// Shares from DealerFunc must reconstruct the secret
 				for _, qset := range fx.qualified {
