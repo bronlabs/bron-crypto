@@ -1,6 +1,7 @@
 package cnf
 
 import (
+	"cmp"
 	"iter"
 	"slices"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -216,8 +218,25 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], c *CNF)
 	if c == nil {
 		return nil, ErrIsNil.WithMessage("access structure cannot be nil")
 	}
-	m := len(c.maximalUnqualifiedSets)
-	clauses := c.Clauses()
+
+	// Sort maximal unqualified sets into a canonical order so that every caller
+	// (potentially running in separate processes) produces the same MSP matrix
+	// and row-to-holder mapping. Without this, Go map-iteration
+	// non-determinism inside hash-set List()/Iter() would cause different
+	// participants to disagree on the MSP row assignments, breaking share
+	// verification in protocols that independently reconstruct the MSP
+	// (e.g. Gennaro DKG over KW).
+	sortedMUS := slices.Clone(c.maximalUnqualifiedSets)
+	slices.SortFunc(sortedMUS, func(a, b ds.Set[ID]) int {
+		ba := bitset.NewImmutableBitSet(a.List()...)
+		bb := bitset.NewImmutableBitSet(b.List()...)
+		return cmp.Compare(uint64(ba), uint64(bb))
+	})
+
+	m := len(sortedMUS)
+	clauses := sliceutils.Map(sortedMUS, func(bi ds.Set[ID]) ds.Set[ID] {
+		return c.shareholders.Difference(bi)
+	})
 
 	// Compute total number of rows (one per shareholder-clause membership).
 	totalRows := 0
@@ -247,7 +266,10 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], c *CNF)
 	rowsToHolders := make(map[int]ID)
 	rowIdx := 0
 	for i := range m {
-		for pi := range clauses[i].Iter() {
+		// Sort clause members for deterministic row-to-holder assignment.
+		members := clauses[i].List()
+		slices.Sort(members)
+		for _, pi := range members {
 			rowsInRowMajorForm = append(rowsInRowMajorForm, slices.Collect(clauseVectors[i].Iter())...)
 			rowsToHolders[rowIdx] = pi
 			rowIdx++
