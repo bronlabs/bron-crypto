@@ -20,9 +20,6 @@ var (
 
 	// Global TagSet for type registration.
 	tags = cbor.NewTagSet()
-
-	ErrSerialisation   = errs.New("serialisation error")
-	ErrDeserialisation = errs.New("deserialisation error")
 )
 
 // Register registers the concrete type parameter T with a fixed CBOR tag.
@@ -89,7 +86,7 @@ func updateModes() {
 func MarshalCBOR[T any](t T) ([]byte, error) {
 	data, err := enc.Marshal(t)
 	if err != nil {
-		return nil, ErrSerialisation
+		return nil, errs.Wrap(err).WithMessage("serialisation error")
 	}
 	return data, nil
 }
@@ -102,7 +99,7 @@ func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
 	}
 	data, err := enc.Marshal(wrapped)
 	if err != nil {
-		return nil, ErrSerialisation
+		return nil, errs.Wrap(err).WithMessage("serialisation error")
 	}
 	return data, nil
 }
@@ -112,7 +109,7 @@ func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
 	err := dec.Unmarshal(data, &t)
 	if err != nil {
-		return t, ErrDeserialisation
+		return t, errs.Wrap(err).WithMessage("deserialisation error")
 	}
 	return t, nil
 }
