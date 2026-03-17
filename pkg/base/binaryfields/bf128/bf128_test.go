@@ -55,3 +55,49 @@ func TestInv(t *testing.T) {
 		require.True(t, y.IsOne())
 	}
 }
+
+func TestInvOne(t *testing.T) {
+	t.Parallel()
+	f := bf128.NewField()
+	one := f.One()
+	inv, err := one.TryInv()
+	require.NoError(t, err)
+	require.True(t, inv.IsOne(), "inv(1) must be 1, got %s", inv)
+	require.True(t, one.Mul(inv).IsOne())
+}
+
+func TestStringFixedWidth(t *testing.T) {
+	t.Parallel()
+	f := bf128.NewField()
+
+	// "F2e128(" = 7 chars, ")" = 1 char, 32 hex chars = 40 total
+	expected := 40
+
+	require.Len(t, f.Zero().String(), expected)
+	require.Len(t, f.One().String(), expected)
+
+	el, err := f.FromBytes([]byte{
+		0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+	})
+	require.NoError(t, err)
+	require.Len(t, el.String(), expected)
+}
+
+func TestComponentsBytesRoundtrip(t *testing.T) {
+	t.Parallel()
+	f := bf128.NewField()
+	prng := pcg.NewRandomised()
+
+	for range reps {
+		x, err := f.Random(prng)
+		require.NoError(t, err)
+
+		components := x.ComponentsBytes()
+		require.Len(t, components, 1)
+
+		reconstructed, err := f.FromComponentsBytes(components)
+		require.NoError(t, err)
+		require.True(t, x.Equal(reconstructed))
+	}
+}

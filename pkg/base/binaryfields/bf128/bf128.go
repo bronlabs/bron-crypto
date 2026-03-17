@@ -153,7 +153,7 @@ func (el *FieldElement) HashCode() base.HashCode {
 }
 
 func (el *FieldElement) String() string {
-	return fmt.Sprintf("F2e128(%08x%08x)", el[1], el[0])
+	return fmt.Sprintf("F2e128(%016x%016x)", el[1], el[0])
 }
 
 func (el *FieldElement) Op(e *FieldElement) *FieldElement {
@@ -188,6 +188,9 @@ func (el *FieldElement) IsOne() bool {
 func (el *FieldElement) TryInv() (*FieldElement, error) {
 	if el.IsZero() {
 		return nil, ErrDivisionByZero
+	}
+	if el.IsOne() {
+		return NewField().One(), nil
 	}
 
 	b := NewField().Zero()
@@ -263,8 +266,8 @@ func (el *FieldElement) EuclideanValuation() cardinal.Cardinal {
 	}
 }
 
-func (*FieldElement) ComponentsBytes() [][]byte {
-	panic("not implemented")
+func (el *FieldElement) ComponentsBytes() [][]byte {
+	return [][]byte{el.Bytes()}
 }
 
 func (el *FieldElement) Add(y *FieldElement) *FieldElement {
@@ -332,13 +335,7 @@ func (el *FieldElement) degree() int {
 	if z == 64 {
 		z += bits.LeadingZeros64(el[0])
 	}
-
-	d := 127 - z
-	if d < 0 {
-		return 0
-	} else {
-		return d
-	}
+	return 127 - z // -1 for the zero polynomial, 0..127 for nonzero
 }
 
 var (
