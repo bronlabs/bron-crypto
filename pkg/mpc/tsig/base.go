@@ -12,21 +12,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
 // BasePublicMaterial contains the public information for threshold signature verification,
 // including the access structure, verification vector, and partial public keys for each party.
 type BasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	accessStructure   *threshold.Threshold
-	fv                feldman.VerificationVector[E, S]
-	partialPublicKeys ds.Map[sharing.ID, *schnorrlike.PublicKey[E, S]]
+	accessStructure *threshold.Threshold
+	fv              feldman.VerificationVector[E, S]
 }
 
 type basePublicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	AccessStructure   *threshold.Threshold                        `cbor:"accessStructure"`
-	FV                feldman.VerificationVector[E, S]            `cbor:"verificationVector"`
-	PartialPublicKeys map[sharing.ID]*schnorrlike.PublicKey[E, S] `cbor:"partialPublicKeys"`
+	AccessStructure    *threshold.Threshold             `cbor:"accessStructure"`
+	VerificationVector feldman.VerificationVector[E, S] `cbor:"verificationVector"`
 }
 
 // AccessStructure returns the threshold access structure defining authorized quorums.
@@ -37,17 +34,18 @@ func (spm *BasePublicMaterial[E, S]) AccessStructure() *threshold.Threshold {
 	return spm.accessStructure
 }
 
-// PublicKey returns the threshold public key (first coefficient of the verification vector).
-func (spm *BasePublicMaterial[E, S]) PublicKey() E {
+// PublicKeyValue returns the threshold public key (first coefficient of the verification vector).
+func (spm *BasePublicMaterial[E, S]) PublicKeyValue() E {
 	return spm.fv.Coefficients()[0]
 }
 
-// PartialPublicKeys returns the map of party IDs to their partial public keys.
-func (spm *BasePublicMaterial[E, S]) PartialPublicKeys() ds.Map[sharing.ID, *schnorrlike.PublicKey[E, S]] {
+// PublicKeyValueShares returns the map of party IDs to their public key shares.
+func (spm *BasePublicMaterial[E, S]) PublicKeyValueShares() ds.Map[sharing.ID, *feldman.LiftedShare[E, S]] {
 	if spm == nil {
 		return nil
 	}
-	return spm.partialPublicKeys
+
+	return errs.Must1(DerivePublicKeyShares(spm.fv, spm.accessStructure.Shareholders()))
 }
 
 // VerificationVector returns the Feldman verification vector for the shared secret.
@@ -69,15 +67,6 @@ func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool
 	if !spm.fv.Equal(other.fv) {
 		return false
 	}
-	if spm.partialPublicKeys.Size() != other.partialPublicKeys.Size() {
-		return false
-	}
-	for id, pk := range spm.partialPublicKeys.Iter() {
-		otherPk, exists := other.partialPublicKeys.Get(id)
-		if !exists || !pk.Equal(otherPk) {
-			return false
-		}
-	}
 
 	return true
 }
@@ -89,15 +78,9 @@ func (spm *BasePublicMaterial[E, S]) HashCode() base.HashCode {
 
 // MarshalCBOR serialises the public material to CBOR format.
 func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
-	ppk := make(map[sharing.ID]*schnorrlike.PublicKey[E, S])
-	for k, v := range spm.partialPublicKeys.Iter() {
-		ppk[k] = v
-	}
-
 	dto := &basePublicMaterialDTO[E, S]{
-		AccessStructure:   spm.accessStructure,
-		FV:                spm.fv,
-		PartialPublicKeys: ppk,
+		AccessStructure:    spm.accessStructure,
+		VerificationVector: spm.fv,
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -110,16 +93,17 @@ func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*basePublicMaterialDTO[E, S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal BasePublicMaterial")
+	}
+	if dto.AccessStructure == nil || dto.VerificationVector == nil {
+		return ErrInvalidArgument.WithMessage("nil input parameters")
+	}
+	if dto.VerificationVector.Degree() != int(dto.AccessStructure.Threshold())-1 {
+		return ErrInvalidArgument.WithMessage("verification vector degree does not match access structure threshold")
 	}
 
-	ppk := hashmap.NewImmutableComparableFromNativeLike(dto.PartialPublicKeys)
-	spm2 := &BasePublicMaterial[E, S]{
-		accessStructure:   dto.AccessStructure,
-		fv:                dto.FV,
-		partialPublicKeys: ppk,
-	}
-	*spm = *spm2
+	spm.accessStructure = dto.AccessStructure
+	spm.fv = dto.VerificationVector
 	return nil
 }
 
@@ -131,6 +115,35 @@ type BaseShard[
 	BasePublicMaterial[E, S]
 
 	share *feldman.Share[S]
+}
+
+// NewBaseShard creates a new base shard from a Feldman share, verification vector, and access structure.
+// It computes the partial public keys for all parties in the access structure.
+func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	share *feldman.Share[S],
+	fv feldman.VerificationVector[E, S],
+	accessStructure *threshold.Threshold,
+) (*BaseShard[E, S], error) {
+	if share == nil || fv == nil || accessStructure == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil input parameters")
+	}
+	if fv.Degree() != int(accessStructure.Threshold())-1 {
+		return nil, ErrInvalidArgument.WithMessage("verification vector degree does not match access structure threshold")
+	}
+	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](fv.Coefficients()[0].Structure())
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+	publicKeyShareValue := fv.Eval(field.FromUint64(uint64(share.ID())))
+	if !publicKeyShareValue.Equal(group.ScalarBaseOp(share.Value())) {
+		return nil, ErrInvalidArgument.WithMessage("share value does not match verification vector")
+	}
+
+	return &BaseShard[E, S]{
+		share: share,
+		BasePublicMaterial: BasePublicMaterial[E, S]{
+			accessStructure: accessStructure,
+			fv:              fv,
+		},
+	}, nil
 }
 
 type baseShardDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
@@ -191,41 +204,20 @@ func (sh *BaseShard[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// NewBaseShard creates a new base shard from a Feldman share, verification vector, and access structure.
-// It computes the partial public keys for all parties in the access structure.
-func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
-	share *feldman.Share[S],
-	fv feldman.VerificationVector[E, S],
-	accessStructure *threshold.Threshold,
-) (*BaseShard[E, S], error) {
-	if share == nil || fv == nil || accessStructure == nil {
-		return nil, ErrInvalidArgument.WithMessage("nil input parameters")
-	}
-	sf, ok := share.Value().Structure().(algebra.PrimeField[S])
-	if !ok {
-		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
-	}
-	partialPublicKeys := hashmap.NewComparable[sharing.ID, *schnorrlike.PublicKey[E, S]]()
-	for id := range accessStructure.Shareholders().Iter() {
-		value := fv.Eval(shamir.SharingIDToLagrangeNode(sf, id))
-		pk, err := schnorrlike.NewPublicKey(value)
+// DerivePublicKeyShares evaluates the verification vector for each shareholder and returns the corresponding public key shares.
+func DerivePublicKeyShares[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](verificationVector feldman.VerificationVector[E, S], shareholders ds.Set[sharing.ID]) (ds.Map[sharing.ID, *feldman.LiftedShare[E, S]], error) {
+	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](verificationVector.CoefficientStructure())
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+	result := hashmap.NewComparable[sharing.ID, *feldman.LiftedShare[E, S]]()
+	for id := range shareholders.Iter() {
+		x := shamir.SharingIDToLagrangeNode(field, id)
+		shareValue := verificationVector.Eval(x)
+		share, err := feldman.NewLiftedShare(id, shareValue)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create public key for party %d", id)
+			return nil, errs.Wrap(err).WithMessage("failed to create share")
 		}
-		partialPublicKeys.Put(id, pk)
+		result.Put(id, share)
 	}
 
-	return &BaseShard[E, S]{
-		share: share,
-		BasePublicMaterial: BasePublicMaterial[E, S]{
-			accessStructure:   accessStructure,
-			fv:                fv,
-			partialPublicKeys: partialPublicKeys.Freeze(),
-		},
-	}, nil
+	return result.Freeze(), nil
 }
-
-var (
-	// ErrInvalidArgument is returned when a function receives an invalid argument.
-	ErrInvalidArgument = errs.New("invalid argument")
-)

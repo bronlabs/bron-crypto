@@ -7,9 +7,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	gentu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/keygen"
@@ -130,15 +132,25 @@ func VerifyPartialSignatures[
 ) error {
 	tb.Helper()
 
+	qualifiedSet := hashset.NewComparable[sharing.ID]()
+	for id := range partialSigs {
+		qualifiedSet.Add(id)
+	}
+	quorum, err := unanimity.NewUnanimityAccessStructure(qualifiedSet.Freeze())
+	require.NoError(tb, err)
+
 	for id, psig := range partialSigs {
-		partialPK, exists := publicMaterial.PartialPublicKeys().Get(id)
+		publicKeyShare, exists := publicMaterial.PublicKeyValueShares().Get(id)
 		if !exists {
 			return errs.New("partial public key for participant %d", id)
 		}
+		additivePublicKeyShare, err := publicKeyShare.ToAdditive(quorum)
+		require.NoError(tb, err)
+		partialPublicKey, err := bls.NewPublicKey(additivePublicKeyShare.Value())
+		require.NoError(tb, err)
 
 		// Determine the message to verify based on rogue key prevention algorithm
 		var verifyMessage []byte
-		var err error
 		switch scheme.RogueKeyPreventionAlgorithm() {
 		case bls.Basic:
 			verifyMessage = message
@@ -159,20 +171,20 @@ func VerifyPartialSignatures[
 
 		// Verify the partial signature
 		if psig.SigmaI != nil {
-			if err := verifier.Verify(psig.SigmaI, partialPK, verifyMessage); err != nil {
+			if err := verifier.Verify(psig.SigmaI, partialPublicKey, verifyMessage); err != nil {
 				return errs.Wrap(err).WithMessage("failed to verify partial signature from participant %d", id)
 			}
 		}
 
 		// Verify the proof of possession if present
 		if scheme.RogueKeyPreventionAlgorithm() == bls.POP && psig.SigmaPopI != nil {
-			popMessage := partialPK.Bytes()
+			popMessage := partialPublicKey.Bytes()
 			popDst := scheme.CipherSuite().GetPopDst(scheme.Variant())
 			popVerifier, err := scheme.Verifier(bls.VerifyWithCustomDST[PK](popDst))
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to create POP verifier")
 			}
-			if err := popVerifier.Verify(psig.SigmaPopI, partialPK, popMessage); err != nil {
+			if err := popVerifier.Verify(psig.SigmaPopI, partialPublicKey, popMessage); err != nil {
 				return errs.Wrap(err).WithMessage("failed to verify proof of possession from participant %d", id)
 			}
 		}
