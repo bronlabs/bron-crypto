@@ -107,7 +107,7 @@ func (w *Witness[S]) UnmarshalCBOR(data []byte) error {
 
 	w2, err := NewWitness(dto.V)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("invalid Pedersen witness")
 	}
 	*w = *w2
 	return nil

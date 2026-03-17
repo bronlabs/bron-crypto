@@ -53,7 +53,7 @@ func (s *Scheme[SK, PK, M, C, N, KG, ENC, DEC]) Committer(opts ...CommitterOptio
 func (s *Scheme[SK, PK, M, C, N, KG, ENC, DEC]) Verifier(opts ...VerifierOption[N, M, C, PK]) (*Verifier[N, M, C, PK], error) {
 	committer, err := s.Committer()
 	if err != nil {
-		return nil, err
+		return nil, errs.Wrap(err).WithMessage("cannot create committer for IND-CPA verifier")
 	}
 	out := &Verifier[N, M, C, PK]{commitments.NewGenericVerifier(committer)}
 	for _, opt := range opts {
