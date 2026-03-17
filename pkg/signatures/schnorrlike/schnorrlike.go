@@ -161,11 +161,11 @@ func (pk *PublicKey[PKV, S]) MarshalCBOR() ([]byte, error) {
 func (pk *PublicKey[PKV, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*publicKeyDTO[PKV, S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal schnorrlike public key")
 	}
 	pk2, err := NewPublicKey(dto.PK)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to validate deserialized public key")
 	}
 	*pk = *pk2
 	return nil
