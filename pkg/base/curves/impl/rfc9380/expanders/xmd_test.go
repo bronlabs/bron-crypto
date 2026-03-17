@@ -38,6 +38,18 @@ type testVectors struct {
 	Cases []testVector `json:"cases"`
 }
 
+func Test_XMDEllDoesNotRejectValidLargeLength(t *testing.T) {
+	t.Parallel()
+
+	// For SHA-256 (b_in_bytes=32), the maximum valid len_in_bytes is 255*32 = 8160.
+	// With the old formula (ell = ceil(lenInBytes/8)), ell for 8160 would be 1020,
+	// which exceeds 255 and would incorrectly panic.
+	messageExpander := h2c.NewXMDMessageExpander(sha256.New)
+	require.NotPanics(t, func() {
+		messageExpander.ExpandMessage([]byte("test-dst"), []byte("test-msg"), 8160)
+	})
+}
+
 func Test_ExpandMessageXMDSha256(t *testing.T) {
 	t.Parallel()
 

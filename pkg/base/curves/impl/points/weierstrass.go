@@ -181,7 +181,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Select(choice ct.Choice, z, 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ClearCofactor(in *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var params C
 
-	params.ClearCofactor(&p.X, &p.Y, &p.Z, &in.Z, &in.Y, &in.Z)
+	params.ClearCofactor(&p.X, &p.Y, &p.Z, &in.X, &in.Y, &in.Z)
 }
 
 // Add computes p = lhs + rhs

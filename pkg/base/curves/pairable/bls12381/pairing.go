@@ -84,7 +84,7 @@ func (p *OptimalAtePPE) Equal(other curves.PPE[*PointG1, *BaseFieldElementG1, *P
 	if !ok {
 		return false
 	}
-	return p.Name() != o.Name()
+	return p.Name() == o.Name()
 }
 
 // Type returns the pairing type.

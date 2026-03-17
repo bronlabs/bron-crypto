@@ -38,6 +38,14 @@ func Test_ScalarCBORRoundTrip(t *testing.T) {
 	require.True(t, deserialized.Equal(e))
 }
 
+func Test_PPEEqualSameEngine(t *testing.T) {
+	t.Parallel()
+	ppe1 := bls12381.NewOptimalAtePPE()
+	ppe2 := bls12381.NewOptimalAtePPE()
+	require.True(t, ppe1.Equal(ppe2),
+		"two instances of the same pairing engine must be Equal")
+}
+
 func Test_G1PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()

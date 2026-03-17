@@ -17,4 +17,6 @@ var (
 	ErrNil = errs.New("nil")
 	// ErrRandomSample reports random sampling failures.
 	ErrRandomSample = errs.New("random sample failed")
+	// ErrSubGroupMembership reports objects not being in the correct subgroup.
+	ErrSubGroupMembership = errs.New("not in correct subgroup")
 )

@@ -34,6 +34,26 @@ type rfc9380TestPoint struct {
 //go:embed testvectors/edwards25519_xmd_sha512_ell2_ro.json
 var roTestVectorsJson string
 
+func Test_IsNonZeroIsComplementOfIsZero(t *testing.T) {
+	t.Parallel()
+
+	// Construct the order-2 point (0, -1, 0, 1) which is on the curve but
+	// is NOT the identity (0, 1, 0, 1). Both have X=0, so a naive
+	// IsNonZero that only checks X would incorrectly return 0.
+	var one, negOne impl.Fp
+	one.SetOne()
+	negOne.Neg(&one)
+
+	var p impl.Point
+	p.X.SetZero()
+	p.Y.Set(&negOne)
+	p.T.SetZero()
+	p.Z.SetOne()
+
+	require.Equal(t, p.IsZero(), p.IsNonZero().Not(),
+		"IsNonZero must be the complement of IsZero")
+}
+
 func Test_HashToCurve(t *testing.T) {
 	t.Parallel()
 

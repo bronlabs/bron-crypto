@@ -26,3 +26,17 @@ func TestP256PointArithmetic_Double(t *testing.T) {
 	require.Equal(t, ct.True, e2)
 	require.Equal(t, ct.True, e3)
 }
+
+func TestP256ClearCofactor_PreservesGenerator(t *testing.T) {
+	t.Parallel()
+
+	// For a cofactor-1 curve, ClearCofactor is the identity function.
+	// This test verifies the point-level ClearCofactor method passes
+	// the correct input coordinates (X, Y, Z) to the params implementation.
+	var g, cleared p256Impl.Point
+	g.SetGenerator()
+	cleared.ClearCofactor(&g)
+
+	require.Equal(t, ct.True, g.Equal(&cleared),
+		"ClearCofactor on a cofactor-1 curve must preserve the point")
+}

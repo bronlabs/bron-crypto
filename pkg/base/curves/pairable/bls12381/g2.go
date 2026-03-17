@@ -189,7 +189,7 @@ func (*G2) FromCompressed(input []byte) (*PointG2, error) {
 	pp.V.Y.Select(isNegative(&y)^sortFlag, &pp.V.Y, &yNeg)
 
 	if !pp.IsTorsionFree() {
-		return nil, curves.ErrFailed.WithMessage("point is not in correct subgroup")
+		return nil, curves.ErrSubGroupMembership.WithStackFrame()
 	}
 	return pp, nil
 }
@@ -238,7 +238,7 @@ func (*G2) FromUncompressed(input []byte) (*PointG2, error) {
 		return nil, curves.ErrFailed.WithMessage("point is not on the curve")
 	}
 	if !pp.IsTorsionFree() {
-		return nil, curves.ErrFailed.WithMessage("point is not in correct subgroup")
+		return nil, curves.ErrSubGroupMembership.WithStackFrame()
 	}
 
 	return pp, nil
@@ -250,6 +250,9 @@ func (*G2) FromAffine(x, y *BaseFieldElementG2) (*PointG2, error) {
 	ok := p.V.SetAffine(&x.V, &y.V)
 	if ok != 1 {
 		return nil, curves.ErrInvalidCoordinates.WithMessage("x/y")
+	}
+	if !p.IsTorsionFree() {
+		return nil, curves.ErrSubGroupMembership.WithStackFrame()
 	}
 	return &p, nil
 }
