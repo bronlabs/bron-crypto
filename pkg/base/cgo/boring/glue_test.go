@@ -29,9 +29,9 @@ func TestBigNum_Jacobi(t *testing.T) {
 }
 
 func TestBigNum_Error(t *testing.T) {
-	zero, err := new(boring.BigNum).SetBytes([]byte{0})
+	zero, err := boring.NewBigNum().SetBytes([]byte{0})
 	require.NoError(t, err)
 	ctx := boring.NewBigNumCtx()
-	_, err = new(boring.BigNum).Mod(zero, zero, ctx)
+	_, err = boring.NewBigNum().Mod(zero, zero, ctx)
 	require.True(t, strings.Contains(err.Error(), "DIV_BY_ZERO"))
 }

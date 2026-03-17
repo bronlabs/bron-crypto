@@ -21,7 +21,10 @@ func Test_LongDhGen(t *testing.T) {
 	const bits = 512
 
 	for i := 0; i < reps; i++ {
-		p := boring.NewDiffieHellmanGroup().GenerateParameters(bits).GetP()
+		dh, err := boring.NewDiffieHellmanGroup().GenerateParameters(bits)
+		require.NoError(t, err)
+		p, err := dh.GetP()
+		require.NoError(t, err)
 		pBytes, err := p.Bytes()
 		require.NoError(t, err)
 
