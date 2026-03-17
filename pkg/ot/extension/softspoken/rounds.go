@@ -69,7 +69,10 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 		r.tape.AppendBytes(expansionMaskLabel, r1.U[i])
 	}
 	m := eta / Sigma                                    // M = η/σ
-	challengeFiatShamir := generateChallenge(r.tape, m) // χ
+	challengeFiatShamir, err := generateChallenge(r.tape, m) // χ
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot generate challenge")
+	}
 	// step 1.6: Compute the challenge response (ẋ, ṫ_i) using the challenge (χ)
 	err = r.computeResponse(xPrime, &t, challengeFiatShamir, &r1.ChallengeResponse)
 	if err != nil {
@@ -144,7 +147,10 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 		s.tape.AppendBytes(expansionMaskLabel, r1.U[i])
 	}
 	M := eta / Sigma
-	challengeFiatShamir := generateChallenge(s.tape, M)
+	challengeFiatShamir, err := generateChallenge(s.tape, M)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot generate challenge")
+	}
 	// step 2.4: Verify the challenge response (ẋ, ṫ_i) using the challenge (χ)
 	err = s.verifyChallenge(challengeFiatShamir, &r1.ChallengeResponse, extCorrelations)
 	if err != nil {
@@ -206,13 +212,16 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 //    using the challenge (χ) and the commitment to the statement (u_i).
 //
 
-func generateChallenge(transcript transcripts.Transcript, challengeLength int) (challenge Challenge) {
+func generateChallenge(transcript transcripts.Transcript, challengeLength int) (Challenge, error) {
 	challengeFiatShamir := make(Challenge, challengeLength)
 	for i := range challengeLength {
-		bytes, _ := transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
+		bytes, err := transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to extract challenge from transcript")
+		}
 		copy(challengeFiatShamir[i][:], bytes)
 	}
-	return challengeFiatShamir
+	return challengeFiatShamir, nil
 }
 
 // computeResponse Computes the challenge response ẋ, ṫ^i ∀i∈[κ].

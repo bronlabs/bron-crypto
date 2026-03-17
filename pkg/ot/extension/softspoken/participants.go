@@ -49,7 +49,7 @@ type Receiver struct {
 
 // NewSender constructs a SoftSpoken sender with VSOT seed outputs.
 func NewSender(sessionID network.SID, receiverSeeds *vsot.ReceiverOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Sender, error) {
-	if receiverSeeds == nil || prng == nil {
+	if receiverSeeds == nil || suite == nil || tape == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 	if receiverSeeds.InferredXi() != Kappa || receiverSeeds.InferredL() != 1 {
@@ -73,7 +73,7 @@ func NewSender(sessionID network.SID, receiverSeeds *vsot.ReceiverOutput, suite 
 
 // NewReceiver constructs a SoftSpoken receiver with VSOT seed outputs.
 func NewReceiver(sessionID network.SID, senderSeeds *vsot.SenderOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Receiver, error) {
-	if senderSeeds == nil || prng == nil {
+	if senderSeeds == nil || suite == nil || tape == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 	if senderSeeds.InferredXi() != Kappa || senderSeeds.InferredL() != 1 {
