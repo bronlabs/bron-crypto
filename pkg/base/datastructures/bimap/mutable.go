@@ -86,16 +86,15 @@ func (m *MutableBiMap[K, V]) Retain(keys ...K) ds.MutableBiMap[K, V] {
 
 // Filter returns a new bimap containing only entries where the predicate returns true.
 func (m *MutableBiMap[K, V]) Filter(predicate func(key K) bool) ds.MutableBiMap[K, V] {
+	filtered := m.internalMap.Filter(predicate)
+	reverseFiltered := m.reverseMap.Clone()
+	reverseFiltered.Clear()
+	for key, value := range filtered.Iter() {
+		reverseFiltered.Put(value, key)
+	}
 	return &MutableBiMap[K, V]{
-		internalMap: m.internalMap.Filter(predicate),
-		reverseMap: m.reverseMap.Filter(func(value V) bool {
-			for k := range m.internalMap.Iter() {
-				if predicate(k) {
-					return true
-				}
-			}
-			return false
-		}),
+		internalMap: filtered,
+		reverseMap:  reverseFiltered,
 	}
 }
 
@@ -106,7 +105,12 @@ func (m *MutableBiMap[K, V]) Put(l K, r V) {
 
 // TryPut adds or updates a key-value pair, returning whether a value was replaced and the old value.
 // If the key already existed, the old value is removed from the reverse map.
+// If the value already maps to a different key, that key is evicted from the internal map.
 func (m *MutableBiMap[K, V]) TryPut(l K, r V) (replaced bool, oldValue V) {
+	// Evict any existing mapping for value r to maintain bijectivity
+	if existingKey, exists := m.reverseMap.Get(r); exists {
+		m.internalMap.Remove(existingKey)
+	}
 	replaced, oldValue = m.internalMap.TryPut(l, r)
 	if replaced {
 		// Remove old value from reverse map since it's no longer mapped

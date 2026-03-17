@@ -78,6 +78,21 @@ type HashableTrait[K ds.Hashable[K], V any] struct {
 	inner HashableMapping[K, V]
 }
 
+// cloneInner returns a deep copy of the inner mapping.
+func (m HashableTrait[K, V]) cloneInner() HashableMapping[K, V] {
+	inner := make(HashableMapping[K, V])
+	for code, entries := range m.inner {
+		inner[code] = make([]*HashableEntry[K, V], len(entries))
+		for i, e := range entries {
+			inner[code][i] = &HashableEntry[K, V]{
+				Key:   e.Key,
+				Value: e.Value,
+			}
+		}
+	}
+	return inner
+}
+
 // Get returns the value associated with the key and whether it exists.
 func (m HashableTrait[K, V]) Get(key K) (value V, exists bool) {
 	hashCode := key.HashCode()
@@ -198,26 +213,16 @@ func (ImmutableHashableMap[K, V]) IsImmutable() bool {
 func (m ImmutableHashableMap[K, V]) Unfreeze() ds.MutableMap[K, V] {
 	return &MutableHashableMap[K, V]{
 		HashableTrait[K, V]{
-			inner: m.inner,
+			inner: m.cloneInner(),
 		},
 	}
 }
 
 // Clone returns a copy of this map.
 func (m ImmutableHashableMap[K, V]) Clone() ds.Map[K, V] {
-	inner := make(HashableMapping[K, V])
-	for code, entries := range m.inner {
-		inner[code] = make([]*HashableEntry[K, V], len(entries))
-		for i, e := range entries {
-			inner[code][i] = &HashableEntry[K, V]{
-				Key:   e.Key,
-				Value: e.Value,
-			}
-		}
-	}
 	return &ImmutableHashableMap[K, V]{
 		HashableTrait[K, V]{
-			inner: inner,
+			inner: m.cloneInner(),
 		},
 	}
 }
@@ -287,26 +292,16 @@ func (MutableHashableMap[K, V]) IsImmutable() bool {
 func (m MutableHashableMap[K, V]) Freeze() ds.Map[K, V] {
 	return &ImmutableHashableMap[K, V]{
 		HashableTrait[K, V]{
-			inner: m.inner,
+			inner: m.cloneInner(),
 		},
 	}
 }
 
 // Clone returns a mutable copy of this map.
 func (m MutableHashableMap[K, V]) Clone() ds.MutableMap[K, V] {
-	inner := make(HashableMapping[K, V])
-	for code, entries := range m.inner {
-		inner[code] = make([]*HashableEntry[K, V], len(entries))
-		for i, e := range entries {
-			inner[code][i] = &HashableEntry[K, V]{
-				Key:   e.Key,
-				Value: e.Value,
-			}
-		}
-	}
 	return &MutableHashableMap[K, V]{
 		HashableTrait[K, V]{
-			inner: inner,
+			inner: m.cloneInner(),
 		},
 	}
 }

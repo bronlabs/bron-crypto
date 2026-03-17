@@ -75,6 +75,53 @@ func TestHashableMap_TryPut_HashCollision(t *testing.T) {
 	require.Equal(t, 2, m.Size())
 }
 
+func TestHashableMap_Freeze_Independence(t *testing.T) {
+	t.Parallel()
+
+	m := hashmap.NewHashable[*CollidingKey, string]()
+	key1 := &CollidingKey{ID: 1, Hash: base.HashCode(1)}
+	key2 := &CollidingKey{ID: 2, Hash: base.HashCode(2)}
+	m.Put(key1, "v1")
+	m.Put(key2, "v2")
+
+	frozen := m.Freeze()
+
+	// Mutate the original mutable map
+	m.Put(key1, "changed")
+	key3 := &CollidingKey{ID: 3, Hash: base.HashCode(3)}
+	m.Put(key3, "v3")
+
+	// Frozen snapshot must be unaffected
+	got, exists := frozen.Get(key1)
+	require.True(t, exists)
+	require.Equal(t, "v1", got, "frozen map should not reflect mutations to mutable map")
+	require.Equal(t, 2, frozen.Size(), "frozen map size should not change")
+}
+
+func TestHashableMap_Unfreeze_Independence(t *testing.T) {
+	t.Parallel()
+
+	m := hashmap.NewHashable[*CollidingKey, string]()
+	key1 := &CollidingKey{ID: 1, Hash: base.HashCode(1)}
+	key2 := &CollidingKey{ID: 2, Hash: base.HashCode(2)}
+	m.Put(key1, "v1")
+	m.Put(key2, "v2")
+
+	frozen := m.Freeze()
+	thawed := frozen.Unfreeze()
+
+	// Mutate the thawed map
+	thawed.Put(key1, "changed")
+	key3 := &CollidingKey{ID: 3, Hash: base.HashCode(3)}
+	thawed.Put(key3, "v3")
+
+	// Original frozen map must be unaffected
+	got, exists := frozen.Get(key1)
+	require.True(t, exists)
+	require.Equal(t, "v1", got, "frozen map should not reflect mutations to unfrozen map")
+	require.Equal(t, 2, frozen.Size(), "frozen map size should not change")
+}
+
 func TestHashableMap_TryRemove_HashCollision(t *testing.T) {
 	t.Parallel()
 

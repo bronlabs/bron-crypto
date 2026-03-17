@@ -24,8 +24,8 @@ func NewConcurrentBiMap[K any, V any](innerBiMap ds.MutableBiMap[K, V]) *Concurr
 
 // Reverse returns a thread-safe view of this bimap with keys and values swapped.
 func (m *ConcurrentBiMap[K, V]) Reverse() ds.ConcurrentBiMap[V, K] {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	return NewConcurrentBiMap(m.inner.Reverse())
 }
@@ -46,15 +46,15 @@ func (m *ConcurrentBiMap[K, V]) Get(l K) (V, bool) {
 
 // Retain returns a new concurrent bimap containing only entries with the specified keys.
 func (m *ConcurrentBiMap[K, V]) Retain(keys ...K) ds.ConcurrentBiMap[K, V] {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return NewConcurrentBiMap(m.inner.Retain(keys...))
 }
 
 // Filter returns a new concurrent bimap containing only entries where the predicate returns true.
 func (m *ConcurrentBiMap[K, V]) Filter(predicate func(key K) bool) ds.ConcurrentBiMap[K, V] {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return NewConcurrentBiMap(m.inner.Filter(predicate))
 }
 
@@ -123,9 +123,15 @@ func (m *ConcurrentBiMap[_, V]) Values() []V {
 
 // Iter returns an iterator over all key-value pairs.
 func (m *ConcurrentBiMap[K, V]) Iter() iter.Seq2[K, V] {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.inner.Iter()
+	return func(yield func(K, V) bool) {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
+		for k, v := range m.inner.Iter() {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
 }
 
 // Clone returns a new concurrent bimap with a copy of the data.
