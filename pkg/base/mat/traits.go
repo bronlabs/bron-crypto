@@ -12,7 +12,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -51,8 +51,21 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) Dimensions() (m, n int) {
 }
 
 // Order returns the cardinality of the matrix module.
+// For m×n matrices over a structure of order q, the total count is q^(m*n).
 func (mm *MatrixGroupTrait[G, S, W, WT]) Order() algebra.Cardinal {
-	return cardinal.New(uint64(mm.rows) * uint64(mm.cols)).Mul(mm.baseStructure.Order())
+	baseOrder := mm.baseStructure.Order()
+	if baseOrder.IsUnknown() || !baseOrder.IsFinite() {
+		return baseOrder
+	}
+	base, err := num.N().FromCardinal(baseOrder)
+	if err != nil {
+		return baseOrder
+	}
+	result := num.N().One()
+	for range mm.rows * mm.cols {
+		result = result.Mul(base)
+	}
+	return result.Cardinal()
 }
 
 // ElementSize returns the byte size of a single matrix (rows * cols * scalar size).
