@@ -129,7 +129,7 @@ func (ge FieldUnitSubGroupElement[FE]) IsOpIdentity() bool {
 }
 
 func (ge FieldUnitSubGroupElement[FE]) TryOpInv() (*FieldUnitSubGroupElement[FE], error) {
-	return ge.Inv(), nil
+	return ge.TryInv()
 }
 
 func (ge FieldUnitSubGroupElement[FE]) OpInv() *FieldUnitSubGroupElement[FE] {
