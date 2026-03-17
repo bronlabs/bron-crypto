@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
@@ -26,10 +27,19 @@ type PublicMaterial[
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
-	publicKey         *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]
-	accessStructure   *threshold.Threshold
-	fv                *feldman.VerificationVector[PK, S]
-	partialPublicKeys ds.Map[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]]
+	publicKey       *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]
+	accessStructure *threshold.Threshold
+	fv              feldman.VerificationVector[PK, S]
+}
+
+type publicMaterialDTO[
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	PublicKey          *bls.PublicKey[PK, PKFE, SG, SGFE, E, S] `cbor:"publicKey"`
+	AccessStructure    *threshold.Threshold                     `cbor:"accessStructure"`
+	VerificationVector feldman.VerificationVector[PK, S]        `cbor:"verificationVector"`
 }
 
 // PublicKey returns the combined BLS public key for the threshold scheme.
@@ -57,7 +67,16 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PartialPublicKeys() ds.Map[
 	if spm == nil {
 		return nil
 	}
-	return spm.partialPublicKeys
+
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](spm.publicKey.Group().ScalarStructure())
+	ppks := hashmap.NewComparable[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]]()
+	for id := range spm.accessStructure.Shareholders().Iter() {
+		x := field.FromUint64(uint64(id))
+		y := spm.fv.Eval(x)
+		ppk := errs.Must1(bls.NewPublicKey(y))
+		ppks.Put(id, ppk)
+	}
+	return ppks.Freeze()
 }
 
 // AdditivePartialPublicKeys returns the map of partial public keys indexed by party ID.
@@ -80,13 +99,14 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AdditivePartialPublicKeys(q
 		return nil, errs.Wrap(err).WithMessage("failed to compute lagrange coefficients")
 	}
 
+	ppks := spm.PartialPublicKeys()
 	result := hashmap.NewComparable[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]]()
 	for id := range quorum.Shareholders().Iter() {
 		c, ok := lagrangeCoefficients.Get(id)
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing lagrange coefficient for party %d", id)
 		}
-		ppk, ok := spm.partialPublicKeys.Get(id)
+		ppk, ok := ppks.Get(id)
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing partial public key for party %d", id)
 		}
@@ -103,7 +123,7 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AdditivePartialPublicKeys(q
 
 // VerificationVector returns the Feldman verification vector used to verify
 // that parties hold valid shares of the secret key. Returns nil if the receiver is nil.
-func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) VerificationVector() *feldman.VerificationVector[PK, S] {
+func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) VerificationVector() feldman.VerificationVector[PK, S] {
 	if spm == nil {
 		return nil
 	}
@@ -123,14 +143,8 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) Equal(other *PublicMaterial
 	if !spm.publicKey.Equal(other.publicKey) {
 		return false
 	}
-	if spm.partialPublicKeys.Size() != other.partialPublicKeys.Size() {
+	if !spm.fv.Equal(other.fv) {
 		return false
-	}
-	for id, pk := range spm.partialPublicKeys.Iter() {
-		otherPk, exists := other.partialPublicKeys.Get(id)
-		if !exists || !pk.Equal(otherPk) {
-			return false
-		}
 	}
 
 	return true
@@ -145,6 +159,42 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 	return spm.publicKey.HashCode()
 }
 
+// MarshalCBOR serialises a shard.
+func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) MarshalCBOR() ([]byte, error) {
+	dto := &publicMaterialDTO[PK, PKFE, SG, SGFE, E, S]{
+		PublicKey:          spm.publicKey,
+		AccessStructure:    spm.accessStructure,
+		VerificationVector: spm.fv,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal public material to CBOR")
+	}
+	return data, nil
+}
+
+// UnmarshalCBOR deserialises a shard.
+func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*publicMaterialDTO[PK, PKFE, SG, SGFE, E, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal public material from CBOR")
+	}
+	if dto.PublicKey == nil || dto.AccessStructure == nil || dto.VerificationVector == nil {
+		return ErrInvalidArgument.WithMessage("missing required fields in public material")
+	}
+	if dto.VerificationVector.Degree() != int(dto.AccessStructure.Threshold())-1 {
+		return ErrInvalidArgument.WithMessage("verification vector degree does not match access structure threshold")
+	}
+	if !dto.PublicKey.Value().Equal(dto.VerificationVector.Coefficients()[0]) {
+		return ErrInvalidArgument.WithMessage("public key does not match verification vector coefficients")
+	}
+
+	spm.publicKey = dto.PublicKey
+	spm.accessStructure = dto.AccessStructure
+	spm.fv = dto.VerificationVector
+	return nil
+}
+
 // Shard represents a party's secret share in a threshold BLS signature scheme.
 // It embeds PublicMaterial and additionally contains the party's private Feldman share,
 // which is used to produce partial signatures. Shards should be kept secret by their owners.
@@ -156,6 +206,15 @@ type Shard[
 	PublicMaterial[PK, PKFE, SG, SGFE, E, S]
 
 	share *feldman.Share[S]
+}
+
+type shardDTO[
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	PublicMaterial *PublicMaterial[PK, PKFE, SG, SGFE, E, S] `cbor:"publicMaterial"`
+	Share          *feldman.Share[S]                         `cbor:"share"`
 }
 
 // Share returns the party's Feldman share of the secret key.
@@ -184,12 +243,7 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *PublicMaterial[PK
 	if s == nil {
 		return nil
 	}
-	return &PublicMaterial[PK, PKFE, SG, SGFE, E, S]{
-		publicKey:         s.publicKey.Clone(),
-		accessStructure:   s.accessStructure.Clone(),
-		fv:                s.fv,
-		partialPublicKeys: s.partialPublicKeys.Clone(),
-	}
+	return &s.PublicMaterial
 }
 
 // HashCode returns a hash code for the shard, derived from both the share and public key.
@@ -240,6 +294,34 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsAdditiveBLSPrivateKey(quorum *unanim
 	return out, nil
 }
 
+// MarshalCBOR serialises shard.
+func (s *Shard[PK, PKFE, SG, SGFE, E, S]) MarshalCBOR() ([]byte, error) {
+	dto := &shardDTO[PK, PKFE, SG, SGFE, E, S]{
+		PublicMaterial: &s.PublicMaterial,
+		Share:          s.share,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal shard to CBOR")
+	}
+	return data, nil
+}
+
+// UnmarshalCBOR deserialises shard.
+func (s *Shard[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*shardDTO[PK, PKFE, SG, SGFE, E, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal shard from CBOR")
+	}
+	if dto.PublicMaterial == nil || dto.Share == nil {
+		return ErrIsNil.WithMessage("missing required field in shard")
+	}
+
+	s.PublicMaterial = *dto.PublicMaterial
+	s.share = dto.Share
+	return nil
+}
+
 // NewShortKeyShard creates a new Shard for the short key variant of BLS signatures.
 // In the short key variant, public keys are in G1 (shorter) and signatures are in G2 (longer).
 // This provides smaller public keys at the cost of larger signatures.
@@ -278,26 +360,13 @@ func NewShortKeyShard[
 	if !publicKey.IsShort() {
 		return nil, ErrInvalidArgument.WithMessage("public key is not a short key variant")
 	}
-	sf, ok := share.Value().Structure().(algebra.PrimeField[S])
-	if !ok {
-		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
-	}
-	partialPublicKeys := hashmap.NewComparable[sharing.ID, *bls.PublicKey[P1, FE1, P2, FE2, E, S]]()
-	for id := range accessStructure.Shareholders().Iter() {
-		value := vector.Eval(shamir.SharingIDToLagrangeNode(sf, id))
-		pk, err := bls.NewPublicKey(value)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create public key for party %d", id)
-		}
-		partialPublicKeys.Put(id, pk)
-	}
+
 	return &Shard[P1, FE1, P2, FE2, E, S]{
 		share: share,
 		PublicMaterial: PublicMaterial[P1, FE1, P2, FE2, E, S]{
-			publicKey:         publicKey,
-			accessStructure:   accessStructure,
-			fv:                &vector,
-			partialPublicKeys: partialPublicKeys.Freeze(),
+			publicKey:       publicKey,
+			accessStructure: accessStructure,
+			fv:              vector,
 		},
 	}, nil
 }
@@ -339,26 +408,13 @@ func NewLongKeyShard[
 	if publicKey.IsShort() {
 		return nil, ErrInvalidArgument.WithMessage("public key is not a long key variant")
 	}
-	sf, ok := share.Value().Structure().(algebra.PrimeField[S])
-	if !ok {
-		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
-	}
-	partialPublicKeys := hashmap.NewComparable[sharing.ID, *bls.PublicKey[P2, FE2, P1, FE1, E, S]]()
-	for id := range accessStructure.Shareholders().Iter() {
-		value := vector.Eval(shamir.SharingIDToLagrangeNode(sf, id))
-		pk, err := bls.NewPublicKey(value)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create public key for party %d", id)
-		}
-		partialPublicKeys.Put(id, pk)
-	}
+
 	return &Shard[P2, FE2, P1, FE1, E, S]{
 		share: share,
 		PublicMaterial: PublicMaterial[P2, FE2, P1, FE1, E, S]{
-			publicKey:         publicKey,
-			accessStructure:   accessStructure,
-			fv:                &vector,
-			partialPublicKeys: partialPublicKeys.Freeze(),
+			publicKey:       publicKey,
+			accessStructure: accessStructure,
+			fv:              vector,
 		},
 	}, nil
 }

@@ -59,7 +59,7 @@ func NewThresholdAccessStructure(t uint, ps ds.Set[ID]) (*Threshold, error) {
 	}, nil
 }
 
-// ThresholdAccessStructure returns the minimum number of shares required for reconstruction.
+// Threshold returns the minimum number of shares required for reconstruction.
 func (a *Threshold) Threshold() uint {
 	return a.t
 }
