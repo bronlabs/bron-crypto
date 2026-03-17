@@ -20,8 +20,11 @@ func IsNil[T any](v T) bool {
 	if !val.IsValid() {
 		return true
 	}
-	kind := val.Kind()
-	return (kind == reflect.Ptr || kind == reflect.Interface) && val.IsNil()
+	switch val.Kind() {
+	case reflect.Ptr, reflect.Interface, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func:
+		return val.IsNil()
+	}
+	return false
 }
 
 // LeadingZeroBytes returns the count of 0x00 prefix bytes.
@@ -49,6 +52,9 @@ func ImplementsX[X, T any](v T) (X, bool) {
 
 // Binomial computes the binomial coefficient "n choose k".
 func Binomial(n, k int) int {
+	if k < 0 || k > n {
+		return 0
+	}
 	// (n,k) = (n, n-k)
 	if k > n/2 {
 		k = n - k

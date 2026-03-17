@@ -16,7 +16,7 @@ func MapOrError[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (o
 	for i, in := range in {
 		out[i], err = f(in)
 		if err != nil {
-			return nil, err
+			return nil, errs.Wrap(err)
 		}
 	}
 	return out, nil
@@ -181,12 +181,22 @@ func CountUniqueFunc[S ~[]T, T any](xs S, equal func(T, T) bool) int {
 
 // Any returns true if any element in xs satisfies the predicate.
 func Any[S ~[]T, T any](xs S, predicate func(T) bool) bool {
-	return Count(xs, predicate) > 0
+	for _, x := range xs {
+		if predicate(x) {
+			return true
+		}
+	}
+	return false
 }
 
 // All returns true if all elements in xs satisfy the predicate.
 func All[S ~[]T, T any](xs S, predicate func(T) bool) bool {
-	return Count(xs, predicate) == len(xs)
+	for _, x := range xs {
+		if !predicate(x) {
+			return false
+		}
+	}
+	return true
 }
 
 // IsAllUnique returns true if all elements in xs are unique.
