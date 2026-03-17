@@ -67,7 +67,10 @@ func (*Pcg) validateSeedInputs(seed, salt []byte) error {
 }
 
 // New generates a new PRNG of the same type with the provided seed and salt.
-func (*Pcg) New(seed, salt []byte) (prng.SeedablePRNG, error) {
+func (r *Pcg) New(seed, salt []byte) (prng.SeedablePRNG, error) {
+	if err := r.validateSeedInputs(seed, salt); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid inputs")
+	}
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)
 	return New(seedUint64, saltUint64), nil

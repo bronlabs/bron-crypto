@@ -56,10 +56,11 @@ func (c *Prng) Reseed(seed, salt []byte) (err error) {
 	copy(key[:], seed)
 	var nonce [chacha20.NonceSizeX]byte
 	copy(nonce[:], salt)
-	c.chacha, err = chacha20.NewFastErasureCipher(key[:], nonce[:])
+	newChacha, err := chacha20.NewFastErasureCipher(key[:], nonce[:])
 	if err != nil {
 		return errs.Wrap(err).WithMessage("Could not create ChachaPRNG")
 	}
+	c.chacha = newChacha
 	c.seeded = true
 	return nil
 }

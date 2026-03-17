@@ -128,8 +128,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 		entropyInput = make([]byte, prg.SecurityStrength())
 		if prg.entropySource == nil {
 			errors = append(errors, ErrInvalidEntropy.WithMessage("cannot reseed without external entropy"))
-		}
-		if _, err := io.ReadFull(prg.entropySource, entropyInput); err != nil {
+		} else if _, err := io.ReadFull(prg.entropySource, entropyInput); err != nil {
 			errors = append(errors, errs.Wrap(err))
 		}
 	case entropyInputLen < prg.SecurityStrength():
