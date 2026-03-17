@@ -121,7 +121,7 @@ func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 	qBig := rsaPrivateKey.Primes[1]
 	// double check
 	if pBig.BitLen() != int(bits) || qBig.BitLen() != int(bits) {
-		return *new(N), *new(N), errs.Wrap(err).WithMessage("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), bits)
+		return *new(N), *new(N), errs.New("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), bits)
 	}
 	p, err = set.FromBig(pBig)
 	if err != nil {

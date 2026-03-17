@@ -50,9 +50,12 @@ func (k Known) Nat() *numct.Nat {
 
 // IsLessThanOrEqual checks if the known cardinal is less than or equal to another cardinal.
 func (k Known) IsLessThanOrEqual(other Cardinal) bool {
+	if !other.IsFinite() {
+		return true // any finite cardinal ≤ infinity
+	}
 	otherKnown, ok := other.(Known)
 	if !ok {
-		return false
+		return false // Unknown: can't determine
 	}
 	lt, eq, _ := k.Nat().Compare(otherKnown.Nat())
 	return lt|eq == ct.True
@@ -94,7 +97,10 @@ func (k Known) String() string {
 
 // Add adds two known cardinals.
 func (k Known) Add(other Cardinal) Cardinal {
-	otherKnown, _ := other.(Known)
+	otherKnown, ok := other.(Known)
+	if !ok {
+		return other
+	}
 	var sum numct.Nat
 	sum.Add(k.Nat(), otherKnown.Nat())
 	return Known(sum.BytesBE())
@@ -102,7 +108,10 @@ func (k Known) Add(other Cardinal) Cardinal {
 
 // Mul multiplies two known cardinals.
 func (k Known) Mul(other Cardinal) Cardinal {
-	otherKnown, _ := other.(Known)
+	otherKnown, ok := other.(Known)
+	if !ok {
+		return other
+	}
 	var prod numct.Nat
 	prod.Mul(k.Nat(), otherKnown.Nat())
 	return Known(prod.BytesBE())
@@ -110,7 +119,10 @@ func (k Known) Mul(other Cardinal) Cardinal {
 
 // Sub subtracts another known cardinal from the known cardinal.
 func (k Known) Sub(other Cardinal) Cardinal {
-	otherKnown, _ := other.(Known)
+	otherKnown, ok := other.(Known)
+	if !ok {
+		return other
+	}
 	var diff numct.Nat
 	diff.SubCap(k.Nat(), otherKnown.Nat(), -1)
 	return Known(diff.BytesBE())

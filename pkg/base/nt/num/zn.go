@@ -460,12 +460,12 @@ func (u *Uint) IsProbablyPrime() bool {
 func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
 	errs.Must1(u.isValid(other))
 	if !u.Group().IsDomain() {
-		return nil, nil, errs.New("not a euclidean domain")
+		return nil, nil, ErrUndefined.WithStackFrame().WithMessage("not a euclidean domain")
 	}
 
 	var q, r numct.Nat
 	if ok := q.EuclideanDiv(&r, u.v, other.v); ok == ct.False {
-		return nil, nil, errs.New("division failed")
+		return nil, nil, ErrUndefined.WithStackFrame().WithMessage("division failed")
 	}
 	u.m.Mod(&q, &q)
 	u.m.Mod(&r, &r)
@@ -488,7 +488,7 @@ func (u *Uint) TryNeg() (*Uint, error) {
 // TryInv returns the multiplicative inverse of the Uint element.
 func (u *Uint) TryInv() (*Uint, error) {
 	if !u.IsUnit() {
-		return nil, errs.New("not a unit")
+		return nil, ErrUndefined.WithStackFrame().WithMessage("not a unit")
 	}
 	v := new(numct.Nat)
 	u.m.ModInv(v, u.v)
@@ -500,7 +500,7 @@ func (u *Uint) TryDiv(other *Uint) (*Uint, error) {
 	errs.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	if ok := u.m.ModDiv(v, u.v, other.v); ok == ct.False {
-		return nil, errs.New("division failed")
+		return nil, ErrUndefined.WithStackFrame().WithMessage("division failed")
 	}
 	return &Uint{v: v, m: u.m}, nil
 }
@@ -594,7 +594,7 @@ func (u *Uint) IsQuadraticResidue() bool {
 func (u *Uint) Sqrt() (*Uint, error) {
 	v := new(numct.Nat)
 	if ok := u.m.ModSqrt(v, u.v); ok == ct.False {
-		return nil, errs.New("square root failed")
+		return nil, ErrUndefined.WithStackFrame().WithMessage("square root failed")
 	}
 	return &Uint{v: v, m: u.m}, nil
 }

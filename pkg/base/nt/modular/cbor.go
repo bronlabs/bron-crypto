@@ -47,7 +47,7 @@ func (m *SimpleModulus) MarshalCBOR() ([]byte, error) {
 func (m *SimpleModulus) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[simpleDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	m.m = dto.Modulus
 	return nil
@@ -73,7 +73,7 @@ func (m *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
 func (m *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[pairDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	out, ok := NewOddPrimeFactors(dto.P, dto.Q)
 	if ok == ct.False {
@@ -98,7 +98,7 @@ func (m *OddPrimeSquareFactors) MarshalCBOR() ([]byte, error) {
 func (m *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[pairDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	out, ok := NewOddPrimeSquareFactors(dto.P, dto.Q)
 	if ok == ct.False {
