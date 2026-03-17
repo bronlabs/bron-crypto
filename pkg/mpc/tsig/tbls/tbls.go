@@ -108,6 +108,7 @@ type shardDTO[
 	Base *tsig.BaseShard[PK, S] `cbor:"base"`
 }
 
+// PublicKey returns the BLS public key associated with the shard.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[PK, PKFE, SG, SGFE, E, S] {
 	return errs.Must1(bls.NewPublicKey(s.PublicKeyValue()))
 }
@@ -312,6 +313,8 @@ func NewLongKeyShard[
 }
 
 var (
-	ErrIsNil           = errs.New("is nil")
+	// ErrIsNil is returned when a required input is nil.
+	ErrIsNil = errs.New("is nil")
+	// ErrInvalidArgument is returned when an input is invalid or inconsistent.
 	ErrInvalidArgument = errs.New("invalid argument")
 )

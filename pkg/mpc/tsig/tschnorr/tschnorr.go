@@ -158,5 +158,6 @@ func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]
 }
 
 var (
+	// ErrInvalidArgument is returned when an input is invalid or inconsistent.
 	ErrInvalidArgument = errs.New("invalid argument")
 )

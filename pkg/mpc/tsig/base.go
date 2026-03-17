@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 )
 
@@ -203,12 +204,14 @@ func (sh *BaseShard[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// DerivePublicKeyShares evaluates the verification vector for each shareholder and returns the corresponding public key shares.
 func DerivePublicKeyShares[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](verificationVector feldman.VerificationVector[E, S], shareholders ds.Set[sharing.ID]) (ds.Map[sharing.ID, *feldman.LiftedShare[E, S]], error) {
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](verificationVector.CoefficientStructure())
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	result := hashmap.NewComparable[sharing.ID, *feldman.LiftedShare[E, S]]()
 	for id := range shareholders.Iter() {
-		shareValue := verificationVector.Eval(field.FromUint64(uint64(id)))
+		x := shamir.SharingIDToLagrangeNode(field, id)
+		shareValue := verificationVector.Eval(x)
 		share, err := feldman.NewLiftedShare(id, shareValue)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create share")
