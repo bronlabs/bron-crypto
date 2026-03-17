@@ -38,7 +38,7 @@ func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error
 	}
 	sk, err := NewPrivateKey(group)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.Wrap(err)
 	}
 	pk, err := NewPublicKey(group.ForgetOrder())
 	if err != nil {

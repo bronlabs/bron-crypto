@@ -173,7 +173,7 @@ func (pt *Plaintext) Add(other *Plaintext) *Plaintext {
 
 // Equal returns true if two plaintexts have the same value.
 func (pt *Plaintext) Equal(other *Plaintext) bool {
-	return pt.Value().Equal(other.Value())
+	return other != nil && pt.n.Equal(other.n) && pt.v.Equal(other.v)
 }
 
 // OpInv returns the additive inverse of the plaintext.
