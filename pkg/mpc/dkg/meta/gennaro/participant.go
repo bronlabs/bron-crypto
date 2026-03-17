@@ -80,7 +80,7 @@ func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	}
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 
-	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, ctx.SessionID(), group.Name())
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, ctx.SessionID(), group.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
 	h, err := ts.Extract(ctx.Transcript(), secondPedersenGeneratorLabel, group)
