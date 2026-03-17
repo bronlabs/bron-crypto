@@ -56,7 +56,7 @@ func (esk *ExtendedPrivateKey[S]) UnmarshalCBOR(data []byte) error {
 	}
 	dtoSf := algebra.StructureMustBeAs[algebra.PrimeField[S]](dto.S.Structure())
 	var ok bool
-	if isFromCurve25519(dtoSf.Name()) {
+	if isFromCurve25519(dtoSf.Name()) || isFromEdwards25519(dtoSf.Name()) {
 		expected, err := ExtendPrivateKey(dtoSk, dtoSf)
 		if err != nil {
 			return errs.Wrap(err).WithMessage("invalid extended private key")
