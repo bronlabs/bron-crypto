@@ -1,6 +1,7 @@
 package tbls
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -228,12 +229,17 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Share() *feldman.Share[S] {
 
 // Equal returns true if two Shard instances are equal.
 // Two shards are equal if they have the same share and public material.
-func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Equal(other *Shard[PK, PKFE, SG, SGFE, E, S]) bool {
+func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Equal(other tsig.Shard[*bls.PublicKey[PK, PKFE, SG, SGFE, E, S], *feldman.Share[S], *threshold.Threshold]) bool {
 	if s == nil && other == nil {
 		return s == other
 	}
-	return (s.share.Equal(other.share) &&
-		s.PublicMaterial.Equal(&other.PublicMaterial))
+	rhs, ok := other.(*Shard[PK, PKFE, SG, SGFE, E, S])
+	if !ok {
+		return false
+	}
+
+	return (s.share.Equal(rhs.share) &&
+		s.PublicMaterial.Equal(&rhs.PublicMaterial))
 }
 
 // PublicKeyMaterial extracts and returns a copy of the public material from the shard.
