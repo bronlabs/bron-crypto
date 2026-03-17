@@ -178,7 +178,7 @@ func (s *DHKEMScheme[P, B, S]) Encap(receiverPublicKey *PublicKey[P, B, S], prng
 
 func (s *DHKEMScheme[P, B, S]) EncapWithIKM(receiverPublicKey *PublicKey[P, B, S], ikmE []byte) (sharedSecret []byte, ephemeralPublicKey *PublicKey[P, B, S], err error) {
 	if receiverPublicKey == nil || ikmE == nil {
-		return nil, nil, errs.Wrap(err)
+		return nil, nil, ErrInvalidArgument.WithMessage("arguments can't be nil")
 	}
 	if receiverPublicKey.Value().IsOpIdentity() {
 		return nil, nil, ErrInvalidPublicKey.WithMessage("receiver public key is identity")
@@ -215,7 +215,7 @@ func (s *DHKEMScheme[P, B, S]) EncapWithIKM(receiverPublicKey *PublicKey[P, B, S
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-2.1.2.6
 func (s *DHKEMScheme[P, B, S]) Decap(receiverPrivateKey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S]) (sharedSecret []byte, err error) {
 	if receiverPrivateKey == nil || ephemeralPublicKey == nil {
-		return nil, errs.Wrap(err)
+		return nil, ErrInvalidArgument.WithMessage("arguments can't be nil")
 	}
 	if ephemeralPublicKey.Value().IsOpIdentity() {
 		return nil, ErrInvalidPublicKey.WithMessage("ephemeral public key is identity")
@@ -331,8 +331,14 @@ func (s *DHKEMScheme[P, B, S]) AuthDecap(receiverPrivateKey *PrivateKey[S], send
 	if receiverPrivateKey == nil || senderPublicKey == nil || ephemeralPublicKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("arguments can't be nil")
 	}
+	if senderPublicKey.Value().IsOpIdentity() {
+		return nil, ErrInvalidPublicKey.WithMessage("sender public key is identity")
+	}
 	if !senderPublicKey.Value().IsTorsionFree() {
 		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup")
+	}
+	if ephemeralPublicKey.Value().IsOpIdentity() {
+		return nil, ErrInvalidPublicKey.WithMessage("ephemeral public key is identity")
 	}
 	if !ephemeralPublicKey.Value().IsTorsionFree() {
 		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup")

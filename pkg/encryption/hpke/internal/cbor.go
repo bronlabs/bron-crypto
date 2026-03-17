@@ -17,7 +17,11 @@ func (sk *PrivateKey[S]) MarshalCBOR() ([]byte, error) {
 	dto := &privateKeyDTO[S]{
 		SK: sk.ExtendedPrivateKey,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+	return data, nil
 }
 
 func (sk *PrivateKey[S]) UnmarshalCBOR(data []byte) error {
@@ -37,7 +41,11 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[P, B, S]{
 		PK: pk.PublicKey,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+	return data, nil
 }
 
 func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
@@ -61,7 +69,11 @@ func (c *CipherSuite) MarshalCBOR() ([]byte, error) {
 		KEM:  c.kem,
 		AEAD: c.aead,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+	return data, nil
 }
 
 func (c *CipherSuite) UnmarshalCBOR(data []byte) error {
