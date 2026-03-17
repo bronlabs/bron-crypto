@@ -27,7 +27,7 @@ func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*moduleValuedPolynomialDTO[ME, S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	if len(dto.Coeffs) == 0 {
 		return ErrSerialisationFailed.WithMessage("empty coefficients")
@@ -56,7 +56,7 @@ func (p *Polynomial[RE]) MarshalCBOR() ([]byte, error) {
 func (p *Polynomial[RE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*polynomialDTO[RE]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	if len(dto.Coeffs) == 0 {
 		return ErrSerialisationFailed.WithMessage("empty coefficients")

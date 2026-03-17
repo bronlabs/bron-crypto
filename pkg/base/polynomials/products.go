@@ -72,8 +72,8 @@ func (r *DirectSumOfPolynomialRings[S]) CoefficientAlgebra() *constructions.Dire
 	S,
 ] {
 	coeffRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](r.Factor().ScalarStructure())
-	alg, _ := constructions.NewFiniteRegularAlgebra(coeffRing)
-	out, _ := constructions.NewDirectSumModule(alg, uint(r.Arity().Uint64()))
+	alg := errs.Must1(constructions.NewFiniteRegularAlgebra(coeffRing))
+	out := errs.Must1(constructions.NewDirectSumModule(alg, uint(r.Arity().Uint64())))
 	return out
 }
 
@@ -94,7 +94,7 @@ func (p *DirectSumOfPolynomials[S]) Structure() algebra.Structure[*DirectSumOfPo
 	if !ok {
 		panic(ErrValidation.WithMessage("component is not a polynomial ring"))
 	}
-	out, _ := NewDirectSumOfPolynomialRings(polyRing, uint(arity.Uint64()))
+	out := errs.Must1(NewDirectSumOfPolynomialRings(polyRing, uint(arity.Uint64())))
 	return out
 }
 
@@ -106,8 +106,8 @@ func (p *DirectSumOfPolynomials[S]) CoefficientAlgebra() *constructions.DirectSu
 		S,
 	], *constructions.FiniteRegularAlgebraElement[S], S] {
 	coeffRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](p.Components()[0].CoefficientStructure())
-	alg, _ := constructions.NewFiniteRegularAlgebra(coeffRing)
-	out, _ := constructions.NewDirectSumModule(alg, uint(p.Arity().Uint64()))
+	alg := errs.Must1(constructions.NewFiniteRegularAlgebra(coeffRing))
+	out := errs.Must1(constructions.NewDirectSumModule(alg, uint(p.Arity().Uint64())))
 	return out
 }
 
