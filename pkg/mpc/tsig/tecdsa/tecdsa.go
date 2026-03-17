@@ -25,7 +25,7 @@ type PublicMaterial[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 func (pm *PublicMaterial[P, B, S]) PublicKey() *ecdsa.PublicKey[P, B, S] {
 	pm.pkOnce.Do(func() {
 		var err error
-		pm.pk, err = ecdsa.NewPublicKey(pm.BasePublicMaterial.PublicKeyValue())
+		pm.pk, err = ecdsa.NewPublicKey(pm.PublicKeyValue())
 		if err != nil {
 			panic(err)
 		}
@@ -54,7 +54,7 @@ func (sh *Shard[P, B, S]) PublicKeyMaterial() *PublicMaterial[P, B, S] {
 func (sh *Shard[P, B, S]) PublicKey() *ecdsa.PublicKey[P, B, S] {
 	sh.pkOnce.Do(func() {
 		var err error
-		sh.pk, err = ecdsa.NewPublicKey(sh.BaseShard.PublicKeyValue())
+		sh.pk, err = ecdsa.NewPublicKey(sh.PublicKeyValue())
 		if err != nil {
 			panic(err)
 		}

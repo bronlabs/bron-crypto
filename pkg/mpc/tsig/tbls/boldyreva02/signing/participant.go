@@ -124,7 +124,7 @@ func NewShortKeyCosigner[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
 	}
-	shareAsPrivateKey, err := shard.AsAdditiveBLSPrivateKey(quorum)
+	shareAsPrivateKey, err := shard.AsAdditivePrivateKey(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
 	}
@@ -191,7 +191,7 @@ func NewLongKeyCosigner[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
 	}
-	shareAsPrivateKey, err := shard.AsAdditiveBLSPrivateKey(quorum)
+	shareAsPrivateKey, err := shard.AsAdditivePrivateKey(quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
 	}

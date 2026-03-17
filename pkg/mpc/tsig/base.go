@@ -1,12 +1,12 @@
 package tsig
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
@@ -44,11 +44,7 @@ func (spm *BasePublicMaterial[E, S]) PublicKeyValueShares() ds.Map[sharing.ID, *
 		return nil
 	}
 
-	publicKeyShares, err := DerivePublicKeyShares(spm.fv, spm.accessStructure.Shareholders())
-	if err != nil {
-		panic("internal error: " + err.Error())
-	}
-	return publicKeyShares
+	return errs.Must1(DerivePublicKeyShares(spm.fv, spm.accessStructure.Shareholders()))
 }
 
 // VerificationVector returns the Feldman verification vector for the shared secret.
@@ -112,8 +108,8 @@ func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 
 // BaseShard contains a party's secret share and the associated public material for threshold signing.
 type BaseShard[
-E algebra.PrimeGroupElement[E, S],
-S algebra.PrimeFieldElement[S],
+	E algebra.PrimeGroupElement[E, S],
+	S algebra.PrimeFieldElement[S],
 ] struct {
 	BasePublicMaterial[E, S]
 

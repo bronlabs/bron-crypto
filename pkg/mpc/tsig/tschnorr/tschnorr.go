@@ -79,7 +79,7 @@ type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	pm.pkOnce.Do(func() {
 		var err error
-		pm.pk, err = schnorrlike.NewPublicKey(pm.BasePublicMaterial.PublicKeyValue())
+		pm.pk, err = schnorrlike.NewPublicKey(pm.PublicKeyValue())
 		if err != nil {
 			panic(err)
 		}
@@ -111,7 +111,7 @@ func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
 func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	sh.pkOnce.Do(func() {
 		var err error
-		sh.pk, err = schnorrlike.NewPublicKey(sh.BaseShard.PublicKeyValue())
+		sh.pk, err = schnorrlike.NewPublicKey(sh.PublicKeyValue())
 		if err != nil {
 			panic(err)
 		}
