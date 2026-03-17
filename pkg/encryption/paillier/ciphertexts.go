@@ -192,3 +192,11 @@ func (ct *Ciphertext) Shift(pk *PublicKey, message *Plaintext) (*Ciphertext, err
 func (ct *Ciphertext) HashCode() base.HashCode {
 	return ct.Value().HashCode()
 }
+
+func (ct *Ciphertext) Bytes() []byte {
+	if ct == nil || ct.u == nil {
+		return nil
+	}
+
+	return ct.u.Bytes()
+}

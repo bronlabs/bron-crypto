@@ -13,8 +13,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 )
+
+type testBytes []byte
+
+func (b testBytes) Bytes() []byte { return []byte(b) }
 
 func Test_And_HappyPath(t *testing.T) {
 	t.Parallel()
@@ -87,6 +92,18 @@ func Test_And_InvalidInputs(t *testing.T) {
 		_, err := sigand.Compose(protocol, 0)
 		require.Error(t, err)
 	})
+}
+
+func Test_And_BytesAreLengthDelimited(t *testing.T) {
+	t.Parallel()
+
+	statementA := sigand.ComposeStatements[sigma.Statement](testBytes("a"), testBytes("bc"))
+	statementB := sigand.ComposeStatements[sigma.Statement](testBytes("ab"), testBytes("c"))
+	require.NotEqual(t, statementA.Bytes(), statementB.Bytes())
+
+	responseA := sigand.Response[sigma.Response]{testBytes("a"), testBytes("bc")}
+	responseB := sigand.Response[sigma.Response]{testBytes("ab"), testBytes("c")}
+	require.NotEqual(t, responseA.Bytes(), responseB.Bytes())
 }
 
 func testAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](

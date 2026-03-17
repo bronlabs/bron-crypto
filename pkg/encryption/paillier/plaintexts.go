@@ -219,5 +219,9 @@ func (pt *Plaintext) PartialCompare(other *Plaintext) base.PartialOrdering {
 
 // Bytes returns the plaintext value as a big-endian byte slice.
 func (pt *Plaintext) Bytes() []byte {
-	return pt.Value().Bytes()
+	if pt == nil || pt.v == nil {
+		return nil
+	}
+
+	return pt.v.Bytes()
 }

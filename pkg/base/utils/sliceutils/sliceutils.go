@@ -1,11 +1,14 @@
 package sliceutils
 
 import (
+	"bytes"
+	"encoding/binary"
 	"io"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/ioutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
@@ -301,6 +304,21 @@ func Fill[T any](s []T, x T) {
 	for i := range s {
 		s[i] = x
 	}
+}
+
+// AppendLengthPrefixed appends an 8-byte little-endian length prefix followed by in to out.
+func AppendLengthPrefixed[Out ~[]byte, In ~[]byte](out Out, in In) Out {
+	buf := new(bytes.Buffer)
+	errs.Must1(ioutils.WriteLengthPrefixed(buf, in))
+	return append(out, buf.Bytes()...)
+}
+
+// AppendLengthPrefixedSlices appends the slice count and then each input slice as a length-prefixed byte string.
+func AppendLengthPrefixedSlices[Out ~[]byte, In ~[]byte](out Out, ins ...In) Out {
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(ins)))
+	buf := new(bytes.Buffer)
+	errs.Must1(ioutils.WriteLengthPrefixed(buf, ins...))
+	return append(out, buf.Bytes()...)
 }
 
 var ErrArgumentIsNil = errs.New("argument is nil")
