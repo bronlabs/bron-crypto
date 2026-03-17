@@ -18,6 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/signing"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/testutils"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
@@ -94,8 +95,8 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 			cosigner, err := signing.NewShortKeyCosigner(
 				signCtx,
 				curveFamily,
-				shard,
-				bls.Basic, // Use basic scheme for simplicity
+				ntu.CBORRoundTrip(t, shard),
+				bls.Basic, // Use a basic scheme for simplicity
 			)
 			require.NoError(t, err)
 			cosigners = append(cosigners, cosigner)
