@@ -28,19 +28,18 @@ var stringTests = []struct {
 }
 
 var invalidStringTests = []struct {
-	in  base58.Base58
-	out base58.Base58
+	in base58.Base58
 }{
-	{"0", ""},
-	{"O", ""},
-	{"I", ""},
-	{"l", ""},
-	{"3mJr0", ""},
-	{"O3yxU", ""},
-	{"3sNI", ""},
-	{"4kl8", ""},
-	{"0OIl", ""},
-	{"!@#$%^&*()-_=+~`", ""},
+	{"0"},
+	{"O"},
+	{"I"},
+	{"l"},
+	{"3mJr0"},
+	{"O3yxU"},
+	{"3sNI"},
+	{"4kl8"},
+	{"0OIl"},
+	{"!@#$%^&*()-_=+~`"},
 }
 
 var hexTests = []struct {
@@ -86,8 +85,8 @@ func TestBase58(t *testing.T) {
 	for i, test := range invalidStringTests {
 		t.Run(fmt.Sprintf("invalidStringTest-%d", i), func(t *testing.T) {
 			t.Parallel()
-			res := base58.Decode(test.in)
-			require.Equal(t, test.out, base58.Base58(res))
+			_, err := base58.Decode(test.in)
+			require.ErrorIs(t, err, base58.ErrInvalidCharacter)
 		})
 	}
 }

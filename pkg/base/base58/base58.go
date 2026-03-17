@@ -63,14 +63,16 @@ func Encode(data []byte) Base58 {
 	return Base58(string(answer))
 }
 
-func Decode(s Base58) []byte {
+var ErrInvalidCharacter = errs.New("invalid base58 character")
+
+func Decode(s Base58) ([]byte, error) {
 	answer := zero
 	j := one
 
 	for i := len(s) - 1; i >= 0; i-- {
 		tmp := b58[s[i]]
 		if tmp == 0xFF {
-			return []byte("")
+			return nil, ErrInvalidCharacter.WithStackFrame()
 		}
 		scratch := num.N().FromUint64(uint64(tmp)).Mul(j)
 		answer = answer.Add(scratch)
@@ -86,5 +88,5 @@ func Decode(s Base58) []byte {
 	flen := leadingZerosCount + len(tmpval)
 	val := make([]byte, flen)
 	copy(val[leadingZerosCount:], tmpval)
-	return val
+	return val, nil
 }
