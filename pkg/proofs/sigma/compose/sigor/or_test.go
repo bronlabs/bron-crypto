@@ -14,8 +14,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigor"
 )
+
+type testBytes []byte
+
+func (b testBytes) Bytes() []byte { return []byte(b) }
 
 func Test_Or_HappyPath(t *testing.T) {
 	t.Parallel()
@@ -109,6 +114,59 @@ func Test_Or_InvalidInputs(t *testing.T) {
 		_, err := sigor.Compose(protocol, 2, nil)
 		require.Error(t, err)
 	})
+}
+
+func Test_Or_ResponseBytesIncludeChallenges(t *testing.T) {
+	t.Parallel()
+
+	responseA := &sigor.Response[sigma.Response]{
+		E: [][]byte{[]byte("aa"), []byte("bb")},
+		Z: []sigma.Response{testBytes("zz")},
+	}
+	responseB := &sigor.Response[sigma.Response]{
+		E: [][]byte{[]byte("cc"), []byte("bb")},
+		Z: []sigma.Response{testBytes("zz")},
+	}
+	require.NotEqual(t, responseA.Bytes(), responseB.Bytes())
+}
+
+func Test_Or_VerifyRejectsMalformedChallenges(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(prng)
+	require.NoError(t, err)
+	protocol, err := schnorr.NewProtocol(base, prng)
+	require.NoError(t, err)
+	orProtocol, err := sigor.Compose(protocol, 2, prng)
+	require.NoError(t, err)
+
+	sf, ok := curve.ScalarStructure().(algebra.PrimeField[*k256.Scalar])
+	require.True(t, ok)
+	w, err := sf.Random(prng)
+	require.NoError(t, err)
+
+	statements := sigor.Statement[*schnorr.Statement[*k256.Point, *k256.Scalar]]{
+		schnorr.NewStatement(base.ScalarMul(w)),
+		schnorr.NewStatement(base),
+	}
+	witness := sigor.NewWitness(schnorr.NewWitness(w))
+	commitment, state, err := orProtocol.ComputeProverCommitment(statements, witness)
+	require.NoError(t, err)
+
+	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+
+	response, err := orProtocol.ComputeProverResponse(statements, witness, commitment, state, challenge)
+	require.NoError(t, err)
+	response.E = response.E[:1]
+
+	require.NotPanics(t, func() {
+		err = orProtocol.Verify(statements, commitment, challenge, response)
+	})
+	require.Error(t, err)
 }
 
 func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](

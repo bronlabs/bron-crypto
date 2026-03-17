@@ -1,6 +1,7 @@
 package sliceutils
 
 import (
+	"encoding/binary"
 	"io"
 	"slices"
 
@@ -291,6 +292,23 @@ func Fill[T any](s []T, x T) {
 	for i := range s {
 		s[i] = x
 	}
+}
+
+// AppendLengthPrefixed appends an 8-byte little-endian length prefix followed by in to out.
+func AppendLengthPrefixed[Out ~[]byte, In ~[]byte](out Out, in In) Out {
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(in)))
+	out = append(out, in...)
+	return out
+}
+
+// AppendLengthPrefixedSlices appends the slice count and then each input slice as a length-prefixed byte string.
+func AppendLengthPrefixedSlices[Out ~[]byte, In ~[]byte](out Out, ins ...In) Out {
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(ins)))
+	for _, in := range ins {
+		out = binary.LittleEndian.AppendUint64(out, uint64(len(in)))
+		out = append(out, in...)
+	}
+	return out
 }
 
 var ErrArgumentIsNil = errs.New("argument is nil")

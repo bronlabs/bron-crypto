@@ -244,6 +244,79 @@ func Test_Simulator(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_BytesBindAllFields(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	scheme := paillier.NewScheme()
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
+	require.NoError(t, err)
+	_, pk, err := keyGenerator.Generate(prng)
+	require.NoError(t, err)
+
+	cts := pk.CiphertextSpace()
+	c1a, err := cts.Sample(prng)
+	require.NoError(t, err)
+	c1b, err := cts.Sample(prng)
+	require.NoError(t, err)
+	c2a, err := cts.Sample(prng)
+	require.NoError(t, err)
+	c2b, err := cts.Sample(prng)
+	require.NoError(t, err)
+	cLast, err := cts.Sample(prng)
+	require.NoError(t, err)
+
+	commitmentA := &paillierrange.Commitment{C1: []*paillier.Ciphertext{c1a}, C2: []*paillier.Ciphertext{c2a, cLast}}
+	commitmentB := &paillierrange.Commitment{C1: []*paillier.Ciphertext{c1b}, C2: []*paillier.Ciphertext{c2b, cLast}}
+	require.NotEqual(t, commitmentA.Bytes(), commitmentB.Bytes())
+
+	ps := pk.PlaintextSpace()
+	w1a, err := ps.Sample(nil, nil, prng)
+	require.NoError(t, err)
+	w1b, err := ps.Sample(nil, nil, prng)
+	require.NoError(t, err)
+	w2a, err := ps.Sample(nil, nil, prng)
+	require.NoError(t, err)
+	w2b, err := ps.Sample(nil, nil, prng)
+	require.NoError(t, err)
+	wja, err := ps.Sample(nil, nil, prng)
+	require.NoError(t, err)
+
+	ns := pk.NonceSpace()
+	r1a, err := ns.Sample(prng)
+	require.NoError(t, err)
+	r1b, err := ns.Sample(prng)
+	require.NoError(t, err)
+	r2a, err := ns.Sample(prng)
+	require.NoError(t, err)
+	r2b, err := ns.Sample(prng)
+	require.NoError(t, err)
+	r2Last, err := ns.Sample(prng)
+	require.NoError(t, err)
+	rja, err := ns.Sample(prng)
+	require.NoError(t, err)
+
+	responseA := &paillierrange.Response{
+		W1: []*paillier.Plaintext{w1a},
+		R1: []*paillier.Nonce{r1a},
+		W2: []*paillier.Plaintext{w2a},
+		R2: []*paillier.Nonce{r2a, r2Last},
+		Wj: []*paillier.Plaintext{wja},
+		Rj: []*paillier.Nonce{rja},
+		J:  []uint{1},
+	}
+	responseB := &paillierrange.Response{
+		W1: []*paillier.Plaintext{w1b},
+		R1: []*paillier.Nonce{r1b},
+		W2: []*paillier.Plaintext{w2b},
+		R2: []*paillier.Nonce{r2b, r2Last},
+		Wj: []*paillier.Plaintext{wja},
+		Rj: []*paillier.Nonce{rja},
+		J:  []uint{1},
+	}
+	require.NotEqual(t, responseA.Bytes(), responseB.Bytes())
+}
+
 func Test_Interactive(t *testing.T) {
 	t.Parallel()
 

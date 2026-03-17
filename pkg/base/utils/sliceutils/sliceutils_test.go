@@ -2,6 +2,7 @@ package sliceutils_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"testing"
 
@@ -278,4 +279,27 @@ func TestFill(t *testing.T) {
 	slice := make([]int, 5)
 	sliceutils.Fill(slice, 42)
 	require.Equal(t, []int{42, 42, 42, 42, 42}, slice)
+}
+
+func TestAppendLengthPrefixed(t *testing.T) {
+	t.Parallel()
+
+	got := sliceutils.AppendLengthPrefixed([]byte("seed"), []byte("abc"))
+
+	want := append([]byte("seed"), binary.LittleEndian.AppendUint64(nil, 3)...)
+	want = append(want, []byte("abc")...)
+	require.Equal(t, want, got)
+}
+
+func TestAppendLengthPrefixedSlices(t *testing.T) {
+	t.Parallel()
+
+	got := sliceutils.AppendLengthPrefixedSlices([]byte("seed"), []byte("a"), []byte("bc"))
+
+	want := append([]byte("seed"), binary.LittleEndian.AppendUint64(nil, 2)...)
+	want = append(want, binary.LittleEndian.AppendUint64(nil, 1)...)
+	want = append(want, []byte("a")...)
+	want = append(want, binary.LittleEndian.AppendUint64(nil, 2)...)
+	want = append(want, []byte("bc")...)
+	require.Equal(t, want, got)
 }

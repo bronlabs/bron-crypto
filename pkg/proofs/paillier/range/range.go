@@ -1,15 +1,14 @@
 package paillierrange
 
 import (
-	"bytes"
 	"encoding/binary"
 	"io"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -35,11 +34,11 @@ type Witness struct {
 
 // Bytes serialises the witness for transcript binding.
 func (w *Witness) Bytes() []byte {
-	var buf bytes.Buffer
-	buf.Write(w.Sk.Group().Modulus().Bytes())
-	buf.Write(w.X.Value().Bytes())
-	buf.Write(w.R.Value().Bytes())
-	return buf.Bytes()
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, w.Sk.Group().Modulus().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, w.X.Value().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, w.R.Value().Bytes())
+	return out
 }
 
 // NewWitness constructs a range-proof witness.
@@ -59,15 +58,12 @@ type Statement struct {
 }
 
 // Bytes serialises the statement for transcript binding.
-func (s *Statement) Bytes() []byte {
-	pkBytes := s.Pk.Group().Modulus().Bytes()
-	cBytes := s.C.Value().Bytes()
-	lBytes := s.L.Bytes()
-	return slices.Concat(
-		binary.LittleEndian.AppendUint64(nil, uint64(len(pkBytes))), pkBytes,
-		binary.LittleEndian.AppendUint64(nil, uint64(len(cBytes))), cBytes,
-		binary.LittleEndian.AppendUint64(nil, uint64(len(lBytes))), lBytes,
-	)
+func (x *Statement) Bytes() []byte {
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, x.Pk.Group().Modulus().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, x.C.Value().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, x.L.Bytes())
+	return out
 }
 
 // NewStatement constructs a range-proof statement.
@@ -86,30 +82,24 @@ type Commitment struct {
 }
 
 // Bytes serialises the commitment for transcript binding.
-func (c *Commitment) Bytes() []byte {
-	var a []byte
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(c.C1)))
-	for _, c1 := range c.C1 {
-		var c1Bytes []byte
-		if c1 != nil && c1.Value() != nil {
-			c1Bytes = c1.Value().Bytes()
+func (a *Commitment) Bytes() []byte {
+	c1Bytes := sliceutils.Map(a.C1, func(in *paillier.Ciphertext) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(c1Bytes)))
-		a = append(a, c1Bytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(c.C2)))
-	for _, c2 := range c.C2 {
-		var c2Bytes []byte
-		if c2 != nil && c2.Value() != nil {
-			c2Bytes = c2.Value().Bytes()
+		return in.Value().Bytes()
+	})
+	c2Bytes := sliceutils.Map(a.C2, func(in *paillier.Ciphertext) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(nil, uint64(len(c2Bytes)))
-		a = append(a, c2Bytes...)
-	}
+		return in.Value().Bytes()
+	})
 
-	return a
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixedSlices(out, c1Bytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, c2Bytes...)
+	return out
 }
 
 // State stores the prover's internal state between rounds.
@@ -132,75 +122,54 @@ type Response struct {
 }
 
 // Bytes serialises the response for transcript binding.
-func (r *Response) Bytes() []byte {
-	var a []byte
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.W1)))
-	for _, w1 := range r.W1 {
-		var w1Bytes []byte
-		if w1 != nil && w1.Value() != nil {
-			w1Bytes = w1.Value().Bytes()
+func (z *Response) Bytes() []byte {
+	w1Bytes := sliceutils.Map(z.W1, func(in *paillier.Plaintext) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(w1Bytes)))
-		a = append(a, w1Bytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.R1)))
-	for _, r1 := range r.R1 {
-		var r1Bytes []byte
-		if r1 != nil && r1.Value() != nil {
-			r1Bytes = r1.Value().Bytes()
+		return in.Value().Bytes()
+	})
+	r1Bytes := sliceutils.Map(z.R1, func(in *paillier.Nonce) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(r1Bytes)))
-		a = append(a, r1Bytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.W2)))
-	for _, w2 := range r.W2 {
-		var w2Bytes []byte
-		if w2 != nil && w2.Value() != nil {
-			w2Bytes = w2.Value().Bytes()
+		return in.Value().Bytes()
+	})
+	w2Bytes := sliceutils.Map(z.W2, func(in *paillier.Plaintext) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(w2Bytes)))
-		a = append(a, w2Bytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.R2)))
-	for _, r2 := range r.R2 {
-		var r2Bytes []byte
-		if r2 != nil && r2.Value() != nil {
-			r2Bytes = r2.Value().Bytes()
+		return in.Value().Bytes()
+	})
+	r2Bytes := sliceutils.Map(z.R2, func(in *paillier.Nonce) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(nil, uint64(len(r2Bytes)))
-		a = append(a, r2Bytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.Wj)))
-	for _, wj := range r.Wj {
-		var wjBytes []byte
-		if wj != nil && wj.Value() != nil {
-			wjBytes = wj.Value().Bytes()
+		return in.Value().Bytes()
+	})
+	wjBytes := sliceutils.Map(z.Wj, func(in *paillier.Plaintext) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(wjBytes)))
-		a = append(a, wjBytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.Rj)))
-	for _, rj := range r.Rj {
-		var rjBytes []byte
-		if rj != nil && rj.Value() != nil {
-			rjBytes = rj.Value().Bytes()
+		return in.Value().Bytes()
+	})
+	rjBytes := sliceutils.Map(z.Rj, func(in *paillier.Nonce) []byte {
+		if in == nil || in.Value() == nil {
+			return nil
 		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(rjBytes)))
-		a = append(a, rjBytes...)
-	}
+		return in.Value().Bytes()
+	})
+	jBytes := sliceutils.Map(z.J, func(in uint) []byte { return binary.LittleEndian.AppendUint64(nil, uint64(in)) })
 
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.J)))
-	for _, j := range r.J {
-		a = binary.LittleEndian.AppendUint64(a, uint64(j))
-	}
-
-	return a
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixedSlices(out, w1Bytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, r1Bytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, w2Bytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, r2Bytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, wjBytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, rjBytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, jBytes...)
+	return out
 }
 
 // Protocol implements the Paillier range proof.

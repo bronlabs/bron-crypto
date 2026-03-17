@@ -2,10 +2,10 @@ package sigand
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -18,8 +18,11 @@ type StatementCartesian[X0, X1 sigma.Statement] struct {
 	X1 X1
 }
 
-func (s *StatementCartesian[X0, X1]) Bytes() []byte {
-	return slices.Concat(s.X0.Bytes(), s.X1.Bytes())
+func (x *StatementCartesian[X0, X1]) Bytes() []byte {
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, x.X0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, x.X1.Bytes())
+	return out
 }
 
 var _ sigma.Statement = (*StatementCartesian[sigma.Statement, sigma.Statement])(nil)
@@ -34,7 +37,10 @@ type WitnessCartesian[W0, W1 sigma.Witness] struct {
 }
 
 func (w *WitnessCartesian[W0, W1]) Bytes() []byte {
-	return slices.Concat(w.W0.Bytes(), w.W1.Bytes())
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, w.W0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, w.W1.Bytes())
+	return out
 }
 
 var _ sigma.Witness = (*WitnessCartesian[sigma.Witness, sigma.Witness])(nil)
@@ -47,8 +53,11 @@ type CommitmentCartesian[A0, A1 sigma.Commitment] struct {
 	A1 A1
 }
 
-func (c *CommitmentCartesian[A0, A1]) Bytes() []byte {
-	return slices.Concat(c.A0.Bytes(), c.A1.Bytes())
+func (a *CommitmentCartesian[A0, A1]) Bytes() []byte {
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, a.A0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, a.A1.Bytes())
+	return out
 }
 
 var _ sigma.Commitment = (*CommitmentCartesian[sigma.Commitment, sigma.Commitment])(nil)
@@ -71,8 +80,11 @@ type ResponseCartesian[Z0, Z1 sigma.Response] struct {
 	Z1 Z1
 }
 
-func (r *ResponseCartesian[Z0, Z1]) Bytes() []byte {
-	return slices.Concat(r.Z0.Bytes(), r.Z1.Bytes())
+func (z *ResponseCartesian[Z0, Z1]) Bytes() []byte {
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, z.Z0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, z.Z1.Bytes())
+	return out
 }
 
 var _ sigma.Response = (*ResponseCartesian[sigma.Response, sigma.Response])(nil)

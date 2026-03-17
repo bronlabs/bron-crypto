@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigor"
 )
 
@@ -80,6 +81,64 @@ func Test_CartesianOr_XORConstraint(t *testing.T) {
 		curve := k256.NewCurve()
 		testCartesianOrXORConstraint(t, curve)
 	})
+}
+
+func Test_CartesianOr_ResponseBytesIncludeChallenges(t *testing.T) {
+	t.Parallel()
+
+	responseA := &sigor.ResponseCartesian[sigma.Response, sigma.Response]{
+		E0: []byte("aa"),
+		E1: []byte("bb"),
+		Z0: testBytes("x"),
+		Z1: testBytes("yz"),
+	}
+	responseB := &sigor.ResponseCartesian[sigma.Response, sigma.Response]{
+		E0: []byte("cc"),
+		E1: []byte("bb"),
+		Z0: testBytes("x"),
+		Z1: testBytes("yz"),
+	}
+	require.NotEqual(t, responseA.Bytes(), responseB.Bytes())
+}
+
+func Test_CartesianOr_VerifyRejectsMalformedChallenges(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(prng)
+	require.NoError(t, err)
+	protocol, err := schnorr.NewProtocol(base, prng)
+	require.NoError(t, err)
+	orProtocol := sigor.CartesianCompose(protocol, protocol, prng)
+
+	sf, ok := curve.ScalarStructure().(algebra.PrimeField[*k256.Scalar])
+	require.True(t, ok)
+	w0, err := sf.Random(prng)
+	require.NoError(t, err)
+	w1, err := sf.Random(prng)
+	require.NoError(t, err)
+
+	statement := sigor.CartesianComposeStatements(
+		schnorr.NewStatement(base.ScalarMul(w0)),
+		schnorr.NewStatement(base),
+	)
+	witness := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	commitment, state, err := orProtocol.ComputeProverCommitment(statement, witness)
+	require.NoError(t, err)
+
+	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+
+	response, err := orProtocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+	require.NoError(t, err)
+	response.E0 = response.E0[:1]
+
+	require.NotPanics(t, func() {
+		err = orProtocol.Verify(statement, commitment, challenge, response)
+	})
+	require.Error(t, err)
 }
 
 func testCartesianOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](

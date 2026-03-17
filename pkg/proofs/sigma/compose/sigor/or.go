@@ -2,10 +2,8 @@ package sigor
 
 import (
 	"crypto/subtle"
-	"encoding/binary"
 	"fmt"
 	"io"
-	"slices"
 
 	"golang.org/x/sync/errgroup"
 
@@ -21,11 +19,10 @@ import (
 type Statement[X sigma.Statement] []X
 
 // Bytes returns the canonical byte representation of the composed statement.
-func (s Statement[X]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x X) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(s))),
-		s...,
-	)
+func (x Statement[X]) Bytes() []byte {
+	xs := sliceutils.Map(x, func(in X) []byte { return in.Bytes() })
+	out := []byte{}
+	return sliceutils.AppendLengthPrefixedSlices(out, xs...)
 }
 
 var _ sigma.Statement = (Statement[sigma.Statement])(nil)
@@ -51,11 +48,10 @@ var _ sigma.Witness = (*Witness[sigma.Witness])(nil)
 type Commitment[A sigma.Commitment] []A
 
 // Bytes returns the canonical byte representation of the composed commitment.
-func (c Commitment[A]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x A) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(c))),
-		c...,
-	)
+func (a Commitment[A]) Bytes() []byte {
+	as := sliceutils.Map(a, func(in A) []byte { return in.Bytes() })
+	out := []byte{}
+	return sliceutils.AppendLengthPrefixedSlices(out, as...)
 }
 
 var _ sigma.Commitment = (Commitment[sigma.Commitment])(nil)
@@ -91,11 +87,12 @@ type Response[Z sigma.Response] struct {
 }
 
 // Bytes returns the canonical byte representation of the response.
-func (r Response[Z]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x Z) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(r.Z))),
-		r.Z...,
-	)
+func (z Response[Z]) Bytes() []byte {
+	zs := sliceutils.Map(z.Z, func(in Z) []byte { return in.Bytes() })
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixedSlices(out, z.E...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, zs...)
+	return out
 }
 
 var _ sigma.Response = (*Response[sigma.Response])(nil)
@@ -266,11 +263,19 @@ func (p *protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Comm
 	if len(commitment) != p.count {
 		return ErrInvalidLength.WithMessage("invalid commitment length")
 	}
+	if len(response.E) != p.count {
+		return ErrInvalidLength.WithMessage("invalid challenge length")
+	}
 	if len(response.Z) != p.count {
 		return ErrInvalidLength.WithMessage("invalid response length")
 	}
 	if len(challenge) != p.GetChallengeBytesLength() {
 		return ErrInvalidLength.WithMessage("invalid challenge length")
+	}
+	for i := range p.count {
+		if len(response.E[i]) != p.GetChallengeBytesLength() {
+			return ErrInvalidLength.WithMessage("invalid challenge length")
+		}
 	}
 	xoredChallenges := make([]byte, p.GetChallengeBytesLength())
 	subtle.XORBytes(xoredChallenges, response.E[0], response.E[1])
