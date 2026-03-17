@@ -22,9 +22,6 @@ func (b Base58) Equal(other Base58) bool {
 }
 
 var (
-	radix58 = num.N().FromUint64(58)
-	zero    = num.N().FromUint64(0)
-	one     = num.N().FromUint64(1)
 	// Pre-computed table: ASCII → 0–57 (invalid = 0xFF)
 	// Initialise once in init().
 	b58 [256]byte
@@ -47,10 +44,12 @@ func Encode(data []byte) Base58 {
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("failed to convert bytes to Nat"))
 	}
+	zero := num.N().FromUint64(0)
+	radix := num.N().FromUint64(58)
 	answer := make([]byte, 0, len(data)*136/100)
 	var rem *num.Nat
 	for x.Compare(zero).Is(base.GreaterThan) {
-		x, rem, err = x.EuclideanDiv(radix58)
+		x, rem, err = x.EuclideanDiv(radix)
 		if err != nil {
 			panic(errs.Wrap(err).WithMessage("failed to perform division"))
 		}
@@ -66,8 +65,9 @@ func Encode(data []byte) Base58 {
 var ErrInvalidCharacter = errs.New("invalid base58 character")
 
 func Decode(s Base58) ([]byte, error) {
-	answer := zero
-	j := one
+	answer := num.N().FromUint64(0)
+	j := num.N().FromUint64(1)
+	radix := num.N().FromUint64(58)
 
 	for i := len(s) - 1; i >= 0; i-- {
 		tmp := b58[s[i]]
@@ -76,7 +76,7 @@ func Decode(s Base58) ([]byte, error) {
 		}
 		scratch := num.N().FromUint64(uint64(tmp)).Mul(j)
 		answer = answer.Add(scratch)
-		j = j.Mul(radix58)
+		j = j.Mul(radix)
 	}
 
 	tmpval := answer.Big().Bytes()
