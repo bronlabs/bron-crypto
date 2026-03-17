@@ -1,10 +1,15 @@
 # Security Notice
 
-This library is not designed to be fully side-channel resistant. We build higher-level protocols on top of a side-channel resistant foundation of elliptic curve and big integer operations.
+This library is not designed to be fully side-channel resistant. We build higher-level protocols
+on top of a side-channel resistant foundation of elliptic curve and big integer operations.
 
-**Important**: This library is intended for use by experienced cryptographers and developers who understand the security implications of the protocols involved. If you are not familiar with the underlying cryptographic primitives, please consult with a cryptography expert before using this library in production.
+**Important**: This library is intended for use by experienced cryptographers and developers 
+who understand the security implications of the protocols involved. If you are not familiar 
+with the underlying cryptographic primitives, please consult with a cryptography expert 
+before using this library in production.
 
-**Audit**: The threshold signing packages of this library and all their direct and indirect dependencies have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory.
+**Audit**: The threshold signing packages of this library and all their direct and indirect dependencies 
+have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory.
 
 ## Supported Versions
 
@@ -35,7 +40,8 @@ If you cannot use GitHub Security Advisories, you can email us directly at:
 **[bugbounty@bron.org](mailto:bugbounty@bron.org)**
 
 Please use the [Vulnerability Report Template](https://bugbounty.bron.org/report) when submitting your report.
-The template includes the required format for email subject and body, ensuring all necessary information is included for efficient triage.
+The template includes the required format for email subject and body,
+ensuring all necessary information is included for efficient triage.
 
 ### What Happens Next
 
@@ -47,13 +53,13 @@ The template includes the required format for email subject and body, ensuring a
 
 ### Responsible Disclosure Timeline
 
-We request that you give us **at least 90 days** to work on a fix before public exposure. This timeline may be extended
-for complex vulnerabilities requiring significant architectural changes.
+We request that you give us **at least 90 days** to work on a fix before public exposure.
+This timeline may be extended for complex vulnerabilities requiring significant architectural changes.
 
 ## Bug Bounty Program
 
-This repository is part of the **Bron Bug Bounty Program**. Security vulnerabilities reported through the proper
-channels may be eligible for rewards.
+This repository is part of the **Bron Bug Bounty Program**.
+Security vulnerabilities reported through the proper channels may be eligible for rewards.
 
 ### Program Details
 
@@ -95,11 +101,12 @@ to clearly define the scope of our bug bounty program.
 ### Out of Scope
 
 - Vulnerabilities in third-party dependencies (unless they create a bron-crypto-specific security issue)
-- Issues that require physical access to the device
+- Bugs that only affect availability unless they also compromise security property
+- Issues that require physical access to the device (including side-channel attacks)
 - Remote timing attacks
 - Social engineering attacks
-- Denial of service (DDoS) attacks that do not compromise security
-- Issues in example code or documentation that do not affect the core library
+- Any denial-of-service attacks that do not compromise security
+- Test, benchmark, example code, and documentation
 - Vulnerabilities in applications using `bron-crypto` (report to those projects instead)
 
 ## Security Best Practices
