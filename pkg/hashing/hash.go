@@ -71,12 +71,12 @@ func HmacIndexLengthPrefixed[H hash.Hash](key []byte, hashFunc func() H, xs ...[
 // Kmac computes a KMAC (Keccak Message Authentication Code) over the inputs using a cSHAKE function.
 // The key must be at least half the output size to meet the security level requirements.
 func Kmac(key, customizationString []byte, tagSize int, h func(key []byte, tagSize int, customizationString []byte) (*kmac.Kmac, error), xs ...[]byte) ([]byte, error) {
+	if len(key) < tagSize/2 {
+		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", tagSize*4)
+	}
 	k, err := h(key, tagSize, customizationString)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("error creating KMAC instance")
-	}
-	if len(key) < k.Size()/2 {
-		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", k.Size()*4)
 	}
 
 	if _, err := ioutils.WriteConcat(k, xs...); err != nil {
@@ -87,12 +87,12 @@ func Kmac(key, customizationString []byte, tagSize int, h func(key []byte, tagSi
 
 // KmacIndexLengthPrefixed computes a KMAC over the inputs after encoding each with its index and length prefix.
 func KmacIndexLengthPrefixed(key, customizationString []byte, tagSize int, h func(key []byte, tagSize int, customizationString []byte) (*kmac.Kmac, error), xs ...[]byte) ([]byte, error) {
+	if len(key) < tagSize/2 {
+		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", tagSize*4)
+	}
 	k, err := h(key, tagSize, customizationString)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("error creating KMAC instance")
-	}
-	if len(key) < k.Size()/2 {
-		return nil, kmac.ErrInvalidKeyLength.WithMessage("key length does not meet %d-bit security level", k.Size()*4)
 	}
 
 	if _, err = ioutils.WriteIndexLengthPrefixed(k, xs...); err != nil {
