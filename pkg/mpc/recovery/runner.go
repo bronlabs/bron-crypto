@@ -75,7 +75,7 @@ func (r *recovererRunner[G, S]) Run(rt *network.Router) (any, error) {
 	return nil, nil
 }
 
-// Run executes the DKG rounds using the provided router and returns the final output.
+// Run executes the recovery rounds using the provided router and returns the final output.
 func (r *mislayerRunner[G, S]) Run(rt *network.Router) (*Output[G, S], error) {
 	quorum := hashset.NewComparable(slices.Collect(r.party.ctx.AllPartiesOrdered())...).Freeze()
 	r2, err := exchange.UnicastReceive[*Round2P2P[G, S]](rt, r2CorrelationID, quorum)

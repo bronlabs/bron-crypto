@@ -46,7 +46,7 @@ func NewRecoverer[
 	}
 	recoverersCtx, err := ctx.SubContext(recoverers.Freeze())
 	if err != nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+		return nil, errs.Wrap(err).WithMessage("cannot create recoverers sub-context")
 	}
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](shard.VerificationVector().Coefficients()[0].Structure())
