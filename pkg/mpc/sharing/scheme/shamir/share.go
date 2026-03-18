@@ -159,6 +159,10 @@ func (s *Share[FE]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal Shamir Share")
 	}
 
+	if dto.ID == 0 {
+		return sharing.ErrMembership.WithMessage("share ID cannot be 0")
+	}
+
 	s2, err := NewShare(dto.ID, dto.V, nil)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to create Shamir Share from deserialized data")

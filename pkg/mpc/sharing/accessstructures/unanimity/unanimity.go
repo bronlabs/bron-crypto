@@ -110,7 +110,7 @@ func (u *Unanimity) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to marshal Unanimity access structure")
 	}
 	return data, nil
 }
@@ -119,12 +119,12 @@ func (u *Unanimity) MarshalCBOR() ([]byte, error) {
 func (u *Unanimity) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[unanimityDTO](data)
 	if err != nil {
-		return errs.Wrap(err)
+		return errs.Wrap(err).WithMessage("failed to unmarshal Unanimity access structure")
 	}
 	ps := hashset.NewComparable(slices.Collect(maps.Keys(dto.Ps))...)
 	u2, err := NewUnanimityAccessStructure(ps.Freeze())
 	if err != nil {
-		return errs.Wrap(err)
+		return errs.Wrap(err).WithMessage("failed to create Unanimity access structure from deserialized data")
 	}
 	*u = *u2
 	return nil

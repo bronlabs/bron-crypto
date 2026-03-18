@@ -79,8 +79,13 @@ func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 		sVal, sExists := s.v[clause]
 		oVal, oExists := other.v[clause]
 
-		if sExists && oExists {
+		switch {
+		case sExists && oExists:
 			result[clause] = sVal.Op(oVal)
+		case sExists:
+			result[clause] = sVal
+		case oExists:
+			result[clause] = oVal
 		}
 	}
 

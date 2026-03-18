@@ -92,7 +92,10 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 	}
 	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
 	for i, id := range d.ac.Shareholders().Iter2() {
-		s, _ := NewShare(id, sharesList[i], d.ac)
+		s, err := NewShare(id, sharesList[i], d.ac)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("could not create share for ID %d", id)
+		}
 		shares.Put(id, s)
 	}
 	return &DealerOutput[E]{
@@ -134,22 +137,17 @@ func SumToSecret[E GroupElement[E]](secret E, sampler func(io.Reader) (E, error)
 // Reconstruct recovers the secret by summing all shares: s = s_1 + s_2 + ... + s_n.
 // All shareholders must provide their shares for reconstruction to succeed.
 func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
-	// First check for nil shares before creating hashset
 	ids, err := sharing.CollectIDs(shares...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
 
-	// Filter out nil shares
-	validShares := make([]*Share[E], 0, len(shares))
-	for _, share := range shares {
-		if share != nil {
-			validShares = append(validShares, share)
-		}
+	idSet := hashset.NewComparable(ids...)
+	if idSet.Size() != len(ids) {
+		return nil, sharing.ErrMembership.WithMessage("duplicate share IDs")
 	}
 
-	// Create set from valid shares only
-	sharesSet := hashset.NewHashable(validShares...).List()
+	sharesSet := hashset.NewHashable(shares...).List()
 
 	if !d.ac.IsQualified(ids...) {
 		return nil, sharing.ErrFailed.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
