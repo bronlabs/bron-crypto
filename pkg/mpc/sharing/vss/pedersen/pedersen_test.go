@@ -606,7 +606,8 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		tamperedValue := field.FromUint64(999)
 
 		// Create new message and witness for tampered share
-		message := pedcom.NewMessage(tamperedValue)
+		message, err := pedcom.NewMessage(tamperedValue)
+		require.NoError(t, err)
 		witness := originalShare.Blinding()
 		tamperedShare, err := pedersen.NewShare(
 			originalShare.ID(),
@@ -653,7 +654,8 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 
 		// Add a small value to tamper with the share
 		tamperedValue := originalValue.Add(field.One())
-		message := pedcom.NewMessage(tamperedValue)
+		message, err := pedcom.NewMessage(tamperedValue)
+		require.NoError(t, err)
 		witness := originalShare.Blinding()
 		tamperedShare, err := pedersen.NewShare(
 			originalShare.ID(),
@@ -987,7 +989,8 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 		newValue := field.FromUint64(999)
 		newBlinding := field.FromUint64(777)
 
-		message := pedcom.NewMessage(newValue)
+		message, err := pedcom.NewMessage(newValue)
+		require.NoError(t, err)
 		witness, err := pedcom.NewWitness(newBlinding)
 		require.NoError(t, err)
 
@@ -1437,7 +1440,8 @@ func TestNewShare(t *testing.T) {
 		value := field.FromUint64(100)
 		blinding := field.FromUint64(200)
 
-		message := pedcom.NewMessage(value)
+		message, err := pedcom.NewMessage(value)
+		require.NoError(t, err)
 		witness, err := pedcom.NewWitness(blinding)
 		require.NoError(t, err)
 
@@ -1473,9 +1477,10 @@ func TestNewShare(t *testing.T) {
 	t.Run("nil blinding witness", func(t *testing.T) {
 		t.Parallel()
 		value := field.FromUint64(100)
-		message := pedcom.NewMessage(value)
+		message, err := pedcom.NewMessage(value)
+		require.NoError(t, err)
 
-		_, err := pedersen.NewShare(
+		_, err = pedersen.NewShare(
 			sharing.ID(1),
 			message,
 			nil,
@@ -1490,7 +1495,8 @@ func TestNewShare(t *testing.T) {
 		value := field.FromUint64(100)
 		blinding := field.FromUint64(200)
 
-		message := pedcom.NewMessage(value)
+		message, err := pedcom.NewMessage(value)
+		require.NoError(t, err)
 		witness, err := pedcom.NewWitness(blinding)
 		require.NoError(t, err)
 
@@ -1510,7 +1516,8 @@ func TestNewShare(t *testing.T) {
 		value := field.FromUint64(100)
 		blinding := field.FromUint64(200)
 
-		message := pedcom.NewMessage(value)
+		message, err := pedcom.NewMessage(value)
+		require.NoError(t, err)
 		witness, err := pedcom.NewWitness(blinding)
 		require.NoError(t, err)
 
@@ -1533,11 +1540,13 @@ func TestNewShare(t *testing.T) {
 		value2 := field.FromUint64(300)
 		blinding2 := field.FromUint64(400)
 
-		message1 := pedcom.NewMessage(value1)
+		message1, err := pedcom.NewMessage(value1)
+		require.NoError(t, err)
 		witness1, err := pedcom.NewWitness(blinding1)
 		require.NoError(t, err)
 
-		message2 := pedcom.NewMessage(value2)
+		message2, err := pedcom.NewMessage(value2)
+		require.NoError(t, err)
 		witness2, err := pedcom.NewWitness(blinding2)
 		require.NoError(t, err)
 
@@ -1637,7 +1646,8 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 
 		// Try to create a different share with same blinding but different value
 		tamperedValue := field.FromUint64(100)
-		message := pedcom.NewMessage(tamperedValue)
+		message, err := pedcom.NewMessage(tamperedValue)
+		require.NoError(t, err)
 		tamperedShare, err := pedersen.NewShare(
 			share.ID(),
 			message,

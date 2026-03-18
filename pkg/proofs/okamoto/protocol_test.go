@@ -399,7 +399,8 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	require.True(t, ok)
 	msgScalar, err := sf.Random(pcg.NewRandomised())
 	require.NoError(t, err)
-	message := pedersen.NewMessage(msgScalar)
+	message, err := pedersen.NewMessage(msgScalar)
+	require.NoError(t, err)
 
 	commitment, pedersenWitness, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(t, err)

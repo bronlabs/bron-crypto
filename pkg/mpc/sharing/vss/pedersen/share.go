@@ -111,7 +111,10 @@ func (s *Share[S]) ScalarOp(sc algebra.Numeric) *Share[S] {
 	if err != nil {
 		panic(sharing.ErrFailed.WithMessage("could not create witness from scalar: %v", err))
 	}
-	m2 := pedcom.NewMessage(scalar)
+	m2, err := pedcom.NewMessage(scalar)
+	if err != nil {
+		panic(sharing.ErrFailed.WithMessage("could not create message from scalar: %v", err))
+	}
 	return &Share[S]{
 		id:       s.id,
 		secret:   s.secret.Mul(m2),

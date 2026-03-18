@@ -120,7 +120,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 		if !ok {
 			return nil, nil, sharing.ErrMembership.WithMessage("blinding share not found for ID %d", id)
 		}
-		message := pedcom.NewMessage(shamirShare.Value())
+		message, _ := pedcom.NewMessage(shamirShare.Value())
 		witness, err := pedcom.NewWitness(blindingShare.Value())
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("could not create witness for share %d", id)
