@@ -6,7 +6,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
@@ -25,7 +27,7 @@ type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
 
 // NewShare creates a share for the given holder ID with the provided values.
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v ...FE) (*Share[FE], error) {
-	if id == 0 || len(v) == 0 {
+	if id == 0 || len(v) == 0 || sliceutils.Any(v, func(vi FE) bool { return utils.IsNil(vi) }) {
 		return nil, sharing.ErrIsNil.WithMessage("id or value is nil")
 	}
 	return &Share[FE]{

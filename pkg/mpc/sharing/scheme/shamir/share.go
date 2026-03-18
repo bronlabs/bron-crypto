@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
@@ -30,6 +31,12 @@ type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
 // NewShare creates a new Shamir share with the given ID and value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *threshold.Threshold) (*Share[FE], error) {
+	if id == 0 {
+		return nil, sharing.ErrMembership.WithMessage("share ID cannot be 0")
+	}
+	if utils.IsNil(value) {
+		return nil, sharing.ErrIsNil.WithMessage("share value cannot be nil")
+	}
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
@@ -157,10 +164,6 @@ func (s *Share[FE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shareDTO[FE]](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal Shamir Share")
-	}
-
-	if dto.ID == 0 {
-		return sharing.ErrMembership.WithMessage("share ID cannot be 0")
 	}
 
 	s2, err := NewShare(dto.ID, dto.V, nil)

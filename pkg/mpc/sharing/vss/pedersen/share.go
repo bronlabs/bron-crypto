@@ -26,7 +26,7 @@ type Share[S algebra.PrimeFieldElement[S]] struct {
 
 type shareDTO[S algebra.PrimeFieldElement[S]] struct {
 	ID       sharing.ID         `cbor:"sharingID"`
-	Secret_  *pedcom.Message[S] `cbor:"secret"`
+	Secret   *pedcom.Message[S] `cbor:"secret"`
 	Blinding *pedcom.Witness[S] `cbor:"blinding"`
 }
 
@@ -168,7 +168,7 @@ func (s *Share[S]) ToAdditive(qualifiedSet *unanimity.Unanimity) (*additive.Shar
 func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 	dto := shareDTO[S]{
 		ID:       s.id,
-		Secret_:  s.secret,
+		Secret:   s.secret,
 		Blinding: s.blinding,
 	}
 	data, err := serde.MarshalCBOR(dto)
@@ -185,7 +185,7 @@ func (s *Share[S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen Share")
 	}
 
-	s2, err := NewShare(dto.ID, dto.Secret_, dto.Blinding, nil)
+	s2, err := NewShare(dto.ID, dto.Secret, dto.Blinding, nil)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to create Pedersen Share from deserialized data")
 	}
