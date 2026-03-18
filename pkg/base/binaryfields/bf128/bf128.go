@@ -142,11 +142,11 @@ func (*Field) ExtensionDegree() uint {
 // components over GF(2). Each of the 128 entries must be a single byte with
 // value 0 or 1. Component 0 is the coefficient of X^127 (MSB) and component 127
 // is the coefficient of X^0 (LSB).
-func (f *Field) FromComponentsBytes(data [][]byte) (*FieldElement, error) {
+func (*Field) FromComponentsBytes(data [][]byte) (*FieldElement, error) {
 	if len(data) != 128 {
 		return nil, ErrInvalidLength.WithMessage("invalid number of components for F2e128 element (is %d, should be 128)", len(data))
 	}
-	var hi, lo uint64
+	el := &FieldElement{}
 	for i := range 128 {
 		if len(data[i]) != 1 {
 			return nil, ErrInvalidLength.WithMessage("component %d has invalid length %d (should be 1)", i, len(data[i]))
@@ -154,13 +154,10 @@ func (f *Field) FromComponentsBytes(data [][]byte) (*FieldElement, error) {
 		if data[i][0] > 1 {
 			return nil, ErrInvalidLength.WithMessage("component %d has invalid value %d (should be 0 or 1)", i, data[i][0])
 		}
-		if i < 64 {
-			hi |= uint64(data[i][0]) << i
-		} else {
-			lo |= uint64(data[i][0]) << (i - 64)
-		}
+		bitPos := 127 - i
+		el[bitPos/64] |= uint64(data[i][0]) << (bitPos % 64)
 	}
-	return &FieldElement{bits.Reverse64(lo), bits.Reverse64(hi)}, nil
+	return el, nil
 }
 
 // FromBytes deserialises a field element from exactly 16 big-endian bytes.
@@ -358,11 +355,9 @@ func (el *FieldElement) EuclideanValuation() cardinal.Cardinal {
 // coefficient of X^0 (LSB).
 func (el *FieldElement) ComponentsBytes() [][]byte {
 	out := make([][]byte, 128)
-	hi := bits.Reverse64(el[1])
-	lo := bits.Reverse64(el[0])
-	for i := range 64 {
-		out[i] = []byte{byte(hi >> i & 1)}
-		out[64+i] = []byte{byte(lo >> i & 1)}
+	for i := range 128 {
+		bitPos := 127 - i
+		out[i] = []byte{byte(el[bitPos/64] >> (bitPos % 64) & 1)}
 	}
 	return out
 }
