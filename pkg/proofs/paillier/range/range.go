@@ -34,6 +34,10 @@ type Witness struct {
 
 // Bytes serialises the witness for transcript binding.
 func (w *Witness) Bytes() []byte {
+	if w == nil {
+		return nil
+	}
+
 	out := []byte{}
 	out = sliceutils.AppendLengthPrefixed(out, w.Sk.Group().Modulus().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, w.X.Value().Bytes())
@@ -59,6 +63,10 @@ type Statement struct {
 
 // Bytes serialises the statement for transcript binding.
 func (x *Statement) Bytes() []byte {
+	if x == nil {
+		return nil
+	}
+
 	out := []byte{}
 	out = sliceutils.AppendLengthPrefixed(out, x.Pk.Group().Modulus().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, x.C.Value().Bytes())
@@ -83,18 +91,12 @@ type Commitment struct {
 
 // Bytes serialises the commitment for transcript binding.
 func (a *Commitment) Bytes() []byte {
-	c1Bytes := sliceutils.Map(a.C1, func(in *paillier.Ciphertext) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
-	c2Bytes := sliceutils.Map(a.C2, func(in *paillier.Ciphertext) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
+	if a == nil {
+		return nil
+	}
+
+	c1Bytes := sliceutils.Map(a.C1, func(in *paillier.Ciphertext) []byte { return in.Bytes() })
+	c2Bytes := sliceutils.Map(a.C2, func(in *paillier.Ciphertext) []byte { return in.Bytes() })
 
 	out := []byte{}
 	out = sliceutils.AppendLengthPrefixedSlices(out, c1Bytes...)
@@ -123,42 +125,16 @@ type Response struct {
 
 // Bytes serialises the response for transcript binding.
 func (z *Response) Bytes() []byte {
-	w1Bytes := sliceutils.Map(z.W1, func(in *paillier.Plaintext) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
-	r1Bytes := sliceutils.Map(z.R1, func(in *paillier.Nonce) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
-	w2Bytes := sliceutils.Map(z.W2, func(in *paillier.Plaintext) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
-	r2Bytes := sliceutils.Map(z.R2, func(in *paillier.Nonce) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
-	wjBytes := sliceutils.Map(z.Wj, func(in *paillier.Plaintext) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
-	rjBytes := sliceutils.Map(z.Rj, func(in *paillier.Nonce) []byte {
-		if in == nil || in.Value() == nil {
-			return nil
-		}
-		return in.Value().Bytes()
-	})
+	if z == nil {
+		return nil
+	}
+
+	w1Bytes := sliceutils.Map(z.W1, func(in *paillier.Plaintext) []byte { return in.Bytes() })
+	r1Bytes := sliceutils.Map(z.R1, func(in *paillier.Nonce) []byte { return in.Bytes() })
+	w2Bytes := sliceutils.Map(z.W2, func(in *paillier.Plaintext) []byte { return in.Bytes() })
+	r2Bytes := sliceutils.Map(z.R2, func(in *paillier.Nonce) []byte { return in.Bytes() })
+	wjBytes := sliceutils.Map(z.Wj, func(in *paillier.Plaintext) []byte { return in.Bytes() })
+	rjBytes := sliceutils.Map(z.Rj, func(in *paillier.Nonce) []byte { return in.Bytes() })
 	jBytes := sliceutils.Map(z.J, func(in uint) []byte { return binary.LittleEndian.AppendUint64(nil, uint64(in)) })
 
 	out := []byte{}
