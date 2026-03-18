@@ -112,11 +112,11 @@ func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 func (s *LiftedShare[E, FE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*liftedShareDTO[E, FE]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal Feldman LiftedShare")
 	}
 	s2, err := NewLiftedShare(dto.ID, dto.V)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to create Feldman LiftedShare from deserialized data")
 	}
 	*s = *s2
 	return nil

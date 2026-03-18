@@ -107,15 +107,15 @@ func (m *Mislayer[G, S]) Round3(r2u network.RoundMessages[*Round2P2P[G, S]]) (ou
 
 	shareValue, err := lagrange.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.ctx.HolderID())))
 	if err != nil {
-		return nil, base.ErrAbort.WithMessage("cannot interpolate")
+		return nil, errs.Wrap(err).WithMessage("cannot interpolate")
 	}
 	share, err := feldman.NewShare(m.ctx.HolderID(), shareValue, nil)
 	if err != nil {
-		return nil, ErrFailed.WithMessage("cannot create share")
+		return nil, errs.Wrap(err).WithMessage("cannot create share")
 	}
 	err = m.scheme.Verify(share, verificationVector)
 	if err != nil {
-		return nil, base.ErrAbort.WithMessage("cannot verify share")
+		return nil, errs.Wrap(err).WithMessage("cannot verify recovered share")
 	}
 
 	output = &Output[G, S]{

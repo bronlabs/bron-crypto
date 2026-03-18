@@ -8,8 +8,12 @@ import "C"
 import (
 	"runtime"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/nocopy"
 )
+
+var ErrNoPrime = errs.New("DH group has no prime set")
 
 type nativeDh = *C.DH
 
@@ -38,30 +42,39 @@ func NewDiffieHellmanGroup() *DiffieHellmanGroup {
 	return dhGroup
 }
 
-func (dh *DiffieHellmanGroup) GenerateParameters(primeBits int) *DiffieHellmanGroup {
+func (dh *DiffieHellmanGroup) GenerateParameters(primeBits int) (*DiffieHellmanGroup, error) {
 	dh.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.DH_generate_parameters_ex(dh.nativeDh, C.int(primeBits), C.DH_GENERATOR_2, nil)
 	if ret != 1 {
-		panic("DH_generate_parameters_ex")
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
-	return dh
+	return dh, nil
 }
 
-func (dh *DiffieHellmanGroup) GetP() *BigNum {
+func (dh *DiffieHellmanGroup) GetP() (*BigNum, error) {
 	dh.copyChecker.Check()
 
 	nativeP := C.DH_get0_p(dh.nativeDh)
 	if nativeP == nil {
-		panic("DH_get0_p")
-	}
-	p := NewBigNum()
-	ret := C.BN_copy(&p.nativeBigNum, nativeP)
-	if ret == nil {
-		panic("DH_get0_p")
+		return nil, ErrNoPrime
 	}
 
+	p := NewBigNum()
+	lockOSThread()
+	ret := C.BN_copy(&p.nativeBigNum, nativeP)
+	if ret == nil {
+		err := lastError()
+		unlockOSThread()
+		return nil, err
+	}
+	unlockOSThread()
+
 	runtime.KeepAlive(dh)
-	return p
+	return p, nil
 }

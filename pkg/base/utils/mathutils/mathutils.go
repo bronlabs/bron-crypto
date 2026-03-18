@@ -21,18 +21,18 @@ func RandomUint64(prng io.Reader) (uint64, error) {
 
 // RandomUint64Range samples a random uint64 in the range [0, bound) from the provided PRNG.
 func RandomUint64Range(prng io.Reader, bound uint64) (uint64, error) {
-	// RandomUint64Range algorithm is slightly tricky. It rejects values that would result in an uneven distribution
-	// (due to the fact that 2^64 is not divisible by n). The probability of a value being rejected depends on n.
-	// The worst case is n=2^63+1, for which the probability of a reject is 1/2,
+	// Rejection sampling: reject values in [0, threshold) where threshold = 2^64 % bound.
+	// This ensures the remaining values are uniformly distributed across [0, bound).
+	// The worst case is bound=2^63+1, for which the probability of rejection is ~1/2,
 	// and the expected number of iterations before the loop terminates is 2.
+	threshold := (-bound) % bound
 	for {
 		randBits, err := RandomUint64(prng)
 		if err != nil {
 			return 0, errs.Wrap(err).WithMessage("failed to sample random uint64")
 		}
-		val := randBits % bound
-		if (randBits - val) >= (bound - 1) {
-			return val, nil
+		if randBits >= threshold {
+			return randBits % bound, nil
 		}
 	}
 }

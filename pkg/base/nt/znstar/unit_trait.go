@@ -2,6 +2,7 @@ package znstar
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -144,7 +145,9 @@ func (u *UnitTrait[A, W, WT]) TryInv() (W, error) {
 
 func (u *UnitTrait[A, W, WT]) Inv() W {
 	var outCt numct.Nat
-	u.arith.ModInv(&outCt, u.v.Value())
+	if ok := u.arith.ModInv(&outCt, u.v.Value()); ok == ct.False {
+		panic(ErrFailed.WithMessage("element is not invertible"))
+	}
 	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
 	if err != nil {
 		panic(err)
@@ -177,7 +180,9 @@ func (u *UnitTrait[A, W, WT]) TryDiv(other W) (W, error) {
 func (u *UnitTrait[A, W, WT]) Div(other W) W {
 	u.mustBeValid(other)
 	var outCt numct.Nat
-	u.arith.ModDiv(&outCt, u.v.Value(), other.Value().Value())
+	if ok := u.arith.ModDiv(&outCt, u.v.Value(), other.Value().Value()); ok == ct.False {
+		panic(ErrFailed.WithMessage("division failed: divisor not invertible"))
+	}
 	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
 	if err != nil {
 		panic(err)
@@ -188,7 +193,7 @@ func (u *UnitTrait[A, W, WT]) Div(other W) W {
 }
 
 func (u *UnitTrait[A, W, WT]) HashCode() base.HashCode {
-	return u.v.HashCode().Combine(u.v.HashCode())
+	return u.v.HashCode().Combine(u.n.HashCode())
 }
 
 func (*UnitTrait[A, W, WT]) IsTorsionFree() bool {

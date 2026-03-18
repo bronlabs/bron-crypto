@@ -36,6 +36,10 @@ func (spm *BasePublicMaterial[E, S]) AccessStructure() *threshold.Threshold {
 
 // PublicKeyValue returns the threshold public key (first coefficient of the verification vector).
 func (spm *BasePublicMaterial[E, S]) PublicKeyValue() E {
+	if spm == nil {
+		var zero E
+		return zero
+	}
 	return spm.fv.Coefficients()[0]
 }
 
@@ -193,12 +197,12 @@ func (sh *BaseShard[E, S]) MarshalCBOR() ([]byte, error) {
 func (sh *BaseShard[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*baseShardDTO[E, S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal BaseShard")
 	}
 
 	sh2, err := NewBaseShard(dto.Share, dto.PM.VerificationVector(), dto.PM.AccessStructure())
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to create BaseShard from deserialized data")
 	}
 	*sh = *sh2
 	return nil

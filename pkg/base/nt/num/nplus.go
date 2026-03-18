@@ -133,7 +133,7 @@ func (*PositiveNaturalNumbers) FromInt(value *Int) (*NatPlus, error) {
 // FromBytes creates a NatPlus from the given big-endian byte slice, returning an error if the input is empty or represents zero.
 func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 	if len(input) == 0 || ct.SliceIsZero(input) == ct.True {
-		return nil, ErrIsNil.WithStackFrame()
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	out := &NatPlus{v: numct.NewNatFromBytes(input), m: nil}
 	if out.v.IsZero() == ct.True {

@@ -31,11 +31,10 @@ func IsIdentifiableAbortError(err error) bool {
 // GetMaliciousIdentities extracts the party IDs responsible for an identifiable abort from the given error.
 func GetMaliciousIdentities[ID IdentifiableAbortID](err error) []ID {
 	culprits := errs.HasTagAll(err, IdentifiableAbortPartyIDTag)
-	ids := make([]ID, len(culprits))
-	for i, culprit := range culprits {
-		id, ok := culprit.(ID)
-		if ok {
-			ids[i] = id
+	ids := make([]ID, 0, len(culprits))
+	for _, culprit := range culprits {
+		if id, ok := culprit.(ID); ok {
+			ids = append(ids, id)
 		}
 	}
 	return ids

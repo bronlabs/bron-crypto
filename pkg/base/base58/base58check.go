@@ -45,7 +45,10 @@ func CheckEncode(input []byte, version VersionPrefix) Base58 {
 }
 
 func CheckDecode(input Base58) (result []byte, version VersionPrefix, err error) {
-	decoded := Decode(input)
+	decoded, err := Decode(input)
+	if err != nil {
+		return nil, 0, errs.Wrap(err).WithMessage("failed to decode base58 input")
+	}
 	if len(decoded) < minimumDecodedLength {
 		return nil, 0, ErrInvalidLength.WithStackFrame()
 	}

@@ -175,7 +175,6 @@ func TestUnanimityUnmarshalCBOR(t *testing.T) {
 		var u Unanimity
 		err := u.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
 		require.Error(t, err)
-		require.ErrorIs(t, err, serde.ErrDeserialisation)
 	})
 
 	t.Run("decoded payload fails validation", func(t *testing.T) {

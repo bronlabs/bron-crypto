@@ -13,9 +13,10 @@ import (
 func TestCompareBytes_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
-		sliceLength := rapid.IntRange(0, 100).Draw(t, "sliceLength")
-		x := rapid.SliceOfN(rapid.Byte(), sliceLength, sliceLength).Draw(t, "x")
-		y := rapid.SliceOfN(rapid.Byte(), sliceLength, sliceLength).Draw(t, "y")
+		lenX := rapid.IntRange(0, 100).Draw(t, "lenX")
+		lenY := rapid.IntRange(0, 100).Draw(t, "lenY")
+		x := rapid.SliceOfN(rapid.Byte(), lenX, lenX).Draw(t, "x")
+		y := rapid.SliceOfN(rapid.Byte(), lenY, lenY).Draw(t, "y")
 
 		lt, eq, gt := ct.CompareBytes(x, y)
 

@@ -8,18 +8,18 @@ import "crypto/subtle"
 func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 	lenX := len(x)
 	lenY := len(y)
-	minLen := Min(lenX, lenY)
 	maxLen := Max(lenX, lenY)
 
-	// Pad both slices to maxLen for constant-time access
+	// Pad both slices to maxLen so the loop always runs maxLen iterations,
+	// avoiding a timing leak of min(len(x), len(y)).
 	px := make([]byte, maxLen)
 	py := make([]byte, maxLen)
 	copy(px, x)
 	copy(py, y)
 
-	// Compare byte by byte up to minLen
+	// Compare byte by byte over the full padded length
 	var done Choice // becomes 1 after the first difference
-	for i := range minLen {
+	for i := range maxLen {
 		bx := px[i]
 		by := py[i]
 
@@ -32,8 +32,8 @@ func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 		done |= less | greater
 	}
 
-	// If all bytes up to minLen are equal, the shorter slice is less
-	// Check lengths in constant time
+	// If all padded bytes were equal, the shorter slice is still less
+	// (e.g., [1,2] < [1,2,0] even though the padded comparison found no difference).
 	xShorter := Less(lenX, lenY)
 	yShorter := Less(lenY, lenX)
 	allEqual := done ^ 1

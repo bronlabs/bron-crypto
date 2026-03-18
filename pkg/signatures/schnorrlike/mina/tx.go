@@ -20,7 +20,7 @@ func NewPaymentMessage(source, receiver *PublicKey, amount, fee uint64, nonce, v
 	// 3. Fee payer public key (x as field, isOdd as 1 bit)
 	// In payments, the fee payer is the source
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to add fee payer public key")
 	}
 
 	// 4. Nonce (32 bits, LSB-first)
@@ -41,12 +41,12 @@ func NewPaymentMessage(source, receiver *PublicKey, amount, fee uint64, nonce, v
 
 	// 2. Source public key
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to add source public key")
 	}
 
 	// 3. Receiver public key
 	if err := addPublicKeyToInput(msg, receiver); err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to add receiver public key")
 	}
 
 	// 4. Legacy token ID again
@@ -76,7 +76,7 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 
 	// 3. Fee payer public key (x as field, isOdd as 1 bit)
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to add fee payer public key")
 	}
 
 	// 4. Nonce (32 bits, LSB-first)
@@ -97,11 +97,11 @@ func NewDelegationMessage(source, newDelegate *PublicKey, fee uint64, nonce, val
 
 	// 2. Source public key
 	if err := addPublicKeyToInput(msg, source); err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to add source public key")
 	}
 	// 3. Receiver public key (the delegate)
 	if err := addPublicKeyToInput(msg, newDelegate); err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to add delegate public key")
 	}
 
 	// 4. Legacy token ID again
@@ -191,11 +191,11 @@ func addPublicKeyToInput(msg *ROInput, pk *PublicKey) error {
 	}
 	x, err := pk.V.AffineX()
 	if err != nil {
-		return errs.Wrap(err)
+		return errs.Wrap(err).WithMessage("failed to get public key X coordinate")
 	}
 	y, err := pk.V.AffineY()
 	if err != nil {
-		return errs.Wrap(err)
+		return errs.Wrap(err).WithMessage("failed to get public key Y coordinate")
 	}
 	msg.AddFields(x)
 	msg.AddBits(y.IsOdd())

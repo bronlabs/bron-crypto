@@ -98,11 +98,17 @@ func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*auxiliaryInfoDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal lindell17 auxiliary info")
 	}
-	a.paillierPrivateKey = dto.PaillierPrivateKey
-	a.paillierPublicKeys = hashmap.NewImmutableComparableFromNativeLike(dto.PaillierPublicKeys)
-	a.encryptedShares = hashmap.NewImmutableComparableFromNativeLike(dto.EncryptedShares)
+	a2, err := NewAuxiliaryInfo(
+		dto.PaillierPrivateKey,
+		hashmap.NewImmutableComparableFromNativeLike(dto.PaillierPublicKeys),
+		hashmap.NewImmutableComparableFromNativeLike(dto.EncryptedShares),
+	)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create lindell17 auxiliary info from deserialized data")
+	}
+	*a = *a2
 	return nil
 }
 
@@ -171,9 +177,12 @@ func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shardDTO[P, B, S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal lindell17 Shard")
 	}
-	s.Shard = dto.Shard
-	s.AuxiliaryInfo = dto.Aux
+	s2, err := NewShard(dto.Shard, &dto.Aux)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create lindell17 Shard from deserialized data")
+	}
+	*s = *s2
 	return nil
 }

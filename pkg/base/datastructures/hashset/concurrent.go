@@ -222,10 +222,11 @@ func (s *ConcurrentSet[E]) Compute(e E, remappingFunction func(e E, exists bool)
 
 	newValue, shouldStore := remappingFunction(e, oldExist)
 
+	if oldExist {
+		s.v.Remove(e)
+	}
 	if shouldStore {
 		s.v.Add(newValue)
-	} else {
-		s.v.Remove(e)
 	}
 	return newValue
 }
@@ -264,12 +265,11 @@ func (s *ConcurrentSet[E]) ComputeIfPresent(e E, remappingFunction func(e E) (E,
 		return e
 	}
 
+	s.v.Remove(e)
 	newValue, shouldStore := remappingFunction(e)
 
 	if shouldStore {
 		s.v.Add(newValue)
-	} else if !shouldStore {
-		s.v.Remove(e)
 	}
 	return newValue
 }

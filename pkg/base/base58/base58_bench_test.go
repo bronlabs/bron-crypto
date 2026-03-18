@@ -39,7 +39,8 @@ func benchmarkDecode(b *testing.B, size int) {
 	encoded := base58.Encode(data)
 	b.ResetTimer()
 	for range b.N {
-		base58.Decode(encoded)
+		_, err = base58.Decode(encoded)
+		require.NoError(b, err)
 	}
 }
 

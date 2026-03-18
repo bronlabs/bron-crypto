@@ -24,7 +24,8 @@ func (e *Xmd) ExpandMessage(dst, msg []byte, lenInBytes uint) []byte {
 		dst = h.Sum(nil)
 	}
 	//  1. ell = ceil(len_in_bytes / b_in_bytes)
-	ell := (lenInBytes + 7) / 8
+	bInBytes := uint(h.Size())
+	ell := (lenInBytes + bInBytes - 1) / bInBytes
 	//  2.  ABORT if ell > 255 or len_in_bytes > 65535
 	if ell > 255 || lenInBytes > 65535 {
 		panic("invalid length")

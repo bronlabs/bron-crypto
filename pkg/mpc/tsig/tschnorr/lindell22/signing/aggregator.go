@@ -82,6 +82,12 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if !a.pkm.AccessStructure().IsQualified(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
 	}
+	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
+		return x == nil
+	}) {
+
+		return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
+	}
 	R := iterutils.Reduce(slices.Values(partialSignatures.Values()),
 		a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
 	)
@@ -93,10 +99,10 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		return nil, errs.Wrap(err).WithMessage("failed to compute challenge")
 	}
 	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
-		return x == nil || !x.Sig.E.Equal(e)
+		return !x.Sig.E.Equal(e)
 	}) {
 
-		return nil, ErrInvalidType.WithMessage("invalid partial signature")
+		return nil, ErrInvalidType.WithMessage("partial signatures have inconsistent challenges")
 	}
 	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)
 	if err != nil {

@@ -34,7 +34,7 @@ func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal matrix")
 	}
 	if len(dto.Data) == 0 {
-		return errs.Wrap(err).WithMessage("empty data")
+		return ErrFailed.WithMessage("empty data")
 	}
 	if len(dto.Data) != dto.Rows*dto.Cols {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
@@ -71,7 +71,7 @@ func (m *ModuleValuedMatrix[E, S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal module-valued matrix")
 	}
 	if len(dto.Data) == 0 {
-		return errs.Wrap(err).WithMessage("empty data")
+		return ErrFailed.WithMessage("empty data")
 	}
 	if len(dto.Data) != dto.Rows*dto.Cols {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
@@ -106,7 +106,7 @@ func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal square matrix")
 	}
 	if len(dto.Data) == 0 {
-		return errs.Wrap(err).WithMessage("empty data")
+		return ErrFailed.WithMessage("empty data")
 	}
 	if len(dto.Data) != dto.Size*dto.Size {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Size*dto.Size)

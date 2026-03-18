@@ -22,6 +22,18 @@ type Sampler[FE algebra.PrimeFieldElement[FE]] struct {
 
 // NewSampler builds a sampler from per-party seeds agreed during setup.
 func NewSampler[FE algebra.PrimeFieldElement[FE]](sharingID sharing.ID, quorum network.Quorum, seeds Seeds, field algebra.PrimeField[FE]) (*Sampler[FE], error) {
+	if quorum == nil {
+		return nil, ErrInvalidArgument.WithMessage("quorum cannot be nil")
+	}
+	if seeds == nil {
+		return nil, ErrInvalidArgument.WithMessage("seeds cannot be nil")
+	}
+	if field == nil {
+		return nil, ErrInvalidArgument.WithMessage("field cannot be nil")
+	}
+	if !quorum.Contains(sharingID) {
+		return nil, ErrInvalidArgument.WithMessage("sharing ID %d not in quorum", sharingID)
+	}
 	prngs := hashmap.NewComparable[sharing.ID, io.Reader]()
 	for id := range quorum.Iter() {
 		if id == sharingID {
@@ -62,8 +74,5 @@ func (s *Sampler[FE]) Sample() (FE, error) {
 		}
 	}
 
-	if share.IsZero() {
-		return nilFE, ErrFailed.WithMessage("could not sample a zero share")
-	}
 	return share, nil
 }

@@ -380,16 +380,15 @@ func (p *protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witn
 	return ErrNotAtLeastOneOutOfN.WithMessage("no valid statement/witness pair found")
 }
 
-// getB finds the index of the branch with a valid statement/witness pair.
+// getB finds the index of the first branch with a valid statement/witness pair.
 // Returns an error if no valid pair is found.
 func (p *protocol[X, W, A, S, Z]) getB(statement Statement[X], witness Witness[W]) (uint, error) {
-	B := uint(p.count) // invalid value
 	for i := range p.count {
 		if invalid := p.sigma.ValidateStatement(statement[i], witness.v); invalid == nil {
-			B = uint(i)
+			return uint(i), nil
 		}
 	}
-	return B, nil
+	return 0, ErrNotAtLeastOneOutOfN.WithMessage("no valid statement/witness pair found")
 }
 
 // Name returns a human-readable name for the composed protocol.

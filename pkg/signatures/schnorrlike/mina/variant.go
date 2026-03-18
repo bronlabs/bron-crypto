@@ -285,9 +285,12 @@ func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 
 // CorrectAdditiveSecretShareParity is a no-op for Mina since no parity correction
 // is needed for secret shares (only for nonce commitments).
-func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
+func (*Variant) CorrectAdditiveSecretShareParity(_ *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
+	if share == nil {
+		return nil, ErrInvalidArgument.WithMessage("share is nil")
+	}
 	// no changes needed
-	return share, nil
+	return share.Clone(), nil
 }
 
 // CorrectPartialNonceParity adjusts a partial nonce for Mina's even-y requirement.

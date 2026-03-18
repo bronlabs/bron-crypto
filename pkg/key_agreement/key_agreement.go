@@ -38,7 +38,7 @@ func (sk *PrivateKey[V]) Value() V {
 
 // Equal checks if two private keys are equal.
 func (sk *PrivateKey[V]) Equal(other *PrivateKey[V]) bool {
-	if sk == nil && other == nil {
+	if sk == nil || other == nil {
 		return sk == other
 	}
 	return sk.v.Equal(other.v) && sk.t == other.t
@@ -71,7 +71,7 @@ func (pk *PublicKey[V, S]) Value() V {
 
 // Equal checks if two public keys are equal.
 func (pk *PublicKey[V, S]) Equal(other *PublicKey[V, S]) bool {
-	if pk == nil && other == nil {
+	if pk == nil || other == nil {
 		return pk == other
 	}
 	return pk.v.Equal(other.v) && pk.t == other.t
@@ -113,7 +113,7 @@ func (k *SharedKey) Type() Type {
 
 // Equal checks if two shared keys are equal.
 func (k *SharedKey) Equal(other *SharedKey) bool {
-	if k == nil && other == nil {
+	if k == nil || other == nil {
 		return k == other
 	}
 	return ct.SliceEqual(k.v, other.v) == ct.True && k.t == other.t

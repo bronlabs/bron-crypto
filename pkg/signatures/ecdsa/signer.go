@@ -86,7 +86,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 		return nil, errs.Wrap(err).WithMessage("cannot convert s")
 	}
 
-	for i := range 5 {
+	for i := range 4 {
 		v := i
 		signature, err := NewSignature(rr, ss, &v)
 		if err != nil {
@@ -94,7 +94,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 		}
 		recoveredPk, err := RecoverPublicKey(s.suite, signature, message)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot recover public key")
+			continue
 		}
 		if recoveredPk.Equal(s.sk.pk) {
 			return signature, nil

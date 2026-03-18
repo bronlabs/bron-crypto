@@ -45,7 +45,7 @@ func (m *RegularModule[R, E, W, WT]) Order() cardinal.Cardinal {
 func (m *RegularModule[R, E, W, WT]) FromBytes(b []byte) (W, error) {
 	el, err := m.Ring.FromBytes(b)
 	if err != nil {
-		return *new(W), err
+		return *new(W), errs.Wrap(err).WithMessage("failed to create element from bytes")
 	}
 	var out WT
 	if err := W(&out).set(el); err != nil {

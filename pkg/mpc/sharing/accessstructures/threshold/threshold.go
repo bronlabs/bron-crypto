@@ -135,13 +135,13 @@ func (a *Threshold) MarshalCBOR() ([]byte, error) {
 func (a *Threshold) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*thresholdDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal Threshold access structure")
 	}
 	ps := hashset.NewComparable(slices.Collect(maps.Keys(dto.Ps))...)
 
 	a2, err := NewThresholdAccessStructure(dto.T, ps.Freeze())
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to create Threshold access structure from deserialized data")
 	}
 
 	*a = *a2

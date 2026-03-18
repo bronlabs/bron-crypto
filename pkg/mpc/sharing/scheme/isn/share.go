@@ -79,8 +79,13 @@ func (s *Share[E]) Op(other *Share[E]) *Share[E] {
 		sVal, sExists := s.v[clause]
 		oVal, oExists := other.v[clause]
 
-		if sExists && oExists {
+		switch {
+		case sExists && oExists:
 			result[clause] = sVal.Op(oVal)
+		case sExists:
+			result[clause] = sVal
+		case oExists:
+			result[clause] = oVal
 		}
 	}
 
@@ -170,6 +175,13 @@ func (s *Share[E]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shareDTO[E]](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ISN Share")
+	}
+
+	if dto.ID == 0 {
+		return sharing.ErrArgument.WithMessage("ISN Share has invalid zero ID")
+	}
+	if len(dto.V) == 0 {
+		return sharing.ErrArgument.WithMessage("ISN Share has empty value map")
 	}
 
 	s.id = dto.ID

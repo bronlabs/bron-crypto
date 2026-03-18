@@ -56,10 +56,10 @@ func CompareInt[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 	return gt, eq, lt
 }
 
-// CSelectInt returns x0 if choice == 0 and x1 if choice == 1. Undefined for other values of choice.
+// CSelectInt returns x0 if choice == 0 and x1 if choice == 1.
 // It supports both signed and unsigned integer types.
 func CSelectInt[I constraints.Integer](choice Choice, x0, x1 I) I {
-	mask := I(-int64(choice)) // 0 if choice == 0, -1 (all bits 1) if choice == 1
+	mask := I(-int64(choice & 1)) // 0 if choice == 0, -1 (all bits 1) if choice == 1
 	return (x0 &^ mask) | (x1 & mask)
 }
 

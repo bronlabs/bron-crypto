@@ -2,14 +2,12 @@ package pedersen
 
 import (
 	"io"
-	"maps"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
@@ -116,20 +114,23 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 		return nil, nil, errs.Wrap(err).WithMessage("could not lift direct sum of polynomials to exponent")
 	}
 	verificationVector := dealerFuncInTheExponent.CoDiagonal()
-	shares := hashmap.NewComparableFromNativeLike(
-		maps.Collect(
-			iterutils.Map2(
-				shamirShares.Shares().Iter(),
-				func(id sharing.ID, shamirShare *shamir.Share[S]) (sharing.ID, *Share[S]) {
-					blindingShare, _ := blindingShares.Shares().Get(id)
-					message := pedcom.NewMessage(shamirShare.Value())
-					witness, _ := pedcom.NewWitness(blindingShare.Value())
-					share, _ := NewShare(id, message, witness, nil)
-					return id, share
-				},
-			),
-		),
-	)
+	shares := hashmap.NewComparable[sharing.ID, *Share[S]]()
+	for id, shamirShare := range shamirShares.Shares().Iter() {
+		blindingShare, ok := blindingShares.Shares().Get(id)
+		if !ok {
+			return nil, nil, sharing.ErrMembership.WithMessage("blinding share not found for ID %d", id)
+		}
+		message := pedcom.NewMessage(shamirShare.Value())
+		witness, err := pedcom.NewWitness(blindingShare.Value())
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("could not create witness for share %d", id)
+		}
+		share, err := NewShare(id, message, witness, nil)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("could not create share for ID %d", id)
+		}
+		shares.Put(id, share)
+	}
 	return &DealerOutput[E, S]{
 		shares: shares.Freeze(),
 		v:      verificationVector,
@@ -178,7 +179,10 @@ func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *Secret[
 // Reconstruct recovers the secret from a set of shares using Lagrange interpolation.
 // Only the secret component f(i) of each share is used; blinding factors are discarded.
 func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
-	shamirShares, _ := sliceutils.MapOrError(shares, func(sh *Share[S]) (*shamir.Share[S], error) { return shamir.NewShare(sh.ID(), sh.secret.Value(), nil) })
+	shamirShares, err := sliceutils.MapOrError(shares, func(sh *Share[S]) (*shamir.Share[S], error) { return shamir.NewShare(sh.ID(), sh.secret.Value(), nil) })
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert Pedersen shares to Shamir shares")
+	}
 	secret, err := s.shamirSSS.Reconstruct(shamirShares...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not reconstruct secret from shares")
@@ -189,14 +193,14 @@ func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
 // ReconstructAndVerify recovers the secret and verifies each share against
 // the verification vector before reconstruction.
 func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], shares ...*Share[S]) (*Secret[S], error) {
-	reconstructed, err := s.Reconstruct(shares...)
-	if err != nil {
-		return nil, err
-	}
 	for i, share := range shares {
 		if err := s.Verify(share, vector); err != nil {
 			return nil, errs.Wrap(err).WithMessage("verification failed for share %d", i)
 		}
+	}
+	reconstructed, err := s.Reconstruct(shares...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to reconstruct secret in ReconstructAndVerify")
 	}
 	return reconstructed, nil
 }
@@ -204,6 +208,9 @@ func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], sha
 // Verify checks that a share (s_i, t_i) is consistent with the verification vector.
 // Returns nil if g^{s_i}·h^{t_i} equals the evaluation of the verification vector at the share's ID.
 func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) error {
+	if share == nil {
+		return sharing.ErrIsNil.WithMessage("share is nil")
+	}
 	if vector == nil {
 		return sharing.ErrIsNil.WithMessage("verification vector is nil")
 	}

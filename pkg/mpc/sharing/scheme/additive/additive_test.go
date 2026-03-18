@@ -368,7 +368,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				return duplicated
 			},
 			expectError: true,
-			errorIs:     sharing.ErrFailed,
+			errorIs:     sharing.ErrMembership,
 		},
 		{
 			name: "invalid share ID",

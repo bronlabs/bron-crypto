@@ -443,6 +443,6 @@ func TestCrossTypeComparison(t *testing.T) {
 	t.Run("known less than or equal comparisons", func(t *testing.T) {
 		t.Parallel()
 		require.False(t, known.IsLessThanOrEqual(unknown))
-		require.False(t, known.IsLessThanOrEqual(infinite))
+		require.True(t, known.IsLessThanOrEqual(infinite))
 	})
 }

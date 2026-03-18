@@ -1,6 +1,7 @@
 package fields
 
 import (
+	"encoding/hex"
 	"io"
 	"slices"
 
@@ -272,8 +273,8 @@ func (f *CubicFieldExtensionImpl[BFP, A, BF]) ComponentsBytes() [][]byte {
 	return slices.Concat(BFP(&f.U0).ComponentsBytes(), BFP(&f.U1).ComponentsBytes(), BFP(&f.U2).ComponentsBytes())
 }
 
-func (*CubicFieldExtensionImpl[BFP, A, BF]) ToHex() string {
-	panic("implement me")
+func (f *CubicFieldExtensionImpl[BFP, A, BF]) ToHex() string {
+	return hex.EncodeToString(f.Bytes())
 }
 
 func (*CubicFieldExtensionImpl[BFP, A, BF]) Degree() uint64 {

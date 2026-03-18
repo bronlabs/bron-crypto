@@ -442,19 +442,6 @@ func TestDeserializeSignature(t *testing.T) {
 	})
 }
 
-// TestCorrectAdditiveSecretShareParity tests the MPC parity correction for secret shares.
-func TestCorrectAdditiveSecretShareParity(t *testing.T) {
-	t.Parallel()
-
-	v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// This should be a no-op for Mina
-	result, err := v.CorrectAdditiveSecretShareParity(nil, nil)
-	require.NoError(t, err)
-	require.Nil(t, result)
-}
-
 // TestCorrectPartialNonceParity tests the MPC parity correction for partial nonces.
 func TestCorrectPartialNonceParity(t *testing.T) {
 	t.Parallel()

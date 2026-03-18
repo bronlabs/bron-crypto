@@ -179,12 +179,12 @@ func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 func (s *Share[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shareDTO[S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen Share")
 	}
 
 	s2, err := NewShare(dto.ID, dto.Secret_, dto.Blinding, nil)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to create Pedersen Share from deserialized data")
 	}
 	*s = *s2
 	return nil

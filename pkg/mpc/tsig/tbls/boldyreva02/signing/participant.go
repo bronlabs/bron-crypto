@@ -71,16 +71,6 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) TargetRogueKeyPreventionAlgorithm()
 
 // NewShortKeyCosigner creates a new Cosigner for the short key variant of BLS signatures.
 // In this variant, public keys are in G1 (smaller) and signatures are in G2 (larger).
-//
-// Parameters:
-//   - sid: Unique session identifier
-//   - curveFamily: The pairing-friendly curve family to use
-//   - shard: The party's secret shard
-//   - quorum: The set of parties participating in signing
-//   - rogueKeyAlg: The rogue key prevention algorithm (Basic, MessageAugmentation, or POP)
-//   - tape: The transcript for domain separation
-//
-// Returns an error if any parameter is invalid or the quorum is not authorized.
 func NewShortKeyCosigner[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
@@ -91,70 +81,18 @@ func NewShortKeyCosigner[
 	shard *boldyreva02.Shard[P1, FE1, P2, FE2, E, S],
 	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
 ) (*Cosigner[P1, FE1, P2, FE2, E, S], error) {
-	if ctx == nil {
-		return nil, ErrInvalidArgument.WithMessage("ctx is nil")
-	}
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
-	if shard == nil {
-		return nil, ErrInvalidArgument.WithMessage("shard is nil")
-	}
-
-	if ctx.HolderID() != shard.Share().ID() {
-		return nil, ErrInvalidArgument.WithMessage("shard does not belong to the holder")
-	}
-	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
-		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
-	}
-	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
-		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
-	}
-	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
-		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
-	}
-	sid := ctx.SessionID()
-	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamily.Name(), bls.ShortKey, rogueKeyAlg)
-	ctx.Transcript().AppendDomainSeparator(dst)
 	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS scheme")
 	}
-	quorum, err := unanimity.NewUnanimityAccessStructure(ctx.Quorum())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
-	}
-	shareAsPrivateKey, err := shard.AsAdditivePrivateKey(quorum)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
-	}
-	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.ShortKey)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
-	}
-	return &Cosigner[P1, FE1, P2, FE2, E, S]{
-		ctx:               ctx,
-		shard:             shard,
-		scheme:            scheme,
-		targetRogueKeyAlg: rogueKeyAlg,
-		targetDst:         blsDst,
-		shareAsPrivateKey: shareAsPrivateKey,
-		round:             1,
-	}, nil
+	return newCosigner(ctx, curveFamily.Name(), shard, rogueKeyAlg, scheme, bls.ShortKey)
 }
 
 // NewLongKeyCosigner creates a new Cosigner for the long key variant of BLS signatures.
 // In this variant, public keys are in G2 (larger) and signatures are in G1 (smaller).
-//
-// Parameters:
-//   - sid: Unique session identifier
-//   - curveFamily: The pairing-friendly curve family to use
-//   - shard: The party's secret shard
-//   - quorum: The set of parties participating in signing
-//   - rogueKeyAlg: The rogue key prevention algorithm (Basic, MessageAugmentation, or POP)
-//   - tape: The transcript for domain separation
-//
-// Returns an error if any parameter is invalid or the quorum is not authorized.
 func NewLongKeyCosigner[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
@@ -165,11 +103,33 @@ func NewLongKeyCosigner[
 	shard *boldyreva02.Shard[P2, FE2, P1, FE1, E, S],
 	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
 ) (*Cosigner[P2, FE2, P1, FE1, E, S], error) {
-	if ctx == nil {
-		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
-	}
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
+	}
+	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create BLS scheme")
+	}
+	return newCosigner(ctx, curveFamily.Name(), shard, rogueKeyAlg, scheme, bls.LongKey)
+}
+
+func newCosigner[
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](
+	ctx *session.Context,
+	curveFamilyName string,
+	shard *boldyreva02.Shard[PK, PKFE, SG, SGFE, E, S],
+	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
+	scheme *bls.Scheme[PK, PKFE, SG, SGFE, E, S],
+	variant bls.Variant,
+) (*Cosigner[PK, PKFE, SG, SGFE, E, S], error) {
+	if ctx == nil {
+		return nil, ErrInvalidArgument.WithMessage("ctx is nil")
+	}
+	if shard == nil {
+		return nil, ErrInvalidArgument.WithMessage("shard is nil")
 	}
 	if ctx.HolderID() != shard.Share().ID() {
 		return nil, ErrInvalidArgument.WithMessage("shard does not belong to the holder")
@@ -181,12 +141,8 @@ func NewLongKeyCosigner[
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
 	sid := ctx.SessionID()
-	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamily.Name(), bls.LongKey, rogueKeyAlg)
+	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamilyName, variant, rogueKeyAlg)
 	ctx.Transcript().AppendDomainSeparator(dst)
-	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create BLS long key scheme")
-	}
 	quorum, err := unanimity.NewUnanimityAccessStructure(ctx.Quorum())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
@@ -195,17 +151,17 @@ func NewLongKeyCosigner[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to convert shard to BLS private key")
 	}
-	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.LongKey)
+	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, variant)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
-	return &Cosigner[P2, FE2, P1, FE1, E, S]{
+	return &Cosigner[PK, PKFE, SG, SGFE, E, S]{
 		ctx:               ctx,
 		shard:             shard,
 		scheme:            scheme,
-		shareAsPrivateKey: shareAsPrivateKey,
 		targetRogueKeyAlg: rogueKeyAlg,
 		targetDst:         blsDst,
+		shareAsPrivateKey: shareAsPrivateKey,
 		round:             1,
 	}, nil
 }

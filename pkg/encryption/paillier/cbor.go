@@ -49,7 +49,19 @@ func (pt *Plaintext) MarshalCBOR() ([]byte, error) {
 func (pt *Plaintext) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[plaintextDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
+	}
+	// Allow zero-valued (nil, nil) for dummy plaintexts (range proofs).
+	if dto.V == nil && dto.N == nil {
+		pt.v = nil
+		pt.n = nil
+		return nil
+	}
+	if dto.V == nil || dto.N == nil {
+		return ErrInvalidArgument.WithMessage("plaintext must have both value and modulus, or neither")
+	}
+	if !dto.V.IsInRangeSymmetric(dto.N) {
+		return ErrInvalidRange.WithMessage("deserialized plaintext value is outside symmetric range")
 	}
 	pt.v = dto.V
 	pt.n = dto.N
@@ -77,7 +89,7 @@ func (n *Nonce) MarshalCBOR() ([]byte, error) {
 func (n *Nonce) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[nonceDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	n.u = dto.U
 	return nil
@@ -104,7 +116,7 @@ func (ct *Ciphertext) MarshalCBOR() ([]byte, error) {
 func (ct *Ciphertext) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[ciphertextDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	ct.u = dto.U
 	return nil
@@ -131,7 +143,7 @@ func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
 func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[publicKeyDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	pkPtr, err := NewPublicKey(dto.Group)
 	if err != nil {
@@ -168,7 +180,7 @@ func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {
 func (sk *PrivateKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[privateKeyDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 
 	skPtr, err := NewPrivateKey(dto.Group)

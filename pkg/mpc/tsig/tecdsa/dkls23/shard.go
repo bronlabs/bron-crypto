@@ -91,10 +91,16 @@ func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*auxiliaryInfoDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal dkls23 auxiliary info")
 	}
-	a.otSenderSeeds = hashmap.NewImmutableComparableFromNativeLike(dto.OTSenderSeeds)
-	a.otReceiverSeeds = hashmap.NewImmutableComparableFromNativeLike(dto.OTReceiverSeeds)
+	a2, err := NewAuxiliaryInfo(
+		hashmap.NewImmutableComparableFromNativeLike(dto.OTSenderSeeds),
+		hashmap.NewImmutableComparableFromNativeLike(dto.OTReceiverSeeds),
+	)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create dkls23 auxiliary info from deserialized data")
+	}
+	*a = *a2
 	return nil
 }
 
@@ -156,9 +162,12 @@ func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shardDTO[P, B, S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal dkls23 Shard")
 	}
-	s.Shard = dto.Shard
-	s.AuxiliaryInfo = dto.Aux
+	s2, err := NewShard(dto.Shard, &dto.Aux)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create dkls23 Shard from deserialized data")
+	}
+	*s = *s2
 	return nil
 }

@@ -93,7 +93,7 @@ type testVectors struct {
 	Inv []unaryOpVector  `json:"inv"`
 	Add []binaryOpVector `json:"add"`
 	Sub []binaryOpVector `json:"sub"`
-	Neg []binaryOpVector `json:"neg"`
+	Neg []unaryOpVector  `json:"neg"`
 }
 
 func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldElement, *bf128.FieldElement) *bf128.FieldElement) {
@@ -126,7 +126,7 @@ func testBinaryTryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.Fiel
 	})
 }
 
-func testUnaryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldElement) *bf128.FieldElement) {
+func testUnaryOp(t *testing.T, vectors []unaryOpVector, op func(*bf128.FieldElement) *bf128.FieldElement) {
 	t.Helper()
 	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
 		t.Parallel()

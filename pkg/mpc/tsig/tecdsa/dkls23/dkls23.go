@@ -69,6 +69,9 @@ func NewPartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B]
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
 func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], publicKey *ecdsa.PublicKey[P, B, S], message []byte, partialSignatures ...*PartialSignature[P, B, S]) (*ecdsa.Signature[S], error) {
+	if len(partialSignatures) == 0 {
+		return nil, ErrFailed.WithMessage("no partial signatures provided")
+	}
 	w := suite.ScalarField().Zero()
 	u := suite.ScalarField().Zero()
 

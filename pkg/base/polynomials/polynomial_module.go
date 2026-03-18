@@ -1,7 +1,6 @@
 package polynomials
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -251,18 +250,9 @@ func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME,
 			coeffs: []ME{p.CoefficientStructure().OpIdentity()},
 		}
 	}
-	ring := algebra.StructureMustBeAs[algebra.FiniteRing[S]](p.ScalarStructure())
 	derivCoeffs := make([]ME, len(p.coeffs)-1)
 	for i := 1; i < len(p.coeffs); i++ {
-		// Create properly sized big-endian bytes for the index
-		elemSize := ring.ElementSize()
-		indexBytes := make([]byte, elemSize)
-		binary.BigEndian.PutUint64(indexBytes[elemSize-8:], uint64(i))
-		rb, err := ring.FromBytes(indexBytes)
-		if err != nil {
-			panic("internal error: could not create ring element from uint64")
-		}
-		derivCoeffs[i-1] = p.coeffs[i].ScalarOp(rb)
+		derivCoeffs[i-1] = algebrautils.ScalarMulNative(p.coeffs[i], uint64(i))
 	}
 	return &ModuleValuedPolynomial[ME, S]{
 		coeffs: derivCoeffs,
@@ -316,7 +306,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Equal(rhs *ModuleValuedPolynomial[ME, S]
 func (p *ModuleValuedPolynomial[ME, S]) HashCode() base.HashCode {
 	h := base.HashCode(0)
 	for _, c := range p.coeffs {
-		h ^= c.HashCode()
+		h = h.Combine(c.HashCode())
 	}
 	return h
 }
@@ -408,6 +398,9 @@ func (p *ModuleValuedPolynomial[ME, S]) IsTorsionFree() bool {
 // Eval evaluates the module-valued polynomial at the given scalar point using
 // Horner's method.
 func (p *ModuleValuedPolynomial[ME, S]) Eval(at S) ME {
+	if len(p.coeffs) == 0 {
+		panic("internal error: empty coeffs")
+	}
 	out := p.coeffs[len(p.coeffs)-1].Clone()
 	for i := len(p.coeffs) - 2; i >= 0; i-- {
 		out = out.ScalarOp(at).Op(p.coeffs[i])

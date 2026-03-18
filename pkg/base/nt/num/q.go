@@ -374,7 +374,7 @@ func (r *Rat) EuclideanValuation() cardinal.Cardinal {
 // TryDiv performs division of two Rat elements.
 func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
 	if rhs.IsZero() {
-		return nil, errs.New("division by zero")
+		return nil, ErrDivisionByZero.WithStackFrame()
 	}
 	numerator := r.a.Mul(rhs.b.Lift())
 	// Handle sign: if rhs.a is negative, negate the numerator
@@ -419,7 +419,7 @@ func (r *Rat) Neg() *Rat {
 // TryInv returns the multiplicative inverse of the Rat element.
 func (r *Rat) TryInv() (*Rat, error) {
 	if r.IsZero() {
-		return nil, errs.New("inversion of zero")
+		return nil, ErrDivisionByZero.WithStackFrame().WithMessage("inversion of zero")
 	}
 	// Swap numerator and denominator: a/b becomes b/a
 	// Handle sign: if a is negative, result should have negative numerator

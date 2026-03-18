@@ -52,7 +52,7 @@ func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
 func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*proofDTO[A, Z]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("cannot unmarshal Fiat-Shamir proof")
 	}
 	p.a = dto.A
 	p.z = dto.Z

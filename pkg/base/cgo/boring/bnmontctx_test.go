@@ -26,9 +26,11 @@ func Test_Sanity(t *testing.T) {
 
 func Test_NoCopy(t *testing.T) {
 	xNat := new(saferith.Nat).SetUint64(11)
-	xNum, _ := boring.NewBigNum().SetBytes(xNat.Bytes())
+	xNum, err := boring.NewBigNum().SetBytes(xNat.Bytes())
+	require.NoError(t, err)
 	bnCtx := boring.NewBigNumCtx()
-	montCtx, _ := boring.NewBigNumMontCtx(xNum, bnCtx)
+	montCtx, err := boring.NewBigNumMontCtx(xNum, bnCtx)
+	require.NoError(t, err)
 
 	montCtxCopy := *montCtx
 	defer func() {

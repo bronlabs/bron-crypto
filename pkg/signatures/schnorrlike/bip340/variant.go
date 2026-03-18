@@ -179,7 +179,7 @@ func (v *Variant) Clone() *Variant {
 		out.sk = v.sk.Clone()
 	}
 	if v.msg != nil {
-		copy(out.msg, v.msg)
+		out.msg = slices.Clone(v.msg)
 	}
 	if v.adjustedSk != nil {
 		out.adjustedSk = v.adjustedSk.Clone()
@@ -213,7 +213,11 @@ func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *ad
 	if pky.IsOdd() {
 		// If the public key is odd, we need to negate the additive share
 		// to ensure that the parity of the nonce commitment is correct.
-		out, _ = additive.NewShare(share.ID(), share.Value().Neg(), nil)
+		var err error
+		out, err = additive.NewShare(share.ID(), share.Value().Neg(), nil)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create negated share")
+		}
 	}
 	return out, nil
 }

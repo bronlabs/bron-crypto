@@ -105,7 +105,7 @@ func (c *Commitment) Bytes() []byte {
 		if c2 != nil && c2.Value() != nil {
 			c2Bytes = c2.Value().Bytes()
 		}
-		a = binary.LittleEndian.AppendUint64(nil, uint64(len(c2Bytes)))
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(c2Bytes)))
 		a = append(a, c2Bytes...)
 	}
 
@@ -171,7 +171,7 @@ func (r *Response) Bytes() []byte {
 		if r2 != nil && r2.Value() != nil {
 			r2Bytes = r2.Value().Bytes()
 		}
-		a = binary.LittleEndian.AppendUint64(nil, uint64(len(r2Bytes)))
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(r2Bytes)))
 		a = append(a, r2Bytes...)
 	}
 
@@ -336,7 +336,7 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 			z.W2[i] = new(paillier.Plaintext)
 			z.R2[i] = new(paillier.Nonce)
 		default:
-			panic("this should never happen")
+			return nil, ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -400,7 +400,7 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}
 		default:
-			panic("this should never happen")
+			return ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -465,7 +465,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 			toBeEncrypted[i] = wj[i]
 			toBeEncrypted[i+p.t] = ps.Zero()
 		default:
-			panic("this should never happen")
+			return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -503,10 +503,10 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 				c1[i] = cZero
 				rj[i] = rji
 			default:
-				panic("this should never happen")
+				return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
 			}
 		default:
-			panic("this should never happen")
+			return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
