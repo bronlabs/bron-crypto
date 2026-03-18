@@ -126,7 +126,11 @@ func NewAuxiliaryInfo(paillierPrivateKey *paillier.PrivateKey, paillierPublicKey
 	if paillierPublicKeys.Size() == 0 {
 		return nil, ErrInvalidArgument.WithMessage("paillier public keys map cannot be empty")
 	}
-	if slices.Equal(paillierPublicKeys.Keys(), encryptedShares.Keys()) {
+	pkKeys := paillierPublicKeys.Keys()
+	esKeys := encryptedShares.Keys()
+	slices.Sort(pkKeys)
+	slices.Sort(esKeys)
+	if !slices.Equal(pkKeys, esKeys) {
 		return nil, ErrInvalidArgument.WithMessage("paillier public keys and encrypted shares maps must have the same keys")
 	}
 	return &AuxiliaryInfo{

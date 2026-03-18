@@ -112,7 +112,11 @@ func NewAuxiliaryInfo(otSenderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], otRe
 	if otSenderSeeds.Size() == 0 {
 		return nil, ErrFailed.WithMessage("OT sender seeds map cannot be empty")
 	}
-	if !slices.Equal(otSenderSeeds.Keys(), otReceiverSeeds.Keys()) {
+	senderKeys := otSenderSeeds.Keys()
+	receiverKeys := otReceiverSeeds.Keys()
+	slices.Sort(senderKeys)
+	slices.Sort(receiverKeys)
+	if !slices.Equal(senderKeys, receiverKeys) {
 		return nil, ErrFailed.WithMessage("OT sender seeds and receiver seeds maps must have the same keys")
 	}
 	return &AuxiliaryInfo{
