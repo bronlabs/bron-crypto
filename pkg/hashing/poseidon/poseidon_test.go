@@ -116,6 +116,11 @@ func TestPoseidonHashInterface(t *testing.T) {
 		d := p.Sum([]byte("qwertyuiqwertyuiqwertyuiqwertyui"))
 
 		require.Equal(t, d[:32], prefix)
+
+		sum := p.Sum(prefix)
+		require.Len(t, sum, len(prefix)+32)
+		require.Equal(t, prefix, sum[:len(prefix)])
+		require.Equal(t, p.Digest().Bytes(), sum[len(prefix):])
 	})
 }
 
