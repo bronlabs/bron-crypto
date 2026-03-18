@@ -191,7 +191,7 @@ func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
 func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], shares ...*Share[S]) (*Secret[S], error) {
 	reconstructed, err := s.Reconstruct(shares...)
 	if err != nil {
-		return nil, err
+		return nil, errs.Wrap(err).WithMessage("failed to reconstruct secret in ReconstructAndVerify")
 	}
 	for i, share := range shares {
 		if err := s.Verify(share, vector); err != nil {

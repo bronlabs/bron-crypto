@@ -172,6 +172,13 @@ func (s *Share[E]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ISN Share")
 	}
 
+	if dto.ID == 0 {
+		return sharing.ErrArgument.WithMessage("ISN Share has invalid zero ID")
+	}
+	if len(dto.V) == 0 {
+		return sharing.ErrArgument.WithMessage("ISN Share has empty value map")
+	}
+
 	s.id = dto.ID
 	s.v = dto.V
 	return nil
