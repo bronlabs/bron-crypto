@@ -110,9 +110,6 @@ func NewShortKeyCosigner[
 	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
-	if !shard.AccessStructure().IsQualified(ctx.Quorum().List()...) {
-		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
-	}
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamily.Name(), bls.ShortKey, rogueKeyAlg)
 	ctx.Transcript().AppendDomainSeparator(dst)
@@ -166,10 +163,13 @@ func NewLongKeyCosigner[
 	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
 ) (*Cosigner[P2, FE2, P1, FE1, E, S], error) {
 	if ctx == nil {
-		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
+		return nil, ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
+	}
+	if shard == nil {
+		return nil, ErrInvalidArgument.WithMessage("shard is nil")
 	}
 	if ctx.HolderID() != shard.Share().ID() {
 		return nil, ErrInvalidArgument.WithMessage("shard does not belong to the holder")
