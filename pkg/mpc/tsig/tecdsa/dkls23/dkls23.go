@@ -18,6 +18,7 @@ type PartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 	w S
 }
 
+// MarshalCBOR encodes the partial signature in CBOR.
 func (ps *PartialSignature[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &partialSignatureDTO[P, B, S]{
 		R: ps.r,
@@ -31,6 +32,7 @@ func (ps *PartialSignature[P, B, S]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR decodes the partial signature from CBOR.
 func (ps *PartialSignature[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*partialSignatureDTO[P, B, S]](data)
 	if err != nil {

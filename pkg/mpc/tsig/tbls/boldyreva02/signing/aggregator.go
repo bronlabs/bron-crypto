@@ -147,24 +147,28 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
 	}
-	additivePartialPublicKeys, err := A.publicMaterial.AdditivePartialPublicKeys(quorum)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create additive partial public keys")
-	}
+	publicKeyShares := A.PublicKeyMaterial().PublicKeyValueShares()
 	sigShares := feldman.SharesInExponent[SG, S]{}
 	popShares := feldman.SharesInExponent[SG, S]{}
 	for sender, psig := range partialSigs.Iter() {
-		partialPublicKey, exists := additivePartialPublicKeys.Get(sender)
+		publicKeyShare, exists := publicKeyShares.Get(sender)
 		if !exists {
 			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d does not exist in public material", sender)
 		}
-		var err error
+		additivePublicKeyShare, err := publicKeyShare.ToAdditive(quorum)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
+		}
+		partialPublicKey, err := bls.NewPublicKey(additivePublicKeyShare.Value())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create partial public key for sender %d", sender)
+		}
 		var internalMessage []byte
 		switch A.targetRogueKeyAlg {
 		case bls.Basic:
 			internalMessage = message
 		case bls.MessageAugmentation:
-			internalMessage, err = bls.AugmentMessage(message, A.publicMaterial.PublicKey().Value())
+			internalMessage, err = bls.AugmentMessage(message, A.PublicKeyMaterial().PublicKeyValue())
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("failed to augment message for sender %d", sender)
 			}

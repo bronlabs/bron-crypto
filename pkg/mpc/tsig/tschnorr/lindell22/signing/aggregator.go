@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -119,10 +118,9 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		if psig == nil {
 			return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
 		}
-		senderPartialPublicKey, _ := a.pkm.PartialPublicKeys().Get(sender)
-		senderPKShare, err := feldman.NewLiftedShare(sender, senderPartialPublicKey.Value())
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create lifted share for sender %d", sender)
+		senderPKShare, ok := a.pkm.PublicKeyValueShares().Get(sender)
+		if !ok {
+			return nil, ErrInvalidMembership.WithMessage("invalid authorization: sender %d is not in public material", sender)
 		}
 		senderAdditivePKShare, err := senderPKShare.ToAdditive(quorumAsUnanimitySet)
 		if err != nil {
