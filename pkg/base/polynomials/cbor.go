@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 type moduleValuedPolynomialDTO[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
@@ -31,6 +32,11 @@ func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {
 	}
 	if len(dto.Coeffs) == 0 {
 		return ErrSerialisationFailed.WithMessage("empty coefficients")
+	}
+	for i, coeff := range dto.Coeffs {
+		if utils.IsNil(coeff) {
+			return ErrSerialisationFailed.WithMessage("coefficient at index %d is nil", i)
+		}
 	}
 	p.coeffs = dto.Coeffs
 	return nil
@@ -60,6 +66,11 @@ func (p *Polynomial[RE]) UnmarshalCBOR(data []byte) error {
 	}
 	if len(dto.Coeffs) == 0 {
 		return ErrSerialisationFailed.WithMessage("empty coefficients")
+	}
+	for i, coeff := range dto.Coeffs {
+		if utils.IsNil(coeff) {
+			return ErrSerialisationFailed.WithMessage("coefficient at index %d is nil", i)
+		}
 	}
 	p.coeffs = dto.Coeffs
 	return nil

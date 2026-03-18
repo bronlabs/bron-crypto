@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
@@ -53,6 +54,12 @@ func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*proofDTO[A, Z]](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot unmarshal Fiat-Shamir proof")
+	}
+	if utils.IsNil(dto.A) {
+		return ErrNil.WithMessage("commitment (A) cannot be nil")
+	}
+	if utils.IsNil(dto.Z) {
+		return ErrNil.WithMessage("response (Z) cannot be nil")
 	}
 	p.a = dto.A
 	p.z = dto.Z
