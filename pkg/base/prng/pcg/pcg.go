@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	mrand "math/rand/v2"
+	"sync"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -16,7 +17,8 @@ var (
 )
 
 type Pcg struct {
-	v *mrand.PCG
+	mu sync.Mutex
+	v  *mrand.PCG
 }
 
 // New creates a new PCG PRNG seeded with the given seed and salt.
@@ -31,6 +33,9 @@ func NewRandomised() *Pcg {
 
 // Read fills the provided byte slice p with random bytes.
 func (r *Pcg) Read(p []byte) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	buf := new(bytes.Buffer)
 	buf.Grow(len(p) + 8)
 	for buf.Len() < len(p) {
@@ -49,6 +54,8 @@ func (r *Pcg) Seed(seed, salt []byte) error {
 	if err := r.validateSeedInputs(seed, salt); err != nil {
 		return errs.Wrap(err).WithMessage("invalid inputs")
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)
 	r.v.Seed(seedUint64, saltUint64)
@@ -71,6 +78,8 @@ func (r *Pcg) New(seed, salt []byte) (prng.SeedablePRNG, error) {
 	if err := r.validateSeedInputs(seed, salt); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid inputs")
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)
 	return New(seedUint64, saltUint64), nil
