@@ -150,7 +150,16 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *PublicMaterial[PK
 	}
 }
 
-// AsPrivateKey converts the shard to a BLS private key share.
+// HashCode returns a hash code for the shard, derived from both the share and public key.
+// Returns 0 if the receiver is nil.
+func (s *Shard[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
+	if s == nil {
+		return 0
+	}
+	return s.share.HashCode().Combine(s.publicKey.HashCode())
+}
+
+// AsBLSPrivateKey converts the shard to a BLS private key share.
 // This is useful for signing operations where the shard holder can produce partial signatures.
 // Returns an error if the shard is nil or if the private key creation fails.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsPrivateKey() (*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S], error) {
