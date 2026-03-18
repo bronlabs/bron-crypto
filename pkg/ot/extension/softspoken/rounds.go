@@ -68,7 +68,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	for i := range Kappa {
 		r.tape.AppendBytes(expansionMaskLabel, r1.U[i])
 	}
-	m := eta / Sigma                                    // M = η/σ
+	m := eta / Sigma                                         // M = η/σ
 	challengeFiatShamir, err := generateChallenge(r.tape, m) // χ
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot generate challenge")

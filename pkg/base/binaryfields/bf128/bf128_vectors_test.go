@@ -93,7 +93,7 @@ type testVectors struct {
 	Inv []unaryOpVector  `json:"inv"`
 	Add []binaryOpVector `json:"add"`
 	Sub []binaryOpVector `json:"sub"`
-	Neg []unaryOpVector `json:"neg"`
+	Neg []unaryOpVector  `json:"neg"`
 }
 
 func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldElement, *bf128.FieldElement) *bf128.FieldElement) {

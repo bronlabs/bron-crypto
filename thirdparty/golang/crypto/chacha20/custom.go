@@ -90,7 +90,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 	// If we'd need to let the counter overflow and keep generating output,
 	// panic immediately. If instead we'd only reach the last block, remember
 	// not to generate any more output after the buffer is drained.
-	numBlocks := (uint64(len(src)) + blockSize - 1) / blockSize + 1 // +1 for FKE reseeding block
+	numBlocks := (uint64(len(src))+blockSize-1)/blockSize + 1 // +1 for FKE reseeding block
 	if c.overflow || uint64(c.counter)+numBlocks > 1<<32 {
 		panic("chacha20: counter overflow")
 	} else if uint64(c.counter)+numBlocks == 1<<32 {

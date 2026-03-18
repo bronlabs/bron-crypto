@@ -23,12 +23,18 @@ type Pcg struct {
 
 // New creates a new PCG PRNG seeded with the given seed and salt.
 func New(seed, salt uint64) *Pcg {
-	return &Pcg{v: mrand.NewPCG(seed, salt)}
+	return &Pcg{
+		mu: sync.Mutex{},
+		v:  mrand.NewPCG(seed, salt),
+	}
 }
 
 // NewRandomised creates a new PCG PRNG with random seed and salt.
 func NewRandomised() *Pcg {
-	return &Pcg{v: mrand.NewPCG(mrand.Uint64(), mrand.Uint64())} //nolint:gosec // weak prng is intentional.
+	return &Pcg{
+		mu: sync.Mutex{},
+		v:  mrand.NewPCG(mrand.Uint64(), mrand.Uint64()), //nolint:gosec // weak prng is intentional.
+	}
 }
 
 // Read fills the provided byte slice p with random bytes.

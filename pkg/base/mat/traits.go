@@ -57,13 +57,13 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) Order() algebra.Cardinal {
 	if baseOrder.IsUnknown() || !baseOrder.IsFinite() {
 		return baseOrder
 	}
-	base, err := num.N().FromCardinal(baseOrder)
+	baseValue, err := num.N().FromCardinal(baseOrder)
 	if err != nil {
 		return baseOrder
 	}
 	result := num.N().One()
 	for range mm.rows * mm.cols {
-		result = result.Mul(base)
+		result = result.Mul(baseValue)
 	}
 	return result.Cardinal()
 }

@@ -85,6 +85,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
 		return x == nil
 	}) {
+
 		return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
 	}
 	R := iterutils.Reduce(slices.Values(partialSignatures.Values()),
@@ -100,6 +101,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
 		return !x.Sig.E.Equal(e)
 	}) {
+
 		return nil, ErrInvalidType.WithMessage("partial signatures have inconsistent challenges")
 	}
 	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)

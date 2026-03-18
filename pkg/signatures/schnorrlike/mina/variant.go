@@ -287,7 +287,7 @@ func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 // is needed for secret shares (only for nonce commitments).
 func (*Variant) CorrectAdditiveSecretShareParity(_ *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
 	if share == nil {
-		return nil, nil
+		return nil, ErrInvalidArgument.WithMessage("share is nil")
 	}
 	// no changes needed
 	return share.Clone(), nil
