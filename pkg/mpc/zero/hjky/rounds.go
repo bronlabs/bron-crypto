@@ -68,8 +68,11 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 			return nil, nil, ErrFailed.WithMessage("missing message")
 		}
 
-		if !b.VerificationVector.Coefficients()[0].Equal(p.group.OpIdentity()) || p.scheme.Verify(u.ZeroShare, b.VerificationVector) != nil {
-			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
+		if err := p.scheme.Verify(u.ZeroShare, b.VerificationVector); err != nil {
+			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("share verification failed: %v", err)
+		}
+		if !b.VerificationVector.Coefficients()[0].Equal(p.group.OpIdentity()) {
+			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("verification vector does not commit to zero")
 		}
 		share = share.Add(u.ZeroShare)
 		verificationVector = verificationVector.Op(b.VerificationVector)
