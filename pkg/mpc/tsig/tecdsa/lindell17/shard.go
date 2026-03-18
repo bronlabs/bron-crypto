@@ -1,6 +1,8 @@
 package lindell17
 
 import (
+	"slices"
+
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -100,15 +102,13 @@ func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal lindell17 auxiliary info")
 	}
-	a2, err := NewAuxiliaryInfo(
-		dto.PaillierPrivateKey,
-		hashmap.NewImmutableComparableFromNativeLike(dto.PaillierPublicKeys),
-		hashmap.NewImmutableComparableFromNativeLike(dto.EncryptedShares),
-	)
+	paillierPublicKeys := hashmap.NewImmutableComparableFromNativeLike(dto.PaillierPublicKeys)
+	encryptedShares := hashmap.NewImmutableComparableFromNativeLike(dto.EncryptedShares)
+	auxInfo, err := NewAuxiliaryInfo(dto.PaillierPrivateKey, paillierPublicKeys, encryptedShares)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create lindell17 auxiliary info from deserialized data")
+		return errs.Wrap(err).WithMessage("failed to create AuxiliaryInfo from unmarshalled data")
 	}
-	*a = *a2
+	*a = *auxInfo
 	return nil
 }
 
@@ -122,6 +122,12 @@ func NewAuxiliaryInfo(paillierPrivateKey *paillier.PrivateKey, paillierPublicKey
 	}
 	if encryptedShares == nil {
 		return nil, ErrInvalidArgument.WithMessage("encrypted shares map is nil")
+	}
+	if paillierPublicKeys.Size() == 0 {
+		return nil, ErrInvalidArgument.WithMessage("paillier public keys map cannot be empty")
+	}
+	if slices.Equal(paillierPublicKeys.Keys(), encryptedShares.Keys()) {
+		return nil, ErrInvalidArgument.WithMessage("paillier public keys and encrypted shares maps must have the same keys")
 	}
 	return &AuxiliaryInfo{
 		paillierPrivateKey: paillierPrivateKey,
@@ -179,10 +185,10 @@ func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal lindell17 Shard")
 	}
-	s2, err := NewShard(dto.Shard, &dto.Aux)
+	shard, err := NewShard(dto.Shard, &dto.Aux)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create lindell17 Shard from deserialized data")
+		return errs.Wrap(err).WithMessage("failed to create Shard from unmarshalled data")
 	}
-	*s = *s2
+	*s = *shard
 	return nil
 }
