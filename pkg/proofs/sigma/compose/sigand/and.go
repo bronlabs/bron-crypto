@@ -1,9 +1,7 @@
 package sigand
 
 import (
-	"encoding/binary"
 	"fmt"
-	"slices"
 
 	"golang.org/x/sync/errgroup"
 
@@ -17,11 +15,10 @@ import (
 // The prover claims to know valid witnesses for all statements in the slice.
 type Statement[X sigma.Statement] []X
 
-func (s Statement[X]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x X) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(s))),
-		s...,
-	)
+func (x Statement[X]) Bytes() []byte {
+	xs := sliceutils.Map(x, func(in X) []byte { return in.Bytes() })
+	out := []byte{}
+	return sliceutils.AppendLengthPrefixedSlices(out, xs...)
 }
 
 var _ sigma.Statement = (Statement[sigma.Statement])(nil)
@@ -31,10 +28,9 @@ var _ sigma.Statement = (Statement[sigma.Statement])(nil)
 type Witness[W sigma.Witness] []W
 
 func (w Witness[W]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x W) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(w))),
-		w...,
-	)
+	ws := sliceutils.Map(w, func(in W) []byte { return in.Bytes() })
+	out := []byte{}
+	return sliceutils.AppendLengthPrefixedSlices(out, ws...)
 }
 
 var _ sigma.Witness = (Witness[sigma.Witness])(nil)
@@ -42,11 +38,10 @@ var _ sigma.Witness = (Witness[sigma.Witness])(nil)
 // Commitment represents the prover's commitments for all branches in AND composition.
 type Commitment[A sigma.Commitment] []A
 
-func (c Commitment[A]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x A) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(c))),
-		c...,
-	)
+func (a Commitment[A]) Bytes() []byte {
+	as := sliceutils.Map(a, func(in A) []byte { return in.Bytes() })
+	out := []byte{}
+	return sliceutils.AppendLengthPrefixedSlices(out, as...)
 }
 
 var _ sigma.Commitment = (Commitment[sigma.Commitment])(nil)
@@ -61,11 +56,10 @@ var _ sigma.State = (State[sigma.State])(nil)
 // Each element is computed using the same verifier challenge.
 type Response[Z sigma.Response] []Z
 
-func (r Response[Z]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x Z) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(r))),
-		r...,
-	)
+func (z Response[Z]) Bytes() []byte {
+	zs := sliceutils.Map(z, func(in Z) []byte { return in.Bytes() })
+	out := []byte{}
+	return sliceutils.AppendLengthPrefixedSlices(out, zs...)
 }
 
 var _ sigma.Response = (Response[sigma.Response])(nil)

@@ -51,20 +51,24 @@ func (pt *Plaintext) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
-	// Allow zero-valued (nil, nil) for dummy plaintexts (range proofs).
-	if dto.V == nil && dto.N == nil {
-		pt.v = nil
-		pt.n = nil
-		return nil
-	}
+
 	if dto.V == nil || dto.N == nil {
 		return ErrInvalidArgument.WithMessage("plaintext must have both value and modulus, or neither")
 	}
 	if !dto.V.IsInRangeSymmetric(dto.N) {
 		return ErrInvalidRange.WithMessage("deserialized plaintext value is outside symmetric range")
 	}
-	pt.v = dto.V
-	pt.n = dto.N
+
+	space, err := NewPlaintextSpace(dto.N)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create plaintext space")
+	}
+	pt2, err := space.FromInt(dto.V.Value())
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create plaintext")
+	}
+
+	*pt = *pt2
 	return nil
 }
 
@@ -91,6 +95,10 @@ func (n *Nonce) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
+	if dto.U == nil {
+		return ErrInvalidArgument.WithMessage("nonce is nil")
+	}
+
 	n.u = dto.U
 	return nil
 }
@@ -118,6 +126,10 @@ func (ct *Ciphertext) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
+	if dto.U == nil {
+		return ErrInvalidArgument.WithMessage("ciphertext is nil")
+	}
+
 	ct.u = dto.U
 	return nil
 }

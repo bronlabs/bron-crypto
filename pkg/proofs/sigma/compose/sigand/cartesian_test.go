@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 )
 
@@ -59,6 +60,18 @@ func Test_CartesianAnd_Simulator(t *testing.T) {
 		curve := bls12381.NewG1()
 		testCartesianAndSimulator(t, curve)
 	})
+}
+
+func Test_CartesianAnd_BytesAreLengthDelimited(t *testing.T) {
+	t.Parallel()
+
+	statementA := sigand.CartesianComposeStatements[sigma.Statement, sigma.Statement](testBytes("a"), testBytes("bc"))
+	statementB := sigand.CartesianComposeStatements[sigma.Statement, sigma.Statement](testBytes("ab"), testBytes("c"))
+	require.NotEqual(t, statementA.Bytes(), statementB.Bytes())
+
+	responseA := &sigand.ResponseCartesian[sigma.Response, sigma.Response]{Z0: testBytes("a"), Z1: testBytes("bc")}
+	responseB := &sigand.ResponseCartesian[sigma.Response, sigma.Response]{Z0: testBytes("ab"), Z1: testBytes("c")}
+	require.NotEqual(t, responseA.Bytes(), responseB.Bytes())
 }
 
 func testCartesianAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
