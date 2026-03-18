@@ -2,6 +2,7 @@ package dkls23
 
 import (
 	"bytes"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -93,14 +94,13 @@ func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal dkls23 auxiliary info")
 	}
-	a2, err := NewAuxiliaryInfo(
-		hashmap.NewImmutableComparableFromNativeLike(dto.OTSenderSeeds),
-		hashmap.NewImmutableComparableFromNativeLike(dto.OTReceiverSeeds),
-	)
+	otSenderSeeds := hashmap.NewImmutableComparableFromNativeLike(dto.OTSenderSeeds)
+	otReceiverSeeds := hashmap.NewImmutableComparableFromNativeLike(dto.OTReceiverSeeds)
+	auxInfo, err := NewAuxiliaryInfo(otSenderSeeds, otReceiverSeeds)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create dkls23 auxiliary info from deserialized data")
+		return errs.Wrap(err).WithMessage("failed to create AuxiliaryInfo from unmarshalled data")
 	}
-	*a = *a2
+	*a = *auxInfo
 	return nil
 }
 
@@ -108,6 +108,12 @@ func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 func NewAuxiliaryInfo(otSenderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], otReceiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput]) (*AuxiliaryInfo, error) {
 	if otSenderSeeds == nil || otReceiverSeeds == nil {
 		return nil, ErrNil.WithMessage("cannot create AuxiliaryInfo with nil fields")
+	}
+	if otSenderSeeds.Size() == 0 {
+		return nil, ErrFailed.WithMessage("OT sender seeds map cannot be empty")
+	}
+	if !slices.Equal(otSenderSeeds.Keys(), otReceiverSeeds.Keys()) {
+		return nil, ErrFailed.WithMessage("OT sender seeds and receiver seeds maps must have the same keys")
 	}
 	return &AuxiliaryInfo{
 		otSenderSeeds:   otSenderSeeds,
@@ -164,10 +170,10 @@ func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal dkls23 Shard")
 	}
-	s2, err := NewShard(dto.Shard, &dto.Aux)
+	shard, err := NewShard(dto.Shard, &dto.Aux)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create dkls23 Shard from deserialized data")
+		return errs.Wrap(err).WithMessage("failed to create Shard from unmarshalled data")
 	}
-	*s = *s2
+	*s = *shard
 	return nil
 }
