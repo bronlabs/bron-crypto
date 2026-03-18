@@ -12,18 +12,18 @@ import (
 )
 
 // Round1 broadcasts the sender's message to all other parties.
-func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P], error) {
+func (p *Participant[B, BP]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P[B, BP], *Participant[B, BP]], error) {
 	serializedMessage, err := serde.MarshalCBOR(message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to marshal message")
 	}
 
-	r1 := hashmap.NewComparable[sharing.ID, *Round1P2P]()
+	r1 := hashmap.NewComparable[sharing.ID, *Round1P2P[B, BP]]()
 	for id := range p.quorum.Iter() {
 		if id == p.sharingID {
 			continue
 		}
-		r1.Put(id, &Round1P2P{
+		r1.Put(id, &Round1P2P[B, BP]{
 			Payload: serializedMessage,
 		})
 	}
@@ -33,7 +33,7 @@ func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P]
 }
 
 // Round2 echoes every received payload back to all parties.
-func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.OutgoingUnicasts[*Round2P2P], error) {
+func (p *Participant[B, BP]) Round2(r1 network.RoundMessages[*Round1P2P[B, BP], *Participant[B, BP]]) (network.OutgoingUnicasts[*Round2P2P[B, BP], *Participant[B, BP]], error) {
 	receivedMessages := make(map[sharing.ID][]byte)
 	for id := range p.quorum.Iter() {
 		if id == p.sharingID {
@@ -47,12 +47,12 @@ func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.O
 		p.state.messages[id] = m.Payload
 	}
 
-	r2 := hashmap.NewComparable[sharing.ID, *Round2P2P]()
+	r2 := hashmap.NewComparable[sharing.ID, *Round2P2P[B, BP]]()
 	for id := range p.quorum.Iter() {
 		if id == p.sharingID {
 			continue
 		}
-		r2.Put(id, &Round2P2P{
+		r2.Put(id, &Round2P2P[B, BP]{
 			Echo: receivedMessages,
 		})
 	}
@@ -61,7 +61,7 @@ func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.O
 }
 
 // Round3 validates echo consistency and outputs the agreed messages.
-func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.RoundMessages[B], error) {
+func (p *Participant[B, BP]) Round3(r2 network.RoundMessages[*Round2P2P[B, BP], *Participant[B, BP]]) (network.RoundMessages[B, BP], error) {
 	received := make(map[sharing.ID][]byte)
 	for id := range p.quorum.Iter() {
 		if id == p.sharingID {

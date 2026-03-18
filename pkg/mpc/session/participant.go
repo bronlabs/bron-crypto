@@ -89,7 +89,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 }
 
 // Round2 collects commitment keys and sends commitment messages to peers.
-func (p *Participant) Round2(inB network.RoundMessages[*Round1Broadcast]) (network.OutgoingUnicasts[*Round2P2P], error) {
+func (p *Participant) Round2(inB network.RoundMessages[*Round1Broadcast, *Participant]) (network.OutgoingUnicasts[*Round2P2P, *Participant], error) {
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
@@ -154,7 +154,7 @@ func (p *Participant) Round2(inB network.RoundMessages[*Round1Broadcast]) (netwo
 }
 
 // Round3 receives peers' commitments and opens our contributions to them.
-func (p *Participant) Round3(inU network.RoundMessages[*Round2P2P]) (network.OutgoingUnicasts[*Round3P2P], error) {
+func (p *Participant) Round3(inU network.RoundMessages[*Round2P2P, *Participant]) (network.OutgoingUnicasts[*Round3P2P, *Participant], error) {
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
@@ -195,7 +195,7 @@ func (p *Participant) Round3(inU network.RoundMessages[*Round2P2P]) (network.Out
 }
 
 // Round4 verifies openings and derives the session context.
-func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P]) (*Context, error) {
+func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]) (*Context, error) {
 	if p.round != 4 {
 		return nil, ErrRound.WithMessage("invalid round")
 	}

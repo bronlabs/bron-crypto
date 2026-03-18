@@ -29,4 +29,6 @@ func NewSID(xs ...[]byte) (SID, error) {
 }
 
 // Message represents any network payload.
-type Message any
+type Message[P any] interface {
+	Validate(P) error
+}

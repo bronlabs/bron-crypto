@@ -11,10 +11,7 @@ type Round1Broadcast struct {
 	Commitments map[sharing.ID]hash_comm.Commitment `cbor:"commitments"`
 }
 
-// Bytes implements network.Message.
-func (*Round1Broadcast) Bytes() []byte {
-	panic("not used")
-}
+func (*Round1Broadcast) Validate(*Participant) error { return nil }
 
 // Round2P2P contains a round-2 private seed contribution and witness.
 type Round2P2P struct {
@@ -22,7 +19,4 @@ type Round2P2P struct {
 	Witness          hash_comm.Witness     `cbor:"witness"`
 }
 
-// Bytes implements network.Message.
-func (*Round2P2P) Bytes() []byte {
-	panic("not used")
-}
+func (*Round2P2P) Validate(*Participant) error { return nil }

@@ -9,7 +9,7 @@ import (
 )
 
 // ExchangeEchoBroadcast runs an echo broadcast: send, echo, and verify consistent payloads for selected parties.
-func ExchangeEchoBroadcast[B any](rt *network.Router, correlationID string, quorum network.Quorum, message B) (network.RoundMessages[B], error) {
+func ExchangeEchoBroadcast[B network.Message[P], P any](rt *network.Router, correlationID string, quorum network.Quorum, message B) (network.RoundMessages[B, P], error) {
 	r, err := NewEchoBroadcastRunner(rt.PartyID(), quorum, correlationID, message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create echo broadcast runner")

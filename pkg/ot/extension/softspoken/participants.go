@@ -33,6 +33,10 @@ type participant struct {
 	prng      io.Reader
 }
 
+func (p *participant) round1ValidateParams() (xi, l int) {
+	return p.suite.Xi(), p.suite.L()
+}
+
 // Sender drives the SoftSpoken sender state machine.
 type Sender struct {
 	participant

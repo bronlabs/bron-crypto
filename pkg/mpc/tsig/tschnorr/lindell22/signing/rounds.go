@@ -21,7 +21,7 @@ import (
 const transcriptDLogSLabel = "Lindell2022SignDLogS-"
 
 // Round1 samples a random nonce, commits to it, and broadcasts the commitment.
-func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast, error) {
+func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast[E, S, M], error) {
 	if c.round != 1 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 1, c.round)
 	}
@@ -42,7 +42,7 @@ func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast, error) {
 	}
 
 	// step 1.4: Broadcast(c_i)
-	broadcast := &Round1Broadcast{
+	broadcast := &Round1Broadcast[E, S, M]{
 		BigRCommitment: commitment,
 	}
 
@@ -55,7 +55,7 @@ func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast, error) {
 }
 
 // Round2 receives commitments from other parties and broadcasts the nonce with a discrete log proof.
-func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast]) (*Round2Broadcast[E, S], error) {
+func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E, S, M], *Cosigner[E, S, M]]) (*Round2Broadcast[E, S, M], error) {
 	if c.round != 2 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 2, c.round)
 	}
@@ -74,7 +74,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast]) 
 	}
 
 	// step 2.3: Broadcast(π^dl_i, R_i, c_i)
-	broadcast := &Round2Broadcast[E, S]{
+	broadcast := &Round2Broadcast[E, S, M]{
 		BigR:        statement,
 		BigROpening: c.state.opening,
 		BigRProof:   bigRProof,
@@ -85,7 +85,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast]) 
 }
 
 // Round3 verifies other parties' commitments and proofs, then computes the partial signature.
-func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E, S]], message M) (*tschnorr.PartialSignature[E, S], error) {
+func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E, S, M], *Cosigner[E, S, M]], message M) (*tschnorr.PartialSignature[E, S], error) {
 	if c.round != 3 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 3, c.round)
 	}

@@ -36,6 +36,10 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	round     int
 }
 
+func (p *participant[P, B, S]) round2ValidateParams() (xi, l, rho int) {
+	return p.xi, p.suite.l, p.rho
+}
+
 // Alice represents the sender party.
 type Alice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant[P, B, S]

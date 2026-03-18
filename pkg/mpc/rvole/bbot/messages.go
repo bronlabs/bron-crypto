@@ -6,6 +6,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 )
 
+type round3Validator interface {
+	round3ValidateParams() (xi, l, rho int)
+}
+
 // Round1P2P carries round 1 peer-to-peer messages.
 type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] = ecbbot.Round1P2P[GE, SE]
 
@@ -20,7 +24,8 @@ type Round3P2P[SE algebra.PrimeFieldElement[SE]] struct {
 }
 
 // Validate validates the message payload dimensions.
-func (r3 *Round3P2P[SE]) Validate(xi, l, rho int) error {
+func (r3 *Round3P2P[SE]) Validate(p round3Validator) error {
+	xi, l, rho := p.round3ValidateParams()
 	if r3 == nil {
 		return ErrValidation.WithMessage("missing message")
 	}

@@ -446,7 +446,7 @@ func newSecurityFixture(t *testing.T) *securityFixture {
 }
 
 // replaceBroadcastFrom returns a copy of victim's broadcast inputs with attacker's message replaced.
-func replaceBroadcastFrom[M network.Message](
+func replaceBroadcastFrom[M any](
 	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
 ) network.RoundMessages[M] {
 	m := hashmap.NewComparable[sharing.ID, M]()
@@ -461,7 +461,7 @@ func replaceBroadcastFrom[M network.Message](
 }
 
 // replaceUnicastFrom returns a copy of victim's unicast inputs with attacker's message replaced.
-func replaceUnicastFrom[M network.Message](
+func replaceUnicastFrom[M any](
 	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
 ) network.RoundMessages[M] {
 	m := hashmap.NewComparable[sharing.ID, M]()

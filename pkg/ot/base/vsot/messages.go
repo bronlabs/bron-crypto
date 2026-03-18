@@ -7,6 +7,22 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
+type round2Validator interface {
+	round2ValidateParams() (xi, l int)
+}
+
+type round3Validator interface {
+	round3ValidateParams() (xi, l, h int)
+}
+
+type round4Validator interface {
+	round4ValidateParams() (xi, l, h int)
+}
+
+type round5Validator interface {
+	round5ValidateParams() (xi, l, h int)
+}
+
 // Round1P2P carries B=bG and its proof of knowledge from the sender.
 type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	BigB  P                     `cbor:"bigB"`
@@ -14,7 +30,7 @@ type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 }
 
 // Validate performs basic sanity checks on the message.
-func (r1 *Round1P2P[P, B, S]) Validate() error {
+func (r1 *Round1P2P[P, B, S]) Validate(any) error {
 	if r1 == nil || r1.BigB.IsOpIdentity() {
 		return ot.ErrInvalidArgument.WithMessage("invalid message")
 	}
@@ -28,7 +44,8 @@ type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 }
 
 // Validate checks sizes and non-identity constraints.
-func (r2 *Round2P2P[P, B, S]) Validate(xi, l int) error {
+func (r2 *Round2P2P[P, B, S]) Validate(p round2Validator) error {
+	xi, l := p.round2ValidateParams()
 	if r2 == nil || len(r2.BigA) != (xi*l) {
 		return ot.ErrInvalidArgument.WithMessage("invalid message")
 	}
@@ -47,7 +64,8 @@ type Round3P2P struct {
 }
 
 // Validate checks sizes of Xi payloads.
-func (r3 *Round3P2P) Validate(xi, l, h int) error {
+func (r3 *Round3P2P) Validate(p round3Validator) error {
+	xi, l, h := p.round3ValidateParams()
 	if r3 == nil || len(r3.Xi) != (xi*l) {
 		return ot.ErrInvalidArgument.WithMessage("invalid message")
 	}
@@ -66,7 +84,8 @@ type Round4P2P struct {
 }
 
 // Validate checks sizes of rhoPrime payloads.
-func (r4 *Round4P2P) Validate(xi, l, h int) error {
+func (r4 *Round4P2P) Validate(p round4Validator) error {
+	xi, l, h := p.round4ValidateParams()
 	if r4 == nil || len(r4.RhoPrime) != (xi*l) {
 		return ot.ErrInvalidArgument.WithMessage("invalid message")
 	}
@@ -86,7 +105,8 @@ type Round5P2P struct {
 }
 
 // Validate checks payload sizes for both digest slices.
-func (r5 *Round5P2P) Validate(xi, l, h int) error {
+func (r5 *Round5P2P) Validate(p round5Validator) error {
+	xi, l, h := p.round5ValidateParams()
 	if r5 == nil || len(r5.Rho0Digest) != (xi*l) || len(r5.Rho1Digest) != (xi*l) {
 		return ot.ErrInvalidArgument.WithMessage("invalid message")
 	}

@@ -47,7 +47,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 }
 
 // Round2 records all commitments and broadcasts the local opening (message, witness).
-func (p *Participant) Round2(r1 network.RoundMessages[*Round1Broadcast]) (*Round2Broadcast, error) {
+func (p *Participant) Round2(r1 network.RoundMessages[*Round1Broadcast, *Participant]) (*Round2Broadcast, error) {
 	// validation
 	incomingMessages, err := validateIncomingBroadcastMessages(p, 2, r1)
 	if err != nil {
@@ -69,7 +69,7 @@ func (p *Participant) Round2(r1 network.RoundMessages[*Round1Broadcast]) (*Round
 }
 
 // Round3 verifies all openings and aggregates the agreed random output.
-func (p *Participant) Round3(r2 network.RoundMessages[*Round2Broadcast]) ([]byte, error) {
+func (p *Participant) Round3(r2 network.RoundMessages[*Round2Broadcast, *Participant]) ([]byte, error) {
 	// validation
 	incomingMessages, err := validateIncomingBroadcastMessages(p, 3, r2)
 	if err != nil {

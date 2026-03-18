@@ -1,6 +1,7 @@
 package signing
 
 import (
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -127,7 +128,7 @@ func NewLongKeyAggregator[
 // Returns the aggregated BLS signature, or an error if verification fails or
 // the partial signatures are not from an authorized quorum.
 func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
-	partialSigs network.RoundMessages[*boldyreva02.PartialSignature[SG, SGFE, PK, PKFE, E, S]],
+	partialSigs ds.Map[*boldyreva02.PartialSignature[SG, SGFE, PK, PKFE, E, S]],
 	message []byte,
 ) (*bls.Signature[SG, SGFE, PK, PKFE, E, S], error) {
 	if partialSigs == nil {

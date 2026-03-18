@@ -7,8 +7,12 @@ type Round1Broadcast struct {
 	Commitment hash_comm.Commitment `cbor:"commitment"`
 }
 
+func (*Round1Broadcast) Validate(*Participant) error { return nil }
+
 // Round2Broadcast carries the opening (message, witness) for the seed commitment.
 type Round2Broadcast struct {
 	Message hash_comm.Message `cbor:"message"`
 	Witness hash_comm.Witness `cbor:"witness"`
 }
+
+func (*Round2Broadcast) Validate(*Participant) error { return nil }

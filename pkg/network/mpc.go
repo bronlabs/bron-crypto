@@ -9,10 +9,10 @@ import (
 type Round = uint64
 
 // RoundMessages maps sender IDs to their round messages.
-type RoundMessages[M Message] = ds.Map[sharing.ID, M]
+type RoundMessages[M Message[P], P any] = ds.Map[sharing.ID, M]
 
 // OutgoingUnicasts maps recipients to outbound unicast payloads.
-type OutgoingUnicasts[M Message] = ds.Map[sharing.ID, M]
+type OutgoingUnicasts[M Message[P], P any] = ds.Map[sharing.ID, M]
 
 // Quorum is the set of parties participating in a session.
 type Quorum = ds.Set[sharing.ID]

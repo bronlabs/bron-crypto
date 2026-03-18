@@ -23,7 +23,7 @@ const (
 )
 
 // Round1 runs the dealer step and broadcasts the Pedersen verification vector.
-func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUnicasts[*Round1Unicast[E, S]], error) {
+func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUnicasts[*Round1Unicast[E, S], *Participant[E, S]], error) {
 	if p.round != 1 {
 		return nil, nil, ErrRound.WithMessage("expected round 1, got %d", p.round)
 	}
@@ -101,7 +101,7 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 }
 
 // Round2 shares Pedersen openings privately and proves correctness of Feldman vector.
-func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[E, S]], r2uin network.RoundMessages[*Round1Unicast[E, S]]) (*Round2Broadcast[E, S], error) {
+func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[E, S], *Participant[E, S]], r2uin network.RoundMessages[*Round1Unicast[E, S], *Participant[E, S]]) (*Round2Broadcast[E, S], error) {
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("expected round 2, got %d", p.round)
 	}
@@ -187,7 +187,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 }
 
 // Round3 verifies all incoming shares and proofs and outputs the joint key material.
-func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S]]) (*DKGOutput[E, S], error) {
+func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S], *Participant[E, S]]) (*DKGOutput[E, S], error) {
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("expected round 3, got %d", p.round)
 	}

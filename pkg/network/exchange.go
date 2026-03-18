@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
-func SendUnicast[U any](rt *Router, correlationID string, messages RoundMessages[U]) error {
+func SendUnicast[U Message[P], P any](rt *Router, correlationID string, messages RoundMessages[U, P]) error {
 	messagesSerialized := make(map[sharing.ID][]byte)
 	for id, message := range messages.Iter() {
 		messageSerialized, err := serde.MarshalCBOR(message)
@@ -24,7 +24,7 @@ func SendUnicast[U any](rt *Router, correlationID string, messages RoundMessages
 	return nil
 }
 
-func ReceiveUnicast[U any](rt *Router, correlationID string, quorum Quorum) (RoundMessages[U], error) {
+func ReceiveUnicast[U Message[P], P any](rt *Router, correlationID string, quorum Quorum) (RoundMessages[U, P], error) {
 	coparties := quorum.Clone().Unfreeze()
 	coparties.Remove(rt.PartyID())
 

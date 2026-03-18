@@ -53,7 +53,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 }
 
 // Round2 opens committed seed contributions to each counterparty.
-func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (network.RoundMessages[*Round2P2P], error) {
+func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast, *Participant]) (network.RoundMessages[*Round2P2P, *Participant], error) {
 	for sharingID := range p.quorum.Iter() {
 		if sharingID == p.mySharingID {
 			continue
@@ -92,7 +92,7 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 }
 
 // Round3 verifies peers' openings and derives pairwise seeds.
-func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds, error) {
+func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P, *Participant]) (przs.Seeds, error) {
 	commonSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	for sharingID := range p.quorum.Iter() {
 		if sharingID == p.mySharingID {

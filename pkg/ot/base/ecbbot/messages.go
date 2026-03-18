@@ -9,7 +9,11 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	Ms G `cbor:"ms"` // mS ∈ Point
 }
 
+func (*Round1P2P[G, S]) Validate(*participant[G, S]) error { return nil }
+
 // Round2P2P carries the POPF programs derived by the receiver.
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	Phi [][2][]G `cbor:"phi"` // Φ ∈ [ξ][2][L]Point
 }
+
+func (*Round2P2P[G, S]) Validate(*participant[G, S]) error { return nil }

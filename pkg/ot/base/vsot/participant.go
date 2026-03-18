@@ -29,6 +29,22 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	prng      io.Reader
 }
 
+func (p *participant[P, B, S]) round2ValidateParams() (xi, l int) {
+	return p.suite.Xi(), p.suite.L()
+}
+
+func (p *participant[P, B, S]) round3ValidateParams() (xi, l, h int) {
+	return p.suite.Xi(), p.suite.L(), p.suite.hashFunc().Size()
+}
+
+func (p *participant[P, B, S]) round4ValidateParams() (xi, l, h int) {
+	return p.suite.Xi(), p.suite.L(), p.suite.hashFunc().Size()
+}
+
+func (p *participant[P, B, S]) round5ValidateParams() (xi, l, h int) {
+	return p.suite.Xi(), p.suite.L(), p.suite.hashFunc().Size()
+}
+
 func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
 	digest, err := hashing.HashIndexLengthPrefixed(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
 	if err != nil {

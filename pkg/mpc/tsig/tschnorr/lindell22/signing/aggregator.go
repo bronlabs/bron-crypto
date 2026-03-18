@@ -3,6 +3,8 @@ package signing
 import (
 	"slices"
 
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -13,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -69,7 +70,7 @@ func NewAggregator[
 // Aggregate combines partial signatures into a complete signature, verifying validity.
 // Returns an identifiable abort error if any partial signature is invalid.
 func (a *Aggregator[VR, GE, S, M]) Aggregate(
-	partialSignatures network.RoundMessages[*lindell22.PartialSignature[GE, S]],
+	partialSignatures ds.Map[sharing.ID, *lindell22.PartialSignature[GE, S]],
 	message M,
 ) (*schnorrlike.Signature[GE, S], error) {
 	if a == nil {

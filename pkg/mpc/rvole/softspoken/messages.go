@@ -6,6 +6,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
 
+type round2Validator interface {
+	round2ValidateParams() (xi, l, rho int)
+}
+
 // Round1P2P carries round 1 peer-to-peer messages.
 type Round1P2P = softspoken.Round1P2P
 
@@ -17,7 +21,8 @@ type Round2P2P[S algebra.PrimeFieldElement[S]] struct {
 }
 
 // Validate validates the message payload.
-func (r2 *Round2P2P[S]) Validate(xi, l, rho int) error {
+func (r2 *Round2P2P[S]) Validate(p round2Validator) error {
+	xi, l, rho := p.round2ValidateParams()
 	if r2 == nil {
 		return ErrValidation.WithMessage("missing message")
 	}
