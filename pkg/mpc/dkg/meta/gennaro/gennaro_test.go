@@ -233,7 +233,7 @@ func TestDKG_PartialPublicKeyConsistency(t *testing.T) {
 	outputs := tu.DoGennaroDKG(t, parties)
 
 	// Each participant should have the same partial public key map
-	allPartialPKs := make(map[sharing.ID]ds.Map[sharing.ID, *kw.LiftedShare[*k256.Point, *k256.Scalar]])
+	allPartialPKs := make(map[sharing.ID]ds.Map[sharing.ID, *feldman.LiftedShare[*k256.Point, *k256.Scalar]])
 	for id, output := range outputs {
 		ppks := output.PartialPublicKeyValues()
 		require.NotNil(t, ppks)
@@ -435,7 +435,7 @@ func TestDKG_OutputConsistency(t *testing.T) {
 			// Build a LiftedDealerFunc from the agreed-upon VV and MSP.
 			lsss, err := kw.NewScheme(sf, fx.ac)
 			require.NoError(t, err)
-			ldf, err := kw.NewLiftedDealerFunc(vv, lsss.MSP())
+			ldf, err := feldman.NewLiftedDealerFunc(vv, lsss.MSP())
 			require.NoError(t, err)
 
 			t.Run("lifted secret equals public key", func(t *testing.T) {
@@ -460,7 +460,7 @@ func TestDKG_OutputConsistency(t *testing.T) {
 			t.Run("partial public keys match lifted shares", func(t *testing.T) {
 				t.Parallel()
 				for id, output := range outputs {
-					lifted, err := kw.LiftShare(output.Share(), group.Generator())
+					lifted, err := feldman.LiftShare(output.Share(), group.Generator())
 					require.NoError(t, err)
 					ppk, ok := ref.PartialPublicKeyValues().Get(id)
 					require.True(t, ok)
@@ -959,7 +959,7 @@ func TestDahlgrenAttack_ExtendedFeldmanVV(t *testing.T) {
 	honestVV := originalBC.FeldmanVerificationVector
 
 	// Determine honest dimension from the VV
-	honestD, _ := honestVV.Dimensions()
+	honestD, _ := honestVV.Value().Dimensions()
 
 	// Build extended column vector with D+1 entries
 	extraScalar, err := field.Random(prng)
@@ -974,7 +974,9 @@ func TestDahlgrenAttack_ExtendedFeldmanVV(t *testing.T) {
 	entries[honestD] = extraScalar
 	extCol, err := extMod.NewRowMajor(entries...)
 	require.NoError(t, err)
-	extendedVV, err := mat.Lift(extCol, gen)
+	extendedVVV, err := mat.Lift(extCol, gen)
+	require.NoError(t, err)
+	extendedVV, err := feldman.NewVerificationVector(extendedVVV, nil)
 	require.NoError(t, err)
 
 	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
@@ -1013,7 +1015,7 @@ func TestTruncatedFeldmanVV_Rejected(t *testing.T) {
 	originalBC, _ := r3bi[victim].Get(attacker)
 
 	// Build a truncated column vector with D-1 entries
-	honestD, _ := originalBC.FeldmanVerificationVector.Dimensions()
+	honestD, _ := originalBC.FeldmanVerificationVector.Value().Dimensions()
 	require.Greater(t, honestD, 1, "need D>1 to truncate")
 	truncMod, err := mat.NewMatrixModule(uint(honestD-1), 1, field)
 	require.NoError(t, err)
@@ -1024,7 +1026,9 @@ func TestTruncatedFeldmanVV_Rejected(t *testing.T) {
 	}
 	truncCol, err := truncMod.NewRowMajor(entries...)
 	require.NoError(t, err)
-	truncatedVV, err := mat.Lift(truncCol, gen)
+	truncatedVVV, err := mat.Lift(truncCol, gen)
+	require.NoError(t, err)
+	truncatedVV, err := feldman.NewVerificationVector(truncatedVVV, nil)
 	require.NoError(t, err)
 
 	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
@@ -1061,14 +1065,14 @@ func TestDahlgrenAttack_ExtendedPedersenVV(t *testing.T) {
 	originalBC, _ := r2bi[victim].Get(attacker)
 
 	// Get honest Pedersen VV dimension
-	honestD, _ := originalBC.PedersenVerificationVector.Dimensions()
+	honestD, _ := originalBC.PedersenVerificationVector.Value().Dimensions()
 
 	// Build an extended Pedersen VV by appending a random commitment
 	extPedMod, err := mat.NewModuleValuedColumnVectorModule[*k256.Point, *k256.Scalar](uint(honestD+1), group)
 	require.NoError(t, err)
 	entries := make([]*k256.Point, honestD+1)
 	for i := range honestD {
-		e, err := originalBC.PedersenVerificationVector.Get(i, 0)
+		e, err := originalBC.PedersenVerificationVector.Value().Get(i, 0)
 		require.NoError(t, err)
 		entries[i] = e
 	}
@@ -1076,7 +1080,9 @@ func TestDahlgrenAttack_ExtendedPedersenVV(t *testing.T) {
 	extraScalar, err := field.Random(prng)
 	require.NoError(t, err)
 	entries[honestD] = group.Generator().ScalarOp(extraScalar)
-	extendedPedVV, err := extPedMod.NewRowMajor(entries...)
+	extendedPedVVV, err := extPedMod.NewRowMajor(entries...)
+	require.NoError(t, err)
+	extendedPedVV, err := feldman.NewVerificationVector(extendedPedVVV, nil)
 	require.NoError(t, err)
 
 	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{

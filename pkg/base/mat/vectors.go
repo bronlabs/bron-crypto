@@ -6,13 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
-type (
-	RowVector[S algebra.RingElement[S]]                                               = Matrix[S]
-	ModuleValuedRowVector[E algebra.ModuleElement[E, S], S algebra.RingElement[S]]    = ModuleValuedMatrix[E, S]
-	ColumnVector[S algebra.RingElement[S]]                                            = Matrix[S]
-	ModuleValuedColumnVector[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] = ModuleValuedMatrix[E, S]
-)
-
 // NewRowVectorModule creates a MatrixModule for row vectors of the given length over the specified finite ring.
 func NewRowVectorModule[S algebra.RingElement[S]](length uint, ring algebra.FiniteRing[S]) (*MatrixModule[S], error) {
 	out, err := NewMatrixModule(1, length, ring)

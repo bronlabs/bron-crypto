@@ -19,7 +19,7 @@ type DKGOutput[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 
 type DKGPublicOutput[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	publicKeyValue    E
-	partialPublicKeys ds.Map[sharing.ID, *kw.LiftedShare[E, S]]
+	partialPublicKeys ds.Map[sharing.ID, *feldman.LiftedShare[E, S]]
 	fv                *feldman.VerificationVector[E, S]
 	accessStructure   accessstructures.Linear
 }
@@ -51,7 +51,7 @@ func (o *DKGPublicOutput[E, S]) PublicKeyValue() E {
 }
 
 // PartialPublicKeyValues returns the map of per-party public key contributions.
-func (o *DKGPublicOutput[E, S]) PartialPublicKeyValues() ds.Map[sharing.ID, *kw.LiftedShare[E, S]] {
+func (o *DKGPublicOutput[E, S]) PartialPublicKeyValues() ds.Map[sharing.ID, *feldman.LiftedShare[E, S]] {
 	if o == nil {
 		return nil
 	}
@@ -77,7 +77,7 @@ func (o *DKGPublicOutput[E, S]) VerificationVector() *feldman.VerificationVector
 func NewDKGOutput[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	sf algebra.PrimeField[S],
 	share *kw.Share[S],
-	ldf *kw.LiftedDealerFunc[E, S],
+	ldf *feldman.LiftedDealerFunc[E, S],
 	accessStructure accessstructures.Linear,
 ) (*DKGOutput[E, S], error) {
 	if share == nil {
@@ -91,7 +91,7 @@ func NewDKGOutput[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement
 		return nil, ErrInvalidArgument.WithMessage("accessStructure is nil")
 	}
 	publicKeyValue := ldf.LiftedSecret().Value()
-	partialPublicKeys := hashmap.NewComparable[sharing.ID, *kw.LiftedShare[E, S]]()
+	partialPublicKeys := hashmap.NewComparable[sharing.ID, *feldman.LiftedShare[E, S]]()
 	for id := range accessStructure.Shareholders().Iter() {
 		pki, err := ldf.ShareOf(id)
 		if err != nil {

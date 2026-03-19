@@ -791,9 +791,11 @@ func TestVerificationVector_IsLiftOfRandomColumn(t *testing.T) {
 			out, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
 			require.NoError(t, err)
 
-			expected, err := mat.Lift(df.RandomColumn(), curve.Generator())
+			expectedMat, err := mat.Lift(df.RandomColumn(), curve.Generator())
 			require.NoError(t, err)
-			require.True(t, out.VerificationMaterial().Equal(expected),
+			expectedVV, err := feldman.NewVerificationVector(expectedMat, df.MSP())
+			require.NoError(t, err)
+			require.True(t, out.VerificationMaterial().Equal(expectedVV),
 				"verification vector must equal Lift(randomColumn, G)")
 		})
 	}
@@ -823,7 +825,7 @@ func TestFeldmanCoreEquation(t *testing.T) {
 			vv := out.VerificationMaterial()
 
 			// Construct the verifier's LiftedDealerFunc from the public V and the MSP
-			ldf, err := kw.NewLiftedDealerFunc(vv, df.MSP())
+			ldf, err := feldman.NewLiftedDealerFunc(vv, df.MSP())
 			require.NoError(t, err)
 
 			for _, id := range fx.shareholders {
@@ -834,7 +836,7 @@ func TestFeldmanCoreEquation(t *testing.T) {
 				// Private: manually lift the scalar share
 				scalarShare, ok := out.Shares().Get(id)
 				require.True(t, ok)
-				manuallyLifted, err := kw.LiftShare(scalarShare, gen)
+				manuallyLifted, err := feldman.LiftShare(scalarShare, gen)
 				require.NoError(t, err)
 
 				require.True(t, expectedLifted.Equal(manuallyLifted),
@@ -1065,6 +1067,326 @@ func TestVerificationVector_DistinctPerDealing(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// NewVerificationVector – construction
+// ---------------------------------------------------------------------------
+
+func TestNewVerificationVector_Valid(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	lifted, err := mat.Lift(df.RandomColumn(), curve.Generator())
+	require.NoError(t, err)
+
+	vv, err := feldman.NewVerificationVector(lifted, df.MSP())
+	require.NoError(t, err)
+	require.NotNil(t, vv)
+	require.True(t, lifted.Equal(vv.Value()))
+}
+
+func TestNewVerificationVector_NilValue(t *testing.T) {
+	t.Parallel()
+
+	_, err := feldman.NewVerificationVector[*k256.Point](nil, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestNewVerificationVector_NotColumnVector(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	curve := k256.NewCurve()
+
+	// Create a row vector (1 x 2) instead of column
+	rowMod, err := mat.NewMatrixModule(1, 2, field)
+	require.NoError(t, err)
+	row, err := rowMod.NewRowMajor(field.One(), field.Zero())
+	require.NoError(t, err)
+	rowLifted, err := mat.Lift(row, curve.Generator())
+	require.NoError(t, err)
+
+	_, err = feldman.NewVerificationVector(rowLifted, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrValue)
+}
+
+func TestNewVerificationVector_DimensionMismatch(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	// Build a column vector with wrong number of rows (D + 1)
+	d, _ := df.RandomColumn().Dimensions()
+	wrongMod, err := mat.NewMatrixModule(uint(d+1), 1, field)
+	require.NoError(t, err)
+	entries := make([]*k256.Scalar, d+1)
+	for i := range d + 1 {
+		entries[i] = field.FromUint64(uint64(i + 1))
+	}
+	wrongCol, err := wrongMod.NewRowMajor(entries...)
+	require.NoError(t, err)
+	wrongLifted, err := mat.Lift(wrongCol, curve.Generator())
+	require.NoError(t, err)
+
+	_, err = feldman.NewVerificationVector(wrongLifted, df.MSP())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrValue)
+}
+
+func TestNewVerificationVector_NilMSPSkipsDimensionCheck(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	// Any column vector should be accepted when MSP is nil
+	colMod, err := mat.NewMatrixModule(3, 1, field)
+	require.NoError(t, err)
+	col, err := colMod.NewRowMajor(field.One(), field.One(), field.One())
+	require.NoError(t, err)
+	lifted, err := mat.Lift(col, curve.Generator())
+	require.NoError(t, err)
+
+	vv, err := feldman.NewVerificationVector(lifted, nil)
+	require.NoError(t, err)
+	require.NotNil(t, vv)
+}
+
+// ---------------------------------------------------------------------------
+// VerificationVector – Equal, HashCode
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_Equal(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+
+	out1, _ := dealFeldman(t, scheme, secret)
+	out2, _ := dealFeldman(t, scheme, secret)
+
+	vv1 := out1.VerificationMaterial()
+
+	t.Run("equal to self", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, vv1.Equal(vv1))
+	})
+
+	t.Run("not equal to different", func(t *testing.T) {
+		t.Parallel()
+		vv2 := out2.VerificationMaterial()
+		require.False(t, vv1.Equal(vv2))
+	})
+
+	t.Run("not equal to nil", func(t *testing.T) {
+		t.Parallel()
+		require.False(t, vv1.Equal(nil))
+	})
+
+	t.Run("nil equals nil", func(t *testing.T) {
+		t.Parallel()
+		var a, b *feldman.VerificationVector[*k256.Point, *k256.Scalar]
+		require.True(t, a.Equal(b))
+	})
+}
+
+func TestVerificationVector_HashCode(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+
+	out1, _ := dealFeldman(t, scheme, secret)
+	out2, _ := dealFeldman(t, scheme, secret)
+
+	require.NotEqual(t, out1.VerificationMaterial().HashCode(), out2.VerificationMaterial().HashCode())
+}
+
+// ---------------------------------------------------------------------------
+// VerificationVector – Op (component-wise group addition)
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_Op_HomomorphicProperty(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(100))
+			s2 := kw.NewSecret(field.FromUint64(200))
+
+			out1, df1, err := scheme.DealAndRevealDealerFunc(s1, pcg.NewRandomised())
+			require.NoError(t, err)
+			out2, df2, err := scheme.DealAndRevealDealerFunc(s2, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			// Op the two verification vectors
+			combined := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+
+			// The first entry of the combined VV should equal
+			// [s1]G + [s2]G = [s1+s2]G
+			expectedSecret := gen.ScalarOp(s1.Value().Add(s2.Value()))
+			combinedFirst, err := combined.Value().Get(0, 0)
+			require.NoError(t, err)
+			require.True(t, expectedSecret.Equal(combinedFirst),
+				"first entry of Op'd VV must equal [s1+s2]G")
+
+			// Each entry should equal the component-wise sum of the
+			// individual verification vectors' entries.
+			r1 := df1.RandomColumn()
+			r2 := df2.RandomColumn()
+			d, _ := r1.Dimensions()
+			for i := range d {
+				v1, err := out1.VerificationMaterial().Value().Get(i, 0)
+				require.NoError(t, err)
+				v2, err := out2.VerificationMaterial().Value().Get(i, 0)
+				require.NoError(t, err)
+				vc, err := combined.Value().Get(i, 0)
+				require.NoError(t, err)
+
+				// Manual: [r1_i]G + [r2_i]G
+				r1i, err := r1.Get(i, 0)
+				require.NoError(t, err)
+				r2i, err := r2.Get(i, 0)
+				require.NoError(t, err)
+				expected := gen.ScalarOp(r1i.Add(r2i))
+				require.True(t, expected.Equal(vc),
+					"combined VV[%d] must equal [r1_%d + r2_%d]G", i, i, i)
+				require.True(t, v1.Op(v2).Equal(vc),
+					"combined VV[%d] must equal VV1[%d] + VV2[%d]", i, i, i)
+			}
+		})
+	}
+}
+
+func TestVerificationVector_Op_VerifyCombinedShares(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(500))
+			s2 := kw.NewSecret(field.FromUint64(300))
+
+			out1, shares1 := dealFeldman(t, scheme, s1)
+			out2, shares2 := dealFeldman(t, scheme, s2)
+
+			combinedVV := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+
+			// Adding shares component-wise should verify against the Op'd VV
+			for _, id := range fx.shareholders {
+				combined := shares1[id].Add(shares2[id])
+				err := scheme.Verify(combined, combinedVV)
+				require.NoError(t, err,
+					"combined share for ID %d must verify against Op'd VV", id)
+			}
+		})
+	}
+}
+
+func TestVerificationVector_Op_Associative(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	out1, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(1)))
+	out2, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(2)))
+	out3, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(3)))
+
+	vv1 := out1.VerificationMaterial()
+	vv2 := out2.VerificationMaterial()
+	vv3 := out3.VerificationMaterial()
+
+	// (vv1 + vv2) + vv3 == vv1 + (vv2 + vv3)
+	left := vv1.Op(vv2).Op(vv3)
+	right := vv1.Op(vv2.Op(vv3))
+	require.True(t, left.Equal(right), "Op must be associative")
+}
+
+func TestVerificationVector_Op_Commutative(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	out1, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(42)))
+	out2, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(77)))
+
+	vv1 := out1.VerificationMaterial()
+	vv2 := out2.VerificationMaterial()
+
+	require.True(t, vv1.Op(vv2).Equal(vv2.Op(vv1)), "Op must be commutative")
+}
+
+// ---------------------------------------------------------------------------
+// VerificationVector – CBOR round-trip
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_CBOR(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(999))
+
+	out, _ := dealFeldman(t, scheme, secret)
+	vv := out.VerificationMaterial()
+
+	data, err := vv.MarshalCBOR()
+	require.NoError(t, err)
+
+	var decoded feldman.VerificationVector[*k256.Point, *k256.Scalar]
+	err = decoded.UnmarshalCBOR(data)
+	require.NoError(t, err)
+	require.True(t, vv.Equal(&decoded))
+}
+
+func TestVerificationVector_CBOR_InvalidData(t *testing.T) {
+	t.Parallel()
+
+	var decoded feldman.VerificationVector[*k256.Point, *k256.Scalar]
+	err := decoded.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
+	require.Error(t, err)
+}
+
+// ---------------------------------------------------------------------------
 // ConvertShareToAdditive: sum of additive shares recovers the secret
 // ---------------------------------------------------------------------------
 
@@ -1162,11 +1484,11 @@ func TestLiftedShare_CBOR(t *testing.T) {
 			sh, ok := out.Shares().Get(id)
 			require.True(t, ok)
 
-			lifted, err := kw.LiftShare(sh, gen)
+			lifted, err := feldman.LiftShare(sh, gen)
 			require.NoError(t, err)
 
 			// Marshal the Feldman-level lifted share
-			fls, err := feldman.NewLiftedShare[*k256.Point, *k256.Scalar](id, lifted.Value())
+			fls, err := feldman.NewLiftedShare[*k256.Point, *k256.Scalar](id, lifted.Value()...)
 			require.NoError(t, err)
 
 			data, err := fls.MarshalCBOR()
@@ -1300,10 +1622,15 @@ func TestDahlgrenAttack_ExtendedVerificationVector(t *testing.T) {
 	extendedVV, err := mat.Lift(extCol, gen)
 	require.NoError(t, err)
 
+	// Wrap without MSP so the constructor doesn't reject; Verify will reject
+	// via the dimension check in the left module action.
+	extendedRef, err := feldman.NewVerificationVector[*k256.Point](extendedVV, nil)
+	require.NoError(t, err)
+
 	// Verify must fail: the extended V has dimension D+1, but M has D columns.
 	sh, ok := out.Shares().Get(fx.shareholders[0])
 	require.True(t, ok)
-	err = scheme.Verify(sh, extendedVV)
+	err = scheme.Verify(sh, extendedRef)
 	require.Error(t, err, "extended verification vector must be rejected (Dahlgren attack)")
 }
 
@@ -1355,7 +1682,7 @@ func TestDealRandomAndRevealDealerFunc_LiftedSecret(t *testing.T) {
 
 			// The lifted secret (first element of V for standard target) should
 			// equal [secret]G.
-			ldf, err := kw.NewLiftedDealerFunc(out.VerificationMaterial(), df.MSP())
+			ldf, err := feldman.NewLiftedDealerFunc(out.VerificationMaterial(), df.MSP())
 			require.NoError(t, err)
 			liftedSecret := ldf.LiftedSecret()
 			expected := gen.ScalarOp(secret.Value())
@@ -1428,6 +1755,223 @@ func TestDeal_NilPRNG(t *testing.T) {
 
 	_, err := scheme.Deal(kw.NewSecret(field.One()), nil)
 	require.Error(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// LiftDealerFunc – construction and error cases
+// ---------------------------------------------------------------------------
+
+func TestLiftDealerFunc_NilDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	_, err := feldman.LiftDealerFunc(nil, curve.Generator())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestLiftDealerFunc_NilBasePoint(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	_, err = feldman.LiftDealerFunc[*k256.Point](df, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestLiftDealerFunc_LiftedSecretMatchesScalarMul(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+
+			_, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			ldf, err := feldman.LiftDealerFunc(df, gen)
+			require.NoError(t, err)
+
+			// LiftedSecret should equal gen * secret
+			expected := gen.ScalarOp(secret.Value())
+			require.True(t, expected.Equal(ldf.LiftedSecret().Value()),
+				"lifted secret should be basePoint * secret")
+		})
+	}
+}
+
+func TestLiftDealerFunc_LiftedShareMatchesManualLift(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(77))
+
+			_, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			ldf, err := feldman.LiftDealerFunc(df, gen)
+			require.NoError(t, err)
+
+			for _, id := range fx.shareholders {
+				liftedShare, err := ldf.ShareOf(id)
+				require.NoError(t, err)
+
+				// Manually lift the scalar share
+				scalarShare, err := df.ShareOf(id)
+				require.NoError(t, err)
+				manualLift, err := feldman.LiftShare(scalarShare, gen)
+				require.NoError(t, err)
+
+				require.True(t, liftedShare.Equal(manualLift),
+					"LiftDealerFunc.ShareOf(%d) must match LiftShare of scalar share", id)
+			}
+		})
+	}
+}
+
+func TestLiftDealerFunc_ShareOfNonExistentID(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	ldf, err := feldman.LiftDealerFunc(df, curve.Generator())
+	require.NoError(t, err)
+
+	_, err = ldf.ShareOf(999)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrMembership)
+}
+
+func TestLiftDealerFunc_Accessors(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.FromUint64(3)), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	ldf, err := feldman.LiftDealerFunc(df, curve.Generator())
+	require.NoError(t, err)
+
+	require.NotNil(t, ldf.VerificationVector())
+	require.NotNil(t, ldf.MSP())
+	require.NotNil(t, ldf.Lambda())
+}
+
+// ---------------------------------------------------------------------------
+// NewLiftedDealerFunc – construction and error cases
+// ---------------------------------------------------------------------------
+
+func TestNewLiftedDealerFunc_NilVerificationVector(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	_, err = feldman.NewLiftedDealerFunc[*k256.Point](nil, df.MSP())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestNewLiftedDealerFunc_NilMSP(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	vvv, err := mat.Lift(df.RandomColumn(), curve.Generator())
+	require.NoError(t, err)
+
+	vv, err := feldman.NewVerificationVector(vvv, nil)
+	require.NoError(t, err)
+
+	_, err = feldman.NewLiftedDealerFunc(vv, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestNewLiftedDealerFunc_ConsistentWithLiftDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+
+			_, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			// Method 1: LiftDealerFunc
+			ldf1, err := feldman.LiftDealerFunc(df, gen)
+			require.NoError(t, err)
+
+			// Method 2: NewLiftedDealerFunc from verification vector
+			vvv, err := mat.Lift(df.RandomColumn(), gen)
+			require.NoError(t, err)
+			vv, err := feldman.NewVerificationVector(vvv, df.MSP())
+			require.NoError(t, err)
+			ldf2, err := feldman.NewLiftedDealerFunc(vv, df.MSP())
+			require.NoError(t, err)
+
+			// Both should produce the same lifted secret
+			require.True(t, ldf1.LiftedSecret().Equal(ldf2.LiftedSecret()),
+				"LiftDealerFunc and NewLiftedDealerFunc must produce the same lifted secret")
+
+			// Both should produce the same lifted shares
+			for _, id := range fx.shareholders {
+				sh1, err := ldf1.ShareOf(id)
+				require.NoError(t, err)
+				sh2, err := ldf2.ShareOf(id)
+				require.NoError(t, err)
+				require.True(t, sh1.Equal(sh2),
+					"lifted shares for ID %d must match between LiftDealerFunc and NewLiftedDealerFunc", id)
+			}
+		})
+	}
 }
 
 // ---------------------------------------------------------------------------

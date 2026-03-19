@@ -8,18 +8,15 @@ import (
 )
 
 // DealerOutput contains the result of a Feldman VSS dealing operation: a map
-// from shareholder IDs to their KW shares, and the public verification vector
+// from shareholder IDs to their shares, and the public verification vector
 // V = [r]G.
 type DealerOutput[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
 	shares ds.Map[sharing.ID, *kw.Share[FE]]
 	v      *VerificationVector[E, FE]
 }
 
-// Shares returns the map of shareholder IDs to their corresponding KW shares.
+// Shares returns the map of shareholder IDs to their corresponding shares.
 func (d *DealerOutput[E, FE]) Shares() ds.Map[sharing.ID, *kw.Share[FE]] {
-	if d == nil {
-		return nil
-	}
 	return d.shares
 }
 
@@ -27,8 +24,5 @@ func (d *DealerOutput[E, FE]) Shares() ds.Map[sharing.ID, *kw.Share[FE]] {
 // is the commitment that shareholders use to verify their shares without
 // learning the secret or the random column r.
 func (d *DealerOutput[E, FE]) VerificationMaterial() *VerificationVector[E, FE] {
-	if d == nil {
-		return nil
-	}
 	return d.v
 }

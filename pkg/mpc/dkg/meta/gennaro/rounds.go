@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/okamoto"
@@ -76,7 +77,7 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	}
 	secretsColumnVectorElements := slices.Collect(secretsColumnVector.RandomColumn().Iter())
 	blindingColumnVectorElements := slices.Collect(blindingColumnVector.RandomColumn().Iter())
-	pedersenVerificationVectorElements := slices.Collect(pedersenVerificationVector.Iter())
+	pedersenVerificationVectorElements := slices.Collect(pedersenVerificationVector.Value().Iter())
 	witnesses := make([]*okamoto.Witness[S], len(secretsColumnVectorElements))
 	statements := make([]*okamoto.Statement[E, S], len(secretsColumnVectorElements))
 	for i, ci := range secretsColumnVectorElements {
@@ -134,7 +135,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto verifier")
 		}
 		if err := verifier.Verify(
-			sigand.ComposeStatements(slices.Collect(iterutils.Map(inB.PedersenVerificationVector.Iter(), okamoto.NewStatement))...),
+			sigand.ComposeStatements(slices.Collect(iterutils.Map(inB.PedersenVerificationVector.Value().Iter(), okamoto.NewStatement))...),
 			inB.Proof,
 		); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify okamoto proof of knowledge of opening from party %d", pid)
@@ -156,9 +157,13 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	}
 
 	// Produce Feldman verification vector for the same column vector.
-	p.state.localFeldmanVerificationVector, err = mat.Lift(localSecretColumnVector.RandomColumn(), p.state.key.G())
+	liftedRandomColumn, err := mat.Lift(localSecretColumnVector.RandomColumn(), p.state.key.G())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to lift pedersen dealer function to exponent")
+	}
+	p.state.localFeldmanVerificationVector, err = feldman.NewVerificationVector(liftedRandomColumn, p.state.lsss.MSP())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create feldman verification vector from lifted random column")
 	}
 
 	// Produce batch schnorr proof of knowledge of Feldman verification vector's coefficients' dlog.
@@ -178,7 +183,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	}
 
 	witness := batch_schnorr.NewWitness(slices.Collect(localSecretColumnVector.RandomColumn().Iter())...)
-	statement := batch_schnorr.NewStatement(p.state.key.G(), slices.Collect(p.state.localFeldmanVerificationVector.Iter())...)
+	statement := batch_schnorr.NewStatement(p.state.key.G(), slices.Collect(p.state.localFeldmanVerificationVector.Value().Iter())...)
 	proof, err := prover.Prove(statement, witness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove batch schnorr statement")
@@ -216,7 +221,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 		}
-		statement := batch_schnorr.NewStatement(p.state.key.G(), slices.Collect(inB.FeldmanVerificationVector.Iter())...)
+		statement := batch_schnorr.NewStatement(p.state.key.G(), slices.Collect(inB.FeldmanVerificationVector.Value().Iter())...)
 		err = verifier.Verify(statement, inB.Proof)
 		if err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman verification vector")
@@ -238,7 +243,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create output feldman share")
 	}
-	ldf, err := kw.NewLiftedDealerFunc(summedFeldmanVerificationVector, p.state.lsss.MSP())
+	ldf, err := feldman.NewLiftedDealerFunc(summedFeldmanVerificationVector, p.state.lsss.MSP())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create lifted dealer function")
 	}

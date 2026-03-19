@@ -148,7 +148,7 @@ func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 		sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 		lsss, err := kw.NewScheme(sf, ac)
 		require.NoError(t, err)
-		ldf, err := kw.NewLiftedDealerFunc(vv, lsss.MSP())
+		ldf, err := feldman.NewLiftedDealerFunc(vv, lsss.MSP())
 		require.NoError(t, err)
 
 		// Lifted secret from VV must equal the public key.
@@ -166,7 +166,7 @@ func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 				"partial public key for %d doesn't match VV-derived lifted share", id)
 
 			// Partial public key must match the manually lifted scalar share.
-			lifted, err := kw.LiftShare(output.Share(), group.Generator())
+			lifted, err := feldman.LiftShare(output.Share(), group.Generator())
 			require.NoError(t, err)
 			require.True(t, lifted.Equal(actualPPK),
 				"LiftShare(share) for %d doesn't match partial public key", id)

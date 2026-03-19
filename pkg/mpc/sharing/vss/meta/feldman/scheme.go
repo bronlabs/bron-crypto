@@ -84,11 +84,15 @@ func (s *Scheme[E, FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOu
 	if err != nil {
 		return nil, nil, nil, errs.Wrap(err).WithMessage("failed to lift matrix for verification commitments")
 	}
+	verificationVector, err := NewVerificationVector(verificationMatrix, s.lsss.MSP())
+	if err != nil {
+		return nil, nil, nil, errs.Wrap(err).WithMessage("failed to create verification vector")
+	}
 	shares := hashmap.NewComparableFromNativeLike(maps.Collect(lsssOutput.Shares().Iter())).Freeze()
 
 	return &DealerOutput[E, FE]{
 		shares: shares,
-		v:      verificationMatrix,
+		v:      verificationVector,
 	}, secret, df, nil
 }
 
@@ -111,9 +115,13 @@ func (s *Scheme[E, FE]) DealAndRevealDealerFunc(secret *kw.Secret[FE], prng io.R
 		return nil, nil, errs.Wrap(err).WithMessage("failed to deal shares")
 	}
 
-	verificationVector, err := mat.Lift(df.RandomColumn(), s.group.Generator())
+	verificationMatrix, err := mat.Lift(df.RandomColumn(), s.group.Generator())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to lift matrix for verification commitments")
+	}
+	verificationVector, err := NewVerificationVector(verificationMatrix, s.lsss.MSP())
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to create verification vector")
 	}
 	shares := hashmap.NewComparableFromNativeLike(maps.Collect(lsssOutput.Shares().Iter())).Freeze()
 
@@ -154,18 +162,18 @@ func (s *Scheme[E, FE]) ReconstructAndVerify(reference *VerificationVector[E, FE
 // action of the shareholder's MSP rows on V) and compares it against the
 // manually lifted scalar share [λ_i]G. Returns nil if and only if the two
 // agree.
-//
-// Dimension enforcement in the left module action implicitly rejects
-// verification vectors whose length does not match the MSP column count D,
-// preventing the Dahlgren attack
-// (https://blog.trailofbits.com/2024/02/20/breaking-the-shared-key-in-threshold-signature-schemes/).
-// This is the generalisation of the polynomial degree check in classical
-// Feldman VSS.
 func (s *Scheme[E, FE]) Verify(share *kw.Share[FE], reference *VerificationVector[E, FE]) error {
 	if share == nil {
 		return sharing.ErrIsNil.WithMessage("share is nil")
 	}
-	liftedDealerFunc, err := kw.NewLiftedDealerFunc(reference, s.lsss.MSP())
+
+	// Dimension enforcement in the left module action implicitly rejects
+	// verification vectors whose length does not match the MSP column count D,
+	// preventing the Dahlgren attack
+	// (https://blog.trailofbits.com/2024/02/20/breaking-the-shared-key-in-threshold-signature-schemes/).
+	// This is the generalisation of the polynomial degree check in classical
+	// Feldman VSS.
+	liftedDealerFunc, err := NewLiftedDealerFunc(reference, s.lsss.MSP())
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to create lifted dealer function from verification vector")
 	}
@@ -177,7 +185,7 @@ func (s *Scheme[E, FE]) Verify(share *kw.Share[FE], reference *VerificationVecto
 	}
 
 	// Manually lift the share to the basepoint
-	manuallyLiftedShare, err := kw.LiftShare(share, s.group.Generator())
+	manuallyLiftedShare, err := LiftShare(share, s.group.Generator())
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to manually lift share for shareholder %d", share.ID())
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/pedersen"
 )
 
@@ -1474,10 +1475,13 @@ func TestDahlgrenAttack_ExtendedVerificationVector(t *testing.T) {
 	require.NoError(t, err)
 	extendedVV := liftedG.Op(liftedH)
 
+	vv, err := feldman.NewVerificationVector(extendedVV, nil)
+	require.NoError(t, err)
+
 	// Verify must fail: extended V has dimension D+1 but M has D columns
 	sh, ok := out.Shares().Get(fx.shareholders[0])
 	require.True(t, ok)
-	err = scheme.Verify(sh, extendedVV)
+	err = scheme.Verify(sh, vv)
 	require.Error(t, err, "extended verification vector must be rejected (Dahlgren attack)")
 }
 

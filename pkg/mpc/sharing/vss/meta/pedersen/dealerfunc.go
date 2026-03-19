@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 )
 
 // NewDealerFunc creates a Pedersen dealer function from the secret (g) and
@@ -75,15 +76,15 @@ func LiftDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 	if key == nil {
 		return nil, sharing.ErrIsNil.WithMessage("pedersen commitment key is nil")
 	}
-	g, err := kw.LiftDealerFunc(df.g, key.G())
+	g, err := feldman.LiftDealerFunc(df.g, key.G())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to lift g dealer func")
 	}
-	h, err := kw.LiftDealerFunc(df.h, key.H())
+	h, err := feldman.LiftDealerFunc(df.h, key.H())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to lift h dealer func")
 	}
-	out, err := kw.NewLiftedDealerFunc(g.VerificationVector().Op(h.VerificationVector()), g.MSP())
+	out, err := feldman.NewLiftedDealerFunc(g.VerificationVector().Op(h.VerificationVector()), g.MSP())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create lifted kw dealer func for Pedersen VSS")
 	}
@@ -96,7 +97,7 @@ func LiftDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 // verification vector and the MSP. This is used during verification to
 // compute the expected lifted shares via the left module action M_i · V.
 func NewLiftedDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](verificationVector *VerificationVector[E, FE], mspMatrix *msp.MSP[FE]) (*LiftedDealerFunc[E, FE], error) {
-	out, err := kw.NewLiftedDealerFunc(verificationVector, mspMatrix)
+	out, err := feldman.NewLiftedDealerFunc(verificationVector, mspMatrix)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create lifted kw dealer func for Pedersen VSS")
 	}
@@ -109,7 +110,7 @@ func NewLiftedDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 // the verification vector V = [r_g]G + [r_h]H and the MSP, enabling
 // computation of lifted shares M_i · V for any shareholder i.
 type LiftedDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
-	gh *kw.LiftedDealerFunc[E, FE]
+	gh *feldman.LiftedDealerFunc[E, FE]
 }
 
 // ShareOf computes the expected lifted share for the given shareholder via the
