@@ -110,7 +110,7 @@ func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 		scalarField:    sf,
 		prng:           prng,
 		niCompilerName: niCompilerName,
-		state: &State[E, S]{
+		state: &State[E, S]{ //nolint:exhaustruct // readability.
 			key:            key,
 			pedersenVSS:    pedersenVSS,
 			feldmanVSS:     feldmanVSS,
