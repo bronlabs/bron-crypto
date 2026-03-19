@@ -56,6 +56,13 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		return nil, nil, ErrRound.WithMessage("expected round 2")
 	}
 
+	if errB := network.ValidateIncomingMessages(p, r1b, p.ctx.OtherPartiesOrdered()); errB != nil {
+		return nil, nil, errs.Wrap(errB)
+	}
+	if errU := network.ValidateIncomingMessages(p, r1u, p.ctx.OtherPartiesOrdered()); errU != nil {
+		return nil, nil, errs.Wrap(errU)
+	}
+
 	share = p.state.share
 	verificationVector := p.state.verificationVectors[p.ctx.HolderID()]
 	for id := range p.ctx.OtherPartiesOrdered() {

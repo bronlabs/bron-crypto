@@ -3,6 +3,8 @@ package przssetup
 import "github.com/bronlabs/errs-go/errs"
 
 var (
+	// ErrRound indicates that a participant received messages for an unexpected round.
+	ErrRound = errs.New("invalid round")
 	// ErrInvalidArgument indicates missing or inconsistent inputs.
 	ErrInvalidArgument = errs.New("invalid argument")
 	// ErrFailed captures non-recoverable protocol failures.

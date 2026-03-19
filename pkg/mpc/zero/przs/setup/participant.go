@@ -24,6 +24,7 @@ type Participant struct {
 	tape        ts.Transcript
 	prng        io.Reader
 	state       State
+	round       network.Round
 }
 
 // State stores commitments and seed material across rounds.
