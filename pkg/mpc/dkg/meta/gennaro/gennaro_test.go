@@ -497,7 +497,7 @@ func TestNewParticipant_Validation(t *testing.T) {
 
 	t.Run("nil group", func(t *testing.T) {
 		t.Parallel()
-		p, err := gennaro.NewParticipant[*k256.Point, *k256.Scalar](ctx, nil, ac, fiatshamir.Name, prng)
+		p, err := gennaro.NewParticipant[*k256.Point](ctx, nil, ac, fiatshamir.Name, prng)
 		require.Error(t, err)
 		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
@@ -513,7 +513,7 @@ func TestNewParticipant_Validation(t *testing.T) {
 
 	t.Run("nil access structure", func(t *testing.T) {
 		t.Parallel()
-		p, err := gennaro.NewParticipant[*k256.Point, *k256.Scalar](ctx, group, nil, fiatshamir.Name, prng)
+		p, err := gennaro.NewParticipant(ctx, group, nil, fiatshamir.Name, prng)
 		require.Error(t, err)
 		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
@@ -1068,7 +1068,7 @@ func TestDahlgrenAttack_ExtendedPedersenVV(t *testing.T) {
 	honestD, _ := originalBC.PedersenVerificationVector.Value().Dimensions()
 
 	// Build an extended Pedersen VV by appending a random commitment
-	extPedMod, err := mat.NewModuleValuedColumnVectorModule[*k256.Point, *k256.Scalar](uint(honestD+1), group)
+	extPedMod, err := mat.NewModuleValuedColumnVectorModule(uint(honestD+1), group)
 	require.NoError(t, err)
 	entries := make([]*k256.Point, honestD+1)
 	for i := range honestD {
