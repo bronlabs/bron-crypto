@@ -281,7 +281,7 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], c *CNF)
 		return nil, errs.Wrap(err).WithMessage("failed to create matrix for MSP induction")
 	}
 
-	out, err := msp.NewStandardMSP(matrix, rowsToHolders)
+	out, err := msp.NewMSP(matrix, rowsToHolders)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create MSP from CNF access structure")
 	}

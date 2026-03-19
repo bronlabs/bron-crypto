@@ -17,42 +17,19 @@ import (
 // ID uniquely identifies a shareholder.
 type ID = internal.ID
 
-// NewStandardMSP constructs an MSP with the standard target vector e_0 = (1,0,...,0).
-func NewStandardMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map[int]ID) (*MSP[E], error) {
-	if m == nil {
-		return nil, ErrIsNil.WithMessage("matrix cannot be nil")
-	}
-	targetVector, err := m.Module().NewStandardUnit(0)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create target vector")
-	}
-	out, err := NewMSP(m, rowsToHolders, targetVector)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create MSP")
-	}
-	return out, nil
-}
-
-// NewMSP constructs a monotone span programme from a matrix, a row-to-holder
-// labelling, and an explicit target vector.
-func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map[int]ID, targetVector *mat.Matrix[E]) (*MSP[E], error) {
+// NewMSP constructs a monotone span programme from a matrix and a row-to-holder
+// labelling. It assumes the target vector is the standard unit vector with a 1 in the first coordinate.
+func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map[int]ID) (*MSP[E], error) {
 	if m == nil {
 		return nil, ErrIsNil.WithMessage("matrix cannot be nil")
 	}
 	if rowsToHolders == nil {
 		return nil, ErrIsNil.WithMessage("rowsToHolders mapping cannot be nil")
 	}
-	if targetVector == nil {
-		return nil, ErrIsNil.WithMessage("target vector cannot be nil")
-	}
-	if !targetVector.IsRowVector() {
-		return nil, ErrValue.WithMessage("target vector must be a row vector")
-	}
-
-	rows, cols := m.Dimensions()
-	_, targetCols := targetVector.Dimensions()
-	if targetCols != cols {
-		return nil, ErrValue.WithMessage("target vector length must match number of columns in matrix: got %d, expected %d", targetCols, cols)
+	rows, _ := m.Dimensions()
+	targetVector, err := m.Module().NewStandardUnit(0)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create target vector")
 	}
 
 	// Require labels defined for every row index 0..rows-1

@@ -287,11 +287,7 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Hie
 	for i, id := range shareHolders {
 		rowsToHolders[i] = id
 	}
-	targetVector, err := matrix.Module().NewStandardUnit(0)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create target vector")
-	}
-	out, err := msp.NewMSP(matrix, rowsToHolders, targetVector)
+	out, err := msp.NewMSP(matrix, rowsToHolders)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create MSP from threshold access structure")
 	}
