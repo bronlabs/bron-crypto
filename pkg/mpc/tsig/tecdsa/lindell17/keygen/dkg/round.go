@@ -153,11 +153,11 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
 		theirBigQ := message.BigQPrime.Add(message.BigQPrime).Add(message.BigQPrime).Add(message.BigQDoublePrime)
-		partialPublicKey, exists := p.shard.PartialPublicKeys().Get(id)
+		publicKeyShare, exists := p.shard.PublicKeyValueShares().Get(id)
 		if !exists {
 			return nil, ErrMissing.WithMessage("could not find participant partial publickey (sharing id=%d)", id)
 		}
-		if !theirBigQ.Equal(partialPublicKey.Value()) {
+		if !theirBigQ.Equal(publicKeyShare.Value()) {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid Q' or Q''")
 		}
 	}
@@ -458,7 +458,7 @@ func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, 
 }
 
 func dlogProve[
-P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
+	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
 ](c *Participant[P, B, S], bigQ, bigQTwin P, x S, tape transcripts.Transcript) (compiler.NIZKPoKProof, error) {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)
@@ -482,7 +482,7 @@ P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldEle
 }
 
 func dlogVerify[
-P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
+	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
 ](c *Participant[P, B, S], proverID sharing.ID, proof compiler.NIZKPoKProof, bigQ, bigQTwin P, tape transcripts.Transcript) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)

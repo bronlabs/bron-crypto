@@ -3,6 +3,8 @@ package znstar
 import (
 	"github.com/fxamacker/cbor/v2"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -123,23 +125,23 @@ func (pg *PaillierGroup[X]) UnmarshalCBOR(data []byte) error {
 	case *modular.OddPrimeSquareFactors:
 		dto, err := serde.UnmarshalCBOR[paillierGroupKnownOrderDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		reconstructed, err := NewPaillierGroup(dto.P, dto.Q)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*pg = *any(reconstructed).(*PaillierGroup[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		n2 := dto.N.Square()
 		reconstructed, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*pg = *any(reconstructed).(*PaillierGroup[X]) //nolint:errcheck // false positive
 		return nil
@@ -176,33 +178,33 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 	case *modular.OddPrimeSquareFactors:
 		dto, err := serde.UnmarshalCBOR[paillierGroupKnownOrderElementDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		p := num.NPlus().FromModulusCT(dto.Arithmetic.P.Factor)
 		q := num.NPlus().FromModulusCT(dto.Arithmetic.Q.Factor)
 		g, err := NewPaillierGroup(p, q)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		elem, err := g.FromUint(dto.V)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		n2 := dto.N.Square()
 		g, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		elem, err := g.FromUint(dto.V)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 		return nil
@@ -213,27 +215,27 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 			q := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.Q.Factor)
 			g, err := NewPaillierGroup(p, q)
 			if err != nil {
-				return err
+				return errs.Wrap(err)
 			}
 			elem, err := g.FromUint(dtoKnown.V)
 			if err != nil {
-				return err
+				return errs.Wrap(err)
 			}
 			*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 			return nil
 		}
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		n2 := dto.N.Square()
 		g, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		elem, err := g.FromUint(dto.V)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*u = *any(elem).(*PaillierGroupElement[X]) //nolint:errcheck // false positive
 		return nil
@@ -268,22 +270,22 @@ func (rg *RSAGroup[X]) UnmarshalCBOR(data []byte) error {
 	case *modular.OddPrimeFactors:
 		dto, err := serde.UnmarshalCBOR[rsaGroupKnownOrderDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		reconstructed, err := NewRSAGroup(dto.P, dto.Q)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*rg = *any(reconstructed).(*RSAGroup[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		reconstructed, err := NewRSAGroupOfUnknownOrder(dto.Modulus)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*rg = *any(reconstructed).(*RSAGroup[X]) //nolint:errcheck // false positive
 		return nil
@@ -319,32 +321,32 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 	case *modular.OddPrimeFactors:
 		dto, err := serde.UnmarshalCBOR[rsaGroupKnownOrderElementDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		p := num.NPlus().FromModulusCT(dto.Arithmetic.Params.P)
 		q := num.NPlus().FromModulusCT(dto.Arithmetic.Params.Q)
 		g, err := NewRSAGroup(p, q)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		elem, err := g.FromUint(dto.V)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		g, err := NewRSAGroupOfUnknownOrder(dto.V.Modulus())
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		elem, err := g.FromUint(dto.V)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 		return nil
@@ -355,26 +357,26 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 			q := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.Params.Q)
 			g, err := NewRSAGroup(p, q)
 			if err != nil {
-				return err
+				return errs.Wrap(err)
 			}
 			elem, err := g.FromUint(dtoKnown.V)
 			if err != nil {
-				return err
+				return errs.Wrap(err)
 			}
 			*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 			return nil
 		}
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		g, err := NewRSAGroupOfUnknownOrder(dto.V.Modulus())
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		elem, err := g.FromUint(dto.V)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 		*u = *any(elem).(*RSAGroupElement[X]) //nolint:errcheck // false positive
 		return nil

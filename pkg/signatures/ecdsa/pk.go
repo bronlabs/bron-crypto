@@ -100,12 +100,12 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*publicKeyDTO[P, B, S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal ECDSA public key")
 	}
 
 	pk2, err := NewPublicKey(dto.PK)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to validate deserialized ECDSA public key")
 	}
 	*pk = *pk2
 	return nil

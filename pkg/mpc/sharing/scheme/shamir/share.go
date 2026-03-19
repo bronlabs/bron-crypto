@@ -135,7 +135,7 @@ func (s *Share[FE]) HashCode() base.HashCode {
 // Bytes returns the canonical byte representation of this share.
 func (s *Share[FE]) Bytes() []byte {
 	buf := s.Value().Bytes()
-	binary.BigEndian.AppendUint64(buf, uint64(s.ID()))
+	buf = binary.BigEndian.AppendUint64(buf, uint64(s.ID()))
 	return buf
 }
 
@@ -156,12 +156,16 @@ func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 func (s *Share[FE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shareDTO[FE]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal Shamir Share")
+	}
+
+	if dto.ID == 0 {
+		return sharing.ErrMembership.WithMessage("share ID cannot be 0")
 	}
 
 	s2, err := NewShare(dto.ID, dto.V, nil)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to create Shamir Share from deserialized data")
 	}
 	*s = *s2
 	return nil

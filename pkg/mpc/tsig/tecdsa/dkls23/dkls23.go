@@ -18,6 +18,7 @@ type PartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 	w S
 }
 
+// MarshalCBOR encodes the partial signature in CBOR.
 func (ps *PartialSignature[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &partialSignatureDTO[P, B, S]{
 		R: ps.r,
@@ -31,6 +32,7 @@ func (ps *PartialSignature[P, B, S]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR decodes the partial signature from CBOR.
 func (ps *PartialSignature[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*partialSignatureDTO[P, B, S]](data)
 	if err != nil {
@@ -67,6 +69,9 @@ func NewPartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B]
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
 func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], publicKey *ecdsa.PublicKey[P, B, S], message []byte, partialSignatures ...*PartialSignature[P, B, S]) (*ecdsa.Signature[S], error) {
+	if len(partialSignatures) == 0 {
+		return nil, ErrFailed.WithMessage("no partial signatures provided")
+	}
 	w := suite.ScalarField().Zero()
 	u := suite.ScalarField().Zero()
 

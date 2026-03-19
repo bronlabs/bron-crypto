@@ -39,7 +39,7 @@ type BytesLike interface {
 type BytesLikeFactory[E any] interface {
 	// FromBytes creates an element of type E from the given byte slice.
 	FromBytes([]byte) (E, error)
-	// If elemnts are atomic, ElementSize returns the **exact** number of bytes (implementation-dependent) required to represent an element.
+	// If elements are atomic, ElementSize returns the **exact** number of bytes (implementation-dependent) required to represent an element.
 	// If elements are collections of atomic elements, ElementSize returns the size of an individual element.
 	// If elements are variable size, ElementSize returns -1.
 	ElementSize() int

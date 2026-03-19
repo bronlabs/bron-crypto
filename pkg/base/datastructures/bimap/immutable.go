@@ -64,16 +64,15 @@ func (m *ImmutableBiMap[K, V]) Retain(keys ...K) ds.BiMap[K, V] {
 
 // Filter returns a new bimap containing only entries where the predicate returns true.
 func (m *ImmutableBiMap[K, V]) Filter(predicate func(key K) bool) ds.BiMap[K, V] {
+	filtered := m.internalMap.Filter(predicate)
+	reverseFiltered := m.reverseMap.Clone().Unfreeze()
+	reverseFiltered.Clear()
+	for key, value := range filtered.Iter() {
+		reverseFiltered.Put(value, key)
+	}
 	return &ImmutableBiMap[K, V]{
-		internalMap: m.internalMap.Filter(predicate),
-		reverseMap: m.reverseMap.Filter(func(value V) bool {
-			for k := range m.internalMap.Iter() {
-				if predicate(k) {
-					return true
-				}
-			}
-			return false
-		}),
+		internalMap: filtered,
+		reverseMap:  reverseFiltered.Freeze(),
 	}
 }
 

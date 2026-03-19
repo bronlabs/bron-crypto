@@ -326,7 +326,7 @@ func (p *Point) String() string {
 // AsPrimeSubGroupPoint converts to a prime subgroup point if torsion-free.
 func (p *Point) AsPrimeSubGroupPoint() (*PrimeSubGroupPoint, error) {
 	if !p.IsTorsionFree() {
-		return nil, curves.ErrFailed.WithMessage("point is not in the prime subgroup")
+		return nil, curves.ErrSubGroupMembership.WithStackFrame()
 	}
 
 	var pp PrimeSubGroupPoint

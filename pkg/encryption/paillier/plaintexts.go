@@ -173,7 +173,10 @@ func (pt *Plaintext) Add(other *Plaintext) *Plaintext {
 
 // Equal returns true if two plaintexts have the same value.
 func (pt *Plaintext) Equal(other *Plaintext) bool {
-	return pt.Value().Equal(other.Value())
+	if pt == nil || other == nil {
+		return pt == other
+	}
+	return pt.n.Equal(other.n) && pt.v.Equal(other.v)
 }
 
 // OpInv returns the additive inverse of the plaintext.
@@ -216,5 +219,9 @@ func (pt *Plaintext) PartialCompare(other *Plaintext) base.PartialOrdering {
 
 // Bytes returns the plaintext value as a big-endian byte slice.
 func (pt *Plaintext) Bytes() []byte {
-	return pt.Value().Bytes()
+	if pt == nil || pt.v == nil {
+		return nil
+	}
+
+	return pt.v.Bytes()
 }

@@ -272,4 +272,7 @@ func Test_EllipticPointOnCurve(t *testing.T) {
 	yInt := new(big.Int).SetBytes(y.BytesBE())
 	ok := ellipticCurve.IsOnCurve(xInt, yInt)
 	require.True(t, ok)
+
+	require.False(t, ellipticCurve.IsOnCurve(big.NewInt(1), big.NewInt(1)))
+	require.False(t, ellipticCurve.IsOnCurve(big.NewInt(0), big.NewInt(0)))
 }

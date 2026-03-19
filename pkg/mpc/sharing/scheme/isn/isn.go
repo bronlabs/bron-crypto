@@ -60,7 +60,7 @@ func (s *Secret[E]) Value() E {
 
 // Equal tests whether two secrets have equal values.
 func (s *Secret[E]) Equal(other *Secret[E]) bool {
-	if s == nil && other == nil {
+	if s == nil || other == nil {
 		return s == other
 	}
 	return s.v.Equal(other.v)

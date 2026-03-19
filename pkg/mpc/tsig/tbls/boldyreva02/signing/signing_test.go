@@ -18,6 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/signing"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02/testutils"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
@@ -94,18 +95,18 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 			cosigner, err := signing.NewShortKeyCosigner(
 				signCtx,
 				curveFamily,
-				shard,
-				bls.Basic, // Use basic scheme for simplicity
+				ntu.CBORRoundTrip(t, shard),
+				bls.Basic, // Use a basic scheme for simplicity
 			)
 			require.NoError(t, err)
 			cosigners = append(cosigners, cosigner)
 		}
 
 		// Create aggregator for the short key scheme
-		publicMaterial := cosigners[0].Shard().PublicMaterial
+		publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
 		aggregator, err := signing.NewShortKeyAggregator(
 			curveFamily,
-			&publicMaterial,
+			publicMaterial,
 			bls.Basic, // Same rogue key algorithm as used in cosigners
 		)
 		require.NoError(t, err)
@@ -203,8 +204,8 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		}
 
 		// Create aggregator
-		publicMaterial := cosigners[0].Shard().PublicMaterial
-		aggregator, err := signing.NewShortKeyAggregator(curveFamily, &publicMaterial, rogueKeyAlg)
+		publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+		aggregator, err := signing.NewShortKeyAggregator(curveFamily, publicMaterial, rogueKeyAlg)
 		require.NoError(t, err)
 
 		// Sign and verify
@@ -250,8 +251,8 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		}
 
 		// Create aggregator
-		publicMaterial := cosigners[0].Shard().PublicMaterial
-		aggregator, err := signing.NewLongKeyAggregator(curveFamily, &publicMaterial, rogueKeyAlg)
+		publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+		aggregator, err := signing.NewLongKeyAggregator(curveFamily, publicMaterial, rogueKeyAlg)
 		require.NoError(t, err)
 
 		// Sign and verify
@@ -329,10 +330,10 @@ func TestPartialSignatureVerification(t *testing.T) {
 	}
 
 	// Create aggregator for the long key scheme
-	publicMaterial := cosigners[0].Shard().PublicMaterial
+	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
 	aggregator, err := signing.NewLongKeyAggregator(
 		curveFamily,
-		&publicMaterial,
+		publicMaterial,
 		bls.MessageAugmentation, // Same rogue key algorithm as used in cosigners
 	)
 	require.NoError(t, err)
@@ -518,7 +519,7 @@ func TestAggregatorCreationErrors(t *testing.T) {
 
 	shard, ok := shards[sharing.ID(1)]
 	require.True(t, ok)
-	publicMaterial := shard.PublicMaterial
+	publicMaterial := shard.PublicKeyMaterial()
 
 	quorumSet := hashset.NewComparable[sharing.ID]()
 	quorumSet.Add(sharing.ID(1))
@@ -526,14 +527,14 @@ func TestAggregatorCreationErrors(t *testing.T) {
 
 	t.Run("NilCurveFamily", func(t *testing.T) {
 		t.Parallel()
-		_, err := signing.NewShortKeyAggregator(nil, &publicMaterial, bls.Basic)
+		_, err := signing.NewShortKeyAggregator(nil, publicMaterial, bls.Basic)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "curveFamily")
 	})
 
 	t.Run("UnsupportedRogueKeyAlgorithm", func(t *testing.T) {
 		t.Parallel()
-		_, err := signing.NewShortKeyAggregator(curveFamily, &publicMaterial, bls.RogueKeyPreventionAlgorithm(99))
+		_, err := signing.NewShortKeyAggregator(curveFamily, publicMaterial, bls.RogueKeyPreventionAlgorithm(99))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not supported")
 	})
@@ -577,8 +578,8 @@ func TestAggregationErrors(t *testing.T) {
 		cosigners = append(cosigners, cosigner)
 	}
 
-	publicMaterial := cosigners[0].Shard().PublicMaterial
-	aggregator, err := signing.NewShortKeyAggregator(curveFamily, &publicMaterial, bls.Basic)
+	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+	aggregator, err := signing.NewShortKeyAggregator(curveFamily, publicMaterial, bls.Basic)
 	require.NoError(t, err)
 
 	t.Run("NilPartialSignatures", func(t *testing.T) {
@@ -674,8 +675,8 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 			}
 
 			// Create aggregator and sign
-			publicMaterial := cosigners[0].Shard().PublicMaterial
-			aggregator, err := signing.NewShortKeyAggregator(curveFamily, &publicMaterial, bls.Basic)
+			publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
+			aggregator, err := signing.NewShortKeyAggregator(curveFamily, publicMaterial, bls.Basic)
 			require.NoError(t, err)
 
 			message := []byte("Test quorum " + tc.name)

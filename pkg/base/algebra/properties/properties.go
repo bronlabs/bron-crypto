@@ -534,8 +534,7 @@ func EuclideanDivisionProperty[S algebra.EuclideanSemiDomain[E], E algebra.Eucli
 				if !r.IsZero() {
 					require.True(
 						t,
-						base.Compare(r.EuclideanValuation(), b.EuclideanValuation()).IsLessThan() &&
-							!base.Compare(r.EuclideanValuation(), b.EuclideanValuation()).IsEqual(),
+						base.Compare(r.EuclideanValuation(), b.EuclideanValuation()).IsLessThan(),
 						"Euclidean division failed: r >= |b|")
 				}
 			})

@@ -8,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 
 	_ "embed"
 )
@@ -158,4 +159,39 @@ func Test_Fp2Sqrt(t *testing.T) {
 			require.Equal(t, vector.Ok, okP|okN)
 		}
 	}
+}
+
+func Test_Fp2SqrtReceiverPreservedOnFailure(t *testing.T) {
+	t.Parallel()
+
+	var vectors testutils.UnaryOpVectorsWithOk[*testFp2, testFp2]
+	err := json.Unmarshal([]byte(fp2SqrtVectors), &vectors)
+	require.NoError(t, err)
+
+	// Use a sentinel receiver with distinct U0 and U1 values.
+	var sentinel testFp2
+	sentinel.U0.SetUint64(42)
+	sentinel.U1.SetUint64(99)
+
+	foundNonQR := false
+	for _, vector := range vectors.Vectors {
+		if vector.Ok != 0 {
+			continue
+		}
+		foundNonQR = true
+
+		var receiver testFp2
+		receiver.U0.Set(&sentinel.U0)
+		receiver.U1.Set(&sentinel.U1)
+
+		ok := receiver.Sqrt(&vector.A.V)
+		require.Equal(t, ct.Bool(0), ok)
+
+		// When Sqrt fails, the receiver must be unchanged.
+		require.Equal(t, ct.Bool(1), receiver.U0.Equal(&sentinel.U0),
+			"U0 was corrupted on failed Sqrt")
+		require.Equal(t, ct.Bool(1), receiver.U1.Equal(&sentinel.U1),
+			"U1 was corrupted on failed Sqrt")
+	}
+	require.True(t, foundNonQR, "test vectors must include at least one non-QR")
 }

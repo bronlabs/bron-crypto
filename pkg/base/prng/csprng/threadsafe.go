@@ -6,14 +6,6 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-var (
-	ErrConstructionFailed = errs.New("failed to construct new prng")
-	ErrReadFailed         = errs.New("failed to read from prng")
-	ErrGenerateFailed     = errs.New("failed to generate from prng")
-	ErrSeedFailed         = errs.New("failed to seed prng")
-	ErrReseedFailed       = errs.New("failed to reseed prng")
-)
-
 // Provide a thread-safe version for PRNGs.
 type ThreadSafePrng struct {
 	prng SeedableCSPRNG
@@ -34,7 +26,7 @@ func (tsp *ThreadSafePrng) Read(p []byte) (n int, err error) {
 	defer tsp.mu.Unlock()
 	n, err = tsp.prng.Read(p)
 	if err != nil {
-		return 0, ErrReadFailed.WithStackFrame()
+		return 0, errs.Wrap(err).WithMessage("failed to read from prng")
 	}
 	return n, nil
 }
@@ -44,7 +36,7 @@ func (tsp *ThreadSafePrng) Generate(buffer, readSalt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Generate(buffer, readSalt); err != nil {
-		return ErrGenerateFailed.WithStackFrame()
+		return errs.Wrap(err).WithMessage("failed to generate from prng")
 	}
 	return nil
 }
@@ -54,7 +46,7 @@ func (tsp *ThreadSafePrng) Reseed(seed, salt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Reseed(seed, salt); err != nil {
-		return ErrReseedFailed.WithStackFrame()
+		return errs.Wrap(err).WithMessage("failed to reseed prng")
 	}
 	return nil
 }
@@ -69,7 +61,7 @@ func (tsp *ThreadSafePrng) Seed(seed, salt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Seed(seed, salt); err != nil {
-		return ErrSeedFailed.WithStackFrame()
+		return errs.Wrap(err).WithMessage("failed to seed prng")
 	}
 	return nil
 }
@@ -80,7 +72,7 @@ func (tsp *ThreadSafePrng) New(seed, salt []byte) (SeedableCSPRNG, error) {
 	defer tsp.mu.Unlock()
 	prng, err := tsp.prng.New(seed, salt)
 	if err != nil {
-		return nil, ErrConstructionFailed.WithStackFrame()
+		return nil, errs.Wrap(err).WithMessage("failed to construct new prng")
 	}
 	return NewThreadSafePrng(prng), nil
 }

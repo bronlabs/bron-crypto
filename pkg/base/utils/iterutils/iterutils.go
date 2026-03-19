@@ -2,6 +2,8 @@ package iterutils
 
 import (
 	"iter"
+
+	"github.com/bronlabs/errs-go/errs"
 )
 
 // Contains checks if the given value is present in the sequence.
@@ -24,7 +26,7 @@ func Contains2[K comparable, V comparable](seq iter.Seq2[K, V], k K, v V) bool {
 	return false
 }
 
-// ConstainsFunc checks if the given value is present in the sequence using a custom equality function.
+// ContainsFunc checks if the given value is present in the sequence using a custom equality function.
 func ContainsFunc[In any](seq iter.Seq[In], v In, f func(In, In) bool) bool {
 	for v2 := range seq {
 		if f(v, v2) {
@@ -258,15 +260,16 @@ func Filter2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) iter.Seq2[K, V] {
 // Truncate limits the sequence to the first n elements.
 func Truncate[V any](seq iter.Seq[V], n int) iter.Seq[V] {
 	return func(yield func(V) bool) {
-		if n <= 0 {
+		remaining := n
+		if remaining <= 0 {
 			return
 		}
 		for v := range seq {
 			if !yield(v) {
 				return
 			}
-			n--
-			if n <= 0 {
+			remaining--
+			if remaining <= 0 {
 				break
 			}
 		}
@@ -276,15 +279,16 @@ func Truncate[V any](seq iter.Seq[V], n int) iter.Seq[V] {
 // Truncate2 limits the sequence of key-value pairs to the first n elements.
 func Truncate2[K, V any](seq iter.Seq2[K, V], n int) iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
-		if n <= 0 {
+		remaining := n
+		if remaining <= 0 {
 			return
 		}
 		for k, v := range seq {
 			if !yield(k, v) {
 				return
 			}
-			n--
-			if n <= 0 {
+			remaining--
+			if remaining <= 0 {
 				break
 			}
 		}
@@ -313,7 +317,7 @@ func ReduceOrError[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) 
 	for v := range seq {
 		accum, err = f(accum, v)
 		if err != nil {
-			return accum, err
+			return accum, errs.Wrap(err)
 		}
 	}
 	return accum, nil
@@ -325,7 +329,7 @@ func ReduceOrError2[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Ac
 	for k, v := range seq {
 		accum, err = f(accum, k, v)
 		if err != nil {
-			return accum, err
+			return accum, errs.Wrap(err)
 		}
 	}
 	return accum, nil

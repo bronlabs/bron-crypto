@@ -49,6 +49,7 @@ func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKP
 
 redo:
 	for {
+		a = a[:0] // reset accumulator on redo
 		// 1. For i = 1, ..., ρ:
 		for i := range p.rho {
 			var err error

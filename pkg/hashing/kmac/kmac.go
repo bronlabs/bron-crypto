@@ -96,7 +96,7 @@ func (k *Kmac) Sum(b []byte) []byte {
 func bytePad(input []byte, w int) []byte {
 	buf := leftEncode(uint64(w))
 	buf = slices.Concat(buf, input)
-	padLen := w - (len(buf) % w)
+	padLen := (w - (len(buf) % w)) % w
 	return slices.Concat(buf, make([]byte, padLen))
 }
 

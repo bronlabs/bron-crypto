@@ -107,13 +107,13 @@ func (c *CipherSuite) GetDst(alg RogueKeyPreventionAlgorithm, variant Variant) (
 }
 
 // GetPopDst returns the domain separation tag for proof of possession operations.
-// Note: POP proofs hash the public key to the opposite subgroup from where the key lives,
-// hence ShortKey (keys in G1) uses SourceGroup DST (hashing to G1 for POP proof).
+// POP proofs are computed in the signature subgroup: ShortKey signatures live in
+// TwistedGroup (G2), LongKey signatures live in SourceGroup (G1).
 func (c *CipherSuite) GetPopDst(variant Variant) string {
 	if variant == ShortKey {
-		return c.DstPopProofInSourceGroup
+		return c.DstPopProofInTwistedGroup
 	}
-	return c.DstPopProofInTwistedGroup
+	return c.DstPopProofInSourceGroup
 }
 
 // BLS12381CipherSuite returns the standard ciphersuite for BLS12-381 curve.
@@ -480,7 +480,10 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *Signature[Sig, S
 		return nil, ErrInvalidArgument.WithMessage("cannot add signature with torsion point")
 	}
 	out := &Signature[Sig, SigFE, PK, PKFE, E, S]{v: sig.v.Add(other.v), pop: nil}
-	if sig.pop == nil && other.pop == nil {
+	if sig.pop == nil || other.pop == nil {
+		if sig.pop != nil || other.pop != nil {
+			return nil, ErrInvalidArgument.WithMessage("cannot aggregate signatures with mismatched proof of possession")
+		}
 		return out, nil
 	}
 	popAgg, err := sig.pop.TryAdd(other.pop)

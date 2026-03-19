@@ -82,10 +82,8 @@ func lastError() error {
 	}
 
 	var errBytes [128]byte
-	ret := C.ERR_error_string_n(errno, (*C.char)(unsafe.Pointer(&errBytes[0])), C.size_t(len(errBytes)))
-	if ret == nil {
-		panic("ERR_error_string_n")
-	}
+	// ERR_error_string_n always returns buf (never nil); see boringssl/include/openssl/err.h.
+	C.ERR_error_string_n(errno, (*C.char)(unsafe.Pointer(&errBytes[0])), C.size_t(len(errBytes)))
 
 	n := bytes.IndexByte(errBytes[:], 0)
 	errString := string(errBytes[:n])

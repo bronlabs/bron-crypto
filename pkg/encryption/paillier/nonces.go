@@ -112,3 +112,11 @@ func (n *Nonce) Mul(other *Nonce) *Nonce {
 	n.isValid(other)
 	return &Nonce{u: n.Value().Mul(other.Value())}
 }
+
+func (n *Nonce) Bytes() []byte {
+	if n == nil || n.u == nil {
+		return nil
+	}
+
+	return n.u.Bytes()
+}

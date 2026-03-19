@@ -139,7 +139,7 @@ func (c *Commitment[E, S]) UnmarshalCBOR(data []byte) error {
 	}
 	c2, err := NewCommitment(dto.V)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("invalid Pedersen commitment")
 	}
 	*c = *c2
 	return nil

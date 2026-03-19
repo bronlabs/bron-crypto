@@ -117,8 +117,8 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create verifier")
 		}
-		if verifier.Verify(theirCommitment, theirSeedContribution[:], theirWitness) != nil {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, sharingID).WithMessage("invalid seed contribution")
+		if err := verifier.Verify(theirCommitment, theirSeedContribution[:], theirWitness); err != nil {
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, sharingID).WithMessage("invalid seed contribution: %v", err)
 		}
 		mySeedContribution, ok := p.state.seedContributions.Get(sharingID)
 		if !ok {

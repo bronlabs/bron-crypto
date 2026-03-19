@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 // --- Matrix CBOR ---
@@ -93,6 +94,22 @@ func TestMatrixCBOR(t *testing.T) {
 		t.Parallel()
 		var m mat.Matrix[S]
 		require.Error(t, m.UnmarshalCBOR([]byte{}))
+	})
+
+	t.Run("valid_cbor_empty_data_field", func(t *testing.T) {
+		t.Parallel()
+		// Craft valid CBOR that decodes successfully but has an empty Data slice.
+		type dto struct {
+			Rows int   `cbor:"rows"`
+			Cols int   `cbor:"cols"`
+			Data []any `cbor:"data"`
+		}
+		data, err := serde.MarshalCBOR(&dto{Rows: 2, Cols: 3, Data: []any{}})
+		require.NoError(t, err)
+
+		var m mat.Matrix[S]
+		err = m.UnmarshalCBOR(data)
+		require.ErrorIs(t, err, mat.ErrFailed)
 	})
 }
 
@@ -193,6 +210,21 @@ func TestModuleValuedMatrixCBOR(t *testing.T) {
 		var m mat.ModuleValuedMatrix[P, S]
 		require.Error(t, m.UnmarshalCBOR([]byte{}))
 	})
+
+	t.Run("valid_cbor_empty_data_field", func(t *testing.T) {
+		t.Parallel()
+		type dto struct {
+			Rows int   `cbor:"rows"`
+			Cols int   `cbor:"cols"`
+			Data []any `cbor:"data"`
+		}
+		data, err := serde.MarshalCBOR(&dto{Rows: 2, Cols: 3, Data: []any{}})
+		require.NoError(t, err)
+
+		var m mat.ModuleValuedMatrix[P, S]
+		err = m.UnmarshalCBOR(data)
+		require.ErrorIs(t, err, mat.ErrFailed)
+	})
 }
 
 // --- SquareMatrix CBOR ---
@@ -290,5 +322,19 @@ func TestSquareMatrixCBOR(t *testing.T) {
 		t.Parallel()
 		var m mat.SquareMatrix[S]
 		require.Error(t, m.UnmarshalCBOR([]byte{}))
+	})
+
+	t.Run("valid_cbor_empty_data_field", func(t *testing.T) {
+		t.Parallel()
+		type dto struct {
+			Size int   `cbor:"size"`
+			Data []any `cbor:"data"`
+		}
+		data, err := serde.MarshalCBOR(&dto{Size: 3, Data: []any{}})
+		require.NoError(t, err)
+
+		var m mat.SquareMatrix[S]
+		err = m.UnmarshalCBOR(data)
+		require.ErrorIs(t, err, mat.ErrFailed)
 	})
 }

@@ -220,7 +220,7 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 
 	r, err := decodePoint(input[:32])
 	if err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("failed to decode signature R point")
 	}
 	s, err := k256.NewScalarField().FromBytes(input[32:])
 	if err != nil {

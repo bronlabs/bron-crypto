@@ -38,7 +38,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#choosesalt
 	salt, err := hashing.Hash(RandomOracleHashFunction, []byte(HKDFKeyGenSalt))
 	if err != nil {
-		return *new(S), *new(K), errs.Wrap(err)
+		return *new(S), *new(K), errs.Wrap(err).WithMessage("failed to hash key generation salt")
 	}
 	// step 2.3.1
 	for d.IsZero() {
@@ -52,17 +52,17 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 		// step 2.3.3
 		okm, err := hkdf.Expand(RandomOracleHashFunction, hkdfKey, string([]byte{0, bls12381Impl.FpBytes}), bls12381Impl.FpBytes)
 		if err != nil {
-			return *new(S), *new(K), errs.Wrap(err)
+			return *new(S), *new(K), errs.Wrap(err).WithMessage("failed to HKDF Expand key material")
 		}
 
 		// step 2.3.4
 		d, err = sf.FromWideBytes(okm)
 		if err != nil {
-			return *new(S), *new(K), errs.Wrap(err)
+			return *new(S), *new(K), errs.Wrap(err).WithMessage("failed to derive scalar from wide bytes")
 		}
 		salt, err = hashing.Hash(RandomOracleHashFunction, salt)
 		if err != nil {
-			return *new(S), *new(K), errs.Wrap(err)
+			return *new(S), *new(K), errs.Wrap(err).WithMessage("failed to rehash salt for key generation")
 		}
 	}
 	// 2.4: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sktopk
@@ -84,7 +84,7 @@ func coreSign[
 	// step 2.6.1
 	Hm, err := signatureSubGroup.HashWithDst(dst, message)
 	if err != nil {
-		return *new(Sig), errs.Wrap(err)
+		return *new(Sig), errs.Wrap(err).WithMessage("failed to hash message to curve")
 	}
 	// step 2.6.2
 	result := Hm.ScalarMul(privateKey)
@@ -108,7 +108,7 @@ func coreAggregateSign[
 	for i, message := range messages {
 		Hms[i], err = signatureSubGroup.HashWithDst(dst, message)
 		if err != nil {
-			return *new(Sig), errs.Wrap(err)
+			return *new(Sig), errs.Wrap(err).WithMessage("failed to hash message to curve")
 		}
 	}
 	scs := sliceutils.Repeat[[]S](privateKey, len(messages))
@@ -126,10 +126,10 @@ func coreBatchSign[
 		return nil, ErrInvalidArgument.WithMessage("private key is zero")
 	}
 	batch := make([]Sig, len(messages))
-	var err error
 	errGroup := errgroup.Group{}
 	for i, message := range messages {
 		errGroup.Go(func() error {
+			var err error
 			batch[i], err = coreSign(signatureSubGroup, privateKey, message, dst)
 			if err != nil {
 				return errs.Wrap(err).WithMessage("could not sign message %s", message)
@@ -138,7 +138,7 @@ func coreBatchSign[
 		})
 	}
 	if err := errGroup.Wait(); err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("batch signing failed")
 	}
 	return batch, nil
 }
@@ -179,7 +179,7 @@ func coreVerify[
 	// step 2.7.6
 	Hm, err := signatureSubGroup.HashWithDst(dst, message)
 	if err != nil {
-		return errs.Wrap(err)
+		return errs.Wrap(err).WithMessage("failed to hash message to curve")
 	}
 
 	out, err := signatureSubGroup.MultiPair(
@@ -187,7 +187,7 @@ func coreVerify[
 		[]PK{publicKey.Neg(), signatureSubGroup.DualStructure().Generator()},
 	)
 	if err != nil {
-		return errs.Wrap(err)
+		return errs.Wrap(err).WithMessage("failed to compute multipairing")
 	}
 	if !out.IsOpIdentity() {
 		return ErrVerificationFailed.WithMessage("incorrect multipairing result")

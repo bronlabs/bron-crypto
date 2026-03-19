@@ -1,15 +1,16 @@
 package paillierrange
 
 import (
-	"bytes"
 	"encoding/binary"
 	"io"
+	"maps"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -35,11 +36,15 @@ type Witness struct {
 
 // Bytes serialises the witness for transcript binding.
 func (w *Witness) Bytes() []byte {
-	var buf bytes.Buffer
-	buf.Write(w.Sk.Group().Modulus().Bytes())
-	buf.Write(w.X.Value().Bytes())
-	buf.Write(w.R.Value().Bytes())
-	return buf.Bytes()
+	if w == nil {
+		return nil
+	}
+
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, w.Sk.Group().Modulus().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, w.X.Value().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, w.R.Value().Bytes())
+	return out
 }
 
 // NewWitness constructs a range-proof witness.
@@ -60,14 +65,15 @@ type Statement struct {
 
 // Bytes serialises the statement for transcript binding.
 func (s *Statement) Bytes() []byte {
-	pkBytes := s.Pk.Group().Modulus().Bytes()
-	cBytes := s.C.Value().Bytes()
-	lBytes := s.L.Bytes()
-	return slices.Concat(
-		binary.LittleEndian.AppendUint64(nil, uint64(len(pkBytes))), pkBytes,
-		binary.LittleEndian.AppendUint64(nil, uint64(len(cBytes))), cBytes,
-		binary.LittleEndian.AppendUint64(nil, uint64(len(lBytes))), lBytes,
-	)
+	if s == nil {
+		return nil
+	}
+
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, s.Pk.Group().Modulus().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, s.C.Value().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, s.L.Bytes())
+	return out
 }
 
 // NewStatement constructs a range-proof statement.
@@ -87,29 +93,17 @@ type Commitment struct {
 
 // Bytes serialises the commitment for transcript binding.
 func (c *Commitment) Bytes() []byte {
-	var a []byte
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(c.C1)))
-	for _, c1 := range c.C1 {
-		var c1Bytes []byte
-		if c1 != nil && c1.Value() != nil {
-			c1Bytes = c1.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(c1Bytes)))
-		a = append(a, c1Bytes...)
+	if c == nil {
+		return nil
 	}
 
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(c.C2)))
-	for _, c2 := range c.C2 {
-		var c2Bytes []byte
-		if c2 != nil && c2.Value() != nil {
-			c2Bytes = c2.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(nil, uint64(len(c2Bytes)))
-		a = append(a, c2Bytes...)
-	}
+	c1Bytes := sliceutils.Map(c.C1, func(c1 *paillier.Ciphertext) []byte { return c1.Bytes() })
+	c2Bytes := sliceutils.Map(c.C2, func(c2 *paillier.Ciphertext) []byte { return c2.Bytes() })
 
-	return a
+	out := []byte{}
+	out = sliceutils.AppendLengthPrefixedSlices(out, c1Bytes...)
+	out = sliceutils.AppendLengthPrefixedSlices(out, c2Bytes...)
+	return out
 }
 
 // State stores the prover's internal state between rounds.
@@ -122,85 +116,59 @@ type State struct {
 
 // Response is the prover response for the range proof.
 type Response struct {
-	W1 []*paillier.Plaintext
-	R1 []*paillier.Nonce
-	W2 []*paillier.Plaintext
-	R2 []*paillier.Nonce
-	Wj []*paillier.Plaintext
-	Rj []*paillier.Nonce
-	J  []uint
+	W1 map[uint]*paillier.Plaintext
+	R1 map[uint]*paillier.Nonce
+	W2 map[uint]*paillier.Plaintext
+	R2 map[uint]*paillier.Nonce
+	Wj map[uint]*paillier.Plaintext
+	Rj map[uint]*paillier.Nonce
+	J  map[uint]uint
 }
 
 // Bytes serialises the response for transcript binding.
 func (r *Response) Bytes() []byte {
-	var a []byte
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.W1)))
-	for _, w1 := range r.W1 {
-		var w1Bytes []byte
-		if w1 != nil && w1.Value() != nil {
-			w1Bytes = w1.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(w1Bytes)))
-		a = append(a, w1Bytes...)
+	if r == nil {
+		return nil
 	}
 
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.R1)))
-	for _, r1 := range r.R1 {
-		var r1Bytes []byte
-		if r1 != nil && r1.Value() != nil {
-			r1Bytes = r1.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(r1Bytes)))
-		a = append(a, r1Bytes...)
+	out := []byte{}
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(r.W1)))
+	for _, k := range slices.Sorted(maps.Keys(r.W1)) {
+		out = binary.LittleEndian.AppendUint64(out, uint64(k))
+		out = sliceutils.AppendLengthPrefixed(out, r.W1[k].Bytes())
+	}
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(r.R1)))
+	for _, k := range slices.Sorted(maps.Keys(r.R1)) {
+		out = binary.LittleEndian.AppendUint64(out, uint64(k))
+		out = sliceutils.AppendLengthPrefixed(out, r.R1[k].Bytes())
+	}
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(r.W2)))
+	for _, k := range slices.Sorted(maps.Keys(r.W2)) {
+		out = binary.LittleEndian.AppendUint64(out, uint64(k))
+		out = sliceutils.AppendLengthPrefixed(out, r.W2[k].Bytes())
+	}
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(r.R2)))
+	for _, k := range slices.Sorted(maps.Keys(r.R2)) {
+		out = binary.LittleEndian.AppendUint64(out, uint64(k))
+		out = sliceutils.AppendLengthPrefixed(out, r.R2[k].Bytes())
+	}
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(r.Wj)))
+	for _, k := range slices.Sorted(maps.Keys(r.Wj)) {
+		out = binary.LittleEndian.AppendUint64(out, uint64(k))
+		out = sliceutils.AppendLengthPrefixed(out, r.Wj[k].Bytes())
+	}
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(r.Rj)))
+	for _, k := range slices.Sorted(maps.Keys(r.Rj)) {
+		out = binary.LittleEndian.AppendUint64(out, uint64(k))
+		out = sliceutils.AppendLengthPrefixed(out, r.Rj[k].Bytes())
+	}
+	out = binary.LittleEndian.AppendUint64(out, uint64(len(r.J)))
+	for _, k := range slices.Sorted(maps.Keys(r.J)) {
+		out = binary.LittleEndian.AppendUint64(out, uint64(k))
+		out = binary.LittleEndian.AppendUint64(out, uint64(r.J[k]))
 	}
 
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.W2)))
-	for _, w2 := range r.W2 {
-		var w2Bytes []byte
-		if w2 != nil && w2.Value() != nil {
-			w2Bytes = w2.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(w2Bytes)))
-		a = append(a, w2Bytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.R2)))
-	for _, r2 := range r.R2 {
-		var r2Bytes []byte
-		if r2 != nil && r2.Value() != nil {
-			r2Bytes = r2.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(nil, uint64(len(r2Bytes)))
-		a = append(a, r2Bytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.Wj)))
-	for _, wj := range r.Wj {
-		var wjBytes []byte
-		if wj != nil && wj.Value() != nil {
-			wjBytes = wj.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(wjBytes)))
-		a = append(a, wjBytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.Rj)))
-	for _, rj := range r.Rj {
-		var rjBytes []byte
-		if rj != nil && rj.Value() != nil {
-			rjBytes = rj.Value().Bytes()
-		}
-		a = binary.LittleEndian.AppendUint64(a, uint64(len(rjBytes)))
-		a = append(a, rjBytes...)
-	}
-
-	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.J)))
-	for _, j := range r.J {
-		a = binary.LittleEndian.AppendUint64(a, uint64(j))
-	}
-
-	return a
+	return out
 }
 
 // Protocol implements the Paillier range proof.
@@ -295,13 +263,13 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 	highBound := lowBound.Add(lowBound)
 
 	z := &Response{
-		W1: make([]*paillier.Plaintext, p.t),
-		R1: make([]*paillier.Nonce, p.t),
-		W2: make([]*paillier.Plaintext, p.t),
-		R2: make([]*paillier.Nonce, p.t),
-		Wj: make([]*paillier.Plaintext, p.t),
-		Rj: make([]*paillier.Nonce, p.t),
-		J:  make([]uint, p.t),
+		W1: make(map[uint]*paillier.Plaintext),
+		R1: make(map[uint]*paillier.Nonce),
+		W2: make(map[uint]*paillier.Plaintext),
+		R2: make(map[uint]*paillier.Nonce),
+		Wj: make(map[uint]*paillier.Plaintext),
+		Rj: make(map[uint]*paillier.Nonce),
+		J:  make(map[uint]uint),
 	}
 
 	for i := range p.t {
@@ -313,10 +281,6 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 			z.W2[i] = state.W2[i]
 			z.R2[i] = state.R2[i]
 
-			// put some dummy value to it can be serialised
-			z.Wj[i] = new(paillier.Plaintext)
-			z.Rj[i] = new(paillier.Nonce)
-			z.J[i] = 0
 		case 1:
 			xPlusW1 := witness.X.Add(state.W1[i])
 			if isInRange(lowBound, highBound, xPlusW1) {
@@ -330,13 +294,8 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 				z.J[i] = 2
 			}
 
-			// put some dummy value to it can be serialised
-			z.W1[i] = new(paillier.Plaintext)
-			z.R1[i] = new(paillier.Nonce)
-			z.W2[i] = new(paillier.Plaintext)
-			z.R2[i] = new(paillier.Nonce)
 		default:
-			panic("this should never happen")
+			return nil, ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -348,7 +307,12 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 	if len(commitment.C1) != int(p.t) || len(commitment.C2) != int(p.t) {
 		return ErrFailed.WithMessage("inconsistent input")
 	}
-	if len(response.W1) != int(p.t) || len(response.R1) != int(p.t) || len(response.W2) != int(p.t) || len(response.R2) != int(p.t) || len(response.Wj) != int(p.t) || len(response.Rj) != int(p.t) || len(response.J) != int(p.t) {
+
+	l1 := len(response.W1)
+	l2 := len(response.Wj)
+	if len(response.W2) != l1 || len(response.W1) != l1 || len(response.R1) != l1 || len(response.R2) != l1 ||
+		len(response.Rj) != l2 || len(response.J) != l2 || l1+l2 != int(p.t) {
+
 		return ErrFailed.WithMessage("inconsistent input")
 	}
 
@@ -366,8 +330,14 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 		ei := (challenge[i/8] >> (i % 8)) % 2
 		switch ei {
 		case 0:
-			w1i := response.W1[i]
-			w2i := response.W2[i]
+			w1i, okw1i := response.W1[i]
+			w2i, okw2i := response.W2[i]
+			r1i, okr1i := response.R1[i]
+			r2i, okr2i := response.R2[i]
+			if !okw1i || !okw2i || !okr1i || !okr2i {
+				return ErrVerificationFailed.WithMessage("verification failed")
+			}
+
 			if (!isInRange(lowBound, highBound, w1i) || !isInRange(ps.Zero(), lowBound, w2i)) &&
 				(!isInRange(lowBound, highBound, w2i) || !isInRange(ps.Zero(), lowBound, w1i)) {
 
@@ -375,21 +345,27 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 			}
 
 			w = append(w, w1i)
-			r = append(r, response.R1[i])
+			r = append(r, r1i)
 			c = append(c, commitment.C1[i])
 			w = append(w, w2i)
-			r = append(r, response.R2[i])
+			r = append(r, r2i)
 			c = append(c, commitment.C2[i])
+
 		case 1:
-			wi := response.Wj[i]
+			wi, okwi := response.Wj[i]
+			ri, okri := response.Rj[i]
+			ji, okji := response.J[i]
+			if !okwi || !okri || !okji {
+				return ErrVerificationFailed.WithMessage("verification failed")
+			}
+
 			if !isInRange(lowBound, highBound, wi) {
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}
 
 			w = append(w, wi)
-			r = append(r, response.Rj[i])
-
-			switch response.J[i] {
+			r = append(r, ri)
+			switch ji {
 			case 1:
 				ci := statement.C.HomAdd(commitment.C1[i])
 				c = append(c, ci)
@@ -400,7 +376,7 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}
 		default:
-			panic("this should never happen")
+			return ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -430,15 +406,15 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 	}
 	highBound := lowBound.Add(lowBound)
 
-	w1 := make([]*paillier.Plaintext, p.t)
-	r1 := make([]*paillier.Nonce, p.t)
+	w1 := make(map[uint]*paillier.Plaintext)
+	r1 := make(map[uint]*paillier.Nonce)
 	c1 := make([]*paillier.Ciphertext, p.t)
-	w2 := make([]*paillier.Plaintext, p.t)
-	r2 := make([]*paillier.Nonce, p.t)
+	w2 := make(map[uint]*paillier.Plaintext)
+	r2 := make(map[uint]*paillier.Nonce)
 	c2 := make([]*paillier.Ciphertext, p.t)
-	wj := make([]*paillier.Plaintext, p.t)
-	rj := make([]*paillier.Nonce, p.t)
-	j := make([]uint, p.t)
+	wj := make(map[uint]*paillier.Plaintext)
+	rj := make(map[uint]*paillier.Nonce)
+	j := make(map[uint]uint)
 
 	enc, err := paillier.NewScheme().Encrypter()
 	if err != nil {
@@ -465,7 +441,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 			toBeEncrypted[i] = wj[i]
 			toBeEncrypted[i+p.t] = ps.Zero()
 		default:
-			panic("this should never happen")
+			return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -503,10 +479,10 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 				c1[i] = cZero
 				rj[i] = rji
 			default:
-				panic("this should never happen")
+				return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
 			}
 		default:
-			panic("this should never happen")
+			return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 

@@ -292,7 +292,7 @@ func RunNistTestCases(f *os.File, AesKeySize int, useDf, withReseed bool) error 
 				}
 				// Check test results
 				if !bytes.Equal(nistTest.State.ReturnedBits, returnedBits) {
-					return errs.Wrap(err)
+					return errs.New("test vector mismatch: count=%d, test=%d", nistTest.State.Count, nistTest.TestNo)
 				}
 				// Scan empty line
 				if err := nistTest.Sscanf(true, ""); err != nil {

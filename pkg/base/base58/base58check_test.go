@@ -48,19 +48,27 @@ func TestBase58Check(t *testing.T) {
 		})
 	}
 
-	// test the two decoding failure cases
+	// test the three decoding failure cases
+	t.Run("invalid character", func(t *testing.T) {
+		t.Parallel()
+		_, _, err := base58.CheckDecode("0OIl")
+		require.ErrorIs(t, err, base58.ErrInvalidCharacter)
+	})
+
 	t.Run("checksum error", func(t *testing.T) {
 		t.Parallel()
 		_, _, err := base58.CheckDecode("3MNQE1Y")
 		require.ErrorIs(t, err, base58.ErrChecksumMismatch)
 	})
 
-	t.Run("string lengths below 5 mean the version byte and/or the checksum bytes are missing).", func(t *testing.T) {
+	t.Run("decoded payloads shorter than version+checksum are rejected", func(t *testing.T) {
 		t.Parallel()
-		testString := base58.Base58("")
-		for range 4 {
-			// make a string of length `len`
-			_, _, err := base58.CheckDecode(testString)
+		// Encode raw byte slices of length 0..4 (all shorter than minimumDecodedLength=5)
+		// directly into base58, then verify CheckDecode rejects them.
+		for length := range 5 {
+			input := make([]byte, length)
+			encoded := base58.Encode(input)
+			_, _, err := base58.CheckDecode(encoded)
 			require.ErrorIs(t, err, base58.ErrInvalidLength)
 		}
 	})

@@ -71,6 +71,9 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	if suite.IsDeterministic() {
 		return nil, ErrValidation.WithMessage("suite must be non-deterministic")
 	}
+	if ctx.HolderID() != shard.Share().ID() {
+		return nil, ErrValidation.WithMessage("inconsistent share id")
+	}
 	if !ctx.Quorum().Contains(shard.Share().ID()) {
 		return nil, ErrValidation.WithMessage("sharing id not part of the quorum")
 	}

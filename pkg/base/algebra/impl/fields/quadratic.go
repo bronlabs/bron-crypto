@@ -213,7 +213,7 @@ func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) Sqrt(v *QuadraticFieldExtensio
 
 	BFP(&f.U0).Select(okp&ok4, &f.U0, &pos)
 	BFP(&f.U0).Select(okn&ok4, &f.U0, &neg)
-	BFP(&f.U1).Select((okp|okn)&ok4, &f.U0, &com)
+	BFP(&f.U1).Select((okp|okn)&ok4, &f.U1, &com)
 
 	return (okp | okn) & ok4
 }

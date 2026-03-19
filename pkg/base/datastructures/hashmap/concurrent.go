@@ -41,8 +41,8 @@ func (m *ConcurrentMap[K, V]) Retain(keys ...K) ds.ConcurrentMap[K, V] {
 
 // Filter returns a new concurrent map containing only entries where the predicate returns true.
 func (m *ConcurrentMap[K, V]) Filter(predicate func(key K) bool) ds.ConcurrentMap[K, V] {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	return &ConcurrentMap[K, V]{
 		inner: m.inner.Filter(predicate),
@@ -115,16 +115,28 @@ func (m *ConcurrentMap[K, V]) TryRemove(key K) (removed bool, removedValue V) {
 
 // Iter returns an iterator over all key-value pairs.
 func (m *ConcurrentMap[K, V]) Iter() iter.Seq2[K, V] {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.inner.Iter()
+	return func(yield func(K, V) bool) {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
+		for k, v := range m.inner.Iter() {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
 }
 
 // Enumerate returns an iterator with index and MapEntry pairs.
 func (m *ConcurrentMap[K, V]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.inner.Enumerate()
+	return func(yield func(int, ds.MapEntry[K, V]) bool) {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
+		for i, entry := range m.inner.Enumerate() {
+			if !yield(i, entry) {
+				return
+			}
+		}
+	}
 }
 
 // Keys returns a slice of all keys in the map.

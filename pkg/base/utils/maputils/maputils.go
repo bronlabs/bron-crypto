@@ -1,6 +1,10 @@
 package maputils
 
-import "maps"
+import (
+	"maps"
+
+	"github.com/bronlabs/errs-go/errs"
+)
 
 // MapKeys applies the given function to each key of the input map and returns a new map with the transformed keys and original values.
 func MapKeys[KIn, KOut comparable, V any](input map[KIn]V, f func(KIn) KOut) map[KOut]V {
@@ -27,7 +31,7 @@ func JoinOrError[K comparable, V any](left, right map[K]V, dup func(K, *V, *V) (
 	for k, v := range right {
 		if existing, exists := out[k]; exists {
 			if out[k], err = dup(k, &existing, &v); err != nil {
-				return nil, err
+				return nil, errs.Wrap(err)
 			}
 		} else {
 			out[k] = v

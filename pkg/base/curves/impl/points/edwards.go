@@ -195,7 +195,6 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetZero() {
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetGenerator() {
 	var params C
 	params.SetGenerator(&p.X, &p.Y, &p.T, &p.Z)
-	FP(&p.Z).SetOne()
 }
 
 // SetAffine sets p from affine coordinates if they satisfy the curve equation.
@@ -284,7 +283,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsZero() ct.Bool {
 
 // IsNonZero reports whether p is not the identity point.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsNonZero() ct.Bool {
-	return FP(&p.X).IsNonZero()
+	return p.IsZero().Not()
 }
 
 // Equal reports whether p and v represent the same point.

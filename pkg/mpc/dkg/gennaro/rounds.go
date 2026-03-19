@@ -210,7 +210,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		verifierTape.AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
 		verifier, err := niBatchSchnorr.NewVerifier(p.ctx.SessionID(), verifierTape)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
+			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr verifier")
 		}
 		statement := batch_schnorr.NewStatement(p.state.key.G(), inB.FeldmanVerificationVector.Coefficients()...)
 		err = verifier.Verify(statement, inB.Proof)

@@ -29,6 +29,9 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	if shard == nil || ctx == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("argument is nil")
 	}
+	if shard.Share().ID() != ctx.HolderID() {
+		return nil, ErrInvalidArgument.WithMessage("shard share ID does not match context holder ID")
+	}
 
 	sid := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))

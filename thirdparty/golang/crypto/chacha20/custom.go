@@ -20,7 +20,7 @@ type FastKeyErasureCipher struct {
 func NewFastErasureCipher(key, nonce []byte) (*FastKeyErasureCipher, error) {
 	c, err := NewUnauthenticatedCipher(key, nonce)
 	if err != nil {
-		return nil, err
+		return nil, errs.Wrap(err).WithMessage("failed to create fast erasure cipher")
 	}
 	return &FastKeyErasureCipher{c}, nil
 }
@@ -90,7 +90,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 	// If we'd need to let the counter overflow and keep generating output,
 	// panic immediately. If instead we'd only reach the last block, remember
 	// not to generate any more output after the buffer is drained.
-	numBlocks := (uint64(len(src)) + blockSize - 1) / blockSize
+	numBlocks := (uint64(len(src))+blockSize-1)/blockSize + 1 // +1 for FKE reseeding block
 	if c.overflow || uint64(c.counter)+numBlocks > 1<<32 {
 		panic("chacha20: counter overflow")
 	} else if uint64(c.counter)+numBlocks == 1<<32 {
@@ -132,8 +132,9 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 		buf := c.buf[bufSize-numBlocks*blockSize:]
 		copy(buf, src)
 		c.xorKeyStreamBlocksGeneric(buf, buf, &c.key)
-		c.remaining = len(buf) - copy(dst, buf)
-		sliceutils.Fill(buf, 0) // CUSTOM: erasure of keystream
+		copied := copy(dst, buf)
+		c.remaining = len(buf) - copied
+		sliceutils.Fill(buf[:copied], 0) // CUSTOM: erasure of consumed keystream only
 		return
 	}
 

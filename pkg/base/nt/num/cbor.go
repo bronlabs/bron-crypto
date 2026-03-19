@@ -42,7 +42,7 @@ func (np *NatPlus) MarshalCBOR() ([]byte, error) {
 func (np *NatPlus) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*natPlusDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	if dto.NatPlus.IsZero() == ct.True {
 		return ErrOutOfRange.WithStackFrame().WithMessage("NatPlus must be greater than 0")
@@ -67,7 +67,7 @@ func (n *Nat) MarshalCBOR() ([]byte, error) {
 func (n *Nat) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*natDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	n.v = dto.Nat
 	return nil
@@ -89,7 +89,7 @@ func (i *Int) MarshalCBOR() ([]byte, error) {
 func (i *Int) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*intDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	i.v = dto.Int
 	return nil
@@ -115,10 +115,10 @@ func (u *Uint) MarshalCBOR() ([]byte, error) {
 func (u *Uint) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*uintDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	if dto.Modulus == nil {
-		return ErrIsNil.WithStackFrame().WithMessage("modulus bytes")
+		return ErrIsNil.WithStackFrame().WithMessage("modulus")
 	}
 	if dto.Value == nil {
 		return ErrIsNil.WithStackFrame().WithMessage("value")
@@ -182,7 +182,7 @@ func (z *ZMod) MarshalCBOR() ([]byte, error) {
 func (z *ZMod) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*zmodDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err)
 	}
 	if dto.Modulus == nil {
 		return ErrIsNil.WithStackFrame().WithMessage("modulus")

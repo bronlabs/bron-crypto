@@ -36,7 +36,7 @@ type HierarchicalConjunctiveThreshold struct { //nolint:revive // keep the Hiera
 }
 
 type hierarchicalConjunctiveThresholdDTO struct {
-	Levels []*ThresholdLevel `json:"levels"`
+	Levels []*ThresholdLevel `cbor:"levels"`
 }
 
 // NewHierarchicalConjunctiveThresholdAccessStructure builds a hierarchical
@@ -164,8 +164,8 @@ type ThresholdLevel struct {
 }
 
 type thresholdLevelDTO struct {
-	Threshold int  `json:"threshold"`
-	Parties   []ID `json:"parties"`
+	Threshold int  `cbor:"threshold"`
+	Parties   []ID `cbor:"parties"`
 }
 
 // Threshold returns the cumulative threshold of the level.
@@ -196,6 +196,17 @@ func (l *ThresholdLevel) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[thresholdLevelDTO](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ThresholdLevel")
+	}
+	if dto.Threshold <= 0 {
+		return ErrValue.WithMessage("threshold must be positive")
+	}
+	if len(dto.Parties) == 0 {
+		return ErrValue.WithMessage("parties must not be empty")
+	}
+	for _, p := range dto.Parties {
+		if p == 0 {
+			return ErrValue.WithMessage("parties cannot contain shareholder ID 0")
+		}
 	}
 	l.threshold = dto.Threshold
 	l.parties = dto.Parties

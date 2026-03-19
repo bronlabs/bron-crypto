@@ -43,7 +43,6 @@ func setup[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, acc
 func TestDKGWithVariousThresholds(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
 	testCases := []struct {
 		name   string
 		thresh uint
@@ -58,7 +57,7 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			group := k256.NewCurve()
-
+			prng := pcg.NewRandomised()
 			quorum := ntu.MakeRandomQuorum(t, prng, int(tc.total))
 			ac, err := threshold.NewThresholdAccessStructure(tc.thresh, quorum)
 			require.NoError(t, err)
@@ -280,7 +279,7 @@ func TestDKGRoundMessages(t *testing.T) {
 	t.Run("round 1 broadcasts and unicasts", func(t *testing.T) {
 		t.Parallel()
 
-		parties := setup(t, ac, group, prng)
+		parties := setup(t, ac, group, pcg.NewRandomised())
 		r1broadcasts, r1unicasts := tu.DoGennaroRound1(t, parties)
 		require.Len(t, r1broadcasts, int(total))
 		require.Len(t, r1unicasts, int(total))
@@ -302,7 +301,7 @@ func TestDKGRoundMessages(t *testing.T) {
 	t.Run("round 2 broadcasts", func(t *testing.T) {
 		t.Parallel()
 
-		parties := setup(t, ac, group, prng)
+		parties := setup(t, ac, group, pcg.NewRandomised())
 		participants := slices.Collect(maps.Values(parties))
 		r1broadcasts, r1unicasts := tu.DoGennaroRound1(t, parties)
 		r2biInputs, r2uiInputs := ntu.MapO2I(t, participants, r1broadcasts, r1unicasts)

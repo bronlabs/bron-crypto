@@ -45,6 +45,9 @@ func (r *PolynomialRing[RE]) RandomPolynomialWithConstantTerm(degree int, consta
 	var err error
 	coeffs := make([]RE, degree+1)
 	coeffs[0] = constantTerm.Clone()
+	if degree == 0 {
+		return &Polynomial[RE]{coeffs: coeffs}, nil
+	}
 	for i := 1; i < degree; i++ {
 		coeffs[i], err = r.ring.Random(prng)
 		if err != nil {
@@ -265,7 +268,7 @@ func (p *Polynomial[RE]) Equal(rhs *Polynomial[RE]) bool {
 func (p *Polynomial[RE]) HashCode() base.HashCode {
 	h := base.HashCode(0)
 	for _, c := range p.coeffs {
-		h ^= c.HashCode()
+		h = h.Combine(c.HashCode())
 	}
 	return h
 }

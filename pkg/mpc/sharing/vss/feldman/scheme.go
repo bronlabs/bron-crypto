@@ -124,14 +124,14 @@ func (d *Scheme[E, FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 // ReconstructAndVerify recovers the secret and verifies each share against
 // the verification vector before reconstruction.
 func (d *Scheme[E, FE]) ReconstructAndVerify(reference VerificationVector[E, FE], shares ...*Share[FE]) (*Secret[FE], error) {
-	reconstructed, err := d.Reconstruct(shares...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not reconstruct secret without verification")
-	}
 	for i, share := range shares {
 		if err := d.Verify(share, reference); err != nil {
 			return nil, errs.Wrap(err).WithMessage("verification failed for share %d", i)
 		}
+	}
+	reconstructed, err := d.Reconstruct(shares...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not reconstruct secret after verification")
 	}
 	return reconstructed, nil
 }
@@ -139,6 +139,9 @@ func (d *Scheme[E, FE]) ReconstructAndVerify(reference VerificationVector[E, FE]
 // Verify checks that a share is consistent with the verification vector.
 // Returns nil if g^{share} equals the evaluation of the verification vector at the share's ID.
 func (d *Scheme[E, FE]) Verify(share *Share[FE], reference VerificationVector[E, FE]) error {
+	if share == nil {
+		return sharing.ErrIsNil.WithMessage("share is nil")
+	}
 	if reference == nil {
 		return sharing.ErrIsNil.WithMessage("verification vector is nil")
 	}

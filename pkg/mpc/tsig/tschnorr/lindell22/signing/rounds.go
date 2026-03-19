@@ -60,7 +60,10 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast]) 
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 2, c.round)
 	}
 	for pid := range c.ctx.OtherPartiesOrdered() {
-		received, _ := inb.Get(pid)
+		received, ok := inb.Get(pid)
+		if !ok {
+			return nil, ErrInvalidRound.WithMessage("missing round 1 broadcast from participant %d", pid)
+		}
 		c.state.theirBigRCommitments[pid] = received.BigRCommitment
 	}
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
@@ -88,7 +91,10 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 	}
 	summedR := c.state.bigR
 	for pid := range c.ctx.OtherPartiesOrdered() {
-		received, _ := inb.Get(pid)
+		received, ok := inb.Get(pid)
+		if !ok {
+			return nil, ErrInvalidRound.WithMessage("missing round 2 broadcast from participant %d", pid)
+		}
 		theirBigR := received.BigR
 		theirOpening := received.BigROpening
 		theirCommitment := c.state.theirBigRCommitments[pid]

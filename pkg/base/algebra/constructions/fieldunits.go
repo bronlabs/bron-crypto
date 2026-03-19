@@ -106,7 +106,7 @@ func (ge FieldUnitSubGroupElement[FE]) Equal(rhs *FieldUnitSubGroupElement[FE]) 
 }
 
 func (ge FieldUnitSubGroupElement[FE]) HashCode() base.HashCode {
-	return ge.fe.HashCode() ^ base.HashCode(0xcafebebe)
+	return ge.fe.HashCode().Combine(base.HashCode(0xcafebebe))
 }
 
 func (ge FieldUnitSubGroupElement[FE]) Op(rhs *FieldUnitSubGroupElement[FE]) *FieldUnitSubGroupElement[FE] {
@@ -129,7 +129,7 @@ func (ge FieldUnitSubGroupElement[FE]) IsOpIdentity() bool {
 }
 
 func (ge FieldUnitSubGroupElement[FE]) TryOpInv() (*FieldUnitSubGroupElement[FE], error) {
-	return ge.Inv(), nil
+	return ge.TryInv()
 }
 
 func (ge FieldUnitSubGroupElement[FE]) OpInv() *FieldUnitSubGroupElement[FE] {

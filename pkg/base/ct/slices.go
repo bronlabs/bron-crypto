@@ -36,7 +36,6 @@ func SliceIsZero[S ~[]E, E constraints.Integer](s S) Choice {
 }
 
 // CSelectInts yields x1 if choice == 1, x0 if choice == 0.
-// Its behaviour is undefined if choice takes any other value.
 func CSelectInts[S ~[]E, E constraints.Integer](choice Choice, x0, x1 S) S {
 	if len(x0) != len(x1) {
 		panic("ct: slices have different lengths")

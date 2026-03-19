@@ -4,11 +4,11 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"io"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -22,8 +22,15 @@ type StatementCartesian[X0, X1 sigma.Statement] struct {
 }
 
 // Bytes returns the canonical byte representation of the composed statement.
-func (s *StatementCartesian[X0, X1]) Bytes() []byte {
-	return slices.Concat(s.X0.Bytes(), s.X1.Bytes())
+func (x *StatementCartesian[X0, X1]) Bytes() []byte {
+	if x == nil {
+		return nil
+	}
+
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, x.X0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, x.X1.Bytes())
+	return out
 }
 
 var _ sigma.Statement = (*StatementCartesian[sigma.Statement, sigma.Statement])(nil)
@@ -39,7 +46,14 @@ type WitnessCartesian[W0, W1 sigma.Witness] struct {
 
 // Bytes returns the canonical byte representation of the composed witness.
 func (w *WitnessCartesian[W0, W1]) Bytes() []byte {
-	return slices.Concat(w.W0.Bytes(), w.W1.Bytes())
+	if w == nil {
+		return nil
+	}
+
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, w.W0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, w.W1.Bytes())
+	return out
 }
 
 var _ sigma.Witness = (*WitnessCartesian[sigma.Witness, sigma.Witness])(nil)
@@ -53,8 +67,15 @@ type CommitmentCartesian[A0, A1 sigma.Commitment] struct {
 }
 
 // Bytes returns the canonical byte representation of the composed commitment.
-func (c *CommitmentCartesian[A0, A1]) Bytes() []byte {
-	return slices.Concat(c.A0.Bytes(), c.A1.Bytes())
+func (a *CommitmentCartesian[A0, A1]) Bytes() []byte {
+	if a == nil {
+		return nil
+	}
+
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, a.A0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, a.A1.Bytes())
+	return out
 }
 
 var _ sigma.Commitment = (*CommitmentCartesian[sigma.Commitment, sigma.Commitment])(nil)
@@ -91,8 +112,17 @@ type ResponseCartesian[Z0, Z1 sigma.Response] struct {
 }
 
 // Bytes returns the canonical byte representation of the response.
-func (r *ResponseCartesian[Z0, Z1]) Bytes() []byte {
-	return slices.Concat(r.E0, r.E1, r.Z0.Bytes(), r.Z1.Bytes())
+func (z *ResponseCartesian[Z0, Z1]) Bytes() []byte {
+	if z == nil {
+		return nil
+	}
+
+	var out = []byte{}
+	out = sliceutils.AppendLengthPrefixed(out, z.E0)
+	out = sliceutils.AppendLengthPrefixed(out, z.E1)
+	out = sliceutils.AppendLengthPrefixed(out, z.Z0.Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, z.Z1.Bytes())
+	return out
 }
 
 var _ sigma.Response = (*ResponseCartesian[sigma.Response, sigma.Response])(nil)

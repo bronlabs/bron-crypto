@@ -242,6 +242,12 @@ func (s *Scheme[F]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput
 // ConvertShareToAdditive converts a Tassa share to an additive share over the
 // provided quorum.
 func (s *Scheme[F]) ConvertShareToAdditive(share *Share[F], quorum *unanimity.Unanimity) (*additive.Share[F], error) {
+	if share == nil {
+		return nil, sharing.ErrIsNil.WithMessage("share is nil")
+	}
+	if quorum == nil {
+		return nil, sharing.ErrIsNil.WithMessage("quorum is nil")
+	}
 	if !quorum.Shareholders().Contains(share.id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d does not belong to quorum", share.id)
 	}

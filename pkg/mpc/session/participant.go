@@ -262,7 +262,7 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P]) (*Context, e
 
 	ctx, err := NewContext(p.id, hashset.NewComparable(p.sortedQuorum...).Freeze(), p.commonSeed, seeds)
 	if err != nil {
-		return nil, err
+		return nil, errs.Wrap(err).WithMessage("failed to create session context")
 	}
 	p.round++
 	return ctx, nil

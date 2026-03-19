@@ -58,7 +58,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot generate paillier keypair")
 		}
-		sharePlaintext, err := paillierPublicKeys[id].PlaintextSpace().FromBytes(share.Bytes())
+		sharePlaintext, err := paillierPublicKeys[id].PlaintextSpace().FromBytes(share.Value().Bytes())
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot create paillier plaintext from share bytes")
 		}
@@ -92,7 +92,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 
 		share, exists := feldmanOutput.Shares().Get(id)
 		if !exists {
-			return nil, nil, errs.Wrap(err).WithMessage("cannot get share for shareholder %d", id)
+			return nil, nil, ErrInvalidArgument.WithMessage("cannot get share for shareholder %d", id)
 		}
 		baseShard, err := tecdsa.NewShard(share, feldmanOutput.VerificationMaterial(), feldmanDealer.AccessStructure())
 		if err != nil {

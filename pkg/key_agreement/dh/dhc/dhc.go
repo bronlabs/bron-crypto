@@ -38,10 +38,10 @@ type (
 func DeriveSharedSecret[
 	P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S],
 ](myPrivateKey *ExtendedPrivateKey[S], otherPartyPublicKey *PublicKey[P, B, S]) (*SharedKey[B], error) {
-	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](otherPartyPublicKey.Value().Structure())
 	if myPrivateKey == nil || otherPartyPublicKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil key provided")
 	}
+	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](otherPartyPublicKey.Value().Structure())
 	if myPrivateKey.Type() != Type || otherPartyPublicKey.Type() != Type {
 		return nil, ErrInvalidArgument.WithMessage("incompatible key types")
 	}
@@ -128,7 +128,7 @@ func (*PrivateKey) Type() key_agreement.Type {
 
 // Equal checks if two private keys are equal.
 func (sk *PrivateKey) Equal(other *PrivateKey) bool {
-	if sk == nil && other == nil {
+	if sk == nil || other == nil {
 		return sk == other
 	}
 	return ct.SliceEqual(sk.v, other.v) == ct.True
@@ -175,7 +175,7 @@ func (esk *ExtendedPrivateKey[S]) Bytes() []byte {
 
 // Equal checks if two extended private keys are equal.
 func (esk *ExtendedPrivateKey[S]) Equal(other *ExtendedPrivateKey[S]) bool {
-	if esk == nil && other == nil {
+	if esk == nil || other == nil {
 		return esk == other
 	}
 	return ct.SliceEqual(esk.v, other.v) == ct.True && esk.s.Equal(other.s)

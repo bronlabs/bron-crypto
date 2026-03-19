@@ -38,13 +38,15 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroot.Statement[*modular.SimpleModulus] {
 		return nthroot.NewStatement(x.Value())
 	}))...)
-	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroot.Witness[*modular.SimpleModulus] {
+	witnesses := make([]*nthroot.Witness[*modular.SimpleModulus], len(nonces))
+	for i, y := range nonces {
 		embeddedNonce, err := verifier.paillierPublicKey.Group().EmbedRSA(y.Value())
 		if err != nil {
-			panic(err)
+			return nil, errs.Wrap(err).WithMessage("cannot embed nonce as RSA element")
 		}
-		return nthroot.NewWitness(embeddedNonce)
-	}))...)
+		witnesses[i] = nthroot.NewWitness(embeddedNonce)
+	}
+	verifier.state.y = sigand.ComposeWitnesses(witnesses...)
 	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionID, rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create sigma protocol prover")
