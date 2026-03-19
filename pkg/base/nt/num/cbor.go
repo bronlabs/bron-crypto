@@ -44,9 +44,6 @@ func (np *NatPlus) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
-	if dto.NatPlus == nil {
-		return ErrIsNil.WithMessage("NatPlus")
-	}
 	if dto.NatPlus.IsZero() == ct.True {
 		return ErrOutOfRange.WithMessage("NatPlus must be greater than 0")
 	}
