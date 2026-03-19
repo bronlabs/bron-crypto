@@ -32,3 +32,5 @@ func NewSID(xs ...[]byte) (SID, error) {
 type Message[P any] interface {
 	Validate(P) error
 }
+
+var ErrInvalidMessage = errs.New("invalid message")
