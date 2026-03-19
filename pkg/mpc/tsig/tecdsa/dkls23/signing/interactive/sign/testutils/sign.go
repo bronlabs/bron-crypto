@@ -55,8 +55,8 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 	}
 
 	r3ui := ntu.MapUnicastO2I(tb, cosigners, r2uo)
-	r3bo := make(map[sharing.ID]*sign.Round3Broadcast)
-	r3uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round3P2P])
+	r3bo := make(map[sharing.ID]*sign.Round3Broadcast[P, B, S])
+	r3uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round3P2P[P, B, S]])
 	for _, cosigner := range cosigners {
 		r3bo[cosigner.SharingID()], r3uo[cosigner.SharingID()], err = cosigner.Round3(r3ui[cosigner.SharingID()])
 		require.NoError(tb, err)

@@ -14,7 +14,9 @@ import (
 
 // Recoverer orchestrates recovery of a missing party's share.
 type Recoverer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	participant[G, S]
+	ctx           *session.Context
+	field         algebra.PrimeField[S]
+	scheme        *feldman.Scheme[G, S]
 	recoverersCtx *session.Context
 	shard         *tsig.BaseShard[G, S]
 	group         algebra.PrimeGroup[G, S]
@@ -55,11 +57,9 @@ func NewRecoverer[
 	}
 
 	r := &Recoverer[G, S]{
-		participant: participant[G, S]{
-			ctx:    ctx,
-			field:  field,
-			scheme: scheme,
-		},
+		ctx:           ctx,
+		field:         field,
+		scheme:        scheme,
 		recoverersCtx: recoverersCtx,
 		shard:         shard,
 		group:         group,

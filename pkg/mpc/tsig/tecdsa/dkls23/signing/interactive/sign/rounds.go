@@ -27,7 +27,7 @@ import (
 )
 
 // Round1 executes protocol round 1.
-func (c *Cosigner[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S]], error) {
+func (c *Cosigner[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S], *Cosigner[P, B, S]], error) {
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(c, r1u) {
 		var err error
@@ -42,7 +42,7 @@ func (c *Cosigner[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, 
 }
 
 // Round2 executes protocol round 2.
-func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]]) (network.OutgoingUnicasts[*Round2P2P[P, B, S]], error) {
+func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S], *Cosigner[P, B, S]]) (network.OutgoingUnicasts[*Round2P2P[P, B, S], *Cosigner[P, B, S]], error) {
 	incomingP2PMessages, err := validateIncomingP2PMessages(c, 2, r1u)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("invalid input or round mismatch")
@@ -90,7 +90,7 @@ func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]
 }
 
 // Round3 executes protocol round 3.
-func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]]) (*Round3Broadcast, network.OutgoingUnicasts[*Round3P2P], error) {
+func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S], *Cosigner[P, B, S]]) (*Round3Broadcast[P, B, S], network.OutgoingUnicasts[*Round3P2P[P, B, S], *Cosigner[P, B, S]], error) {
 	incomingP2PMessages, err := validateIncomingP2PMessages(c, 3, r2u)
 	if err != nil {
 		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
@@ -134,7 +134,7 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 	}
 	c.state.chi = make(map[sharing.ID]S)
 
-	bOut := &Round3Broadcast{
+	bOut := &Round3Broadcast[P, B, S]{
 		BigRCommitment: c.state.bigRCommitment[c.ctx.HolderID()],
 	}
 
@@ -142,7 +142,7 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create mul suite")
 	}
-	uOut := hashmap.NewComparable[sharing.ID, *Round3P2P]()
+	uOut := hashmap.NewComparable[sharing.ID, *Round3P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
 		otR2u, ok := otR2.Get(id)
 		if !ok {
@@ -197,13 +197,13 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 }
 
 // Round4 executes protocol round 4.
-func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast], r3u network.RoundMessages[*Round3P2P]) (r4b *Round4Broadcast[P, B, S], r4u network.OutgoingUnicasts[*Round4P2P[P, B, S]], err error) {
+func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P, B, S], *Cosigner[P, B, S]], r3u network.RoundMessages[*Round3P2P[P, B, S], *Cosigner[P, B, S]]) (r4b *Round4Broadcast[P, B, S], r4u network.OutgoingUnicasts[*Round4P2P[P, B, S], *Cosigner[P, B, S]], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 4, r3b, r3u)
 	if err != nil {
 		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
 	}
 
-	mulR1 := make(map[sharing.ID]*rvole_softspoken.Round1P2P)
+	mulR1 := make(map[sharing.ID]*rvole_softspoken.Round1P2P[P, B, S])
 	for id, message := range incomingMessages {
 		c.state.bigRCommitment[id] = message.broadcast.BigRCommitment
 		mulR1[id] = message.p2p.MulR1
@@ -249,7 +249,7 @@ func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast], 
 }
 
 // Round5 executes protocol round 5.
-func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P, B, S]], r4u network.RoundMessages[*Round4P2P[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
+func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P, B, S], *Cosigner[P, B, S]], r4u network.RoundMessages[*Round4P2P[P, B, S], *Cosigner[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 5, r4b, r4u)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("invalid input or round mismatch")

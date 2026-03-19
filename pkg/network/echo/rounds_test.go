@@ -12,25 +12,33 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 )
 
+type dummyParticipant struct{}
+
+type dummyMessage uint64
+
+func (m dummyMessage) Validate(p *dummyParticipant) error {
+	return nil
+}
+
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 	ids := sharing.NewOrdinalShareholderSet(3)
-	parties := []*echo.Participant[uint64]{}
+	parties := []*echo.Participant[dummyMessage, *dummyParticipant]{}
 	for id := range ids.Iter() {
-		p, err := echo.NewParticipant[uint64](id, ids)
+		p, err := echo.NewParticipant[dummyMessage, *dummyParticipant](id, ids)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
 
 	var err error
-	r1 := make(map[sharing.ID]network.OutgoingUnicasts[*echo.Round1P2P])
+	r1 := make(map[sharing.ID]network.OutgoingUnicasts[*echo.Round1P2P[dummyMessage, *dummyParticipant], *echo.Participant[dummyMessage, *dummyParticipant]])
 	for _, p := range parties {
-		r1[p.SharingID()], err = p.Round1(rand.Uint64())
+		r1[p.SharingID()], err = p.Round1(dummyMessage(rand.Uint64()))
 		require.NoError(t, err)
 	}
 	r2In := ntu.MapUnicastO2I(t, parties, r1)
 
-	r2 := make(map[sharing.ID]network.OutgoingUnicasts[*echo.Round2P2P])
+	r2 := make(map[sharing.ID]network.OutgoingUnicasts[*echo.Round2P2P[dummyMessage, *dummyParticipant], *echo.Participant[dummyMessage, *dummyParticipant]])
 	for _, p := range parties {
 		r2[p.SharingID()], err = p.Round2(r2In[p.SharingID()])
 		require.NoError(t, err)

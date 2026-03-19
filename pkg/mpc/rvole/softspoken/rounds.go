@@ -10,7 +10,7 @@ import (
 )
 
 // Round1 executes protocol round 1.
-func (bob *Bob[P, B, S]) Round1() (r1 *Round1P2P, b S, err error) {
+func (bob *Bob[P, B, S]) Round1() (r1 *Round1P2P[P, B, S], b S, err error) {
 	var nilS S
 	if bob.round != 1 {
 		return nil, nilS, ErrValidation.WithMessage("invalid round")
@@ -21,7 +21,7 @@ func (bob *Bob[P, B, S]) Round1() (r1 *Round1P2P, b S, err error) {
 		return nil, nilS, errs.Wrap(err).WithMessage("cannot sample choices")
 	}
 
-	r1, receiverOutput, err := bob.receiver.Round1(beta)
+	otR1, receiverOutput, err := bob.receiver.Round1(beta)
 	if err != nil {
 		return nil, nilS, errs.Wrap(err).WithMessage("cannot run round 2 of receiver")
 	}
@@ -48,16 +48,18 @@ func (bob *Bob[P, B, S]) Round1() (r1 *Round1P2P, b S, err error) {
 	}
 
 	bob.round += 2
-	return r1, b, nil
+	return &Round1P2P[P, B, S]{
+		OtR1: otR1,
+	}, b, nil
 }
 
 // Round2 executes protocol round 2.
-func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P, a []S) (*Round2P2P[S], []S, error) {
+func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P[P, B, S], a []S) (*Round2P2P[P, B, S], []S, error) {
 	if alice.round != 2 {
 		return nil, nil, ErrValidation.WithMessage("invalid round")
 	}
 
-	senderOutput, err := alice.sender.Round2(r1)
+	senderOutput, err := alice.sender.Round2(r1.OtR1)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run round 2 of receiver")
 	}
@@ -135,7 +137,7 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P, a []S) (*Round2P2P[S], []S, e
 		return nil, nil, errs.Wrap(err).WithMessage("cannot get mu")
 	}
 
-	r2 := &Round2P2P[S]{
+	r2 := &Round2P2P[P, B, S]{
 		ATilde: aTilde,
 		Eta:    eta,
 		Mu:     mu,
@@ -145,7 +147,7 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P, a []S) (*Round2P2P[S], []S, e
 }
 
 // Round3 executes protocol round 3.
-func (bob *Bob[P, B, S]) Round3(r2 *Round2P2P[S]) (d []S, err error) {
+func (bob *Bob[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (d []S, err error) {
 	if bob.round != 3 {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}

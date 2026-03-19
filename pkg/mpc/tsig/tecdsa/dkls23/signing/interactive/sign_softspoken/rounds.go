@@ -22,7 +22,7 @@ import (
 )
 
 // Round1 executes protocol round 1.
-func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMessages[*Round1P2P], err error) {
+func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast[P, B, S], r1u network.RoundMessages[*Round1P2P[P, B, S], *Cosigner[P, B, S]], err error) {
 	if c.state.round != 1 {
 		return nil, nil, ErrFailed.WithMessage("invalid round")
 	}
@@ -60,10 +60,10 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 	}
 
 	c.state.chi = make(map[sharing.ID]S)
-	bOut := &Round1Broadcast{
+	bOut := &Round1Broadcast[P, B, S]{
 		BigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
 	}
-	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P]()
+	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
 		message.MulR1, c.state.chi[id], err = c.state.bobMul[id].Round1()
 		if err != nil {
@@ -76,13 +76,13 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 }
 
 // Round2 executes protocol round 2.
-func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], r1u network.RoundMessages[*Round1P2P]) (r2b *Round2Broadcast[P, B, S], r2u network.RoundMessages[*Round2P2P[P, B, S]], err error) {
+func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[P, B, S], *Cosigner[P, B, S]], r1u network.RoundMessages[*Round1P2P[P, B, S], *Cosigner[P, B, S]]) (r2b *Round2Broadcast[P, B, S], r2u network.RoundMessages[*Round2P2P[P, B, S], *Cosigner[P, B, S]], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 2, r1b, r1u)
 	if err != nil {
 		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
 	}
 
-	mulR1 := make(map[sharing.ID]*rvole_softspoken.Round1P2P)
+	mulR1 := make(map[sharing.ID]*rvole_softspoken.Round1P2P[P, B, S])
 	for id, message := range incomingMessages {
 		c.state.bigRCommitment[id] = message.broadcast.BigRCommitment
 		mulR1[id] = message.p2p.MulR1
@@ -128,7 +128,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 }
 
 // Round3 executes protocol round 3.
-func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P, B, S]], r2u network.RoundMessages[*Round2P2P[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
+func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P, B, S], *Cosigner[P, B, S]], r2u network.RoundMessages[*Round2P2P[P, B, S], *Cosigner[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 3, r2b, r2u)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("invalid input or round mismatch")

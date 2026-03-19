@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	gentu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/keygen"
@@ -66,9 +66,9 @@ func CreateLindell22Cosigners[GE algebra.PrimeGroupElement[GE, S], S algebra.Pri
 	return cosigners
 }
 
-func DoLindell22Round1[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message](tb testing.TB, participants map[sharing.ID]*signing.Cosigner[E, S, M]) map[sharing.ID]*signing.Round1Broadcast {
+func DoLindell22Round1[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message](tb testing.TB, participants map[sharing.ID]*signing.Cosigner[E, S, M]) map[sharing.ID]*signing.Round1Broadcast[E, S, M] {
 	tb.Helper()
-	r1bo := make(map[sharing.ID]*signing.Round1Broadcast, len(participants))
+	r1bo := make(map[sharing.ID]*signing.Round1Broadcast[E, S, M], len(participants))
 	for id, pi := range participants {
 		v, err := pi.Round1()
 		require.NoError(tb, err)
@@ -78,9 +78,9 @@ func DoLindell22Round1[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	return r1bo
 }
 
-func DoLindell22Round2[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message](tb testing.TB, participants map[sharing.ID]*signing.Cosigner[E, S, M], r2bi map[sharing.ID]network.RoundMessages[*signing.Round1Broadcast]) map[sharing.ID]*signing.Round2Broadcast[E, S] {
+func DoLindell22Round2[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message](tb testing.TB, participants map[sharing.ID]*signing.Cosigner[E, S, M], r2bi map[sharing.ID]network.RoundMessages[*signing.Round1Broadcast[E, S, M], *signing.Cosigner[E, S, M]]) map[sharing.ID]*signing.Round2Broadcast[E, S, M] {
 	tb.Helper()
-	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[E, S], len(participants))
+	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[E, S, M], len(participants))
 	for id, pi := range participants {
 		v, err := pi.Round2(r2bi[id])
 		require.NoError(tb, err)
@@ -89,7 +89,7 @@ func DoLindell22Round2[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	return r2bo
 }
 
-func DoLindell22Round3[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message](tb testing.TB, participants map[sharing.ID]*signing.Cosigner[E, S, M], r3bi map[sharing.ID]network.RoundMessages[*signing.Round2Broadcast[E, S]], message M) map[sharing.ID]*lindell22.PartialSignature[E, S] {
+func DoLindell22Round3[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message](tb testing.TB, participants map[sharing.ID]*signing.Cosigner[E, S, M], r3bi map[sharing.ID]network.RoundMessages[*signing.Round2Broadcast[E, S, M], *signing.Cosigner[E, S, M]], message M) map[sharing.ID]*lindell22.PartialSignature[E, S] {
 	tb.Helper()
 	psigs := make(map[sharing.ID]*lindell22.PartialSignature[E, S])
 	for id, pi := range participants {

@@ -3,26 +3,29 @@ package rvole_softspoken
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
 
-type round2Validator interface {
-	round2ValidateParams() (xi, l, rho int)
+// Round1P2P carries round 1 peer-to-peer messages.
+type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	OtR1 *softspoken.Round1P2P
 }
 
-// Round1P2P carries round 1 peer-to-peer messages.
-type Round1P2P = softspoken.Round1P2P
+func (*Round1P2P[P, B, S]) Validate(alice *Alice[P, B, S]) error {
+	return nil
+}
 
 // Round2P2P carries round 2 peer-to-peer messages.
-type Round2P2P[S algebra.PrimeFieldElement[S]] struct {
+type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ATilde [][]S
 	Eta    []S
 	Mu     []byte
 }
 
 // Validate validates the message payload.
-func (r2 *Round2P2P[S]) Validate(p round2Validator) error {
-	xi, l, rho := p.round2ValidateParams()
+func (r2 *Round2P2P[P, B, S]) Validate(bob *Bob[P, B, S]) error {
+	xi, l, rho := bob.xi, bob.suite.l, bob.rho
 	if r2 == nil {
 		return ErrValidation.WithMessage("missing message")
 	}

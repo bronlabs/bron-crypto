@@ -40,7 +40,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	}
 	cosigners := slices.Collect(maps.Values(cosignersMap))
 
-	r1bo := make(map[sharing.ID]*sign_bbot.Round1Broadcast)
+	r1bo := make(map[sharing.ID]*sign_bbot.Round1Broadcast[P, B, S])
 	r1uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_bbot.Round1P2P[P, B, S]])
 	for _, cosigner := range cosigners {
 		r1bo[cosigner.SharingID()], r1uo[cosigner.SharingID()], err = cosigner.Round1()

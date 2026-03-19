@@ -15,7 +15,7 @@ type message[B any, U any] struct {
 	p2p       U
 }
 
-func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB any, MU any](c *Cosigner[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
+func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message[*Cosigner[P, B, S]], MU network.Message[*Cosigner[P, B, S]]](c *Cosigner[P, B, S], rIn network.Round, bIn network.RoundMessages[MB, *Cosigner[P, B, S]], uIn network.RoundMessages[MU, *Cosigner[P, B, S]]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
 	if rIn != c.state.round {
 		return nil, ErrFailed.WithMessage("invalid round")
 	}

@@ -15,7 +15,7 @@ type message[B any, U any] struct {
 	p2p       U
 }
 
-func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB any, MU any](c *Cosigner[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
+func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message[*Cosigner[P, B, S]], MU network.Message[*Cosigner[P, B, S]]](c *Cosigner[P, B, S], rIn network.Round, bIn network.RoundMessages[MB, *Cosigner[P, B, S]], uIn network.RoundMessages[MU, *Cosigner[P, B, S]]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
 	if rIn != c.state.round {
 		return nil, ErrFailed.WithMessage("invalid round")
 	}
@@ -37,11 +37,12 @@ func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldEleme
 	}, nil
 }
 
-type messagePointerConstraint[MP any, M any] interface {
+type messagePointerConstraint[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MP network.Message[*Cosigner[P, B, S]], M any] interface {
+	network.Message[*Cosigner[P, B, S]]
 	*M
 }
 
-func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](c *Cosigner[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
+func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[P, B, S, UPtr, U], U any](c *Cosigner[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
 	return func(yield func(p sharing.ID, out UPtr) bool) {
 		for id := range c.ctx.OtherPartiesOrdered() {
 			u := new(U)

@@ -1,11 +1,11 @@
 package refresh
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
-	"github.com/bronlabs/errs-go/errs"
-
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
@@ -19,11 +19,11 @@ func (p *Participant[G, S]) Round1() (broadcast *Round1Broadcast[G, S], unicasts
 	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P[G, S]]()
 	for id, m := range uu.Iter() {
 		uOut.Put(id, &Round1P2P[G, S]{
-			hjkyR1: m,
+			HjkyR1: m,
 		})
 	}
 	bOut := &Round1Broadcast[G, S]{
-		hjkyR1: bc,
+		HjkyR1: bc,
 	}
 
 	return bOut, uOut.Freeze(), nil
@@ -33,11 +33,11 @@ func (p *Participant[G, S]) Round1() (broadcast *Round1Broadcast[G, S], unicasts
 func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r2u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (output *Output[G, S], err error) {
 	hjkyR2U := hashmap.NewComparable[sharing.ID, *hjky.Round1P2P[G, S]]()
 	for id, m := range r2u.Iter() {
-		hjkyR2U.Put(id, m.hjkyR1)
+		hjkyR2U.Put(id, m.HjkyR1)
 	}
 	hjkyR2B := hashmap.NewComparable[sharing.ID, *hjky.Round1Broadcast[G, S]]()
 	for id, m := range r2b.Iter() {
-		hjkyR2B.Put(id, m.hjkyR1)
+		hjkyR2B.Put(id, m.HjkyR1)
 	}
 
 	share, verification, err := p.zeroParticipant.Round2(hjkyR2B.Freeze(), hjkyR2U.Freeze())

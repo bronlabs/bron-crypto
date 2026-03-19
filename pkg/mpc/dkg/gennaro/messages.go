@@ -12,14 +12,14 @@ type Round1Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 	Proof                      compiler.NIZKPoKProof                `cbor:"proof"`
 }
 
-func (*Round1Broadcast[E, S]) Validate(*Participant[E, S]) error { return nil }
+func (*Round1Broadcast[E, S]) Validate(participant *Participant[E, S]) error { return nil }
 
 // Round1Unicast carries the dealer’s Pedersen share to a specific party.
 type Round1Unicast[E GroupElement[E, S], S Scalar[S]] struct {
 	Share *pedersenVSS.Share[S] `cbor:"share"`
 }
 
-func (*Round1Unicast[E, S]) Validate(*Participant[E, S]) error { return nil }
+func (*Round1Unicast[E, S]) Validate(participant *Participant[E, S]) error { return nil }
 
 // Round2Broadcast carries the Feldman VSS verification vector and proof of well-formedness.
 type Round2Broadcast[E GroupElement[E, S], S Scalar[S]] struct {

@@ -13,7 +13,7 @@ import (
 )
 
 // Round1 executes protocol round 1.
-func (p *Participant[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S]], error) {
+func (p *Participant[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S], *Participant[P, B, S]], error) {
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(p, r1u) {
 		var err error
@@ -28,7 +28,7 @@ func (p *Participant[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, 
 }
 
 // Round2 executes protocol round 2.
-func (p *Participant[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]]) (network.RoundMessages[*Round2P2P[P, B, S]], error) {
+func (p *Participant[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S], *Participant[P, B, S]]) (network.RoundMessages[*Round2P2P[P, B, S], *Participant[P, B, S]], error) {
 	otR1 := hashmap.NewComparable[sharing.ID, *vsot.Round1P2P[P, B, S]]()
 	in, err := incomingP2PMessages(p, 2, r1u)
 	if err != nil {
@@ -66,7 +66,7 @@ func (p *Participant[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B,
 }
 
 // Round3 executes protocol round 3.
-func (p *Participant[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]]) (network.RoundMessages[*Round3P2P], error) {
+func (p *Participant[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S], *Participant[P, B, S]]) (network.RoundMessages[*Round3P2P[P, B, S], *Participant[P, B, S]], error) {
 	otR2u := hashmap.NewComparable[sharing.ID, *vsot.Round2P2P[P, B, S]]()
 	in, err := incomingP2PMessages(p, 3, r2u)
 	if err != nil {
@@ -77,7 +77,7 @@ func (p *Participant[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B,
 	}
 
 	p.state.senderSeeds = hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
-	r3u := hashmap.NewComparable[sharing.ID, *Round3P2P]()
+	r3u := hashmap.NewComparable[sharing.ID, *Round3P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(p, r3u) {
 		otR2, ok := otR2u.Get(id)
 		if !ok {
@@ -96,8 +96,8 @@ func (p *Participant[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B,
 }
 
 // Round4 executes protocol round 4.
-func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P]) (network.RoundMessages[*Round4P2P], error) {
-	otR3u := hashmap.NewComparable[sharing.ID, *vsot.Round3P2P]()
+func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B, S], *Participant[P, B, S]]) (network.RoundMessages[*Round4P2P[P, B, S], *Participant[P, B, S]], error) {
+	otR3u := hashmap.NewComparable[sharing.ID, *vsot.Round3P2P[P, B, S]]()
 	in, err := incomingP2PMessages(p, 4, r3u)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("invalid messages or round mismatch")
@@ -106,7 +106,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P]) (ne
 		otR3u.Put(id, p2p.OtR3)
 	}
 
-	r4u := hashmap.NewComparable[sharing.ID, *Round4P2P]()
+	r4u := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(p, r4u) {
 		otR3, ok := otR3u.Get(id)
 		if !ok {
@@ -124,8 +124,8 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P]) (ne
 }
 
 // Round5 executes protocol round 5.
-func (p *Participant[P, B, S]) Round5(r4u network.RoundMessages[*Round4P2P]) (network.RoundMessages[*Round5P2P], error) {
-	otR4u := hashmap.NewComparable[sharing.ID, *vsot.Round4P2P]()
+func (p *Participant[P, B, S]) Round5(r4u network.RoundMessages[*Round4P2P[P, B, S], *Participant[P, B, S]]) (network.RoundMessages[*Round5P2P[P, B, S], *Participant[P, B, S]], error) {
+	otR4u := hashmap.NewComparable[sharing.ID, *vsot.Round4P2P[P, B, S]]()
 	in, err := incomingP2PMessages(p, 5, r4u)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("invalid messages or round mismatch")
@@ -134,7 +134,7 @@ func (p *Participant[P, B, S]) Round5(r4u network.RoundMessages[*Round4P2P]) (ne
 		otR4u.Put(id, p2p.OtR4)
 	}
 
-	r5u := hashmap.NewComparable[sharing.ID, *Round5P2P]()
+	r5u := hashmap.NewComparable[sharing.ID, *Round5P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(p, r5u) {
 		otR4, ok := otR4u.Get(id)
 		if !ok {
@@ -152,7 +152,7 @@ func (p *Participant[P, B, S]) Round5(r4u network.RoundMessages[*Round4P2P]) (ne
 }
 
 // Round6 executes protocol round 6.
-func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*dkls23.Shard[P, B, S], error) {
+func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P[P, B, S], *Participant[P, B, S]]) (*dkls23.Shard[P, B, S], error) {
 	in, err := incomingP2PMessages(p, 6, r5u)
 	if err != nil {
 		return nil, ErrFailed.WithMessage("invalid messages or round mismatch")

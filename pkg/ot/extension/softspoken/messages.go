@@ -4,10 +4,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
-type round1Validator interface {
-	round1ValidateParams() (xi, l int)
-}
-
 // Challenge is the verifier's random challenge for the consistency check (χ_i ∈ [M=η/σ][σ] bits).
 type Challenge = [][SigmaBytes]byte // χ_i ∈ [M=η/σ][σ]bits is the random challenge for the consistency check.
 
@@ -24,8 +20,8 @@ type Round1P2P struct {
 }
 
 // Validate checks lengths of U entries against suite parameters.
-func (r1 *Round1P2P) Validate(p round1Validator) error {
-	xi, l := p.round1ValidateParams()
+func (r1 *Round1P2P) Validate(p *Sender) error {
+	xi, l := p.suite.Xi(), p.suite.L()
 	eta := l * xi                       // η = L*ξ
 	etaPrimeBytes := eta/8 + SigmaBytes // η'= η + σ
 	for i := range Kappa {

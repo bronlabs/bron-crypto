@@ -27,6 +27,7 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	if p.round != 1 {
 		return nil, nil, ErrRound.WithMessage("expected round 1, got %d", p.round)
 	}
+
 	// Pedersen VSS dealing
 	var err error
 	p.state.localPedersenDealerOutput, p.state.localSecret, p.state.pedersenDealerFunc, err = p.state.pedersenVSS.DealRandomAndRevealDealerFunc(p.prng)
@@ -105,9 +106,14 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("expected round 2, got %d", p.round)
 	}
+	if errB := network.ValidateIncomingMessages(p, r2bin, p.ctx.OtherPartiesOrdered()); errB != nil {
+		return nil, errs.Wrap(errB)
+	}
+	if errU := network.ValidateIncomingMessages(p, r2uin, p.ctx.OtherPartiesOrdered()); errU != nil {
+		return nil, errs.Wrap(errU)
+	}
 
 	localSecretsPolynomial := p.state.pedersenDealerFunc.Components()[0]
-
 	var err error
 	p.state.summedShareValue = p.state.localShare.Value()
 	for pid := range p.ctx.OtherPartiesOrdered() {
@@ -190,6 +196,9 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S], *Participant[E, S]]) (*DKGOutput[E, S], error) {
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("expected round 3, got %d", p.round)
+	}
+	if errB := network.ValidateIncomingMessages(p, r3bi, p.ctx.OtherPartiesOrdered()); errB != nil {
+		return nil, errs.Wrap(errB)
 	}
 
 	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)

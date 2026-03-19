@@ -12,7 +12,7 @@ import (
 )
 
 // Round1 blinds the dealer polynomial and distributes blinded shares.
-func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S], *participant[G, S]], error) {
+func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S], *Recoverer[G, S]], error) {
 	blindOutput, _, err := r.scheme.DealRandom(r.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot deal blind")
@@ -49,7 +49,7 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 }
 
 // Round2 aggregates blinded shares and publishes the original verification vector.
-func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *participant[G, S]]) (network.OutgoingUnicasts[*Round2P2P[G, S], *participant[G, S]], error) {
+func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Recoverer[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Recoverer[G, S]]) (network.OutgoingUnicasts[*Round2P2P[G, S], *Mislayer[G, S]], error) {
 	blindedShare := r.state.blindShare.Add(r.shard.Share())
 	for id := range r.recoverersCtx.OtherPartiesOrdered() {
 		u, ok := r1u.Get(id)
@@ -85,7 +85,7 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 }
 
 // Round3 interpolates the blinded shares to reconstruct the missing share.
-func (m *Mislayer[G, S]) Round3(r2u network.RoundMessages[*Round2P2P[G, S], *participant[G, S]]) (output *Output[G, S], err error) {
+func (m *Mislayer[G, S]) Round3(r2u network.RoundMessages[*Round2P2P[G, S], *Mislayer[G, S]]) (output *Output[G, S], err error) {
 	xs := []S{}
 	ys := []S{}
 

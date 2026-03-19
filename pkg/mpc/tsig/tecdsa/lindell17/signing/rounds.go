@@ -28,7 +28,7 @@ const (
 )
 
 // Round1 executes the primary cosigner's first round.
-func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P, err error) {
+func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P[P, B, S], err error) {
 	// Validation
 	if pc.round != 1 {
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 1, pc.round)
@@ -54,13 +54,13 @@ func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P, err error)
 
 	pc.round += 2
 	// step 1.3: Send(c1) -> P_2
-	return &Round1OutputP2P{
+	return &Round1OutputP2P[P, B, S]{
 		BigR1Commitment: bigR1Commitment,
 	}, nil
 }
 
 // Round2 executes the secondary cosigner's second round.
-func (sc *SecondaryCosigner[P, B, S]) Round2(r1out *Round1OutputP2P) (r2out *Round2OutputP2P[P, B, S], err error) {
+func (sc *SecondaryCosigner[P, B, S]) Round2(r1out *Round1OutputP2P[P, B, S]) (r2out *Round2OutputP2P[P, B, S], err error) {
 	// Validation
 	if sc.round != 2 {
 		return nil, ErrRound.WithMessage("Running round %d but secondary cosigner expected round %d", 2, sc.round)

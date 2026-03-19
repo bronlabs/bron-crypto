@@ -12,7 +12,9 @@ import (
 
 // Mislayer represents the party whose share is being reconstructed.
 type Mislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	participant[G, S]
+	ctx    *session.Context
+	field  algebra.PrimeField[S]
+	scheme *feldman.Scheme[G, S]
 }
 
 // NewMislayer constructs a mislayer helper used to validate and interpolate recovered shares.
@@ -32,11 +34,9 @@ func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 
 	m := &Mislayer[G, S]{
-		participant: participant[G, S]{
-			ctx:    ctx,
-			field:  field,
-			scheme: scheme,
-		},
+		ctx:    ctx,
+		field:  field,
+		scheme: scheme,
 	}
 	return m, nil
 }

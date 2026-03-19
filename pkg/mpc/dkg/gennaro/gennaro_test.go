@@ -422,9 +422,9 @@ type securityFixture struct {
 	ids     []sharing.ID // sorted
 
 	r1bo map[sharing.ID]*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]
-	r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar]]
-	r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]]
-	r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar]]
+	r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
+	r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
+	r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
 }
 
 func newSecurityFixture(t *testing.T) *securityFixture {
@@ -446,9 +446,9 @@ func newSecurityFixture(t *testing.T) *securityFixture {
 }
 
 // replaceBroadcastFrom returns a copy of victim's broadcast inputs with attacker's message replaced.
-func replaceBroadcastFrom[M any](
-	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M] {
+func replaceBroadcastFrom[M network.Message[P], P any](
+	original network.RoundMessages[M, P], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, P] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {
@@ -461,9 +461,9 @@ func replaceBroadcastFrom[M any](
 }
 
 // replaceUnicastFrom returns a copy of victim's unicast inputs with attacker's message replaced.
-func replaceUnicastFrom[M any](
-	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M] {
+func replaceUnicastFrom[M network.Message[P], P any](
+	original network.RoundMessages[M, P], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, P] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {

@@ -35,7 +35,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-	r2uo := make(map[sharing.ID]network.RoundMessages[*session.Round2P2P])
+	r2uo := make(map[sharing.ID]network.RoundMessages[*session.Round2P2P, *session.Participant])
 	for _, p := range participants {
 		var err error
 		r2uo[p.SharingID()], err = p.Round2(r2bi[p.SharingID()])
@@ -43,7 +43,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	r3ui := ntu.MapUnicastO2I(t, participants, r2uo)
-	r3uo := make(map[sharing.ID]network.RoundMessages[*session.Round3P2P])
+	r3uo := make(map[sharing.ID]network.RoundMessages[*session.Round3P2P, *session.Participant])
 	for _, p := range participants {
 		var err error
 		r3uo[p.SharingID()], err = p.Round3(r3ui[p.SharingID()])

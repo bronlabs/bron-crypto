@@ -21,7 +21,7 @@ import (
 )
 
 // Round1 executes protocol round 1.
-func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessages[*Round1P2P[P, B, S]], err error) {
+func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast[P, B, S], r1uOut network.RoundMessages[*Round1P2P[P, B, S], *Cosigner[P, B, S]], err error) {
 	if c.state.round != 1 {
 		return nil, nil, ErrFailed.WithMessage("invalid round")
 	}
@@ -58,7 +58,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample phi")
 	}
 
-	bOut := &Round1Broadcast{
+	bOut := &Round1Broadcast[P, B, S]{
 		BigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
@@ -74,7 +74,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 }
 
 // Round2 executes protocol round 2.
-func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast], r1uOut network.RoundMessages[*Round1P2P[P, B, S]]) (r2bOut *Round2Broadcast[P, B, S], r2uOut network.RoundMessages[*Round2P2P[P, B, S]], err error) {
+func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast[P, B, S], *Cosigner[P, B, S]], r1uOut network.RoundMessages[*Round1P2P[P, B, S], *Cosigner[P, B, S]]) (r2bOut *Round2Broadcast[P, B, S], r2uOut network.RoundMessages[*Round2P2P[P, B, S], *Cosigner[P, B, S]], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 2, r1bOut, r1uOut)
 	if err != nil {
 		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
@@ -104,7 +104,7 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 }
 
 // Round3 executes protocol round 3.
-func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast[P, B, S]], r2uOut network.RoundMessages[*Round2P2P[P, B, S]]) (r3bOut *Round3Broadcast[P, B, S], r3uOut network.RoundMessages[*Round3P2P[P, B, S]], err error) {
+func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast[P, B, S], *Cosigner[P, B, S]], r2uOut network.RoundMessages[*Round2P2P[P, B, S], *Cosigner[P, B, S]]) (r3bOut *Round3Broadcast[P, B, S], r3uOut network.RoundMessages[*Round3P2P[P, B, S], *Cosigner[P, B, S]], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 3, r2bOut, r2uOut)
 	if err != nil {
 		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
@@ -160,7 +160,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 }
 
 // Round4 executes protocol round 4.
-func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast[P, B, S]], r3uOut network.RoundMessages[*Round3P2P[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
+func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast[P, B, S], *Cosigner[P, B, S]], r3uOut network.RoundMessages[*Round3P2P[P, B, S], *Cosigner[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
 	incomingMessages, err := validateIncomingMessages(c, 4, r3bOut, r3uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid input or round mismatch")

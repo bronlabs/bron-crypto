@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
-func incomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MU any](p *Participant[P, B, S], rIn network.Round, uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, MU], error) {
+func incomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MU network.Message[*Participant[P, B, S]]](p *Participant[P, B, S], rIn network.Round, uIn network.RoundMessages[MU, *Participant[P, B, S]]) (iter.Seq2[sharing.ID, MU], error) {
 	if rIn != p.round {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
@@ -32,11 +32,12 @@ func incomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B]
 	}, nil
 }
 
-type messagePointerConstraint[MP any, M any] interface {
+type messagePointerConstraint[MP network.Message[*Participant[P, B, S]], P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], M any] interface {
+	network.Message[*Participant[P, B, S]]
 	*M
 }
 
-func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](p *Participant[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
+func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, P, B, S, U], U any](p *Participant[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
 	return func(yield func(p sharing.ID, out UPtr) bool) {
 		for id := range p.ctx.OtherPartiesOrdered() {
 			u := new(U)

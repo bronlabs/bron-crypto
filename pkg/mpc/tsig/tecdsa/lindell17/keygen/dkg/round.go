@@ -29,7 +29,7 @@ const (
 )
 
 // Round1 executes the first DKG round.
-func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast, err error) {
+func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast[P, B, S], err error) {
 	// Validation
 	if p.round != 1 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 1, p.round)
@@ -66,13 +66,13 @@ func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast, err error) {
 
 	// 1.iv. broadcast commitments
 	p.round++
-	return &Round1Broadcast{
+	return &Round1Broadcast[P, B, S]{
 		BigQCommitment: bigQCommitment,
 	}, nil
 }
 
 // Round2 executes the second DKG round.
-func (p *Participant[P, B, S]) Round2(input network.RoundMessages[*Round1Broadcast]) (output *Round2Broadcast[P, B, S], err error) {
+func (p *Participant[P, B, S]) Round2(input network.RoundMessages[*Round1Broadcast[P, B, S], *Participant[P, B, S]]) (output *Round2Broadcast[P, B, S], err error) {
 	// Validation
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 2, p.round)
@@ -113,7 +113,7 @@ func (p *Participant[P, B, S]) Round2(input network.RoundMessages[*Round1Broadca
 }
 
 // Round3 executes the third DKG round.
-func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadcast[P, B, S]]) (output *Round3Broadcast, err error) {
+func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadcast[P, B, S], *Participant[P, B, S]]) (output *Round3Broadcast[P, B, S], err error) {
 	// Validation
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 3, p.round)
@@ -220,7 +220,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 
 	// 3.v. broadcast (pk, ckey', ckey'')
 	p.round++
-	return &Round3Broadcast{
+	return &Round3Broadcast[P, B, S]{
 		CKeyPrime:         cKeyPrime,
 		CKeyDoublePrime:   cKeyDoublePrime,
 		PaillierPublicKey: p.state.myPaillierPk,
@@ -228,13 +228,13 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 }
 
 // Round4 executes the fourth DKG round.
-func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadcast]) (output network.OutgoingUnicasts[*Round4P2P], err error) {
+func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadcast[P, B, S], *Participant[P, B, S]]) (output network.OutgoingUnicasts[*Round4P2P[P, B, S], *Participant[P, B, S]], err error) {
 	// Validation
 	if p.round != 4 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 4, p.round)
 	}
 
-	r4o := hashmap.NewComparable[sharing.ID, *Round4P2P]()
+	r4o := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
 	for id := range p.shard.AccessStructure().Shareholders().Iter() {
 		if id == p.shard.Share().ID() {
 			continue
@@ -267,7 +267,7 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL verifier")
 		}
 
-		outgoingMessage := new(Round4P2P)
+		outgoingMessage := new(Round4P2P[P, B, S])
 		outgoingMessage.LpRound1Output, err = p.state.lpVerifiers[id].Round1()
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot run round 1 of LP verifier")
@@ -288,13 +288,13 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 }
 
 // Round5 executes the fifth DKG round.
-func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P]) (output network.OutgoingUnicasts[*Round5P2P], err error) {
+func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P[P, B, S], *Participant[P, B, S]]) (output network.OutgoingUnicasts[*Round5P2P[P, B, S], *Participant[P, B, S]], err error) {
 	// Validation
 	if p.round != 5 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 5, p.round)
 	}
 	// 5. LP and LPDL continue
-	r5o := hashmap.NewComparable[sharing.ID, *Round5P2P]()
+	r5o := hashmap.NewComparable[sharing.ID, *Round5P2P[P, B, S]]()
 	for id := range p.shard.AccessStructure().Shareholders().Iter() {
 		if id == p.SharingID() {
 			continue
@@ -304,7 +304,7 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P]) (
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
 		}
 
-		outgoingMessage := new(Round5P2P)
+		outgoingMessage := new(Round5P2P[P, B, S])
 		errGroup := errgroup.Group{}
 		errGroup.Go(func() error {
 			var err error
@@ -341,13 +341,15 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P]) (
 }
 
 // Round6 executes the sixth DKG round.
-func (p *Participant[P, B, S]) Round6(input network.RoundMessages[*Round5P2P]) (output network.OutgoingUnicasts[*Round6P2P], err error) {
+//
+//nolint:dupl // false positive
+func (p *Participant[P, B, S]) Round6(input network.RoundMessages[*Round5P2P[P, B, S], *Participant[P, B, S]]) (output network.OutgoingUnicasts[*Round6P2P[P, B, S], *Participant[P, B, S]], err error) {
 	// Validation
 	if p.round != 6 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 6, p.round)
 	}
 	// 6. LP and LPDL continue
-	r6o := hashmap.NewComparable[sharing.ID, *Round6P2P]()
+	r6o := hashmap.NewComparable[sharing.ID, *Round6P2P[P, B, S]]()
 	for id := range p.shard.AccessStructure().Shareholders().Iter() {
 		if id == p.SharingID() {
 			continue
@@ -357,7 +359,7 @@ func (p *Participant[P, B, S]) Round6(input network.RoundMessages[*Round5P2P]) (
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
 		}
 
-		outgoingMessage := new(Round6P2P)
+		outgoingMessage := new(Round6P2P[P, B, S])
 		outgoingMessage.LpRound3Output, err = p.state.lpVerifiers[id].Round3(message.LpRound2Output)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot run round 3 of LP verifier")
@@ -378,7 +380,9 @@ func (p *Participant[P, B, S]) Round6(input network.RoundMessages[*Round5P2P]) (
 }
 
 // Round7 executes the seventh DKG round.
-func (p *Participant[P, B, S]) Round7(input network.RoundMessages[*Round6P2P]) (output network.OutgoingUnicasts[*Round7P2P[P, B, S]], err error) {
+//
+//nolint:dupl // false positive
+func (p *Participant[P, B, S]) Round7(input network.RoundMessages[*Round6P2P[P, B, S], *Participant[P, B, S]]) (output network.OutgoingUnicasts[*Round7P2P[P, B, S], *Participant[P, B, S]], err error) {
 	// Validation
 	if p.round != 7 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 7, p.round)
@@ -415,7 +419,7 @@ func (p *Participant[P, B, S]) Round7(input network.RoundMessages[*Round6P2P]) (
 }
 
 // Round8 executes the final DKG round.
-func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, B, S]]) (*lindell17.Shard[P, B, S], error) {
+func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, B, S], *Participant[P, B, S]]) (*lindell17.Shard[P, B, S], error) {
 	// Validation
 	if p.round != 8 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 8, p.round)

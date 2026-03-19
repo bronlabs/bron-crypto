@@ -8,11 +8,11 @@ import (
 )
 
 // Round1Broadcast carries round 1 broadcast messages.
-type Round1Broadcast struct {
+type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	BigRCommitment hash_comm.Commitment `cbor:"bigRCommitment"`
 }
 
-func (*Round1Broadcast) Validate(any) error { return nil }
+func (*Round1Broadcast[P, B, S]) Validate(cosigner *Cosigner[P, B, S]) error { return nil }
 
 // Round1P2P carries round 1 peer-to-peer messages.
 type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -45,7 +45,7 @@ func (*Round3Broadcast[P, B, S]) Validate(*Cosigner[P, B, S]) error { return nil
 
 // Round3P2P carries round 3 peer-to-peer messages.
 type Round3P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	MulR3 *rvole_bbot.Round3P2P[S] `cbor:"mulR3"`
+	MulR3 *rvole_bbot.Round3P2P[P, S] `cbor:"mulR3"`
 
 	GammaU P `cbor:"gammaU"`
 	GammaV P `cbor:"gammaV"`

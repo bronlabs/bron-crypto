@@ -40,7 +40,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
 
-	r2uo := make(map[sharing.ID]network.RoundMessages[*przsSetup.Round2P2P])
+	r2uo := make(map[sharing.ID]network.RoundMessages[*przsSetup.Round2P2P, *przsSetup.Participant])
 	for _, p := range participants {
 		r2uo[p.SharingID()], err = p.Round2(r2bi[p.SharingID()])
 		require.NoError(t, err)

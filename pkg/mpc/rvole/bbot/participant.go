@@ -33,10 +33,6 @@ type participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	round     int
 }
 
-func (p *participant[G, S]) round3ValidateParams() (xi, l, rho int) {
-	return p.xi, p.suite.l, p.rho
-}
-
 // Alice represents the sender party.
 type Alice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	participant[G, S] // Base Participant

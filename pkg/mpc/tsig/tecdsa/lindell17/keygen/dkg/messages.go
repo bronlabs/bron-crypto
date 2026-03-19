@@ -11,11 +11,11 @@ import (
 )
 
 // Round1Broadcast carries the first-round broadcast data.
-type Round1Broadcast struct {
+type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	BigQCommitment hash_comm.Commitment
 }
 
-func (*Round1Broadcast) Validate(any) error { return nil }
+func (*Round1Broadcast[P, B, S]) Validate(participant *Participant[P, B, S]) error { return nil }
 
 // Round2Broadcast carries the second-round broadcast data.
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -26,43 +26,43 @@ type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	BigQDoublePrimeProof compiler.NIZKPoKProof
 }
 
-func (*Round2Broadcast[P, B, S]) Validate(any) error { return nil }
+func (*Round2Broadcast[P, B, S]) Validate(participant *Participant[P, B, S]) error { return nil }
 
 // Round3Broadcast carries the third-round broadcast data.
-type Round3Broadcast struct {
+type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	CKeyPrime         *paillier.Ciphertext
 	CKeyDoublePrime   *paillier.Ciphertext
 	PaillierPublicKey *paillier.PublicKey
 }
 
-func (*Round3Broadcast) Validate(any) error { return nil }
+func (*Round3Broadcast[P, B, S]) Validate(participant *Participant[P, B, S]) error { return nil }
 
 // Round4P2P carries round 4 point-to-point data.
-type Round4P2P struct {
+type Round4P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	LpRound1Output              *lp.Round1Output
 	LpdlPrimeRound1Output       *lpdl.Round1Output
 	LpdlDoublePrimeRound1Output *lpdl.Round1Output
 }
 
-func (*Round4P2P) Validate(any) error { return nil }
+func (*Round4P2P[P, B, S]) Validate(participant *Participant[P, B, S]) error { return nil }
 
 // Round5P2P carries round 5 point-to-point data.
-type Round5P2P struct {
+type Round5P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	LpRound2Output              *lp.Round2Output
 	LpdlPrimeRound2Output       *lpdl.Round2Output
 	LpdlDoublePrimeRound2Output *lpdl.Round2Output
 }
 
-func (*Round5P2P) Validate(any) error { return nil }
+func (*Round5P2P[P, B, S]) Validate(participant *Participant[P, B, S]) error { return nil }
 
 // Round6P2P carries round 6 point-to-point data.
-type Round6P2P struct {
+type Round6P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	LpRound3Output              *lp.Round3Output
 	LpdlPrimeRound3Output       *lpdl.Round3Output
 	LpdlDoublePrimeRound3Output *lpdl.Round3Output
 }
 
-func (*Round6P2P) Validate(any) error { return nil }
+func (*Round6P2P[P, B, S]) Validate(participant *Participant[P, B, S]) error { return nil }
 
 // Round7P2P carries round 7 point-to-point data.
 type Round7P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -71,4 +71,4 @@ type Round7P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	LpdlDoublePrimeRound4Output *lpdl.Round4Output[P, B, S]
 }
 
-func (*Round7P2P[P, B, S]) Validate(any) error { return nil }
+func (*Round7P2P[P, B, S]) Validate(participant *Participant[P, B, S]) error { return nil }
