@@ -11,32 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
-
-func Test_ContextSampleZeroShare(t *testing.T) {
-	t.Parallel()
-	prng := pcg.NewRandomised()
-	curve := k256.NewCurve()
-	quorum := sharing.NewOrdinalShareholderSet(4)
-	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-
-	sum := curve.OpIdentity()
-	for _, ctx := range ctxs {
-		share, err := session.SampleZeroShare(ctx, curve)
-		require.NoError(t, err)
-		sum = sum.Op(share.Value())
-	}
-	require.True(t, sum.IsOpIdentity())
-
-	sum = curve.OpIdentity()
-	for _, ctx := range ctxs {
-		share, err := session.SampleZeroShare(ctx, curve)
-		require.NoError(t, err)
-		sum = sum.Op(share.Value())
-	}
-	require.True(t, sum.IsOpIdentity())
-}
 
 func Test_ContextSessionId(t *testing.T) {
 	t.Parallel()
@@ -100,7 +77,7 @@ func Test_SubContextTranscriptAndZeroShare(t *testing.T) {
 
 	sum := curve.OpIdentity()
 	for id := range subQuorum.Iter() {
-		share, err := session.SampleZeroShare(subCtxs[id], curve)
+		share, err := przs.SampleZeroShare(subCtxs[id], curve)
 		require.NoError(t, err)
 		sum = sum.Op(share.Value())
 	}

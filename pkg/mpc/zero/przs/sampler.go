@@ -1,78 +1,38 @@
 package przs
 
 import (
-	"io"
-	"math/rand/v2"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 )
 
-// Sampler deterministically derives zero-sharing scalars from pairwise seeds.
-type Sampler[FE algebra.PrimeFieldElement[FE]] struct {
-	field       algebra.PrimeField[FE]
-	mySharingID sharing.ID
-	seededPrngs ds.Map[sharing.ID, io.Reader]
-}
-
-// NewSampler builds a sampler from per-party seeds agreed during setup.
-func NewSampler[FE algebra.PrimeFieldElement[FE]](sharingID sharing.ID, quorum network.Quorum, seeds Seeds, field algebra.PrimeField[FE]) (*Sampler[FE], error) {
-	if quorum == nil {
-		return nil, ErrInvalidArgument.WithMessage("quorum cannot be nil")
+// SampleZeroShare derives an additive share that sums to the group identity across the quorum.
+func SampleZeroShare[GE algebra.GroupElement[GE]](ctx *session.Context, g algebra.FiniteGroup[GE]) (*additive.Share[GE], error) {
+	if ctx == nil || g == nil {
+		return nil, ErrInvalidArgument.WithMessage("input is nil")
 	}
-	if seeds == nil {
-		return nil, ErrInvalidArgument.WithMessage("seeds cannot be nil")
-	}
-	if field == nil {
-		return nil, ErrInvalidArgument.WithMessage("field cannot be nil")
-	}
-	if !quorum.Contains(sharingID) {
-		return nil, ErrInvalidArgument.WithMessage("sharing ID %d not in quorum", sharingID)
-	}
-	prngs := hashmap.NewComparable[sharing.ID, io.Reader]()
-	for id := range quorum.Iter() {
-		if id == sharingID {
-			continue
-		}
-		seed, ok := seeds.Get(id)
-		if !ok {
-			return nil, ErrInvalidArgument.WithMessage("missing seed for %d", id)
-		}
-
-		prng := rand.NewChaCha8(seed)
-		prngs.Put(id, prng)
-	}
-	p := &Sampler[FE]{
-		field:       field,
-		mySharingID: sharingID,
-		seededPrngs: prngs.Freeze(),
-	}
-
-	return p, nil
-}
-
-// Sample draws a zero-share using pairwise PRNGs; the sum across parties is zero.
-func (s *Sampler[FE]) Sample() (FE, error) {
-	var nilFE FE
-	share := s.field.Zero()
-
-	for id, prng := range s.seededPrngs.Iter() {
-		sample, err := s.field.Random(prng)
+	value := g.OpIdentity()
+	for id := range ctx.OtherPartiesOrdered() {
+		v, err := g.Random(ctx.Seeds()[id])
 		if err != nil {
-			return nilFE, errs.Wrap(err).WithMessage("could not sample scalar")
+			return nil, errs.Wrap(err).WithMessage("could not sample group element")
 		}
-
-		if id < s.mySharingID {
-			share = share.Add(sample)
-		} else {
-			share = share.Add(sample.Neg())
+		if id < ctx.HolderID() {
+			v = v.OpInv()
 		}
+		value = value.Op(v)
 	}
 
+	as, err := unanimity.NewUnanimityAccessStructure(ctx.Quorum())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create access structure")
+	}
+	share, err := additive.NewShare(ctx.HolderID(), value, as)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create additive share")
+	}
 	return share, nil
 }

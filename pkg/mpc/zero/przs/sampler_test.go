@@ -1,71 +1,48 @@
 package przs_test
 
 import (
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
-	przsSetup "github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs/setup"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
+
+	testHappyPath(t, k256.NewCurve(), 3)
+	testHappyPath(t, p256.NewScalarField(), 4)
+	testHappyPath(t, curve25519.NewScalarField(), 5)
+}
+
+func testHappyPath[G algebra.GroupElement[G]](tb testing.TB, group algebra.FiniteGroup[G], n int) {
+	tb.Helper()
+
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
+	quorum := sharing.NewOrdinalShareholderSet(uint(n))
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
 
-	quorum := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
-	tape := hagrid.NewTranscript("test")
-
-	participants := make([]*przsSetup.Participant, quorum.Size())
-	for i, sharingID := range quorum.Iter2() {
-		participants[i], err = przsSetup.NewParticipant(sessionID, sharingID, quorum, tape.Clone(), prng)
-		require.NoError(t, err)
+	sum := group.OpIdentity()
+	for _, ctx := range ctxs {
+		share, err := przs.SampleZeroShare(ctx, group)
+		require.NoError(tb, err)
+		sum = sum.Op(share.Value())
 	}
+	require.True(tb, sum.IsOpIdentity())
 
-	r1bo := make(map[sharing.ID]*przsSetup.Round1Broadcast)
-	for _, p := range participants {
-		r1bo[p.SharingID()], err = p.Round1()
-		require.NoError(t, err)
+	sum = group.OpIdentity()
+	for _, ctx := range ctxs {
+		share, err := przs.SampleZeroShare(ctx, group)
+		require.NoError(tb, err)
+		sum = sum.Op(share.Value())
 	}
-	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-	r2uo := make(map[sharing.ID]network.RoundMessages[*przsSetup.Round2P2P, *przsSetup.Participant])
-	for _, p := range participants {
-		r2uo[p.SharingID()], err = p.Round2(r2bi[p.SharingID()])
-		require.NoError(t, err)
-	}
-	r3ui := ntu.MapUnicastO2I(t, participants, r2uo)
-
-	seeds := make(map[sharing.ID]przs.Seeds)
-	for _, p := range participants {
-		seeds[p.SharingID()], err = p.Round3(r3ui[p.SharingID()])
-		require.NoError(t, err)
-	}
-
-	field := k256.NewScalarField()
-	samplers := make(map[sharing.ID]*przs.Sampler[*k256.Scalar])
-	for i, s := range seeds {
-		samplers[i], err = przs.NewSampler(i, quorum, s, field)
-		require.NoError(t, err)
-	}
-
-	zero := field.Zero()
-	for _, sampler := range samplers {
-		sample, err := sampler.Sample()
-		require.NoError(t, err)
-		require.False(t, sample.IsZero())
-		zero = zero.Add(sample)
-	}
-	require.True(t, zero.IsZero())
+	require.True(tb, sum.IsOpIdentity())
 }

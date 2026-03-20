@@ -16,10 +16,10 @@ import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
@@ -205,7 +205,7 @@ func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P,
 	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](c.shard.Share().Value().Structure())
-	zeta, err := session.SampleZeroShare(c.ctx, field)
+	zeta, err := przs.SampleZeroShare(c.ctx, field)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}

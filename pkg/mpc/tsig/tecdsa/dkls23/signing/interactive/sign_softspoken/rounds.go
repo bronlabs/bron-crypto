@@ -12,10 +12,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
@@ -93,7 +93,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[P,
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}
 	f := algebra.StructureMustBeAs[algebra.PrimeField[S]](c.shard.Share().Value().Structure())
-	zeta, err := session.SampleZeroShare(c.ctx, f)
+	zeta, err := przs.SampleZeroShare(c.ctx, f)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample zero share")
 	}

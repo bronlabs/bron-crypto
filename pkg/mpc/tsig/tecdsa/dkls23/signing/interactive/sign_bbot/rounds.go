@@ -11,10 +11,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
@@ -122,7 +122,7 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 		return nil, nil, errs.Wrap(err).WithMessage("invalid p2p input")
 	}
 
-	zeta, err := session.SampleZeroShare(c.ctx, c.suite.ScalarField())
+	zeta, err := przs.SampleZeroShare(c.ctx, c.suite.ScalarField())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
