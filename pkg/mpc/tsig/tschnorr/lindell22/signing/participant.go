@@ -23,17 +23,6 @@ import (
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-var (
-	// ErrNilArgument is returned when a required argument is nil.
-	ErrNilArgument = errs.New("nil argument")
-	// ErrInvalidRound is returned when an operation is attempted in the wrong round.
-	ErrInvalidRound = errs.New("invalid round")
-	// ErrInvalidType is returned when a type assertion or check fails.
-	ErrInvalidType = errs.New("invalid type")
-	// ErrInvalidMembership is returned when a party is not authorized for an operation.
-	ErrInvalidMembership = errs.New("invalid membership")
-)
-
 const (
 	transcriptLabel = "BRON_CRYPTO_TSCHNORR_LINDELL22_SIGNING-"
 )
