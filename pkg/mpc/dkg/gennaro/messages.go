@@ -49,11 +49,11 @@ type Round2Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 	Proof                     compiler.NIZKPoKProof            `cbor:"proof"`
 }
 
-func (m *Round2Broadcast[E, S]) Validate(_ *Participant[E, S], _ sharing.ID) error {
+func (m *Round2Broadcast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
 	if m.FeldmanVerificationVector == nil {
 		return network.ErrInvalidMessage.WithMessage("missing Feldman verification vector")
 	}
-	if m.FeldmanVerificationVector.Degree()+1 != m.FeldmanVerificationVector.Degree()+1 {
+	if m.FeldmanVerificationVector.Degree()+1 != int(participant.ac.Threshold()) {
 		return network.ErrInvalidMessage.WithMessage("invalid Feldman verification vector degree")
 	}
 	if len(m.Proof) == 0 {
