@@ -4,7 +4,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
@@ -15,14 +14,17 @@ type Round1Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 }
 
 func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
+	if m == nil {
+		return ErrValidation.WithMessage("missing fields in Round1Broadcast message")
+	}
 	if m.PedersenVerificationVector == nil {
-		return network.ErrInvalidMessage.WithMessage("missing Pedersen verification vector")
+		return ErrValidation.WithMessage("missing Pedersen verification vector")
 	}
 	if m.PedersenVerificationVector.Degree()+1 != int(participant.ac.Threshold()) {
-		return network.ErrInvalidMessage.WithMessage("invalid Pedersen verification vector degree")
+		return ErrValidation.WithMessage("invalid Pedersen verification vector degree")
 	}
 	if len(m.Proof) == 0 {
-		return network.ErrInvalidMessage.WithMessage("missing proof of well-formedness")
+		return ErrValidation.WithMessage("missing proof of well-formedness")
 	}
 
 	return nil
@@ -34,11 +36,14 @@ type Round1Unicast[E GroupElement[E, S], S Scalar[S]] struct {
 }
 
 func (m *Round1Unicast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
+	if m == nil {
+		return ErrValidation.WithMessage("missing fields in Round1Unicast message")
+	}
 	if m.Share == nil {
-		return network.ErrInvalidMessage.WithMessage("missing Pedersen share")
+		return ErrValidation.WithMessage("missing Pedersen share")
 	}
 	if m.Share.ID() != participant.SharingID() {
-		return network.ErrInvalidMessage.WithMessage("Pedersen share ID does not match recipient ID")
+		return ErrValidation.WithMessage("Pedersen share ID does not match recipient ID")
 	}
 	return nil
 }
@@ -50,14 +55,17 @@ type Round2Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 }
 
 func (m *Round2Broadcast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
+	if m == nil {
+		return ErrValidation.WithMessage("missing fields in Round2Broadcast message")
+	}
 	if m.FeldmanVerificationVector == nil {
-		return network.ErrInvalidMessage.WithMessage("missing Feldman verification vector")
+		return ErrValidation.WithMessage("missing Feldman verification vector")
 	}
 	if m.FeldmanVerificationVector.Degree()+1 != int(participant.ac.Threshold()) {
-		return network.ErrInvalidMessage.WithMessage("invalid Feldman verification vector degree")
+		return ErrValidation.WithMessage("invalid Feldman verification vector degree")
 	}
 	if len(m.Proof) == 0 {
-		return network.ErrInvalidMessage.WithMessage("missing proof of well-formedness")
+		return ErrValidation.WithMessage("missing proof of well-formedness")
 	}
 	return nil
 }

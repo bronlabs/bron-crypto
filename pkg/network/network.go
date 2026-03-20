@@ -33,5 +33,3 @@ func NewSID(xs ...[]byte) (SID, error) {
 type Message[P any] interface {
 	Validate(receiver P, senderID sharing.ID) error
 }
-
-var ErrInvalidMessage = errs.New("invalid message")

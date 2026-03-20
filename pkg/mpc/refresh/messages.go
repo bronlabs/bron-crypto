@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 // Round1Broadcast carries the public commitments for the zero-share offset.
@@ -15,8 +14,8 @@ type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElem
 }
 
 func (m *Round1Broadcast[G, S]) Validate(participant *Participant[G, S], from sharing.ID) error {
-	if m.HjkyR1 == nil {
-		return network.ErrInvalidMessage.WithMessage("missing HJKY round 1 broadcast")
+	if m == nil || m.HjkyR1 == nil {
+		return ErrValidation.WithMessage("missing HJKY round 1 broadcast")
 	}
 	if err := m.HjkyR1.Validate(participant.zeroParticipant, from); err != nil {
 		return errs.Wrap(err).WithMessage("invalid HJKY round 1 broadcast")
@@ -30,8 +29,8 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 func (m *Round1P2P[G, S]) Validate(participant *Participant[G, S], from sharing.ID) error {
-	if m.HjkyR1 == nil {
-		return network.ErrInvalidMessage.WithMessage("missing HJKY round 1 unicast")
+	if m == nil || m.HjkyR1 == nil {
+		return ErrValidation.WithMessage("missing HJKY round 1 unicast")
 	}
 	if err := m.HjkyR1.Validate(participant.zeroParticipant, from); err != nil {
 		return errs.Wrap(err).WithMessage("invalid HJKY round 1 unicast")

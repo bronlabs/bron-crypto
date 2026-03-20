@@ -9,4 +9,6 @@ var (
 	ErrFailed = errs.New("failed")
 	// ErrRound is returned when rounds are invoked out of order.
 	ErrRound = errs.New("invalid round")
+	// ErrValidation indicates a failure to validate incoming messages.
+	ErrValidation = errs.New("validation failed")
 )
