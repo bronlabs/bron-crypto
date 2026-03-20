@@ -1,6 +1,7 @@
 package aor
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
@@ -10,7 +11,15 @@ type Round1Broadcast struct {
 	Commitment hash_comm.Commitment `cbor:"commitment"`
 }
 
-func (*Round1Broadcast) Validate(*Participant, sharing.ID) error { return nil }
+func (m *Round1Broadcast) Validate(*Participant, sharing.ID) error {
+	if m == nil {
+		return ErrValidation.WithMessage("missing fields in Round1Broadcast message")
+	}
+	if m.Commitment == [hash_comm.DigestSize]byte{} {
+		return ErrValidation.WithMessage("missing commitment in Round1Broadcast message")
+	}
+	return nil
+}
 
 // Round2Broadcast carries the opening (message, witness) for the seed commitment.
 type Round2Broadcast struct {
@@ -18,4 +27,15 @@ type Round2Broadcast struct {
 	Witness hash_comm.Witness `cbor:"witness"`
 }
 
-func (*Round2Broadcast) Validate(*Participant, sharing.ID) error { return nil }
+func (m *Round2Broadcast) Validate(*Participant, sharing.ID) error {
+	if m == nil {
+		return ErrValidation.WithMessage("missing fields in Round2Broadcast message")
+	}
+	if ct.SliceIsZero(m.Message) == ct.True {
+		return ErrValidation.WithMessage("missing message in Round2Broadcast message")
+	}
+	if m.Witness == [hash_comm.DigestSize]byte{} {
+		return ErrValidation.WithMessage("missing witness in Round2Broadcast message")
+	}
+	return nil
+}
