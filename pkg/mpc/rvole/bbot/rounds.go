@@ -143,7 +143,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[G, S]) (d []S, err error) {
 	if bob.round != 4 {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}
-	if err := r3Out.Validate(bob); err != nil {
+	if err := r3Out.Validate(bob, 0); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 

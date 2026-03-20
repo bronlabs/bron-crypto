@@ -38,10 +38,10 @@ func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G,
 		return nil, ErrRound.WithMessage("expected round 2")
 	}
 
-	if errB := network.ValidateIncomingMessages(p, r2b, p.zeroParticipant.Context().OtherPartiesOrdered()); errB != nil {
+	if errB := network.ValidateIncomingMessages(p, p.zeroParticipant.Context().OtherPartiesOrdered(), r2b); errB != nil {
 		return nil, errs.Wrap(errB)
 	}
-	if errU := network.ValidateIncomingMessages(p, r2u, p.zeroParticipant.Context().OtherPartiesOrdered()); errU != nil {
+	if errU := network.ValidateIncomingMessages(p, p.zeroParticipant.Context().OtherPartiesOrdered(), r2u); errU != nil {
 		return nil, errs.Wrap(errU)
 	}
 

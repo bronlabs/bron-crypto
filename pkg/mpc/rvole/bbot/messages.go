@@ -3,6 +3,7 @@ package rvole_bbot
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 )
 
@@ -11,7 +12,7 @@ type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElemen
 	OtR1 *ecbbot.Round1P2P[GE, SE]
 }
 
-func (*Round1P2P[GE, SE]) Validate(bob *Bob[GE, SE]) error {
+func (*Round1P2P[GE, SE]) Validate(bob *Bob[GE, SE], _ sharing.ID) error {
 	return nil
 }
 
@@ -20,7 +21,7 @@ type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElemen
 	OtR2 *ecbbot.Round2P2P[GE, SE]
 }
 
-func (*Round2P2P[GE, SE]) Validate(alice *Alice[GE, SE]) error {
+func (*Round2P2P[GE, SE]) Validate(alice *Alice[GE, SE], _ sharing.ID) error {
 	return nil
 }
 
@@ -32,7 +33,7 @@ type Round3P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElemen
 }
 
 // Validate validates the message payload dimensions.
-func (r3 *Round3P2P[GE, SE]) Validate(bob *Bob[GE, SE]) error {
+func (r3 *Round3P2P[GE, SE]) Validate(bob *Bob[GE, SE], _ sharing.ID) error {
 	xi, l, rho := bob.xi, bob.suite.l, bob.rho
 	if r3 == nil {
 		return ErrValidation.WithMessage("missing message")

@@ -2,6 +2,7 @@ package signing
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -13,7 +14,9 @@ type Round1Broadcast[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEl
 	BigRCommitment lindell22.Commitment `cbor:"bigRCommitment"`
 }
 
-func (*Round1Broadcast[GE, S, M]) Validate(cosigner *Cosigner[GE, S, M]) error { return nil }
+func (*Round1Broadcast[GE, S, M]) Validate(cosigner *Cosigner[GE, S, M], _ sharing.ID) error {
+	return nil
+}
 
 // Round2Broadcast is the message broadcast in round 2 containing the nonce, its opening, and proof.
 type Round2Broadcast[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] struct {
@@ -22,4 +25,6 @@ type Round2Broadcast[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEl
 	BigR        *schnorr.Statement[GE, S] `cbor:"bigR"`
 }
 
-func (*Round2Broadcast[GE, S, M]) Validate(cosigner *Cosigner[GE, S, M]) error { return nil }
+func (*Round2Broadcast[GE, S, M]) Validate(cosigner *Cosigner[GE, S, M], _ sharing.ID) error {
+	return nil
+}

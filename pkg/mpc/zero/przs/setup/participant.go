@@ -51,6 +51,7 @@ func NewParticipant(sessionID network.SID, mySharingID sharing.ID, quorum networ
 		return nil, ErrInvalidArgument.WithMessage("prng cannot be nil")
 	}
 
+	//nolint:exhaustruct // lazy initialisation
 	p := &Participant{
 		mySharingID: mySharingID,
 		quorum:      quorum,

@@ -56,10 +56,10 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		return nil, nil, ErrRound.WithMessage("expected round 2")
 	}
 
-	if errB := network.ValidateIncomingMessages(p, r1b, p.ctx.OtherPartiesOrdered()); errB != nil {
+	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r1b); errB != nil {
 		return nil, nil, errs.Wrap(errB)
 	}
-	if errU := network.ValidateIncomingMessages(p, r1u, p.ctx.OtherPartiesOrdered()); errU != nil {
+	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r1u); errU != nil {
 		return nil, nil, errs.Wrap(errU)
 	}
 

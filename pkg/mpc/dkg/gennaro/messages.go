@@ -1,6 +1,7 @@
 package gennaro
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -13,7 +14,7 @@ type Round1Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 	Proof                      compiler.NIZKPoKProof                `cbor:"proof"`
 }
 
-func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S]) error {
+func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
 	if m.PedersenVerificationVector == nil {
 		return network.ErrInvalidMessage.WithMessage("missing Pedersen verification vector")
 	}
@@ -23,6 +24,7 @@ func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S]) error {
 	if len(m.Proof) == 0 {
 		return network.ErrInvalidMessage.WithMessage("missing proof of well-formedness")
 	}
+
 	return nil
 }
 
@@ -31,7 +33,7 @@ type Round1Unicast[E GroupElement[E, S], S Scalar[S]] struct {
 	Share *pedersenVSS.Share[S] `cbor:"share"`
 }
 
-func (m *Round1Unicast[E, S]) Validate(participant *Participant[E, S]) error {
+func (m *Round1Unicast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
 	if m.Share == nil {
 		return network.ErrInvalidMessage.WithMessage("missing Pedersen share")
 	}
@@ -47,11 +49,11 @@ type Round2Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 	Proof                     compiler.NIZKPoKProof            `cbor:"proof"`
 }
 
-func (m *Round2Broadcast[E, S]) Validate(*Participant[E, S]) error {
+func (m *Round2Broadcast[E, S]) Validate(_ *Participant[E, S], _ sharing.ID) error {
 	if m.FeldmanVerificationVector == nil {
 		return network.ErrInvalidMessage.WithMessage("missing Feldman verification vector")
 	}
-	if m.FeldmanVerificationVector.Degree()+1 != int(m.FeldmanVerificationVector.Degree()+1) {
+	if m.FeldmanVerificationVector.Degree()+1 != m.FeldmanVerificationVector.Degree()+1 {
 		return network.ErrInvalidMessage.WithMessage("invalid Feldman verification vector degree")
 	}
 	if len(m.Proof) == 0 {

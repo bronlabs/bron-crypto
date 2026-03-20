@@ -5,6 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
@@ -13,7 +14,9 @@ type Round1OutputP2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	BigR1Commitment hash_comm.Commitment
 }
 
-func (*Round1OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S]) error { return nil }
+func (*Round1OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S], _ sharing.ID) error {
+	return nil
+}
 
 // Round2OutputP2P carries the secondary cosigner's round 2 output.
 type Round2OutputP2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -21,7 +24,9 @@ type Round2OutputP2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	BigR2Proof compiler.NIZKPoKProof
 }
 
-func (*Round2OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S]) error { return nil }
+func (*Round2OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S], _ sharing.ID) error {
+	return nil
+}
 
 // Round3OutputP2P carries the primary cosigner's round 3 output.
 type Round3OutputP2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -30,11 +35,15 @@ type Round3OutputP2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	BigR1Proof   compiler.NIZKPoKProof
 }
 
-func (*Round3OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S]) error { return nil }
+func (*Round3OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S], _ sharing.ID) error {
+	return nil
+}
 
 // Round4OutputP2P carries the secondary cosigner's round 4 output.
 type Round4OutputP2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	C3 *paillier.Ciphertext
 }
 
-func (*Round4OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S]) error { return nil }
+func (*Round4OutputP2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S], _ sharing.ID) error {
+	return nil
+}

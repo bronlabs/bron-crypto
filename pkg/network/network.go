@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
 var sidHasher = func() hash.Hash { return sha3.New256() }
@@ -30,7 +31,7 @@ func NewSID(xs ...[]byte) (SID, error) {
 
 // Message represents any network payload.
 type Message[P any] interface {
-	Validate(P) error
+	Validate(receiver P, senderID sharing.ID) error
 }
 
 var ErrInvalidMessage = errs.New("invalid message")

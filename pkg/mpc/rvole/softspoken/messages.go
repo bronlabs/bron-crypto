@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
 
@@ -12,7 +13,7 @@ type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 	OtR1 *softspoken.Round1P2P
 }
 
-func (*Round1P2P[P, B, S]) Validate(alice *Alice[P, B, S]) error {
+func (*Round1P2P[P, B, S]) Validate(alice *Alice[P, B, S], _ sharing.ID) error {
 	return nil
 }
 
@@ -24,7 +25,7 @@ type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 }
 
 // Validate validates the message payload.
-func (r2 *Round2P2P[P, B, S]) Validate(bob *Bob[P, B, S]) error {
+func (r2 *Round2P2P[P, B, S]) Validate(bob *Bob[P, B, S], _ sharing.ID) error {
 	xi, l, rho := bob.xi, bob.suite.l, bob.rho
 	if r2 == nil {
 		return ErrValidation.WithMessage("missing message")

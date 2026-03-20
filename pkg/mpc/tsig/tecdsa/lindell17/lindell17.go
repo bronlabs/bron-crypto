@@ -17,7 +17,7 @@ type PartialSignature struct {
 	C3 *paillier.Ciphertext
 }
 
-func (*PartialSignature) Validate(any) error { return nil }
+func (*PartialSignature) Validate(any, sharing.ID) error { return nil }
 
 // NewPartialSignature constructs a partial signature wrapper.
 func NewPartialSignature(c3 *paillier.Ciphertext) (*PartialSignature, error) {

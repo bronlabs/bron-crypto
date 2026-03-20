@@ -2,6 +2,7 @@ package hjky
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -11,7 +12,7 @@ type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElem
 	VerificationVector feldman.VerificationVector[G, S] `cbor:"verificationVector"`
 }
 
-func (m *Round1Broadcast[G, S]) Validate(participant *Participant[G, S]) error {
+func (m *Round1Broadcast[G, S]) Validate(participant *Participant[G, S], _ sharing.ID) error {
 	if m.VerificationVector == nil {
 		return network.ErrInvalidMessage.WithMessage("missing Feldman verification vector")
 	}
@@ -26,7 +27,7 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	ZeroShare *feldman.Share[S] `cbor:"zeroShare"`
 }
 
-func (m *Round1P2P[G, S]) Validate(participant *Participant[G, S]) error {
+func (m *Round1P2P[G, S]) Validate(participant *Participant[G, S], _ sharing.ID) error {
 	if m.ZeroShare == nil {
 		return network.ErrInvalidMessage.WithMessage("missing zero share")
 	}

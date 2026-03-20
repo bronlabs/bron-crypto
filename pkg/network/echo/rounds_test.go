@@ -16,7 +16,7 @@ type dummyParticipant struct{}
 
 type dummyMessage uint64
 
-func (m dummyMessage) Validate(p *dummyParticipant) error {
+func (m dummyMessage) Validate(p *dummyParticipant, _ sharing.ID) error {
 	return nil
 }
 

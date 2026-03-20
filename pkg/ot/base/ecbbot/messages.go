@@ -2,6 +2,7 @@ package ecbbot
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
 // Round1P2P carries the sender's initial key-agreement message mS.
@@ -9,11 +10,11 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	Ms G `cbor:"ms"` // mS ∈ Point
 }
 
-func (*Round1P2P[G, S]) Validate(receiver *Receiver[G, S]) error { return nil }
+func (*Round1P2P[G, S]) Validate(receiver *Receiver[G, S], _ sharing.ID) error { return nil }
 
 // Round2P2P carries the POPF programs derived by the receiver.
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	Phi [][2][]G `cbor:"phi"` // Φ ∈ [ξ][2][L]Point
 }
 
-func (*Round2P2P[G, S]) Validate(sender *Sender[G, S]) error { return nil }
+func (*Round2P2P[G, S]) Validate(sender *Sender[G, S], _ sharing.ID) error { return nil }

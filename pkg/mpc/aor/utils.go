@@ -33,7 +33,7 @@ func validateIncomingBroadcastMessages[MB network.Message[*Participant]](p *Part
 			if !ok {
 				panic("this should never happen: missing broadcast message")
 			}
-			if err := u.Validate(p); err != nil {
+			if err := u.Validate(p, id); err != nil {
 				panic(err)
 			}
 			if !yield(id, u) {

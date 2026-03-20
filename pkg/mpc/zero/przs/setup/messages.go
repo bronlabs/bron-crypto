@@ -13,7 +13,7 @@ type Round1Broadcast struct {
 	Commitments map[sharing.ID]hash_comm.Commitment `cbor:"commitments"`
 }
 
-func (m *Round1Broadcast) Validate(p *Participant) error {
+func (m *Round1Broadcast) Validate(p *Participant, _ sharing.ID) error {
 	for sharingID := range p.quorum.Iter() {
 		if sharingID == p.mySharingID {
 			continue
@@ -22,7 +22,7 @@ func (m *Round1Broadcast) Validate(p *Participant) error {
 		if !ok {
 			return network.ErrInvalidMessage.WithMessage("missing commitment for sharing ID %d", sharingID)
 		}
-		if len(com) == 0 {
+		if com == [hash_comm.DigestSize]byte{} {
 			return network.ErrInvalidMessage.WithMessage("empty commitment for sharing ID %d", sharingID)
 		}
 	}
@@ -35,7 +35,7 @@ type Round2P2P struct {
 	Witness          hash_comm.Witness     `cbor:"witness"`
 }
 
-func (m *Round2P2P) Validate(p *Participant) error {
+func (m *Round2P2P) Validate(p *Participant, _ sharing.ID) error {
 	if ct.SliceIsZero(m.SeedContribution[:]) == ct.True {
 		return network.ErrInvalidMessage.WithMessage("seed contribution cannot be all zero")
 	}

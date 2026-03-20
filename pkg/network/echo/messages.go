@@ -10,7 +10,7 @@ type Round1P2P[B network.Message[BP], BP any] struct {
 	Payload []byte `cbor:"payload"`
 }
 
-func (r *Round1P2P[B, BP]) Validate(*Participant[B, BP]) error {
+func (r *Round1P2P[B, BP]) Validate(*Participant[B, BP], sharing.ID) error {
 	if r == nil {
 		return ErrInvalidArgument.WithMessage("missing message")
 	}
@@ -22,7 +22,7 @@ type Round2P2P[B network.Message[BP], BP any] struct {
 	Echo map[sharing.ID][]byte `cbor:"echo"`
 }
 
-func (r *Round2P2P[B, BP]) Validate(*Participant[B, BP]) error {
+func (r *Round2P2P[B, BP]) Validate(*Participant[B, BP], sharing.ID) error {
 	if r == nil {
 		return ErrInvalidArgument.WithMessage("missing message")
 	}
