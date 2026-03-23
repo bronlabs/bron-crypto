@@ -1,6 +1,8 @@
 package rvole_softspoken
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -13,7 +15,14 @@ type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 	OtR1 *softspoken.Round1P2P
 }
 
-func (*Round1P2P[P, B, S]) Validate(alice *Alice[P, B, S], _ sharing.ID) error {
+func (m *Round1P2P[P, B, S]) Validate(alice *Alice[P, B, S], from sharing.ID) error {
+	if m == nil || m.OtR1 == nil {
+		return ErrValidation.WithMessage("missing message")
+	}
+	if err := m.OtR1.Validate(alice.sender, from); err != nil {
+		return errs.Wrap(err).WithMessage("invalid OT round 1 message")
+	}
+
 	return nil
 }
 

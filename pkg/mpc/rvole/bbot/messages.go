@@ -1,6 +1,8 @@
 package rvole_bbot
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -12,7 +14,14 @@ type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElemen
 	OtR1 *ecbbot.Round1P2P[GE, SE]
 }
 
-func (*Round1P2P[GE, SE]) Validate(bob *Bob[GE, SE], _ sharing.ID) error {
+func (m *Round1P2P[GE, SE]) Validate(bob *Bob[GE, SE], from sharing.ID) error {
+	if m == nil || m.OtR1 == nil {
+		return ErrValidation.WithMessage("missing message")
+	}
+	if err := m.OtR1.Validate(bob.receiver, from); err != nil {
+		return errs.Wrap(err).WithMessage("invalid OT round 1 message")
+	}
+
 	return nil
 }
 
@@ -21,7 +30,14 @@ type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElemen
 	OtR2 *ecbbot.Round2P2P[GE, SE]
 }
 
-func (*Round2P2P[GE, SE]) Validate(alice *Alice[GE, SE], _ sharing.ID) error {
+func (m *Round2P2P[GE, SE]) Validate(alice *Alice[GE, SE], from sharing.ID) error {
+	if m == nil || m.OtR2 == nil {
+		return ErrValidation.WithMessage("missing message")
+	}
+	if err := m.OtR2.Validate(alice.sender, from); err != nil {
+		return errs.Wrap(err).WithMessage("invalid OT round 2 message")
+	}
+
 	return nil
 }
 

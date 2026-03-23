@@ -11,14 +11,29 @@ type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElem
 	BlindVerificationVector feldman.VerificationVector[G, S] `cbor:"blindVerificationVector"`
 }
 
-func (*Round1Broadcast[G, S]) Validate(recoverer *Recoverer[G, S], _ sharing.ID) error { return nil }
+func (m *Round1Broadcast[G, S]) Validate(p *Recoverer[G, S], _ sharing.ID) error {
+	if m == nil || m.BlindVerificationVector == nil {
+		return ErrInvalidArgument.WithMessage("missing fields in Round1Broadcast message")
+	}
+	if m.BlindVerificationVector.Degree() != int(p.scheme.AccessStructure().Threshold())-1 {
+		return ErrInvalidArgument.WithMessage("invalid message")
+	}
+
+	return nil
+}
 
 // Round1P2P carries blinded Feldman shares to each party.
 type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	BlindShare *feldman.Share[S] `cbor:"blindShare"`
 }
 
-func (*Round1P2P[G, S]) Validate(recoverer *Recoverer[G, S], _ sharing.ID) error { return nil }
+func (m *Round1P2P[G, S]) Validate(*Recoverer[G, S], sharing.ID) error {
+	if m == nil || m.BlindShare == nil {
+		return ErrInvalidArgument.WithMessage("missing fields in Round1P2P message")
+	}
+
+	return nil
+}
 
 // Round2P2P delivers the aggregated blinded share back to the mislayer.
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
@@ -26,4 +41,13 @@ type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	VerificationVector feldman.VerificationVector[G, S] `cbor:"verificationVector"`
 }
 
-func (*Round2P2P[G, S]) Validate(mislayer *Mislayer[G, S], _ sharing.ID) error { return nil }
+func (m *Round2P2P[G, S]) Validate(p *Mislayer[G, S], _ sharing.ID) error {
+	if m == nil || m.BlindedShare == nil || m.VerificationVector == nil {
+		return ErrInvalidArgument.WithMessage("missing fields in Round2P2P message")
+	}
+	if m.VerificationVector.Degree() != int(p.scheme.AccessStructure().Threshold())-1 {
+		return ErrInvalidArgument.WithMessage("invalid message")
+	}
+
+	return nil
+}
