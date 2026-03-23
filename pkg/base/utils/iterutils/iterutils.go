@@ -4,6 +4,8 @@ import (
 	"iter"
 
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // Contains checks if the given value is present in the sequence.
@@ -39,6 +41,15 @@ func ContainsFunc[In any](seq iter.Seq[In], v In, f func(In, In) bool) bool {
 func ContainsFunc2[K any, V any](seq iter.Seq2[K, V], k K, v V, f func(K, V, K, V) bool) bool {
 	for k2, v2 := range seq {
 		if f(k, v, k2, v2) {
+			return true
+		}
+	}
+	return false
+}
+
+func ContainsNil[V any](seq iter.Seq[V]) bool {
+	for v := range seq {
+		if utils.IsNil(v) {
 			return true
 		}
 	}

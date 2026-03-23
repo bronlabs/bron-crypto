@@ -4,13 +4,15 @@ import (
 	"encoding/binary"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -19,7 +21,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -79,10 +80,7 @@ func (p *Participant[P, B, S]) Round2(input network.RoundMessages[*Round1Broadca
 	}
 
 	// 2. store commitments
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.shard.Share().ID() {
-			continue
-		}
+	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
 		if !exists {
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
@@ -119,10 +117,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 3, p.round)
 	}
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.SharingID() {
-			continue
-		}
+	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
 		if !exists {
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
@@ -198,21 +193,17 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 
 	// 3.vi. prove pairwise iz ZK that pk was generated correctly (LP)
 	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
-	// Note: Share single transcript clone across all proofs to preserve state
-	paillierProofsTranscript := p.ctx.Transcript().Clone()
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.shard.Share().ID() {
-			continue
-		}
-		p.state.lpProvers[id], err = lp.NewProver(p.ctx.SessionID(), base.ComputationalSecurityBits, p.state.myPaillierSk, paillierProofsTranscript, p.prng)
+	// Note: Share single transcript across all proofs to preserve state
+	for id := range p.ctx.OtherPartiesOrdered() {
+		p.state.lpProvers[id], err = lp.NewProver(p.ctx, base.ComputationalSecurityBits, p.state.myPaillierSk, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create LP prover")
 		}
-		p.state.lpdlPrimeProvers[id], err = lpdl.NewProver(p.ctx.SessionID(), p.curve, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeProvers[id], err = lpdl.NewProver(p.ctx, p.curve, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL prover")
 		}
-		p.state.lpdlDoublePrimeProvers[id], err = lpdl.NewProver(p.ctx.SessionID(), p.curve, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeProvers[id], err = lpdl.NewProver(p.ctx, p.curve, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL prover")
 		}
@@ -235,10 +226,7 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 	}
 
 	r4o := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.shard.Share().ID() {
-			continue
-		}
+	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
 		if !exists {
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
@@ -253,16 +241,19 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 
 		// 4.ii. LP and LPDL continue
 		// Share single transcript clone across all verifiers to preserve state
-		paillierProofsTranscript := p.ctx.Transcript().Clone()
-		p.state.lpVerifiers[id], err = lp.NewVerifier(p.ctx.SessionID(), base.ComputationalSecurityBits, theirPaillierPublicKey, paillierProofsTranscript, p.prng)
+		paillierProofsCtx := p.ctx
+		// if err != nil {
+		//	return nil, errs.Wrap(err).WithMessage("cannot create subcontext")
+		//}
+		p.state.lpVerifiers[id], err = lp.NewVerifier(paillierProofsCtx, base.ComputationalSecurityBits, theirPaillierPublicKey, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create P verifier")
 		}
-		p.state.lpdlPrimeVerifiers[id], err = lpdl.NewVerifier(p.ctx.SessionID(), theirPaillierPublicKey, p.state.theirBigQPrime[id], theirCKeyPrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeVerifiers[id], err = lpdl.NewVerifier(paillierProofsCtx, theirPaillierPublicKey, p.state.theirBigQPrime[id], theirCKeyPrime, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL verifier")
 		}
-		p.state.lpdlDoublePrimeVerifiers[id], err = lpdl.NewVerifier(p.ctx.SessionID(), theirPaillierPublicKey, p.state.theirBigQDoublePrime[id], theirCKeyDoublePrime, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeVerifiers[id], err = lpdl.NewVerifier(paillierProofsCtx, theirPaillierPublicKey, p.state.theirBigQDoublePrime[id], theirCKeyDoublePrime, p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PDL verifier")
 		}
@@ -295,10 +286,7 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P[P, 
 	}
 	// 5. LP and LPDL continue
 	r5o := hashmap.NewComparable[sharing.ID, *Round5P2P[P, B, S]]()
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.SharingID() {
-			continue
-		}
+	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
 		if !exists {
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
@@ -350,10 +338,7 @@ func (p *Participant[P, B, S]) Round6(input network.RoundMessages[*Round5P2P[P, 
 	}
 	// 6. LP and LPDL continue
 	r6o := hashmap.NewComparable[sharing.ID, *Round6P2P[P, B, S]]()
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.SharingID() {
-			continue
-		}
+	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
 		if !exists {
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
@@ -389,10 +374,7 @@ func (p *Participant[P, B, S]) Round7(input network.RoundMessages[*Round6P2P[P, 
 	}
 	// 7. LP and LPDL continue
 	r7o := hashmap.NewComparable[sharing.ID, *Round7P2P[P, B, S]]()
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.SharingID() {
-			continue
-		}
+	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
 		if !exists {
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)
@@ -424,10 +406,7 @@ func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, 
 	if p.round != 8 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 8, p.round)
 	}
-	for id := range p.shard.AccessStructure().Shareholders().Iter() {
-		if id == p.SharingID() {
-			continue
-		}
+	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
 		if !exists {
 			return nil, ErrFailed.WithMessage("no input from participant with sharing id %d", id)

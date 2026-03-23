@@ -12,15 +12,17 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const paillierGroupNLen = 2048
@@ -62,9 +64,7 @@ func Test_HappyPath(t *testing.T) {
 	xEncrypted, r, err := senc.SelfEncrypt(xMessage, prng)
 	require.NoError(t, err)
 
-	sid, err := network.NewSID([]byte("sessionID"))
-	require.NoError(t, err)
-	err = doProof(x, bigQ, curve, xEncrypted, r, pk, sk, sid, prng)
+	err = doProof(t, x, bigQ, curve, xEncrypted, r, pk, sk, prng)
 	require.NoError(t, err)
 }
 
@@ -104,9 +104,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	x1Encrypted, r, err := enc.Encrypt(x1Message, pk, prng)
 	require.NoError(t, err)
 
-	sid, err := network.NewSID([]byte("sessionID"))
-	require.NoError(t, err)
-	err = doProof(x1, bigQ2, curve, x1Encrypted, r, pk, sk, sid, prng)
+	err = doProof(t, x1, bigQ2, curve, x1Encrypted, r, pk, sk, prng)
 	require.Error(t, err)
 }
 
@@ -146,9 +144,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	x2Encrypted, r, err := enc.Encrypt(x2Message, pk, prng)
 	require.NoError(t, err)
 
-	sid, err := network.NewSID([]byte("sessionID"))
-	require.NoError(t, err)
-	err = doProof(x, bigQ, curve, x2Encrypted, r, pk, sk, sid, prng)
+	err = doProof(t, x, bigQ, curve, x2Encrypted, r, pk, sk, prng)
 	require.Error(t, err)
 }
 
@@ -163,17 +159,19 @@ func randomIntInRange(qBig *big.Int, prng io.Reader) (*numct.Nat, error) {
 	return (*numct.Nat)(new(saferith.Nat).Add(l, x, 2048)), nil
 }
 
-func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](x S, bigQ P, curve curves.Curve[P, B, S], xEncrypted *paillier.Ciphertext, r *paillier.Nonce, pk *paillier.PublicKey, sk *paillier.PrivateKey, sessionID network.SID, prng io.Reader) (err error) {
-	transcriptLabel := "LPDL"
+func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, x S, bigQ P, curve curves.Curve[P, B, S], xEncrypted *paillier.Ciphertext, r *paillier.Nonce, pk *paillier.PublicKey, sk *paillier.PrivateKey, prng io.Reader) (err error) {
+	tb.Helper()
+	const proverID = 1
+	const verifierID = 2
+	quorum := hashset.NewComparable[sharing.ID](proverID, verifierID).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
 
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	verifier, err := lpdl.NewVerifier(sessionID, pk, bigQ, xEncrypted, verifierTranscript, prng)
+	verifier, err := lpdl.NewVerifier(ctxs[proverID], pk, bigQ, xEncrypted, prng)
 	if err != nil {
 		return err
 	}
 
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
-	prover, err := lpdl.NewProver(sessionID, curve, sk, x, r, proverTranscript, prng)
+	prover, err := lpdl.NewProver(ctxs[verifierID], curve, sk, x, r, prng)
 	if err != nil {
 		return err
 	}
@@ -204,11 +202,11 @@ func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra
 	}
 
 	label := "gimme, gimme"
-	proverBytes, err := proverTranscript.ExtractBytes(label, 128)
+	proverBytes, err := ctxs[proverID].Transcript().ExtractBytes(label, base.ComputationalSecurityBytesCeil)
 	if err != nil {
 		return err
 	}
-	verifierBytes, err := verifierTranscript.ExtractBytes(label, 128)
+	verifierBytes, err := ctxs[verifierID].Transcript().ExtractBytes(label, base.ComputationalSecurityBytesCeil)
 	if err != nil {
 		return err
 	}

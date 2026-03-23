@@ -79,8 +79,8 @@ func (*Round3Broadcast[P, B, S]) Validate(participant *Participant[P, B, S], _ s
 // Round4P2P carries round 4 point-to-point data.
 type Round4P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	LpRound1Output              *lp.Round1Output
-	LpdlPrimeRound1Output       *lpdl.Round1Output
-	LpdlDoublePrimeRound1Output *lpdl.Round1Output
+	LpdlPrimeRound1Output       *lpdl.Round1Output[P, B, S]
+	LpdlDoublePrimeRound1Output *lpdl.Round1Output[P, B, S]
 }
 
 func (m *Round4P2P[P, B, S]) Validate(participant *Participant[P, B, S], _ sharing.ID) error {
@@ -94,8 +94,8 @@ func (m *Round4P2P[P, B, S]) Validate(participant *Participant[P, B, S], _ shari
 // Round5P2P carries round 5 point-to-point data.
 type Round5P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	LpRound2Output              *lp.Round2Output
-	LpdlPrimeRound2Output       *lpdl.Round2Output
-	LpdlDoublePrimeRound2Output *lpdl.Round2Output
+	LpdlPrimeRound2Output       *lpdl.Round2Output[P, B, S]
+	LpdlDoublePrimeRound2Output *lpdl.Round2Output[P, B, S]
 }
 
 func (*Round5P2P[P, B, S]) Validate(participant *Participant[P, B, S], _ sharing.ID) error {
@@ -105,8 +105,8 @@ func (*Round5P2P[P, B, S]) Validate(participant *Participant[P, B, S], _ sharing
 // Round6P2P carries round 6 point-to-point data.
 type Round6P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	LpRound3Output              *lp.Round3Output
-	LpdlPrimeRound3Output       *lpdl.Round3Output
-	LpdlDoublePrimeRound3Output *lpdl.Round3Output
+	LpdlPrimeRound3Output       *lpdl.Round3Output[P, B, S]
+	LpdlDoublePrimeRound3Output *lpdl.Round3Output[P, B, S]
 }
 
 func (*Round6P2P[P, B, S]) Validate(participant *Participant[P, B, S], _ sharing.ID) error {

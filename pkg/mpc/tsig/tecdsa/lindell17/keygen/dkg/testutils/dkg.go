@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
@@ -135,6 +136,16 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Verify consistency
+	// 0. Transcripts match
+	tsData := [][]byte{}
+	for id := range accessStructure.Shareholders().Iter() {
+		data, err := ctxs[id].Transcript().ExtractBytes("test", base.ComputationalSecurityBytesCeil)
+		require.NoError(tb, err)
+		tsData = append(tsData, data)
+	}
+	for i := 1; i < len(tsData); i++ {
+		require.True(tb, slices.Equal(tsData[i-1], tsData[i]), "All participants should produce the same transcript")
+	}
 
 	// 1. Public keys should match across all shards
 	publicKeys := slices.Collect(maps.Values(maputils.MapValues(shards, func(_ sharing.ID, s *lindell17.Shard[P, B, S]) P {
