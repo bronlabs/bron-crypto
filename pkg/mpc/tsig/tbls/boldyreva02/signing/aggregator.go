@@ -157,6 +157,11 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		if !exists {
 			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d does not exist in public material", sender)
 		}
+		if publicKeyShare == nil {
+			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d is nil", sender).WithTag(
+				base.IdentifiableAbortPartyIDTag, sender,
+			)
+		}
 		additivePublicKeyShare, err := publicKeyShare.ToAdditive(quorum)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)

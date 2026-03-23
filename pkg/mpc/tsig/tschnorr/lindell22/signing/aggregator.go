@@ -76,18 +76,16 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if a == nil {
 		return nil, ErrNilArgument.WithMessage("aggregator cannot be nil")
 	}
-	if partialSignatures == nil {
-		return nil, ErrNilArgument.WithMessage("partial signatures cannot be nil")
-	}
 	quorum := hashset.NewComparable(partialSignatures.Keys()...).Freeze()
 	if !a.pkm.AccessStructure().IsQualified(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
 	}
-	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
-		return x == nil
-	}) {
-
-		return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
+	for sender, psig := range partialSignatures.Iter() {
+		if psig == nil {
+			return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
+				base.IdentifiableAbortPartyIDTag, sender,
+			)
+		}
 	}
 	R := iterutils.Reduce(slices.Values(partialSignatures.Values()),
 		a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
