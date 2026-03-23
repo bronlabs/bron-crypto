@@ -157,10 +157,8 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		if !exists {
 			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d does not exist in public material", sender)
 		}
-		if publicKeyShare == nil {
-			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d is nil", sender).WithTag(
-				base.IdentifiableAbortPartyIDTag, sender,
-			)
+		if err := psig.Validate(A.targetRogueKeyAlg); err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("invalid partial signature from sender %d", sender)
 		}
 		additivePublicKeyShare, err := publicKeyShare.ToAdditive(quorum)
 		if err != nil {
