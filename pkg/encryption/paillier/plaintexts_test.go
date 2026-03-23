@@ -1,3 +1,4 @@
+//nolint:testpackage // testing internal details of the paillier package.
 package paillier
 
 import (
