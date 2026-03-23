@@ -163,9 +163,9 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		if !ok {
 			return nil, nil, ErrFailed.WithMessage("couldn't find alice seed")
 		}
-		aliceTape := c.ctx.Transcript().Clone()
-		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.aliceMul[id], err = rvole_softspoken.NewAlice(c.ctx.SessionID(), mulSuite, aliceSeed, c.prng, aliceTape)
+		aliceCtx := c.ctx.Clone()
+		aliceCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		c.aliceMul[id], err = rvole_softspoken.NewAlice(aliceCtx, mulSuite, aliceSeed, c.prng)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("couldn't initialise Alice")
 		}
@@ -174,9 +174,9 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		if !ok {
 			return nil, nil, ErrFailed.WithMessage("couldn't find bob seed")
 		}
-		bobTape := c.ctx.Transcript().Clone()
-		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())))
-		c.bobMul[id], err = rvole_softspoken.NewBob(c.ctx.SessionID(), mulSuite, bobSeed, c.prng, bobTape)
+		bobCtx := c.ctx.Clone()
+		bobCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())))
+		c.bobMul[id], err = rvole_softspoken.NewBob(bobCtx, mulSuite, bobSeed, c.prng)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("couldn't initialise Bob")
 		}

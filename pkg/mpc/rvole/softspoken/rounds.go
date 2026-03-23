@@ -225,7 +225,7 @@ func (bob *Bob[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (d []S, err error) {
 func (p *participant[P, B, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 	for _, aTildeJ := range aTilde {
 		for _, aj := range aTildeJ {
-			p.tape.AppendBytes(aTildeLabel, aj.Bytes())
+			p.ctx.Transcript().AppendBytes(aTildeLabel, aj.Bytes())
 		}
 	}
 
@@ -233,7 +233,7 @@ func (p *participant[P, B, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 	for i := range theta {
 		theta[i] = make([]S, p.rho)
 		for j := range theta[i] {
-			thetaBytes, err := p.tape.ExtractBytes(thetaLabel, uint(p.suite.field.WideElementSize()))
+			thetaBytes, err := p.ctx.Transcript().ExtractBytes(thetaLabel, uint(p.suite.field.WideElementSize()))
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot extract theta")
 			}
@@ -250,10 +250,10 @@ func (p *participant[P, B, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 func (p *participant[P, B, S]) roMu(muBold [][]S) (mu []byte, err error) {
 	for _, muJ := range muBold {
 		for _, e := range muJ {
-			p.tape.AppendBytes(muVectorLabel, e.Bytes())
+			p.ctx.Transcript().AppendBytes(muVectorLabel, e.Bytes())
 		}
 	}
-	mu, err = p.tape.ExtractBytes(muLabel, base.CollisionResistanceBytesCeil)
+	mu, err = p.ctx.Transcript().ExtractBytes(muLabel, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot extract mu")
 	}

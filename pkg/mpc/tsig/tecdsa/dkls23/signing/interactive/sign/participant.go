@@ -10,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
@@ -97,16 +98,22 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	otReceivers := make(map[sharing.ID]*ecbbot.Receiver[P, S])
 	sharingID := shard.Share().ID()
 	for id := range ctx.OtherPartiesOrdered() {
-		otTape := ctx.Transcript().Clone()
-		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingID)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		otSender, err := ecbbot.NewSender(ctx.SessionID(), otSuite, otTape, prng)
+		otCtx, err := ctx.SubContext(hashset.NewComparable(ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("error creating subcontext")
+		}
+		otCtx.Transcript().AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingID)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		otSender, err := ecbbot.NewSender(otCtx, otSuite, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("error creating bbot sender")
 		}
 
-		otTape = ctx.Transcript().Clone()
-		otTape.AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingID)))
-		otReceiver, err := ecbbot.NewReceiver(ctx.SessionID(), otSuite, otTape, prng)
+		otCtx, err = ctx.SubContext(hashset.NewComparable(ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("error creating subcontext")
+		}
+		otCtx.Transcript().AppendBytes(ecbbotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingID)))
+		otReceiver, err := ecbbot.NewReceiver(otCtx, otSuite, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("error creating bbot receiver")
 		}

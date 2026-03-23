@@ -22,8 +22,6 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, ErrRound.WithMessage("%d != 1", verifier.round)
 	}
 
-	rootTranscript := verifier.ctx.Transcript().Clone()
-
 	zero, err := verifier.paillierPublicKey.PlaintextSpace().FromNat(numct.NatZero())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create plaintext zero")
@@ -47,7 +45,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		witnesses[i] = nthroot.NewWitness(embeddedNonce)
 	}
 	verifier.state.y = sigand.ComposeWitnesses(witnesses...)
-	verifier.state.rootsProver, err = sigma.NewProver(verifier.ctx.SessionID(), rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
+	verifier.state.rootsProver, err = sigma.NewProver(verifier.ctx, verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create sigma protocol prover")
 	}
@@ -81,8 +79,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 			return nil, errs.Wrap(err).WithMessage("failed to create statement with known order")
 		}
 	}
-	rootTranscript := prover.ctx.Transcript().Clone()
-	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.ctx.SessionID(), rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.prng)
+	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.ctx, prover.multiNthRootsProtocol, prover.state.x, prover.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Nth root verifier")
 	}

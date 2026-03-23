@@ -37,7 +37,7 @@ func (s *Sender[G, S]) Round1() (r1out *Round1P2P[G, S], err error) {
 	}
 
 	// step 1.3 (Setup RO)
-	s.tape.AppendBytes(TaggedKeyAgreementMs, ms.Bytes())
+	s.ctx.Transcript().AppendBytes(TaggedKeyAgreementMs, ms.Bytes())
 
 	s.round = 3
 	r1out = &Round1P2P[G, S]{
@@ -54,7 +54,7 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	}
 
 	// Setup ROs
-	r.tape.AppendBytes(TaggedKeyAgreementMs, r1out.Ms.Bytes())
+	r.ctx.Transcript().AppendBytes(TaggedKeyAgreementMs, r1out.Ms.Bytes())
 	f, err := r.makeProgrammableOncePublicFunction()
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("creating popf")
@@ -139,11 +139,11 @@ func (s *Sender[G, S]) Round3(r2out *Round2P2P[G, S]) (senderOut *SenderOutput[S
 
 func (p *participant[G, S]) makeProgrammableOncePublicFunction() (f *Popf[G, S], err error) {
 	var tagsRandomOracle [2][]byte
-	tagsRandomOracle[0], err = p.tape.ExtractBytes(Ro0Label, TagLength)
+	tagsRandomOracle[0], err = p.ctx.Transcript().ExtractBytes(Ro0Label, TagLength)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("extracting tag Ro0")
 	}
-	tagsRandomOracle[1], err = p.tape.ExtractBytes(Ro1Label, TagLength)
+	tagsRandomOracle[1], err = p.ctx.Transcript().ExtractBytes(Ro1Label, TagLength)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("extracting tag Ro1")
 	}

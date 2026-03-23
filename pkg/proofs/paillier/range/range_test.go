@@ -11,15 +11,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const logRange = 256
@@ -280,14 +281,14 @@ func Test_Interactive(t *testing.T) {
 		R:  r,
 	}
 
-	var sessionID network.SID
-	copy(sessionID[:], "test sessionID")
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	prover, err := sigma.NewProver(sessionID, proverTranscript, protocol, statement, witness)
+	prover, err := sigma.NewProver(ctxs[proverId], protocol, statement, witness)
 	require.NoError(t, err)
-	verifier, err := sigma.NewVerifier(sessionID, verifierTranscript, protocol, statement, prng)
+	verifier, err := sigma.NewVerifier(ctxs[verifierId], protocol, statement, prng)
 	require.NoError(t, err)
 
 	r1Out, err := prover.Round1()
@@ -299,9 +300,9 @@ func Test_Interactive(t *testing.T) {
 	err = verifier.Verify(r3Out)
 	require.NoError(t, err)
 
-	proverBytes, err := proverTranscript.ExtractBytes("sigma", 32)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("sigma", 32)
 	require.NoError(t, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", 32)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("sigma", 32)
 	require.NoError(t, err)
 	require.Equal(t, proverBytes, verifierBytes)
 }
@@ -342,14 +343,14 @@ func Test_InteractiveZk(t *testing.T) {
 		R:  r,
 	}
 
-	sessionID, err := network.NewSID([]byte("test sessionID"))
-	require.NoError(t, err)
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	prover, err := zk.NewProver(sessionID, proverTranscript, protocol, statement, witness)
+	prover, err := zk.NewProver(ctxs[proverId], protocol, statement, witness)
 	require.NoError(t, err)
-	verifier, err := zk.NewVerifier(sessionID, verifierTranscript, protocol, statement, prng)
+	verifier, err := zk.NewVerifier(ctxs[verifierId], protocol, statement, prng)
 	require.NoError(t, err)
 
 	r1Out, err := verifier.Round1()
@@ -363,9 +364,9 @@ func Test_InteractiveZk(t *testing.T) {
 	err = verifier.Verify(r4Out)
 	require.NoError(t, err)
 
-	proverBytes, err := proverTranscript.ExtractBytes("sigma", 32)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("sigma", 32)
 	require.NoError(t, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", 32)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("sigma", 32)
 	require.NoError(t, err)
 	require.Equal(t, proverBytes, verifierBytes)
 }
@@ -409,15 +410,15 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 	compiler, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
 
-	sessionID, err := network.NewSID([]byte("test sessionID"))
-	require.NoError(t, err)
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	niProver, err := compiler.NewProver(sessionID, proverTranscript)
+	niProver, err := compiler.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 
-	niVerifier, err := compiler.NewVerifier(sessionID, verifierTranscript)
+	niVerifier, err := compiler.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	proof, err := niProver.Prove(statement, witness)
@@ -426,9 +427,9 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 	err = niVerifier.Verify(statement, proof)
 	require.NoError(t, err)
 
-	proverBytes, err := proverTranscript.ExtractBytes("sigma", 32)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("sigma", 32)
 	require.NoError(t, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", 32)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("sigma", 32)
 	require.NoError(t, err)
 	require.Equal(t, proverBytes, verifierBytes)
 }

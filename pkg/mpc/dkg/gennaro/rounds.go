@@ -69,9 +69,9 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to compile okamoto protocol to non-interactive")
 	}
-	proverTape := p.ctx.Transcript().Clone()
-	proverTape.AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
-	prover, err := niBatchOkamoto.NewProver(p.ctx.SessionID(), proverTape)
+	proverCtx := p.ctx.Clone()
+	proverCtx.Transcript().AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
+	prover, err := niBatchOkamoto.NewProver(proverCtx)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto prover")
 	}
@@ -133,9 +133,9 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to compile okamoto protocol to non-interactive")
 		}
-		verifierTape := p.ctx.Transcript().Clone()
-		verifierTape.AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
-		verifier, err := niBatchOkamoto.NewVerifier(p.ctx.SessionID(), verifierTape)
+		verifierCtx := p.ctx.Clone()
+		verifierCtx.Transcript().AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
+		verifier, err := niBatchOkamoto.NewVerifier(verifierCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto verifier")
 		}
@@ -171,9 +171,9 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compile protocol to non interactive")
 	}
-	proverTape := p.ctx.Transcript().Clone()
-	proverTape.AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
-	prover, err := niBatchSchnorr.NewProver(p.ctx.SessionID(), proverTape)
+	proverCtx := p.ctx.Clone()
+	proverCtx.Transcript().AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
+	prover, err := niBatchSchnorr.NewProver(proverCtx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 	}
@@ -215,9 +215,9 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		inB, _ := r3bi.Get(pid)
 
 		// Verify batch schnorr proof of knowledge of Feldman verification vector's coefficients' dlog.
-		verifierTape := p.ctx.Transcript().Clone()
-		verifierTape.AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
-		verifier, err := niBatchSchnorr.NewVerifier(p.ctx.SessionID(), verifierTape)
+		verifierCtx := p.ctx.Clone()
+		verifierCtx.Transcript().AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
+		verifier, err := niBatchSchnorr.NewVerifier(verifierCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr verifier")
 		}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
@@ -23,11 +23,11 @@ type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 // NewProver creates a new prover for the zero-knowledge compiled protocol.
 // The sigma protocol must have soundness error at least 2^(-80) (statistical security).
 // The prover will execute rounds 2 and 4 of the protocol.
-func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionID network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
 	if utils.IsNil(witness) {
 		return nil, ErrNil.WithMessage("witness")
 	}
-	p, err := newParticipant(sessionID, tape, sigmaProtocol, statement)
+	p, err := newParticipant(ctx, sigmaProtocol, statement)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}
@@ -48,7 +48,7 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 		return zero, ErrRound.WithMessage("r != 2 (%d)", p.round)
 	}
 
-	transcripts.Append(p.tape, challengeCommitmentLabel, eCommitment)
+	transcripts.Append(p.ctx.Transcript(), challengeCommitmentLabel, eCommitment)
 
 	p.challengeCommitment = eCommitment
 
@@ -57,7 +57,7 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 		return zero, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
 
-	transcripts.Append(p.tape, commitmentLabel, commitment)
+	transcripts.Append(p.ctx.Transcript(), commitmentLabel, commitment)
 	p.commitment = commitment
 	p.state = state
 	p.round += 2
@@ -68,7 +68,7 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 // prover's response. Returns the sigma protocol response (z).
 func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash_comm.Witness) (Z, error) {
 	var zero Z
-	p.tape.AppendBytes(challengeLabel, challenge)
+	p.ctx.Transcript().AppendBytes(challengeLabel, challenge)
 
 	if p.round != 4 {
 		return zero, ErrRound.WithMessage("r != 4 (%d)", p.round)
@@ -85,7 +85,7 @@ func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot generate response")
 	}
-	transcripts.Append(p.tape, responseLabel, response)
+	transcripts.Append(p.ctx.Transcript(), responseLabel, response)
 
 	p.response = response
 	p.round += 2

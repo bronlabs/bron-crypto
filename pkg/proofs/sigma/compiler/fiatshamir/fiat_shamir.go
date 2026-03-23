@@ -1,6 +1,7 @@
 package fiatshamir
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -8,10 +9,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -90,24 +90,32 @@ func NewCompiler[
 
 // NewProver creates a new non-interactive prover for generating Fiat-Shamir proofs.
 // The sessionID and transcript are used for domain separation.
-func (c *fs[X, W, A, S, Z]) NewProver(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
-	dst := fmt.Sprintf("%s-%s-%s", sessionID, transcriptLabel, c.sigmaProtocol.Name())
-	transcript.AppendDomainSeparator(dst)
+func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+	if ctx == nil {
+		return nil, ErrNil.WithMessage("ctx")
+	}
+	sid := ctx.SessionID()
+	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())
+	ctx.Transcript().AppendDomainSeparator(dst)
 
 	return &prover[X, W, A, S, Z]{
-		transcript:    transcript,
+		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }
 
 // NewVerifier creates a new non-interactive verifier for checking Fiat-Shamir proofs.
 // The sessionID and transcript must match those used by the prover.
-func (c *fs[X, W, A, S, Z]) NewVerifier(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
-	dst := fmt.Sprintf("%s-%s-%s", sessionID, transcriptLabel, c.sigmaProtocol.Name())
-	transcript.AppendDomainSeparator(dst)
+func (c *fs[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
+	if ctx == nil {
+		return nil, ErrNil.WithMessage("ctx")
+	}
+	sid := ctx.SessionID()
+	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())
+	ctx.Transcript().AppendDomainSeparator(dst)
 
 	return &verifier[X, W, A, S, Z]{
-		transcript:    transcript,
+		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }

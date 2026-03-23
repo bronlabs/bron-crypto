@@ -9,10 +9,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
@@ -21,8 +20,7 @@ var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 
 // verifier implements the NIVerifier interface for Fischlin proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	sessionID     network.SID
-	transcript    transcripts.Transcript
+	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
@@ -52,9 +50,9 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 		return ErrVerification.WithMessage("insufficient soundness")
 	}
 
-	v.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, fischlinProof.Rho))
-	v.transcript.AppendBytes(statementLabel, statement.Bytes())
-	commonHKey, err := v.transcript.ExtractBytes(commonHLabel, 32)
+	v.ctx.Transcript().AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, fischlinProof.Rho))
+	v.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
+	commonHKey, err := v.ctx.Transcript().ExtractBytes(commonHLabel, 32)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot extract h")
 	}
@@ -63,8 +61,8 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	for i := range fischlinProof.Rho {
 		commitmentSerialized = append(commitmentSerialized, fischlinProof.A[i].Bytes())
 	}
-	v.transcript.AppendBytes(commitmentLabel, commitmentSerialized...)
-	v.transcript.AppendBytes(challengeLabel, fischlinProof.E...)
+	v.ctx.Transcript().AppendBytes(commitmentLabel, commitmentSerialized...)
+	v.ctx.Transcript().AppendBytes(challengeLabel, fischlinProof.E...)
 
 	a := make([]byte, 0)
 	for i := range fischlinProof.Rho {
@@ -72,7 +70,8 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	// 3. common-h ← H(x, m, sid)
-	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionID[:])
+	sessionID := v.ctx.SessionID()
+	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, sessionID[:])
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot serialise statement")
 	}
@@ -106,7 +105,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	for i := range fischlinProof.Rho {
 		responseSerialized = append(responseSerialized, fischlinProof.Z[i].Bytes())
 	}
-	v.transcript.AppendBytes(responseLabel, responseSerialized...)
+	v.ctx.Transcript().AppendBytes(responseLabel, responseSerialized...)
 
 	// 5. Output 'accept'
 	return nil

@@ -7,12 +7,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -69,16 +70,16 @@ func Test_HappyPath(t *testing.T) {
 		}
 	})
 
-	var sessionID network.SID
-	_, err = io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
 	hashFunc := sha256.New
 	suite, err := softspoken.NewSuite(XI, L, hashFunc)
 	require.NoError(t, err)
-	tape := hagrid.NewTranscript("test")
 
-	receiverTape := tape.Clone()
-	receiver, err := softspoken.NewReceiver(sessionID, senderSeeds, suite, receiverTape, prng)
+	const receiverID = 1
+	const senderID = 2
+	quorum := hashset.NewComparable[sharing.ID](receiverID, senderID).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	receiver, err := softspoken.NewReceiver(ctxs[receiverID], senderSeeds, suite, prng)
 	require.NoError(t, err)
 	choices := make([]byte, XI/8)
 	_, err = io.ReadFull(prng, choices)
@@ -86,8 +87,7 @@ func Test_HappyPath(t *testing.T) {
 	r1, receiverOutput, err := receiver.Round1(choices)
 	require.NoError(t, err)
 
-	senderTape := tape.Clone()
-	sender, err := softspoken.NewSender(sessionID, receiverSeeds, suite, senderTape, prng)
+	sender, err := softspoken.NewSender(ctxs[senderID], receiverSeeds, suite, prng)
 	require.NoError(t, err)
 	senderOutput, err := sender.Round2(r1)
 	require.NoError(t, err)
@@ -112,9 +112,9 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("transcripts match", func(t *testing.T) {
 		t.Parallel()
-		senderBytes, err := senderTape.ExtractBytes("test", 32)
+		senderBytes, err := ctxs[senderID].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
-		receiverBytes, err := receiverTape.ExtractBytes("test", 32)
+		receiverBytes, err := ctxs[receiverID].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.Equal(t, senderBytes, receiverBytes)
 	})

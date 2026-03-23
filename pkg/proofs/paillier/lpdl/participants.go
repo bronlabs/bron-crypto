@@ -98,7 +98,6 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	rangeProofTranscript := ctx.Transcript().Clone()
 	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
@@ -118,7 +117,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	xUnknown := paillier.NewCiphertextFromUnit(xEncrypted.Value().ForgetOrder())
 	rangeCiphertext := xUnknown.HomSub(qThird)
 	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
-	rangeVerifier, err := zkcompiler.NewVerifier(ctx.SessionID(), rangeProofTranscript, rangeProtocol, rangeStatement, prng)
+	rangeVerifier, err := zkcompiler.NewVerifier(ctx, rangeProtocol, rangeStatement, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Paillier range verifier")
 	}
@@ -193,7 +192,6 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	rangeProofTranscript := ctx.Transcript().Clone()
 	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
@@ -231,7 +229,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	}
 	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
 	rangeStatement := paillierrange.NewStatement(secretKey.PublicKey(), rangeCipherText, qThirdNat)
-	rangeProver, err := zkcompiler.NewProver(ctx.SessionID(), rangeProofTranscript, rangeProtocol, rangeStatement, rangeWitness)
+	rangeProver, err := zkcompiler.NewProver(ctx, rangeProtocol, rangeStatement, rangeWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise prover")
 	}

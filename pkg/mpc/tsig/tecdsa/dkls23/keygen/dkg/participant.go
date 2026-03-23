@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa"
@@ -61,16 +62,22 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	otSenders := make(map[sharing.ID]*vsot.Sender[P, B, S])
 	otReceivers := make(map[sharing.ID]*vsot.Receiver[P, B, S])
 	for id := range ctx.OtherPartiesOrdered() {
-		otTape := ctx.Transcript().Clone()
-		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		otSender, err := vsot.NewSender(ctx.SessionID(), otSuite, otTape, prng)
+		otCtx, err := ctx.SubContext(hashset.NewComparable(ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("error creating subcontext")
+		}
+		otCtx.Transcript().AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		otSender, err := vsot.NewSender(otCtx, otSuite, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("error creating vsot sender")
 		}
 
-		otTape = ctx.Transcript().Clone()
-		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(ctx.HolderID())))
-		otReceiver, err := vsot.NewReceiver(ctx.SessionID(), otSuite, otTape, prng)
+		otCtx, err = ctx.SubContext(hashset.NewComparable(ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("error creating subcontext")
+		}
+		otCtx.Transcript().AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(ctx.HolderID())))
+		otReceiver, err := vsot.NewReceiver(otCtx, otSuite, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("error creating vsot receiver")
 		}

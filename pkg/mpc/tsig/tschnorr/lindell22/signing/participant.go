@@ -20,7 +20,6 @@ import (
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -43,12 +42,12 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 
 // State holds the cosigner's internal state during the signing protocol.
 type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
-	quorumBytes               [][]byte
-	k                         S
-	bigR                      GE
-	opening                   lindell22.Opening
-	theirBigRCommitments      map[sharing.ID]lindell22.Commitment
-	tapeFrozenBeforeDlogProof ts.Transcript
+	quorumBytes              [][]byte
+	k                        S
+	bigR                     GE
+	opening                  lindell22.Opening
+	theirBigRCommitments     map[sharing.ID]lindell22.Commitment
+	ctxFrozenBeforeDlogProof *session.Context
 }
 
 // SessionID returns the session identifier for this signing session.
@@ -180,12 +179,12 @@ func NewCosigner[
 		variant:      variant,
 		round:        1,
 		state: &State[GE, S]{
-			quorumBytes:               quorumBytes,
-			k:                         *new(S),
-			bigR:                      *new(GE),
-			opening:                   lindell22.Opening{},
-			theirBigRCommitments:      make(map[sharing.ID]lindell22.Commitment, ctx.Quorum().Size()-1),
-			tapeFrozenBeforeDlogProof: nil,
+			quorumBytes:              quorumBytes,
+			k:                        *new(S),
+			bigR:                     *new(GE),
+			opening:                  lindell22.Opening{},
+			theirBigRCommitments:     make(map[sharing.ID]lindell22.Commitment, ctx.Quorum().Size()-1),
+			ctxFrozenBeforeDlogProof: nil,
 		},
 	}, nil
 }

@@ -4,14 +4,14 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 // verifier implements the NIVerifier interface for Fiat-Shamir proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	transcript    transcripts.Transcript
+	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
@@ -27,12 +27,12 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot deserialize proof")
 	}
-	v.transcript.AppendBytes(statementLabel, statement.Bytes())
+	v.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
 	a := fsProof.a
-	v.transcript.AppendBytes(commitmentLabel, a.Bytes())
+	v.ctx.Transcript().AppendBytes(commitmentLabel, a.Bytes())
 
-	e, err := v.transcript.ExtractBytes(challengeLabel, uint(v.sigmaProtocol.GetChallengeBytesLength()))
+	e, err := v.ctx.Transcript().ExtractBytes(challengeLabel, uint(v.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot extract bytes from transcript")
 	}

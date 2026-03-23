@@ -36,7 +36,7 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	}
 	dlogStatement := dlogschnorr.NewStatement(s.state.bigB)
 	dlogWitness := dlogschnorr.NewWitness(s.state.b)
-	dlogProver, err := dlogProtocolCompiler.NewProver(s.sessionID, s.tape)
+	dlogProver, err := dlogProtocolCompiler.NewProver(s.ctx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
@@ -74,7 +74,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog protocol compiler")
 	}
 	dlogStatement := dlogschnorr.NewStatement(r1.BigB)
-	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.sessionID, r.tape)
+	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.ctx)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}
@@ -112,7 +112,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 			}
 			receiverOutput.Messages[i][j] = r.state.rhoOmega[idx]
 
-			r.tape.AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), r.state.bigA[idx].ToCompressed())
+			r.ctx.Transcript().AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), r.state.bigA[idx].ToCompressed())
 		}
 	}
 
@@ -181,7 +181,7 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P[P, B, S], *
 			xi[idx] = make([]byte, len(s.state.rho0DigestDigest[idx]))
 			subtle.XORBytes(xi[idx], s.state.rho0DigestDigest[idx], rho1DigestDigest)
 
-			s.tape.AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), bigA.ToCompressed())
+			s.ctx.Transcript().AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), bigA.ToCompressed())
 		}
 	}
 

@@ -9,10 +9,9 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
@@ -21,8 +20,7 @@ var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
 
 // prover implements the NIProver interface for randomised Fischlin proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
-	sessionID     network.SID
-	transcript    transcripts.Transcript
+	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 }
@@ -31,12 +29,13 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 // and witness. It runs R parallel executions, randomly sampling challenges until
 // finding ones that hash to zero. Returns the serialised proof containing all R transcripts.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
-	p.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(p.sessionID[:])))
-	crs, err := p.transcript.ExtractBytes(crsLabel, 32)
+	sessionID := p.ctx.SessionID()
+	p.ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	crs, err := p.ctx.Transcript().ExtractBytes(crsLabel, 32)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot extract crs")
 	}
-	p.transcript.AppendBytes(statementLabel, statement.Bytes())
+	p.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
 	a := make([]byte, 0)
 	aI := make([]A, R)
@@ -94,8 +93,8 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	for i := range R {
 		commitmentSerialized = append(commitmentSerialized, aI[i].Bytes()...)
 	}
-	p.transcript.AppendBytes(commitmentLabel, commitmentSerialized)
-	p.transcript.AppendBytes(challengeLabel, eI...)
+	p.ctx.Transcript().AppendBytes(commitmentLabel, commitmentSerialized)
+	p.ctx.Transcript().AppendBytes(challengeLabel, eI...)
 
 	// step 4. output (a_i, e_i, z_i) for every i in [r]
 	proof := &Proof[A, Z]{

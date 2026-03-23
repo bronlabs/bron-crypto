@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
@@ -15,7 +16,6 @@ import (
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const transcriptDLogSLabel = "Lindell2022SignDLogS-"
@@ -67,7 +67,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E,
 		c.state.theirBigRCommitments[pid] = received.BigRCommitment
 	}
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
-	c.state.tapeFrozenBeforeDlogProof = c.ctx.Transcript().Clone()
+	c.state.ctxFrozenBeforeDlogProof = c.ctx.Clone()
 	bigRProof, statement, err := dlogProve(c, c.state.k, c.state.bigR, c.state.quorumBytes)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove dlog")
@@ -104,7 +104,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		}
 		// step 3.3: Run NIPoKDL.Verify(R_j, π^dl_j)
 		if err := dlogVerify(
-			c.state.tapeFrozenBeforeDlogProof.Clone(), c.niDlogScheme, pid, c.ctx.SessionID(), received.BigRProof, theirBigR, c.state.quorumBytes,
+			c.state.ctxFrozenBeforeDlogProof.Clone(), c.niDlogScheme, pid, received.BigRProof, theirBigR, c.state.quorumBytes,
 		); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("cannot verify dlog proof for participant")
 		}
@@ -172,11 +172,11 @@ func verifyBigRCommitment[
 func dlogProve[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (proof compiler.NIZKPoKProof, statement *schnorrpok.Statement[E, S], err error) {
-	provingTape := c.ctx.Transcript().Clone()
+	proverCtx := c.ctx.Clone()
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
-	provingTape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
-	provingTape.AppendBytes("prover", proverIDBytes)
-	prover, err := c.niDlogScheme.NewProver(c.ctx.SessionID(), provingTape)
+	proverCtx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes...)
+	proverCtx.Transcript().AppendBytes("prover", proverIDBytes)
+	prover, err := c.niDlogScheme.NewProver(proverCtx)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
@@ -195,11 +195,11 @@ func dlogProve[
 
 func dlogVerify[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-](tape ts.Transcript, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
+](proverCtx *session.Context, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
-	tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
-	tape.AppendBytes("prover", proverIDBytes)
-	verifier, err := niDlogScheme.NewVerifier(sid, tape)
+	proverCtx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes...)
+	proverCtx.Transcript().AppendBytes("prover", proverIDBytes)
+	verifier, err := niDlogScheme.NewVerifier(proverCtx)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}

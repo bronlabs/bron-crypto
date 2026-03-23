@@ -11,10 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -27,13 +26,12 @@ const (
 )
 
 type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	sessionID network.SID
-	suite     *Suite[P, B, S]
-	xi        int
-	rho       int
-	tape      transcripts.Transcript
-	prng      io.Reader
-	round     int
+	ctx   *session.Context
+	suite *Suite[P, B, S]
+	xi    int
+	rho   int
+	prng  io.Reader
+	round int
 }
 
 // Alice represents the sender party.
@@ -55,8 +53,8 @@ type Bob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFiel
 	gamma    [][]S
 }
 
-func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant[P, B, S], error) {
-	if suite == nil || prng == nil || tape == nil {
+func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader, initialRound int) (*participant[P, B, S], error) {
+	if suite == nil || prng == nil || ctx == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
 
@@ -64,21 +62,21 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 	xi := kappa + base.CollisionResistance // normally this should be statistical security, but then xi is an invalid parameter for softspoken
 	rho := mathutils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	return &participant[P, B, S]{
-		sessionID: sessionID,
-		suite:     suite,
-		xi:        xi,
-		rho:       rho,
-		tape:      tape,
-		prng:      prng,
-		round:     initialRound,
+		ctx:   ctx,
+		suite: suite,
+		xi:    xi,
+		rho:   rho,
+		prng:  prng,
+		round: initialRound,
 	}, nil
 }
 
 // NewAlice returns a new Alice participant.
-func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader, tape transcripts.Transcript) (*Alice[P, B, S], error) {
-	p, err := newParticipant(sessionID, suite, prng, tape, 2)
+func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader) (*Alice[P, B, S], error) {
+	p, err := newParticipant(ctx, suite, prng, 2)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
@@ -87,7 +85,7 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
 	}
 
-	sender, err := softspoken.NewSender(sessionID, seeds, softspokenSuite, tape, prng)
+	sender, err := softspoken.NewSender(ctx, seeds, softspokenSuite, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create sender")
 	}
@@ -106,8 +104,8 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 }
 
 // NewBob returns a new Bob participant.
-func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader, tape transcripts.Transcript) (*Bob[P, B, S], error) {
-	p, err := newParticipant(sessionID, suite, prng, tape, 1)
+func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader) (*Bob[P, B, S], error) {
+	p, err := newParticipant(ctx, suite, prng, 1)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
@@ -116,7 +114,7 @@ func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeF
 		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
 	}
 
-	receiver, err := softspoken.NewReceiver(sessionID, seeds, softspokenSuite, tape, prng)
+	receiver, err := softspoken.NewReceiver(ctx, seeds, softspokenSuite, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create receiver")
 	}
@@ -137,7 +135,7 @@ func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeF
 func (p *participant[P, B, S]) generateGadgetVector() ([]S, error) {
 	gadget := make([]S, p.xi)
 	for i := range gadget {
-		bytes, err := p.tape.ExtractBytes(gadgetLabel, uint(p.suite.field.WideElementSize()))
+		bytes, err := p.ctx.Transcript().ExtractBytes(gadgetLabel, uint(p.suite.field.WideElementSize()))
 		if err != nil {
 			return gadget, errs.Wrap(err).WithMessage("extracting bytes from transcript")
 		}

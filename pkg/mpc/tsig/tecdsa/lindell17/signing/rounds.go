@@ -14,11 +14,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -98,7 +96,7 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("invalid round 2 output")
 	}
 
-	if err := dlogVerify(pc.ctx.Transcript(), pc.niDlogScheme, pc.secondarySharingID, pc.ctx.SessionID(), r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
+	if err := dlogVerify(&pc.Cosigner, pc.niDlogScheme, pc.secondarySharingID, r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
 		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("cannot verify R2 dlog proof")
 	}
 
@@ -143,7 +141,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 		return nil, errs.Wrap(err).WithMessage("cannot open R1 commitment")
 	}
 
-	if err := dlogVerify(sc.ctx.Transcript(), sc.niDlogScheme, sc.primarySharingID, sc.ctx.SessionID(), r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
+	if err := dlogVerify(&sc.Cosigner, sc.niDlogScheme, sc.primarySharingID, r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
 		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("cannot verify R1 dlog proof")
 	}
 
@@ -265,7 +263,7 @@ func dlogProve[
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
 	c.ctx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes)
 	c.ctx.Transcript().AppendBytes(proverLabel, proverIDBytes)
-	prover, err := c.niDlogScheme.NewProver(c.ctx.SessionID(), c.ctx.Transcript())
+	prover, err := c.niDlogScheme.NewProver(c.ctx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
@@ -284,16 +282,16 @@ func dlogProve[
 
 func dlogVerify[
 	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
-](tape transcripts.Transcript, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR P, mySharingID sharing.ID) error {
+](c *Cosigner[P, B, S], niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]], proverID sharing.ID, proof compiler.NIZKPoKProof, theirBigR P, mySharingID sharing.ID) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(mySharingID))
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
-	tape.AppendBytes(transcriptDLogSLabel, quorumBytes)
-	tape.AppendBytes(proverLabel, proverIDBytes)
+	c.ctx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes)
+	c.ctx.Transcript().AppendBytes(proverLabel, proverIDBytes)
 	statement := &schnorrpok.Statement[P, S]{
 		X: theirBigR,
 	}
-	verifier, err := niDlogScheme.NewVerifier(sid, tape)
+	verifier, err := niDlogScheme.NewVerifier(c.ctx)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}

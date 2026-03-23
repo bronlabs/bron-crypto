@@ -189,6 +189,25 @@ func (ctx *Context) SubContext(subQuorum network.Quorum) (*Context, error) {
 	return newCtx, nil
 }
 
+func (ctx *Context) Clone() *Context {
+	newSid := ctx.sid
+	newHolderID := ctx.holderID
+	newQuorum := slices.Clone(ctx.sortedQuorum)
+	newTape := ctx.tape.Clone()
+	newSeeds := make(map[sharing.ID]*sha3.SHAKE)
+	for id, shake := range ctx.seeds {
+		newSeeds[id] = new(*shake)
+	}
+
+	return &Context{
+		sid:          newSid,
+		holderID:     newHolderID,
+		sortedQuorum: newQuorum,
+		tape:         newTape,
+		seeds:        newSeeds,
+	}
+}
+
 func (ctx *Context) Seeds() map[sharing.ID]io.Reader {
 	return maputils.MapValues(ctx.seeds, func(_ sharing.ID, shake *sha3.SHAKE) io.Reader { return shake })
 }

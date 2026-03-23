@@ -4,27 +4,35 @@ import (
 	"io"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
 // RunBBOT runs the full batched base OT protocol.
-func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](xi, l int, group algebra.PrimeGroup[GE, SE], sessionID network.SID, tape transcripts.Transcript, prng io.Reader) (*ecbbot.SenderOutput[SE], *ecbbot.ReceiverOutput[SE], error) {
+func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](tb testing.TB, xi, l int, group algebra.PrimeGroup[GE, SE], prng io.Reader) (*ecbbot.SenderOutput[SE], *ecbbot.ReceiverOutput[SE], error) {
+	tb.Helper()
+
 	suite, err := ecbbot.NewSuite(xi, l, group)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("constructing OT suite in run BatchedBaseOT")
 	}
 
-	sender, err := ecbbot.NewSender(sessionID, suite, tape.Clone(), prng)
+	const senderID = 1
+	const receiverID = 2
+	quorum := hashset.NewComparable[sharing.ID](senderID, receiverID).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
+
+	sender, err := ecbbot.NewSender(ctxs[senderID], suite, prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("constructing OT sender in run BatchedBaseOT")
 	}
-	receiver, err := ecbbot.NewReceiver(sessionID, suite, tape.Clone(), prng)
+	receiver, err := ecbbot.NewReceiver(ctxs[receiverID], suite, prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("constructing OT receiver in run BatchedBaseOT")
 	}

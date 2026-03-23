@@ -8,10 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -32,11 +34,14 @@ func Test_HappyPath(t *testing.T) {
 	_, err = io.ReadFull(prng, choices)
 	require.NoError(t, err)
 
-	senderTape := hagrid.NewTranscript("test")
-	receiverTape := senderTape.Clone()
-	sender, err := vsot.NewSender(sessionID, suite, senderTape, prng)
+	const senderId = 1
+	const receiverId = 2
+	quorum := hashset.NewComparable[sharing.ID](senderId, receiverId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	sender, err := vsot.NewSender(ctxs[senderId], suite, prng)
 	require.NoError(t, err)
-	receiver, err := vsot.NewReceiver(sessionID, suite, receiverTape, prng)
+	receiver, err := vsot.NewReceiver(ctxs[receiverId], suite, prng)
 	require.NoError(t, err)
 
 	r1, err := sender.Round1()
@@ -75,9 +80,9 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("transcripts match", func(t *testing.T) {
 		t.Parallel()
-		senderBytes, err := senderTape.ExtractBytes("test", 32)
+		senderBytes, err := ctxs[senderId].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
-		receiverBytes, err := receiverTape.ExtractBytes("test", 32)
+		receiverBytes, err := ctxs[receiverId].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.Equal(t, senderBytes, receiverBytes)
 	})

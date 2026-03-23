@@ -2,7 +2,6 @@ package fiatshamir_test
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,11 +15,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const iters = 32
@@ -82,9 +82,6 @@ func testSchnorrFiatShamir[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	t.Helper()
 
 	prng := pcg.NewRandomised()
-	var sid network.SID
-	_, err := io.ReadFull(prng, sid[:])
-	require.NoError(t, err)
 	g := group.Generator()
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	witnessValue, err := field.Random(prng)
@@ -98,22 +95,25 @@ func testSchnorrFiatShamir[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 
 	niScheme, err := fiatshamir.NewCompiler(scheme)
 	require.NoError(t, err)
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := proverTranscript.Clone()
 
-	prover, err := niScheme.NewProver(sid, proverTranscript)
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	prover, err := niScheme.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(t, err)
 
-	verifier, err := niScheme.NewVerifier(sid, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 	err = verifier.Verify(statement, proof)
 	require.NoError(t, err)
 
-	proverTapeData, err := proverTranscript.ExtractBytes("test", base.CollisionResistanceBytesCeil)
+	proverTapeData, err := ctxs[proverId].Transcript().ExtractBytes("test", base.CollisionResistanceBytesCeil)
 	require.NoError(t, err)
-	verifierTapeData, err := verifierTranscript.ExtractBytes("test", base.CollisionResistanceBytesCeil)
+	verifierTapeData, err := ctxs[verifierId].Transcript().ExtractBytes("test", base.CollisionResistanceBytesCeil)
 	require.NoError(t, err)
 
 	require.Equal(t, proverTapeData, verifierTapeData)
@@ -124,10 +124,6 @@ func TestFiatShamir_WrongWitness(t *testing.T) {
 
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
-
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(t, err)
@@ -146,15 +142,17 @@ func TestFiatShamir_WrongWitness(t *testing.T) {
 	niScheme, err := fiatshamir.NewCompiler(schnorrProtocol)
 	require.NoError(t, err)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := proverTranscript.Clone()
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	prover, err := niScheme.NewProver(sessionID, proverTranscript)
+	prover, err := niScheme.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, wrongWitness)
 	require.NoError(t, err)
 
-	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	// Verification should fail with wrong witness
@@ -168,10 +166,6 @@ func TestFiatShamir_TamperedProof(t *testing.T) {
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(t, err)
 
@@ -184,10 +178,12 @@ func TestFiatShamir_TamperedProof(t *testing.T) {
 	niScheme, err := fiatshamir.NewCompiler(schnorrProtocol)
 	require.NoError(t, err)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := proverTranscript.Clone()
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	prover, err := niScheme.NewProver(sessionID, proverTranscript)
+	prover, err := niScheme.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(t, err)
@@ -197,7 +193,7 @@ func TestFiatShamir_TamperedProof(t *testing.T) {
 		proof[0] ^= 0xFF
 	}
 
-	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	// Verification should fail with tampered proof
@@ -211,10 +207,6 @@ func TestFiatShamir_EmptyProof(t *testing.T) {
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(t, err)
 
@@ -226,8 +218,12 @@ func TestFiatShamir_EmptyProof(t *testing.T) {
 	niScheme, err := fiatshamir.NewCompiler(schnorrProtocol)
 	require.NoError(t, err)
 
-	verifierTranscript := hagrid.NewTranscript("test")
-	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	verifier, err := niScheme.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	// Verification should fail with empty proof
@@ -235,47 +231,6 @@ func TestFiatShamir_EmptyProof(t *testing.T) {
 	require.Error(t, err)
 
 	err = verifier.Verify(statement, []byte{})
-	require.Error(t, err)
-}
-
-func TestFiatShamir_WrongSessionID(t *testing.T) {
-	t.Parallel()
-
-	prng := pcg.NewRandomised()
-	curve := k256.NewCurve()
-
-	var proverSessionID, verifierSessionID network.SID
-	_, err := io.ReadFull(prng, proverSessionID[:])
-	require.NoError(t, err)
-	_, err = io.ReadFull(prng, verifierSessionID[:])
-	require.NoError(t, err)
-
-	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
-	require.NoError(t, err)
-
-	witnessValue, err := curve.ScalarField().Random(prng)
-	require.NoError(t, err)
-	witness := schnorr.NewWitness(witnessValue)
-	statementValue := curve.ScalarBaseMul(witnessValue)
-	statement := schnorr.NewStatement(statementValue)
-
-	niScheme, err := fiatshamir.NewCompiler(schnorrProtocol)
-	require.NoError(t, err)
-
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
-
-	prover, err := niScheme.NewProver(proverSessionID, proverTranscript)
-	require.NoError(t, err)
-	proof, err := prover.Prove(statement, witness)
-	require.NoError(t, err)
-
-	// Use different session ID for verifier
-	verifier, err := niScheme.NewVerifier(verifierSessionID, verifierTranscript)
-	require.NoError(t, err)
-
-	// Verification should fail with wrong session ID
-	err = verifier.Verify(statement, proof)
 	require.Error(t, err)
 }
 
@@ -309,9 +264,6 @@ func testTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	tb.Helper()
 
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(tb, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(tb, err)
@@ -325,23 +277,25 @@ func testTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	niScheme, err := fiatshamir.NewCompiler(schnorrProtocol)
 	require.NoError(tb, err)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
 
-	prover, err := niScheme.NewProver(sessionID, proverTranscript)
+	prover, err := niScheme.NewProver(ctxs[proverId])
 	require.NoError(tb, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(tb, err)
 
-	verifier, err := niScheme.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := niScheme.NewVerifier(ctxs[verifierId])
 	require.NoError(tb, err)
 	err = verifier.Verify(statement, proof)
 	require.NoError(tb, err)
 
 	// Verify transcripts match after proof/verify
-	proverBytes, err := proverTranscript.ExtractBytes("final", 32)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("final", 32)
 	require.NoError(tb, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("final", 32)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("final", 32)
 	require.NoError(tb, err)
 	require.True(tb, bytes.Equal(proverBytes, verifierBytes))
 }

@@ -8,10 +8,9 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
@@ -20,8 +19,7 @@ var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 
 // verifier implements the NIVerifier interface for randomised Fischlin proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	sessionID     network.SID
-	transcript    transcripts.Transcript
+	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
@@ -42,19 +40,20 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 		return ErrInvalid.WithMessage("invalid length")
 	}
 
-	v.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(v.sessionID[:])))
-	crs, err := v.transcript.ExtractBytes(crsLabel, 32)
+	sessionID := v.ctx.SessionID()
+	v.ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	crs, err := v.ctx.Transcript().ExtractBytes(crsLabel, 32)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot extract crs")
 	}
-	v.transcript.AppendBytes(statementLabel, statement.Bytes())
+	v.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
 	commitmentSerialized := make([]byte, 0)
 	for i := range R {
 		commitmentSerialized = append(commitmentSerialized, rfProof.A[i].Bytes()...)
 	}
-	v.transcript.AppendBytes(commitmentLabel, commitmentSerialized)
-	v.transcript.AppendBytes(challengeLabel, rfProof.E...)
+	v.ctx.Transcript().AppendBytes(commitmentLabel, commitmentSerialized)
+	v.ctx.Transcript().AppendBytes(challengeLabel, rfProof.E...)
 
 	// step 1. parse (a_i, e_i, z_i) for i in [r] and set a = (a_i) for every i in [r]
 	a := make([]byte, 0)
