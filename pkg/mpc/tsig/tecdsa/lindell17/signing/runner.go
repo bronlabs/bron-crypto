@@ -104,7 +104,7 @@ func (r *primaryRunner[P, B, S]) Run(rt *network.Router) (*ecdsa.Signature[S], e
 		return nil, errs.Wrap(err).WithMessage("cannot send round 3")
 	}
 
-	r4In, err := exchange.UnicastReceive[*lindell17.PartialSignature](rt, r4CorrelationID, hashset.NewComparable(r.cosigner.secondarySharingID).Freeze())
+	r4In, err := exchange.UnicastReceive[*Round4OutputP2P[P, B, S]](rt, r4CorrelationID, hashset.NewComparable(r.cosigner.secondarySharingID).Freeze())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot receive round 4")
 	}
@@ -151,7 +151,7 @@ func (r *secondaryRunner[P, B, S]) Run(rt *network.Router) (*ecdsa.Signature[S],
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 4")
 	}
-	r4u := hashmap.NewComparable[sharing.ID, *lindell17.PartialSignature]()
+	r4u := hashmap.NewComparable[sharing.ID, *Round4OutputP2P[P, B, S]]()
 	r4u.Put(r.cosigner.primarySharingID, r4Out)
 	err = exchange.UnicastSend(rt, r4CorrelationID, r4u.Freeze())
 	if err != nil {

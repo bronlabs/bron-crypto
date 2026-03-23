@@ -14,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -65,6 +64,9 @@ func (sc *SecondaryCosigner[P, B, S]) Round2(r1out *Round1OutputP2P[P, B, S]) (r
 	if sc.round != 2 {
 		return nil, ErrRound.WithMessage("Running round %d but secondary cosigner expected round %d", 2, sc.round)
 	}
+	if err := r1out.Validate(&sc.Cosigner, sc.primarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("invalid round 1 output")
+	}
 
 	sc.state.bigR1Commitment = r1out.BigR1Commitment
 	// step 2.1: k2 <-$ Zq     &    R2 <- k2 * G
@@ -91,6 +93,9 @@ func (sc *SecondaryCosigner[P, B, S]) Round2(r1out *Round1OutputP2P[P, B, S]) (r
 func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3out *Round3OutputP2P[P, B, S], err error) {
 	if pc.round != 3 {
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 3, pc.round)
+	}
+	if err := r2out.Validate(&pc.Cosigner, pc.secondarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("invalid round 2 output")
 	}
 
 	if err := dlogVerify(pc.ctx.Transcript(), pc.niDlogScheme, pc.secondarySharingID, pc.ctx.SessionID(), r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
@@ -121,10 +126,13 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 }
 
 // Round4 executes the secondary cosigner's fourth round.
-func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], message []byte) (round4Output *lindell17.PartialSignature, err error) {
+func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], message []byte) (round4Output *Round4OutputP2P[P, B, S], err error) {
 	// Validation
 	if sc.round != 4 {
 		return nil, ErrRound.WithMessage("Running round %d but secondary cosigner expected round %d", 4, sc.round)
+	}
+	if err := r3out.Validate(&sc.Cosigner, sc.primarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("invalid round 3 output")
 	}
 
 	verifier, err := sc.commitmentScheme.Verifier()
@@ -190,16 +198,19 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	}
 
 	sc.round += 2
-	return &lindell17.PartialSignature{
+	return &Round4OutputP2P[P, B, S]{
 		C3: c3,
 	}, nil
 }
 
 // Round5 executes the primary cosigner's final round.
-func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, message []byte) (*ecdsa.Signature[S], error) {
+func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *Round4OutputP2P[P, B, S], message []byte) (*ecdsa.Signature[S], error) {
 	// Validation
 	if pc.round != 5 {
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 5, pc.round)
+	}
+	if err := r4out.Validate(&pc.Cosigner, pc.secondarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("invalid round 4 output")
 	}
 	decrypter, err := paillier.NewScheme().Decrypter(pc.shard.PaillierPrivateKey())
 	if err != nil {

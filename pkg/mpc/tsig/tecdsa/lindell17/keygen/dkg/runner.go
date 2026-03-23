@@ -25,7 +25,7 @@ const (
 	r7CorrelationID = "Lindell17DKGRound7"
 )
 
-type dkgRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type runner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant *Participant[P, B, S]
 }
 
@@ -42,10 +42,10 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}
-	return &dkgRunner[P, B, S]{participant: participant}, nil
+	return &runner[P, B, S]{participant: participant}, nil
 }
 
-func (r *dkgRunner[P, B, S]) Run(rt *network.Router) (*lindell17.Shard[P, B, S], error) {
+func (r *runner[P, B, S]) Run(rt *network.Router) (*lindell17.Shard[P, B, S], error) {
 	quorum := r.participant.shard.AccessStructure().Shareholders()
 
 	r1Out, err := r.participant.Round1()
