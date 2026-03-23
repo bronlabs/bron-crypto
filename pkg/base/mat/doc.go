@@ -28,7 +28,7 @@
 //     or [MatrixAlgebra.Identity] methods to construct matrices.
 //
 //   - [ModuleValuedMatrixModule] is the structure for module-valued matrices.
-//     Create one with [NewModuleValuedMatrixModule], or use [LiftMatrix] to
+//     Create one with [NewModuleValuedMatrixModule], or use [Lift] to
 //     convert a scalar matrix into a module-valued matrix via a base point.
 //
 // Elements are stored in row-major order in a flat slice. Most operations come

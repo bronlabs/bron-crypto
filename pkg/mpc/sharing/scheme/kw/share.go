@@ -19,8 +19,8 @@ type Share[FE algebra.PrimeFieldElement[FE]] struct {
 }
 
 type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
-	ID    sharing.ID `cbor:"id"`
-	Value []FE       `cbor:"Value"`
+	ID sharing.ID `cbor:"id"`
+	V  []FE       `cbor:"value"`
 }
 
 // NewShare creates a share for the given holder ID with the provided values.
@@ -115,8 +115,8 @@ func (s *Share[FE]) HashCode() base.HashCode {
 // MarshalCBOR serialises the share to CBOR.
 func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 	dto := shareDTO[FE]{
-		ID:    s.id,
-		Value: s.v,
+		ID: s.id,
+		V:  s.v,
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *Share[FE]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal KW Share")
 	}
-	ss, err := NewShare(dto.ID, dto.Value...)
+	ss, err := NewShare(dto.ID, dto.V...)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("invalid share data")
 	}

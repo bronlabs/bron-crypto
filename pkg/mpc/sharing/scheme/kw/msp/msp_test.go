@@ -32,96 +32,47 @@ func newMatrix(t *testing.T, rows [][]uint64) *mat.Matrix[*k256.Scalar] {
 	return out
 }
 
-// rowVector builds a 1×m row vector.
-func rowVector(t *testing.T, vals ...uint64) *mat.Matrix[*k256.Scalar] {
-	t.Helper()
-	mod, err := mat.NewMatrixModule(1, uint(len(vals)), field)
-	require.NoError(t, err)
-	elems := make([]*k256.Scalar, len(vals))
-	for i, v := range vals {
-		elems[i] = scalar(v)
-	}
-	out, err := mod.NewRowMajor(elems...)
-	require.NoError(t, err)
-	return out
-}
-
 // --- NewMSP validation tests ---
 
 func TestNewMSP_NilMatrix(t *testing.T) {
 	t.Parallel()
-	_, err := msp.NewMSP[*k256.Scalar](nil, map[int]msp.ID{0: 1}, rowVector(t, 1))
+	_, err := msp.NewMSP[*k256.Scalar](nil, map[int]msp.ID{0: 1})
 	require.ErrorIs(t, err, msp.ErrIsNil)
 }
 
 func TestNewMSP_NilRowsToHolders(t *testing.T) {
 	t.Parallel()
 	m := newMatrix(t, [][]uint64{{1}})
-	_, err := msp.NewMSP(m, nil, rowVector(t, 1))
+	_, err := msp.NewMSP(m, nil)
 	require.ErrorIs(t, err, msp.ErrIsNil)
-}
-
-func TestNewMSP_NilTargetVector(t *testing.T) {
-	t.Parallel()
-	m := newMatrix(t, [][]uint64{{1}})
-	_, err := msp.NewMSP[*k256.Scalar](m, map[int]msp.ID{0: 1}, nil)
-	require.ErrorIs(t, err, msp.ErrIsNil)
-}
-
-func TestNewMSP_TargetNotRowVector(t *testing.T) {
-	t.Parallel()
-	m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-	// Pass a 2×2 matrix as target instead of a row vector.
-	target := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
-	_, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2}, target)
-	require.ErrorIs(t, err, msp.ErrValue)
-}
-
-func TestNewMSP_TargetWrongLength(t *testing.T) {
-	t.Parallel()
-	m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-	target := rowVector(t, 1, 0, 0) // length 3, matrix has 2 columns
-	_, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2}, target)
-	require.ErrorIs(t, err, msp.ErrValue)
 }
 
 func TestNewMSP_MissingRowIndex(t *testing.T) {
 	t.Parallel()
 	m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-	target := rowVector(t, 1, 0)
 	// Only map row 0, missing row 1.
-	_, err := msp.NewMSP(m, map[int]msp.ID{0: 1}, target)
+	_, err := msp.NewMSP(m, map[int]msp.ID{0: 1})
 	require.ErrorIs(t, err, msp.ErrValue)
 }
 
 func TestNewMSP_ExtraRowIndex(t *testing.T) {
 	t.Parallel()
 	m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-	target := rowVector(t, 1, 0)
-	_, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2, 5: 3}, target)
+	_, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2, 5: 3})
 	require.ErrorIs(t, err, msp.ErrValue)
 }
 
 func TestNewMSP_ZeroIDInMapping(t *testing.T) {
 	t.Parallel()
 	m := newMatrix(t, [][]uint64{{1, 2}, {3, 4}})
-	target := rowVector(t, 1, 0)
-	_, err := msp.NewMSP(m, map[int]msp.ID{0: 0, 1: 2}, target)
+	_, err := msp.NewMSP(m, map[int]msp.ID{0: 0, 1: 2})
 	require.ErrorIs(t, err, msp.ErrValue)
 }
 
-// --- NewStandardMSP tests ---
-
-func TestNewStandardMSP_NilMatrix(t *testing.T) {
-	t.Parallel()
-	_, err := msp.NewStandardMSP[*k256.Scalar](nil, map[int]msp.ID{0: 1})
-	require.ErrorIs(t, err, msp.ErrIsNil)
-}
-
-func TestNewStandardMSP_SetsTargetToE0(t *testing.T) {
+func TestNewMSP_SetsTargetToE0(t *testing.T) {
 	t.Parallel()
 	m := newMatrix(t, [][]uint64{{1, 2, 3}, {4, 5, 6}})
-	sp, err := msp.NewStandardMSP(m, map[int]msp.ID{0: 1, 1: 2})
+	sp, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2})
 	require.NoError(t, err)
 
 	tv := sp.TargetVector()
@@ -145,7 +96,7 @@ func TestMSP_Accessors(t *testing.T) {
 		{1, 2},
 	})
 	rth := map[int]msp.ID{0: 10, 1: 20, 2: 30}
-	sp, err := msp.NewStandardMSP(m, rth)
+	sp, err := msp.NewMSP(m, rth)
 	require.NoError(t, err)
 
 	t.Run("Size", func(t *testing.T) {
@@ -209,7 +160,7 @@ func TestMSP_IsIdeal_False(t *testing.T) {
 
 	// Holder 1 owns rows 0 and 1 → not ideal.
 	m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
-	sp, err := msp.NewStandardMSP(m, map[int]msp.ID{0: 1, 1: 1})
+	sp, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 1})
 	require.NoError(t, err)
 	require.False(t, sp.IsIdeal())
 }
@@ -229,7 +180,7 @@ func new2of3MSP(t *testing.T) *msp.MSP[*k256.Scalar] {
 		{1, 2},
 		{1, 3},
 	})
-	sp, err := msp.NewStandardMSP(m, map[int]msp.ID{0: 1, 1: 2, 2: 3})
+	sp, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2, 2: 3})
 	require.NoError(t, err)
 	return sp
 }
@@ -311,7 +262,7 @@ func TestMSP_MultiRowHolder(t *testing.T) {
 	// 2×2 identity matrix: holder 1 owns both rows.
 	// With both rows the target (1,0) is trivially in span.
 	m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
-	sp, err := msp.NewStandardMSP(m, map[int]msp.ID{0: 1, 1: 1})
+	sp, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 1})
 	require.NoError(t, err)
 
 	require.True(t, sp.Accepts(1))
@@ -322,23 +273,6 @@ func TestMSP_MultiRowHolder(t *testing.T) {
 	got1, ok1 := htr.Get(1)
 	require.True(t, ok1)
 	require.Len(t, got1.List(), 2)
-}
-
-// --- Custom target vector tests ---
-
-func TestMSP_CustomTarget(t *testing.T) {
-	t.Parallel()
-
-	// M = [[1, 0], [0, 1], [1, 1]]  target = (0, 1)
-	// Row 1 alone spans (0,1). Rows 0 and 2 also span it: (0,1) = -1*(1,0) + 1*(1,1).
-	m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}, {1, 1}})
-	target := rowVector(t, 0, 1)
-	sp, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2, 2: 3}, target)
-	require.NoError(t, err)
-
-	require.True(t, sp.Accepts(2), "row 1 alone spans (0,1)")
-	require.True(t, sp.Accepts(1, 3), "rows 0 and 2 span (0,1)")
-	require.False(t, sp.Accepts(1), "row 0 = (1,0) cannot span (0,1)")
 }
 
 func TestMSP_DuplicateIDsDeduped(t *testing.T) {

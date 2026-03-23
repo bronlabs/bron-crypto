@@ -24,10 +24,10 @@ func NewModuleValuedMatrixModule[E algebra.ModuleElement[E, S], S algebra.RingEl
 	}, nil
 }
 
-// LiftMatrix lifts a scalar [Matrix] into a [ModuleValuedMatrix] by applying the
+// Lift lifts a scalar [Matrix] into a [ModuleValuedMatrix] by applying the
 // scalar action of each entry on the given base point.
 // Entry (i,j) of the result is basePoint.ScalarOp(m[i,j]).
-func LiftMatrix[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m *Matrix[S], basePoint E) (*ModuleValuedMatrix[E, S], error) {
+func Lift[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m *Matrix[S], basePoint E) (*ModuleValuedMatrix[E, S], error) {
 	if m == nil {
 		return nil, ErrFailed.WithMessage("matrix cannot be nil")
 	}
@@ -40,6 +40,80 @@ func LiftMatrix[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m *Matr
 	for i, c := range m.data() {
 		elements[i] = basePoint.ScalarOp(c)
 	}
+	out, err := module.NewRowMajor(elements...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create module-valued matrix")
+	}
+	return out, nil
+}
+
+// LeftAction computes the left module action of a scalar matrix on a module-valued matrix.
+// Given actor ∈ M_{m×p}(R) and x ∈ M_{p×n}(M), the result is an m×n module-valued matrix
+// where entry (i,j) = Σ_k x[k,j] · actor[i,k].
+func LeftAction[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](actor *Matrix[S], x *ModuleValuedMatrix[E, S]) (*ModuleValuedMatrix[E, S], error) {
+	if actor == nil || x == nil {
+		return nil, ErrFailed.WithMessage("matrices cannot be nil")
+	}
+	if actor.n != x.rows() {
+		return nil, ErrDimension.WithMessage("cannot multiply: number of columns in first matrix (%d) does not match number of rows in second matrix (%d)", actor.n, x.rows())
+	}
+
+	baseModule := x.Module().baseStructure
+	module, err := NewModuleValuedMatrixModule(uint(actor.m), uint(x.cols()), baseModule)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create module-valued matrix module")
+	}
+
+	elements := make([]E, actor.m*x.cols())
+	aData := actor.data()
+	xData := x.data()
+	for i := range actor.m {
+		for j := range x.cols() {
+			sum := baseModule.OpIdentity()
+			for k := range actor.n {
+				sum = sum.Op(xData[x.idx(k, j)].ScalarOp(aData[actor.idx(i, k)]))
+			}
+			elements[i*x.cols()+j] = sum
+		}
+	}
+
+	out, err := module.NewRowMajor(elements...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create module-valued matrix")
+	}
+	return out, nil
+}
+
+// RightAction computes the right module action of a scalar matrix on a module-valued matrix.
+// Given x ∈ M_{m×p}(M) and actor ∈ M_{p×n}(R), the result is an m×n module-valued matrix
+// where entry (i,j) = Σ_k x[i,k] · actor[k,j].
+func RightAction[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](x *ModuleValuedMatrix[E, S], actor *Matrix[S]) (*ModuleValuedMatrix[E, S], error) {
+	if x == nil || actor == nil {
+		return nil, ErrFailed.WithMessage("matrices cannot be nil")
+	}
+	if x.cols() != actor.m {
+		return nil, ErrDimension.WithMessage("cannot multiply: number of columns in first matrix (%d) does not match number of rows in second matrix (%d)", x.cols(), actor.m)
+	}
+
+	baseModule := x.Module().baseStructure
+	module, err := NewModuleValuedMatrixModule(uint(x.rows()), uint(actor.n), baseModule)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create module-valued matrix module")
+	}
+
+	elements := make([]E, x.rows()*actor.n)
+	xData := x.data()
+	aData := actor.data()
+	for i := range x.rows() {
+		for j := range actor.n {
+			sum := baseModule.OpIdentity()
+			for k := range x.cols() {
+				sum = sum.Op(xData[x.idx(i, k)].ScalarOp(aData[actor.idx(k, j)]))
+			}
+			elements[i*actor.n+j] = sum
+		}
+	}
+
 	out, err := module.NewRowMajor(elements...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create module-valued matrix")

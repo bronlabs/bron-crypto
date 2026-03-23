@@ -28,7 +28,7 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Thr
 		mspRho[i] = id
 	}
 
-	inducedMsp, err := msp.NewStandardMSP(m, mspRho)
+	inducedMsp, err := msp.NewMSP(m, mspRho)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create an MSP from the MSP matrix")
 	}
