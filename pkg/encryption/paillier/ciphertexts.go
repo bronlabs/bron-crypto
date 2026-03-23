@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -64,8 +65,11 @@ func NewCiphertextFromUnit(u *znstar.PaillierGroupElementUnknownOrder) *Cipherte
 }
 
 // Contains returns true if the ciphertext belongs to this ciphertext space.
-func (cts *CiphertextSpace) Contains(ct *Ciphertext) bool {
-	return ct != nil && cts.N2().Equal(ct.N2())
+func (cts *CiphertextSpace) Contains(ctx *Ciphertext) bool {
+	return ctx != nil &&
+		cts.N2().Equal(ctx.N2()) &&
+		cts.g.N().Equal(ctx.Value().N()) &&
+		cts.g.Arithmetic().Modulus().Nat().Equal(ctx.Value().Arithmetic().Modulus().Nat()) == ct.True
 }
 
 // Ciphertext represents an encrypted Paillier message in the group (Z/n²Z)*.

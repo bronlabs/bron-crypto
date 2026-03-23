@@ -79,6 +79,10 @@ func (p *Participant[P, B, S]) Round2(input network.RoundMessages[*Round1Broadca
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 2, p.round)
 	}
 
+	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), input); errB != nil {
+		return nil, errs.Wrap(errB)
+	}
+
 	// 2. store commitments
 	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
@@ -116,6 +120,10 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 3, p.round)
 	}
+	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), input); errB != nil {
+		return nil, errs.Wrap(errB)
+	}
+
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
 	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)
@@ -224,6 +232,9 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 	if p.round != 4 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 4, p.round)
 	}
+	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), input); errB != nil {
+		return nil, errs.Wrap(errB)
+	}
 
 	r4o := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
 	for id := range p.ctx.OtherPartiesOrdered() {
@@ -284,6 +295,9 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P[P, 
 	if p.round != 5 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 5, p.round)
 	}
+	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), input); errU != nil {
+		return nil, errs.Wrap(errU)
+	}
 	// 5. LP and LPDL continue
 	r5o := hashmap.NewComparable[sharing.ID, *Round5P2P[P, B, S]]()
 	for id := range p.ctx.OtherPartiesOrdered() {
@@ -336,6 +350,9 @@ func (p *Participant[P, B, S]) Round6(input network.RoundMessages[*Round5P2P[P, 
 	if p.round != 6 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 6, p.round)
 	}
+	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), input); errU != nil {
+		return nil, errs.Wrap(errU)
+	}
 	// 6. LP and LPDL continue
 	r6o := hashmap.NewComparable[sharing.ID, *Round6P2P[P, B, S]]()
 	for id := range p.ctx.OtherPartiesOrdered() {
@@ -372,6 +389,9 @@ func (p *Participant[P, B, S]) Round7(input network.RoundMessages[*Round6P2P[P, 
 	if p.round != 7 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 7, p.round)
 	}
+	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), input); errU != nil {
+		return nil, errs.Wrap(errU)
+	}
 	// 7. LP and LPDL continue
 	r7o := hashmap.NewComparable[sharing.ID, *Round7P2P[P, B, S]]()
 	for id := range p.ctx.OtherPartiesOrdered() {
@@ -405,6 +425,9 @@ func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, 
 	// Validation
 	if p.round != 8 {
 		return nil, ErrRound.WithMessage("Running round %d but participant expected round %d", 8, p.round)
+	}
+	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), input); errU != nil {
+		return nil, errs.Wrap(errU)
 	}
 	for id := range p.ctx.OtherPartiesOrdered() {
 		message, exists := input.Get(id)

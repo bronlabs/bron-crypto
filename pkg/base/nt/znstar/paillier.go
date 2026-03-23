@@ -202,6 +202,11 @@ type PaillierGroupElement[X ArithmeticPaillier] struct {
 	UnitTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]
 }
 
+// N returns the sqrt of modulus, n.
+func (u *PaillierGroupElement[X]) N() *num.NatPlus {
+	return u.n
+}
+
 // Clone creates a copy of the Paillier group element.
 func (u *PaillierGroupElement[X]) Clone() *PaillierGroupElement[X] {
 	return &PaillierGroupElement[X]{
