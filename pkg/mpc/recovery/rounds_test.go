@@ -57,7 +57,6 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	rs := []*recovery.Recoverer[*k256.Point, *k256.Scalar]{recoverers[0], recoverers[1]}
 	ms := []*recovery.Mislayer[*k256.Point, *k256.Scalar]{mislayer}
-	//participants := []ntu.TestParticipant{recoverers[0], recoverers[1], mislayer}
 
 	r1bo := make(map[sharing.ID]*recovery.Round1Broadcast[*k256.Point, *k256.Scalar])
 	r1uo := make(map[sharing.ID]network.RoundMessages[*recovery.Round1P2P[*k256.Point, *k256.Scalar], *recovery.Recoverer[*k256.Point, *k256.Scalar]])
