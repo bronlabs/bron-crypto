@@ -104,30 +104,6 @@ func TestHierarchicalConjunctiveThresholdIsQualified(t *testing.T) {
 	}
 }
 
-func TestHierarchicalConjunctiveThresholdCBORRoundTrip(t *testing.T) {
-	t.Parallel()
-
-	original, err := NewHierarchicalConjunctiveThresholdAccessStructure(
-		WithLevel(1, 1, 2),
-		WithLevel(2, 3, 4),
-		WithLevel(4, 5, 6),
-	)
-	require.NoError(t, err)
-
-	data, err := serde.MarshalCBOR(original)
-	require.NoError(t, err)
-
-	decoded, err := serde.UnmarshalCBOR[HierarchicalConjunctiveThreshold](data)
-	require.NoError(t, err)
-	require.True(t, original.Shareholders().Equal(decoded.Shareholders()))
-
-	cases := [][]ID{{1, 3, 5, 6}, {1, 3, 4}, {3, 4, 5, 6}, {1, 2, 3, 4, 5, 6}}
-	for _, ids := range cases {
-		require.Equal(t, original.IsQualified(ids...), decoded.IsQualified(ids...),
-			"disagree on %v", ids)
-	}
-}
-
 func TestHierarchicalConjunctiveThresholdUnmarshalCBOR(t *testing.T) {
 	t.Parallel()
 

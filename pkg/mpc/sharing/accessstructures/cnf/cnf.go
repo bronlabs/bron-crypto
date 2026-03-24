@@ -12,7 +12,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
-	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
@@ -26,11 +25,6 @@ type ID = internal.ID
 type CNF struct {
 	shareholders           ds.Set[ID]
 	maximalUnqualifiedSets []ds.Set[ID]
-}
-
-type cnfDTO struct {
-	Shareholders           map[ID]bool   `cbor:"shareholders"`
-	MaximalUnqualifiedSets []map[ID]bool `cbor:"maximal_unqualified_sets"`
 }
 
 // ConvertToCNF converts a linear access structure to CNF form by enumerating its maximal unqualified sets.
@@ -110,53 +104,6 @@ func (c *CNF) Clauses() []ds.Set[ID] {
 			return c.shareholders.Difference(bi)
 		},
 	)
-}
-
-// MarshalCBOR serialises the CNF access structure.
-func (c *CNF) MarshalCBOR() ([]byte, error) {
-	dto := &cnfDTO{
-		Shareholders:           make(map[ID]bool),
-		MaximalUnqualifiedSets: make([]map[ID]bool, len(c.maximalUnqualifiedSets)),
-	}
-	for p := range c.shareholders.Iter() {
-		dto.Shareholders[p] = true
-	}
-	for i, u := range c.maximalUnqualifiedSets {
-		dto.MaximalUnqualifiedSets[i] = make(map[ID]bool)
-		for p := range u.Iter() {
-			dto.MaximalUnqualifiedSets[i][p] = true
-		}
-	}
-
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal CNF access structure")
-	}
-	return data, nil
-}
-
-// UnmarshalCBOR deserializes the CNF access structure.
-func (c *CNF) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[cnfDTO](data)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to unmarshal CNF access structure")
-	}
-
-	maximalUnqualifiedSets := make([]ds.Set[ID], len(dto.MaximalUnqualifiedSets))
-	for i, u := range dto.MaximalUnqualifiedSets {
-		setBuilder := hashset.NewComparable[ID]()
-		for p := range u {
-			setBuilder.Add(p)
-		}
-		maximalUnqualifiedSets[i] = setBuilder.Freeze()
-	}
-
-	a2, err := NewCNFAccessStructure(maximalUnqualifiedSets...)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create CNF access structure from unmarshalled data")
-	}
-	*c = *a2
-	return nil
 }
 
 func normaliseCNF(unqualifiedSets ...ds.Set[ID]) ([]ds.Set[ID], error) {

@@ -275,26 +275,25 @@ func TestInducedMSPByCNF_ReconstructionVector(t *testing.T) {
 	})
 }
 
-func TestCNFCBORRoundTrip(t *testing.T) {
+func TestNewCNF_RejectsZeroShareholder(t *testing.T) {
 	t.Parallel()
 
-	original, err := NewCNFAccessStructure(
-		hashset.NewComparable[ID](1, 2).Freeze(),
-		hashset.NewComparable[ID](3, 4).Freeze(),
-	)
-	require.NoError(t, err)
+	valid := hashset.NewComparable[ID](1, 2).Freeze()
+	invalid := hashset.NewComparable[ID](0, 3).Freeze()
+	c, err := NewCNFAccessStructure(valid, invalid)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrMembership)
+	require.Nil(t, c)
+}
 
-	data, err := serde.MarshalCBOR(original)
-	require.NoError(t, err)
-
-	decoded, err := serde.UnmarshalCBOR[CNF](data)
-	require.NoError(t, err)
-	require.True(t, original.Shareholders().Equal(decoded.Shareholders()))
-
-	cases := [][]ID{{1, 3}, {1, 2}, {3, 4}, {1, 2, 3, 4}}
-	for _, ids := range cases {
-		require.Equal(t, original.IsQualified(ids...), decoded.IsQualified(ids...))
+func canonicalIDs(s ds.Set[ID]) string {
+	ids := s.List()
+	slices.Sort(ids)
+	parts := make([]string, 0, len(ids))
+	for _, id := range ids {
+		parts = append(parts, fmt.Sprint(id))
 	}
+	return strings.Join(parts, ",")
 }
 
 func TestCNFUnmarshalCBOR(t *testing.T) {
@@ -323,25 +322,4 @@ func TestCNFUnmarshalCBOR(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrMembership)
 	})
-}
-
-func TestNewCNF_RejectsZeroShareholder(t *testing.T) {
-	t.Parallel()
-
-	valid := hashset.NewComparable[ID](1, 2).Freeze()
-	invalid := hashset.NewComparable[ID](0, 3).Freeze()
-	c, err := NewCNFAccessStructure(valid, invalid)
-	require.Error(t, err)
-	require.ErrorIs(t, err, ErrMembership)
-	require.Nil(t, c)
-}
-
-func canonicalIDs(s ds.Set[ID]) string {
-	ids := s.List()
-	slices.Sort(ids)
-	parts := make([]string, 0, len(ids))
-	for _, id := range ids {
-		parts = append(parts, fmt.Sprint(id))
-	}
-	return strings.Join(parts, ",")
 }

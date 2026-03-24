@@ -2,15 +2,12 @@ package unanimity
 
 import (
 	"iter"
-	"maps"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
@@ -25,10 +22,6 @@ type ID = internal.ID
 // access structure for additive secret sharing.
 type Unanimity struct {
 	ps ds.Set[ID]
-}
-
-type unanimityDTO struct {
-	Ps map[ID]bool `cbor:"shareholders"`
 }
 
 // NewUnanimityAccessStructure creates a new n-of-n access structure.
@@ -98,36 +91,6 @@ func (u *Unanimity) Clone() *Unanimity {
 	return &Unanimity{
 		ps: u.ps.Clone(),
 	}
-}
-
-// MarshalCBOR serialises the access structure.
-func (u *Unanimity) MarshalCBOR() ([]byte, error) {
-	dto := unanimityDTO{
-		Ps: make(map[ID]bool),
-	}
-	for id := range u.ps.Iter() {
-		dto.Ps[id] = true
-	}
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal Unanimity access structure")
-	}
-	return data, nil
-}
-
-// UnmarshalCBOR deserializes the access structure.
-func (u *Unanimity) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[unanimityDTO](data)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to unmarshal Unanimity access structure")
-	}
-	ps := hashset.NewComparable(slices.Collect(maps.Keys(dto.Ps))...)
-	u2, err := NewUnanimityAccessStructure(ps.Freeze())
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create Unanimity access structure from deserialized data")
-	}
-	*u = *u2
-	return nil
 }
 
 // InducedMSP constructs a monotone span programme from a unanimity
