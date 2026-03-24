@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
@@ -21,10 +23,11 @@ const (
 )
 
 type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ctx   *session.Context
-	suite *Suite[P, B, S]
-	round int
-	prng  io.Reader
+	ctx       *session.Context
+	copartyID sharing.ID
+	suite     *Suite[P, B, S]
+	round     int
+	prng      io.Reader
 }
 
 func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
@@ -56,15 +59,20 @@ func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	s := &Sender[P, B, S]{
 		participant: participant[P, B, S]{
-			ctx:   ctx,
-			suite: suite,
-			round: 1,
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			suite:     suite,
+			round:     1,
+			prng:      prng,
 		},
 		state: senderState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
@@ -94,15 +102,20 @@ func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	r := &Receiver[P, B, S]{
 		participant: participant[P, B, S]{
-			ctx:   ctx,
-			suite: suite,
-			round: 2,
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			suite:     suite,
+			round:     2,
+			prng:      prng,
 		},
 		state: receiverState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}

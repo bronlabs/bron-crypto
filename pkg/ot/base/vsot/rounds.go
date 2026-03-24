@@ -15,11 +15,11 @@ import (
 
 // Round1 samples sender secret b, computes B = bG, proves knowledge of b, and sends (B, proof).
 func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
-	var err error
 	if s.round != 1 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
 
+	var err error
 	s.state.b, err = s.suite.Field().Random(s.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("generating b")
@@ -58,7 +58,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	if r.round != 2 {
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r1.Validate(r, 0); err != nil {
+	if err := r1.Validate(r, r.copartyID); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 	if len(choices)*8 != r.suite.Xi() {
@@ -125,14 +125,14 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 
 // Round3 derives sender seeds rho0/rho1 and commits to them with digests and XOR masks.
 func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P[P, B, S], *SenderOutput, error) {
-	var err error
 	if s.round != 3 {
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r2.Validate(s, 0); err != nil {
+	if err := r2.Validate(s, s.copartyID); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
+	var err error
 	rho0 := make([][]byte, s.suite.Xi()*s.suite.L())
 	rho1 := make([][]byte, s.suite.Xi()*s.suite.L())
 	s.state.rho0Digest = make([][]byte, s.suite.Xi()*s.suite.L())
@@ -194,14 +194,14 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P[P, B, S], *
 
 // Round4 unblinds the masked digest corresponding to each receiver choice and returns rhoPrime values.
 func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P[P, B, S]) (*Round4P2P[P, B, S], error) {
-	var err error
 	if r.round != 4 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r3.Validate(r, 0); err != nil {
+	if err := r3.Validate(r, r.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
+	var err error
 	r.state.xi = r3.Xi
 	rhoPrime := make([][]byte, r.suite.Xi()*r.suite.L())
 	r.state.rhoOmegaDigest = make([][]byte, r.suite.Xi()*r.suite.L())
@@ -237,7 +237,7 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P[P, B, S]) (*Round5P2P[P, B, S], e
 	if s.round != 5 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r4.Validate(s, 0); err != nil {
+	if err := r4.Validate(s, s.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
@@ -267,7 +267,7 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P[P, B, S]) error {
 	if r.round != 6 {
 		return ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r5.Validate(r, 0); err != nil {
+	if err := r5.Validate(r, r.copartyID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid message")
 	}
 

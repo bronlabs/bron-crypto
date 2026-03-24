@@ -52,6 +52,9 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	if r.round != 2 {
 		return nil, nil, ot.ErrRound.WithMessage("running round %d but participant expected round %d", 2, r.round)
 	}
+	if err := r1out.Validate(r, r.copartyID); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid round %d input", r.round)
+	}
 
 	// Setup ROs
 	r.ctx.Transcript().AppendBytes(TaggedKeyAgreementMs, r1out.Ms.Bytes())
@@ -105,6 +108,9 @@ func (s *Sender[G, S]) Round3(r2out *Round2P2P[G, S]) (senderOut *SenderOutput[S
 	// Validation
 	if s.round != 3 {
 		return nil, ot.ErrRound.WithMessage("running round %d but participant expected round %d", 3, s.round)
+	}
+	if err := r2out.Validate(s, s.copartyID); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid round %d input", s.round)
 	}
 
 	f, err := s.makeProgrammableOncePublicFunction()

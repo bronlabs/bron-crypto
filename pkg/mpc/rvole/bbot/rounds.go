@@ -32,6 +32,9 @@ func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b 
 	if bob.round != 2 {
 		return nil, nilSE, ErrValidation.WithMessage("invalid round")
 	}
+	if err := r1Out.Validate(bob, bob.copartyID); err != nil {
+		return nil, nilSE, errs.Wrap(err).WithMessage("invalid message")
+	}
 
 	beta := make([]byte, bob.xi/8)
 	if _, err := io.ReadFull(bob.prng, beta); err != nil {
@@ -65,6 +68,9 @@ func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b 
 func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2P[G, S], c []S, err error) {
 	if alice.round != 3 {
 		return nil, nil, ErrValidation.WithMessage("invalid round")
+	}
+	if err := r2Out.Validate(alice, alice.copartyID); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
 	senderOutput, err := alice.sender.Round3(r2Out.OtR2)
@@ -143,7 +149,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[G, S]) (d []S, err error) {
 	if bob.round != 4 {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}
-	if err := r3Out.Validate(bob, 0); err != nil {
+	if err := r3Out.Validate(bob, bob.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 

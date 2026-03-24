@@ -115,7 +115,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	if s.round != 2 {
 		return nil, ot.ErrRound.WithMessage("running round %d but participant expected round %d", 2, s.round)
 	}
-	if err := r1.Validate(s, 0); err != nil {
+	if err := r1.Validate(s, s.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round %d input", s.round)
 	}
 

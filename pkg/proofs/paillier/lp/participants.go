@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
@@ -23,7 +25,8 @@ const (
 
 // Participant holds a common state for the LP protocol participants.
 type Participant[A znstar.ArithmeticPaillier] struct {
-	ctx *session.Context
+	ctx       *session.Context
+	copartyID sharing.ID
 	// Base participant
 	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroot.Statement[A]], sigand.Witness[*nthroot.Witness[A]], sigand.Commitment[*nthroot.Commitment[A]], sigand.State[*nthroot.State[A]], sigand.Response[*nthroot.Response[A]]]
 	prng                  io.Reader
@@ -85,6 +88,7 @@ func NewVerifier(ctx *session.Context, k int, pk *paillier.PublicKey, prng io.Re
 		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
@@ -105,6 +109,7 @@ func NewVerifier(ctx *session.Context, k int, pk *paillier.PublicKey, prng io.Re
 	return &Verifier{
 		Participant: Participant[*modular.SimpleModulus]{
 			ctx:                   ctx,
+			copartyID:             copartyID,
 			round:                 1,
 			prng:                  prng,
 			k:                     k,
@@ -124,6 +129,9 @@ func validateVerifierInputs(ctx *session.Context, k int, pk *paillier.PublicKey,
 	if ctx == nil {
 		return ErrInvalidArgument.WithMessage("ctx is nil")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 	if pk == nil {
 		return ErrInvalidArgument.WithMessage("paillier public key is nil")
 	}
@@ -142,6 +150,7 @@ func NewProver(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Rea
 		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
@@ -158,6 +167,7 @@ func NewProver(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Rea
 	return &Prover{
 		Participant: Participant[*modular.OddPrimeSquareFactors]{
 			ctx:                   ctx,
+			copartyID:             copartyID,
 			prng:                  prng,
 			round:                 2,
 			k:                     k,
@@ -174,6 +184,9 @@ func NewProver(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Rea
 func validateProverInputs(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Reader) error {
 	if ctx == nil {
 		return ErrInvalidArgument.WithMessage("ctx is nil")
+	}
+	if ctx.Quorum().Size() != 2 {
+		return ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if sk == nil {
 		return ErrInvalidArgument.WithMessage("paillier secret key is nil")

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -16,6 +17,7 @@ import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
 )
@@ -27,11 +29,12 @@ const (
 
 // Participant holds common state for the LPDL protocol participants.
 type Participant[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ctx   *session.Context
-	round int
-	pk    *paillier.PublicKey
-	bigQ  P
-	prng  io.Reader
+	ctx       *session.Context
+	copartyID sharing.ID
+	round     int
+	pk        *paillier.PublicKey
+	bigQ      P
+	prng      io.Reader
 }
 
 // State holds shared state for LPDL rounds.
@@ -94,6 +97,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](bigQ.Structure())
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
@@ -138,11 +142,12 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 
 	return &Verifier[P, B, S]{
 		Participant: Participant[P, B, S]{
-			ctx:   ctx,
-			round: 1,
-			pk:    publicKey,
-			bigQ:  bigQ,
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			round:     1,
+			pk:        publicKey,
+			bigQ:      bigQ,
+			prng:      prng,
 		},
 		rangeVerifier:     rangeVerifier,
 		c:                 xEncrypted,
@@ -167,6 +172,9 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 	if ctx == nil {
 		return ErrInvalidArgument.WithMessage("context is nil")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 	if publicKey == nil {
 		return ErrInvalidArgument.WithMessage("public key is nil")
 	}
@@ -188,6 +196,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
@@ -241,11 +250,12 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 
 	return &Prover[P, B, S]{
 		Participant: Participant[P, B, S]{
-			ctx:   ctx,
-			round: 2,
-			pk:    secretKey.PublicKey(),
-			bigQ:  curve.ScalarBaseMul(x),
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			round:     2,
+			pk:        secretKey.PublicKey(),
+			bigQ:      curve.ScalarBaseMul(x),
+			prng:      prng,
 		},
 		rangeProver:       rangeProver,
 		paillierDecrypter: dec,
@@ -271,6 +281,9 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) error {
 	if ctx == nil {
 		return ErrInvalidArgument.WithMessage("ctx is empty")
+	}
+	if ctx.Quorum().Size() != 2 {
+		return ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if secretKey == nil {
 		return ErrInvalidArgument.WithMessage("secret key is nil")

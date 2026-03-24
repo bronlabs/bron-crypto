@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/errs-go/errs"
 
@@ -201,7 +202,10 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
 	// Note: Share single transcript across all proofs to preserve state
 	for id := range p.ctx.OtherPartiesOrdered() {
-		ctx := p.ctx.Clone()
+		ctx, err := p.ctx.SubContext(hashset.NewComparable(p.ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create subcontext")
+		}
 		ctx.Transcript().AppendBytes("proverId", binary.LittleEndian.AppendUint64(nil, uint64(ctx.HolderID())))
 		ctx.Transcript().AppendBytes("verifierId", binary.LittleEndian.AppendUint64(nil, uint64(id)))
 
@@ -254,7 +258,10 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 
 		// 4.ii. LP and LPDL continue
 		// Share single transcript clone across all verifiers to preserve state
-		ctx := p.ctx.Clone()
+		ctx, err := p.ctx.SubContext(hashset.NewComparable(p.ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create subcontext")
+		}
 		ctx.Transcript().AppendBytes("proverId", binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		ctx.Transcript().AppendBytes("verifierId", binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
 

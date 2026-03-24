@@ -67,7 +67,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	if prover.round != 2 {
 		return nil, ErrRound.WithMessage("%d != 2", prover.round)
 	}
-	if err := input.Validate(prover, 0); err != nil {
+	if err := input.Validate(prover, prover.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 2 input")
 	}
 
@@ -107,7 +107,7 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 	if verifier.round != 3 {
 		return nil, ErrRound.WithMessage("%d != 3", verifier.round)
 	}
-	if err := input.Validate(verifier, 0); err != nil {
+	if err := input.Validate(verifier, verifier.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 3 input")
 	}
 
@@ -127,7 +127,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	if prover.round != 4 {
 		return nil, ErrRound.WithMessage("%d != 4", prover.round)
 	}
-	if err := input.Validate(prover, 0); err != nil {
+	if err := input.Validate(prover, prover.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 4 input")
 	}
 
@@ -172,7 +172,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if verifier.round != 5 {
 		return ErrRound.WithMessage("%d != 5", verifier.round)
 	}
-	if err := input.Validate(verifier, 0); err != nil {
+	if err := input.Validate(verifier, verifier.copartyID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid round 5 input")
 	}
 

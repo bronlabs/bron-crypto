@@ -4,22 +4,25 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
 const transcriptLabel = "BRON_CRYPTO_BBOT-"
 
 type participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	ctx   *session.Context
-	ka    *TaggedKeyAgreement[G, S]
-	suite *Suite[G, S]
-	round int
-	prng  io.Reader
+	ctx       *session.Context
+	copartyID sharing.ID
+	ka        *TaggedKeyAgreement[G, S]
+	suite     *Suite[G, S]
+	round     int
+	prng      io.Reader
 }
 
 // Sender obtains the 2 random messages for the 1|2 ROT.
@@ -43,7 +46,11 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
@@ -53,11 +60,12 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 
 	s := &Sender[G, S]{
 		participant: participant[G, S]{
-			ctx:   ctx,
-			ka:    ka,
-			round: 1,
-			suite: suite,
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			ka:        ka,
+			round:     1,
+			suite:     suite,
+			prng:      prng,
 		},
 		state: SenderState[S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
@@ -70,7 +78,11 @@ func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
@@ -80,11 +92,12 @@ func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 
 	r := &Receiver[G, S]{
 		participant: participant[G, S]{
-			ctx:   ctx,
-			ka:    ka,
-			suite: suite,
-			round: 2,
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			ka:        ka,
+			suite:     suite,
+			round:     2,
+			prng:      prng,
 		},
 	}
 	return r, nil

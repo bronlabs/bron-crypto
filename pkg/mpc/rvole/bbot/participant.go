@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 )
 
@@ -24,11 +26,12 @@ const (
 )
 
 type participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	ctx     *session.Context
-	suite   *Suite[G, S]
-	xi, rho int
-	prng    io.Reader
-	round   int
+	ctx       *session.Context
+	copartyID sharing.ID
+	suite     *Suite[G, S]
+	xi, rho   int
+	prng      io.Reader
+	round     int
 }
 
 // Alice represents the sender party.
@@ -54,7 +57,11 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	if suite == nil || prng == nil || ctx == nil || initialRound < 1 {
 		return nil, ErrNil.WithMessage("argument")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ErrValidation.WithMessage("invalid quorum size")
+	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	kappa := suite.group.ScalarStructure().ElementSize() * 8
@@ -62,12 +69,13 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	rho := mathutils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
 	return &participant[G, S]{
-		ctx:   ctx,
-		prng:  prng,
-		round: initialRound,
-		suite: suite,
-		xi:    xi,
-		rho:   rho,
+		ctx:       ctx,
+		copartyID: copartyID,
+		prng:      prng,
+		round:     initialRound,
+		suite:     suite,
+		xi:        xi,
+		rho:       rho,
 	}, nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -163,7 +164,10 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		if !ok {
 			return nil, nil, ErrFailed.WithMessage("couldn't find alice seed")
 		}
-		aliceCtx := c.ctx.Clone()
+		aliceCtx, err := c.ctx.SubContext(hashset.NewComparable(c.ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create subcontext")
+		}
 		aliceCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		c.aliceMul[id], err = rvole_softspoken.NewAlice(aliceCtx, mulSuite, aliceSeed, c.prng)
 		if err != nil {
@@ -174,7 +178,10 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		if !ok {
 			return nil, nil, ErrFailed.WithMessage("couldn't find bob seed")
 		}
-		bobCtx := c.ctx.Clone()
+		bobCtx, err := c.ctx.SubContext(hashset.NewComparable(c.ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create subcontext")
+		}
 		bobCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())))
 		c.bobMul[id], err = rvole_softspoken.NewBob(bobCtx, mulSuite, bobSeed, c.prng)
 		if err != nil {

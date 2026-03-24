@@ -58,6 +58,9 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P[P, B, S], a []S) (*Round2P2P[P
 	if alice.round != 2 {
 		return nil, nil, ErrValidation.WithMessage("invalid round")
 	}
+	if err := r1.Validate(alice, alice.copartyID); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
+	}
 
 	senderOutput, err := alice.sender.Round2(r1.OtR1)
 	if err != nil {
@@ -151,7 +154,7 @@ func (bob *Bob[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (d []S, err error) {
 	if bob.round != 3 {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}
-	if err := r2.Validate(bob, 0); err != nil {
+	if err := r2.Validate(bob, bob.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 

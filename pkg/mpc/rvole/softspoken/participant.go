@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
@@ -26,12 +28,13 @@ const (
 )
 
 type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ctx   *session.Context
-	suite *Suite[P, B, S]
-	xi    int
-	rho   int
-	prng  io.Reader
-	round int
+	ctx       *session.Context
+	copartyID sharing.ID
+	suite     *Suite[P, B, S]
+	xi        int
+	rho       int
+	prng      io.Reader
+	round     int
 }
 
 // Alice represents the sender party.
@@ -57,20 +60,25 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 	if suite == nil || prng == nil || ctx == nil {
 		return nil, ErrNil.WithMessage("argument")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ErrValidation.WithMessage("invalid quorum size")
+	}
 
 	kappa := suite.field.ElementSize() * 8
 	xi := kappa + base.CollisionResistance // normally this should be statistical security, but then xi is an invalid parameter for softspoken
 	rho := mathutils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	return &participant[P, B, S]{
-		ctx:   ctx,
-		suite: suite,
-		xi:    xi,
-		rho:   rho,
-		prng:  prng,
-		round: initialRound,
+		ctx:       ctx,
+		copartyID: copartyID,
+		suite:     suite,
+		xi:        xi,
+		rho:       rho,
+		prng:      prng,
+		round:     initialRound,
 	}, nil
 }
 

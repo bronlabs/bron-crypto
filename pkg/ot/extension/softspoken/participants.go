@@ -13,6 +13,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 )
@@ -25,10 +26,11 @@ const (
 )
 
 type participant struct {
-	ctx   *session.Context
-	suite *Suite
-	round int
-	prng  io.Reader
+	ctx       *session.Context
+	copartyID sharing.ID
+	suite     *Suite
+	round     int
+	prng      io.Reader
 }
 
 // Sender drives the SoftSpoken sender state machine.
@@ -50,15 +52,20 @@ func NewSender(ctx *session.Context, receiverSeeds *vsot.ReceiverOutput, suite *
 	if receiverSeeds == nil || suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 	if receiverSeeds.InferredXi() != Kappa || receiverSeeds.InferredL() != 1 {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid receiver seeds")
 	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	s := &Sender{
 		participant: participant{
 			ctx,
+			copartyID,
 			suite,
 			2,
 			prng,
@@ -74,15 +81,20 @@ func NewReceiver(ctx *session.Context, senderSeeds *vsot.SenderOutput, suite *Su
 	if senderSeeds == nil || suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 	if senderSeeds.InferredXi() != Kappa || senderSeeds.InferredL() != 1 {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid sender seeds")
 	}
 
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
 	sessionID := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	r := &Receiver{
 		participant: participant{
 			ctx,
+			copartyID,
 			suite,
 			1,
 			prng,
