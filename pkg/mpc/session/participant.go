@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"iter"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -93,12 +94,11 @@ func (p *Participant) Round2(inB network.RoundMessages[*Round1Broadcast, *Partic
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
+	if err := network.ValidateIncomingMessages(p, p.otherParticipantsOrdered(), inB); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid incoming messages")
+	}
 
-	for _, id := range p.sortedQuorum {
-		if id == p.id {
-			continue
-		}
-
+	for id := range p.otherParticipantsOrdered() {
 		b, ok := inB.Get(id)
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing broadcast from %d", id)
@@ -118,11 +118,7 @@ func (p *Participant) Round2(inB network.RoundMessages[*Round1Broadcast, *Partic
 	p.commonSeed = slices.Concat(commonData...)
 
 	uOut := hashmap.NewComparable[sharing.ID, *Round2P2P]()
-	for _, id := range p.sortedQuorum {
-		if id == p.id {
-			continue
-		}
-
+	for id := range p.otherParticipantsOrdered() {
 		ck, ok := p.commitmentKeys[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing commitment key for %d", id)
@@ -158,12 +154,11 @@ func (p *Participant) Round3(inU network.RoundMessages[*Round2P2P, *Participant]
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
+	if err := network.ValidateIncomingMessages(p, p.otherParticipantsOrdered(), inU); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid incoming messages")
+	}
 
-	for _, id := range p.sortedQuorum {
-		if id == p.id {
-			continue
-		}
-
+	for id := range p.otherParticipantsOrdered() {
 		u, ok := inU.Get(id)
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing unicast from %d", id)
@@ -172,10 +167,7 @@ func (p *Participant) Round3(inU network.RoundMessages[*Round2P2P, *Participant]
 	}
 
 	uOut := hashmap.NewComparable[sharing.ID, *Round3P2P]()
-	for _, id := range p.sortedQuorum {
-		if id == p.id {
-			continue
-		}
+	for id := range p.otherParticipantsOrdered() {
 		contribution, ok := p.contributions[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing contribution for %d", id)
@@ -199,6 +191,9 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 	if p.round != 4 {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
+	if err := network.ValidateIncomingMessages(p, p.otherParticipantsOrdered(), uIn); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid incoming messages")
+	}
 
 	ck, ok := p.commitmentKeys[p.id]
 	if !ok {
@@ -214,11 +209,7 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 	}
 
 	seeds := make(map[sharing.ID][]byte)
-	for _, id := range p.sortedQuorum {
-		if id == p.id {
-			continue
-		}
-
+	for id := range p.otherParticipantsOrdered() {
 		u, ok := uIn.Get(id)
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing message from %d", id)
@@ -266,4 +257,17 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 	}
 	p.round++
 	return ctx, nil
+}
+
+func (p *Participant) otherParticipantsOrdered() iter.Seq[sharing.ID] {
+	return func(yield func(sharing.ID) bool) {
+		for _, id := range p.sortedQuorum {
+			if id == p.id {
+				continue
+			}
+			if ok := yield(id); !ok {
+				return
+			}
+		}
+	}
 }
