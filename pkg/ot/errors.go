@@ -6,4 +6,5 @@ var (
 	ErrInvalidArgument = errs.New("invalid argument")
 	ErrFailed          = errs.New("failed")
 	ErrRound           = errs.New("invalid round")
+	ErrValidation      = errs.New("validation failed")
 )

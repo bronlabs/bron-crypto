@@ -14,10 +14,10 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 
 func (m *Round1P2P[G, S]) Validate(*Receiver[G, S], sharing.ID) error {
 	if m == nil || utils.IsNil(m.Ms) {
-		return ot.ErrInvalidArgument.WithMessage("invalid message")
+		return ot.ErrValidation.WithMessage("invalid message")
 	}
 	if m.Ms.IsOpIdentity() || !m.Ms.IsTorsionFree() {
-		return ot.ErrInvalidArgument.WithMessage("invalid message")
+		return ot.ErrValidation.WithMessage("invalid message")
 	}
 
 	return nil
@@ -30,14 +30,14 @@ type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 
 func (m *Round2P2P[G, S]) Validate(p *Sender[G, S], _ sharing.ID) error {
 	if m == nil {
-		return ot.ErrInvalidArgument.WithMessage("invalid message")
+		return ot.ErrValidation.WithMessage("invalid message")
 	}
 	if len(m.Phi) != p.suite.Xi() {
-		return ot.ErrInvalidArgument.WithMessage("invalid message")
+		return ot.ErrValidation.WithMessage("invalid message")
 	}
 	for _, phi := range m.Phi {
 		if len(phi[0]) != p.suite.L() || len(phi[1]) != p.suite.L() {
-			return ot.ErrInvalidArgument.WithMessage("invalid message")
+			return ot.ErrValidation.WithMessage("invalid message")
 		}
 	}
 

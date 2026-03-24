@@ -13,10 +13,10 @@ type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElem
 
 func (m *Round1Broadcast[G, S]) Validate(p *Recoverer[G, S], _ sharing.ID) error {
 	if m == nil || m.BlindVerificationVector == nil {
-		return ErrInvalidArgument.WithMessage("missing fields in Round1Broadcast message")
+		return ErrValidation.WithMessage("missing fields in Round1Broadcast message")
 	}
 	if m.BlindVerificationVector.Degree() != int(p.scheme.AccessStructure().Threshold())-1 {
-		return ErrInvalidArgument.WithMessage("invalid message")
+		return ErrValidation.WithMessage("invalid message")
 	}
 
 	return nil
@@ -29,7 +29,7 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 
 func (m *Round1P2P[G, S]) Validate(*Recoverer[G, S], sharing.ID) error {
 	if m == nil || m.BlindShare == nil {
-		return ErrInvalidArgument.WithMessage("missing fields in Round1P2P message")
+		return ErrValidation.WithMessage("missing fields in Round1P2P message")
 	}
 
 	return nil
@@ -43,10 +43,10 @@ type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 
 func (m *Round2P2P[G, S]) Validate(p *Mislayer[G, S], _ sharing.ID) error {
 	if m == nil || m.BlindedShare == nil || m.VerificationVector == nil {
-		return ErrInvalidArgument.WithMessage("missing fields in Round2P2P message")
+		return ErrValidation.WithMessage("missing fields in Round2P2P message")
 	}
 	if m.VerificationVector.Degree() != int(p.scheme.AccessStructure().Threshold())-1 {
-		return ErrInvalidArgument.WithMessage("invalid message")
+		return ErrValidation.WithMessage("invalid message")
 	}
 
 	return nil
