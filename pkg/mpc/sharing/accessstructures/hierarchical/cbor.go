@@ -1,9 +1,10 @@
 package hierarchical
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/internal/tags"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const HierarchicalConjunctiveThresholdAccessStructureTag = tags.HierarchicalConjunctiveThresholdAccessStructureTag

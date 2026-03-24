@@ -4,10 +4,11 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/internal/tags"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const UnanimityAccessStructureTag = tags.UnanimityAccessStructureTag

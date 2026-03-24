@@ -1,11 +1,12 @@
 package cnf
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/internal/tags"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const CNFAccessStructureTag = tags.CNFAccessStructureTag

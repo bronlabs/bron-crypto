@@ -8,5 +8,5 @@ var (
 	ErrMembership    = errs.New("membership error")
 	ErrType          = errs.New("type error")
 	ErrFailed        = errs.New("failed")
-	ErrSerialisation = errs.New("serialization error")
+	ErrSerialisation = errs.New("serialisation error")
 )

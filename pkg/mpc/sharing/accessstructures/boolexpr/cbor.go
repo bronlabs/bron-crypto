@@ -1,10 +1,11 @@
 package boolexpr
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/internal/tags"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const ThresholdGateAccessStructureTag = tags.ThresholdGateAccessStructureTag
@@ -18,10 +19,10 @@ type thresholdGateAccessStructureDTO struct {
 	Shareholders map[internal.ID]bool `cbor:"shareholders"`
 }
 
-func (as *ThresholdGateAccessStructure) MarshalCBOR() ([]byte, error) {
+func (a *ThresholdGateAccessStructure) MarshalCBOR() ([]byte, error) {
 	dto := &thresholdGateAccessStructureDTO{
-		Root:         as.root,
-		Shareholders: as.shareholders,
+		Root:         a.root,
+		Shareholders: a.shareholders,
 	}
 	data, err := serde.MarshalCBORTagged(dto, ThresholdGateAccessStructureTag)
 	if err != nil {
@@ -30,7 +31,7 @@ func (as *ThresholdGateAccessStructure) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (as *ThresholdGateAccessStructure) UnmarshalCBOR(data []byte) error {
+func (a *ThresholdGateAccessStructure) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*thresholdGateAccessStructureDTO](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ThresholdGateAccessStructure")
@@ -50,8 +51,8 @@ func (as *ThresholdGateAccessStructure) UnmarshalCBOR(data []byte) error {
 			return internal.ErrSerialisation.WithMessage("shareholder in threshold gate tree not found in shareholders map")
 		}
 	}
-	as.root = dto.Root
-	as.shareholders = dto.Shareholders
+	a.root = dto.Root
+	a.shareholders = dto.Shareholders
 	return nil
 }
 
