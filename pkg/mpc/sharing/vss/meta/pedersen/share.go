@@ -45,7 +45,10 @@ func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret, blinding *k
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrUnauthorized.WithMessage("share ID %d is not a valid shareholder", id)
 	}
-	messages := sliceutils.Map(secret.Value(), pedcom.NewMessage)
+	messages, err := sliceutils.MapOrError(secret.Value(), pedcom.NewMessage)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create Pedersen messages")
+	}
 	witnesses, err := sliceutils.MapOrError(blinding.Value(), pedcom.NewWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create Pedersen witnesses")
@@ -124,7 +127,10 @@ func (s *Share[S]) ScalarOp(sc algebra.Numeric) *Share[S] {
 	if err != nil {
 		panic(sharing.ErrFailed.WithMessage("could not create witness from scalar: %v", err))
 	}
-	m2 := pedcom.NewMessage(scalar)
+	m2, err := pedcom.NewMessage(scalar)
+	if err != nil {
+		panic(sharing.ErrFailed.WithMessage("could not create message from scalar: %v", err))
+	}
 	return &Share[S]{
 		id:       s.id,
 		secret:   sliceutils.Map(s.secret, func(m *pedcom.Message[S]) *pedcom.Message[S] { return m.Mul(m2) }),
