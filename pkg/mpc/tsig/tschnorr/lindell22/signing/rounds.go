@@ -49,8 +49,8 @@ func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast[E, S, M], error) {
 	c.state.k = k
 	c.state.bigR = bigR
 	c.state.opening = opening
-	c.round++
 
+	c.round++
 	return broadcast, nil
 }
 
@@ -59,6 +59,10 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E,
 	if c.round != 2 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 2, c.round)
 	}
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), inb); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid input")
+	}
+
 	for pid := range c.ctx.OtherPartiesOrdered() {
 		received, ok := inb.Get(pid)
 		if !ok {
@@ -89,6 +93,10 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 	if c.round != 3 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 3, c.round)
 	}
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), inb); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid input")
+	}
+
 	summedR := c.state.bigR
 	for pid := range c.ctx.OtherPartiesOrdered() {
 		received, ok := inb.Get(pid)
@@ -121,6 +129,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute partial signature")
 	}
+
 	c.round++
 	return psig, nil
 }

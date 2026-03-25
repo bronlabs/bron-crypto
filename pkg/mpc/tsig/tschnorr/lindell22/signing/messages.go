@@ -16,7 +16,7 @@ type Round1Broadcast[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEl
 	BigRCommitment lindell22.Commitment `cbor:"bigRCommitment"`
 }
 
-func (m *Round1Broadcast[GE, S, M]) Validate(cosigner *Cosigner[GE, S, M], _ sharing.ID) error {
+func (m *Round1Broadcast[GE, S, M]) Validate(_ *Cosigner[GE, S, M], _ sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round1Broadcast message")
 	}
@@ -33,7 +33,7 @@ type Round2Broadcast[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEl
 	BigR        *schnorr.Statement[GE, S] `cbor:"bigR"`
 }
 
-func (m *Round2Broadcast[GE, S, M]) Validate(cosigner *Cosigner[GE, S, M], _ sharing.ID) error {
+func (m *Round2Broadcast[GE, S, M]) Validate(_ *Cosigner[GE, S, M], _ sharing.ID) error {
 	if m == nil || m.BigR == nil || utils.IsNil(m.BigR.Value()) {
 		return ErrValidation.WithMessage("missing fields in Round2Broadcast message")
 	}

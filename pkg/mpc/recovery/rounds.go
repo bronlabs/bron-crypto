@@ -13,6 +13,10 @@ import (
 
 // Round1 blinds the dealer polynomial and distributes blinded shares.
 func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S], *Recoverer[G, S]], error) {
+	if r.round != 1 {
+		return nil, nil, ErrValidation.WithMessage("invalid round")
+	}
+
 	blindOutput, _, err := r.scheme.DealRandom(r.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot deal blind")
@@ -45,11 +49,22 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 		})
 	}
 
+	r.round++
 	return r1b, r1u.Freeze(), nil
 }
 
 // Round2 aggregates blinded shares and publishes the original verification vector.
 func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Recoverer[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Recoverer[G, S]]) (network.OutgoingUnicasts[*Round2P2P[G, S], *Mislayer[G, S]], error) {
+	if r.round != 2 {
+		return nil, ErrValidation.WithMessage("invalid round")
+	}
+	if err := network.ValidateIncomingMessages(r, r.recoverersCtx.OtherPartiesOrdered(), r1b); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid broadcast input")
+	}
+	if err := network.ValidateIncomingMessages(r, r.recoverersCtx.OtherPartiesOrdered(), r1u); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid p2p input")
+	}
+
 	blindedShare := r.state.blindShare.Add(r.shard.Share())
 	for id := range r.recoverersCtx.OtherPartiesOrdered() {
 		u, ok := r1u.Get(id)
@@ -81,11 +96,19 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 		VerificationVector: r.shard.VerificationVector(),
 	})
 
+	r.round++
 	return r2u.Freeze(), nil
 }
 
 // Round3 interpolates the blinded shares to reconstruct the missing share.
 func (m *Mislayer[G, S]) Round3(r2u network.RoundMessages[*Round2P2P[G, S], *Mislayer[G, S]]) (output *Output[G, S], err error) {
+	if m.round != 3 {
+		return nil, ErrValidation.WithMessage("invalid round")
+	}
+	if err := network.ValidateIncomingMessages(m, m.ctx.OtherPartiesOrdered(), r2u); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid input")
+	}
+
 	xs := []S{}
 	ys := []S{}
 
@@ -122,5 +145,7 @@ func (m *Mislayer[G, S]) Round3(r2u network.RoundMessages[*Round2P2P[G, S], *Mis
 		share:        share,
 		verification: verificationVector,
 	}
+
+	m.round++
 	return output, nil
 }

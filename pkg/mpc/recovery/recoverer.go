@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 // Recoverer orchestrates recovery of a missing party's share.
@@ -23,6 +24,7 @@ type Recoverer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	mislayerID    sharing.ID
 	prng          io.Reader
 	state         RecovererState[G, S]
+	round         network.Round
 }
 
 // RecovererState stores per-session randomness and blinded share data.
@@ -66,6 +68,7 @@ func NewRecoverer[
 		mislayerID:    mislayerID,
 		prng:          prng,
 		state:         RecovererState[G, S]{blindShare: nil},
+		round:         1,
 	}
 	return r, nil
 }
