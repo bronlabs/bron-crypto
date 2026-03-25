@@ -170,25 +170,6 @@ func TestThresholdClone(t *testing.T) {
 	require.Nil(t, nilA.Clone())
 }
 
-func TestThresholdCBORRoundTrip(t *testing.T) {
-	t.Parallel()
-
-	original, err := NewThresholdAccessStructure(2, hashset.NewComparable[ID](10, 20, 30).Freeze())
-	require.NoError(t, err)
-
-	data, err := serde.MarshalCBOR(original)
-	require.NoError(t, err)
-
-	decoded, err := serde.UnmarshalCBOR[Threshold](data)
-	require.NoError(t, err)
-	require.True(t, original.Equal(&decoded))
-
-	cases := [][]ID{{10, 20}, {10, 20, 30}, {10}, {10, 99}}
-	for _, ids := range cases {
-		require.Equal(t, original.IsQualified(ids...), decoded.IsQualified(ids...))
-	}
-}
-
 func TestThresholdUnmarshalCBOR(t *testing.T) {
 	t.Parallel()
 

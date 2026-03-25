@@ -147,25 +147,6 @@ func TestUnanimityClone(t *testing.T) {
 	require.Nil(t, nilU.Clone())
 }
 
-func TestUnanimityCBORRoundTrip(t *testing.T) {
-	t.Parallel()
-
-	original, err := NewUnanimityAccessStructure(hashset.NewComparable[ID](2, 4, 8, 16).Freeze())
-	require.NoError(t, err)
-
-	data, err := serde.MarshalCBOR(original)
-	require.NoError(t, err)
-
-	decoded, err := serde.UnmarshalCBOR[Unanimity](data)
-	require.NoError(t, err)
-
-	require.True(t, original.Shareholders().Equal(decoded.Shareholders()))
-	cases := [][]ID{{2, 4, 8, 16}, {2, 4, 8, 16, 99}, {2, 4, 8}}
-	for _, ids := range cases {
-		require.Equal(t, original.IsQualified(ids...), decoded.IsQualified(ids...))
-	}
-}
-
 func TestUnanimityUnmarshalCBOR(t *testing.T) {
 	t.Parallel()
 

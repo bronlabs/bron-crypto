@@ -13,15 +13,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
-type gateKind uint8
+// GateKind distinguishes between internal threshold gates and attribute leaves in the threshold-gate tree.
+type GateKind uint8
 
 const (
-	gate gateKind = iota + 1
+	gate GateKind = iota + 1
 	attribute
 )
 
 type Node struct {
-	kind gateKind
+	kind GateKind
 
 	// for attribute gates
 	attr internal.ID

@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/internal/tags"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -37,14 +38,14 @@ var (
 )
 
 const (
-	RSAGroupKnownOrderTag = 5010 + iota
-	RSAGroupKnownOrderElementTag
-	RSAGroupUnknownOrderTag
-	RSAGroupUnknownOrderElementTag
-	PaillierGroupKnownOrderTag
-	PaillierGroupKnownOrderElementTag
-	PaillierGroupUnknownOrderTag
-	PaillierGroupUnknownOrderElementTag
+	RSAGroupKnownOrderTag               = tags.RSAGroupKnownOrderTag
+	RSAGroupKnownOrderElementTag        = tags.RSAGroupKnownOrderElementTag
+	RSAGroupUnknownOrderTag             = tags.RSAGroupUnknownOrderTag
+	RSAGroupUnknownOrderElementTag      = tags.RSAGroupUnknownOrderElementTag
+	PaillierGroupKnownOrderTag          = tags.PaillierGroupKnownOrderTag
+	PaillierGroupKnownOrderElementTag   = tags.PaillierGroupKnownOrderElementTag
+	PaillierGroupUnknownOrderTag        = tags.PaillierGroupUnknownOrderTag
+	PaillierGroupUnknownOrderElementTag = tags.PaillierGroupUnknownOrderElementTag
 )
 
 func init() {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/internal/tags"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -20,9 +21,9 @@ var (
 )
 
 const (
-	SimpleModulusTag         = 5006
-	OddPrimeFactorsTag       = 5007
-	OddPrimeSquareFactorsTag = 5008
+	SimpleModulusTag         = tags.SimpleModulusTag
+	OddPrimeFactorsTag       = tags.OddPrimeFactorsTag
+	OddPrimeSquareFactorsTag = tags.OddPrimeSquareFactorsTag
 )
 
 func init() {

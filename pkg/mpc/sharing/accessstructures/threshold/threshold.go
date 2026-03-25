@@ -2,8 +2,6 @@ package threshold
 
 import (
 	"iter"
-	"maps"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -11,7 +9,6 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/vandermonde"
-	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
@@ -26,11 +23,6 @@ type ID = internal.ID
 type Threshold struct {
 	t  uint
 	ps ds.Set[ID]
-}
-
-type thresholdDTO struct {
-	T  uint        `cbor:"threshold"`
-	Ps map[ID]bool `cbor:"shareholders"`
 }
 
 // NewThresholdAccessStructure creates a new threshold access structure.
@@ -112,40 +104,6 @@ func (a *Threshold) Clone() *Threshold {
 		t:  a.t,
 		ps: a.ps.Clone(),
 	}
-}
-
-// MarshalCBOR serialises the threshold access structure.
-func (a *Threshold) MarshalCBOR() ([]byte, error) {
-	dto := &thresholdDTO{
-		T:  a.t,
-		Ps: make(map[ID]bool),
-	}
-	for p := range a.ps.Iter() {
-		dto.Ps[p] = true
-	}
-
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal AccessStructure")
-	}
-	return data, nil
-}
-
-// UnmarshalCBOR deserializes the threshold access structure.
-func (a *Threshold) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*thresholdDTO](data)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to unmarshal Threshold access structure")
-	}
-	ps := hashset.NewComparable(slices.Collect(maps.Keys(dto.Ps))...)
-
-	a2, err := NewThresholdAccessStructure(dto.T, ps.Freeze())
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create Threshold access structure from deserialized data")
-	}
-
-	*a = *a2
-	return nil
 }
 
 // InducedMSP constructs an ideal monotone span programme from a
