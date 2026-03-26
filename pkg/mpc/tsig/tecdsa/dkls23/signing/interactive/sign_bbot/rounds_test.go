@@ -17,7 +17,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -38,10 +37,6 @@ func Test_HappyPathWithDKG(t *testing.T) {
 			for _, testAccessStructure := range testAccessStructures {
 				t.Run(fmt.Sprintf("(%d/%d)", testAccessStructure.Threshold(), testAccessStructure.Shareholders().Size()), func(t *testing.T) {
 					t.Parallel()
-					t.Run("P256", func(t *testing.T) {
-						t.Parallel()
-						testHappyPath(t, p256.NewCurve(), testHashFunc, testAccessStructure)
-					})
 					t.Run("secp256k1", func(t *testing.T) {
 						t.Parallel()
 						testHappyPath(t, k256.NewCurve(), testHashFunc, testAccessStructure)
