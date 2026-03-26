@@ -27,10 +27,6 @@ func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map
 		return nil, ErrIsNil.WithMessage("rowsToHolders mapping cannot be nil")
 	}
 	rows, _ := m.Dimensions()
-	targetVector, err := m.Module().NewStandardUnit(0)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create target vector")
-	}
 
 	// Require labels defined for every row index 0..rows-1
 	for i := range rows {
@@ -64,11 +60,9 @@ func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map
 	}
 
 	return &MSP[E]{
-		matrix:          m.Clone(),
-		rowsToHolders:   hashmap.NewComparableFromNativeLike(rowsToHolders).Freeze(),
-		holdersToRows:   holdersToRows.Freeze(),
-		targetRowVector: targetVector,
-		f:               algebra.StructureMustBeAs[algebra.FiniteField[E]](m.Module().ScalarStructure()),
+		matrix:        m.Clone(),
+		rowsToHolders: hashmap.NewComparableFromNativeLike(rowsToHolders).Freeze(),
+		holdersToRows: holdersToRows.Freeze(),
 	}, nil
 }
 
@@ -76,11 +70,9 @@ func NewMSP[E algebra.FiniteFieldElement[E]](m *mat.Matrix[E], rowsToHolders map
 // access structure via a matrix M, a target vector t, and a labelling of rows
 // to shareholder IDs.
 type MSP[E algebra.FiniteFieldElement[E]] struct {
-	matrix          *mat.Matrix[E]
-	rowsToHolders   ds.Map[int, ID]
-	holdersToRows   ds.Map[ID, ds.Set[int]]
-	targetRowVector *mat.Matrix[E]
-	f               algebra.FiniteField[E]
+	matrix        *mat.Matrix[E]
+	rowsToHolders ds.Map[int, ID]
+	holdersToRows ds.Map[ID, ds.Set[int]]
 }
 
 // Matrix returns the MSP matrix.
@@ -90,7 +82,7 @@ func (m *MSP[E]) Matrix() *mat.Matrix[E] {
 
 // BaseField returns the finite field over which the MSP is defined.
 func (m *MSP[E]) BaseField() algebra.FiniteField[E] {
-	return m.f
+	return algebra.StructureMustBeAs[algebra.FiniteField[E]](m.matrix.Module().ScalarStructure())
 }
 
 // RowsToHolders returns a copy of the mapping from matrix row indices to shareholder IDs.
@@ -103,9 +95,18 @@ func (m *MSP[E]) HoldersToRows() ds.Map[ID, ds.Set[int]] {
 	return m.holdersToRows
 }
 
+// Shareholders returns the set of all shareholder IDs that occur in the MSP.
+func (m *MSP[E]) Shareholders() ds.Set[ID] {
+	return hashset.NewComparable(m.holdersToRows.Keys()...).Freeze()
+}
+
 // TargetVector returns the target row vector of the MSP.
 func (m *MSP[E]) TargetVector() *mat.Matrix[E] {
-	return m.targetRowVector
+	targetVector, err := m.matrix.Module().NewStandardUnit(0)
+	if err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to create target vector"))
+	}
+	return targetVector
 }
 
 // Size returns the number of rows in the MSP matrix.
@@ -149,7 +150,7 @@ func (m *MSP[E]) ReconstructionVector(IDs ...ID) (*mat.Matrix[E], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to extract submatrix for given IDs")
 	}
-	out, err := mat.SolveLeft(MIDs, m.targetRowVector)
+	out, err := mat.SolveLeft(MIDs, m.TargetVector())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("target vector is not in the span of the selected rows")
 	}
