@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
@@ -282,4 +283,107 @@ func TestMSP_DuplicateIDsDeduped(t *testing.T) {
 	// Passing the same ID twice should behave as passing it once.
 	require.False(t, sp.Accepts(1, 1), "duplicate of single holder should not qualify")
 	require.True(t, sp.Accepts(1, 2, 2), "duplicates should be ignored, {1,2} qualifies")
+}
+
+// --- CBOR roundtrip tests ---
+
+func TestMSP_CBORRoundTrip_2of3(t *testing.T) {
+	t.Parallel()
+	original := new2of3MSP(t)
+
+	data, err := serde.MarshalCBOR(original)
+	require.NoError(t, err)
+
+	decoded, err := serde.UnmarshalCBOR[*msp.MSP[*k256.Scalar]](data)
+	require.NoError(t, err)
+
+	// Matrix is preserved.
+	require.True(t, original.Matrix().Equal(decoded.Matrix()))
+
+	// Dimensions match.
+	require.Equal(t, original.Size(), decoded.Size())
+	require.Equal(t, original.D(), decoded.D())
+
+	// RowsToHolders mapping preserved.
+	for i := range int(original.Size()) {
+		origID, ok1 := original.RowsToHolders().Get(i)
+		decID, ok2 := decoded.RowsToHolders().Get(i)
+		require.True(t, ok1)
+		require.True(t, ok2)
+		require.Equal(t, origID, decID)
+	}
+
+	// HoldersToRows rebuilt correctly.
+	require.True(t, original.Shareholders().Equal(decoded.Shareholders()))
+
+	// Acceptance behaviour identical.
+	require.True(t, decoded.Accepts(1, 2))
+	require.True(t, decoded.Accepts(1, 3))
+	require.True(t, decoded.Accepts(2, 3))
+	require.True(t, decoded.Accepts(1, 2, 3))
+	require.False(t, decoded.Accepts(1))
+	require.False(t, decoded.Accepts(2))
+	require.False(t, decoded.Accepts(3))
+}
+
+func TestMSP_CBORRoundTrip_MultiRowHolder(t *testing.T) {
+	t.Parallel()
+
+	// Holder 1 owns both rows of a 2×2 identity matrix.
+	m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
+	original, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 1})
+	require.NoError(t, err)
+	require.False(t, original.IsIdeal())
+
+	data, err := serde.MarshalCBOR(original)
+	require.NoError(t, err)
+
+	decoded, err := serde.UnmarshalCBOR[*msp.MSP[*k256.Scalar]](data)
+	require.NoError(t, err)
+
+	require.True(t, original.Matrix().Equal(decoded.Matrix()))
+	require.False(t, decoded.IsIdeal())
+	require.True(t, decoded.Accepts(1))
+
+	// HoldersToRows should show holder 1 with 2 rows.
+	rows, ok := decoded.HoldersToRows().Get(1)
+	require.True(t, ok)
+	require.Equal(t, 2, rows.Size())
+}
+
+func TestMSP_CBORRoundTrip_LargerMatrix(t *testing.T) {
+	t.Parallel()
+
+	// 4×3 matrix with 4 distinct holders.
+	m := newMatrix(t, [][]uint64{
+		{1, 1, 1},
+		{1, 2, 4},
+		{1, 3, 9},
+		{1, 4, 16},
+	})
+	original, err := msp.NewMSP(m, map[int]msp.ID{0: 10, 1: 20, 2: 30, 3: 40})
+	require.NoError(t, err)
+
+	data, err := serde.MarshalCBOR(original)
+	require.NoError(t, err)
+
+	decoded, err := serde.UnmarshalCBOR[*msp.MSP[*k256.Scalar]](data)
+	require.NoError(t, err)
+
+	require.True(t, original.Matrix().Equal(decoded.Matrix()))
+	require.Equal(t, original.Size(), decoded.Size())
+	require.Equal(t, original.D(), decoded.D())
+	require.True(t, original.Shareholders().Equal(decoded.Shareholders()))
+
+	// Any 3 of 4 holders should qualify (3-of-4 Vandermonde).
+	require.True(t, decoded.Accepts(10, 20, 30))
+	require.True(t, decoded.Accepts(10, 20, 40))
+	require.False(t, decoded.Accepts(10, 20))
+}
+
+func TestMSP_CBORUnmarshal_InvalidData(t *testing.T) {
+	t.Parallel()
+
+	_, err := serde.UnmarshalCBOR[*msp.MSP[*k256.Scalar]]([]byte{0xff, 0xfe})
+	require.Error(t, err)
 }
