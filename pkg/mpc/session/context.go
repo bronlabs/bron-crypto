@@ -4,18 +4,17 @@ import (
 	"bytes"
 	"crypto/sha3"
 	"encoding/binary"
+	"io"
 	"iter"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/maputils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -190,27 +189,25 @@ func (ctx *Context) SubContext(subQuorum network.Quorum) (*Context, error) {
 	return newCtx, nil
 }
 
-// SampleZeroShare derives an additive share that sums to the group identity across the quorum.
-func SampleZeroShare[GE algebra.GroupElement[GE]](ctx *Context, g algebra.FiniteGroup[GE]) (*additive.Share[GE], error) {
-	value := g.OpIdentity()
-	for id := range ctx.OtherPartiesOrdered() {
-		v, err := g.Random(ctx.seeds[id])
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("could not sample group element")
-		}
-		if id < ctx.holderID {
-			v = v.OpInv()
-		}
-		value = value.Op(v)
+func (ctx *Context) Clone() *Context {
+	newSid := ctx.sid
+	newHolderID := ctx.holderID
+	newQuorum := slices.Clone(ctx.sortedQuorum)
+	newTape := ctx.tape.Clone()
+	newSeeds := make(map[sharing.ID]*sha3.SHAKE)
+	for id, shake := range ctx.seeds {
+		newSeeds[id] = new(*shake)
 	}
 
-	as, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable(ctx.sortedQuorum...).Freeze())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create access structure")
+	return &Context{
+		sid:          newSid,
+		holderID:     newHolderID,
+		sortedQuorum: newQuorum,
+		tape:         newTape,
+		seeds:        newSeeds,
 	}
-	share, err := additive.NewShare(ctx.holderID, value, as)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create additive share")
-	}
-	return share, nil
+}
+
+func (ctx *Context) Seeds() map[sharing.ID]io.Reader {
+	return maputils.MapValues(ctx.seeds, func(_ sharing.ID, shake *sha3.SHAKE) io.Reader { return shake })
 }

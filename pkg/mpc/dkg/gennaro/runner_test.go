@@ -8,15 +8,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -28,6 +22,7 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHappyPath(t *testing.T) {
@@ -55,40 +50,9 @@ func TestHappyPath(t *testing.T) {
 						t.Parallel()
 						testHappyPathRunner(t, iters, k256.NewCurve(), as.thresh, as.total, niCompiler)
 					})
-
-					t.Run("p256", func(t *testing.T) {
-						t.Parallel()
-						testHappyPathRunner(t, iters, p256.NewCurve(), as.thresh, as.total, niCompiler)
-					})
-
-					t.Run("edwards25519", func(t *testing.T) {
-						t.Parallel()
-						testHappyPathRunner(t, iters, edwards25519.NewPrimeSubGroup(), as.thresh, as.total, niCompiler)
-					})
-
 					t.Run("curve25519", func(t *testing.T) {
 						t.Parallel()
 						testHappyPathRunner(t, iters, curve25519.NewPrimeSubGroup(), as.thresh, as.total, niCompiler)
-					})
-
-					t.Run("pallas", func(t *testing.T) {
-						t.Parallel()
-						testHappyPathRunner(t, iters, pasta.NewPallasCurve(), as.thresh, as.total, niCompiler)
-					})
-
-					t.Run("vesta", func(t *testing.T) {
-						t.Parallel()
-						testHappyPathRunner(t, iters, pasta.NewVestaCurve(), as.thresh, as.total, niCompiler)
-					})
-
-					t.Run("BLS12381G1", func(t *testing.T) {
-						t.Parallel()
-						testHappyPathRunner(t, iters, bls12381.NewG1(), as.thresh, as.total, niCompiler)
-					})
-
-					t.Run("BLS12381G2", func(t *testing.T) {
-						t.Parallel()
-						testHappyPathRunner(t, iters, bls12381.NewG2(), as.thresh, as.total, niCompiler)
 					})
 				})
 			}

@@ -2,8 +2,7 @@ package sigma
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 )
 
 const (
@@ -69,8 +68,7 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {
-	sessionID  network.SID
-	transcript transcripts.Transcript
+	ctx *session.Context
 
 	sigmaProtocol  Protocol[X, W, A, S, Z]
 	statement      X

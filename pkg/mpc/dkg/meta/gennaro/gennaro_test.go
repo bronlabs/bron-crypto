@@ -641,9 +641,9 @@ type securityFixture struct {
 	ids     []sharing.ID // sorted
 
 	r1bo map[sharing.ID]*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]
-	r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar]]
-	r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]]
-	r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar]]
+	r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
+	r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
+	r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
 }
 
 func newSecurityFixture(t *testing.T) *securityFixture {
@@ -664,9 +664,9 @@ func newSecurityFixture(t *testing.T) *securityFixture {
 	}
 }
 
-func replaceBroadcastFrom[M network.Message](
-	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M] {
+func replaceBroadcastFrom[M network.Message[*gennaro.Participant[*k256.Point, *k256.Scalar]]](
+	original network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {
@@ -678,9 +678,9 @@ func replaceBroadcastFrom[M network.Message](
 	return m.Freeze()
 }
 
-func replaceUnicastFrom[M network.Message](
-	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M] {
+func replaceUnicastFrom[M network.Message[*gennaro.Participant[*k256.Point, *k256.Scalar]]](
+	original network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {

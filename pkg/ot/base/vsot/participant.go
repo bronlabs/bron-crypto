@@ -5,15 +5,16 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -22,15 +23,16 @@ const (
 )
 
 type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	sessionID network.SID
+	ctx       *session.Context
+	copartyID sharing.ID
 	suite     *Suite[P, B, S]
-	tape      transcripts.Transcript
 	round     int
 	prng      io.Reader
 }
 
 func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
-	digest, err := hashing.HashIndexLengthPrefixed(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
+	sessionID := p.ctx.SessionID()
+	digest, err := hashing.HashIndexLengthPrefixed(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute hash")
 	}
@@ -53,17 +55,22 @@ type senderState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 }
 
 // NewSender creates a VSOT sender bound to the session, suite, transcript, and randomness source.
-func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Sender[P, B, S], error) {
-	if suite == nil || tape == nil || prng == nil {
+func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Sender[P, B, S], error) {
+	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	s := &Sender[P, B, S]{
 		participant: participant[P, B, S]{
-			sessionID: sessionID,
+			ctx:       ctx,
+			copartyID: copartyID,
 			suite:     suite,
-			tape:      tape,
 			round:     1,
 			prng:      prng,
 		},
@@ -91,17 +98,22 @@ type receiverState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 }
 
 // NewReceiver creates a VSOT receiver bound to the session, suite, transcript, and randomness source.
-func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[P, B, S], error) {
-	if suite == nil || tape == nil || prng == nil {
+func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Receiver[P, B, S], error) {
+	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	r := &Receiver[P, B, S]{
 		participant: participant[P, B, S]{
-			sessionID: sessionID,
+			ctx:       ctx,
+			copartyID: copartyID,
 			suite:     suite,
-			tape:      tape,
 			round:     2,
 			prng:      prng,
 		},

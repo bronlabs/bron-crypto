@@ -9,14 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -24,23 +25,22 @@ func Test_HappyPath(t *testing.T) {
 
 	const L = 16
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
 
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
 	suite, err := rvole_softspoken.NewSuite(L, curve, hashFunc)
 	require.NoError(t, err)
-	tape := hagrid.NewTranscript("test")
 	senderSeeds, receiverSeeds := generateSeeds(t, prng)
 
-	aliceTape := tape.Clone()
-	alice, err := rvole_softspoken.NewAlice(sessionID, suite, receiverSeeds, prng, aliceTape)
+	const aliceId = 1
+	const bobId = 2
+	quorum := hashset.NewComparable[sharing.ID](aliceId, bobId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	alice, err := rvole_softspoken.NewAlice(ctxs[aliceId], suite, receiverSeeds, prng)
 	require.NoError(t, err)
 
-	bobTape := tape.Clone()
-	bob, err := rvole_softspoken.NewBob(sessionID, suite, senderSeeds, prng, bobTape)
+	bob, err := rvole_softspoken.NewBob(ctxs[bobId], suite, senderSeeds, prng)
 	require.NoError(t, err)
 
 	r1, b, err := bob.Round1()
@@ -69,9 +69,9 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("transcripts at the same state", func(t *testing.T) {
 		t.Parallel()
-		aliceBytes, err := aliceTape.ExtractBytes("test", 32)
+		aliceBytes, err := ctxs[aliceId].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
-		bobBytes, err := bobTape.ExtractBytes("test", 32)
+		bobBytes, err := ctxs[bobId].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.True(t, bytes.Equal(aliceBytes, bobBytes))
 	})

@@ -1,20 +1,20 @@
 package compiler_test
 
 import (
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func TestCompile_UsagePattern(t *testing.T) {
@@ -50,22 +50,19 @@ func testUsagePattern(t *testing.T, compilerName compiler.Name) {
 	statementValue := curve.ScalarBaseMul(witnessValue)
 	statement := schnorr.NewStatement(statementValue)
 
-	var sessionID network.SID
-	_, err = io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-
 	// nizk, err := compiler.Compile(fiatshamir.Name, sigmaProtocol, prng)
 	nizk, err := compiler.Compile(compilerName, sigmaProtocol, prng)
 	require.NoError(t, err, "Compile should succeed for %s", compilerName)
 
-	// prover, _ := nizk.NewProver(sessionID, transcript)
-	proverTranscript := hagrid.NewTranscript("test")
-	prover, err := nizk.NewProver(sessionID, proverTranscript)
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	prover, err := nizk.NewProver(ctxs[proverId])
 	require.NoError(t, err, "NewProver should succeed for %s", compilerName)
 
-	// verifier, _ := nizk.NewVerifier(sessionID, transcript)
-	verifierTranscript := hagrid.NewTranscript("test")
-	verifier, err := nizk.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := nizk.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err, "NewVerifier should succeed for %s", compilerName)
 
 	// proof, _ := prover.Prove(statement, witness)

@@ -9,10 +9,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
@@ -21,8 +20,7 @@ var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
 
 // prover implements the NIProver interface for Fischlin proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
-	sessionID     network.SID
-	transcript    transcripts.Transcript
+	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 	rho           uint64
@@ -34,9 +32,9 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 // It runs rho parallel executions of the sigma protocol, searching for challenge/response
 // pairs that hash to zero. Returns the serialised proof containing all rho transcripts.
 func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
-	p.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
-	p.transcript.AppendBytes(statementLabel, statement.Bytes())
-	commonHKey, err := p.transcript.ExtractBytes(commonHLabel, base.CollisionResistanceBytesCeil)
+	p.ctx.Transcript().AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
+	p.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
+	commonHKey, err := p.ctx.Transcript().ExtractBytes(commonHLabel, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot extract h")
 	}
@@ -65,7 +63,8 @@ redo:
 
 		// 3. common-h ← H(x, m, sid)
 		// (This is a full hash, with output length 2*κc)
-		commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, p.sessionID[:])
+		sessionID := p.ctx.SessionID()
+		commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, sessionID[:])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot generate commitment")
 		}
@@ -110,9 +109,9 @@ redo:
 	for i := range p.rho {
 		responseSerialized = append(responseSerialized, zI[i].Bytes())
 	}
-	p.transcript.AppendBytes(commitmentLabel, commitmentSerialized...)
-	p.transcript.AppendBytes(challengeLabel, eI...)
-	p.transcript.AppendBytes(responseLabel, responseSerialized...)
+	p.ctx.Transcript().AppendBytes(commitmentLabel, commitmentSerialized...)
+	p.ctx.Transcript().AppendBytes(challengeLabel, eI...)
+	p.ctx.Transcript().AppendBytes(responseLabel, responseSerialized...)
 
 	// 7. π ← (m, e, z)
 	proof := &Proof[A, Z]{

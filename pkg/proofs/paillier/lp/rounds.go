@@ -18,11 +18,9 @@ import (
 
 // Round1 executes the verifier's first round.
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {
-	if verifier.Round != 1 {
-		return nil, ErrRound.WithMessage("%d != 1", verifier.Round)
+	if verifier.round != 1 {
+		return nil, ErrRound.WithMessage("%d != 1", verifier.round)
 	}
-
-	rootTranscript := verifier.Transcript.Clone()
 
 	zero, err := verifier.paillierPublicKey.PlaintextSpace().FromNat(numct.NatZero())
 	if err != nil {
@@ -30,7 +28,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 	// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
 	zeros := sliceutils.Repeat[[]*paillier.Plaintext](zero, verifier.k)
-	ciphertexts, nonces, err := verifier.enc.EncryptMany(zeros, verifier.paillierPublicKey, verifier.Prng)
+	ciphertexts, nonces, err := verifier.enc.EncryptMany(zeros, verifier.paillierPublicKey, verifier.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("encryption failed")
 	}
@@ -47,7 +45,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		witnesses[i] = nthroot.NewWitness(embeddedNonce)
 	}
 	verifier.state.y = sigand.ComposeWitnesses(witnesses...)
-	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionID, rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
+	verifier.state.rootsProver, err = sigma.NewProver(verifier.ctx, verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create sigma protocol prover")
 	}
@@ -57,7 +55,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1 of Nth root prover")
 	}
 
-	verifier.Round += 2
+	verifier.round += 2
 	return &Round1Output{
 		NthRootsProverOutput: nthRootProverRound1Output,
 		X:                    verifier.state.x,
@@ -66,10 +64,10 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 // Round2 executes the prover's second round.
 func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
-	if prover.Round != 2 {
-		return nil, ErrRound.WithMessage("%d != 2", prover.Round)
+	if prover.round != 2 {
+		return nil, ErrRound.WithMessage("%d != 2", prover.round)
 	}
-	if err := input.Validate(prover.k); err != nil {
+	if err := input.Validate(prover, prover.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 2 input")
 	}
 
@@ -81,8 +79,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 			return nil, errs.Wrap(err).WithMessage("failed to create statement with known order")
 		}
 	}
-	rootTranscript := prover.Transcript.Clone()
-	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.SessionID, rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.Prng)
+	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.ctx, prover.multiNthRootsProtocol, prover.state.x, prover.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Nth root verifier")
 	}
@@ -99,7 +96,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2 of Nth root verifier")
 	}
 
-	prover.Round += 2
+	prover.round += 2
 	return &Round2Output{
 		NthRootsVerifierOutput: nthRootVerifierRound2Output,
 	}, nil
@@ -107,15 +104,19 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 // Round3 executes the verifier's third round.
 func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
-	if verifier.Round != 3 {
-		return nil, ErrRound.WithMessage("%d != 3", verifier.Round)
+	if verifier.round != 3 {
+		return nil, ErrRound.WithMessage("%d != 3", verifier.round)
 	}
+	if err := input.Validate(verifier, verifier.copartyID); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid round 3 input")
+	}
+
 	nthRootProverRound3Output, err := verifier.state.rootsProver.Round3(input.NthRootsVerifierOutput)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3 of Nth root prover")
 	}
 
-	verifier.Round += 2
+	verifier.round += 2
 	return &Round3Output{
 		NthRootsProverOutput: nthRootProverRound3Output,
 	}, nil
@@ -123,9 +124,13 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 
 // Round4 executes the prover's fourth round.
 func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
-	if prover.Round != 4 {
-		return nil, ErrRound.WithMessage("%d != 4", prover.Round)
+	if prover.round != 4 {
+		return nil, ErrRound.WithMessage("%d != 4", prover.round)
 	}
+	if err := input.Validate(prover, prover.copartyID); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid round 4 input")
+	}
+
 	// round 4 of proving the knowledge of y
 	responses := make([]*nthroot.Response[*modular.OddPrimeSquareFactors], prover.k)
 	for i, z := range input.NthRootsProverOutput {
@@ -155,7 +160,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	)
 
 	// P returns a y'
-	prover.Round += 2
+	prover.round += 2
 	return &Round4Output{
 		YPrime: yPrime,
 	}, nil
@@ -164,10 +169,10 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 // Round5 executes the verifier's final round.
 func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	// Validation
-	if verifier.Round != 5 {
-		return ErrRound.WithMessage("%d != 5", verifier.Round)
+	if verifier.round != 5 {
+		return ErrRound.WithMessage("%d != 5", verifier.round)
 	}
-	if err := input.Validate(verifier.k); err != nil {
+	if err := input.Validate(verifier, verifier.copartyID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid round 5 input")
 	}
 
@@ -183,6 +188,6 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 
 	// V accepts if every y_i == y'_i
-	verifier.Round += 2
+	verifier.round += 2
 	return nil
 }

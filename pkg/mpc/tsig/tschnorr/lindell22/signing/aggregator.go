@@ -7,13 +7,14 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -69,24 +70,22 @@ func NewAggregator[
 // Aggregate combines partial signatures into a complete signature, verifying validity.
 // Returns an identifiable abort error if any partial signature is invalid.
 func (a *Aggregator[VR, GE, S, M]) Aggregate(
-	partialSignatures network.RoundMessages[*lindell22.PartialSignature[GE, S]],
+	partialSignatures ds.Map[sharing.ID, *lindell22.PartialSignature[GE, S]],
 	message M,
 ) (*schnorrlike.Signature[GE, S], error) {
 	if a == nil {
 		return nil, ErrNilArgument.WithMessage("aggregator cannot be nil")
 	}
-	if partialSignatures == nil {
-		return nil, ErrNilArgument.WithMessage("partial signatures cannot be nil")
-	}
 	quorum := hashset.NewComparable(partialSignatures.Keys()...).Freeze()
 	if !a.pkm.AccessStructure().IsQualified(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
 	}
-	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
-		return x == nil
-	}) {
-
-		return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
+	for sender, psig := range partialSignatures.Iter() {
+		if psig == nil {
+			return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
+				base.IdentifiableAbortPartyIDTag, sender,
+			)
+		}
 	}
 	R := iterutils.Reduce(slices.Values(partialSignatures.Values()),
 		a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },

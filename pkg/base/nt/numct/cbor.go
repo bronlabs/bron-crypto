@@ -36,7 +36,9 @@ func (n *Nat) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
-	n.SetBytes(dto.NatBytes)
+	if ok := n.SetBytes(dto.NatBytes); ok == ct.False {
+		return ErrDeserialisation.WithMessage("invalid Nat bytes")
+	}
 	return nil
 }
 
@@ -60,7 +62,9 @@ func (i *Int) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
-	i.SetBytes(dto.IntBytes)
+	if ok := i.SetBytes(dto.IntBytes); ok == ct.False {
+		return ErrDeserialisation.WithMessage("invalid Int bytes")
+	}
 	return nil
 }
 
@@ -83,18 +87,18 @@ func (m *Modulus) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if serial.N == nil {
-		return ErrFailed.WithMessage("modulus data is nil")
+		return ErrDeserialisation.WithMessage("modulus data is nil")
 	}
 	if serial.N.IsZero() == ct.True {
-		return ErrFailed.WithMessage("modulus cannot be zero")
+		return ErrDeserialisation.WithMessage("modulus cannot be zero")
 	}
 	ok := m.SetNat(serial.N)
 	if ok == ct.False {
-		return ErrFailed.WithMessage("invalid modulus")
+		return ErrDeserialisation.WithMessage("invalid modulus")
 	}
 	return nil
 }
 
 var (
-	ErrFailed = errs.New("failed")
+	ErrDeserialisation = errs.New("deserialisation failed")
 )

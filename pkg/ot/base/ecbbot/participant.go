@@ -4,23 +4,25 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const transcriptLabel = "BRON_CRYPTO_BBOT-"
 
 type participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	ka    *TaggedKeyAgreement[G, S]
-	suite *Suite[G, S]
-	round int
-	tape  transcripts.Transcript
-	prng  io.Reader
+	ctx       *session.Context
+	copartyID sharing.ID
+	ka        *TaggedKeyAgreement[G, S]
+	suite     *Suite[G, S]
+	round     int
+	prng      io.Reader
 }
 
 // Sender obtains the 2 random messages for the 1|2 ROT.
@@ -40,12 +42,17 @@ type Receiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 }
 
 // NewSender constructs a Random OT sender.
-func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[G, S], tape transcripts.Transcript, prng io.Reader) (*Sender[G, S], error) {
-	if suite == nil || tape == nil || prng == nil {
+func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[G, S], prng io.Reader) (*Sender[G, S], error) {
+	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create tagged key agreement")
@@ -53,11 +60,12 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 
 	s := &Sender[G, S]{
 		participant: participant[G, S]{
-			ka:    ka,
-			round: 1,
-			suite: suite,
-			tape:  tape,
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			ka:        ka,
+			round:     1,
+			suite:     suite,
+			prng:      prng,
 		},
 		state: SenderState[S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
@@ -66,12 +74,17 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 // NewReceiver constructs a Random OT receiver.
-func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionID network.SID, suite *Suite[G, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[G, S], error) {
-	if suite == nil || tape == nil || prng == nil {
+func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[G, S], prng io.Reader) (*Receiver[G, S], error) {
+	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create tagged key agreement")
@@ -79,11 +92,12 @@ func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 
 	r := &Receiver[G, S]{
 		participant: participant[G, S]{
-			ka:    ka,
-			suite: suite,
-			round: 2,
-			tape:  tape,
-			prng:  prng,
+			ctx:       ctx,
+			copartyID: copartyID,
+			ka:        ka,
+			suite:     suite,
+			round:     2,
+			prng:      prng,
 		},
 	}
 	return r, nil

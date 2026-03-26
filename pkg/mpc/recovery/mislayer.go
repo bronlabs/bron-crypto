@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 // Mislayer represents the party whose share is being reconstructed.
@@ -15,6 +16,7 @@ type Mislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 	ctx    *session.Context
 	field  algebra.PrimeField[S]
 	scheme *feldman.Scheme[G, S]
+	round  network.Round
 }
 
 // NewMislayer constructs a mislayer helper used to validate and interpolate recovered shares.
@@ -37,6 +39,7 @@ func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		ctx:    ctx,
 		field:  field,
 		scheme: scheme,
+		round:  3,
 	}
 	return m, nil
 }

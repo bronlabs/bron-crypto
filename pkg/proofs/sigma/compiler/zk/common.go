@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -9,9 +10,8 @@ import (
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -28,8 +28,7 @@ const (
 type CommitmentScheme commitments.Scheme[hash_comm.Key, hash_comm.Witness, hash_comm.Message, hash_comm.Commitment, *hash_comm.Committer, *hash_comm.Verifier]
 
 type participant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	sessionID network.SID
-	tape      transcripts.Transcript
+	ctx *session.Context
 
 	protocol   sigma.Protocol[X, W, A, S, Z]
 	statement  X
@@ -40,9 +39,9 @@ type participant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 	round uint
 }
 
-func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionID network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X) (*participant[X, W, A, S, Z], error) {
-	if len(sessionID) == 0 {
-		return nil, ErrInvalid.WithMessage("sessionID is empty")
+func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X) (*participant[X, W, A, S, Z], error) {
+	if ctx == nil {
+		return nil, ErrInvalid.WithMessage("ctx is empty")
 	}
 	if sigmaProtocol == nil {
 		return nil, ErrNil.WithMessage("protocol")
@@ -54,13 +53,11 @@ func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S si
 		return nil, ErrFailed.WithMessage("challengeBytes is too long for the compiler")
 	}
 
-	if tape == nil {
-		return nil, ErrNil.WithMessage("tape")
-	}
-	dst := fmt.Sprintf("%s-%s-%x", transcriptLabel, sigmaProtocol.Name(), sessionID)
-	tape.AppendDomainSeparator(dst)
+	sessionID := ctx.SessionID()
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
+	ctx.Transcript().AppendDomainSeparator(dst)
 
-	tape.AppendBytes(statementLabel, statement.Bytes())
+	ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, dst)
 	if err != nil {
@@ -73,8 +70,7 @@ func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S si
 	}
 
 	return &participant[X, W, A, S, Z]{
-		sessionID:  sessionID,
-		tape:       tape,
+		ctx:        ctx,
 		protocol:   sigmaProtocol,
 		statement:  statement,
 		commitment: *new(A),

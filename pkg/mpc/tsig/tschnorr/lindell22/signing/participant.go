@@ -15,22 +15,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-)
-
-var (
-	// ErrNilArgument is returned when a required argument is nil.
-	ErrNilArgument = errs.New("nil argument")
-	// ErrInvalidRound is returned when an operation is attempted in the wrong round.
-	ErrInvalidRound = errs.New("invalid round")
-	// ErrInvalidType is returned when a type assertion or check fails.
-	ErrInvalidType = errs.New("invalid type")
-	// ErrInvalidMembership is returned when a party is not authorized for an operation.
-	ErrInvalidMembership = errs.New("invalid membership")
 )
 
 const (
@@ -53,12 +42,12 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 
 // State holds the cosigner's internal state during the signing protocol.
 type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
-	quorumBytes               [][]byte
-	k                         S
-	bigR                      GE
-	opening                   lindell22.Opening
-	theirBigRCommitments      map[sharing.ID]lindell22.Commitment
-	tapeFrozenBeforeDlogProof ts.Transcript
+	quorumBytes              [][]byte
+	k                        S
+	bigR                     GE
+	opening                  lindell22.Opening
+	theirBigRCommitments     map[sharing.ID]lindell22.Commitment
+	ctxFrozenBeforeDlogProof *session.Context
 }
 
 // SessionID returns the session identifier for this signing session.
@@ -100,7 +89,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.Quorum())
 	}
-	zero, err := session.SampleZeroShare(c.ctx, c.sf)
+	zero, err := przs.SampleZeroShare(c.ctx, c.sf)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot sample zero share")
 	}
@@ -190,12 +179,12 @@ func NewCosigner[
 		variant:      variant,
 		round:        1,
 		state: &State[GE, S]{
-			quorumBytes:               quorumBytes,
-			k:                         *new(S),
-			bigR:                      *new(GE),
-			opening:                   lindell22.Opening{},
-			theirBigRCommitments:      make(map[sharing.ID]lindell22.Commitment, ctx.Quorum().Size()-1),
-			tapeFrozenBeforeDlogProof: nil,
+			quorumBytes:              quorumBytes,
+			k:                        *new(S),
+			bigR:                     *new(GE),
+			opening:                  lindell22.Opening{},
+			theirBigRCommitments:     make(map[sharing.ID]lindell22.Commitment, ctx.Quorum().Size()-1),
+			ctxFrozenBeforeDlogProof: nil,
 		},
 	}, nil
 }

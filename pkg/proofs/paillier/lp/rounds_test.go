@@ -8,14 +8,16 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const paillierGroupNLen = 2048
@@ -41,26 +43,25 @@ func Test_HappyPath(t *testing.T) {
 	sk, err := paillier.NewPrivateKey(group)
 	require.NoError(t, err)
 
-	err = doProof(40, sk.PublicKey(), sk)
+	err = doProof(t, 40, sk.PublicKey(), sk)
 	require.NoError(t, err)
 }
 
-func doProof(k int, pk *paillier.PublicKey, sk *paillier.PrivateKey) (err error) {
+func doProof(tb testing.TB, k int, pk *paillier.PublicKey, sk *paillier.PrivateKey) (err error) {
+	tb.Helper()
+
 	prng := pcg.NewRandomised()
-	sessionID, err := network.NewSID([]byte("lpSession"))
-	if err != nil {
-		return err
-	}
-	transcriptLabel := "LP"
+	const proverID = 1
+	const verifierID = 2
+	quorum := hashset.NewComparable[sharing.ID](proverID, verifierID).Freeze()
 
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	verifier, err := lp.NewVerifier(sessionID, k, pk, verifierTranscript, prng)
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
+	verifier, err := lp.NewVerifier(ctxs[verifierID], k, pk, prng)
 	if err != nil {
 		return err
 	}
 
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
-	prover, err := lp.NewProver(sessionID, k, sk, proverTranscript, prng)
+	prover, err := lp.NewProver(ctxs[proverID], k, sk, prng)
 	if err != nil {
 		return err
 	}
@@ -91,11 +92,11 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.PrivateKey) (err error)
 	}
 
 	label := "gimme, gimme"
-	proverBytes, err := proverTranscript.ExtractBytes(label, 128)
+	proverBytes, err := ctxs[proverID].Transcript().ExtractBytes(label, base.ComputationalSecurityBytesCeil)
 	if err != nil {
 		return lp.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
 	}
-	verifierBytes, err := verifierTranscript.ExtractBytes(label, 128)
+	verifierBytes, err := ctxs[verifierID].Transcript().ExtractBytes(label, base.ComputationalSecurityBytesCeil)
 	if err != nil {
 		return lp.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
 	}

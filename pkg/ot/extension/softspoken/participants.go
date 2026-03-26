@@ -12,10 +12,10 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -26,10 +26,10 @@ const (
 )
 
 type participant struct {
-	sessionID network.SID
+	ctx       *session.Context
+	copartyID sharing.ID
 	suite     *Suite
 	round     int
-	tape      transcripts.Transcript
 	prng      io.Reader
 }
 
@@ -48,21 +48,26 @@ type Receiver struct {
 }
 
 // NewSender constructs a SoftSpoken sender with VSOT seed outputs.
-func NewSender(sessionID network.SID, receiverSeeds *vsot.ReceiverOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Sender, error) {
-	if receiverSeeds == nil || suite == nil || tape == nil || prng == nil {
+func NewSender(ctx *session.Context, receiverSeeds *vsot.ReceiverOutput, suite *Suite, prng io.Reader) (*Sender, error) {
+	if receiverSeeds == nil || suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
+	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if receiverSeeds.InferredXi() != Kappa || receiverSeeds.InferredL() != 1 {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid receiver seeds")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	s := &Sender{
 		participant: participant{
-			sessionID,
+			ctx,
+			copartyID,
 			suite,
 			2,
-			tape,
 			prng,
 		},
 		receiverSeeds: receiverSeeds,
@@ -72,21 +77,26 @@ func NewSender(sessionID network.SID, receiverSeeds *vsot.ReceiverOutput, suite 
 }
 
 // NewReceiver constructs a SoftSpoken receiver with VSOT seed outputs.
-func NewReceiver(sessionID network.SID, senderSeeds *vsot.SenderOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Receiver, error) {
-	if senderSeeds == nil || suite == nil || tape == nil || prng == nil {
+func NewReceiver(ctx *session.Context, senderSeeds *vsot.SenderOutput, suite *Suite, prng io.Reader) (*Receiver, error) {
+	if senderSeeds == nil || suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
+	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if senderSeeds.InferredXi() != Kappa || senderSeeds.InferredL() != 1 {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid sender seeds")
 	}
 
-	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	r := &Receiver{
 		participant: participant{
-			sessionID,
+			ctx,
+			copartyID,
 			suite,
 			1,
-			tape,
 			prng,
 		},
 		senderSeeds: senderSeeds,
@@ -96,7 +106,8 @@ func NewReceiver(sessionID network.SID, senderSeeds *vsot.SenderOutput, suite *S
 }
 
 func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
-	preimage := slices.Concat(p.sessionID[:], binary.LittleEndian.AppendUint64(nil, uint64(j)), binary.LittleEndian.AppendUint64(nil, uint64(l)))
+	sessionID := p.ctx.SessionID()
+	preimage := slices.Concat(sessionID[:], binary.LittleEndian.AppendUint64(nil, uint64(j)), binary.LittleEndian.AppendUint64(nil, uint64(l)))
 	for _, d := range data {
 		preimage = slices.Concat(preimage, d)
 	}
@@ -109,7 +120,8 @@ func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
 
 // expand derives pseudorandom output from a seed message and choice bit.
 func (p *participant) expand(outputLen, idx int, message []byte, choice int) ([]byte, error) {
-	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, p.sessionID[:])
+	sessionID := p.ctx.SessionID()
+	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, sessionID[:])
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create blake2b XOF")
 	}

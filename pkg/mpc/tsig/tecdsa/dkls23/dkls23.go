@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
@@ -55,7 +56,7 @@ type partialSignatureDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B]
 
 // NewPartialSignature returns a new partial signature.
 func NewPartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](r P, u, w S) (*PartialSignature[P, B, S], error) {
-	if r.IsOpIdentity() || u.IsZero() {
+	if utils.IsNil(r) || utils.IsNil(u) || utils.IsNil(w) || r.IsOpIdentity() || u.IsZero() {
 		return nil, ErrFailed.WithMessage("invalid arguments")
 	}
 

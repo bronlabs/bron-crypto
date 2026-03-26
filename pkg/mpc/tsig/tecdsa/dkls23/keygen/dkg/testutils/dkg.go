@@ -51,35 +51,35 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 		require.NoError(tb, err)
 	}
 
-	r1uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round1P2P[P, B, S]])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round1P2P[P, B, S], *dkg.Participant[P, B, S]])
 	for id, party := range dkgParticipants {
 		r1uo[id], err = party.Round1()
 		require.NoError(tb, err)
 	}
 
 	r2ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r1uo)
-	r2uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round2P2P[P, B, S]])
+	r2uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round2P2P[P, B, S], *dkg.Participant[P, B, S]])
 	for id, party := range dkgParticipants {
 		r2uo[id], err = party.Round2(r2ui[id])
 		require.NoError(tb, err)
 	}
 
 	r3ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r2uo)
-	r3uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round3P2P])
+	r3uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round3P2P[P, B, S], *dkg.Participant[P, B, S]])
 	for id, party := range dkgParticipants {
 		r3uo[id], err = party.Round3(r3ui[id])
 		require.NoError(tb, err)
 	}
 
 	r4ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r3uo)
-	r4uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round4P2P])
+	r4uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round4P2P[P, B, S], *dkg.Participant[P, B, S]])
 	for id, party := range dkgParticipants {
 		r4uo[id], err = party.Round4(r4ui[id])
 		require.NoError(tb, err)
 	}
 
 	r5ui := ntu.MapUnicastO2I(tb, slices.Collect(maps.Values(dkgParticipants)), r4uo)
-	r5uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round5P2P])
+	r5uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round5P2P[P, B, S], *dkg.Participant[P, B, S]])
 	for id, party := range dkgParticipants {
 		r5uo[id], err = party.Round5(r5ui[id])
 		require.NoError(tb, err)

@@ -7,8 +7,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 )
 
 // Prover implements the interactive sigma prover.
@@ -20,7 +19,10 @@ type Prover[X Statement, W Witness, A Commitment, S State, Z Response] struct {
 }
 
 // NewProver constructs a sigma protocol prover.
-func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessionID network.SID, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](ctx *session.Context, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+	if ctx == nil {
+		return nil, ErrInvalidArgument.WithMessage("ctx is nil")
+	}
 	if sigmaProtocol == nil {
 		return nil, ErrInvalidArgument.WithMessage("protocol, statement or witness is nil")
 	}
@@ -28,16 +30,16 @@ func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessio
 		return nil, ErrInvalidArgument.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
 	}
 
+	sessionID := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionID[:]), transcriptLabel, sigmaProtocol.Name())
-	transcript.AppendDomainSeparator(dst)
-	transcript.AppendBytes(statementLabel, statement.Bytes())
+	ctx.Transcript().AppendDomainSeparator(dst)
+	ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
 	//nolint:exhaustruct // initial state
 	return &Prover[X, W, A, S, Z]{
 		//nolint:exhaustruct // initial state
 		participant: participant[X, W, A, S, Z]{
-			sessionID:     sessionID,
-			transcript:    transcript,
+			ctx:           ctx,
 			sigmaProtocol: sigmaProtocol,
 			statement:     statement,
 			round:         1,
@@ -59,7 +61,7 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 		return zero, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
 
-	p.transcript.AppendBytes(commitmentLabel, commitment.Bytes())
+	p.ctx.Transcript().AppendBytes(commitmentLabel, commitment.Bytes())
 	p.commitment = commitment
 	p.state = state
 	p.round += 2 // prover doesn't send anything in round 2 (skip to round 3)
@@ -69,7 +71,7 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 // Round3 runs the prover's third round.
 func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 	var zero Z
-	p.transcript.AppendBytes(challengeLabel, challengeBytes)
+	p.ctx.Transcript().AppendBytes(challengeLabel, challengeBytes)
 
 	if p.round != 3 {
 		return zero, ErrRound.WithMessage("r != 3 (%d)", p.round)
@@ -79,7 +81,7 @@ func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot generate response")
 	}
-	p.transcript.AppendBytes(responseLabel, response.Bytes())
+	p.ctx.Transcript().AppendBytes(responseLabel, response.Bytes())
 
 	p.challengeBytes = challengeBytes
 	p.response = response

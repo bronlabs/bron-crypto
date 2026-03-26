@@ -9,16 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 var primeLen = 512
@@ -47,7 +48,7 @@ func Test_HappyPathInteractive(t *testing.T) {
 	var xNatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
-	err = doInteractiveProof(&xNatCt, yNatCt, g, prng)
+	err = doInteractiveProof(t, &xNatCt, yNatCt, g, prng)
 	require.NoError(t, err)
 }
 
@@ -81,20 +82,18 @@ func Test_InvalidRootInteractive(t *testing.T) {
 	var x2NatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2NatCt, y2NatCt)
 
-	err = doInteractiveProof(&x1NatCt, y2NatCt, g, prng)
+	err = doInteractiveProof(t, &x1NatCt, y2NatCt, g, prng)
 	require.Error(t, err)
 	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 
-	err = doInteractiveProof(&x2NatCt, y1NatCt, g, prng)
+	err = doInteractiveProof(t, &x2NatCt, y1NatCt, g, prng)
 	require.Error(t, err)
 	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 }
 
 func Test_HappyPathNonInteractive(t *testing.T) {
 	t.Parallel()
-	sessionID, err := network.NewSID([]byte("nthRootSession"))
-	require.NoError(t, err)
-	appLabel := "NthRoot"
+
 	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
@@ -130,12 +129,15 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	fsProtocol, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
 
-	proverTranscript := hagrid.NewTranscript(appLabel)
-	prover, err := fsProtocol.NewProver(sessionID, proverTranscript)
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	prover, err := fsProtocol.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 
-	verifierTranscript := hagrid.NewTranscript(appLabel)
-	verifier, err := fsProtocol.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := fsProtocol.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	theProof, err := prover.Prove(statement, witness)
@@ -147,9 +149,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 
 func Test_InvalidRootNonInteractive(t *testing.T) {
 	t.Parallel()
-	sessionID, err := network.NewSID([]byte("nthRootSession"))
-	require.NoError(t, err)
-	appLabel := "NthRoot"
+
 	prng := pcg.NewRandomised()
 	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
@@ -193,12 +193,15 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	fsProtocol, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
 
-	proverTranscript := hagrid.NewTranscript(appLabel)
-	prover, err := fsProtocol.NewProver(sessionID, proverTranscript)
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	prover, err := fsProtocol.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 
-	verifierTranscript := hagrid.NewTranscript(appLabel)
-	verifier, err := fsProtocol.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := fsProtocol.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	statement1 := nthroot.NewStatement(x1)
@@ -330,10 +333,9 @@ func Test_Extractor(t *testing.T) {
 	require.True(t, witness.Value().Equal(extractedWitness.Value()))
 }
 
-func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, g *znstar.PaillierGroup[A], prng io.Reader) (err error) {
-	var sessionID network.SID
-	copy(sessionID[:], "nthRootSession")
-	appLabel := "NthRoot"
+func doInteractiveProof[A znstar.ArithmeticPaillier](tb testing.TB, xNatCt, yNatCt *numct.Nat, g *znstar.PaillierGroup[A], prng io.Reader) (err error) {
+	tb.Helper()
+
 	protocol, err := nthroot.NewProtocol(g, prng)
 	if err != nil {
 		return err
@@ -346,16 +348,20 @@ func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, 
 	if err != nil {
 		return err
 	}
+
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
+
 	proverStatement := nthroot.NewStatement(xUnit)
 	proverWitness := nthroot.NewWitness(yUnit)
-	proverTranscript := hagrid.NewTranscript(appLabel)
-	prover, err := sigma.NewProver(sessionID, proverTranscript, protocol, proverStatement, proverWitness)
+	prover, err := sigma.NewProver(ctxs[proverId], protocol, proverStatement, proverWitness)
 	if err != nil {
 		return err
 	}
 
-	verifierTranscript := hagrid.NewTranscript(appLabel)
-	verifier, err := sigma.NewVerifier(sessionID, verifierTranscript, protocol, proverStatement, prng)
+	verifier, err := sigma.NewVerifier(ctxs[verifierId], protocol, proverStatement, prng)
 	if err != nil {
 		return err
 	}
@@ -379,11 +385,11 @@ func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, 
 	}
 
 	label := "gimme, gimme"
-	proverBytes, err := proverTranscript.ExtractBytes(label, base.CollisionResistanceBytesCeil)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes(label, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return err
 	}
-	verifierBytes, err := verifierTranscript.ExtractBytes(label, base.CollisionResistanceBytesCeil)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes(label, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return err
 	}

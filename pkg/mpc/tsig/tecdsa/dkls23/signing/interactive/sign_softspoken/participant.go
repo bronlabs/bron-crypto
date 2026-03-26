@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
@@ -107,9 +108,12 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		if !ok {
 			return nil, ErrFailed.WithMessage("couldn't find alice seed")
 		}
-		aliceTape := ctx.Transcript().Clone()
-		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(c.ctx.SessionID(), mulSuite, aliceSeed, prng, aliceTape)
+		aliceCtx, err := ctx.SubContext(hashset.NewComparable(ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("couldn't create subcontext")
+		}
+		aliceCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(aliceCtx, mulSuite, aliceSeed, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("couldn't initialise Alice")
 		}
@@ -118,9 +122,12 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		if !ok {
 			return nil, ErrFailed.WithMessage("couldn't find bob seed")
 		}
-		bobTape := c.ctx.Transcript().Clone()
-		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
-		c.state.bobMul[id], err = rvole_softspoken.NewBob(c.ctx.SessionID(), mulSuite, bobSeed, prng, bobTape)
+		bobCtx, err := ctx.SubContext(hashset.NewComparable(ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("couldn't create subcontext")
+		}
+		bobCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
+		c.state.bobMul[id], err = rvole_softspoken.NewBob(bobCtx, mulSuite, bobSeed, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("couldn't initialise Bob")
 		}

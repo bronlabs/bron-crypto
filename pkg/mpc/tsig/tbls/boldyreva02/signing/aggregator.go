@@ -6,11 +6,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls/boldyreva02"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 
@@ -127,10 +129,10 @@ func NewLongKeyAggregator[
 // Returns the aggregated BLS signature, or an error if verification fails or
 // the partial signatures are not from an authorized quorum.
 func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
-	partialSigs network.RoundMessages[*boldyreva02.PartialSignature[SG, SGFE, PK, PKFE, E, S]],
+	partialSigs ds.Map[sharing.ID, *boldyreva02.PartialSignature[SG, SGFE, PK, PKFE, E, S]],
 	message []byte,
 ) (*bls.Signature[SG, SGFE, PK, PKFE, E, S], error) {
-	if partialSigs == nil {
+	if utils.IsNil(partialSigs) {
 		return nil, ErrInvalidArgument.WithMessage("partialSigs is nil")
 	}
 	if len(message) == 0 {
@@ -154,6 +156,9 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		publicKeyShare, exists := publicKeyShares.Get(sender)
 		if !exists {
 			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d does not exist in public material", sender)
+		}
+		if err := psig.Validate(A.targetRogueKeyAlg); err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("invalid partial signature from sender %d", sender)
 		}
 		additivePublicKeyShare, err := publicKeyShare.ToAdditive(quorum)
 		if err != nil {

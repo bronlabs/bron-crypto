@@ -273,6 +273,10 @@ func ContainsFunc[S ~[]T, T any](xs S, x T, equal func(T, T) bool) bool {
 	return false
 }
 
+func ContainsNil[V any](s []V) bool {
+	return iterutils.ContainsNil(slices.Values(s))
+}
+
 // Fold reduces the slice rest to a single value by applying the binary function f cumulatively, starting with initial.
 func Fold[T, U any](f func(acc U, x T) U, initial U, rest ...T) U {
 	accumulator := func(acc U, x T) (U, error) { return f(acc, x), nil }

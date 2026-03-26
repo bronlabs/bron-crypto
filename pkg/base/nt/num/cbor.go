@@ -45,7 +45,7 @@ func (np *NatPlus) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err)
 	}
 	if dto.NatPlus.IsZero() == ct.True {
-		return ErrOutOfRange.WithStackFrame().WithMessage("NatPlus must be greater than 0")
+		return ErrOutOfRange.WithMessage("NatPlus must be greater than 0")
 	}
 	np.v = dto.NatPlus
 	return nil
@@ -69,6 +69,9 @@ func (n *Nat) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
+	if dto.Nat == nil {
+		return ErrIsNil.WithMessage("Nat")
+	}
 	n.v = dto.Nat
 	return nil
 }
@@ -90,6 +93,9 @@ func (i *Int) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*intDTO](data)
 	if err != nil {
 		return errs.Wrap(err)
+	}
+	if dto.Int == nil {
+		return ErrIsNil.WithMessage("Int")
 	}
 	i.v = dto.Int
 	return nil
@@ -118,15 +124,15 @@ func (u *Uint) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err)
 	}
 	if dto.Modulus == nil {
-		return ErrIsNil.WithStackFrame().WithMessage("modulus")
+		return ErrIsNil.WithMessage("modulus")
 	}
 	if dto.Value == nil {
-		return ErrIsNil.WithStackFrame().WithMessage("value")
+		return ErrIsNil.WithMessage("value")
 	}
 
 	// Deserialize the modulus interface directly - tags handle type preservation
 	if lt, _, _ := dto.Value.Compare(dto.Modulus.Nat()); lt == ct.False {
-		return ErrOutOfRange.WithStackFrame().WithMessage("value must be in [0, modulus)")
+		return ErrOutOfRange.WithMessage("value must be in [0, modulus)")
 	}
 	u.v = dto.Value
 	u.m = dto.Modulus
@@ -156,10 +162,10 @@ func (r *Rat) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err)
 	}
 	if dto.A == nil {
-		return ErrIsNil.WithStackFrame().WithMessage("numerator")
+		return ErrIsNil.WithMessage("numerator")
 	}
 	if dto.B == nil {
-		return ErrIsNil.WithStackFrame().WithMessage("denominator")
+		return ErrIsNil.WithMessage("denominator")
 	}
 	r.a = dto.A
 	r.b = dto.B
@@ -185,7 +191,7 @@ func (z *ZMod) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err)
 	}
 	if dto.Modulus == nil {
-		return ErrIsNil.WithStackFrame().WithMessage("modulus")
+		return ErrIsNil.WithMessage("modulus")
 	}
 	z.n = dto.Modulus
 	return nil

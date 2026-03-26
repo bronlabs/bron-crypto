@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
@@ -28,6 +29,27 @@ import (
 type Share[E algebra.GroupElement[E]] struct {
 	id sharing.ID
 	v  map[bitset.ImmutableBitSet[sharing.ID]]E
+}
+
+func NewShare[E algebra.GroupElement[E]](id sharing.ID, v map[bitset.ImmutableBitSet[sharing.ID]]E) (*Share[E], error) {
+	if id == 0 {
+		return nil, sharing.ErrArgument.WithMessage("share ID cannot be zero")
+	}
+	if v == nil {
+		return nil, sharing.ErrArgument.WithMessage("share value map cannot be nil")
+	}
+	for clause, value := range v {
+		if utils.IsNil(value) {
+			return nil, sharing.ErrArgument.WithMessage("share value map cannot contain nil values (clause %v)", clause)
+		}
+		if clause == 0 {
+			return nil, sharing.ErrArgument.WithMessage("share value map cannot contain empty clause")
+		}
+	}
+	return &Share[E]{
+		id: id,
+		v:  v,
+	}, nil
 }
 
 // ID returns the shareholder's unique identifier.
@@ -177,15 +199,12 @@ func (s *Share[E]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ISN Share")
 	}
 
-	if dto.ID == 0 {
-		return sharing.ErrArgument.WithMessage("ISN Share has invalid zero ID")
+	ss, err := NewShare(dto.ID, dto.V)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("invalid share data")
 	}
-	if len(dto.V) == 0 {
-		return sharing.ErrArgument.WithMessage("ISN Share has empty value map")
-	}
-
-	s.id = dto.ID
-	s.v = dto.V
+	s.id = ss.id
+	s.v = ss.v
 	return nil
 }
 

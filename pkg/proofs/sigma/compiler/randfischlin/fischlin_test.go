@@ -14,11 +14,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPathSchnorr(t *testing.T) {
@@ -69,20 +71,22 @@ func testSchnorrHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(tb, err)
 
-	schnorrProtocol, err := schnorr.NewProtocol(
-		curve.Generator(), prng)
+	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(tb, err)
 
 	nizk, err := randfischlin.NewCompiler(schnorrProtocol, prng)
 	require.NoError(tb, err)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	prover, err := nizk.NewProver(sessionID, proverTranscript)
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
+
+	prover, err := nizk.NewProver(ctxs[proverId])
 	require.NoError(tb, err)
 	require.NotNil(tb, prover)
 
-	verifierTranscript := hagrid.NewTranscript("test")
-	verifier, err := nizk.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := nizk.NewVerifier(ctxs[verifierId])
 	require.NoError(tb, err)
 	require.NotNil(tb, verifier)
 
@@ -103,9 +107,9 @@ func testSchnorrHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	err = verifier.Verify(statement, proof)
 	require.NoError(tb, err)
 
-	proverBytes, err := proverTranscript.ExtractBytes("test", 32)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("test", 32)
 	require.NoError(tb, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("test", 32)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("test", 32)
 	require.NoError(tb, err)
 
 	require.True(tb, bytes.Equal(proverBytes, verifierBytes))
@@ -116,10 +120,6 @@ func TestRandFischlin_WrongWitness(t *testing.T) {
 
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
-
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(t, err)
@@ -138,15 +138,17 @@ func TestRandFischlin_WrongWitness(t *testing.T) {
 	nizk, err := randfischlin.NewCompiler(schnorrProtocol, prng)
 	require.NoError(t, err)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := proverTranscript.Clone()
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	prover, err := nizk.NewProver(sessionID, proverTranscript)
+	prover, err := nizk.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, wrongWitness)
 	require.NoError(t, err)
 
-	verifier, err := nizk.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := nizk.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	// Verification should fail with wrong witness
@@ -160,10 +162,6 @@ func TestRandFischlin_TamperedProof(t *testing.T) {
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(t, err)
 
@@ -176,10 +174,12 @@ func TestRandFischlin_TamperedProof(t *testing.T) {
 	nizk, err := randfischlin.NewCompiler(schnorrProtocol, prng)
 	require.NoError(t, err)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := proverTranscript.Clone()
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	prover, err := nizk.NewProver(sessionID, proverTranscript)
+	prover, err := nizk.NewProver(ctxs[proverId])
 	require.NoError(t, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(t, err)
@@ -189,7 +189,7 @@ func TestRandFischlin_TamperedProof(t *testing.T) {
 		proof[0] ^= 0xFF
 	}
 
-	verifier, err := nizk.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := nizk.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	// Verification should fail with tampered proof
@@ -203,10 +203,6 @@ func TestRandFischlin_EmptyProof(t *testing.T) {
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(t, err)
 
@@ -218,8 +214,12 @@ func TestRandFischlin_EmptyProof(t *testing.T) {
 	nizk, err := randfischlin.NewCompiler(schnorrProtocol, prng)
 	require.NoError(t, err)
 
-	verifierTranscript := hagrid.NewTranscript("test")
-	verifier, err := nizk.NewVerifier(sessionID, verifierTranscript)
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	verifier, err := nizk.NewVerifier(ctxs[verifierId])
 	require.NoError(t, err)
 
 	// Verification should fail with empty proof
@@ -227,47 +227,6 @@ func TestRandFischlin_EmptyProof(t *testing.T) {
 	require.Error(t, err)
 
 	err = verifier.Verify(statement, []byte{})
-	require.Error(t, err)
-}
-
-func TestRandFischlin_WrongSessionID(t *testing.T) {
-	t.Parallel()
-
-	prng := pcg.NewRandomised()
-	curve := k256.NewCurve()
-
-	var proverSessionID, verifierSessionID network.SID
-	_, err := io.ReadFull(prng, proverSessionID[:])
-	require.NoError(t, err)
-	_, err = io.ReadFull(prng, verifierSessionID[:])
-	require.NoError(t, err)
-
-	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
-	require.NoError(t, err)
-
-	witnessValue, err := curve.ScalarField().Random(prng)
-	require.NoError(t, err)
-	witness := schnorr.NewWitness(witnessValue)
-	statementValue := curve.ScalarBaseMul(witnessValue)
-	statement := schnorr.NewStatement(statementValue)
-
-	nizk, err := randfischlin.NewCompiler(schnorrProtocol, prng)
-	require.NoError(t, err)
-
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
-
-	prover, err := nizk.NewProver(proverSessionID, proverTranscript)
-	require.NoError(t, err)
-	proof, err := prover.Prove(statement, witness)
-	require.NoError(t, err)
-
-	// Use different session ID for verifier
-	verifier, err := nizk.NewVerifier(verifierSessionID, verifierTranscript)
-	require.NoError(t, err)
-
-	// Verification should fail with wrong session ID
-	err = verifier.Verify(statement, proof)
 	require.Error(t, err)
 }
 
@@ -312,9 +271,6 @@ func testRandFischlinTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldEl
 	tb.Helper()
 
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(tb, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(tb, err)
@@ -328,23 +284,25 @@ func testRandFischlinTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldEl
 	nizk, err := randfischlin.NewCompiler(schnorrProtocol, prng)
 	require.NoError(tb, err)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
 
-	prover, err := nizk.NewProver(sessionID, proverTranscript)
+	prover, err := nizk.NewProver(ctxs[proverId])
 	require.NoError(tb, err)
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(tb, err)
 
-	verifier, err := nizk.NewVerifier(sessionID, verifierTranscript)
+	verifier, err := nizk.NewVerifier(ctxs[verifierId])
 	require.NoError(tb, err)
 	err = verifier.Verify(statement, proof)
 	require.NoError(tb, err)
 
 	// Verify transcripts match after proof/verify
-	proverBytes, err := proverTranscript.ExtractBytes("final", 32)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("final", 32)
 	require.NoError(tb, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("final", 32)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("final", 32)
 	require.NoError(tb, err)
 	require.True(tb, bytes.Equal(proverBytes, verifierBytes))
 }

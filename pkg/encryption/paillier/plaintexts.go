@@ -71,7 +71,7 @@ func (pts *PlaintextSpace) Sample(lowInclusive, highExclusive *Plaintext, prng i
 
 // Contains returns true if the plaintext belongs to this plaintext space.
 func (pts *PlaintextSpace) Contains(m *Plaintext) bool {
-	return m != nil && pts.N().Equal(m.N())
+	return m != nil && pts.N().Equal(m.N()) && m.Value().IsInRangeSymmetric(pts.N())
 }
 
 // FromNat creates a plaintext from a constant-time natural number.

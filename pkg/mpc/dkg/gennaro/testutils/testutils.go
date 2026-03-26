@@ -31,10 +31,10 @@ func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	return runners
 }
 
-func DoGennaroRound1[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S]) (r1bo map[sharing.ID]*gennaro.Round1Broadcast[E, S], r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[E, S]]) {
+func DoGennaroRound1[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S]) (r1bo map[sharing.ID]*gennaro.Round1Broadcast[E, S], r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[E, S], *gennaro.Participant[E, S]]) {
 	tb.Helper()
 	r1bo = make(map[sharing.ID]*gennaro.Round1Broadcast[E, S])
-	r1uo = make(map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[E, S]])
+	r1uo = make(map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[E, S], *gennaro.Participant[E, S]])
 	for id, p := range participants {
 		var err error
 		r1bo[id], r1uo[id], err = p.Round1()
@@ -43,7 +43,7 @@ func DoGennaroRound1[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testi
 	return r1bo, r1uo
 }
 
-func DoGennaroRound2[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[E, S]], r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[E, S]]) map[sharing.ID]*gennaro.Round2Broadcast[E, S] {
+func DoGennaroRound2[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[E, S], *gennaro.Participant[E, S]], r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[E, S], *gennaro.Participant[E, S]]) map[sharing.ID]*gennaro.Round2Broadcast[E, S] {
 	tb.Helper()
 	r2bo := make(map[sharing.ID]*gennaro.Round2Broadcast[E, S], len(participants))
 	for id, p := range participants {
@@ -54,7 +54,7 @@ func DoGennaroRound2[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testi
 	return r2bo
 }
 
-func DoGennaroRound3[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r3bi map[sharing.ID]network.RoundMessages[*gennaro.Round2Broadcast[E, S]]) map[sharing.ID]*gennaro.DKGOutput[E, S] {
+func DoGennaroRound3[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r3bi map[sharing.ID]network.RoundMessages[*gennaro.Round2Broadcast[E, S], *gennaro.Participant[E, S]]) map[sharing.ID]*gennaro.DKGOutput[E, S] {
 	tb.Helper()
 	dkgOutput := make(map[sharing.ID]*gennaro.DKGOutput[E, S])
 	for id, p := range participants {

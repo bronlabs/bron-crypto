@@ -1,9 +1,8 @@
 package internal
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 // Name is the identifier for a compiler implementation (e.g., "FiatShamir", "Fischlin").
@@ -38,7 +37,7 @@ type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness] interface {
 	// SigmaProtocolName returns the name of the underlying sigma protocol.
 	SigmaProtocolName() sigma.Name
 	// NewProver creates a new prover for generating proofs.
-	NewProver(sessionID network.SID, transcript transcripts.Transcript) (NIProver[X, W], error)
+	NewProver(ctx *session.Context) (NIProver[X, W], error)
 	// NewVerifier creates a new verifier for checking proofs.
-	NewVerifier(sessionID network.SID, transcript transcripts.Transcript) (NIVerifier[X], error)
+	NewVerifier(ctx *session.Context) (NIVerifier[X], error)
 }

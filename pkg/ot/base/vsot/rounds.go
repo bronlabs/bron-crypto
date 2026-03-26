@@ -15,11 +15,11 @@ import (
 
 // Round1 samples sender secret b, computes B = bG, proves knowledge of b, and sends (B, proof).
 func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
-	var err error
 	if s.round != 1 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
 
+	var err error
 	s.state.b, err = s.suite.Field().Random(s.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("generating b")
@@ -36,7 +36,7 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	}
 	dlogStatement := dlogschnorr.NewStatement(s.state.bigB)
 	dlogWitness := dlogschnorr.NewWitness(s.state.b)
-	dlogProver, err := dlogProtocolCompiler.NewProver(s.sessionID, s.tape)
+	dlogProver, err := dlogProtocolCompiler.NewProver(s.ctx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
@@ -58,7 +58,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	if r.round != 2 {
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r1.Validate(); err != nil {
+	if err := r1.Validate(r, r.copartyID); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 	if len(choices)*8 != r.suite.Xi() {
@@ -74,7 +74,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog protocol compiler")
 	}
 	dlogStatement := dlogschnorr.NewStatement(r1.BigB)
-	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.sessionID, r.tape)
+	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.ctx)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}
@@ -112,7 +112,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 			}
 			receiverOutput.Messages[i][j] = r.state.rhoOmega[idx]
 
-			r.tape.AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), r.state.bigA[idx].ToCompressed())
+			r.ctx.Transcript().AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), r.state.bigA[idx].ToCompressed())
 		}
 	}
 
@@ -124,15 +124,15 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 }
 
 // Round3 derives sender seeds rho0/rho1 and commits to them with digests and XOR masks.
-func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOutput, error) {
-	var err error
+func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P[P, B, S], *SenderOutput, error) {
 	if s.round != 3 {
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r2.Validate(s.suite.Xi(), s.suite.L()); err != nil {
+	if err := r2.Validate(s, s.copartyID); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
+	var err error
 	rho0 := make([][]byte, s.suite.Xi()*s.suite.L())
 	rho1 := make([][]byte, s.suite.Xi()*s.suite.L())
 	s.state.rho0Digest = make([][]byte, s.suite.Xi()*s.suite.L())
@@ -181,11 +181,11 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 			xi[idx] = make([]byte, len(s.state.rho0DigestDigest[idx]))
 			subtle.XORBytes(xi[idx], s.state.rho0DigestDigest[idx], rho1DigestDigest)
 
-			s.tape.AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), bigA.ToCompressed())
+			s.ctx.Transcript().AppendBytes(fmt.Sprintf("%s%d-%d-", aLabel, i, j), bigA.ToCompressed())
 		}
 	}
 
-	r3 := &Round3P2P{
+	r3 := &Round3P2P[P, B, S]{
 		Xi: xi,
 	}
 	s.round += 2
@@ -193,15 +193,15 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 }
 
 // Round4 unblinds the masked digest corresponding to each receiver choice and returns rhoPrime values.
-func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
-	var err error
+func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P[P, B, S]) (*Round4P2P[P, B, S], error) {
 	if r.round != 4 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r3.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()); err != nil {
+	if err := r3.Validate(r, r.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
+	var err error
 	r.state.xi = r3.Xi
 	rhoPrime := make([][]byte, r.suite.Xi()*r.suite.L())
 	r.state.rhoOmegaDigest = make([][]byte, r.suite.Xi()*r.suite.L())
@@ -225,7 +225,7 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 		}
 	}
 
-	r4 := &Round4P2P{
+	r4 := &Round4P2P[P, B, S]{
 		RhoPrime: rhoPrime,
 	}
 	r.round += 2
@@ -233,11 +233,11 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 }
 
 // Round5 checks rhoPrime against sender commitments and returns digest openings.
-func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
+func (s *Sender[P, B, S]) Round5(r4 *Round4P2P[P, B, S]) (*Round5P2P[P, B, S], error) {
 	if s.round != 5 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r4.Validate(s.suite.Xi(), s.suite.L(), s.suite.hashFunc().Size()); err != nil {
+	if err := r4.Validate(s, s.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
@@ -254,7 +254,7 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 		}
 	}
 
-	r5 := &Round5P2P{
+	r5 := &Round5P2P[P, B, S]{
 		Rho0Digest: s.state.rho0Digest,
 		Rho1Digest: s.state.rho1Digest,
 	}
@@ -263,11 +263,11 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 }
 
 // Round6 verifies the sender's openings against the receiver's choice and internal hashes.
-func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
+func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P[P, B, S]) error {
 	if r.round != 6 {
 		return ot.ErrRound.WithMessage("invalid round")
 	}
-	if err := r5.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()); err != nil {
+	if err := r5.Validate(r, r.copartyID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid message")
 	}
 

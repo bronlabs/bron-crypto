@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
@@ -25,11 +25,11 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // The sigma protocol must have soundness error at least 2^(-80) (statistical security).
 // The prng is used to sample the random challenge. The verifier will execute
 // rounds 1, 3, and 5 of the protocol.
-func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionID network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
+func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
 	if prng == nil {
 		return nil, ErrNil.WithMessage("prng")
 	}
-	p, err := newParticipant(sessionID, tape, sigmaProtocol, statement)
+	p, err := newParticipant(ctx, sigmaProtocol, statement)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}
@@ -64,7 +64,7 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 	}
 	v.eWitness = eWitness
 
-	transcripts.Append(v.tape, challengeCommitmentLabel, eCommitment)
+	transcripts.Append(v.ctx.Transcript(), challengeCommitmentLabel, eCommitment)
 	v.round += 2
 	return eCommitment, nil
 }
@@ -75,8 +75,8 @@ func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hash_comm.Message, hash_
 	if v.round != 3 {
 		return hash_comm.Message(nil), hash_comm.Witness{}, ErrRound.WithMessage("r != 3 (%d)", v.round)
 	}
-	transcripts.Append(v.tape, commitmentLabel, commitment)
-	v.tape.AppendBytes(challengeLabel, v.challengeBytes)
+	transcripts.Append(v.ctx.Transcript(), commitmentLabel, commitment)
+	v.ctx.Transcript().AppendBytes(challengeLabel, v.challengeBytes)
 
 	v.commitment = commitment
 	v.round += 2
@@ -91,7 +91,7 @@ func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 		return ErrRound.WithMessage("r != 5 (%d)", v.round)
 	}
 
-	transcripts.Append(v.tape, responseLabel, response)
+	transcripts.Append(v.ctx.Transcript(), responseLabel, response)
 
 	err := v.protocol.Verify(v.statement, v.commitment, v.challengeBytes, response)
 	if err != nil {

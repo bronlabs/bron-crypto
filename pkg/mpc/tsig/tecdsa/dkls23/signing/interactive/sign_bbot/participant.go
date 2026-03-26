@@ -10,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
@@ -85,16 +86,22 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	c.state.aliceMul = make(map[sharing.ID]*rvole_bbot.Alice[P, S])
 	c.state.bobMul = make(map[sharing.ID]*rvole_bbot.Bob[P, S])
 	for id := range c.ctx.OtherPartiesOrdered() {
-		aliceTape := ctx.Transcript().Clone()
-		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.state.aliceMul[id], err = rvole_bbot.NewAlice(c.ctx.SessionID(), mulSuite, prng, aliceTape)
+		aliceCtx, err := ctx.SubContext(hashset.NewComparable[sharing.ID](ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create sub-context")
+		}
+		aliceCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		c.state.aliceMul[id], err = rvole_bbot.NewAlice(aliceCtx, mulSuite, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("couldn't initialise alice")
 		}
 
-		bobTape := ctx.Transcript().Clone()
-		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())))
-		c.state.bobMul[id], err = rvole_bbot.NewBob(c.ctx.SessionID(), mulSuite, prng, bobTape)
+		bobCtx, err := ctx.SubContext(hashset.NewComparable[sharing.ID](ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create sub-context")
+		}
+		bobCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())))
+		c.state.bobMul[id], err = rvole_bbot.NewBob(bobCtx, mulSuite, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("couldn't initialise bob")
 		}

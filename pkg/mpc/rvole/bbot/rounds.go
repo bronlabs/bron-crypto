@@ -15,13 +15,15 @@ func (alice *Alice[G, S]) Round1() (r1Out *Round1P2P[G, S], err error) {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}
 
-	r1Out, err = alice.sender.Round1()
+	otR1Out, err := alice.sender.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to call OT round 1")
 	}
 
 	alice.round += 2
-	return r1Out, nil
+	return &Round1P2P[G, S]{
+		OtR1: otR1Out,
+	}, nil
 }
 
 // Round2 executes protocol round 2.
@@ -30,13 +32,16 @@ func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b 
 	if bob.round != 2 {
 		return nil, nilSE, ErrValidation.WithMessage("invalid round")
 	}
+	if err := r1Out.Validate(bob, bob.copartyID); err != nil {
+		return nil, nilSE, errs.Wrap(err).WithMessage("invalid message")
+	}
 
 	beta := make([]byte, bob.xi/8)
 	if _, err := io.ReadFull(bob.prng, beta); err != nil {
 		return nil, nilSE, errs.Wrap(err).WithMessage("cannot sample choices")
 	}
 
-	r2Out, receiverOutput, err := bob.receiver.Round2(r1Out, beta)
+	otR2Out, receiverOutput, err := bob.receiver.Round2(r1Out.OtR1, beta)
 	if err != nil {
 		return nil, nilSE, errs.Wrap(err).WithMessage("cannot run round 2 of receiver")
 	}
@@ -54,16 +59,21 @@ func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b 
 	}
 
 	bob.round += 2
-	return r2Out, b, nil
+	return &Round2P2P[G, S]{
+		OtR2: otR2Out,
+	}, b, nil
 }
 
 // Round3 executes protocol round 3.
-func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2P[S], c []S, err error) {
+func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2P[G, S], c []S, err error) {
 	if alice.round != 3 {
 		return nil, nil, ErrValidation.WithMessage("invalid round")
 	}
+	if err := r2Out.Validate(alice, alice.copartyID); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
+	}
 
-	senderOutput, err := alice.sender.Round3(r2Out)
+	senderOutput, err := alice.sender.Round3(r2Out.OtR2)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot send round 3 of receiver")
 	}
@@ -125,7 +135,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 		return nil, nil, errs.Wrap(err).WithMessage("cannot get mu")
 	}
 
-	r3Out = &Round3P2P[S]{
+	r3Out = &Round3P2P[G, S]{
 		ATilde: aTilde,
 		Eta:    eta,
 		Mu:     mu,
@@ -135,11 +145,11 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 }
 
 // Round4 executes protocol round 4.
-func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
+func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[G, S]) (d []S, err error) {
 	if bob.round != 4 {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}
-	if err := r3Out.Validate(bob.xi, bob.suite.l, bob.rho); err != nil {
+	if err := r3Out.Validate(bob, bob.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
@@ -213,7 +223,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 func (p *participant[G, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 	for _, aTildeJ := range aTilde {
 		for _, aj := range aTildeJ {
-			p.tape.AppendBytes(aTildeLabel, aj.Bytes())
+			p.ctx.Transcript().AppendBytes(aTildeLabel, aj.Bytes())
 		}
 	}
 
@@ -221,7 +231,7 @@ func (p *participant[G, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 	for i := range theta {
 		theta[i] = make([]S, p.rho)
 		for j := range theta[i] {
-			thetaBytes, err := p.tape.ExtractBytes(thetaLabel, uint(p.suite.field.WideElementSize()))
+			thetaBytes, err := p.ctx.Transcript().ExtractBytes(thetaLabel, uint(p.suite.field.WideElementSize()))
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot extract theta")
 			}
@@ -238,10 +248,10 @@ func (p *participant[G, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 func (p *participant[G, S]) roMu(muBold [][]S) (mu []byte, err error) {
 	for _, muJ := range muBold {
 		for _, e := range muJ {
-			p.tape.AppendBytes(muVectorLabel, e.Bytes())
+			p.ctx.Transcript().AppendBytes(muVectorLabel, e.Bytes())
 		}
 	}
-	mu, err = p.tape.ExtractBytes(muLabel, uint(base.CollisionResistanceBytesCeil))
+	mu, err = p.ctx.Transcript().ExtractBytes(muLabel, uint(base.CollisionResistanceBytesCeil))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot extract mu")
 	}

@@ -14,11 +14,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func TestZKCompiler_HappyPath(t *testing.T) {
@@ -65,9 +67,6 @@ func testZKHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S algeb
 	tb.Helper()
 
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(tb, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(tb, err)
@@ -83,14 +82,16 @@ func testZKHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S algeb
 		X: statementValue,
 	}
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
 
-	prover, err := zk.NewProver(sessionID, proverTranscript, schnorrProtocol, statement, witness)
+	prover, err := zk.NewProver(ctxs[proverId], schnorrProtocol, statement, witness)
 	require.NoError(tb, err)
 	require.NotNil(tb, prover)
 
-	verifier, err := zk.NewVerifier(sessionID, verifierTranscript, schnorrProtocol, statement, prng)
+	verifier, err := zk.NewVerifier(ctxs[verifierId], schnorrProtocol, statement, prng)
 	require.NoError(tb, err)
 	require.NotNil(tb, verifier)
 
@@ -115,9 +116,9 @@ func testZKHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S algeb
 	require.NoError(tb, err)
 
 	// Verify transcripts match
-	proverBytes, err := proverTranscript.ExtractBytes("test", 32)
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("test", 32)
 	require.NoError(tb, err)
-	verifierBytes, err := verifierTranscript.ExtractBytes("test", 32)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("test", 32)
 	require.NoError(tb, err)
 	require.True(tb, bytes.Equal(proverBytes, verifierBytes))
 }
@@ -146,13 +147,15 @@ func TestZKCompiler_WrongWitness(t *testing.T) {
 	require.NoError(t, err)
 	wrongWitness := schnorr.NewWitness(wrongWitnessValue)
 
-	proverTranscript := hagrid.NewTranscript("test")
-	verifierTranscript := hagrid.NewTranscript("test")
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-	prover, err := zk.NewProver(sessionID, proverTranscript, schnorrProtocol, statement, wrongWitness)
+	prover, err := zk.NewProver(ctxs[proverId], schnorrProtocol, statement, wrongWitness)
 	require.NoError(t, err)
 
-	verifier, err := zk.NewVerifier(sessionID, verifierTranscript, schnorrProtocol, statement, prng)
+	verifier, err := zk.NewVerifier(ctxs[verifierId], schnorrProtocol, statement, prng)
 	require.NoError(t, err)
 
 	// Run protocol with wrong witness
@@ -179,10 +182,6 @@ func TestZKCompiler_RoundOrderEnforcement(t *testing.T) {
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
 
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(t, err)
 
@@ -192,10 +191,14 @@ func TestZKCompiler_RoundOrderEnforcement(t *testing.T) {
 	statementValue := curve.ScalarBaseMul(witnessValue)
 	statement := schnorr.NewStatement(statementValue)
 
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
 	t.Run("prover cannot skip to round 4", func(t *testing.T) {
 		t.Parallel()
-		proverTranscript := hagrid.NewTranscript("test")
-		prover, err := zk.NewProver(sessionID, proverTranscript, schnorrProtocol, statement, witness)
+		prover, err := zk.NewProver(ctxs[proverId], schnorrProtocol, statement, witness)
 		require.NoError(t, err)
 
 		// Try to call Round4 before Round2 - should fail due to wrong round
@@ -206,8 +209,7 @@ func TestZKCompiler_RoundOrderEnforcement(t *testing.T) {
 
 	t.Run("verifier cannot skip to round 3", func(t *testing.T) {
 		t.Parallel()
-		verifierTranscript := hagrid.NewTranscript("test")
-		verifier, err := zk.NewVerifier(sessionID, verifierTranscript, schnorrProtocol, statement, prng)
+		verifier, err := zk.NewVerifier(ctxs[verifierId], schnorrProtocol, statement, prng)
 		require.NoError(t, err)
 
 		// Try to call Round3 before Round1
@@ -217,8 +219,7 @@ func TestZKCompiler_RoundOrderEnforcement(t *testing.T) {
 
 	t.Run("verifier cannot verify before round 5", func(t *testing.T) {
 		t.Parallel()
-		verifierTranscript := hagrid.NewTranscript("test")
-		verifier, err := zk.NewVerifier(sessionID, verifierTranscript, schnorrProtocol, statement, prng)
+		verifier, err := zk.NewVerifier(ctxs[verifierId], schnorrProtocol, statement, prng)
 		require.NoError(t, err)
 
 		// Try to call Verify before completing rounds
@@ -246,31 +247,15 @@ func TestZKCompiler_NilInputs(t *testing.T) {
 	statementValue := curve.ScalarBaseMul(witnessValue)
 	statement := schnorr.NewStatement(statementValue)
 
-	t.Run("prover with nil transcript", func(t *testing.T) {
+	t.Run("prover with nil ctx", func(t *testing.T) {
 		t.Parallel()
-		_, err := zk.NewProver(sessionID, nil, schnorrProtocol, statement, witness)
-		require.Error(t, err)
-	})
-
-	t.Run("prover with empty sessionID", func(t *testing.T) {
-		t.Parallel()
-		transcript := hagrid.NewTranscript("test")
-		var emptySessionID network.SID
-		_, err := zk.NewProver(emptySessionID, transcript, schnorrProtocol, statement, witness)
+		_, err := zk.NewProver(nil, schnorrProtocol, statement, witness)
 		require.Error(t, err)
 	})
 
 	t.Run("verifier with nil transcript", func(t *testing.T) {
 		t.Parallel()
-		_, err := zk.NewVerifier(sessionID, nil, schnorrProtocol, statement, prng)
-		require.Error(t, err)
-	})
-
-	t.Run("verifier with empty sessionID", func(t *testing.T) {
-		t.Parallel()
-		transcript := hagrid.NewTranscript("test")
-		var emptySessionID network.SID
-		_, err := zk.NewVerifier(emptySessionID, transcript, schnorrProtocol, statement, prng)
+		_, err := zk.NewVerifier(nil, schnorrProtocol, statement, prng)
 		require.Error(t, err)
 	})
 }
@@ -282,10 +267,6 @@ func TestZKCompiler_MultipleIterations(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	for range 10 {
-		var sessionID network.SID
-		_, err := io.ReadFull(prng, sessionID[:])
-		require.NoError(t, err)
-
 		schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 		require.NoError(t, err)
 
@@ -295,13 +276,15 @@ func TestZKCompiler_MultipleIterations(t *testing.T) {
 		statementValue := curve.ScalarBaseMul(witnessValue)
 		statement := schnorr.NewStatement(statementValue)
 
-		proverTranscript := hagrid.NewTranscript("test")
-		verifierTranscript := hagrid.NewTranscript("test")
+		const proverId = 1
+		const verifierId = 2
+		quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+		ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
-		prover, err := zk.NewProver(sessionID, proverTranscript, schnorrProtocol, statement, witness)
+		prover, err := zk.NewProver(ctxs[proverId], schnorrProtocol, statement, witness)
 		require.NoError(t, err)
 
-		verifier, err := zk.NewVerifier(sessionID, verifierTranscript, schnorrProtocol, statement, prng)
+		verifier, err := zk.NewVerifier(ctxs[verifierId], schnorrProtocol, statement, prng)
 		require.NoError(t, err)
 
 		challengeCommitment, err := verifier.Round1()

@@ -7,8 +7,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,15 +49,15 @@ func MakeRandomSessionID(tb testing.TB, prng io.Reader) network.SID {
 // MapO2I maps the outputs of all participants in a round of a protocol to the inputs of the next round
 // with serialising and deserializing them throughout the process.
 func MapO2I[
-	P TestParticipant, BcastT, UnicastT network.Message,
+	P TestParticipant, BcastT, UnicastT network.Message[P],
 ](
 	tb testing.TB,
 	participants []P,
 	broadcastOutputs map[sharing.ID]BcastT,
-	UnicastOutputs map[sharing.ID]network.RoundMessages[UnicastT],
+	UnicastOutputs map[sharing.ID]network.RoundMessages[UnicastT, P],
 ) (
-	broadcastInputs map[sharing.ID]network.RoundMessages[BcastT],
-	UnicastInputs map[sharing.ID]network.RoundMessages[UnicastT],
+	broadcastInputs map[sharing.ID]network.RoundMessages[BcastT, P],
+	UnicastInputs map[sharing.ID]network.RoundMessages[UnicastT, P],
 ) {
 	tb.Helper()
 	if len(broadcastOutputs) != 0 {
@@ -74,26 +74,23 @@ func MapO2I[
 func MapBroadcastO2I[
 	P interface {
 		SharingID() sharing.ID
-	}, BcastT network.Message,
+	}, BcastT network.Message[P],
 ](
 	tb testing.TB,
 	participants []P,
 	broadcastOutputs map[sharing.ID]BcastT,
 ) (
-	broadcastInputs map[sharing.ID]network.RoundMessages[BcastT],
+	broadcastInputs map[sharing.ID]network.RoundMessages[BcastT, P],
 ) {
 	tb.Helper()
-	broadcastInputs = make(map[sharing.ID]network.RoundMessages[BcastT], len(participants))
+	broadcastInputs = make(map[sharing.ID]network.RoundMessages[BcastT, P], len(participants))
 	for _, receiver := range participants {
 		inputs := hashmap.NewComparable[sharing.ID, BcastT]()
-		for _, sender := range participants {
-			if sender.SharingID() == receiver.SharingID() {
+		for senderID, msg := range broadcastOutputs {
+			if senderID == receiver.SharingID() {
 				continue
 			}
-			msg, ok := broadcastOutputs[sender.SharingID()]
-			if ok {
-				inputs.Put(sender.SharingID(), CBORRoundTrip(tb, msg))
-			}
+			inputs.Put(senderID, CBORRoundTrip(tb, msg))
 		}
 		broadcastInputs[receiver.SharingID()] = inputs.Freeze()
 	}
@@ -105,32 +102,29 @@ func MapBroadcastO2I[
 func MapUnicastO2I[
 	P interface {
 		SharingID() sharing.ID
-	}, UnicastT network.Message,
+	}, UnicastT network.Message[P],
 ](
 	tb testing.TB,
 	participants []P,
-	p2pOutputs map[sharing.ID]network.RoundMessages[UnicastT],
+	p2pOutputs map[sharing.ID]network.RoundMessages[UnicastT, P],
 ) (
-	p2pInputs map[sharing.ID]network.RoundMessages[UnicastT],
+	p2pInputs map[sharing.ID]network.RoundMessages[UnicastT, P],
 ) {
 	tb.Helper()
-	p2pInputs = make(map[sharing.ID]network.RoundMessages[UnicastT], len(participants))
+	p2pInputs = make(map[sharing.ID]network.RoundMessages[UnicastT, P])
+
 	for _, receiver := range participants {
 		inputs := hashmap.NewComparable[sharing.ID, UnicastT]()
-		for _, sender := range participants {
-			if sender.SharingID() == receiver.SharingID() {
+		for senderID, messages := range p2pOutputs {
+			if senderID == receiver.SharingID() {
 				continue
 			}
-			p2pOutput, ok := p2pOutputs[sender.SharingID()]
+			msg, ok := messages.Get(receiver.SharingID())
 			if ok {
-				msg, exists := p2pOutput.Get(receiver.SharingID())
-				if exists {
-					inputs.Put(sender.SharingID(), CBORRoundTrip(tb, msg))
-				}
+				inputs.Put(senderID, CBORRoundTrip(tb, msg))
 			}
 		}
 		p2pInputs[receiver.SharingID()] = inputs.Freeze()
-
 	}
 	return p2pInputs
 }

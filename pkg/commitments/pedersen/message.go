@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // Message wraps a scalar plaintext committed with Pedersen commitments.
@@ -18,10 +19,13 @@ type messageDTO[S algebra.PrimeFieldElement[S]] struct {
 }
 
 // NewMessage constructs a message from the provided scalar value.
-func NewMessage[S algebra.PrimeFieldElement[S]](v S) *Message[S] {
+func NewMessage[S algebra.PrimeFieldElement[S]](v S) (*Message[S], error) {
+	if utils.IsNil(v) {
+		return nil, ErrInvalidArgument.WithMessage("message value cannot be nil")
+	}
 	return &Message[S]{
 		v: v,
-	}
+	}, nil
 }
 
 // Value returns the underlying scalar.
@@ -106,7 +110,10 @@ func (m *Message[S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen message")
 	}
 
-	m2 := NewMessage(dto.V)
+	m2, err := NewMessage(dto.V)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create Pedersen message")
+	}
 	*m = *m2
 	return nil
 }

@@ -1,16 +1,13 @@
 package ecbbot_test
 
 import (
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	ecbbottestutils "github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPathRandomOT(t *testing.T) {
@@ -18,39 +15,9 @@ func Test_HappyPathRandomOT(t *testing.T) {
 	const CHI = 128
 	const L = 1
 	prng := pcg.NewRandomised()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-	tape := hagrid.NewTranscript("test")
 	curve := k256.NewCurve()
 
-	senderOutput, receiverOutput, err := ecbbottestutils.RunBBOT(CHI, L, curve, sessionID, tape, prng)
+	senderOutput, receiverOutput, err := ecbbottestutils.RunBBOT(t, CHI, L, curve, prng)
 	require.NoError(t, err)
 	ecbbottestutils.ValidateOT(t, CHI, L, senderOutput, receiverOutput)
 }
-
-//func Benchmark_BBOT(b *testing.B) {
-//	Xi := 128
-//	L := 4
-//	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
-//	require.NoError(b, err)
-//	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
-//	require.NoError(b, err)
-//	senderKey, receiverKey := authKeys[0], authKeys[1]
-//	uniqueSessionID := [32]byte{}
-//	_, err = pcg.NewRandomised().Read(uniqueSessionID[:])
-//	require.NoError(b, err)
-//	for _, curve := range curveInstances {
-//		_, _, err := ecbbottestutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionID[:], pcg.NewRandomised())
-//		require.NoError(b, err)
-//	}
-//}
-//
-//func getKeys(t *testing.T) (senderKey, receiverKey types.AuthKey) {
-//	t.Helper()
-//	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
-//	require.NoError(t, err)
-//	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
-//	require.NoError(t, err)
-//	return authKeys[0], authKeys[1]
-//}

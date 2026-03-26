@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -64,8 +65,11 @@ func NewCiphertextFromUnit(u *znstar.PaillierGroupElementUnknownOrder) *Cipherte
 }
 
 // Contains returns true if the ciphertext belongs to this ciphertext space.
-func (cts *CiphertextSpace) Contains(ct *Ciphertext) bool {
-	return ct != nil && cts.N2().Equal(ct.N2())
+func (cts *CiphertextSpace) Contains(ctx *Ciphertext) bool {
+	return ctx != nil &&
+		cts.N2().Equal(ctx.N2()) &&
+		cts.g.N().Equal(ctx.Value().N()) &&
+		cts.g.Arithmetic().Modulus().Nat().Equal(ctx.Value().Arithmetic().Modulus().Nat()) == ct.True
 }
 
 // Ciphertext represents an encrypted Paillier message in the group (Z/n²Z)*.
@@ -74,83 +78,83 @@ type Ciphertext struct {
 }
 
 // Value returns the underlying group element.
-func (ct *Ciphertext) Value() *znstar.PaillierGroupElementUnknownOrder {
-	return ct.u
+func (ctx *Ciphertext) Value() *znstar.PaillierGroupElementUnknownOrder {
+	return ctx.u
 }
 
 // ValueCT returns the ciphertext value as a constant-time natural number.
-func (ct *Ciphertext) ValueCT() *numct.Nat {
-	return ct.Value().Value().Value()
+func (ctx *Ciphertext) ValueCT() *numct.Nat {
+	return ctx.Value().Value().Value()
 }
 
 // N2 returns the modulus n² of the ciphertext.
-func (ct *Ciphertext) N2() *num.NatPlus {
-	return ct.Value().Modulus()
+func (ctx *Ciphertext) N2() *num.NatPlus {
+	return ctx.Value().Modulus()
 }
 
-func (ct *Ciphertext) isValid(x *Ciphertext) {
+func (ctx *Ciphertext) isValid(x *Ciphertext) {
 	if x == nil {
 		panic("cannot operate on nil ciphertexts")
 	}
-	if !ct.N2().Equal(x.N2()) {
+	if !ctx.N2().Equal(x.N2()) {
 		panic("cannot operate on ciphertexts with different moduli")
 	}
 }
 
 // Op multiplies two ciphertexts in the group (Z/n²Z)*, which corresponds
 // to addition of the underlying plaintexts in the Paillier scheme.
-func (ct *Ciphertext) Op(other *Ciphertext) *Ciphertext {
-	ct.isValid(other)
-	v := ct.Value().ForgetOrder().Mul(other.Value().ForgetOrder())
+func (ctx *Ciphertext) Op(other *Ciphertext) *Ciphertext {
+	ctx.isValid(other)
+	v := ctx.Value().ForgetOrder().Mul(other.Value().ForgetOrder())
 	return &Ciphertext{u: v}
 }
 
 // HomAdd performs homomorphic addition of two ciphertexts.
 // The result decrypts to the sum of the two plaintexts: Dec(HomAdd(c1, c2)) = m1 + m2.
-func (ct *Ciphertext) HomAdd(other *Ciphertext) *Ciphertext {
-	return ct.Op(other)
+func (ctx *Ciphertext) HomAdd(other *Ciphertext) *Ciphertext {
+	return ctx.Op(other)
 }
 
 // HomSub performs homomorphic subtraction of two ciphertexts.
 // The result decrypts to the difference of the two plaintexts: Dec(HomSub(c1, c2)) = m1 - m2.
-func (ct *Ciphertext) HomSub(other *Ciphertext) *Ciphertext {
-	ct.isValid(other)
-	return &Ciphertext{u: ct.Value().Div(other.Value())}
+func (ctx *Ciphertext) HomSub(other *Ciphertext) *Ciphertext {
+	ctx.isValid(other)
+	return &Ciphertext{u: ctx.Value().Div(other.Value())}
 }
 
 // ScalarOp exponentiates a ciphertext by a scalar, which corresponds to
 // multiplication of the underlying plaintext by the scalar in the Paillier scheme.
-func (ct *Ciphertext) ScalarOp(scalar *num.Nat) *Ciphertext {
-	return &Ciphertext{u: ct.Value().Exp(scalar)}
+func (ctx *Ciphertext) ScalarOp(scalar *num.Nat) *Ciphertext {
+	return &Ciphertext{u: ctx.Value().Exp(scalar)}
 }
 
 // ScalarOpBounded exponentiates a ciphertext by a scalar with a known bit bound.
 // This is more efficient than ScalarOp when the scalar is known to be small.
-func (ct *Ciphertext) ScalarOpBounded(scalar *num.Nat, bits uint) *Ciphertext {
-	return &Ciphertext{u: ct.Value().ExpBounded(scalar, bits)}
+func (ctx *Ciphertext) ScalarOpBounded(scalar *num.Nat, bits uint) *Ciphertext {
+	return &Ciphertext{u: ctx.Value().ExpBounded(scalar, bits)}
 }
 
 // ScalarMul performs homomorphic scalar multiplication of a ciphertext.
 // The result decrypts to the product of the plaintext and scalar: Dec(ScalarMul(c, k)) = m * k.
-func (ct *Ciphertext) ScalarMul(scalar *num.Nat) *Ciphertext {
-	return ct.ScalarOp(scalar)
+func (ctx *Ciphertext) ScalarMul(scalar *num.Nat) *Ciphertext {
+	return ctx.ScalarOp(scalar)
 }
 
 // ScalarMulBounded performs homomorphic scalar multiplication with a known bit bound.
 // This is more efficient than ScalarMul when the scalar is known to be small.
-func (ct *Ciphertext) ScalarMulBounded(scalar *num.Nat, bits uint) *Ciphertext {
-	return ct.ScalarOpBounded(scalar, bits)
+func (ctx *Ciphertext) ScalarMulBounded(scalar *num.Nat, bits uint) *Ciphertext {
+	return ctx.ScalarOpBounded(scalar, bits)
 }
 
 // ReRandomise re-randomises a ciphertext by multiplying it with a fresh encryption of zero.
 // This produces a new ciphertext that decrypts to the same plaintext but is unlinkable
 // to the original. Returns the new ciphertext and the nonce used.
-func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
+func (ctx *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
 	nonce, err := pk.NonceSpace().Sample(prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err)
 	}
-	ciphertext, err := ct.ReRandomiseWithNonce(pk, nonce)
+	ciphertext, err := ctx.ReRandomiseWithNonce(pk, nonce)
 	if err != nil {
 		return nil, nil, errs.Wrap(err)
 	}
@@ -159,7 +163,7 @@ func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *
 
 // ReRandomiseWithNonce re-randomises a ciphertext using a provided nonce.
 // The result is c' = c * r^n mod n², which decrypts to the same plaintext as c.
-func (ct *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Ciphertext, error) {
+func (ctx *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Ciphertext, error) {
 	g := pk.CiphertextSpace().g
 	embeddedNonce, err := g.EmbedRSA(nonce.Value())
 	if err != nil {
@@ -170,33 +174,33 @@ func (ct *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Cipher
 		return nil, errs.Wrap(err)
 	}
 	// c' = c * r^n mod n^2
-	return &Ciphertext{u: ct.Value().Mul(rn)}, nil
+	return &Ciphertext{u: ctx.Value().Mul(rn)}, nil
 }
 
 // Equal returns true if two ciphertexts are equal.
-func (ct *Ciphertext) Equal(other *Ciphertext) bool {
-	return ct.Value().Equal(other.Value())
+func (ctx *Ciphertext) Equal(other *Ciphertext) bool {
+	return ctx.Value().Equal(other.Value())
 }
 
 // Shift adds a plaintext value to an encrypted ciphertext without re-randomization.
 // This is useful for adjusting ciphertexts by known values without changing randomness.
-func (ct *Ciphertext) Shift(pk *PublicKey, message *Plaintext) (*Ciphertext, error) {
+func (ctx *Ciphertext) Shift(pk *PublicKey, message *Plaintext) (*Ciphertext, error) {
 	gDeltaM, err := pk.group.Representative(message.ValueCT())
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
-	return &Ciphertext{u: ct.u.Mul(gDeltaM)}, nil
+	return &Ciphertext{u: ctx.u.Mul(gDeltaM)}, nil
 }
 
 // HashCode returns a hash code for the ciphertext.
-func (ct *Ciphertext) HashCode() base.HashCode {
-	return ct.Value().HashCode()
+func (ctx *Ciphertext) HashCode() base.HashCode {
+	return ctx.Value().HashCode()
 }
 
-func (ct *Ciphertext) Bytes() []byte {
-	if ct == nil || ct.u == nil {
+func (ctx *Ciphertext) Bytes() []byte {
+	if ctx == nil || ctx.u == nil {
 		return nil
 	}
 
-	return ct.u.Bytes()
+	return ctx.u.Bytes()
 }

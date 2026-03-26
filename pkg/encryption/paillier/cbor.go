@@ -109,9 +109,9 @@ type ciphertextDTO struct {
 }
 
 // MarshalCBOR serialises the ciphertext to CBOR format.
-func (ct *Ciphertext) MarshalCBOR() ([]byte, error) {
+func (ctx *Ciphertext) MarshalCBOR() ([]byte, error) {
 	dto := &ciphertextDTO{
-		U: ct.u,
+		U: ctx.u,
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -121,7 +121,7 @@ func (ct *Ciphertext) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR deserializes the ciphertext from CBOR format.
-func (ct *Ciphertext) UnmarshalCBOR(data []byte) error {
+func (ctx *Ciphertext) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[ciphertextDTO](data)
 	if err != nil {
 		return errs.Wrap(err)
@@ -130,7 +130,7 @@ func (ct *Ciphertext) UnmarshalCBOR(data []byte) error {
 		return ErrInvalidArgument.WithMessage("ciphertext is nil")
 	}
 
-	ct.u = dto.U
+	ctx.u = dto.U
 	return nil
 }
 

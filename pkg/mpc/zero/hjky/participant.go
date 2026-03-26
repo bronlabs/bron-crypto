@@ -74,3 +74,8 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 func (p *Participant[G, S]) SharingID() sharing.ID {
 	return p.ctx.HolderID()
 }
+
+// Context returns the session context associated with this participant.
+func (p *Participant[G, S]) Context() *session.Context {
+	return p.ctx
+}

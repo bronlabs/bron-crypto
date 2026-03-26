@@ -6,25 +6,23 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/stretchr/testify/require"
 )
 
 func setup[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, accessStructure *threshold.Threshold, group gennaro.Group[E, S], prng io.Reader) map[sharing.ID]*gennaro.Participant[E, S] {
@@ -422,9 +420,9 @@ type securityFixture struct {
 	ids     []sharing.ID // sorted
 
 	r1bo map[sharing.ID]*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]
-	r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar]]
-	r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]]
-	r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar]]
+	r1uo map[sharing.ID]network.OutgoingUnicasts[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
+	r2bi map[sharing.ID]network.RoundMessages[*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
+	r2ui map[sharing.ID]network.RoundMessages[*gennaro.Round1Unicast[*k256.Point, *k256.Scalar], *gennaro.Participant[*k256.Point, *k256.Scalar]]
 }
 
 func newSecurityFixture(t *testing.T) *securityFixture {
@@ -446,9 +444,9 @@ func newSecurityFixture(t *testing.T) *securityFixture {
 }
 
 // replaceBroadcastFrom returns a copy of victim's broadcast inputs with attacker's message replaced.
-func replaceBroadcastFrom[M network.Message](
-	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M] {
+func replaceBroadcastFrom[M network.Message[P], P any](
+	original network.RoundMessages[M, P], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, P] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {
@@ -461,9 +459,9 @@ func replaceBroadcastFrom[M network.Message](
 }
 
 // replaceUnicastFrom returns a copy of victim's unicast inputs with attacker's message replaced.
-func replaceUnicastFrom[M network.Message](
-	original network.RoundMessages[M], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M] {
+func replaceUnicastFrom[M network.Message[P], P any](
+	original network.RoundMessages[M, P], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, P] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {

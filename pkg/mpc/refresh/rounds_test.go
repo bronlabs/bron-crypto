@@ -49,7 +49,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	r1bo := make(map[sharing.ID]*refresh.Round1Broadcast[*k256.Point, *k256.Scalar])
-	r1uo := make(map[sharing.ID]network.RoundMessages[*refresh.Round1P2P[*k256.Point, *k256.Scalar]])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*refresh.Round1P2P[*k256.Point, *k256.Scalar], *refresh.Participant[*k256.Point, *k256.Scalar]])
 	for id, p := range participants {
 		r1bo[id], r1uo[id], err = p.Round1()
 		require.NoError(t, err)

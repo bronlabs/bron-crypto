@@ -13,7 +13,7 @@ const (
 	broadcastPrefix = "BROADCAST:"
 )
 
-func UnicastSend[U any](rt *network.Router, correlationID string, unicastMessagesOut network.RoundMessages[U]) error {
+func UnicastSend[U network.Message[P], P any](rt *network.Router, correlationID string, unicastMessagesOut network.RoundMessages[U, P]) error {
 	err := network.SendUnicast(rt, correlationID+unicastPrefix, unicastMessagesOut)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot send unicast")
@@ -21,8 +21,8 @@ func UnicastSend[U any](rt *network.Router, correlationID string, unicastMessage
 	return nil
 }
 
-func UnicastReceive[U any](rt *network.Router, correlationID string, quorum network.Quorum) (network.RoundMessages[U], error) {
-	unicastMessagesIn, err := network.ReceiveUnicast[U](rt, correlationID+unicastPrefix, quorum)
+func UnicastReceive[U network.Message[P], P any](rt *network.Router, correlationID string, quorum network.Quorum) (network.RoundMessages[U, P], error) {
+	unicastMessagesIn, err := network.ReceiveUnicast[U, P](rt, correlationID+unicastPrefix, quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot receive unicast")
 	}
@@ -30,13 +30,13 @@ func UnicastReceive[U any](rt *network.Router, correlationID string, quorum netw
 }
 
 // UnicastExchange performs a unicast-only exchange where each party sends distinct messages.
-func UnicastExchange[U any](rt *network.Router, correlationID string, unicastMessagesOut network.RoundMessages[U]) (unicastMessagesIn network.RoundMessages[U], err error) {
+func UnicastExchange[U network.Message[P], P any](rt *network.Router, correlationID string, unicastMessagesOut network.RoundMessages[U, P]) (unicastMessagesIn network.RoundMessages[U, P], err error) {
 	err = network.SendUnicast(rt, correlationID+unicastPrefix, unicastMessagesOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot send unicast")
 	}
 	quorum := unicastMessagesOut.Keys()
-	unicastMessagesIn, err = network.ReceiveUnicast[U](rt, correlationID+unicastPrefix, hashset.NewComparable(quorum...).Freeze())
+	unicastMessagesIn, err = network.ReceiveUnicast[U, P](rt, correlationID+unicastPrefix, hashset.NewComparable(quorum...).Freeze())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange unicast")
 	}
@@ -44,8 +44,8 @@ func UnicastExchange[U any](rt *network.Router, correlationID string, unicastMes
 }
 
 // BroadcastExchange performs an echo-broadcast round with the given message.
-func BroadcastExchange[B any](rt *network.Router, correlationID string, quorum network.Quorum, broadcastMessageOut B) (broadcastMessagesIn network.RoundMessages[B], err error) {
-	broadcastMessagesIn, err = echo.ExchangeEchoBroadcast(rt, correlationID+broadcastPrefix, quorum, broadcastMessageOut)
+func BroadcastExchange[B network.Message[P], P any](rt *network.Router, correlationID string, quorum network.Quorum, broadcastMessageOut B) (broadcastMessagesIn network.RoundMessages[B, P], err error) {
+	broadcastMessagesIn, err = echo.ExchangeEchoBroadcast[B, P](rt, correlationID+broadcastPrefix, quorum, broadcastMessageOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
@@ -53,7 +53,7 @@ func BroadcastExchange[B any](rt *network.Router, correlationID string, quorum n
 }
 
 // Exchange performs a combined broadcast and unicast exchange under a shared correlation ID.
-func Exchange[B any, U any](rt *network.Router, correlationID string, quorum network.Quorum, broadcastMessageOut B, unicastMessagesOut network.RoundMessages[U]) (broadcastMessagesIn network.RoundMessages[B], unicastMessagesIn network.RoundMessages[U], err error) {
+func Exchange[B network.Message[P], U network.Message[P], P any](rt *network.Router, correlationID string, quorum network.Quorum, broadcastMessageOut B, unicastMessagesOut network.RoundMessages[U, P]) (broadcastMessagesIn network.RoundMessages[B, P], unicastMessagesIn network.RoundMessages[U, P], err error) {
 	broadcastMessagesIn, err = BroadcastExchange(rt, correlationID, quorum, broadcastMessageOut)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")

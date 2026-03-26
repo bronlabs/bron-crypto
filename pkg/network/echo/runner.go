@@ -7,20 +7,20 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
-type echoBroadcastRunner[B any] struct {
-	party         *Participant[B]
+type echoBroadcastRunner[B network.Message[BP], BP any] struct {
+	party         *Participant[B, BP]
 	correlationID string
 	message       B
 }
 
 // NewEchoBroadcastRunner constructs an echo broadcast runner for the given party and quorum.
-func NewEchoBroadcastRunner[B any](sharingID sharing.ID, quorum network.Quorum, correlationID string, message B) (network.Runner[network.RoundMessages[B]], error) {
+func NewEchoBroadcastRunner[B network.Message[BP], BP any](sharingID sharing.ID, quorum network.Quorum, correlationID string, message B) (network.Runner[network.RoundMessages[B, BP]], error) {
 	party, err := NewParticipant[B](sharingID, quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create participant")
 	}
 
-	r := &echoBroadcastRunner[B]{
+	r := &echoBroadcastRunner[B, BP]{
 		party,
 		correlationID,
 		message,
@@ -29,7 +29,7 @@ func NewEchoBroadcastRunner[B any](sharingID sharing.ID, quorum network.Quorum, 
 }
 
 // Run executes the three-round echo broadcast protocol over the provided router.
-func (r *echoBroadcastRunner[B]) Run(rt *network.Router) (network.RoundMessages[B], error) {
+func (r *echoBroadcastRunner[B, BP]) Run(rt *network.Router) (network.RoundMessages[B, BP], error) {
 	// r1
 	r1Out, err := r.party.Round1(r.message)
 	if err != nil {
@@ -39,7 +39,7 @@ func (r *echoBroadcastRunner[B]) Run(rt *network.Router) (network.RoundMessages[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to send unicast")
 	}
-	r2In, err := network.ReceiveUnicast[*Round1P2P](rt, r.correlationID+":EchoRound1P2P", r.party.Quorum())
+	r2In, err := network.ReceiveUnicast[*Round1P2P[B, BP], *Participant[B, BP]](rt, r.correlationID+":EchoRound1P2P", r.party.Quorum())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to receive unicast")
 	}
@@ -53,7 +53,7 @@ func (r *echoBroadcastRunner[B]) Run(rt *network.Router) (network.RoundMessages[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to send unicast")
 	}
-	r3In, err := network.ReceiveUnicast[*Round2P2P](rt, r.correlationID+":EchoRound2P2P", r.party.Quorum())
+	r3In, err := network.ReceiveUnicast[*Round2P2P[B, BP], *Participant[B, BP]](rt, r.correlationID+":EchoRound2P2P", r.party.Quorum())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to receive unicast")
 	}

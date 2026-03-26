@@ -40,8 +40,8 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 	}
 	cosigners := slices.Collect(maps.Values(cosignersMap))
 
-	r1bo := make(map[sharing.ID]*sign_softspoken.Round1Broadcast)
-	r1uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_softspoken.Round1P2P])
+	r1bo := make(map[sharing.ID]*sign_softspoken.Round1Broadcast[P, B, S])
+	r1uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_softspoken.Round1P2P[P, B, S]])
 	for _, cosigner := range cosigners {
 		r1bo[cosigner.SharingID()], r1uo[cosigner.SharingID()], err = cosigner.Round1()
 		require.NoError(tb, err)

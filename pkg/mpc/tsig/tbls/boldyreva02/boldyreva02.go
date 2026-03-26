@@ -1,11 +1,15 @@
 package boldyreva02
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tbls"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
+
+var ErrValidation = errs.New("validation error")
 
 // PartialSignature represents a partial BLS signature produced by a single party
 // in the Boldyreva threshold BLS scheme. It contains the partial signature on
@@ -20,6 +24,24 @@ type PartialSignature[
 	SigmaI *bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_i"`
 	// SigmaPopI is the proof-of-possession signature, present only when using POP algorithm.
 	SigmaPopI *bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_pop_i"`
+}
+
+func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Validate(rogueKeyPrevention bls.RogueKeyPreventionAlgorithm) error {
+	if ps == nil || ps.SigmaI == nil {
+		return ErrValidation.WithMessage("partial signature cannot be nil")
+	}
+	if ps.SigmaI.Value().IsOpIdentity() || !ps.SigmaI.Value().IsTorsionFree() {
+		return ErrValidation.WithMessage("partial signature point must be non-identity and torsion-free")
+	}
+	if rogueKeyPrevention == bls.POP {
+		if ps.SigmaPopI == nil {
+			return ErrValidation.WithMessage("partial signature POP cannot be nil when using POP algorithm")
+		}
+		if ps.SigmaPopI.Value().IsOpIdentity() || !ps.SigmaPopI.Value().IsTorsionFree() {
+			return ErrValidation.WithMessage("partial signature POP point must be non-identity and torsion-free")
+		}
+	}
+	return nil
 }
 
 // Equal returns true if two PartialSignature instances are equal.

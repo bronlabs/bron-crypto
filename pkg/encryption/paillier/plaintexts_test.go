@@ -1,4 +1,5 @@
-package paillier_test
+//nolint:testpackage // testing internal details of the paillier package.
+package paillier
 
 import (
 	"testing"
@@ -6,22 +7,22 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
 // --- Test Helpers ---
 
 type plaintextTestContext struct {
-	pk *paillier.PublicKey
-	ps *paillier.PlaintextSpace
+	pk *PublicKey
+	ps *PlaintextSpace
 }
 
 func newPlaintextTestContext(tb testing.TB) *plaintextTestContext {
 	tb.Helper()
-	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
+	scheme := NewScheme()
+	kg, err := scheme.Keygen(WithKeyLen(1024))
 	require.NoError(tb, err)
 	_, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(tb, err)
@@ -31,7 +32,7 @@ func newPlaintextTestContext(tb testing.TB) *plaintextTestContext {
 	}
 }
 
-func (tc *plaintextTestContext) fromInt64(tb testing.TB, val int64) *paillier.Plaintext {
+func (tc *plaintextTestContext) fromInt64(tb testing.TB, val int64) *Plaintext {
 	tb.Helper()
 	var n numct.Int
 	if val >= 0 {
@@ -425,4 +426,109 @@ func TestPlaintext_Add_Inverse(t *testing.T) {
 
 	require.True(t, pt.Add(neg).Equal(zero))
 	require.True(t, neg.Add(pt).Equal(zero))
+}
+
+// TestPlaintextSpace_Contains_SymmetricRange verifies that Contains correctly
+// rejects plaintexts whose values fall outside the symmetric range [-n/2, n/2).
+// This catches the previous bug where Contains did not check the symmetric range.
+func TestPlaintextSpace_Contains_SymmetricRange(t *testing.T) {
+	t.Parallel()
+
+	scheme := NewScheme()
+	kg, err := scheme.Keygen(WithKeyLen(1024))
+	require.NoError(t, err)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
+	require.NoError(t, err)
+	ps := pk.PlaintextSpace()
+	n := ps.N()
+
+	z := num.Z()
+
+	// For odd n (Paillier modulus is always odd), floor(n/2) = (n-1)/2.
+	// The symmetric range is [-(n-1)/2, (n-1)/2], so:
+	//   (n-1)/2     is the maximum included value
+	//   (n-1)/2 + 1 is the minimum excluded positive value
+	halfN := n.Rsh(1) // floor(n/2) = (n-1)/2
+	halfNInt, err := z.FromNatPlus(halfN)
+	require.NoError(t, err)
+
+	one := z.FromInt64(1)
+
+	t.Run("floor(n/2)_is_included", func(t *testing.T) {
+		t.Parallel()
+		// (n-1)/2 is the inclusive upper bound
+		pt := &Plaintext{v: halfNInt, n: n}
+		require.True(t, ps.Contains(pt), "value (n-1)/2 should be inside symmetric range")
+	})
+
+	t.Run("floor(n/2)+1_is_excluded", func(t *testing.T) {
+		t.Parallel()
+		// (n-1)/2 + 1 = (n+1)/2 is just outside the upper bound
+		pt := &Plaintext{v: halfNInt.Add(one), n: n}
+		require.False(t, ps.Contains(pt), "value (n+1)/2 should be outside symmetric range")
+	})
+
+	t.Run("negative_floor(n/2)_is_included", func(t *testing.T) {
+		t.Parallel()
+		// -(n-1)/2 is the inclusive lower bound
+		negHalfN := z.FromInt64(0).Sub(halfNInt)
+		pt := &Plaintext{v: negHalfN, n: n}
+		require.True(t, ps.Contains(pt), "value -(n-1)/2 should be inside symmetric range")
+	})
+
+	t.Run("negative_floor(n/2)+1_is_excluded", func(t *testing.T) {
+		t.Parallel()
+		// -((n-1)/2) - 1 = -(n+1)/2 is just outside the lower bound
+		negHalfNMinus1 := z.FromInt64(0).Sub(halfNInt).Sub(one)
+		pt := &Plaintext{v: negHalfNMinus1, n: n}
+		require.False(t, ps.Contains(pt), "value -(n+1)/2 should be outside symmetric range")
+	})
+
+	t.Run("value_at_n_is_excluded", func(t *testing.T) {
+		t.Parallel()
+		nInt, err := z.FromNatPlus(n)
+		require.NoError(t, err)
+		pt := &Plaintext{v: nInt, n: n}
+		require.False(t, ps.Contains(pt), "value n should be outside symmetric range")
+	})
+
+	t.Run("value_at_negative_n_is_excluded", func(t *testing.T) {
+		t.Parallel()
+		nInt, err := z.FromNatPlus(n)
+		require.NoError(t, err)
+		negN := z.FromInt64(0).Sub(nInt)
+		pt := &Plaintext{v: negN, n: n}
+		require.False(t, ps.Contains(pt), "value -n should be outside symmetric range")
+	})
+
+	t.Run("zero_is_included", func(t *testing.T) {
+		t.Parallel()
+		pt := &Plaintext{v: z.FromInt64(0), n: n}
+		require.True(t, ps.Contains(pt), "zero should be inside symmetric range")
+	})
+
+	t.Run("small_positive_is_included", func(t *testing.T) {
+		t.Parallel()
+		pt := &Plaintext{v: z.FromInt64(42), n: n}
+		require.True(t, ps.Contains(pt), "small positive value should be inside symmetric range")
+	})
+
+	t.Run("small_negative_is_included", func(t *testing.T) {
+		t.Parallel()
+		pt := &Plaintext{v: z.FromInt64(-42), n: n}
+		require.True(t, ps.Contains(pt), "small negative value should be inside symmetric range")
+	})
+
+	t.Run("different_modulus_is_excluded", func(t *testing.T) {
+		t.Parallel()
+		_, pk2, err := kg.Generate(pcg.NewRandomised())
+		require.NoError(t, err)
+		pt := &Plaintext{v: z.FromInt64(1), n: pk2.PlaintextSpace().N()}
+		require.False(t, ps.Contains(pt), "plaintext with different modulus should not be contained")
+	})
+
+	t.Run("nil_plaintext_is_excluded", func(t *testing.T) {
+		t.Parallel()
+		require.False(t, ps.Contains(nil), "nil plaintext should not be contained")
+	})
 }

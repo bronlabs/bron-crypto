@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	shard           *tsig.BaseShard[G, S]
 	zeroParticipant *hjky.Participant[G, S]
+	round           network.Round
 }
 
 // NewParticipant constructs a shard refresher using the HjKy zero-sharing subprotocol.
@@ -44,6 +46,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	p := &Participant[G, S]{
 		shard:           shard,
 		zeroParticipant: zeroParticipant,
+		round:           1,
 	}
 
 	return p, nil

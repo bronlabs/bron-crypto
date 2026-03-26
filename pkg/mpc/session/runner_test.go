@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 )
@@ -52,7 +53,7 @@ func TestHappyPathRunner(t *testing.T) {
 		curve := k256.NewCurve()
 		sum := curve.OpIdentity()
 		for _, ctx := range contexts {
-			share, err := session.SampleZeroShare(ctx, curve)
+			share, err := przs.SampleZeroShare(ctx, curve)
 			require.NoError(t, err)
 			sum = sum.Op(share.Value())
 		}

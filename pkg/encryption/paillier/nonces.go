@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -61,7 +62,9 @@ func (ns *NonceSpace) New(x *numct.Nat) (*Nonce, error) {
 
 // Contains returns true if the nonce belongs to this nonce space.
 func (ns *NonceSpace) Contains(n *Nonce) bool {
-	return n != nil && ns.N().Equal(n.N())
+	return n != nil &&
+		ns.N().Equal(n.N()) &&
+		ns.g.Arithmetic().Modulus().Nat().Equal(n.Value().Arithmetic().Modulus().Nat()) == ct.True
 }
 
 // Nonce represents a Paillier encryption nonce in the group (Z/nZ)*.

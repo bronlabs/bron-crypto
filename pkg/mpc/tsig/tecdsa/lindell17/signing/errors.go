@@ -15,4 +15,6 @@ var (
 	ErrVerificationFailed = errs.New("verification failed")
 	// ErrFailed indicates a general failure during protocol execution.
 	ErrFailed = errs.New("failed")
+	// ErrValidation indicates a validation error in message fields.
+	ErrValidation = errs.New("validation error")
 )

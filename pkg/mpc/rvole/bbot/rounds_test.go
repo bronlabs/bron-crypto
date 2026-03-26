@@ -2,16 +2,16 @@ package rvole_bbot_test
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -20,19 +20,18 @@ func Test_HappyPath(t *testing.T) {
 	const L = 8
 	prng := pcg.NewRandomised()
 	curve := k256.NewCurve()
-	var sessionID network.SID
-	_, err := io.ReadFull(prng, sessionID[:])
-	require.NoError(t, err)
-	tape := hagrid.NewTranscript("test")
 	suite, err := rvole_bbot.NewSuite(L, curve)
 	require.NoError(t, err)
 
-	aliceTape := tape.Clone()
-	alice, err := rvole_bbot.NewAlice(sessionID, suite, prng, aliceTape)
+	const aliceId = 1
+	const bobId = 2
+	quorum := hashset.NewComparable[sharing.ID](aliceId, bobId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	alice, err := rvole_bbot.NewAlice(ctxs[aliceId], suite, prng)
 	require.NoError(t, err)
 
-	bobTape := tape.Clone()
-	bob, err := rvole_bbot.NewBob(sessionID, suite, prng, bobTape)
+	bob, err := rvole_bbot.NewBob(ctxs[bobId], suite, prng)
 	require.NoError(t, err)
 
 	r1, err := alice.Round1()
@@ -64,9 +63,9 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("transcripts at the same state", func(t *testing.T) {
 		t.Parallel()
-		aliceBytes, err := aliceTape.ExtractBytes("test", 32)
+		aliceBytes, err := ctxs[aliceId].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
-		bobBytes, err := bobTape.ExtractBytes("test", 32)
+		bobBytes, err := ctxs[bobId].Transcript().ExtractBytes("test", 32)
 		require.NoError(t, err)
 		require.True(t, bytes.Equal(aliceBytes, bobBytes))
 	})

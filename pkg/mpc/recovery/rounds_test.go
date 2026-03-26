@@ -55,22 +55,23 @@ func Test_HappyPath(t *testing.T) {
 
 	mislayer, err := recovery.NewMislayer(ctxs[MISLAYER_ID], as, group)
 	require.NoError(t, err)
-	participants := []ntu.TestParticipant{recoverers[0], recoverers[1], mislayer}
+	rs := []*recovery.Recoverer[*k256.Point, *k256.Scalar]{recoverers[0], recoverers[1]}
+	ms := []*recovery.Mislayer[*k256.Point, *k256.Scalar]{mislayer}
 
 	r1bo := make(map[sharing.ID]*recovery.Round1Broadcast[*k256.Point, *k256.Scalar])
-	r1uo := make(map[sharing.ID]network.RoundMessages[*recovery.Round1P2P[*k256.Point, *k256.Scalar]])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*recovery.Round1P2P[*k256.Point, *k256.Scalar], *recovery.Recoverer[*k256.Point, *k256.Scalar]])
 	for _, r := range recoverers {
 		r1bo[r.SharingID()], r1uo[r.SharingID()], err = r.Round1()
 		require.NoError(t, err)
 	}
-	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+	r2bi, r2ui := ntu.MapO2I(t, rs, r1bo, r1uo)
 
-	r2uo := make(map[sharing.ID]network.RoundMessages[*recovery.Round2P2P[*k256.Point, *k256.Scalar]])
+	r2uo := make(map[sharing.ID]network.RoundMessages[*recovery.Round2P2P[*k256.Point, *k256.Scalar], *recovery.Mislayer[*k256.Point, *k256.Scalar]])
 	for _, r := range recoverers {
 		r2uo[r.SharingID()], err = r.Round2(r2bi[r.SharingID()], r2ui[r.SharingID()])
 		require.NoError(t, err)
 	}
-	r3ui := ntu.MapUnicastO2I(t, participants, r2uo)
+	r3ui := ntu.MapUnicastO2I(t, ms, r2uo)
 
 	o, err := mislayer.Round3(r3ui[MISLAYER_ID])
 	require.NoError(t, err)

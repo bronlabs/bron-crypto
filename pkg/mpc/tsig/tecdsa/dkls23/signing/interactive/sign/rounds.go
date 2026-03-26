@@ -12,14 +12,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
@@ -27,14 +28,16 @@ import (
 )
 
 // Round1 executes protocol round 1.
-func (c *Cosigner[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S]], error) {
+func (c *Cosigner[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S], *Cosigner[P, B, S]], error) {
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
-	for id, u := range outgoingP2PMessages(c, r1u) {
+	for id := range c.ctx.OtherPartiesOrdered() {
+		uOut := new(Round1P2P[P, B, S])
 		var err error
-		u.OtR1, err = c.baseOtSenders[id].Round1()
+		uOut.OtR1, err = c.baseOtSenders[id].Round1()
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot run round 1 of VSOT party")
 		}
+		r1u.Put(id, uOut)
 	}
 
 	c.state.round++
@@ -42,32 +45,27 @@ func (c *Cosigner[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, 
 }
 
 // Round2 executes protocol round 2.
-func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]]) (network.OutgoingUnicasts[*Round2P2P[P, B, S]], error) {
-	incomingP2PMessages, err := validateIncomingP2PMessages(c, 2, r1u)
-	if err != nil {
-		return nil, ErrFailed.WithMessage("invalid input or round mismatch")
+func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S], *Cosigner[P, B, S]]) (network.OutgoingUnicasts[*Round2P2P[P, B, S], *Cosigner[P, B, S]], error) {
+	if c.state.round != 2 {
+		return nil, ErrFailed.WithMessage("round 2 is not the expected round")
 	}
-
-	otR1 := hashmap.NewComparable[sharing.ID, *ecbbot.Round1P2P[P, S]]()
-	for id, m := range incomingP2PMessages {
-		otR1.Put(id, m.OtR1)
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), r1u); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid input")
 	}
 
 	globalOtTape := c.ctx.Transcript().Clone()
 	globalOtTape.AppendDomainSeparator(otRandomizerLabel)
 	r2u := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
-	for id, u := range outgoingP2PMessages(c, r2u) {
-		otR1u, ok := otR1.Get(id)
-		if !ok {
-			return nil, ErrFailed.WithMessage("cannot run round 2 of VSOT setup party")
-		}
+	for id := range c.ctx.OtherPartiesOrdered() {
+		uOut := new(Round2P2P[P, B, S])
+		uIn, _ := r1u.Get(id)
 		choices := make([]byte, (softspoken.Kappa+7)/8)
-		_, err = io.ReadFull(c.prng, choices)
+		_, err := io.ReadFull(c.prng, choices)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot sample choices")
 		}
 		var seed *ecbbot.ReceiverOutput[S]
-		u.OtR2, seed, err = c.baseOtReceivers[id].Round2(otR1u, choices)
+		uOut.OtR2, seed, err = c.baseOtReceivers[id].Round2(uIn.OtR1, choices)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot run round 2 of VSOT party")
 		}
@@ -83,6 +81,7 @@ func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot convert seed to bits output")
 		}
+		r2u.Put(id, uOut)
 	}
 
 	c.state.round++
@@ -90,16 +89,14 @@ func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]
 }
 
 // Round3 executes protocol round 3.
-func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]]) (*Round3Broadcast, network.OutgoingUnicasts[*Round3P2P], error) {
-	incomingP2PMessages, err := validateIncomingP2PMessages(c, 3, r2u)
-	if err != nil {
-		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
+func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S], *Cosigner[P, B, S]]) (*Round3Broadcast[P, B, S], network.OutgoingUnicasts[*Round3P2P[P, B, S], *Cosigner[P, B, S]], error) {
+	if c.state.round != 3 {
+		return nil, nil, ErrFailed.WithMessage("round 3 is not the expected round")
+	}
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), r2u); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid input")
 	}
 
-	otR2 := hashmap.NewComparable[sharing.ID, *ecbbot.Round2P2P[P, S]]()
-	for id, m := range incomingP2PMessages {
-		otR2.Put(id, m.OtR2)
-	}
 	globalOtTape := c.ctx.Transcript().Clone()
 	globalOtTape.AppendDomainSeparator(otRandomizerLabel)
 
@@ -134,7 +131,7 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 	}
 	c.state.chi = make(map[sharing.ID]S)
 
-	bOut := &Round3Broadcast{
+	bOut := &Round3Broadcast[P, B, S]{
 		BigRCommitment: c.state.bigRCommitment[c.ctx.HolderID()],
 	}
 
@@ -142,13 +139,12 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create mul suite")
 	}
-	uOut := hashmap.NewComparable[sharing.ID, *Round3P2P]()
-	for id, message := range outgoingP2PMessages(c, uOut) {
-		otR2u, ok := otR2.Get(id)
-		if !ok {
-			return nil, nil, ErrFailed.WithMessage("missing OT message")
-		}
-		seed, err := c.baseOtSenders[id].Round3(otR2u)
+	r3u := hashmap.NewComparable[sharing.ID, *Round3P2P[P, B, S]]()
+	for id := range c.ctx.OtherPartiesOrdered() {
+		uOut := new(Round3P2P[P, B, S])
+		uIn, _ := r2u.Get(id)
+
+		seed, err := c.baseOtSenders[id].Round3(uIn.OtR2)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot run round 3 of VSOT party")
 		}
@@ -168,9 +164,12 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		if !ok {
 			return nil, nil, ErrFailed.WithMessage("couldn't find alice seed")
 		}
-		aliceTape := c.ctx.Transcript().Clone()
-		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.aliceMul[id], err = rvole_softspoken.NewAlice(c.ctx.SessionID(), mulSuite, aliceSeed, c.prng, aliceTape)
+		aliceCtx, err := c.ctx.SubContext(hashset.NewComparable(c.ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create subcontext")
+		}
+		aliceCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		c.aliceMul[id], err = rvole_softspoken.NewAlice(aliceCtx, mulSuite, aliceSeed, c.prng)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("couldn't initialise Alice")
 		}
@@ -179,38 +178,41 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		if !ok {
 			return nil, nil, ErrFailed.WithMessage("couldn't find bob seed")
 		}
-		bobTape := c.ctx.Transcript().Clone()
-		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())))
-		c.bobMul[id], err = rvole_softspoken.NewBob(c.ctx.SessionID(), mulSuite, bobSeed, c.prng, bobTape)
+		bobCtx, err := c.ctx.SubContext(hashset.NewComparable(c.ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create subcontext")
+		}
+		bobCtx.Transcript().AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.ctx.HolderID())))
+		c.bobMul[id], err = rvole_softspoken.NewBob(bobCtx, mulSuite, bobSeed, c.prng)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("couldn't initialise Bob")
 		}
 
-		message.MulR1, c.state.chi[id], err = c.bobMul[id].Round1()
+		uOut.MulR1, c.state.chi[id], err = c.bobMul[id].Round1()
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot run Bob mul round1")
 		}
+		r3u.Put(id, uOut)
 	}
 
 	c.state.round++
-	return bOut, uOut.Freeze(), nil
+	return bOut, r3u.Freeze(), nil
 }
 
 // Round4 executes protocol round 4.
-func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast], r3u network.RoundMessages[*Round3P2P]) (r4b *Round4Broadcast[P, B, S], r4u network.OutgoingUnicasts[*Round4P2P[P, B, S]], err error) {
-	incomingMessages, err := validateIncomingMessages(c, 4, r3b, r3u)
-	if err != nil {
-		return nil, nil, ErrFailed.WithMessage("invalid input or round mismatch")
+func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P, B, S], *Cosigner[P, B, S]], r3u network.RoundMessages[*Round3P2P[P, B, S], *Cosigner[P, B, S]]) (*Round4Broadcast[P, B, S], network.OutgoingUnicasts[*Round4P2P[P, B, S], *Cosigner[P, B, S]], error) {
+	if c.state.round != 4 {
+		return nil, nil, ErrFailed.WithMessage("round 4 is not the expected round")
 	}
-
-	mulR1 := make(map[sharing.ID]*rvole_softspoken.Round1P2P)
-	for id, message := range incomingMessages {
-		c.state.bigRCommitment[id] = message.broadcast.BigRCommitment
-		mulR1[id] = message.p2p.MulR1
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), r3b); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid broadcast input")
+	}
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), r3u); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid p2p input")
 	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](c.shard.Share().Value().Structure())
-	zeta, err := session.SampleZeroShare(c.ctx, field)
+	zeta, err := przs.SampleZeroShare(c.ctx, field)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
@@ -228,31 +230,42 @@ func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast], 
 	c.state.pk[c.ctx.HolderID()] = c.suite.Curve().ScalarBaseMul(c.state.sk)
 	c.state.c = make(map[sharing.ID][]S)
 
-	bOut := &Round4Broadcast[P, B, S]{
+	r4b := &Round4Broadcast[P, B, S]{
 		BigR:        c.state.bigR[c.ctx.HolderID()],
 		BigRWitness: c.state.bigRWitness,
 		Pk:          c.state.pk[c.ctx.HolderID()],
 	}
-	uOut := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
-	for id, message := range outgoingP2PMessages(c, uOut) {
-		message.MulR2, c.state.c[id], err = c.aliceMul[id].Round2(mulR1[id], []S{c.state.r, c.state.sk})
+	r4u := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
+	for id := range c.ctx.OtherPartiesOrdered() {
+		uOut := new(Round4P2P[P, B, S])
+		uIn, _ := r3u.Get(id)
+		bIn, _ := r3b.Get(id)
+		c.state.bigRCommitment[id] = bIn.BigRCommitment
+
+		uOut.MulR2, c.state.c[id], err = c.aliceMul[id].Round2(uIn.MulR1, []S{c.state.r, c.state.sk})
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot run alice mul round2")
 		}
-		message.GammaU = c.suite.Curve().ScalarBaseMul(c.state.c[id][0])
-		message.GammaV = c.suite.Curve().ScalarBaseMul(c.state.c[id][1])
-		message.Psi = c.state.phi.Sub(c.state.chi[id])
+		uOut.GammaU = c.suite.Curve().ScalarBaseMul(c.state.c[id][0])
+		uOut.GammaV = c.suite.Curve().ScalarBaseMul(c.state.c[id][1])
+		uOut.Psi = c.state.phi.Sub(c.state.chi[id])
+		r4u.Put(id, uOut)
 	}
 
 	c.state.round++
-	return bOut, uOut.Freeze(), nil
+	return r4b, r4u.Freeze(), nil
 }
 
 // Round5 executes protocol round 5.
-func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P, B, S]], r4u network.RoundMessages[*Round4P2P[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
-	incomingMessages, err := validateIncomingMessages(c, 5, r4b, r4u)
-	if err != nil {
-		return nil, ErrFailed.WithMessage("invalid input or round mismatch")
+func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P, B, S], *Cosigner[P, B, S]], r4u network.RoundMessages[*Round4P2P[P, B, S], *Cosigner[P, B, S]], message []byte) (*dkls23.PartialSignature[P, B, S], error) {
+	if c.state.round != 5 {
+		return nil, ErrFailed.WithMessage("round 5 is not the expected round")
+	}
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), r4b); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid broadcast input")
+	}
+	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), r4u); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid p2p input")
 	}
 
 	psi := c.suite.ScalarField().Zero()
@@ -262,28 +275,30 @@ func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P,
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create verifier")
 	}
-	for id, message := range incomingMessages {
-		if err := verifier.Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
+	for id := range c.ctx.OtherPartiesOrdered() {
+		bIn, _ := r4b.Get(id)
+		uIn, _ := r4u.Get(id)
+		if err := verifier.Verify(c.state.bigRCommitment[id], bIn.BigR.ToCompressed(), bIn.BigRWitness); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
-		c.state.bigR[id] = message.broadcast.BigR
+		c.state.bigR[id] = bIn.BigR
 
-		d, err := c.bobMul[id].Round3(message.p2p.MulR2)
+		d, err := c.bobMul[id].Round3(uIn.MulR2)
 		if err != nil {
 			if errs.Is(err, base.ErrAbort) {
 				return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot run Bob mul round3")
 			}
 			return nil, errs.Wrap(err).WithMessage("cannot run Bob mul round3")
 		}
-		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
+		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(uIn.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("consistency check failed")
 		}
-		if !message.broadcast.Pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
+		if !bIn.Pk.ScalarMul(c.state.chi[id]).Sub(uIn.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("consistency check failed")
 		}
-		c.state.pk[id] = message.broadcast.Pk
+		c.state.pk[id] = bIn.Pk
 
-		psi = psi.Add(message.p2p.Psi)
+		psi = psi.Add(uIn.Psi)
 		cudu = cudu.Add(c.state.c[id][0].Add(d[0]))
 		cvdv = cvdv.Add(c.state.c[id][1].Add(d[1]))
 	}
@@ -314,7 +329,7 @@ func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P,
 	}
 	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
-	partialSignature, err = dkls23.NewPartialSignature(bigR, u, w)
+	partialSignature, err := dkls23.NewPartialSignature(bigR, u, w)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create partial signature")
 	}

@@ -14,12 +14,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tecdsa/lindell17"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -28,7 +25,7 @@ const (
 )
 
 // Round1 executes the primary cosigner's first round.
-func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P, err error) {
+func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P[P, B, S], err error) {
 	// Validation
 	if pc.round != 1 {
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 1, pc.round)
@@ -54,16 +51,19 @@ func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P, err error)
 
 	pc.round += 2
 	// step 1.3: Send(c1) -> P_2
-	return &Round1OutputP2P{
+	return &Round1OutputP2P[P, B, S]{
 		BigR1Commitment: bigR1Commitment,
 	}, nil
 }
 
 // Round2 executes the secondary cosigner's second round.
-func (sc *SecondaryCosigner[P, B, S]) Round2(r1out *Round1OutputP2P) (r2out *Round2OutputP2P[P, B, S], err error) {
+func (sc *SecondaryCosigner[P, B, S]) Round2(r1out *Round1OutputP2P[P, B, S]) (r2out *Round2OutputP2P[P, B, S], err error) {
 	// Validation
 	if sc.round != 2 {
 		return nil, ErrRound.WithMessage("Running round %d but secondary cosigner expected round %d", 2, sc.round)
+	}
+	if err := r1out.Validate(&sc.Cosigner, sc.primarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("invalid round 1 output")
 	}
 
 	sc.state.bigR1Commitment = r1out.BigR1Commitment
@@ -92,8 +92,11 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 	if pc.round != 3 {
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 3, pc.round)
 	}
+	if err := r2out.Validate(&pc.Cosigner, pc.secondarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("invalid round 2 output")
+	}
 
-	if err := dlogVerify(pc.ctx.Transcript(), pc.niDlogScheme, pc.secondarySharingID, pc.ctx.SessionID(), r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
+	if err := dlogVerify(&pc.Cosigner, pc.niDlogScheme, pc.secondarySharingID, r2out.BigR2Proof, r2out.BigR2, pc.SharingID()); err != nil {
 		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("cannot verify R2 dlog proof")
 	}
 
@@ -121,10 +124,13 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 }
 
 // Round4 executes the secondary cosigner's fourth round.
-func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], message []byte) (round4Output *lindell17.PartialSignature, err error) {
+func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], message []byte) (round4Output *Round4OutputP2P[P, B, S], err error) {
 	// Validation
 	if sc.round != 4 {
 		return nil, ErrRound.WithMessage("Running round %d but secondary cosigner expected round %d", 4, sc.round)
+	}
+	if err := r3out.Validate(&sc.Cosigner, sc.primarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("invalid round 3 output")
 	}
 
 	verifier, err := sc.commitmentScheme.Verifier()
@@ -135,7 +141,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 		return nil, errs.Wrap(err).WithMessage("cannot open R1 commitment")
 	}
 
-	if err := dlogVerify(sc.ctx.Transcript(), sc.niDlogScheme, sc.primarySharingID, sc.ctx.SessionID(), r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
+	if err := dlogVerify(&sc.Cosigner, sc.niDlogScheme, sc.primarySharingID, r3out.BigR1Proof, r3out.BigR1, sc.SharingID()); err != nil {
 		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sc.primarySharingID).WithMessage("cannot verify R1 dlog proof")
 	}
 
@@ -190,16 +196,19 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	}
 
 	sc.round += 2
-	return &lindell17.PartialSignature{
+	return &Round4OutputP2P[P, B, S]{
 		C3: c3,
 	}, nil
 }
 
 // Round5 executes the primary cosigner's final round.
-func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, message []byte) (*ecdsa.Signature[S], error) {
+func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *Round4OutputP2P[P, B, S], message []byte) (*ecdsa.Signature[S], error) {
 	// Validation
 	if pc.round != 5 {
 		return nil, ErrRound.WithMessage("Running round %d but primary cosigner expected round %d", 5, pc.round)
+	}
+	if err := r4out.Validate(&pc.Cosigner, pc.secondarySharingID); err != nil {
+		return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pc.secondarySharingID).WithMessage("invalid round 4 output")
 	}
 	decrypter, err := paillier.NewScheme().Decrypter(pc.shard.PaillierPrivateKey())
 	if err != nil {
@@ -254,7 +263,7 @@ func dlogProve[
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
 	c.ctx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes)
 	c.ctx.Transcript().AppendBytes(proverLabel, proverIDBytes)
-	prover, err := c.niDlogScheme.NewProver(c.ctx.SessionID(), c.ctx.Transcript())
+	prover, err := c.niDlogScheme.NewProver(c.ctx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
@@ -273,16 +282,16 @@ func dlogProve[
 
 func dlogVerify[
 	P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S],
-](tape transcripts.Transcript, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR P, mySharingID sharing.ID) error {
+](c *Cosigner[P, B, S], niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]], proverID sharing.ID, proof compiler.NIZKPoKProof, theirBigR P, mySharingID sharing.ID) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(mySharingID))
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
-	tape.AppendBytes(transcriptDLogSLabel, quorumBytes)
-	tape.AppendBytes(proverLabel, proverIDBytes)
+	c.ctx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes)
+	c.ctx.Transcript().AppendBytes(proverLabel, proverIDBytes)
 	statement := &schnorrpok.Statement[P, S]{
 		X: theirBigR,
 	}
-	verifier, err := niDlogScheme.NewVerifier(sid, tape)
+	verifier, err := niDlogScheme.NewVerifier(c.ctx)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create dlog verifier")
 	}

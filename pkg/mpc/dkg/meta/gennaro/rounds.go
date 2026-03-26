@@ -24,7 +24,7 @@ const (
 	batchSchnorrProverIDLabel = "BRON_CRYPTO_DKG_GENNARO_BATCH_SCHNORR_PROVER_ID-"
 )
 
-func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUnicasts[*Round1Unicast[E, S]], error) {
+func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUnicasts[*Round1Unicast[E, S], *Participant[E, S]], error) {
 	if p.round != 1 {
 		return nil, nil, ErrRound.WithMessage("expected round 1, got %d", p.round)
 	}
@@ -69,9 +69,9 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to compile okamoto protocol to non-interactive")
 	}
-	proverTape := p.ctx.Transcript().Clone()
-	proverTape.AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
-	prover, err := niBatchOkamoto.NewProver(p.ctx.SessionID(), proverTape)
+	proverCtx := p.ctx.Clone()
+	proverCtx.Transcript().AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
+	prover, err := niBatchOkamoto.NewProver(proverCtx)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto prover")
 	}
@@ -102,9 +102,16 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	}, r1uo.Freeze(), nil
 }
 
-func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[E, S]], r2uin network.RoundMessages[*Round1Unicast[E, S]]) (*Round2Broadcast[E, S], error) {
+func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[E, S], *Participant[E, S]], r2uin network.RoundMessages[*Round1Unicast[E, S], *Participant[E, S]]) (*Round2Broadcast[E, S], error) {
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("expected round 2, got %d", p.round)
+	}
+
+	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r2bin); errB != nil {
+		return nil, errs.Wrap(errB)
+	}
+	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r2uin); errU != nil {
+		return nil, errs.Wrap(errU)
 	}
 
 	localSecretColumnVector := p.state.pedersenDealerFunc.G()
@@ -128,9 +135,9 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to compile okamoto protocol to non-interactive")
 		}
-		verifierTape := p.ctx.Transcript().Clone()
-		verifierTape.AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
-		verifier, err := niBatchOkamoto.NewVerifier(p.ctx.SessionID(), verifierTape)
+		verifierCtx := p.ctx.Clone()
+		verifierCtx.Transcript().AppendBytes(batchOkamotoProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
+		verifier, err := niBatchOkamoto.NewVerifier(verifierCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto verifier")
 		}
@@ -175,9 +182,9 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compile protocol to non interactive")
 	}
-	proverTape := p.ctx.Transcript().Clone()
-	proverTape.AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
-	prover, err := niBatchSchnorr.NewProver(p.ctx.SessionID(), proverTape)
+	proverCtx := p.ctx.Clone()
+	proverCtx.Transcript().AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.ctx.HolderID())))
+	prover, err := niBatchSchnorr.NewProver(proverCtx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 	}
@@ -196,9 +203,12 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	}, nil
 }
 
-func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S]]) (*DKGOutput[E, S], error) {
+func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S], *Participant[E, S]]) (*DKGOutput[E, S], error) {
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("expected round 3, got %d", p.round)
+	}
+	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r3bi); errB != nil {
+		return nil, errs.Wrap(errB)
 	}
 
 	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.state.lsss.MSP().D()), p.state.key.Group(), p.prng)
@@ -215,9 +225,9 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		inB, _ := r3bi.Get(pid)
 
 		// Verify batch schnorr proof of knowledge of Feldman verification vector's coefficients' dlog.
-		verifierTape := p.ctx.Transcript().Clone()
-		verifierTape.AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
-		verifier, err := niBatchSchnorr.NewVerifier(p.ctx.SessionID(), verifierTape)
+		verifierCtx := p.ctx.Clone()
+		verifierCtx.Transcript().AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
+		verifier, err := niBatchSchnorr.NewVerifier(verifierCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 		}

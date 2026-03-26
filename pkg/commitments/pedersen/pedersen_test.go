@@ -31,7 +31,8 @@ func TestBasicCommitment(t *testing.T) {
 	require.Equal(t, pedersen.Name, scheme.Name())
 
 	// Create a message
-	message := pedersen.NewMessage(field.FromUint64(42))
+	message, err := pedersen.NewMessage(field.FromUint64(42))
+	require.NoError(t, err)
 
 	// Commit to the message
 	committer, err := scheme.Committer()
@@ -50,7 +51,8 @@ func TestBasicCommitment(t *testing.T) {
 	require.True(t, verified, "commitment should verify")
 
 	// Verify with wrong message
-	wrongMessage := pedersen.NewMessage(field.FromUint64(43))
+	wrongMessage, err := pedersen.NewMessage(field.FromUint64(43))
+	require.NoError(t, err)
 	err = verifier.Verify(commitment, wrongMessage, witness)
 	verified = err == nil
 	require.False(t, verified, "commitment should not verify with wrong message")
@@ -151,15 +153,17 @@ func TestCommitmentCreation(t *testing.T) {
 
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
-		_, _, err := committer.Commit(message, nil)
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
+		_, _, err = committer.Commit(message, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "prng cannot be nil")
 	})
 
 	t.Run("commit with witness", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 		witness, err := pedersen.NewWitness(field.FromUint64(123))
 		require.NoError(t, err)
 
@@ -187,15 +191,17 @@ func TestCommitmentCreation(t *testing.T) {
 
 	t.Run("commit with witness nil witness", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
-		_, err := committer.CommitWithWitness(message, nil)
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
+		_, err = committer.CommitWithWitness(message, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "witness cannot be nil")
 	})
 
 	t.Run("deterministic commitment", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 
 		// Use deterministic randomness
 		seed := []byte("deterministic seed for testing only!")
@@ -280,8 +286,10 @@ func TestMessageOperations(t *testing.T) {
 
 	t.Run("message creation and operations", func(t *testing.T) {
 		t.Parallel()
-		m1 := pedersen.NewMessage(field.FromUint64(10))
-		m2 := pedersen.NewMessage(field.FromUint64(20))
+		m1, err := pedersen.NewMessage(field.FromUint64(10))
+		require.NoError(t, err)
+		m2, err := pedersen.NewMessage(field.FromUint64(20))
+		require.NoError(t, err)
 
 		require.True(t, field.FromUint64(10).Equal(m1.Value()))
 
@@ -318,7 +326,8 @@ func TestMessageOperations(t *testing.T) {
 
 	t.Run("nil operations", func(t *testing.T) {
 		t.Parallel()
-		m1 := pedersen.NewMessage(field.FromUint64(10))
+		m1, err := pedersen.NewMessage(field.FromUint64(10))
+		require.NoError(t, err)
 
 		// Operations with nil
 		m2 := m1.Add(nil)
@@ -355,8 +364,10 @@ func TestHomomorphicProperties(t *testing.T) {
 	t.Run("additive homomorphism", func(t *testing.T) {
 		t.Parallel()
 		// Create two messages
-		m1 := pedersen.NewMessage(field.FromUint64(10))
-		m2 := pedersen.NewMessage(field.FromUint64(20))
+		m1, err := pedersen.NewMessage(field.FromUint64(10))
+		require.NoError(t, err)
+		m2, err := pedersen.NewMessage(field.FromUint64(20))
+		require.NoError(t, err)
 
 		// Commit to each message
 		c1, w1, err := committer.Commit(m1, pcg.NewRandomised())
@@ -384,8 +395,10 @@ func TestHomomorphicProperties(t *testing.T) {
 	t.Run("scalar multiplication", func(t *testing.T) {
 		t.Parallel()
 		// Create a message and scalar
-		m := pedersen.NewMessage(field.FromUint64(10))
-		scalar := pedersen.NewMessage(field.FromUint64(3))
+		m, err := pedersen.NewMessage(field.FromUint64(10))
+		require.NoError(t, err)
+		scalar, err := pedersen.NewMessage(field.FromUint64(3))
+		require.NoError(t, err)
 
 		// Commit to the message
 		c, w, err := committer.Commit(m, pcg.NewRandomised())
@@ -395,7 +408,8 @@ func TestHomomorphicProperties(t *testing.T) {
 		cScaled := c.ScalarOp(scalar)
 
 		// Multiply message and witness by scalar
-		mScaled := pedersen.NewMessage(field.FromUint64(30)) // 10 * 3
+		mScaled, err := pedersen.NewMessage(field.FromUint64(30)) // 10 * 3
+		require.NoError(t, err)
 		// We need to compute w * 3
 		wValue := w.Value()
 		wScaledValue := wValue.Mul(scalar.Value())
@@ -410,8 +424,10 @@ func TestHomomorphicProperties(t *testing.T) {
 	t.Run("combined operations", func(t *testing.T) {
 		t.Parallel()
 		// Test: 2*C(m1) + 3*C(m2) = C(2*m1 + 3*m2)
-		m1 := pedersen.NewMessage(field.FromUint64(10))
-		m2 := pedersen.NewMessage(field.FromUint64(20))
+		m1, err := pedersen.NewMessage(field.FromUint64(10))
+		require.NoError(t, err)
+		m2, err := pedersen.NewMessage(field.FromUint64(20))
+		require.NoError(t, err)
 
 		c1, w1, err := committer.Commit(m1, pcg.NewRandomised())
 		require.NoError(t, err)
@@ -419,8 +435,10 @@ func TestHomomorphicProperties(t *testing.T) {
 		require.NoError(t, err)
 
 		// Scale commitments
-		scalar1 := pedersen.NewMessage(field.FromUint64(2))
-		scalar2 := pedersen.NewMessage(field.FromUint64(3))
+		scalar1, err := pedersen.NewMessage(field.FromUint64(2))
+		require.NoError(t, err)
+		scalar2, err := pedersen.NewMessage(field.FromUint64(3))
+		require.NoError(t, err)
 
 		c1Scaled := c1.ScalarOp(scalar1)
 		c2Scaled := c2.ScalarOp(scalar2)
@@ -429,7 +447,8 @@ func TestHomomorphicProperties(t *testing.T) {
 		cCombined := c1Scaled.Op(c2Scaled)
 
 		// Compute combined message: 2*10 + 3*20 = 80
-		mCombined := pedersen.NewMessage(field.FromUint64(80))
+		mCombined, err := pedersen.NewMessage(field.FromUint64(80))
+		require.NoError(t, err)
 
 		// Compute combined witness
 		w1Scaled, err := pedersen.NewWitness(w1.Value().Mul(scalar1.Value()))
@@ -464,7 +483,8 @@ func TestReRandomization(t *testing.T) {
 
 	t.Run("re-randomization preserves message", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 
 		// Initial commitment
 		c1, w1, err := committer.Commit(message, pcg.NewRandomised())
@@ -491,7 +511,8 @@ func TestReRandomization(t *testing.T) {
 
 	t.Run("re-randomization with specific witness", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 
 		// Initial commitment
 		c1, w1, err := committer.Commit(message, pcg.NewRandomised())
@@ -515,7 +536,8 @@ func TestReRandomization(t *testing.T) {
 
 	t.Run("re-randomization errors", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 		c, _, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
@@ -544,7 +566,8 @@ func TestReRandomization(t *testing.T) {
 
 	t.Run("multiple re-randomizations", func(t *testing.T) {
 		t.Parallel()
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 
 		// Initial commitment
 		c0, w0, err := committer.Commit(message, pcg.NewRandomised())
@@ -604,8 +627,10 @@ func TestCommitmentOperations(t *testing.T) {
 
 	t.Run("commitment operations", func(t *testing.T) {
 		t.Parallel()
-		m1 := pedersen.NewMessage(field.FromUint64(10))
-		m2 := pedersen.NewMessage(field.FromUint64(20))
+		m1, err := pedersen.NewMessage(field.FromUint64(10))
+		require.NoError(t, err)
+		m2, err := pedersen.NewMessage(field.FromUint64(20))
+		require.NoError(t, err)
 
 		c1, _, err := committer.Commit(m1, pcg.NewRandomised())
 		require.NoError(t, err)
@@ -644,11 +669,13 @@ func TestCommitmentOperations(t *testing.T) {
 
 	t.Run("scalar operation", func(t *testing.T) {
 		t.Parallel()
-		m := pedersen.NewMessage(field.FromUint64(10))
+		m, err := pedersen.NewMessage(field.FromUint64(10))
+		require.NoError(t, err)
 		c, _, err := committer.Commit(m, pcg.NewRandomised())
 		require.NoError(t, err)
 
-		scalar := pedersen.NewMessage(field.FromUint64(3))
+		scalar, err := pedersen.NewMessage(field.FromUint64(3))
+		require.NoError(t, err)
 		cScaled := c.ScalarOp(scalar)
 		require.NotNil(t, cScaled)
 		require.False(t, c.Equal(cScaled))
@@ -684,7 +711,8 @@ func TestEdgeCases(t *testing.T) {
 		t.Parallel()
 		committer, err := scheme.Committer()
 		require.NoError(t, err)
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 
 		// Provide insufficient randomness
 		shortRandom := bytes.NewReader([]byte{1, 2, 3}) // Too short
@@ -700,7 +728,8 @@ func TestEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 
 		// Commitment to zero is valid
-		zeroMessage := pedersen.NewMessage(field.Zero())
+		zeroMessage, err := pedersen.NewMessage(field.Zero())
+		require.NoError(t, err)
 		c, w, err := committer.Commit(zeroMessage, pcg.NewRandomised())
 		require.NoError(t, err)
 
@@ -733,7 +762,8 @@ func TestMultipleCurves(t *testing.T) {
 		verifier, err := scheme.Verifier()
 		require.NoError(t, err)
 
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 		commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
@@ -762,7 +792,8 @@ func TestMultipleCurves(t *testing.T) {
 		verifier, err := scheme.Verifier()
 		require.NoError(t, err)
 
-		message := pedersen.NewMessage(field.FromUint64(42))
+		message, err := pedersen.NewMessage(field.FromUint64(42))
+		require.NoError(t, err)
 		commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 		require.NoError(t, err)
 
@@ -788,7 +819,8 @@ func BenchmarkCommit(b *testing.B) {
 	committer, err := scheme.Committer()
 	require.NoError(b, err)
 
-	message := pedersen.NewMessage(field.FromUint64(42))
+	message, err := pedersen.NewMessage(field.FromUint64(42))
+	require.NoError(b, err)
 
 	b.ResetTimer()
 	for range b.N {
@@ -815,7 +847,8 @@ func BenchmarkVerify(b *testing.B) {
 	verifier, err := scheme.Verifier()
 	require.NoError(b, err)
 
-	message := pedersen.NewMessage(field.FromUint64(42))
+	message, err := pedersen.NewMessage(field.FromUint64(42))
+	require.NoError(b, err)
 	commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(b, err)
 
@@ -842,7 +875,8 @@ func BenchmarkReRandomise(b *testing.B) {
 	committer, err := scheme.Committer()
 	require.NoError(b, err)
 
-	message := pedersen.NewMessage(field.FromUint64(42))
+	message, err := pedersen.NewMessage(field.FromUint64(42))
+	require.NoError(b, err)
 	commitment, _, err := committer.Commit(message, pcg.NewRandomised())
 	require.NoError(b, err)
 
@@ -869,8 +903,10 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	committer, err := scheme.Committer()
 	require.NoError(b, err)
 
-	m1 := pedersen.NewMessage(field.FromUint64(10))
-	m2 := pedersen.NewMessage(field.FromUint64(20))
+	m1, err := pedersen.NewMessage(field.FromUint64(10))
+	require.NoError(b, err)
+	m2, err := pedersen.NewMessage(field.FromUint64(20))
+	require.NoError(b, err)
 	c1, _, err := committer.Commit(m1, pcg.NewRandomised())
 	require.NoError(b, err)
 	c2, _, err := committer.Commit(m2, pcg.NewRandomised())
@@ -883,7 +919,8 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	})
 
 	b.Run("ScalarMul", func(b *testing.B) {
-		scalar := pedersen.NewMessage(field.FromUint64(3))
+		scalar, err := pedersen.NewMessage(field.FromUint64(3))
+		require.NoError(b, err)
 		for range b.N {
 			_ = c1.ScalarOp(scalar)
 		}

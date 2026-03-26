@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
-func validateIncomingBroadcastMessages[MB network.Message](p *Participant, rIn network.Round, uIn network.RoundMessages[MB]) (iter.Seq2[sharing.ID, MB], error) {
+func validateIncomingBroadcastMessages[MB network.Message[*Participant]](p *Participant, rIn network.Round, uIn network.RoundMessages[MB, *Participant]) (iter.Seq2[sharing.ID, MB], error) {
 	if rIn != p.round {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
@@ -32,6 +32,9 @@ func validateIncomingBroadcastMessages[MB network.Message](p *Participant, rIn n
 			u, ok := uIn.Get(id)
 			if !ok {
 				panic("this should never happen: missing broadcast message")
+			}
+			if err := u.Validate(p, id); err != nil {
+				panic(err)
 			}
 			if !yield(id, u) {
 				return

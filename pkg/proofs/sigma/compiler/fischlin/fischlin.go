@@ -8,10 +8,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (
@@ -86,17 +85,17 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 
 // NewProver creates a new non-interactive prover for generating Fischlin proofs.
 // The sessionID and transcript are used for domain separation.
-func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
-	if transcript == nil {
-		return nil, ErrNil.WithMessage("transcript")
+func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+	if ctx == nil {
+		return nil, ErrNil.WithMessage("ctx")
 	}
 
+	sessionID := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
-	transcript.AppendDomainSeparator(dst)
+	ctx.Transcript().AppendDomainSeparator(dst)
 
 	return &prover[X, W, A, S, Z]{
-		sessionID:     sessionID,
-		transcript:    transcript,
+		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 		prng:          c.prng,
 		rho:           c.rho,
@@ -107,17 +106,17 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionID network.SID, tra
 
 // NewVerifier creates a new non-interactive verifier for checking Fischlin proofs.
 // The sessionID and transcript must match those used by the prover.
-func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(sessionID network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
-	if transcript == nil {
-		return nil, ErrNil.WithMessage("transcript")
+func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
+	if ctx == nil {
+		return nil, ErrNil.WithMessage("ctx")
 	}
 
+	sessionID := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
-	transcript.AppendDomainSeparator(dst)
+	ctx.Transcript().AppendDomainSeparator(dst)
 
 	return &verifier[X, W, A, S, Z]{
-		sessionID:     sessionID,
-		transcript:    transcript,
+		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }

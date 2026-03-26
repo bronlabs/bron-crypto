@@ -1,6 +1,7 @@
 package softspoken
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
@@ -20,12 +21,13 @@ type Round1P2P struct {
 }
 
 // Validate checks lengths of U entries against suite parameters.
-func (r1 *Round1P2P) Validate(xi, l int) error {
+func (r1 *Round1P2P) Validate(p *Sender, _ sharing.ID) error {
+	xi, l := p.suite.Xi(), p.suite.L()
 	eta := l * xi                       // η = L*ξ
 	etaPrimeBytes := eta/8 + SigmaBytes // η'= η + σ
 	for i := range Kappa {
 		if len(r1.U[i]) != etaPrimeBytes {
-			return ot.ErrInvalidArgument.WithMessage("U[%d] length is %d, should be η'=%d", i, len(r1.U[i]), etaPrimeBytes)
+			return ot.ErrValidation.WithMessage("U[%d] length is %d, should be η'=%d", i, len(r1.U[i]), etaPrimeBytes)
 		}
 	}
 	return nil

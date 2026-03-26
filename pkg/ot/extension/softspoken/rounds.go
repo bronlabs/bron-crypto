@@ -66,10 +66,10 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 1.5: Generate the challenge (χ) using Fiat-Shamir heuristic
 	for i := range Kappa {
-		r.tape.AppendBytes(expansionMaskLabel, r1.U[i])
+		r.ctx.Transcript().AppendBytes(expansionMaskLabel, r1.U[i])
 	}
-	m := eta / Sigma                                         // M = η/σ
-	challengeFiatShamir, err := generateChallenge(r.tape, m) // χ
+	m := eta / Sigma                                                     // M = η/σ
+	challengeFiatShamir, err := generateChallenge(r.ctx.Transcript(), m) // χ
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot generate challenge")
 	}
@@ -79,9 +79,9 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot compute challenge")
 	}
 
-	r.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
+	r.ctx.Transcript().AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
 	for i := range Kappa {
-		r.tape.AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
+		r.ctx.Transcript().AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
 	}
 
 	// RANDOMISE
@@ -115,7 +115,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	if s.round != 2 {
 		return nil, ot.ErrRound.WithMessage("running round %d but participant expected round %d", 2, s.round)
 	}
-	if err := r1.Validate(s.suite.Xi(), s.suite.L()); err != nil {
+	if err := r1.Validate(s, s.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round %d input", s.round)
 	}
 
@@ -144,10 +144,10 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 2.3: Generate the challenge (χ) using Fiat-Shamir heuristic
 	for i := range Kappa {
-		s.tape.AppendBytes(expansionMaskLabel, r1.U[i])
+		s.ctx.Transcript().AppendBytes(expansionMaskLabel, r1.U[i])
 	}
 	M := eta / Sigma
-	challengeFiatShamir, err := generateChallenge(s.tape, M)
+	challengeFiatShamir, err := generateChallenge(s.ctx.Transcript(), M)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot generate challenge")
 	}
@@ -157,9 +157,9 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 		return nil, base.ErrAbort.WithMessage("bad consistency check for SoftSpoken COTe")
 	}
 
-	s.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
+	s.ctx.Transcript().AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
 	for i := range Kappa {
-		s.tape.AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
+		s.ctx.Transcript().AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
 	}
 
 	// RANDOMISE
