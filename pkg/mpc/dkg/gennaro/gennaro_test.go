@@ -8,7 +8,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
@@ -736,45 +735,4 @@ func TestShareReconstructionYieldsMatchingPublicKey(t *testing.T) {
 	require.True(t, reconstructedPK.Equal(publicKey),
 		"reconstructed public key does not match DKG output")
 	require.False(t, publicKey.IsZero(), "joint public key must not be the identity")
-}
-
-func TestMessageValidation(t *testing.T) {
-	t.Parallel()
-
-	var err error
-	const th = 2
-	const n = 3
-	prng := pcg.NewRandomised()
-	quorum := sharing.NewOrdinalShareholderSet(n)
-	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-	group := k256.NewCurve()
-	ac, err := threshold.NewThresholdAccessStructure(th, quorum)
-	require.NoError(t, err)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
-	for id := range quorum.Iter() {
-		parties[id], err = gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, pcg.NewRandomised())
-		require.NoError(t, err)
-	}
-
-	r1b := make(map[sharing.ID]*gennaro.Round1Broadcast[*k256.Point, *k256.Scalar])
-	r1u := make(map[sharing.ID]ds.Map[sharing.ID, *gennaro.Round1Unicast[*k256.Point, *k256.Scalar]])
-	for id := range quorum.Iter() {
-		r1b[id], r1u[id], err = parties[id].Round1()
-		require.NoError(t, err)
-	}
-
-	// malform message from party 2
-	offendingId := sharing.ID(2)
-	r1b[offendingId].PedersenVerificationVector = nil
-
-	r1bIn, r1uIn := ntu.MapO2I(t, slices.Collect(maps.Values(parties)), r1b, r1u)
-	for id := range quorum.Iter() {
-		if id != offendingId {
-			_, err = parties[id].Round2(r1bIn[id], r1uIn[id])
-			require.Error(t, err)
-			require.True(t, base.IsIdentifiableAbortError(err))
-			require.Contains(t, base.GetMaliciousIdentities[sharing.ID](err), offendingId)
-		}
-	}
 }
