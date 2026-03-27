@@ -17,11 +17,11 @@ import (
 const commitmentDomainRLabel = "Lindell2022SignR-"
 
 type (
-	// Shard represents a party's secret key share for threshold Schnorr signing.
+	// Shard represents a party's secret key share for MPC Schnorr signing.
 	Shard[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = schnorr.Shard[GE, S]
 	// PublicMaterial contains public information shared among signing parties.
 	PublicMaterial[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = schnorr.PublicMaterial[GE, S]
-	// PartialSignature is a party's contribution to the threshold signature.
+	// PartialSignature is a party's contribution to the aggregate signature.
 	PartialSignature[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = schnorr.PartialSignature[GE, S]
 )
 

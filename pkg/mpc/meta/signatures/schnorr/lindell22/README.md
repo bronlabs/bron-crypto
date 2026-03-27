@@ -1,10 +1,10 @@
 # lindell22
 
-Implementation of the Lindell 2022 threshold Schnorr signing protocol.
+Implementation of the Lindell 2022 Schnorr signing protocol for arbitrary monotone access structures.
 
 ## Overview
 
-This package implements the threshold Schnorr signing protocol from [Yehuda Lindell's 2022 paper](https://eprint.iacr.org/2022/374). The protocol provides:
+This package implements the Schnorr signing protocol from [Yehuda Lindell's 2022 paper](https://eprint.iacr.org/2022/374), generalised to arbitrary monotone access structures via MSP-based secret sharing. The protocol provides:
 
 - 3-round interactive signing
 - Identifiable abort (malicious parties can be identified)

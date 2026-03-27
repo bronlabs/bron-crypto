@@ -6,7 +6,7 @@ import (
 	normal_signatures "github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
-// Shard represents a threshold signature shard held by a participant.
+// Shard represents a signature shard held by a participant.
 type Shard[
 	PK normal_signatures.PublicKey[PK],
 	S sharing.Share[S],

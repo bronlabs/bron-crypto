@@ -136,7 +136,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 	return psig, nil
 }
 
-// ComputePartialSignature computes this party's contribution to the threshold signature.
+// ComputePartialSignature computes this party's contribution to the aggregate signature.
 func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment GE, challenge S) (*lindell22.PartialSignature[GE, S], error) {
 	if c == nil {
 		return nil, ErrNilArgument.WithMessage("cosigner cannot be nil")

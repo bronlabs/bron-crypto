@@ -20,7 +20,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
-// Aggregator combines partial signatures into a complete threshold signature.
+// Aggregator combines partial signatures into a complete signature.
 type Aggregator[
 	VR mpcschnorr.MPCFriendlyVariant[GE, S, M], GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ] struct {

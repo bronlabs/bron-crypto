@@ -1,6 +1,6 @@
 # signing
 
-Interactive signing protocol for Lindell22 threshold Schnorr.
+Interactive signing protocol for Lindell22 Schnorr over arbitrary monotone access structures.
 
 ## Overview
 

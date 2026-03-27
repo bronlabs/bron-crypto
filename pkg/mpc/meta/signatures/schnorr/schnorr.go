@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
-// MPCFriendlyVariant extends schnorrlike.Variant with methods needed for threshold signing.
+// MPCFriendlyVariant extends schnorrlike.Variant with methods needed for MPC signing.
 // It provides parity correction for secret shares and nonces required by some Schnorr variants.
 type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] interface {
 	schnorrlike.Variant[GE, S, M]
@@ -23,7 +23,7 @@ type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFiel
 	CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (GE, S, error)
 }
 
-// MPCFriendlyScheme extends schnorrlike.Scheme with threshold signing capabilities.
+// MPCFriendlyScheme extends schnorrlike.Scheme with MPC signing capabilities.
 // It provides a partial signature verifier for validating individual party contributions.
 type MPCFriendlyScheme[
 	VR MPCFriendlyVariant[GE, S, M],
@@ -41,7 +41,7 @@ type MPCFriendlyScheme[
 	) (schnorrlike.Verifier[VR, GE, S, M], error) // making batch verification etc is not objective here, so won't return VF
 }
 
-// PartialSignature represents a party's contribution to a threshold Schnorr signature.
+// PartialSignature represents a party's contribution to an MPC Schnorr signature.
 type PartialSignature[
 	GE algebra.PrimeGroupElement[GE, S],
 	S algebra.PrimeFieldElement[S],
@@ -60,7 +60,7 @@ func (ps *PartialSignature[E, S]) Bytes() []byte {
 	return out
 }
 
-// PublicMaterial contains public information for threshold Schnorr signature verification.
+// PublicMaterial contains public information for MPC Schnorr signature verification.
 type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	mpc.BasePublicMaterial[E, S]
 
@@ -68,7 +68,7 @@ type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	pkOnce sync.Once
 }
 
-// PublicKey returns the threshold public key as a schnorrlike.PublicKey.
+// PublicKey returns the aggregate public key as a schnorrlike.PublicKey.
 func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	pm.pkOnce.Do(func() {
 		var err error
@@ -80,7 +80,7 @@ func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	return pm.pk
 }
 
-// Shard represents a party's secret key share for threshold Schnorr signing.
+// Shard represents a party's secret key share for MPC Schnorr signing.
 type Shard[
 	E algebra.PrimeGroupElement[E, S],
 	S algebra.PrimeFieldElement[S],
@@ -100,7 +100,7 @@ func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
 	}
 }
 
-// PublicKey returns the threshold public key as a schnorrlike.PublicKey.
+// PublicKey returns the aggregate public key as a schnorrlike.PublicKey.
 func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	sh.pkOnce.Do(func() {
 		var err error
@@ -118,7 +118,7 @@ func (sh *Shard[E, S]) Equal(other mpcsig.Shard[*schnorrlike.PublicKey[E, S], *f
 	return ok && sh.BaseShard.Equal(&o.BaseShard)
 }
 
-// NewShard creates a new threshold Schnorr shard from a Feldman share, verification vector, and access structure.
+// NewShard creates a new Schnorr shard from a Feldman share, verification vector, and MSP.
 func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv *feldman.VerificationVector[E, S],

@@ -25,7 +25,7 @@ const (
 	transcriptLabel = "BRON_CRYPTO_TSCHNORR_LINDELL22_SIGNING-"
 )
 
-// Cosigner is a participant in the Lindell22 threshold Schnorr signing protocol.
+// Cosigner is a participant in the Lindell22 Schnorr signing protocol.
 type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] struct {
 	ctx     *session.Context
 	shard   *lindell22.Shard[GE, S]
@@ -75,7 +75,7 @@ func (c *Cosigner[GE, S, M]) Variant() mpcschnorr.MPCFriendlyVariant[GE, S, M] {
 	return c.variant
 }
 
-// NewCosigner creates a new cosigner for threshold Schnorr signing.
+// NewCosigner creates a new cosigner for Schnorr signing.
 func NewCosigner[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](

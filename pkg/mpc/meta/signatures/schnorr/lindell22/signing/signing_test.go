@@ -332,9 +332,9 @@ func TestSigning_MultipleMessages(t *testing.T) {
 	}
 }
 
-// TestSigning_DifferentQualifiedSubsetsSameSignature verifies that for threshold
-// schemes, different qualified subsets produce valid signatures for the same
-// public key (signatures differ due to nonce randomness but all verify).
+// TestSigning_DifferentQualifiedSubsets verifies that different qualified subsets
+// produce valid signatures for the same public key (signatures differ due to
+// nonce randomness but all verify).
 func TestSigning_DifferentQualifiedSubsets(t *testing.T) {
 	t.Parallel()
 
@@ -395,7 +395,7 @@ func TestSigning_TranscriptConsistency(t *testing.T) {
 }
 
 // TestSigning_PublicKeysConsistentAcrossShards verifies that all shards agree
-// on the threshold public key.
+// on the aggregate public key.
 func TestSigning_PublicKeysConsistentAcrossShards(t *testing.T) {
 	t.Parallel()
 

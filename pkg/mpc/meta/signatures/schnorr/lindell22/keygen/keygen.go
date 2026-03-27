@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// NewShard creates a threshold Schnorr shard from a base shard output by the DKG protocol.
+// NewShard creates a Schnorr shard from a base shard output by the DKG protocol.
 func NewShard[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S],
 ](
