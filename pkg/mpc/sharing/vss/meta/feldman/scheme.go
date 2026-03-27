@@ -296,5 +296,9 @@ func (s *Scheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[E, FE], 
 		result = result.Op(share.Value()[i].ScalarOp(coeff))
 	}
 
-	return additive.NewShare(share.ID(), result, quorum)
+	out, err := additive.NewShare(share.ID(), result, quorum)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create additive share from lifted share")
+	}
+	return out, nil
 }

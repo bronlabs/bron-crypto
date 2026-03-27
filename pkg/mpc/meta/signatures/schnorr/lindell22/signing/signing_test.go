@@ -480,7 +480,7 @@ func TestSigning_RunnerEndToEnd(t *testing.T) {
 	}
 }
 
-// TestSigning_ShardCBORRoundTrip verifies that shards survive CBOR serialization.
+// TestSigning_ShardCBORRoundTrip verifies that shards survive CBOR serialisation.
 func TestSigning_ShardCBORRoundTrip(t *testing.T) {
 	t.Parallel()
 
@@ -522,4 +522,3 @@ func formatIDs(ids []sharing.ID) string {
 	}
 	return s + "}"
 }
-
