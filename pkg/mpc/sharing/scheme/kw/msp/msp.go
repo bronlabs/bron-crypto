@@ -163,6 +163,29 @@ func (m *MSP[E]) Accepts(IDs ...ID) bool {
 	return err == nil
 }
 
+// Equal returns true if this MSP equals another.
+func (m *MSP[E]) Equal(other *MSP[E]) bool {
+	if m == nil || other == nil {
+		return m == other
+	}
+	if !m.matrix.Equal(other.matrix) {
+		return false
+	}
+	for k, v := range m.rowsToHolders.Iter() {
+		otherV, ok := other.rowsToHolders.Get(k)
+		if !ok || otherV != v {
+			return false
+		}
+	}
+	for k, v := range m.holdersToRows.Iter() {
+		otherV, ok := other.holdersToRows.Get(k)
+		if !ok || !v.Equal(otherV) {
+			return false
+		}
+	}
+	return true
+}
+
 var (
 	// ErrValue indicates an invalid value.
 	ErrValue = internal.ErrValue

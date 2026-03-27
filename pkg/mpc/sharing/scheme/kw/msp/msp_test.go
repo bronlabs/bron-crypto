@@ -287,6 +287,111 @@ func TestMSP_DuplicateIDsDeduped(t *testing.T) {
 
 // --- CBOR roundtrip tests ---
 
+// --- Equal tests ---
+
+func TestMSP_Equal_BothNil(t *testing.T) {
+	t.Parallel()
+	var a, b *msp.MSP[*k256.Scalar]
+	require.True(t, a.Equal(b))
+}
+
+func TestMSP_Equal_OneNil(t *testing.T) {
+	t.Parallel()
+	sp := new2of3MSP(t)
+	var nilMSP *msp.MSP[*k256.Scalar]
+
+	require.False(t, sp.Equal(nilMSP))
+	require.False(t, nilMSP.Equal(sp))
+}
+
+func TestMSP_Equal_Reflexive(t *testing.T) {
+	t.Parallel()
+	sp := new2of3MSP(t)
+	require.True(t, sp.Equal(sp))
+}
+
+func TestMSP_Equal_IdenticalConstruction(t *testing.T) {
+	t.Parallel()
+	a := new2of3MSP(t)
+	b := new2of3MSP(t)
+	require.True(t, a.Equal(b))
+	require.True(t, b.Equal(a))
+}
+
+func TestMSP_Equal_DifferentMatrix(t *testing.T) {
+	t.Parallel()
+	m1 := newMatrix(t, [][]uint64{{1, 1}, {1, 2}, {1, 3}})
+	m2 := newMatrix(t, [][]uint64{{1, 1}, {1, 2}, {1, 4}})
+
+	a, err := msp.NewMSP(m1, map[int]msp.ID{0: 1, 1: 2, 2: 3})
+	require.NoError(t, err)
+	b, err := msp.NewMSP(m2, map[int]msp.ID{0: 1, 1: 2, 2: 3})
+	require.NoError(t, err)
+
+	require.False(t, a.Equal(b))
+	require.False(t, b.Equal(a))
+}
+
+func TestMSP_Equal_DifferentRowsToHolders(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 1}, {1, 2}, {1, 3}})
+
+	a, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2, 2: 3})
+	require.NoError(t, err)
+	// Same matrix, but holders are assigned differently.
+	b, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 3, 2: 2})
+	require.NoError(t, err)
+
+	require.False(t, a.Equal(b))
+}
+
+func TestMSP_Equal_DifferentDimensions(t *testing.T) {
+	t.Parallel()
+	m1 := newMatrix(t, [][]uint64{{1, 1}, {1, 2}})
+	m2 := newMatrix(t, [][]uint64{{1, 1}, {1, 2}, {1, 3}})
+
+	a, err := msp.NewMSP(m1, map[int]msp.ID{0: 1, 1: 2})
+	require.NoError(t, err)
+	b, err := msp.NewMSP(m2, map[int]msp.ID{0: 1, 1: 2, 2: 3})
+	require.NoError(t, err)
+
+	require.False(t, a.Equal(b))
+}
+
+func TestMSP_Equal_MultiRowHolder(t *testing.T) {
+	t.Parallel()
+	m := newMatrix(t, [][]uint64{{1, 0}, {0, 1}})
+
+	// Holder 1 owns both rows.
+	a, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 1})
+	require.NoError(t, err)
+	b, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 1})
+	require.NoError(t, err)
+
+	require.True(t, a.Equal(b))
+
+	// Same matrix but different holder assignment.
+	c, err := msp.NewMSP(m, map[int]msp.ID{0: 1, 1: 2})
+	require.NoError(t, err)
+	require.False(t, a.Equal(c))
+}
+
+func TestMSP_Equal_AfterCBORRoundTrip(t *testing.T) {
+	t.Parallel()
+	original := new2of3MSP(t)
+
+	data, err := serde.MarshalCBOR(original)
+	require.NoError(t, err)
+
+	decoded, err := serde.UnmarshalCBOR[*msp.MSP[*k256.Scalar]](data)
+	require.NoError(t, err)
+
+	require.True(t, original.Equal(decoded))
+	require.True(t, decoded.Equal(original))
+}
+
+// --- CBOR roundtrip tests ---
+
 func TestMSP_CBORRoundTrip_2of3(t *testing.T) {
 	t.Parallel()
 	original := new2of3MSP(t)
