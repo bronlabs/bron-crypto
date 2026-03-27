@@ -53,10 +53,12 @@ func (*Scheme[FE]) Name() sharing.Name {
 	return Name
 }
 
+// CanReconstruct checks if the given shareholder IDs form a qualified set according to the underlying access structure.
 func (s *Scheme[FE]) CanReconstruct(ids ...sharing.ID) bool {
 	return s.msp.Accepts(ids...)
 }
 
+// Shareholders returns the universe of shareholder IDs defined by the underlying MSP.
 func (s *Scheme[FE]) Shareholders() ds.Set[sharing.ID] {
 	return s.msp.Shareholders()
 }

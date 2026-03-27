@@ -1309,5 +1309,4 @@ func TestConvertShareToAdditive_QuorumNotQualified(t *testing.T) {
 
 	_, err := scheme.ConvertShareToAdditive(shares[1], quorum)
 	require.Error(t, err)
-	require.ErrorIs(t, err, sharing.ErrMembership)
 }

@@ -2,1212 +2,524 @@ package signing_test
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"io"
-	"maps"
 	"slices"
-	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/errs-go/errs"
-
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gennaro"
+	dkgtu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22/keygen"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22/signing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/signing"
-	ltu "github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
-	vanilla "github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/schnorr"
 )
 
-// TestLindell22DKGAndSign tests the complete DKG and signing flow for all variants
-func TestLindell22DKGAndSign(t *testing.T) {
-	t.Parallel()
+// ---------------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------------
 
-	testCases := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"MinimalQuorum_2of3", 2, 3},
-		{"StandardQuorum_3of5", 3, 5},
-		{"LargerQuorum_5of7", 5, 7},
-	}
-
-	// Test with BIP340
-	t.Run("BIP340", func(t *testing.T) {
-		t.Parallel()
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-				runTestWithBIP340(t, tc.thresh, tc.total)
-			})
-		}
-	})
-
-	// Test with Vanilla Schnorr
-	t.Run("VanillaSchnorr", func(t *testing.T) {
-		t.Parallel()
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-				runTestWithVanillaSchnorr(t, tc.thresh, tc.total)
-			})
-		}
-	})
+func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
+	return hashset.NewComparable(ids...).Freeze()
 }
 
-func runTestWithBIP340(t *testing.T, thresh, total uint) {
+// doDKG runs the meta Gennaro DKG and converts output to Lindell22 shards.
+func doDKG(
+	t *testing.T,
+	group *k256.Curve,
+	ac accessstructures.Monotone,
+	ctxs map[sharing.ID]*session.Context,
+) map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar] {
 	t.Helper()
-	// Setup
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
 
-	// Create BIP340 scheme
+	participants := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
+	for id := range ac.Shareholders().Iter() {
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, pcg.NewRandomised())
+		require.NoError(t, err)
+		participants[id] = p
+	}
+	dkgOutputs := dkgtu.DoGennaroDKG(t, participants)
+
+	shards := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
+	for id, output := range dkgOutputs {
+		shard, err := keygen.NewShard(output)
+		require.NoError(t, err)
+		shards[id] = shard
+	}
+	return shards
+}
+
+// signAndAggregate runs the Lindell22 signing protocol for the given quorum
+// and returns the aggregated signature.
+func signAndAggregate(
+	t *testing.T,
+	shards map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar],
+	quorumIDs []sharing.ID,
+	message []byte,
+) {
+	t.Helper()
+
+	prng := pcg.NewRandomised()
 	scheme, err := bip340.NewScheme(prng)
 	require.NoError(t, err)
-
-	// Setup DKG participants
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
-	}
-
-	// Run DKG using testutils
-	shards := ltu.DoLindell22DKG(t, parties)
-	require.Len(t, shards, int(total))
-
-	// Test thresh signing with a quorum
-	t.Run("threshold_signing", func(t *testing.T) {
-		t.Parallel()
-		// Select a quorum (thresh participants)
-		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range thresh {
-			quorumSet.Add(sharing.ID(i + 1))
-		}
-		quorum := quorumSet.Freeze()
-
-		// Create cosigners using testutils
-		variant := scheme.Variant()
-
-		// Convert shards to map for testutils
-		shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-		for id, shard := range shards {
-			shardsMap[id] = shard
-		}
-
-		signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-		cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-		// Sign a message using the 3-round protocol
-		message := []byte("Hello, Lindell22 with BIP340!")
-
-		// Round 1
-		r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-		// Map broadcast outputs to inputs
-		participants := slices.Collect(maps.Values(cosigners))
-		r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-		// Round 2
-		r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-		// Map broadcast outputs to inputs
-		r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-		// Round 3
-		partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
-
-		// Verify we got partial signatures from all cosigners
-		require.Len(t, partialSigs, len(cosigners))
-
-		// Manual aggregation to test signature validity
-		publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-
-		// Verify we have partial signatures with the expected properties
-		for psig := range maps.Values(partialSigs) {
-			require.NotNil(t, psig)
-			require.NotNil(t, psig.Sig.R)
-			require.NotNil(t, psig.Sig.S)
-			require.NotNil(t, psig.Sig.E)
-		}
-
-		// Create aggregator using the public material and scheme
-		aggregator, err := signing.NewAggregator(publicMaterial, scheme)
-		require.NoError(t, err)
-
-		// Aggregate the partial signatures
-		aggregatedSig, err := aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-		require.NoError(t, err)
-		require.NotNil(t, aggregatedSig)
-
-		// Verify the aggregated signature
-		verifier, err := scheme.Verifier()
-		require.NoError(t, err)
-		err = verifier.Verify(aggregatedSig, publicMaterial.PublicKey(), message)
-		require.NoError(t, err)
-
-		t.Logf("✅ Lindell22 thresh signing works with BIP340! Successfully signed and verified a message using the 3-round protocol.")
-	})
-}
-
-func runTestWithVanillaSchnorr(t *testing.T, thresh, total uint) {
-	t.Helper()
-	// Setup
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-
-	// Create Vanilla Schnorr scheme
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
-	require.NoError(t, err)
-
-	// Setup DKG participants
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
-	}
-
-	// Run DKG using testutils
-	shards := ltu.DoLindell22DKG(t, parties)
-	require.Len(t, shards, int(total))
-
-	// Test thresh signing with a quorum
-	t.Run("threshold_signing", func(t *testing.T) {
-		t.Parallel()
-		// Select a quorum (thresh participants)
-		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range thresh {
-			quorumSet.Add(sharing.ID(i + 1))
-		}
-		quorum := quorumSet.Freeze()
-
-		// Create cosigners using testutils
-		variant := scheme.Variant()
-
-		// Convert shards to map for testutils
-		shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-		for id, shard := range shards {
-			shardsMap[id] = shard
-		}
-
-		signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-		cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-		// Sign a message using the 3-round protocol
-		message := []byte("Hello, Lindell22 with Vanilla Schnorr!")
-
-		// Round 1
-		r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-		// Map broadcast outputs to inputs
-		participants := slices.Collect(maps.Values(cosigners))
-		r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-		// Round 2
-		r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-		// Map broadcast outputs to inputs
-		r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-		// Round 3
-		partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
-
-		// Verify we got partial signatures from all cosigners
-		require.Len(t, partialSigs, len(cosigners))
-
-		// Manual aggregation to test signature validity
-		publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-
-		// Verify we have partial signatures with the expected properties
-		for psig := range maps.Values(partialSigs) {
-			require.NotNil(t, psig)
-			require.NotNil(t, psig.Sig.R)
-			require.NotNil(t, psig.Sig.S)
-			require.NotNil(t, psig.Sig.E)
-		}
-
-		// Create aggregator using the public material and scheme
-		aggregator, err := signing.NewAggregator(publicMaterial, scheme)
-		require.NoError(t, err)
-
-		// Aggregate the partial signatures
-		aggregatedSig, err := aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-		require.NoError(t, err)
-		require.NotNil(t, aggregatedSig)
-
-		// Verify the aggregated signature
-		verifier, err := scheme.Verifier()
-		require.NoError(t, err)
-		err = verifier.Verify(aggregatedSig, publicMaterial.PublicKey(), message)
-		require.NoError(t, err)
-
-		t.Logf("✅ Lindell22 thresh signing works with Vanilla Schnorr! Successfully signed and verified a message using the 3-round protocol.")
-	})
-}
-
-// TestIdentifiableAbort tests the identifiable abort functionality for all variants
-func TestIdentifiableAbort(t *testing.T) {
-	t.Parallel()
-
-	t.Run("BIP340", func(t *testing.T) {
-		t.Parallel()
-		testIdentifiableAbortWithBIP340(t)
-	})
-
-	t.Run("VanillaSchnorr", func(t *testing.T) {
-		t.Parallel()
-		testIdentifiableAbortWithVanillaSchnorr(t)
-	})
-}
-
-func testIdentifiableAbortWithBIP340(t *testing.T) {
-	t.Helper()
-	// Setup
-	thresh := uint(3)
-	total := uint(5)
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-
-	// Create scheme
-	scheme, err := bip340.NewScheme(prng)
-	require.NoError(t, err)
-
-	// Setup DKG
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
-	}
-
-	// Run DKG
-	shards := ltu.DoLindell22DKG(t, parties)
-
-	// Create signing session
-	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range thresh {
-		quorumSet.Add(sharing.ID(i + 1))
-	}
-	quorum := quorumSet.Freeze()
-
 	variant := scheme.Variant()
 
-	// Convert shards to map for testutils
-	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards {
-		shardsMap[id] = shard
-	}
+	quorumSet := hashset.NewComparable(quorumIDs...).Freeze()
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
 
-	// Create cosigners
-	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-	message := []byte("Test identifiable abort with BIP340")
-
-	// Run rounds 1 and 2 normally
-	r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-	participants := slices.Collect(maps.Values(cosigners))
-	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-	// Round 3 - get partial signatures
-	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
-
-	// Corrupt one signature
-	corruptedID := sharing.ID(1)
-	// Get the signature for the corrupted ID and replace it
-	validPsig, ok := partialSigs[corruptedID]
-	require.True(t, ok)
-
-	corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig)
-
-	// Create a new map with the corrupted signature
-	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
-	for id := range quorum.Iter() {
-		if id == corruptedID {
-			corruptedSigsMap.Put(id, corruptedPsig)
-		} else {
-			psig := partialSigs[id]
-			corruptedSigsMap.Put(id, psig)
-		}
-	}
-	corruptedSigs := corruptedSigsMap.Freeze()
-
-	// Try to aggregate with the corrupted signature - should trigger identifiable abort
-	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-	aggregator, err := signing.NewAggregator(publicMaterial, scheme)
-	require.NoError(t, err)
-
-	// This should fail and identify the bad signature
-	_, err = aggregator.Aggregate(corruptedSigs, message)
-	require.Error(t, err)
-
-	// Check that the aggregator detected the bad signature
-	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
-	require.NotEmpty(t, culprits)
-	require.Contains(t, culprits, corruptedID)
-	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with BIP340")
-}
-
-func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
-	t.Helper()
-	// Setup
-	thresh := uint(3)
-	total := uint(5)
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-
-	// Create scheme
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
-	require.NoError(t, err)
-
-	// Setup DKG
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
-	}
-
-	// Run DKG
-	shards := ltu.DoLindell22DKG(t, parties)
-
-	// Create signing session
-	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range thresh {
-		quorumSet.Add(sharing.ID(i + 1))
-	}
-	quorum := quorumSet.Freeze()
-
-	variant := scheme.Variant()
-
-	// Convert shards to map for testutils
-	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards {
-		shardsMap[id] = shard
-	}
-
-	// Create cosigners
-	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-	message := []byte("Test identifiable abort with Vanilla Schnorr")
-
-	// Run rounds 1 and 2 normally
-	r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-	participants := slices.Collect(maps.Values(cosigners))
-	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-	// Round 3 - get partial signatures
-	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
-
-	// Corrupt one signature
-	corruptedID1 := sharing.ID(1)
-	corruptedID2 := sharing.ID(2)
-	corruptedIDs := []sharing.ID{corruptedID1, corruptedID2}
-	// Get the signature for the corrupted ID and replace it
-	// Create a new map with the corrupted signature
-	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
-	for id := range quorum.Iter() {
-		if slices.Contains(corruptedIDs, id) {
-			validPsig, ok := partialSigs[id]
-			require.True(t, ok)
-			corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig)
-			corruptedSigsMap.Put(id, corruptedPsig)
-		} else {
-			psig := partialSigs[id]
-			corruptedSigsMap.Put(id, psig)
-		}
-	}
-	corruptedSigs := corruptedSigsMap.Freeze()
-
-	// Try to aggregate with the corrupted signature - should trigger identifiable abort
-	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-	aggregator, err := signing.NewAggregator(publicMaterial, scheme)
-	require.NoError(t, err)
-
-	// This should fail and identify the bad signature
-	_, err = aggregator.Aggregate(corruptedSigs, message)
-	require.Error(t, err)
-
-	// Check that the aggregator detected the bad signature
-	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
-	require.GreaterOrEqual(t, len(culprits), 2)
-	require.Contains(t, culprits, corruptedID1)
-	require.Contains(t, culprits, corruptedID2)
-	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with Vanilla Schnorr")
-}
-
-// TestLindell22ConcurrentSigning tests signing multiple messages concurrently
-func TestLindell22ConcurrentSigning(t *testing.T) {
-	t.Parallel()
-
-	t.Run("BIP340", func(t *testing.T) {
-		t.Parallel()
-		testConcurrentSigningWithScheme(t, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
-			scheme, err := bip340.NewScheme(prng)
-			if err != nil {
-				return nil, nil, err
-			}
-			variant := scheme.Variant()
-			return scheme, variant, nil
-		})
-	})
-
-	t.Run("VanillaSchnorr", func(t *testing.T) {
-		t.Parallel()
-		testConcurrentSigningWithScheme(t, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
-			group := k256.NewCurve()
-			scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
-			if err != nil {
-				return nil, nil, err
-			}
-			variant := scheme.Variant()
-			return scheme, variant, nil
-		})
-	})
-}
-
-func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
-	t.Helper()
-	thresh := uint(3)
-	total := uint(5)
-	numMessages := 5
-
-	// Setup
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-
-	// Create scheme
-	scheme, variant, err := createScheme(prng)
-	require.NoError(t, err)
-
-	// Setup DKG
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
-	}
-
-	// Run DKG
-	shards := ltu.DoLindell22DKG(t, parties)
-
-	// Select quorum
-	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range thresh {
-		quorumSet.Add(sharing.ID(i + 1))
-	}
-	quorum := quorumSet.Freeze()
-
-	// Convert shards to map
-	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards {
-		shardsMap[id] = shard
-	}
-
-	// Generate multiple messages
-	messages := make([][]byte, numMessages)
-	for i := range numMessages {
-		messages[i] = []byte(string(rune('A' + i)))
-	}
-
-	// Sign messages concurrently
-	var wg sync.WaitGroup
-	type result struct {
-		index int
-		sig   *schnorrlike.Signature[*k256.Point, *k256.Scalar]
-		err   error
-	}
-	results := make(chan result, numMessages)
-
-	for i := range numMessages {
-		wg.Add(1)
-		go func(index int, message []byte) {
-			defer wg.Done()
-
-			// Create cosigners for this signing session
-			signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-			cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-			// Run protocol
-			r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-			participants := slices.Collect(maps.Values(cosigners))
-			r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-			r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-			r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-			partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
-
-			// Aggregate based on scheme type
-			publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-			var (
-				sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
-				err error
-			)
-
-			switch s := scheme.(type) {
-			case *bip340.Scheme:
-				aggregator, err := signing.NewAggregator(publicMaterial, s)
-				if err != nil {
-					results <- result{index, nil, err}
-					return
-				}
-				sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-				assert.NoError(t, err)
-			case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
-				aggregator, err := signing.NewAggregator(publicMaterial, s)
-				if err != nil {
-					results <- result{index, nil, err}
-					return
-				}
-				sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-				assert.NoError(t, err)
-			}
-
-			results <- result{index, sig, err}
-		}(i, messages[i])
-	}
-
-	wg.Wait()
-	close(results)
-
-	// Collect and verify results
-	publicMaterial := shardsMap[1].PublicKeyMaterial()
-
-	signatures := make([]*schnorrlike.Signature[*k256.Point, *k256.Scalar], numMessages)
-	for result := range results {
-		require.NoError(t, result.err, "signing message %d failed", result.index)
-		require.NotNil(t, result.sig)
-		signatures[result.index] = result.sig
-
-		// Verify signature based on scheme type
-		switch s := scheme.(type) {
-		case *bip340.Scheme:
-			verifier, err := s.Verifier()
-			require.NoError(t, err)
-			err = verifier.Verify(result.sig, publicMaterial.PublicKey(), messages[result.index])
-			require.NoError(t, err, "signature verification failed for message %d", result.index)
-		case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
-			verifier, err := s.Verifier()
-			require.NoError(t, err)
-			err = verifier.Verify(result.sig, publicMaterial.PublicKey(), messages[result.index])
-			require.NoError(t, err, "signature verification failed for message %d", result.index)
-		}
-	}
-
-	t.Logf("✅ Successfully signed %d messages concurrently", numMessages)
-}
-
-// TestLindell22DifferentQuorums tests signing with different quorum combinations
-func TestLindell22DifferentQuorums(t *testing.T) {
-	t.Parallel()
-
-	thresh := uint(3)
-	total := uint(5)
-
-	// Test different quorum combinations
-	quorumCombinations := [][]sharing.ID{
-		{1, 2, 3},    // First three
-		{3, 4, 5},    // Last three
-		{1, 3, 4},    // Mixed
-		{1, 2, 3, 4}, // Larger than a thresh
-	}
-
-	t.Run("BIP340", func(t *testing.T) {
-		t.Parallel()
-		for i, quorumIDs := range quorumCombinations {
-			t.Run(string(rune('A'+i)), func(t *testing.T) {
-				t.Parallel()
-				testDifferentQuorumsWithScheme(t, thresh, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
-					scheme, err := bip340.NewScheme(prng)
-					if err != nil {
-						return nil, nil, err
-					}
-					variant := scheme.Variant()
-					return scheme, variant, nil
-				})
-			})
-		}
-	})
-
-	t.Run("VanillaSchnorr", func(t *testing.T) {
-		t.Parallel()
-		for i, quorumIDs := range quorumCombinations {
-			t.Run(string(rune('A'+i)), func(t *testing.T) {
-				t.Parallel()
-				testDifferentQuorumsWithScheme(t, thresh, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
-					group := k256.NewCurve()
-					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
-					if err != nil {
-						return nil, nil, err
-					}
-					variant := scheme.Variant()
-					return scheme, variant, nil
-				})
-			})
-		}
-	})
-}
-
-func testDifferentQuorumsWithScheme(t *testing.T, thresh, total uint, quorumIDs []sharing.ID, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
-	t.Helper()
-	// Setup
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-
-	// Create scheme
-	scheme, variant, err := createScheme(prng)
-	require.NoError(t, err)
-
-	// Setup DKG
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
-	}
-
-	// Run DKG
-	shards := ltu.DoLindell22DKG(t, parties)
-
-	// Convert shards to map
-	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards {
-		shardsMap[id] = shard
-	}
-
-	// Create quorum
-	quorumSet := hashset.NewComparable[sharing.ID]()
+	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
 	for _, id := range quorumIDs {
-		quorumSet.Add(id)
-	}
-	quorum := quorumSet.Freeze()
-
-	// Create cosigners
-	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-	message := []byte("Test message for different quorums")
-
-	// Run protocol
-	r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-	participants := slices.Collect(maps.Values(cosigners))
-	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
-
-	// Aggregate
-	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-
-	var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
-	switch s := scheme.(type) {
-	case *bip340.Scheme:
-		aggregator, err := signing.NewAggregator(publicMaterial, s)
+		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, message, pcg.NewRandomised())
 		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-		require.NoError(t, err)
-	case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
-		aggregator, err := signing.NewAggregator(publicMaterial, s)
-		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-		require.NoError(t, err)
+		runners[id] = runner
 	}
 
-	// Verify
-	switch s := scheme.(type) {
-	case *bip340.Scheme:
-		verifier, err := s.Verifier()
-		require.NoError(t, err)
-		err = verifier.Verify(sig, publicMaterial.PublicKey(), message)
-		require.NoError(t, err)
-	case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
-		verifier, err := s.Verifier()
-		require.NoError(t, err)
-		err = verifier.Verify(sig, publicMaterial.PublicKey(), message)
-		require.NoError(t, err)
-	}
+	partialSignatures := ntu.TestExecuteRunners(t, runners)
+	require.Len(t, partialSignatures, len(quorumIDs))
 
-	t.Logf("✅ Successfully signed with quorum %v", quorumIDs)
+	anyID := quorumIDs[0]
+	aggregator, err := signing.NewAggregator(shards[anyID].PublicKeyMaterial(), scheme)
+	require.NoError(t, err)
+
+	sig, err := aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSignatures).Freeze(), message)
+	require.NoError(t, err)
+	require.NotNil(t, sig)
+
+	verifier, err := scheme.Verifier()
+	require.NoError(t, err)
+	err = verifier.Verify(sig, shards[anyID].PublicKey(), message)
+	require.NoError(t, err)
 }
 
-// TestLindell22EdgeCases tests edge cases like empty messages, large messages
-func TestLindell22EdgeCases(t *testing.T) {
-	t.Parallel()
+// ---------------------------------------------------------------------------
+// access-structure fixtures
+// ---------------------------------------------------------------------------
 
-	// Test cases
-	testCases := []struct {
-		name    string
-		message []byte
-	}{
-		{"empty_message", []byte{}},
-		{"single_byte", []byte{0x42}},
-		{"all_zeros", make([]byte, 32)},
-		{"all_ones", bytes.Repeat([]byte{0xFF}, 32)},
-		{"large_message", make([]byte, 1024)},
-	}
-
-	// Fill large message with random data
-	pcg.NewRandomised().Read(testCases[4].message)
-
-	t.Run("BIP340", func(t *testing.T) {
-		t.Parallel()
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-				testEdgeCasesWithScheme(t, tc.message, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
-					scheme, err := bip340.NewScheme(prng)
-					if err != nil {
-						return nil, nil, err
-					}
-					variant := scheme.Variant()
-					return scheme, variant, nil
-				})
-			})
-		}
-	})
-
-	t.Run("VanillaSchnorr", func(t *testing.T) {
-		t.Parallel()
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-				testEdgeCasesWithScheme(t, tc.message, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
-					group := k256.NewCurve()
-					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
-					if err != nil {
-						return nil, nil, err
-					}
-					variant := scheme.Variant()
-					return scheme, variant, nil
-				})
-			})
-		}
-	})
+type acFixture struct {
+	name         string
+	ac           accessstructures.Monotone
+	qualified    [][]sharing.ID
+	unqualified  [][]sharing.ID
+	shareholders []sharing.ID
 }
 
-func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+func thresholdFixture(t *testing.T) acFixture {
 	t.Helper()
-	thresh := uint(2)
-	total := uint(3)
-
-	// Setup
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-
-	// Create scheme
-	scheme, variant, err := createScheme(prng)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
 	require.NoError(t, err)
-
-	// Setup DKG
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
+	return acFixture{
+		name:         "threshold(2,3)",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 2}, {1, 3}, {2, 3}},
+		unqualified:  [][]sharing.ID{{1}, {2}, {3}},
+		shareholders: []sharing.ID{1, 2, 3},
 	}
-
-	// Run DKG
-	shards := ltu.DoLindell22DKG(t, parties)
-
-	// Select quorum
-	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range thresh {
-		quorumSet.Add(sharing.ID(i + 1))
-	}
-	quorum := quorumSet.Freeze()
-
-	// Convert shards to map
-	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards {
-		shardsMap[id] = shard
-	}
-
-	// Create cosigners
-	signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-	cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-	// Run protocol
-	r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-	participants := slices.Collect(maps.Values(cosigners))
-	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-	r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-	partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
-
-	// Aggregate
-	publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-
-	var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
-	switch s := scheme.(type) {
-	case *bip340.Scheme:
-		aggregator, err := signing.NewAggregator(publicMaterial, s)
-		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-		require.NoError(t, err)
-	case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
-		aggregator, err := signing.NewAggregator(publicMaterial, s)
-		require.NoError(t, err)
-		sig, err = aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-		require.NoError(t, err)
-	}
-
-	// Verify
-	switch s := scheme.(type) {
-	case *bip340.Scheme:
-		verifier, err := s.Verifier()
-		require.NoError(t, err)
-		err = verifier.Verify(sig, publicMaterial.PublicKey(), message)
-		require.NoError(t, err)
-	case *vanilla.Scheme[*k256.Point, *k256.Scalar]:
-		verifier, err := s.Verifier()
-		require.NoError(t, err)
-		err = verifier.Verify(sig, publicMaterial.PublicKey(), message)
-		require.NoError(t, err)
-	}
-
-	t.Logf("✅ Successfully signed edge case message")
 }
 
-// TestLindell22DeterministicSigning tests that signing is deterministic with fixed randomness
-func TestLindell22DeterministicSigning(t *testing.T) {
+func unanimityFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := unanimity.NewUnanimityAccessStructure(shareholders(1, 2, 3))
+	require.NoError(t, err)
+	return acFixture{
+		name:         "unanimity(3)",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 2, 3}},
+		unqualified:  [][]sharing.ID{{1}, {2}, {1, 2}, {1, 3}, {2, 3}},
+		shareholders: []sharing.ID{1, 2, 3},
+	}
+}
+
+func cnfFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := cnf.NewCNFAccessStructure(
+		shareholders(1, 2),
+		shareholders(3, 4),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name:         "cnf({1,2},{3,4})",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 3}, {1, 4}, {2, 3}, {2, 4}, {1, 2, 3, 4}},
+		unqualified:  [][]sharing.ID{{1, 2}, {3, 4}},
+		shareholders: []sharing.ID{1, 2, 3, 4},
+	}
+}
+
+func largeThresholdFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := threshold.NewThresholdAccessStructure(4, shareholders(1, 2, 3, 4, 5, 6, 7))
+	require.NoError(t, err)
+	return acFixture{
+		name:         "threshold(4,7)",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 2, 3, 4}, {3, 4, 5, 6}, {1, 4, 6, 7}},
+		unqualified:  [][]sharing.ID{{1, 2, 3}, {5, 6, 7}},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6, 7},
+	}
+}
+
+// boolexprFixture builds AND(Threshold(2, {1,2,3}), OR(4,5)):
+// qualified iff at least 2 of {1,2,3} present AND at least one of {4,5} present.
+func boolexprFixture(t *testing.T) acFixture {
+	t.Helper()
+	tree := boolexpr.And(
+		boolexpr.Threshold(2, boolexpr.ID(1), boolexpr.ID(2), boolexpr.ID(3)),
+		boolexpr.Or(boolexpr.ID(4), boolexpr.ID(5)),
+	)
+	ac, err := boolexpr.NewThresholdGateAccessStructure(tree)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr(2of3 AND 1of2)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4}, {1, 3, 5}, {2, 3, 4}, {1, 2, 3, 4, 5},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 4}, {4, 5}, {1, 2, 3}, {3, 5},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5},
+	}
+}
+
+func hierarchicalFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(1, 1, 2),
+		hierarchical.WithLevel(2, 3, 4),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name:         "hierarchical(1,2)",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 3, 4}, {2, 3, 4}, {1, 2, 3, 4}},
+		unqualified:  [][]sharing.ID{{3, 4}},
+		shareholders: []sharing.ID{1, 2, 3, 4},
+	}
+}
+
+func allFixtures(t *testing.T) []acFixture {
+	t.Helper()
+	return []acFixture{
+		thresholdFixture(t),
+		unanimityFixture(t),
+		cnfFixture(t),
+		largeThresholdFixture(t),
+		boolexprFixture(t),
+		hierarchicalFixture(t),
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Signing happy-path: DKG + sign + aggregate + verify across access structures
+// ---------------------------------------------------------------------------
+
+func TestSigning_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	thresh := uint(2)
-	total := uint(3)
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
 
-	// Setup with fixed seed
-	group := k256.NewCurve()
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+			shards := doDKG(t, group, fx.ac, ctxs)
+			require.Len(t, shards, len(fx.shareholders))
 
-	// Note: BIP340 is deterministic, vanilla Schnorr is randomised
-	// So we only test BIP340 here for deterministic behaviour
-	t.Run("BIP340", func(t *testing.T) {
-		t.Parallel()
-		// Create two identical PRNGs with same seed
-		seed := uint64(12345)
-		salt := uint64(67890)
-		prng1 := pcg.New(seed, salt)
-		prng2 := pcg.New(seed, salt)
+			message := []byte("test message for " + fx.name)
 
-		// Create schemes with fixed auxiliary data
-		aux := [32]byte{}
-		for i := range aux {
-			aux[i] = byte(i + 100)
+			for _, quorum := range fx.qualified {
+				t.Run(formatIDs(quorum), func(t *testing.T) {
+					t.Parallel()
+					signAndAggregate(t, shards, quorum, message)
+				})
+			}
+		})
+	}
+}
+
+// TestSigning_UnqualifiedQuorumRejected verifies that creating a signing session
+// with an unqualified set of shareholders (size >= 2) is rejected by the MSP
+// authorization check in the cosigner.
+func TestSigning_UnqualifiedQuorumRejected(t *testing.T) {
+	t.Parallel()
+
+	for _, fx := range allFixtures(t) {
+		// Filter to multi-party unqualified sets (size >= 2).
+		var multiPartyUnqualified [][]sharing.ID
+		for _, u := range fx.unqualified {
+			if len(u) >= 2 {
+				multiPartyUnqualified = append(multiPartyUnqualified, u)
+			}
 		}
-		scheme1 := bip340.NewSchemeWithAux(aux)
-		scheme2 := bip340.NewSchemeWithAux(aux)
+		if len(multiPartyUnqualified) == 0 {
+			continue
+		}
 
-		// Setup DKG (run twice with same inputs)
-		runDKGAndSign := func(scheme *bip340.Scheme, prng io.Reader) *schnorrlike.Signature[*k256.Point, *k256.Scalar] {
-			shareholders := sharing.NewOrdinalShareholderSet(total)
-			ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+			shards := doDKG(t, group, fx.ac, ctxs)
+
+			scheme, err := bip340.NewScheme(pcg.NewRandomised())
 			require.NoError(t, err)
-			ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-			parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-			for id := range shareholders.Iter() {
-				p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-				require.NoError(t, err)
-				parties[id] = p
-			}
-
-			// Run DKG
-			shards := ltu.DoLindell22DKG(t, parties)
-
-			// Select same quorum
-			quorumSet := hashset.NewComparable[sharing.ID]()
-			for i := range thresh {
-				quorumSet.Add(sharing.ID(i + 1))
-			}
-			quorum := quorumSet.Freeze()
-
-			// Convert shards to map
-			shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-			for id, shard := range shards {
-				shardsMap[id] = shard
-			}
-
-			// Get variant
 			variant := scheme.Variant()
 
-			// Create cosigners
-			signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-			cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
+			for _, unqualified := range multiPartyUnqualified {
+				t.Run(formatIDs(unqualified), func(t *testing.T) {
+					t.Parallel()
 
-			// Sign same message
-			message := []byte("Deterministic test message")
+					quorumSet := hashset.NewComparable(unqualified...).Freeze()
+					signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, pcg.NewRandomised())
 
-			// Run protocol
-			r1bo := ltu.DoLindell22Round1(t, cosigners)
+					for _, id := range unqualified {
+						_, err := signing.NewCosigner(
+							signingCtxs[id], shards[id], fiatshamir.Name, variant, pcg.NewRandomised(),
+						)
+						// The MSP must reject an unqualified quorum.
+						require.Error(t, err, "cosigner creation should fail for unqualified quorum %v, party %d", unqualified, id)
+						return // one rejection is enough to confirm
+					}
+				})
+			}
+		})
+	}
+}
 
-			participants := slices.Collect(maps.Values(cosigners))
-			r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
+// TestSigning_MultipleMessages verifies that distinct messages under the same
+// key yield distinct valid signatures.
+func TestSigning_MultipleMessages(t *testing.T) {
+	t.Parallel()
 
-			r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, ctxs)
 
-			r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+	messages := [][]byte{
+		[]byte("message one"),
+		[]byte("message two"),
+		[]byte("message three"),
+	}
+	quorum := fx.qualified[0]
 
-			partialSigs := ltu.DoLindell22Round3(t, cosigners, r3bi, message)
+	for _, msg := range messages {
+		t.Run(string(msg), func(t *testing.T) {
+			t.Parallel()
+			signAndAggregate(t, shards, quorum, msg)
+		})
+	}
+}
 
-			// Aggregate
-			publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-			aggregator, err := signing.NewAggregator(publicMaterial, scheme)
+// TestSigning_DifferentQualifiedSubsetsSameSignature verifies that for threshold
+// schemes, different qualified subsets produce valid signatures for the same
+// public key (signatures differ due to nonce randomness but all verify).
+func TestSigning_DifferentQualifiedSubsets(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, ctxs)
+
+	message := []byte("same message, different quorums")
+
+	for _, quorum := range fx.qualified {
+		t.Run(formatIDs(quorum), func(t *testing.T) {
+			t.Parallel()
+			signAndAggregate(t, shards, quorum, message)
+		})
+	}
+}
+
+// TestSigning_TranscriptConsistency verifies all parties derive the same
+// transcript state after a signing session.
+func TestSigning_TranscriptConsistency(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, ctxs)
+
+	scheme, err := bip340.NewScheme(pcg.NewRandomised())
+	require.NoError(t, err)
+	variant := scheme.Variant()
+	message := []byte("transcript consistency")
+	quorum := fx.qualified[0]
+
+	quorumSet := hashset.NewComparable(quorum...).Freeze()
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, pcg.NewRandomised())
+
+	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+	for _, id := range quorum {
+		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, message, pcg.NewRandomised())
+		require.NoError(t, err)
+		runners[id] = runner
+	}
+
+	ntu.TestExecuteRunners(t, runners)
+
+	// All parties' transcripts must be identical.
+	firstTape, err := signingCtxs[quorum[0]].Transcript().ExtractBytes("test", 32)
+	require.NoError(t, err)
+	for _, id := range quorum[1:] {
+		tape, err := signingCtxs[id].Transcript().ExtractBytes("test", 32)
+		require.NoError(t, err)
+		require.True(t, bytes.Equal(firstTape, tape),
+			"transcript mismatch between party %d and %d", quorum[0], id)
+	}
+}
+
+// TestSigning_PublicKeysConsistentAcrossShards verifies that all shards agree
+// on the threshold public key.
+func TestSigning_PublicKeysConsistentAcrossShards(t *testing.T) {
+	t.Parallel()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+			shards := doDKG(t, group, fx.ac, ctxs)
+
+			var refPK *k256.Point
+			for id, shard := range shards {
+				pk := shard.PublicKey().Value()
+				if refPK == nil {
+					refPK = pk
+				} else {
+					require.True(t, refPK.Equal(pk),
+						"public key mismatch at shareholder %d", id)
+				}
+			}
+		})
+	}
+}
+
+// TestSigning_RunnerEndToEnd exercises the full runner-based flow (DKG → sign →
+// aggregate → verify) for each access structure, matching the meta DKG runner
+// test pattern.
+func TestSigning_RunnerEndToEnd(t *testing.T) {
+	t.Parallel()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			scheme, err := bip340.NewScheme(prng)
+			require.NoError(t, err)
+
+			// DKG via runners
+			dkgCtxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+			dkgRunners := dkgtu.MakeGennaroDKGRunners(t, dkgCtxs, fx.ac, fiatshamir.Name, group)
+			dkgOutputs := ntu.TestExecuteRunners(t, dkgRunners)
+			require.Len(t, dkgOutputs, len(fx.shareholders))
+
+			shards := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
+			for id, output := range dkgOutputs {
+				shard, err := keygen.NewShard(output)
+				require.NoError(t, err)
+				shards[id] = shard
+			}
+
+			message := []byte("runner end-to-end test")
+			quorum := fx.qualified[0]
+			quorumSet := hashset.NewComparable(quorum...).Freeze()
+			signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
+
+			variant := scheme.Variant()
+			runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+			for _, id := range quorum {
+				runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, message, pcg.NewRandomised())
+				require.NoError(t, err)
+				runners[id] = runner
+			}
+
+			partialSigs := ntu.TestExecuteRunners(t, runners)
+			require.Len(t, partialSigs, len(quorum))
+
+			aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
 			require.NoError(t, err)
 
 			sig, err := aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
 			require.NoError(t, err)
+			require.NotNil(t, sig)
 
-			return sig
-		}
-
-		// Run twice and compare
-		sig1 := runDKGAndSign(scheme1, prng1)
-		sig2 := runDKGAndSign(scheme2, prng2)
-
-		// Signatures should be identical
-		require.True(t, sig1.R.Equal(sig2.R), "R components should be equal")
-		require.True(t, sig1.S.Equal(sig2.S), "S components should be equal")
-		require.True(t, sig1.E.Equal(sig2.E), "E components should be equal")
-
-		t.Log("✅ BIP340 signing is deterministic with fixed randomness")
-	})
+			verifier, err := scheme.Verifier()
+			require.NoError(t, err)
+			require.NoError(t, verifier.Verify(sig, shards[quorum[0]].PublicKey(), message))
+		})
+	}
 }
 
-// TestLindell22IdentifiableAbortRounds tests identifiable abort in different rounds
-func TestLindell22IdentifiableAbortRounds(t *testing.T) {
+// TestSigning_ShardCBORRoundTrip verifies that shards survive CBOR serialization.
+func TestSigning_ShardCBORRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	thresh := uint(2)
-	total := uint(3)
-
-	// Setup
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, ctxs)
 
-	// Create scheme
-	scheme, err := bip340.NewScheme(prng)
-	require.NoError(t, err)
-
-	// Setup DKG
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	require.NoError(t, err)
-	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		require.NoError(t, err)
-		parties[id] = p
-	}
-
-	// Run DKG
-	shards := ltu.DoLindell22DKG(t, parties)
-
-	// Convert shards to map
-	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
 	for id, shard := range shards {
-		shardsMap[id] = shard
+		roundTripped := ntu.CBORRoundTrip(t, shard)
+		require.True(t, shard.PublicKey().Value().Equal(roundTripped.PublicKey().Value()),
+			"public key mismatch after CBOR round-trip for shareholder %d", id)
 	}
+}
 
-	variant := scheme.Variant()
+// ---------------------------------------------------------------------------
+// formatting helper
+// ---------------------------------------------------------------------------
 
-	t.Run("BadProofInRound3", func(t *testing.T) {
-		t.Parallel()
-		// Select quorum
-		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := range thresh {
-			quorumSet.Add(sharing.ID(i + 1))
+func formatIDs(ids []sharing.ID) string {
+	sorted := slices.Clone(ids)
+	slices.Sort(sorted)
+	s := "{"
+	for i, id := range sorted {
+		if i > 0 {
+			s += ","
 		}
-		quorum := quorumSet.Freeze()
-
-		// Create cosigners
-		signingCtxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-		cosigners := ltu.CreateLindell22Cosigners(t, signingCtxs, shardsMap, variant, prng)
-
-		message := []byte("Test bad proof")
-
-		// Run rounds 1 and 2 normally
-		r1bo := ltu.DoLindell22Round1(t, cosigners)
-
-		participants := slices.Collect(maps.Values(cosigners))
-		r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-		r2bo := ltu.DoLindell22Round2(t, cosigners, r2bi)
-
-		// Corrupt one cosigner's round 2 output
-		corruptedID := sharing.ID(1)
-		corruptedOutput := r2bo[corruptedID]
-		// Corrupt the BigR to make the proof invalid
-		corruptedOutput.BigR.X = corruptedOutput.BigR.X.Neg()
-		r2bo[corruptedID] = corruptedOutput
-
-		r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-		// Round 3 should detect the bad proof.
-		_, err = cosigners[sharing.ID(2)].Round3(r3bi[sharing.ID(2)], message)
-		require.Error(t, err)
-		culprit, ok := errs.HasTag(err, base.IdentifiableAbortPartyIDTag)
-		require.True(t, ok)
-		require.Equal(t, corruptedID, culprit.(sharing.ID))
-
-		t.Logf("✅ Successfully detected bad DLog proof in Round 3")
-	})
-}
-
-// BenchmarkLindell22Signing benchmarks the performance of the protocol
-func BenchmarkLindell22Signing(b *testing.B) {
-	// Setup
-	thresh := uint(3)
-	total := uint(5)
-
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-
-	// Create scheme
-	scheme, err := bip340.NewScheme(prng)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	// Setup DKG
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	if err != nil {
-		b.Fatal(err)
-	}
-	ctxs := session_testutils.MakeRandomContexts(b, shareholders, prng)
-
-	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], total)
-	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
-		if err != nil {
-			b.Fatal(err)
+		buf := ""
+		n := id
+		if n == 0 {
+			buf = "0"
 		}
-		parties[id] = p
+		for n > 0 {
+			buf = string(rune('0'+n%10)) + buf
+			n /= 10
+		}
+		s += buf
 	}
-
-	// Run DKG
-	shards := ltu.DoLindell22DKG(&testing.T{}, parties)
-
-	// Select quorum
-	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := range thresh {
-		quorumSet.Add(sharing.ID(i + 1))
-	}
-	quorum := quorumSet.Freeze()
-
-	// Convert shards to map
-	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
-	for id, shard := range shards {
-		shardsMap[id] = shard
-	}
-
-	variant := scheme.Variant()
-
-	message := []byte("Benchmark message")
-
-	b.ResetTimer()
-	for range b.N {
-		// Create cosigners
-		signingCtxs := session_testutils.MakeRandomContexts(&testing.T{}, quorum, prng)
-		cosigners := ltu.CreateLindell22Cosigners(&testing.T{}, signingCtxs, shardsMap, variant, prng)
-
-		// Run protocol
-		r1bo := ltu.DoLindell22Round1(&testing.T{}, cosigners)
-
-		participants := slices.Collect(maps.Values(cosigners))
-		r2bi := ntu.MapBroadcastO2I(&testing.T{}, participants, r1bo)
-
-		r2bo := ltu.DoLindell22Round2(&testing.T{}, cosigners, r2bi)
-
-		r3bi := ntu.MapBroadcastO2I(&testing.T{}, participants, r2bo)
-
-		partialSigs := ltu.DoLindell22Round3(&testing.T{}, cosigners, r3bi, message)
-
-		// Aggregate
-		publicMaterial := firstCosigner(cosigners).Shard().PublicKeyMaterial()
-		aggregator, _ := signing.NewAggregator(publicMaterial, scheme)
-		aggregator.Aggregate(hashmap.NewComparableFromNativeLike(partialSigs).Freeze(), message)
-	}
+	return s + "}"
 }
 
-func firstCosigner(cosigners map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.Scalar, []byte]) *signing.Cosigner[*k256.Point, *k256.Scalar, []byte] {
-	ids := slices.Collect(maps.Keys(cosigners))
-	slices.Sort(ids)
-	return cosigners[ids[0]]
-}

@@ -11,16 +11,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
 // Aggregator combines partial signatures into a complete threshold signature.
 type Aggregator[
-	VR tschnorr.MPCFriendlyVariant[GE, S, M], GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
+	VR mpcschnorr.MPCFriendlyVariant[GE, S, M], GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ] struct {
 	pkm          *lindell22.PublicMaterial[GE, S]
 	group        algebra.PrimeGroup[GE, S]
@@ -28,6 +30,7 @@ type Aggregator[
 	variant      VR
 	verifier     schnorrlike.Verifier[VR, GE, S, M]
 	psigVerifier schnorrlike.Verifier[VR, GE, S, M]
+	feldmanVSS   *feldman.Scheme[GE, S]
 }
 
 // PublicMaterial returns the public key material for signature verification.
@@ -40,8 +43,8 @@ func (a *Aggregator[VR, GE, S, M]) PublicMaterial() *lindell22.PublicMaterial[GE
 
 // NewAggregator creates a new signature aggregator for the given public material and scheme.
 func NewAggregator[
-	SCH tschnorr.MPCFriendlyScheme[VR, GE, S, M, KG, SG, VF],
-	VR tschnorr.MPCFriendlyVariant[GE, S, M],
+	SCH mpcschnorr.MPCFriendlyScheme[VR, GE, S, M, KG, SG, VF],
+	VR mpcschnorr.MPCFriendlyVariant[GE, S, M],
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 	KG schnorrlike.KeyGenerator[GE, S], SG schnorrlike.Signer[VR, GE, S, M], VF schnorrlike.Verifier[VR, GE, S, M],
 ](
@@ -64,7 +67,15 @@ func NewAggregator[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create partial signature verifier for scheme %s", scheme.Name())
 	}
-	return &Aggregator[VR, GE, S, M]{pkm: pk, group: group, sf: sf, variant: scheme.Variant(), verifier: verifier, psigVerifier: psigVerifier}, nil
+	kwScheme, err := kw.NewInducedScheme(pk.MSP())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create KW scheme for aggregator")
+	}
+	feldmanVSS, err := feldman.NewSchemeFromKW(group, kwScheme)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create Feldman VSS scheme for aggregator")
+	}
+	return &Aggregator[VR, GE, S, M]{pkm: pk, group: group, sf: sf, variant: scheme.Variant(), verifier: verifier, psigVerifier: psigVerifier, feldmanVSS: feldmanVSS}, nil
 }
 
 // Aggregate combines partial signatures into a complete signature, verifying validity.
@@ -77,7 +88,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		return nil, ErrNilArgument.WithMessage("aggregator cannot be nil")
 	}
 	quorum := hashset.NewComparable(partialSignatures.Keys()...).Freeze()
-	if !a.pkm.AccessStructure().IsQualified(quorum.List()...) {
+	if !a.pkm.MSP().Accepts(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
 	}
 	for sender, psig := range partialSignatures.Iter() {
@@ -100,7 +111,6 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if sliceutils.Any(partialSignatures.Values(), func(x *lindell22.PartialSignature[GE, S]) bool {
 		return !x.Sig.E.Equal(e)
 	}) {
-
 		return nil, ErrInvalidType.WithMessage("partial signatures have inconsistent challenges")
 	}
 	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)
@@ -123,11 +133,11 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		if psig == nil {
 			return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
 		}
-		senderPKShare, ok := a.pkm.PublicKeyValueShares().Get(sender)
+		senderPKShare, ok := a.pkm.PublicKeyShares().Get(sender)
 		if !ok {
 			return nil, ErrInvalidMembership.WithMessage("invalid authorization: sender %d is not in public material", sender)
 		}
-		senderAdditivePKShare, err := senderPKShare.ToAdditive(quorumAsUnanimitySet)
+		senderAdditivePKShare, err := a.feldmanVSS.ConvertLiftedShareToAdditive(senderPKShare, quorumAsUnanimitySet)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
 		}
