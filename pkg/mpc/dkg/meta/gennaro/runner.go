@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -18,7 +19,7 @@ type runner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] s
 }
 
 // NewRunner constructs a network runner that drives the three DKG rounds.
-func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, group algebra.PrimeGroup[G, S], accessStructure accessstructures.Linear, niCompilerName compiler.Name, prng io.Reader) (network.Runner[*DKGOutput[G, S]], error) {
+func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, group algebra.PrimeGroup[G, S], accessStructure accessstructures.Linear, niCompilerName compiler.Name, prng io.Reader) (network.Runner[*mpc.BaseShard[G, S]], error) {
 	party, err := NewParticipant(ctx, group, accessStructure, niCompilerName, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
@@ -27,7 +28,7 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 // Run executes the DKG rounds using the provided router and returns the final output.
-func (r *runner[G, S]) Run(rt *network.Router) (*DKGOutput[G, S], error) {
+func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	// r1
 	r1OutB, r1OutU, err := r.party.Round1()
 	if err != nil {

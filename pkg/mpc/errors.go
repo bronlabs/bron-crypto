@@ -1,4 +1,4 @@
-package tsig
+package mpc
 
 import "github.com/bronlabs/errs-go/errs"
 

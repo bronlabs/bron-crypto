@@ -1,28 +1,24 @@
-package tsig
+package signatures
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
-	"github.com/bronlabs/bron-crypto/pkg/signatures"
+	normal_signatures "github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 // Shard represents a threshold signature shard held by a participant.
 type Shard[
-	PK signatures.PublicKey[PK],
+	PK normal_signatures.PublicKey[PK],
 	S sharing.Share[S],
-	AC accessstructures.Linear,
 ] interface {
 	Share() S
-	PublicMaterial[PK, AC]
-	base.Hashable[Shard[PK, S, AC]]
+	PublicMaterial[PK]
+	base.Hashable[Shard[PK, S]]
 }
 
 // PublicMaterial represents the public material shared among participants.
 type PublicMaterial[
-	PK signatures.PublicKey[PK],
-	AC accessstructures.Linear,
+	PK normal_signatures.PublicKey[PK],
 ] interface {
 	PublicKey() PK
-	AccessStructure() AC
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
@@ -203,7 +204,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	}, nil
 }
 
-func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S], *Participant[E, S]]) (*DKGOutput[E, S], error) {
+func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S], *Participant[E, S]]) (*mpc.BaseShard[E, S], error) {
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("expected round 3, got %d", p.round)
 	}
@@ -253,11 +254,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create output feldman share")
 	}
-	ldf, err := feldman.NewLiftedDealerFunc(summedFeldmanVerificationVector, p.state.lsss.MSP())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create lifted dealer function")
-	}
-	out, err := NewDKGOutput(p.scalarField, outputShare, ldf, p.state.lsss.AccessStructure())
+	out, err := mpc.NewBaseShard(outputShare, summedFeldmanVerificationVector, p.state.lsss.MSP())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create DKG output")
 	}

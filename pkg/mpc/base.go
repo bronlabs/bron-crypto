@@ -1,4 +1,4 @@
-package tsig
+package mpc
 
 import (
 	"github.com/bronlabs/errs-go/errs"
@@ -69,7 +69,6 @@ func (spm *BasePublicMaterial[E, S]) VerificationVector() *feldman.VerificationV
 	return spm.fv
 }
 
-// Equal returns true if this public material equals another.
 func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool {
 	if spm == nil || other == nil {
 		return spm == other
@@ -113,7 +112,6 @@ func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// BaseShard contains a party's secret share and the associated public material for threshold signing.
 type BaseShard[
 	E algebra.PrimeGroupElement[E, S],
 	S algebra.PrimeFieldElement[S],
