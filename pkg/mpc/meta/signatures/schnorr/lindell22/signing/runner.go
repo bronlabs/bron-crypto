@@ -6,9 +6,9 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -32,7 +32,7 @@ func NewRunner[
 	ctx *session.Context,
 	shard *lindell22.Shard[GE, S],
 	niCompilerName compiler.Name,
-	variant tschnorr.MPCFriendlyVariant[GE, S, M],
+	variant mpcschnorr.MPCFriendlyVariant[GE, S, M],
 	message M,
 	prng io.Reader,
 ) (network.Runner[*lindell22.PartialSignature[GE, S]], error) {

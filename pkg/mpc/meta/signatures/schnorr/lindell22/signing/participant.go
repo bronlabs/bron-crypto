@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -35,6 +36,7 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 	variant mpcschnorr.MPCFriendlyVariant[GE, S, M]
 
 	niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[GE, S], *schnorrpok.Witness[S]]
+	lsss         *kw.Scheme[S]
 	state        *State[GE, S]
 }
 
@@ -121,12 +123,18 @@ func NewCosigner[
 	ctx.Transcript().AppendDomainSeparator(dst)
 	quorumBytes := lindell22.QuorumBytes(ctx.Quorum())
 
+	kwScheme, err := kw.NewInducedScheme(shard.MSP())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create kw scheme")
+	}
+
 	return &Cosigner[GE, S, M]{
 		ctx:          ctx,
 		shard:        shard,
 		group:        group,
 		sf:           sf,
 		prng:         prng,
+		lsss:         kwScheme,
 		niDlogScheme: niDlogScheme,
 		variant:      variant,
 		round:        1,

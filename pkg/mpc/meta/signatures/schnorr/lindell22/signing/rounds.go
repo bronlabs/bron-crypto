@@ -154,7 +154,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot sample zero share")
 	}
-	ashare, err := c.shard.Share().ToAdditive(quorum)
+	ashare, err := c.lsss.ConvertShareToAdditive(c.shard.Share(), quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert share %d to additive share", c.shard.Share().ID())
 	}

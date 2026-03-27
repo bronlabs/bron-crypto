@@ -39,12 +39,12 @@ func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], ac ac
 }
 
 // NewInducedScheme creates a KW scheme directly from an MSP, bypassing the induction step. This is useful when the MSP is already known or constructed by other means.
-func NewInducedScheme[FE algebra.PrimeFieldElement[FE]](msp *msp.MSP[FE]) (*Scheme[FE], error) {
-	if msp == nil {
+func NewInducedScheme[FE algebra.PrimeFieldElement[FE]](mspMatrix *msp.MSP[FE]) (*Scheme[FE], error) {
+	if mspMatrix == nil {
 		return nil, sharing.ErrIsNil.WithMessage("MSP cannot be nil")
 	}
 	return &Scheme[FE]{
-		msp: msp,
+		msp: mspMatrix,
 	}, nil
 }
 
