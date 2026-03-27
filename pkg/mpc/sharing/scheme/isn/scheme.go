@@ -41,7 +41,7 @@ type Scheme[E algebra.GroupElement[E]] struct {
 // Returns the initialised scheme.
 func NewFiniteScheme[E algebra.GroupElement[E]](
 	g algebra.FiniteGroup[E],
-	ac accessstructures.Linear,
+	ac accessstructures.Monotone,
 ) (*Scheme[E], error) {
 	if ac == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
@@ -58,7 +58,7 @@ func NewFiniteScheme[E algebra.GroupElement[E]](
 	maximalUnqualifiedSets := sliceutils.Map(
 		slices.Collect(ac.MaximalUnqualifiedSetsIter()),
 		func(u ds.Set[sharing.ID]) bitset.ImmutableBitSet[sharing.ID] {
-			return bitset.NewImmutableBitSet[sharing.ID](u.List()...)
+			return bitset.NewImmutableBitSet(u.List()...)
 		},
 	)
 
@@ -78,6 +78,16 @@ func (*Scheme[E]) Name() sharing.Name {
 // AccessStructure returns the scheme access structure.
 func (c *Scheme[E]) AccessStructure() *cnf.CNF {
 	return c.ac
+}
+
+// CanReconstruct checks if the given shareholder IDs form a qualified set that can reconstruct the secret according to the access structure.
+func (c *Scheme[E]) CanReconstruct(ids ...sharing.ID) bool {
+	return c.ac.IsQualified(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs defined by the access structure.
+func (c *Scheme[E]) Shareholders() ds.Set[sharing.ID] {
+	return c.ac.Shareholders()
 }
 
 // DealRandom samples a uniformly random secret from the group and splits it

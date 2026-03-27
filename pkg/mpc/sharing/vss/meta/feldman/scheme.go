@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -31,7 +32,7 @@ type Scheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]
 
 // NewScheme creates a new Feldman VSS scheme over the given prime-order group
 // and linear access structure. The scalar field is derived from the group.
-func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](group algebra.PrimeGroup[E, FE], accessStructure accessstructures.Linear) (*Scheme[E, FE], error) {
+func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](group algebra.PrimeGroup[E, FE], accessStructure accessstructures.Monotone) (*Scheme[E, FE], error) {
 	if group == nil {
 		return nil, sharing.ErrIsNil.WithMessage("group is nil")
 	}
@@ -56,9 +57,14 @@ func (*Scheme[E, FE]) Name() sharing.Name {
 	return Name
 }
 
-// AccessStructure returns the linear access structure underlying this scheme.
-func (s *Scheme[E, FE]) AccessStructure() accessstructures.Linear {
-	return s.lsss.AccessStructure()
+// CanReconstruct checks whether the given set of shareholder IDs is qualified under the access structure, i.e. whether reconstruction is possible from shares belonging to these shareholders.
+func (s *Scheme[E, FE]) CanReconstruct(ids ...sharing.ID) bool {
+	return s.lsss.MSP().Accepts(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs for this scheme, as defined by the underlying MSP.
+func (s *Scheme[E, FE]) Shareholders() ds.Set[sharing.ID] {
+	return s.lsss.MSP().Shareholders()
 }
 
 // DealRandom generates shares for a uniformly random secret and returns

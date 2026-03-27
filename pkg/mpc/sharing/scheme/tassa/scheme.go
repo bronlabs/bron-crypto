@@ -21,47 +21,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 )
 
-const (
-	// Name is the human-readable identifier of the Tassa secret sharing scheme.
-	Name = "Tassa Secret Sharing Scheme"
-)
-
-// Secret is a Tassa secret represented as a prime-field element.
-type Secret[F algebra.PrimeFieldElement[F]] struct {
-	value F
-}
-
-// NewSecret constructs a secret wrapper from a field element.
-func NewSecret[F algebra.PrimeFieldElement[F]](value F) *Secret[F] {
-	return &Secret[F]{
-		value: value,
-	}
-}
-
-// Equal reports whether two secrets are equal.
-func (s *Secret[F]) Equal(r *Secret[F]) bool {
-	if s == nil || r == nil {
-		return s == r
-	}
-
-	return s.value.Equal(r.value)
-}
-
-// Value returns the underlying field element.
-func (s *Secret[F]) Value() F {
-	return s.value
-}
-
-// DealerOutput contains shares produced by one dealing execution.
-type DealerOutput[F algebra.PrimeFieldElement[F]] struct {
-	shares ds.Map[sharing.ID, *Share[F]]
-}
-
-// Shares returns the dealt shares indexed by shareholder ID.
-func (do *DealerOutput[F]) Shares() ds.Map[sharing.ID, *Share[F]] {
-	return do.shares
-}
-
 // Scheme implements Tassa hierarchical secret sharing over a prime field.
 type Scheme[F algebra.PrimeFieldElement[F]] struct {
 	accessStructure *hierarchical.HierarchicalConjunctiveThreshold
@@ -159,6 +118,16 @@ func (s *Scheme[F]) Reconstruct(shares ...*Share[F]) (secret *Secret[F], err err
 // AccessStructure returns the hierarchical access policy used by the scheme.
 func (s *Scheme[F]) AccessStructure() *hierarchical.HierarchicalConjunctiveThreshold {
 	return s.accessStructure
+}
+
+// CanReconstruct checks if the given shareholder IDs form a qualified set that can reconstruct the secret according to the access structure.
+func (s *Scheme[F]) CanReconstruct(ids ...sharing.ID) bool {
+	return s.accessStructure.IsQualified(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs defined by the access structure.
+func (s *Scheme[F]) Shareholders() ds.Set[sharing.ID] {
+	return s.accessStructure.Shareholders()
 }
 
 // DealAndRevealDealerFunc deals shares and returns the dealer polynomial used

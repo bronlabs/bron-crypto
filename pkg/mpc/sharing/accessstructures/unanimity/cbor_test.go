@@ -30,10 +30,10 @@ func TestUnanimityCBORRoundTrip(t *testing.T) {
 	}
 }
 
-func TestUnanimityCBORAsLinear(t *testing.T) {
+func TestUnanimityCBORAsMonotone(t *testing.T) {
 	t.Parallel()
 
-	t.Run("deserializes as Linear", func(t *testing.T) {
+	t.Run("deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable[unanimity.ID](1, 2, 3).Freeze())
@@ -42,7 +42,7 @@ func TestUnanimityCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -52,7 +52,7 @@ func TestUnanimityCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(1))
 	})
 
-	t.Run("larger shareholder set deserializes as Linear", func(t *testing.T) {
+	t.Run("larger shareholder set deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable[unanimity.ID](10, 20, 30, 40).Freeze())
@@ -61,7 +61,7 @@ func TestUnanimityCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -71,7 +71,7 @@ func TestUnanimityCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(10, 20, 30, 99))
 	})
 
-	t.Run("deserialized Linear has Unanimity concrete type", func(t *testing.T) {
+	t.Run("deserialized Monotone has Unanimity concrete type", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable[unanimity.ID](1, 2, 3).Freeze())
@@ -80,7 +80,7 @@ func TestUnanimityCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 
 		_, ok := decoded.(*unanimity.Unanimity)

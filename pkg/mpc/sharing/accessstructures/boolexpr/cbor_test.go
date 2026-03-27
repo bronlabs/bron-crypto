@@ -188,10 +188,10 @@ func TestThresholdGateAccessStructureCBORUnmarshalErrors(t *testing.T) {
 	})
 }
 
-func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
+func TestThresholdGateAccessStructureCBORAsMonotone(t *testing.T) {
 	t.Parallel()
 
-	t.Run("simple threshold deserializes as Linear", func(t *testing.T) {
+	t.Run("simple threshold deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := boolexpr.NewThresholdGateAccessStructure(
@@ -206,7 +206,7 @@ func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -216,7 +216,7 @@ func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(1))
 	})
 
-	t.Run("nested tree deserializes as Linear", func(t *testing.T) {
+	t.Run("nested tree deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := boolexpr.NewThresholdGateAccessStructure(
@@ -243,7 +243,7 @@ func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -252,7 +252,7 @@ func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(1, 2, 3, 4))
 	})
 
-	t.Run("AND/OR gates deserialize as Linear", func(t *testing.T) {
+	t.Run("AND/OR gates deserialize as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := boolexpr.NewThresholdGateAccessStructure(
@@ -272,7 +272,7 @@ func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -282,7 +282,7 @@ func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(3, 4))
 	})
 
-	t.Run("deserialized Linear has same concrete type", func(t *testing.T) {
+	t.Run("deserialized Monotone has same concrete type", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := boolexpr.NewThresholdGateAccessStructure(
@@ -297,7 +297,7 @@ func TestThresholdGateAccessStructureCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 
 		_, ok := decoded.(*boolexpr.ThresholdGateAccessStructure)

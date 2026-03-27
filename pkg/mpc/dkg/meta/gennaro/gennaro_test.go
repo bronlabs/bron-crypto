@@ -41,7 +41,7 @@ func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
 	return hashset.NewComparable(ids...).Freeze()
 }
 
-func setup(tb testing.TB, ac accessstructures.Linear, group *k256.Curve, prng io.Reader) map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar] {
+func setup(tb testing.TB, ac accessstructures.Monotone, group *k256.Curve, prng io.Reader) map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar] {
 	tb.Helper()
 	ctxs := session_testutils.MakeRandomContexts(tb, ac.Shareholders(), prng)
 	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
@@ -65,7 +65,7 @@ func firstOutput(outputs map[sharing.ID]*mpc.BaseShard[*k256.Point, *k256.Scalar
 
 type acFixture struct {
 	name         string
-	ac           accessstructures.Linear
+	ac           accessstructures.Monotone
 	qualified    [][]sharing.ID
 	unqualified  [][]sharing.ID
 	shareholders []sharing.ID
@@ -578,7 +578,7 @@ func TestDKG_ProofsAreNonEmpty(t *testing.T) {
 
 type securityFixture struct {
 	group   *k256.Curve
-	ac      accessstructures.Linear
+	ac      accessstructures.Monotone
 	parties map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar]
 	ids     []sharing.ID // sorted
 

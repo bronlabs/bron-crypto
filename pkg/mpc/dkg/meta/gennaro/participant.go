@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -52,14 +53,14 @@ func (p *Participant[E, S]) SharingID() sharing.ID {
 	return p.ctx.HolderID()
 }
 
-func (p *Participant[E, S]) AccessStructure() accessstructures.Linear {
-	return p.state.lsss.AccessStructure()
+func (p *Participant[E, S]) MSP() *msp.MSP[S] {
+	return p.state.lsss.MSP()
 }
 
 func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	ctx *session.Context,
 	group algebra.PrimeGroup[E, S],
-	ac accessstructures.Linear,
+	ac accessstructures.Monotone,
 	niCompilerName compiler.Name,
 	prng io.Reader,
 ) (*Participant[E, S], error) {

@@ -30,10 +30,10 @@ func TestThresholdCBORRoundTrip(t *testing.T) {
 	}
 }
 
-func TestThresholdCBORAsLinear(t *testing.T) {
+func TestThresholdCBORAsMonotone(t *testing.T) {
 	t.Parallel()
 
-	t.Run("2-of-3 deserializes as Linear", func(t *testing.T) {
+	t.Run("2-of-3 deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := threshold.NewThresholdAccessStructure(2, hashset.NewComparable[threshold.ID](1, 2, 3).Freeze())
@@ -42,7 +42,7 @@ func TestThresholdCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -52,7 +52,7 @@ func TestThresholdCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(1))
 	})
 
-	t.Run("3-of-5 deserializes as Linear", func(t *testing.T) {
+	t.Run("3-of-5 deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := threshold.NewThresholdAccessStructure(3, hashset.NewComparable[threshold.ID](10, 20, 30, 40, 50).Freeze())
@@ -61,7 +61,7 @@ func TestThresholdCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -72,7 +72,7 @@ func TestThresholdCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(10))
 	})
 
-	t.Run("deserialized Linear has Threshold concrete type", func(t *testing.T) {
+	t.Run("deserialized Monotone has Threshold concrete type", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := threshold.NewThresholdAccessStructure(2, hashset.NewComparable[threshold.ID](1, 2, 3).Freeze())
@@ -81,7 +81,7 @@ func TestThresholdCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 
 		_, ok := decoded.(*threshold.Threshold)

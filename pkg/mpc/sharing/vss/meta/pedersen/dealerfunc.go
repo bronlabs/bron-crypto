@@ -47,7 +47,7 @@ func (df *DealerFunc[FE]) ShareOf(id sharing.ID) (*Share[FE], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not get blinding share from h dealer func")
 	}
-	return NewShare(id, secretShare, blindingShare, nil)
+	return NewShare(id, secretShare, blindingShare)
 }
 
 // Secret returns the dealt secret (r_g[0]).

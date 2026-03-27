@@ -22,11 +22,11 @@ import (
 
 type benchConfig struct {
 	name string
-	ac   func(b *testing.B) accessstructures.Linear
+	ac   func(b *testing.B) accessstructures.Monotone
 }
 
-func thresholdAC(t uint, n uint) func(b *testing.B) accessstructures.Linear {
-	return func(b *testing.B) accessstructures.Linear {
+func thresholdAC(t uint, n uint) func(b *testing.B) accessstructures.Monotone {
+	return func(b *testing.B) accessstructures.Monotone {
 		b.Helper()
 		ac, err := threshold.NewThresholdAccessStructure(t, sharing.NewOrdinalShareholderSet(n))
 		require.NoError(b, err)
@@ -34,8 +34,8 @@ func thresholdAC(t uint, n uint) func(b *testing.B) accessstructures.Linear {
 	}
 }
 
-func hierarchicalAC(levels ...*hierarchical.ThresholdLevel) func(b *testing.B) accessstructures.Linear {
-	return func(b *testing.B) accessstructures.Linear {
+func hierarchicalAC(levels ...*hierarchical.ThresholdLevel) func(b *testing.B) accessstructures.Monotone {
+	return func(b *testing.B) accessstructures.Monotone {
 		b.Helper()
 		ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(levels...)
 		require.NoError(b, err)
@@ -160,7 +160,7 @@ func BenchmarkConvertShareToAdditive(b *testing.B) {
 // minimalQualifiedIDs returns a minimal set of shareholder IDs that satisfies
 // the access structure. For threshold it picks the first t IDs; for hierarchical
 // it picks enough from each level.
-func minimalQualifiedIDs(ac accessstructures.Linear) []sharing.ID {
+func minimalQualifiedIDs(ac accessstructures.Monotone) []sharing.ID {
 	switch a := ac.(type) {
 	case *threshold.Threshold:
 		ids := a.Shareholders().List()

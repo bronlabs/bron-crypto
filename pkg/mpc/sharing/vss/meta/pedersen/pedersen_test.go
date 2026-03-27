@@ -60,7 +60,7 @@ func newPedersenKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 func newPedersenScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
 	key *pedcom.Key[E, S],
-	ac accessstructures.Linear,
+	ac accessstructures.Monotone,
 ) *pedersen.Scheme[E, S] {
 	tb.Helper()
 	scheme, err := pedersen.NewScheme(key, ac)
@@ -104,7 +104,7 @@ func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
 
 type acFixture struct {
 	name         string
-	ac           accessstructures.Linear
+	ac           accessstructures.Monotone
 	qualified    [][]sharing.ID
 	unqualified  [][]sharing.ID
 	shareholders []sharing.ID
@@ -392,7 +392,7 @@ func TestNewScheme(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
 				require.Equal(t, pedersen.Name, scheme.Name())
-				require.Equal(t, len(fx.shareholders), scheme.AccessStructure().Shareholders().Size())
+				require.Equal(t, len(fx.shareholders), scheme.Shareholders().Size())
 			})
 		}
 	})
@@ -544,7 +544,7 @@ func TestVerify_TamperedSecret(t *testing.T) {
 			blindingShare, err := kw.NewShare(id, blindingVals...)
 			require.NoError(t, err)
 
-			tampered, err := pedersen.NewShare(id, tamperedSecret, blindingShare, fx.ac)
+			tampered, err := pedersen.NewShare(id, tamperedSecret, blindingShare)
 			require.NoError(t, err)
 
 			err = scheme.Verify(tampered, ref)
@@ -589,7 +589,7 @@ func TestVerify_TamperedBlinding(t *testing.T) {
 			tamperedBlinding, err := kw.NewShare(id, tamperedBlindingVals...)
 			require.NoError(t, err)
 
-			tampered, err := pedersen.NewShare(id, secretShare, tamperedBlinding, fx.ac)
+			tampered, err := pedersen.NewShare(id, secretShare, tamperedBlinding)
 			require.NoError(t, err)
 
 			err = scheme.Verify(tampered, ref)
@@ -696,7 +696,7 @@ func TestReconstructAndVerify_RejectsTamperedShare(t *testing.T) {
 	blindingShare, err := kw.NewShare(honest.ID(), blindingVals...)
 	require.NoError(t, err)
 
-	tampered, err := pedersen.NewShare(honest.ID(), tamperedSecret, blindingShare, fx.ac)
+	tampered, err := pedersen.NewShare(honest.ID(), tamperedSecret, blindingShare)
 	require.NoError(t, err)
 	picked[0] = tampered
 

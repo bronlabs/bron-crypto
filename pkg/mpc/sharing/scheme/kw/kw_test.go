@@ -31,7 +31,7 @@ func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
 	return hashset.NewComparable(ids...).Freeze()
 }
 
-func newKWScheme[FE algebra.PrimeFieldElement[FE]](tb testing.TB, f algebra.PrimeField[FE], ac accessstructures.Linear) *kw.Scheme[FE] {
+func newKWScheme[FE algebra.PrimeFieldElement[FE]](tb testing.TB, f algebra.PrimeField[FE], ac accessstructures.Monotone) *kw.Scheme[FE] {
 	tb.Helper()
 	scheme, err := kw.NewScheme(f, ac)
 	require.NoError(tb, err)
@@ -70,7 +70,7 @@ func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
 
 type acFixture struct {
 	name         string
-	ac           accessstructures.Linear
+	ac           accessstructures.Monotone
 	qualified    [][]sharing.ID // sets that MUST reconstruct
 	unqualified  [][]sharing.ID // sets that MUST be rejected
 	shareholders []sharing.ID   // all shareholders
@@ -379,7 +379,7 @@ func TestNewScheme(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
 				require.Equal(t, kw.Name, scheme.Name())
-				require.Equal(t, len(fx.shareholders), scheme.AccessStructure().Shareholders().Size())
+				require.Equal(t, len(fx.shareholders), scheme.Shareholders().Size())
 			})
 		}
 	})

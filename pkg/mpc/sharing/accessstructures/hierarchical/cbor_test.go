@@ -34,10 +34,10 @@ func TestHierarchicalConjunctiveThresholdCBORRoundTrip(t *testing.T) {
 	}
 }
 
-func TestHierarchicalConjunctiveThresholdCBORAsLinear(t *testing.T) {
+func TestHierarchicalConjunctiveThresholdCBORAsMonotone(t *testing.T) {
 	t.Parallel()
 
-	t.Run("deserializes as Linear", func(t *testing.T) {
+	t.Run("deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
@@ -50,7 +50,7 @@ func TestHierarchicalConjunctiveThresholdCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -63,7 +63,7 @@ func TestHierarchicalConjunctiveThresholdCBORAsLinear(t *testing.T) {
 		}
 	})
 
-	t.Run("single level deserializes as Linear", func(t *testing.T) {
+	t.Run("single level deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
@@ -74,7 +74,7 @@ func TestHierarchicalConjunctiveThresholdCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -84,7 +84,7 @@ func TestHierarchicalConjunctiveThresholdCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(10))
 	})
 
-	t.Run("deserialized Linear has HierarchicalConjunctiveThreshold concrete type", func(t *testing.T) {
+	t.Run("deserialized Monotone has HierarchicalConjunctiveThreshold concrete type", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
@@ -96,7 +96,7 @@ func TestHierarchicalConjunctiveThresholdCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 
 		_, ok := decoded.(*hierarchical.HierarchicalConjunctiveThreshold)

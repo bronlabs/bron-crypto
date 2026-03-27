@@ -19,7 +19,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
-func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, ctxs map[sharing.ID]*session.Context, ac accessstructures.Linear, niCompiler compiler.Name, group algebra.PrimeGroup[G, S]) map[sharing.ID]network.Runner[*mpc.BaseShard[G, S]] {
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, ctxs map[sharing.ID]*session.Context, ac accessstructures.Monotone, niCompiler compiler.Name, group algebra.PrimeGroup[G, S]) map[sharing.ID]network.Runner[*mpc.BaseShard[G, S]] {
 	tb.Helper()
 
 	runners := make(map[sharing.ID]network.Runner[*mpc.BaseShard[G, S]])

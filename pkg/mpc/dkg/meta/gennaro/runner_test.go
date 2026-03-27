@@ -51,7 +51,7 @@ func TestRunnerHappyPath(t *testing.T) {
 	}
 }
 
-func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, group algebra.PrimeGroup[G, S], ac accessstructures.Linear, niCompiler compiler.Name) {
+func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, group algebra.PrimeGroup[G, S], ac accessstructures.Monotone, niCompiler compiler.Name) {
 	t.Helper()
 
 	prng := pcg.NewRandomised()

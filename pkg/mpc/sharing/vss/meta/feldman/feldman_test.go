@@ -45,7 +45,7 @@ func formatIDs(ids []sharing.ID) string {
 func newFeldmanScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](
 	tb testing.TB,
 	group algebra.PrimeGroup[E, FE],
-	ac accessstructures.Linear,
+	ac accessstructures.Monotone,
 ) *feldman.Scheme[E, FE] {
 	tb.Helper()
 	scheme, err := feldman.NewScheme(group, ac)
@@ -89,7 +89,7 @@ func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
 
 type acFixture struct {
 	name         string
-	ac           accessstructures.Linear
+	ac           accessstructures.Monotone
 	qualified    [][]sharing.ID
 	unqualified  [][]sharing.ID
 	shareholders []sharing.ID
@@ -429,7 +429,7 @@ func TestNewScheme(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
 				require.Equal(t, feldman.Name, scheme.Name())
-				require.Equal(t, len(fx.shareholders), scheme.AccessStructure().Shareholders().Size())
+				require.Equal(t, len(fx.shareholders), scheme.Shareholders().Size())
 			})
 		}
 	})
