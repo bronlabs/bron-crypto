@@ -48,6 +48,14 @@ func NewInducedScheme[FE algebra.PrimeFieldElement[FE]](mspMatrix *msp.MSP[FE]) 
 	}, nil
 }
 
+func NewSchemeMSP[FE algebra.PrimeFieldElement[FE]](mspMat *msp.MSP[FE]) *Scheme[FE] {
+	// TODO: add validation
+	return &Scheme[FE]{
+		msp: mspMat,
+		ac:  nil,
+	}
+}
+
 // Name returns the canonical name of this scheme.
 func (*Scheme[FE]) Name() sharing.Name {
 	return Name
@@ -230,6 +238,10 @@ func (s *Scheme[FE]) ConvertShareToAdditive(share *Share[FE], quorum *unanimity.
 		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the unanimity quorum", share.ID())
 	}
 	quorumIDs := quorum.Shareholders().List()
+	if !s.msp.Accepts(quorumIDs...) {
+		return nil, sharing.ErrMembership.WithMessage("quorum shareholders are not qualified by the access structure")
+	}
+
 	reconVec, err := s.msp.ReconstructionVector(quorumIDs...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector for unanimity quorum")

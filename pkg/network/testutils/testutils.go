@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/stretchr/testify/require"
@@ -90,7 +91,9 @@ func MapBroadcastO2I[
 			if senderID == receiver.SharingID() {
 				continue
 			}
-			inputs.Put(senderID, CBORRoundTrip(tb, msg))
+			if !utils.IsNil(msg) {
+				inputs.Put(senderID, CBORRoundTrip(tb, msg))
+			}
 		}
 		broadcastInputs[receiver.SharingID()] = inputs.Freeze()
 	}
@@ -119,9 +122,11 @@ func MapUnicastO2I[
 			if senderID == receiver.SharingID() {
 				continue
 			}
-			msg, ok := messages.Get(receiver.SharingID())
-			if ok {
-				inputs.Put(senderID, CBORRoundTrip(tb, msg))
+			if messages != nil {
+				msg, ok := messages.Get(receiver.SharingID())
+				if ok {
+					inputs.Put(senderID, CBORRoundTrip(tb, msg))
+				}
 			}
 		}
 		p2pInputs[receiver.SharingID()] = inputs.Freeze()
