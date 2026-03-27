@@ -14,9 +14,19 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
+// Round1 redistributes each recoverer's previous share into subshares under the
+// next access structure.
+//
+// Recoverers broadcast verification material for their previous share and the
+// new subsharing, and privately send one subshare to each recoveree. Parties
+// that are not recoverers return nil outputs.
 func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S], *Participant[G, S]], error) {
+	if p.state.round != 1 {
+		return nil, nil, ErrValidation.WithMessage("invalid round")
+	}
+	defer func() { p.state.round++ }()
 	if !p.isRecoverer(p.ctx.HolderID()) {
-		return nil, nil, nil
+		return &Round1Broadcast[G, S]{}, nil, nil
 	}
 
 	recoverersSubCtx, err := p.ctx.SubContext(p.recoverers)
@@ -73,10 +83,26 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 	return r1b, r1u.Freeze(), nil
 }
 
+// Round2 verifies all received subshares, aggregates them, and outputs the
+// participant's redistributed shard.
+//
+// Only recoverees produce an output shard. Parties outside the next access
+// structure return nil.
 func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (*BaseShard[G, S], error) {
+	if p.state.round != 2 {
+		return nil, ErrValidation.WithMessage("invalid round")
+	}
+	defer func() { p.state.round++ }()
 	if !p.isRecoveree(p.ctx.HolderID()) {
 		//nolint:nilnil // intentional
 		return nil, nil
+	}
+
+	if errB := network.ValidateIncomingMessages(p, p.otherRecoverers(), r1b); errB != nil {
+		return nil, errs.Wrap(errB).WithMessage("invalid broadcast input")
+	}
+	if errU := network.ValidateIncomingMessages(p, p.otherRecoverers(), r1u); errU != nil {
+		return nil, errs.Wrap(errU).WithMessage("invalid p2p input")
 	}
 
 	for id := range p.otherRecoverers() {

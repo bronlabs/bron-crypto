@@ -11,8 +11,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
+// Participant executes the two-round share redistribution protocol.
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	ctx                  *session.Context
 	recoverers           ds.Set[sharing.ID]
@@ -24,11 +26,19 @@ type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 }
 
 type state[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	round                      network.Round
 	share                      *kw.Share[S]
 	shareVerificationVector    *feldman.VerificationVector[G, S]
 	subShareVerificationVector *feldman.VerificationVector[G, S]
 }
 
+// NewParticipant constructs a redistribution participant.
+//
+// The caller supplies the current session context, the qualified recoverer set
+// from the previous access structure, the caller's previous shard when the
+// caller is a recoverer, and the next access structure to redistribute into.
+// The session quorum must equal the union of the recoverers and the
+// shareholders of the next access structure.
 func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, recoverers ds.Set[sharing.ID], prevShard *BaseShard[G, S], nextAccessStructure accessstructures.Linear, prng io.Reader) (*Participant[G, S], error) {
 	if ctx == nil || recoverers == nil || nextAccessStructure == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments (nil)")
@@ -56,17 +66,22 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments (quorum does not match recoverers and next access structure)")
 	}
 
-	//nolint:exhaustruct // state is lazy initialised
 	p := &Participant[G, S]{
 		ctx:                  ctx,
 		recoverers:           recoverers,
 		prevShard:            prevShard,
 		nextAccessStructures: nextAccessStructure,
 		prng:                 prng,
+		//nolint:exhaustruct // state is lazily initialised
+		state: state[G, S]{
+			round: 1,
+		},
 	}
 	return p, nil
 }
 
+// SharingID returns the participant's holder identifier in the redistribution
+// session.
 func (p *Participant[G, S]) SharingID() sharing.ID {
 	return p.ctx.HolderID()
 }
