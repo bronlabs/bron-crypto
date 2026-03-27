@@ -13,6 +13,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 )
 
+// BasePublicMaterial holds the public artefacts common to all MPC protocols
+// built on MSP-based Feldman VSS: the monotone span programme and the
+// verification vector. From these two objects every other public quantity
+// (aggregate public key, per-party public key shares) can be derived.
 type BasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	msp *msp.MSP[S]
 	fv  *feldman.VerificationVector[E, S]
@@ -23,6 +27,8 @@ type basePublicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFie
 	VerificationVector *feldman.VerificationVector[E, S] `cbor:"verificationVector"`
 }
 
+// NewBasePublicMaterial creates a BasePublicMaterial from an MSP and a Feldman
+// verification vector, validating that their dimensions are consistent.
 func NewBasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	mspMatrix *msp.MSP[S],
 	fv *feldman.VerificationVector[E, S],
@@ -43,14 +49,19 @@ func NewBasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFie
 	}, nil
 }
 
+// MSP returns the monotone span programme underlying this public material.
 func (spm *BasePublicMaterial[E, S]) MSP() *msp.MSP[S] {
 	return spm.msp
 }
 
+// PublicKeyValue derives and returns the aggregate public key group element
+// from the verification vector and MSP.
 func (spm *BasePublicMaterial[E, S]) PublicKeyValue() E {
 	return errs.Must1(feldman.NewLiftedDealerFunc(spm.fv, spm.msp)).LiftedSecret().Value()
 }
 
+// PublicKeyShares derives and returns the per-party public key shares (lifted
+// shares) from the verification vector and MSP.
 func (spm *BasePublicMaterial[E, S]) PublicKeyShares() ds.Map[sharing.ID, *feldman.LiftedShare[E, S]] {
 	df := errs.Must1(feldman.NewLiftedDealerFunc(spm.fv, spm.msp))
 
@@ -65,10 +76,12 @@ func (spm *BasePublicMaterial[E, S]) PublicKeyShares() ds.Map[sharing.ID, *feldm
 	return pkShares.Freeze()
 }
 
+// VerificationVector returns the Feldman verification vector V = [r]G.
 func (spm *BasePublicMaterial[E, S]) VerificationVector() *feldman.VerificationVector[E, S] {
 	return spm.fv
 }
 
+// Equal reports whether two BasePublicMaterial values are identical.
 func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool {
 	if spm == nil || other == nil {
 		return spm == other
@@ -82,10 +95,12 @@ func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool
 	return true
 }
 
+// HashCode returns a hash code for use in hash-based collections.
 func (spm *BasePublicMaterial[E, S]) HashCode() base.HashCode {
 	return spm.fv.HashCode().Combine(spm.msp.Matrix().HashCode())
 }
 
+// MarshalCBOR serialises the public material to CBOR.
 func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &basePublicMaterialDTO[E, S]{
 		MSP:                spm.msp,
@@ -93,11 +108,12 @@ func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal tSchnorr BasePublicMaterial")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal BasePublicMaterial")
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises public material from CBOR.
 func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*basePublicMaterialDTO[E, S]](data)
 	if err != nil {
@@ -112,6 +128,10 @@ func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// BaseShard combines BasePublicMaterial with a party's private Feldman share.
+// It embeds the public material so every shard carrier also has access to the
+// MSP, verification vector, aggregate public key, and per-party public key
+// shares.
 type BaseShard[
 	E algebra.PrimeGroupElement[E, S],
 	S algebra.PrimeFieldElement[S],
@@ -121,6 +141,9 @@ type BaseShard[
 	share *feldman.Share[S]
 }
 
+// NewBaseShard creates a BaseShard from a Feldman share, verification vector,
+// and MSP. It validates that the share is consistent with the verification
+// vector by lifting it and comparing against the VV-derived public key share.
 func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv *feldman.VerificationVector[E, S],
@@ -191,7 +214,7 @@ func (sh *BaseShard[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal tSchnorr BaseShard")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal BaseShard")
 	}
 	return data, nil
 }
