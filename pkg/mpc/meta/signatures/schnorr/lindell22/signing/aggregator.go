@@ -98,6 +98,7 @@ func NewAggregator[
 	}, nil
 }
 
+// NewCosigningAggregator creates a new aggregator that is also a cosigner, enabling full identifiable abort.
 func NewCosigningAggregator[
 	SCH mpcschnorr.MPCFriendlyScheme[VR, GE, S, M, KG, SG, VF],
 	VR mpcschnorr.MPCFriendlyVariant[GE, S, M],
