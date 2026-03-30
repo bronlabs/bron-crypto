@@ -316,7 +316,7 @@ func (*Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupEleme
 // CorrectPartialNonceCommitmentParity adjusts a partial nonce commitment for Mina's even-y requirement.
 // If the aggregate nonce commitment R has odd y, each party must negate their
 // partial nonce commitment R_i to ensure the final signature is valid.
-func (*Variant) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment *GroupElement, partialNonceCommitment *GroupElement) (*GroupElement, error) {
+func (*Variant) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment, partialNonceCommitment *GroupElement) (*GroupElement, error) {
 	if aggregatedNonceCommitment == nil || partialNonceCommitment == nil {
 		return nil, ErrInvalidArgument.WithMessage("aggregated nonce commitment or partial nonce commitment is nil")
 	}

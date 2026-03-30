@@ -345,7 +345,7 @@ func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, n
 
 // CorrectPartialNonceCommitmentParity is a no-op for vanilla Schnorr (no parity constraints).
 // Returns the partial nonce commitment unchanged.
-func (*Variant[GE, S]) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment GE, partialNonceCommitment GE) (GE, error) {
+func (*Variant[GE, S]) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment, partialNonceCommitment GE) (GE, error) {
 	if utils.IsNil(aggregatedNonceCommitment) {
 		return *new(GE), ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
 	}

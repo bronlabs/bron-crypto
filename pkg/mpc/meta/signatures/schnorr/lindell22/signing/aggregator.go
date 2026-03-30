@@ -87,7 +87,15 @@ func NewAggregator[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Feldman VSS scheme for aggregator")
 	}
-	return &Aggregator[VR, GE, S, M]{pkm: pk, group: group, sf: sf, variant: scheme.Variant(), verifier: verifier, psigVerifier: psigVerifier, feldmanVSS: feldmanVSS}, nil
+	return &Aggregator[VR, GE, S, M]{ //nolint:exhaustruct // the other fields are for the cosigning aggregator.
+		pkm:          pk,
+		group:        group,
+		sf:           sf,
+		variant:      scheme.Variant(),
+		verifier:     verifier,
+		psigVerifier: psigVerifier,
+		feldmanVSS:   feldmanVSS,
+	}, nil
 }
 
 func NewCosigningAggregator[

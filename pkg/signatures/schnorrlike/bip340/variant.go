@@ -270,7 +270,7 @@ func (*Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.S
 // Similar to CorrectPartialNonceParity, but operates on the nonce commitment R_i instead of the scalar k_i.
 // If the aggregate nonce commitment R has odd y, each party must negate their partial nonce commitment R_i
 // to ensure the aggregate R has even y.
-func (*Variant) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment *k256.Point, partialNonceCommitment *k256.Point) (*k256.Point, error) {
+func (*Variant) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment, partialNonceCommitment *k256.Point) (*k256.Point, error) {
 	if aggregatedNonceCommitment == nil || partialNonceCommitment == nil {
 		return nil, ErrInvalidArgument.WithMessage("aggregated nonce commitment or partial nonce commitment is nil")
 	}

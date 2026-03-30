@@ -1328,8 +1328,8 @@ func TestConvertShareToAdditive_AliceBobOrCharlieDarcy(t *testing.T) {
 	// Access structure: (Alice AND Bob) OR (Charlie AND Darcy).
 	ac, err := boolexpr.NewThresholdGateAccessStructure(
 		boolexpr.Threshold(1, // OR
-			boolexpr.Threshold(2, boolexpr.ID(Alice), boolexpr.ID(Bob)),       // Alice AND Bob
-			boolexpr.Threshold(2, boolexpr.ID(Charlie), boolexpr.ID(Darcy)),   // Charlie AND Darcy
+			boolexpr.Threshold(2, boolexpr.ID(Alice), boolexpr.ID(Bob)),     // Alice AND Bob
+			boolexpr.Threshold(2, boolexpr.ID(Charlie), boolexpr.ID(Darcy)), // Charlie AND Darcy
 		),
 	)
 	require.NoError(t, err)
