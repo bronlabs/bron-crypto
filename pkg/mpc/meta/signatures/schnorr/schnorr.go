@@ -41,25 +41,6 @@ type MPCFriendlyScheme[
 	) (schnorrlike.Verifier[VR, GE, S, M], error) // making batch verification etc is not objective here, so won't return VF
 }
 
-// PartialSignature represents a party's contribution to an MPC Schnorr signature.
-type PartialSignature[
-	GE algebra.PrimeGroupElement[GE, S],
-	S algebra.PrimeFieldElement[S],
-] struct {
-	Sig schnorrlike.Signature[GE, S] `cbor:"signature"`
-}
-
-// Bytes serialises the partial signature to a byte slice.
-func (ps *PartialSignature[E, S]) Bytes() []byte {
-	if ps == nil {
-		return nil
-	}
-	out := ps.Sig.S.Bytes()
-	out = append(out, ps.Sig.R.Bytes()...)
-	out = append(out, ps.Sig.E.Bytes()...)
-	return out
-}
-
 // PublicMaterial contains public information for MPC Schnorr signature verification.
 type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	mpc.BasePublicMaterial[E, S]

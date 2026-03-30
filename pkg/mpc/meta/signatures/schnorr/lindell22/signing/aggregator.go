@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
@@ -31,6 +32,8 @@ type Aggregator[
 	verifier     schnorrlike.Verifier[VR, GE, S, M]
 	psigVerifier schnorrlike.Verifier[VR, GE, S, M]
 	feldmanVSS   *feldman.Scheme[GE, S]
+
+	bigR GE
 }
 
 // PublicMaterial returns the public key material for signature verification.
@@ -53,6 +56,9 @@ func NewAggregator[
 ) (*Aggregator[VR, GE, S, M], error) {
 	if pk == nil {
 		return nil, ErrNilArgument.WithMessage("public material cannot be nil")
+	}
+	if utils.IsNil(scheme) {
+		return nil, ErrNilArgument.WithMessage("scheme cannot be nil")
 	}
 	group := pk.PublicKey().Group()
 	sf, ok := group.ScalarStructure().(algebra.PrimeField[S])
@@ -78,6 +84,24 @@ func NewAggregator[
 	return &Aggregator[VR, GE, S, M]{pkm: pk, group: group, sf: sf, variant: scheme.Variant(), verifier: verifier, psigVerifier: psigVerifier, feldmanVSS: feldmanVSS}, nil
 }
 
+func NewCosigningAggregator[
+	SCH mpcschnorr.MPCFriendlyScheme[VR, GE, S, M, KG, SG, VF],
+	VR mpcschnorr.MPCFriendlyVariant[GE, S, M],
+	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
+	KG schnorrlike.KeyGenerator[GE, S], SG schnorrlike.Signer[VR, GE, S, M], VF schnorrlike.Verifier[VR, GE, S, M],
+](
+	cosigner *Cosigner[GE, S, M],
+	pk *lindell22.PublicMaterial[GE, S],
+	scheme SCH,
+) (*Aggregator[VR, GE, S, M], error) {
+	agg, err := NewAggregator(pk, scheme)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create aggregator")
+	}
+	agg.bigR = cosigner.state.bigR
+	return agg, nil
+}
+
 // Aggregate combines partial signatures into a complete signature, verifying validity.
 // Returns an identifiable abort error if any partial signature is invalid.
 func (a *Aggregator[VR, GE, S, M]) Aggregate(
@@ -98,9 +122,15 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 			)
 		}
 	}
-	R := iterutils.Reduce(slices.Values(partialSignatures.Values()),
-		a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
-	)
+	// If Aggregator was also a Cosigner, then it would be aware of the aggregated nonce R.
+	var R GE
+	if !utils.IsNil(a.bigR) {
+		R = a.bigR
+	} else {
+		R = iterutils.Reduce(slices.Values(partialSignatures.Values()),
+			a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
+		)
+	}
 	s := iterutils.Reduce(slices.Values(partialSignatures.Values()),
 		a.sf.Zero(), func(acc S, x *lindell22.PartialSignature[GE, S]) S { return acc.Add(x.Sig.S) },
 	)
@@ -134,6 +164,11 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		if psig == nil {
 			return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
 		}
+		if utils.IsNil(psig.ZeroPublicKeyShift) {
+			return nil, ErrNilArgument.WithMessage("zero public key shift cannot be nil for sender %d", sender).WithTag(
+				base.IdentifiableAbortPartyIDTag, sender,
+			)
+		}
 		senderPKShare, ok := a.pkm.PublicKeyShares().Get(sender)
 		if !ok {
 			return nil, ErrInvalidMembership.WithMessage("invalid authorization: sender %d is not in public material", sender)
@@ -142,7 +177,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
 		}
-		senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShare.Value())
+		senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShare.Value().Op(psig.ZeroPublicKeyShift))
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
 		}
@@ -153,6 +188,5 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if len(identityAborts) != 0 {
 		return nil, errs.Join(identityAborts...).WithMessage("verification failed")
 	}
-
-	panic("should not reach here: not all partial signatures should have been valid")
+	return nil, base.ErrAbort.WithMessage("verification, as well as identification of the culprit, have failed")
 }

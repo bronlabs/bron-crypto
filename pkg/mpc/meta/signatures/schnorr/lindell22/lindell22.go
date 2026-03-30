@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
 const commitmentDomainRLabel = "Lindell2022SignR-"
@@ -22,7 +23,13 @@ type (
 	// PublicMaterial contains public information shared among signing parties.
 	PublicMaterial[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = schnorr.PublicMaterial[GE, S]
 	// PartialSignature is a party's contribution to the aggregate signature.
-	PartialSignature[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = schnorr.PartialSignature[GE, S]
+	PartialSignature[
+		GE algebra.PrimeGroupElement[GE, S],
+		S algebra.PrimeFieldElement[S],
+	] struct {
+		Sig                schnorrlike.Signature[GE, S] `cbor:"signature"`
+		ZeroPublicKeyShift GE                           `cbor:"zero_public_key_shift"` // zero-shift for the party's public key, as the shares are randomized with a sharing of zero.
+	}
 )
 
 // Lindell22 is proven to be secure in standard model only if a UC-secure commitment scheme is used.

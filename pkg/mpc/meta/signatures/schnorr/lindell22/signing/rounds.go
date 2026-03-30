@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
-	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -66,10 +65,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E,
 	}
 
 	for pid := range c.ctx.OtherPartiesOrdered() {
-		received, ok := inb.Get(pid)
-		if !ok {
-			return nil, ErrInvalidRound.WithMessage("missing round 1 broadcast from participant %d", pid)
-		}
+		received, _ := inb.Get(pid)
 		c.state.theirBigRCommitments[pid] = received.BigRCommitment
 	}
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
@@ -91,7 +87,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E,
 }
 
 // Round3 verifies other parties' commitments and proofs, then computes the partial signature.
-func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E, S, M], *Cosigner[E, S, M]], message M) (*mpcschnorr.PartialSignature[E, S], error) {
+func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E, S, M], *Cosigner[E, S, M]], message M) (*lindell22.PartialSignature[E, S], error) {
 	if c.round != 3 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 3, c.round)
 	}
@@ -99,12 +95,8 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		return nil, errs.Wrap(err).WithMessage("invalid input")
 	}
 
-	summedR := c.state.bigR
 	for pid := range c.ctx.OtherPartiesOrdered() {
-		received, ok := inb.Get(pid)
-		if !ok {
-			return nil, ErrInvalidRound.WithMessage("missing round 2 broadcast from participant %d", pid)
-		}
+		received, _ := inb.Get(pid)
 		theirBigR := received.BigR
 		theirOpening := received.BigROpening
 		theirCommitment := c.state.theirBigRCommitments[pid]
@@ -119,15 +111,15 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("cannot verify dlog proof for participant")
 		}
 		// step 3.4: R <- Σ R_j
-		summedR = summedR.Op(theirBigR.X)
+		c.state.bigR = c.state.bigR.Op(theirBigR.X)
 	}
 	// step 3.7.2: compute e
-	e, err := c.variant.ComputeChallenge(summedR, c.shard.PublicKey().Value(), message)
+	e, err := c.variant.ComputeChallenge(c.state.bigR, c.shard.PublicKey().Value(), message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create digest scalar")
 	}
 
-	psig, err := c.ComputePartialSignature(summedR, e)
+	psig, err := c.ComputePartialSignature(c.state.bigR, e)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute partial signature")
 	}
@@ -145,7 +137,6 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 		return nil, ErrInvalidRound.WithMessage("cosigner %d cannot compute partial signature in round %d, expected round 3", c.ctx.HolderID(), c.round)
 	}
 
-	// step 3.7.1: compute additive share d_i'
 	quorum, err := unanimity.NewUnanimityAccessStructure(c.Quorum())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.Quorum())
@@ -159,12 +150,12 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 		return nil, errs.Wrap(err).WithMessage("cannot convert share %d to additive share", c.shard.Share().ID())
 	}
 	ashare = ashare.Add(zero)
+	shift := c.group.ScalarBaseOp(zero.Value())
 
 	myAdditiveShare, err := c.variant.CorrectAdditiveSecretShareParity(c.shard.PublicKey(), ashare)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot correct share %d parity", c.shard.Share().ID())
 	}
-	// step 3.7.3 & 3.8: compute s'_i and set s_i <- s'_i + ζ_i
 	correctedR, correctedK, err := c.variant.CorrectPartialNonceParity(aggregatedNonceCommitment, c.state.k)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot correct nonce parity")
@@ -179,6 +170,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 			R: correctedR,
 			S: s,
 		},
+		ZeroPublicKeyShift: shift,
 	}, nil
 }
 

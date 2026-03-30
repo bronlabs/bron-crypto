@@ -5,8 +5,12 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -29,6 +33,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
 )
 
@@ -495,6 +500,226 @@ func TestSigning_ShardCBORRoundTrip(t *testing.T) {
 		require.True(t, shard.PublicKey().Value().Equal(roundTripped.PublicKey().Value()),
 			"public key mismatch after CBOR round-trip for shareholder %d", id)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Identifiable abort: only the corrupted signer must be blamed
+// ---------------------------------------------------------------------------
+
+// TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed runs a full signing
+// protocol, corrupts one partial signature, and verifies that the aggregator's
+// identification phase pins blame exclusively on the corrupted signer.
+// Honest signers must NOT appear in the culprit list.
+func TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	scheme, err := bip340.NewScheme(prng)
+	require.NoError(t, err)
+
+	fx := thresholdFixture(t) // threshold(2,3)
+	ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, ctxs)
+
+	quorum := fx.qualified[0] // e.g. {1, 2}
+	quorumSet := hashset.NewComparable(quorum...).Freeze()
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
+
+	variant := scheme.Variant()
+	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+	for _, id := range quorum {
+		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, []byte("identifiable abort"), pcg.NewRandomised())
+		require.NoError(t, err)
+		runners[id] = runner
+	}
+	partialSigs := ntu.TestExecuteRunners(t, runners)
+	require.Len(t, partialSigs, len(quorum))
+
+	// Corrupt exactly one signer by adding 1 to its S value.
+	corruptedID := quorum[0]
+	sf := k256.NewScalarField()
+	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
+	for _, id := range quorum {
+		psig := partialSigs[id]
+		if id == corruptedID {
+			corruptedSigsMap.Put(id, &lindell22.PartialSignature[*k256.Point, *k256.Scalar]{
+				Sig: schnorrlike.Signature[*k256.Point, *k256.Scalar]{
+					E: psig.Sig.E,
+					R: psig.Sig.R,
+					S: psig.Sig.S.Add(sf.One()),
+				},
+			})
+		} else {
+			corruptedSigsMap.Put(id, psig)
+		}
+	}
+
+	aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
+	require.NoError(t, err)
+
+	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), []byte("identifiable abort"))
+	require.Error(t, err, "aggregation must fail with a corrupted partial signature")
+
+	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
+	require.NotEmpty(t, culprits, "identification phase must detect at least one culprit")
+
+	// The corrupted signer must be blamed.
+	assert.Contains(t, culprits, corruptedID, "corrupted signer must be among the culprits")
+	// Honest signers must NOT be blamed.
+	for _, id := range quorum {
+		if id != corruptedID {
+			assert.NotContains(t, culprits, id, "honest signer %d must not be blamed", id)
+		}
+	}
+}
+
+// TestIdentifiableAbort_IncorrectShare simulates a signer who follows the
+// protocol honestly but whose underlying secret share is wrong (e.g. corrupted
+// DKG output). The partial signature is structurally valid — computed as
+// s = wrong_d' * e + k — but uses an incorrect share. The ZeroPublicKeyShift
+// is honest. The aggregator must detect this signer during identification.
+func TestIdentifiableAbort_IncorrectShare(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	scheme, err := bip340.NewScheme(prng)
+	require.NoError(t, err)
+	sf := k256.NewScalarField()
+
+	fx := thresholdFixture(t)
+	ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, ctxs)
+
+	message := []byte("incorrect share test")
+	quorum := fx.qualified[0]
+	quorumSet := hashset.NewComparable(quorum...).Freeze()
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
+
+	variant := scheme.Variant()
+	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+	for _, id := range quorum {
+		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, message, pcg.NewRandomised())
+		require.NoError(t, err)
+		runners[id] = runner
+	}
+	partialSigs := ntu.TestExecuteRunners(t, runners)
+
+	// Simulate a signer whose share is off by delta. A partial signature
+	// computed with share (d_i' + δ) instead of d_i' satisfies:
+	//   s_bad = (d_i' + δ)·e + k = s_good + δ·e
+	// The ZeroPublicKeyShift is left unchanged (honest zero-share computation).
+	corruptedID := quorum[0]
+	delta := sf.FromUint64(7)
+	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
+	for _, id := range quorum {
+		psig := partialSigs[id]
+		if id == corruptedID {
+			corruptedSigsMap.Put(id, &lindell22.PartialSignature[*k256.Point, *k256.Scalar]{
+				Sig: schnorrlike.Signature[*k256.Point, *k256.Scalar]{
+					E: psig.Sig.E,
+					R: psig.Sig.R,
+					S: psig.Sig.S.Add(delta.Mul(psig.Sig.E)),
+				},
+				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
+			})
+		} else {
+			corruptedSigsMap.Put(id, psig)
+		}
+	}
+
+	aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
+	require.NoError(t, err)
+
+	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), message)
+	require.Error(t, err, "aggregation must fail when one share is incorrect")
+
+	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
+	require.NotEmpty(t, culprits, "identification phase must detect the bad signer")
+	assert.Contains(t, culprits, corruptedID, "signer with wrong share must be blamed")
+	for _, id := range quorum {
+		if id != corruptedID {
+			assert.NotContains(t, culprits, id, "honest signer %d must not be blamed", id)
+		}
+	}
+}
+
+// TestIdentifiableAbort_CorruptedR_EscapesBlame demonstrates that a malicious
+// signer can substitute a different R in their partial signature without being
+// identified. Given a valid partial signature (e, R_i, s_i) that satisfies
+// s_i·G = R_i + e·PK_i, the adversary adds a random δ to both the response
+// and the nonce commitment:
+//
+//	R' = R_i + δ·G,  s' = s_i + δ   →   s'·G = R' + e·PK_i  ✓
+//
+// The resulting partial signature individually verifies, but the aggregated R
+// is wrong, so the recomputed challenge e' ≠ e. The aggregator detects the
+// inconsistency but cannot attribute blame because every partial signature
+// carries the original (now stale) challenge.
+func TestIdentifiableAbort_CorruptedR_EscapesBlame(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	scheme, err := bip340.NewScheme(prng)
+	require.NoError(t, err)
+	sf := k256.NewScalarField()
+
+	fx := thresholdFixture(t)
+	ctxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, ctxs)
+
+	message := []byte("corrupted R test")
+	quorum := fx.qualified[0]
+	quorumSet := hashset.NewComparable(quorum...).Freeze()
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
+
+	variant := scheme.Variant()
+	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+	for _, id := range quorum {
+		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, message, pcg.NewRandomised())
+		require.NoError(t, err)
+		runners[id] = runner
+	}
+	partialSigs := ntu.TestExecuteRunners(t, runners)
+
+	// Corrupt one signer's R: add δ·G to R and δ to S. The resulting partial
+	// signature individually verifies but shifts the aggregated R.
+	corruptedID := quorum[0]
+	delta, err := sf.Random(prng)
+	require.NoError(t, err)
+	deltaG := group.ScalarBaseOp(delta)
+
+	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
+	for _, id := range quorum {
+		psig := partialSigs[id]
+		if id == corruptedID {
+			corruptedSigsMap.Put(id, &lindell22.PartialSignature[*k256.Point, *k256.Scalar]{
+				Sig: schnorrlike.Signature[*k256.Point, *k256.Scalar]{
+					E: psig.Sig.E,
+					R: psig.Sig.R.Op(deltaG),
+					S: psig.Sig.S.Add(delta),
+				},
+				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
+			})
+		} else {
+			corruptedSigsMap.Put(id, psig)
+		}
+	}
+
+	aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
+	require.NoError(t, err)
+
+	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), message)
+	require.Error(t, err, "aggregation must fail when R is corrupted")
+
+	// The corrupted R shifts the aggregated nonce commitment, so the
+	// recomputed challenge e' ≠ e. The aggregator catches this as
+	// "inconsistent challenges" but never enters the identification phase.
+	// No culprit is attributed.
+	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
+	assert.Empty(t, culprits, "no culprit is identified — the cheater escapes blame")
 }
 
 // ---------------------------------------------------------------------------
