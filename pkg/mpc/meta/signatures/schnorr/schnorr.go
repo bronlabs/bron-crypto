@@ -21,6 +21,7 @@ type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFiel
 	schnorrlike.Variant[GE, S, M]
 	CorrectAdditiveSecretShareParity(publicKey *schnorrlike.PublicKey[GE, S], share *additive.Share[S]) (*additive.Share[S], error)
 	CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (GE, S, error)
+	CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment GE, partialNonceCommitment GE) (GE, error)
 }
 
 // MPCFriendlyScheme extends schnorrlike.Scheme with MPC signing capabilities.

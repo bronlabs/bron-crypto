@@ -33,7 +33,8 @@ type Aggregator[
 	psigVerifier schnorrlike.Verifier[VR, GE, S, M]
 	feldmanVSS   *feldman.Scheme[GE, S]
 
-	bigR GE
+	bigR           GE
+	correctedBigRs map[sharing.ID]GE
 }
 
 // PublicMaterial returns the public key material for signature verification.
@@ -42,6 +43,11 @@ func (a *Aggregator[VR, GE, S, M]) PublicMaterial() *lindell22.PublicMaterial[GE
 		return nil
 	}
 	return a.pkm
+}
+
+// IsCosigning indicates whether the aggregator is also a cosigner, which determines if it has access to the aggregated nonce commitment R.
+func (a *Aggregator[VR, GE, S, M]) IsCosigning() bool {
+	return !utils.IsNil(a.bigR)
 }
 
 // NewAggregator creates a new signature aggregator for the given public material and scheme.
@@ -99,6 +105,7 @@ func NewCosigningAggregator[
 		return nil, errs.Wrap(err).WithMessage("failed to create aggregator")
 	}
 	agg.bigR = cosigner.state.bigR
+	agg.correctedBigRs = cosigner.state.correctedBigRs
 	return agg, nil
 }
 
@@ -124,8 +131,20 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	}
 	// If Aggregator was also a Cosigner, then it would be aware of the aggregated nonce R.
 	var R GE
-	if !utils.IsNil(a.bigR) {
+	if a.IsCosigning() {
 		R = a.bigR
+		for sender, psig := range partialSignatures.Iter() {
+			if psig == nil {
+				return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
+					base.IdentifiableAbortPartyIDTag, sender,
+				)
+			}
+			if !psig.Sig.R.Equal(a.correctedBigRs[sender]) {
+				return nil, ErrInvalidType.WithMessage("partial signature from sender %d has inconsistent nonce commitment", sender).WithTag(
+					base.IdentifiableAbortPartyIDTag, sender,
+				)
+			}
+		}
 	} else {
 		R = iterutils.Reduce(slices.Values(partialSignatures.Values()),
 			a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },

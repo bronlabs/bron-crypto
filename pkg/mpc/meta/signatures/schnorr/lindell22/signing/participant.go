@@ -4,12 +4,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
@@ -46,6 +44,7 @@ type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] 
 	k                        S
 	bigR                     GE
 	opening                  lindell22.Opening
+	correctedBigRs           map[sharing.ID]GE
 	theirBigRCommitments     map[sharing.ID]lindell22.Commitment
 	ctxFrozenBeforeDlogProof *session.Context
 }
@@ -62,7 +61,7 @@ func (c *Cosigner[GE, S, M]) SharingID() sharing.ID {
 
 // Quorum returns the set of parties participating in this signing session.
 func (c *Cosigner[GE, S, M]) Quorum() network.Quorum {
-	return hashset.NewComparable(slices.Collect(c.ctx.AllPartiesOrdered())...).Freeze()
+	return c.ctx.Quorum()
 }
 
 // Shard returns the party's secret key share.
@@ -144,6 +143,7 @@ func NewCosigner[
 			bigR:                     *new(GE),
 			opening:                  lindell22.Opening{},
 			theirBigRCommitments:     make(map[sharing.ID]lindell22.Commitment, ctx.Quorum().Size()-1),
+			correctedBigRs:           make(map[sharing.ID]GE, ctx.Quorum().Size()),
 			ctxFrozenBeforeDlogProof: nil,
 		},
 	}, nil

@@ -2,6 +2,7 @@ package signing_test
 
 import (
 	"bytes"
+	"maps"
 	"slices"
 	"testing"
 
@@ -720,6 +721,108 @@ func TestIdentifiableAbort_CorruptedR_EscapesBlame(t *testing.T) {
 	// No culprit is attributed.
 	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
 	assert.Empty(t, culprits, "no culprit is identified — the cheater escapes blame")
+}
+
+// TestIdentifiableAbort_CorruptedR_CosigningAggregator is the same attack as
+// CorruptedR_EscapesBlame (δ added to both R and S), but the aggregator is
+// also a cosigner and retains each party's committed R from round 2. It
+// cross-checks the partial signature R against the expected value and
+// identifies the corrupted signer before even reaching signature verification.
+func TestIdentifiableAbort_CorruptedR_CosigningAggregator(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	scheme, err := bip340.NewScheme(prng)
+	require.NoError(t, err)
+	sf := k256.NewScalarField()
+
+	fx := thresholdFixture(t)
+	dkgCtxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
+	shards := doDKG(t, group, fx.ac, dkgCtxs)
+
+	message := []byte("cosigning aggregator R test")
+	quorum := fx.qualified[0]
+	quorumSet := hashset.NewComparable(quorum...).Freeze()
+	variant := scheme.Variant()
+
+	// Create cosigners directly so we can pass one to NewCosigningAggregator.
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
+	cosigners := make(map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.Scalar, []byte])
+	for _, id := range quorum {
+		c, err := signing.NewCosigner(signingCtxs[id], shards[id], fiatshamir.Name, variant, pcg.NewRandomised())
+		require.NoError(t, err)
+		cosigners[id] = c
+	}
+
+	// Round 1
+	r1bo := make(map[sharing.ID]*signing.Round1Broadcast[*k256.Point, *k256.Scalar, []byte])
+	for id, c := range cosigners {
+		out, err := c.Round1()
+		require.NoError(t, err)
+		r1bo[id] = out
+	}
+	participants := slices.Collect(maps.Values(cosigners))
+	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
+
+	// Round 2
+	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[*k256.Point, *k256.Scalar, []byte])
+	for id, c := range cosigners {
+		out, err := c.Round2(r2bi[id])
+		require.NoError(t, err)
+		r2bo[id] = out
+	}
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	// Round 3
+	partialSigs := make(map[sharing.ID]*lindell22.PartialSignature[*k256.Point, *k256.Scalar])
+	for id, c := range cosigners {
+		psig, err := c.Round3(r3bi[id], message)
+		require.NoError(t, err)
+		partialSigs[id] = psig
+	}
+
+	// Pick one cosigner as the aggregator — it now knows the correct
+	// aggregated R and each party's committed R from the protocol.
+	aggregatorCosigner := cosigners[quorum[0]]
+
+	// Corrupt a DIFFERENT signer's R: add δ·G to R and δ to S.
+	corruptedID := quorum[1]
+	delta, err := sf.Random(prng)
+	require.NoError(t, err)
+	deltaG := group.ScalarBaseOp(delta)
+
+	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
+	for _, id := range quorum {
+		psig := partialSigs[id]
+		if id == corruptedID {
+			corruptedSigsMap.Put(id, &lindell22.PartialSignature[*k256.Point, *k256.Scalar]{
+				Sig: schnorrlike.Signature[*k256.Point, *k256.Scalar]{
+					E: psig.Sig.E,
+					R: psig.Sig.R.Op(deltaG),
+					S: psig.Sig.S.Add(delta),
+				},
+				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
+			})
+		} else {
+			corruptedSigsMap.Put(id, psig)
+		}
+	}
+
+	aggregator, err := signing.NewCosigningAggregator(aggregatorCosigner, shards[quorum[0]].PublicKeyMaterial(), scheme)
+	require.NoError(t, err)
+
+	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), message)
+	require.Error(t, err, "aggregation must fail when R is corrupted")
+
+	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
+	require.NotEmpty(t, culprits, "cosigning aggregator must identify the cheater")
+	assert.Contains(t, culprits, corruptedID, "signer who corrupted R must be blamed")
+	for _, id := range quorum {
+		if id != corruptedID {
+			assert.NotContains(t, culprits, id, "honest signer %d must not be blamed", id)
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
