@@ -721,6 +721,7 @@ func TestIdentifiableAbort_CorruptedR_EscapesBlame(t *testing.T) {
 	// No culprit is attributed.
 	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
 	assert.Empty(t, culprits, "no culprit is identified — the cheater escapes blame")
+	require.ErrorIs(t, err, base.ErrAbort)
 }
 
 // TestIdentifiableAbort_CorruptedR_CosigningAggregator is the same attack as

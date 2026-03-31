@@ -149,7 +149,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 				)
 			}
 			if !psig.Sig.R.Equal(a.correctedBigRs[sender]) {
-				return nil, ErrInvalidType.WithMessage("partial signature from sender %d has inconsistent nonce commitment", sender).WithTag(
+				return nil, base.ErrAbort.WithMessage("partial signature from sender %d has inconsistent nonce commitment", sender).WithTag(
 					base.IdentifiableAbortPartyIDTag, sender,
 				)
 			}
@@ -170,7 +170,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		return !x.Sig.E.Equal(e)
 	}) {
 
-		return nil, ErrInvalidType.WithMessage("partial signatures have inconsistent challenges")
+		return nil, base.ErrAbort.WithMessage("partial signatures have inconsistent challenges")
 	}
 	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)
 	if err != nil {
@@ -190,7 +190,9 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	}
 	for sender, psig := range partialSignatures.Iter() {
 		if psig == nil {
-			return nil, ErrNilArgument.WithMessage("partial signature cannot be nil")
+			return nil, ErrNilArgument.WithMessage("partial signature cannot be nil").WithTag(
+				base.IdentifiableAbortPartyIDTag, sender,
+			)
 		}
 		if utils.IsNil(psig.ZeroPublicKeyShift) {
 			return nil, ErrNilArgument.WithMessage("zero public key shift cannot be nil for sender %d", sender).WithTag(
