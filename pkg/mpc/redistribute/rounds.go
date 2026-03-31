@@ -15,22 +15,23 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
-// Round1 redistributes each recoverer's previous share into subshares under the
+// Round1 redistributes each previous shareholder's shares into subshares under the
 // next access structure.
 //
-// Recoverers broadcast verification material for their previous share and the
-// new subsharing, and privately send one subshare to each recoveree. Parties
-// that are not recoverers return nil outputs.
+// Previous shareholders broadcast verification material for their previous share and the
+// new subsharing, and privately send one subshare to each new shareholder. Parties
+// that are not previous shareholders return nil outputs.
 func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S], *Participant[G, S]], error) {
 	if p.state.round != 1 {
 		return nil, nil, ErrValidation.WithMessage("invalid round")
 	}
-	defer func() { p.state.round++ }()
-	if !p.isRecoverer(p.ctx.HolderID()) {
+	defer p.state.round.IncrementBy(1)
+
+	if !p.isPrevShareholder(p.ctx.HolderID()) {
 		return &Round1Broadcast[G, S]{}, nil, nil
 	}
 
-	recoverersSubCtx, err := p.ctx.SubContext(p.recoverers)
+	prevShareholdersSubCtx, err := p.ctx.SubContext(p.prevShareholders)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create subcontext")
 	}
@@ -38,15 +39,15 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create sharing scheme")
 	}
-	recoverersQuorum, err := unanimity.NewUnanimityAccessStructure(recoverersSubCtx.Quorum())
+	prevQuorum, err := unanimity.NewUnanimityAccessStructure(prevShareholdersSubCtx.Quorum())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create unanimity quorum")
 	}
-	prevShare, err := prevScheme.ConvertShareToAdditive(p.prevShard.Share(), recoverersQuorum)
+	prevShare, err := prevScheme.ConvertShareToAdditive(p.prevShard.Share(), prevQuorum)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot convert previous share to additive")
 	}
-	zeroShare, err := przs.SampleZeroShare(recoverersSubCtx, algebra.StructureMustBeAs[algebra.PrimeField[S]](prevShare.Value().Structure()))
+	zeroShare, err := przs.SampleZeroShare(prevShareholdersSubCtx, algebra.StructureMustBeAs[algebra.PrimeField[S]](prevShare.Value().Structure()))
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample zero share")
 	}
@@ -90,26 +91,27 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 // Round2 verifies all received subshares, aggregates them, and outputs the
 // participant's redistributed shard.
 //
-// Only recoverees produce an output shard. Parties outside the next access
+// Only the previous shareholders produce an output shard. Parties outside the next access
 // structure return nil.
 func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (*mpc.BaseShard[G, S], error) {
 	if p.state.round != 2 {
 		return nil, ErrValidation.WithMessage("invalid round")
 	}
-	defer func() { p.state.round++ }()
-	if !p.isRecoveree(p.ctx.HolderID()) {
+	defer p.state.round.IncrementBy(1)
+
+	if !p.isNextShareholder(p.ctx.HolderID()) {
 		//nolint:nilnil // intentional
 		return nil, nil
 	}
 
-	if errB := network.ValidateIncomingMessages(p, p.otherRecoverers(), r1b); errB != nil {
+	if errB := network.ValidateIncomingMessages(p, p.otherPrevShareholders(), r1b); errB != nil {
 		return nil, errs.Wrap(errB).WithMessage("invalid broadcast input")
 	}
-	if errU := network.ValidateIncomingMessages(p, p.otherRecoverers(), r1u); errU != nil {
+	if errU := network.ValidateIncomingMessages(p, p.otherPrevShareholders(), r1u); errU != nil {
 		return nil, errs.Wrap(errU).WithMessage("invalid p2p input")
 	}
 
-	for id := range p.otherRecoverers() {
+	for id := range p.otherPrevShareholders() {
 		b, okb := r1b.Get(id)
 		u, oku := r1u.Get(id)
 		if !okb || !oku {
@@ -133,7 +135,7 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 			p.state.share = p.state.share.Add(u.SubShare)
 			p.state.subShareVerificationVector = p.state.subShareVerificationVector.Op(b.SubShareVerificationVector)
 			if !p.state.shareVerificationVector.Equal(b.ShareVerificationVector) {
-				return nil, ErrFailed.WithMessage("share verification vectors do not match")
+				return nil, base.ErrAbort.WithMessage("share verification vectors do not match")
 			}
 		}
 	}
@@ -142,14 +144,14 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 	oldPk, _ := p.state.shareVerificationVector.Value().Get(0, 0)
 	newPk, _ := p.state.subShareVerificationVector.Value().Get(0, 0)
 	if !oldPk.Equal(newPk) {
-		return nil, ErrFailed.WithMessage("inconsistent sharing")
+		return nil, base.ErrAbort.WithMessage("inconsistent sharing")
 	}
 	nextScheme, err := feldman.NewScheme(algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](newPk.Structure()), p.nextAccessStructures)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
 	}
 	if err := nextScheme.Verify(p.state.share, p.state.subShareVerificationVector); err != nil {
-		return nil, errs.Wrap(err).WithMessage("inconsistent sharing")
+		return nil, base.ErrAbort.WithMessage("inconsistent sharing")
 	}
 
 	newShard, err := mpc.NewBaseShard(p.state.share, p.state.subShareVerificationVector, nextScheme.MSP())

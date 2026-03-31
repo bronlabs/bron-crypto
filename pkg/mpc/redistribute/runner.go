@@ -55,7 +55,7 @@ func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	}
 
 	// r2
-	r1uIn, err := exchange.UnicastReceive[*Round1P2P[G, S], *Participant[G, S]](rt, r1CorrelationID, r.participant.recoverers)
+	r1uIn, err := exchange.UnicastReceive[*Round1P2P[G, S], *Participant[G, S]](rt, r1CorrelationID, r.participant.prevShareholders)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot receive round 1 p2p")
 	}
