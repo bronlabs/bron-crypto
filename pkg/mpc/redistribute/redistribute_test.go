@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -75,7 +76,7 @@ func testHappyPathAddTTP[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	}
 
 	r2bi, r2ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r1bo, r1uo)
-	newShards := make(map[sharing.ID]*redistribute.BaseShard[G, S])
+	newShards := make(map[sharing.ID]*mpc.BaseShard[G, S])
 	for id, p := range participants {
 		newShards[id], err = p.Round2(r2bi[id], r2ui[id])
 		require.NoError(tb, err)
@@ -85,17 +86,17 @@ func testHappyPathAddTTP[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	scheme, err := feldman.NewScheme(group, newAS)
 	require.NoError(tb, err)
 	for _, shard := range newShards {
-		err := scheme.Verify(shard.Share, shard.VerificationVector)
+		err := scheme.Verify(shard.Share(), shard.VerificationVector())
 		require.NoError(tb, err)
 	}
 
 	// new shares are refreshed but keep the same public key
 	for id := range oldAS.Shareholders().Iter() {
-		require.False(tb, oldShards[id].Share.Equal(newShards[id].Share))
-		require.False(tb, oldShards[id].VerificationVector.Equal(newShards[id].VerificationVector))
+		require.False(tb, oldShards[id].Share().Equal(newShards[id].Share()))
+		require.False(tb, oldShards[id].VerificationVector().Equal(newShards[id].VerificationVector()))
 
-		oldPk, _ := oldShards[id].VerificationVector.Value().Get(0, 0)
-		newPk, _ := newShards[id].VerificationVector.Value().Get(0, 0)
+		oldPk, _ := oldShards[id].VerificationVector().Value().Get(0, 0)
+		newPk, _ := newShards[id].VerificationVector().Value().Get(0, 0)
 		require.True(tb, oldPk.Equal(newPk))
 	}
 
@@ -103,7 +104,7 @@ func testHappyPathAddTTP[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	c := 0
 	for ids := range sliceutils.KCoveringCombinations(newAS.Shareholders().List(), 1) {
 		if scheme.MSP().Accepts(ids...) {
-			shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share })
+			shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share() })
 			newSecret, err := scheme.Reconstruct(shares...)
 			require.NoError(tb, err)
 			require.True(tb, newSecret.Value().Equal(secretValue))
@@ -152,7 +153,7 @@ func testHappyPathDisjoint[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	}
 
 	r2bi, r2ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r1bo, r1uo)
-	newShards := make(map[sharing.ID]*redistribute.BaseShard[G, S])
+	newShards := make(map[sharing.ID]*mpc.BaseShard[G, S])
 	for id, p := range participants {
 		newShards[id], err = p.Round2(r2bi[id], r2ui[id])
 		require.NoError(tb, err)
@@ -164,14 +165,14 @@ func testHappyPathDisjoint[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	for id := range newAS.Shareholders().Iter() {
 		shard, ok := newShards[id]
 		require.True(tb, ok)
-		err := scheme.Verify(shard.Share, shard.VerificationVector)
+		err := scheme.Verify(shard.Share(), shard.VerificationVector())
 		require.NoError(tb, err)
 	}
 
 	// new shares reconstruct to the same value
 	for ids := range sliceutils.KCoveringCombinations(newAS.Shareholders().List(), 3) {
 		if scheme.MSP().Accepts(ids...) {
-			shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share })
+			shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share() })
 			newSecret, err := scheme.Reconstruct(shares...)
 			require.NoError(tb, err)
 			require.True(tb, newSecret.Value().Equal(secretValue))

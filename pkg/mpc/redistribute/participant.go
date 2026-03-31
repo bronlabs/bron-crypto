@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -18,8 +19,8 @@ import (
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	ctx                  *session.Context
 	recoverers           ds.Set[sharing.ID]
-	prevShard            *BaseShard[G, S]
-	nextAccessStructures accessstructures.Linear
+	prevShard            *mpc.BaseShard[G, S]
+	nextAccessStructures accessstructures.Monotone
 	prng                 io.Reader
 
 	state state[G, S]
@@ -39,7 +40,7 @@ type state[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 // caller is a recoverer, and the next access structure to redistribute into.
 // The session quorum must equal the union of the recoverers and the
 // shareholders of the next access structure.
-func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, recoverers ds.Set[sharing.ID], prevShard *BaseShard[G, S], nextAccessStructure accessstructures.Linear, prng io.Reader) (*Participant[G, S], error) {
+func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, recoverers ds.Set[sharing.ID], prevShard *mpc.BaseShard[G, S], nextAccessStructure accessstructures.Monotone, prng io.Reader) (*Participant[G, S], error) {
 	if ctx == nil || recoverers == nil || nextAccessStructure == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments (nil)")
 	}
@@ -47,7 +48,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 		if prevShard == nil {
 			return nil, ErrInvalidArgument.WithMessage("invalid arguments (nil)")
 		}
-		if !prevShard.MSP.Accepts(recoverers.List()...) {
+		if !prevShard.MSP().Accepts(recoverers.List()...) {
 			return nil, ErrInvalidArgument.WithMessage("unqualified recoverers set")
 		}
 	}

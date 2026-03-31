@@ -11,7 +11,11 @@ import (
 )
 
 // Round is the sequential identifier of a protocol step.
-type Round = uint64
+type Round uint64
+
+func (r *Round) IncrementBy(delta uint64) {
+	*r += Round(delta)
+}
 
 // RoundMessages maps sender IDs to their round messages.
 type RoundMessages[M Message[P], P any] = ds.Map[sharing.ID, M]

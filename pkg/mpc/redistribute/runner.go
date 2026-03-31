@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -24,7 +25,7 @@ type runner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] s
 
 // NewRunner constructs a network runner that executes the redistribution
 // protocol.
-func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, recoverers ds.Set[sharing.ID], prevShard *BaseShard[G, S], nextAccessStructure accessstructures.Linear, prng io.Reader) (network.Runner[*BaseShard[G, S]], error) {
+func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, recoverers ds.Set[sharing.ID], prevShard *mpc.BaseShard[G, S], nextAccessStructure accessstructures.Monotone, prng io.Reader) (network.Runner[*mpc.BaseShard[G, S]], error) {
 	participant, err := NewParticipant(ctx, recoverers, prevShard, nextAccessStructure, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
@@ -36,7 +37,7 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 // Run executes the two redistribution rounds over the provided router.
-func (r *runner[G, S]) Run(rt *network.Router) (*BaseShard[G, S], error) {
+func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	// r1
 	r1bOut, r1uOut, err := r.participant.Round1()
 	if err != nil {

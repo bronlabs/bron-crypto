@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/maputils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -44,7 +45,7 @@ func testHappyPathRefresh[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFiel
 
 	oldShards := testutils.Deal(tb, as, group, secretValue)
 	ctxs := session_testutils.MakeRandomContexts(tb, shareholders, prng)
-	participants := maputils.MapValues(oldShards, func(id sharing.ID, shard *redistribute.BaseShard[G, S]) *redistribute.Participant[G, S] {
+	participants := maputils.MapValues(oldShards, func(id sharing.ID, shard *mpc.BaseShard[G, S]) *redistribute.Participant[G, S] {
 		p, err := redistribute.NewParticipant(ctxs[id], as.Shareholders(), oldShards[id], as, pcg.NewRandomised())
 		require.NoError(tb, err)
 		return p
@@ -58,7 +59,7 @@ func testHappyPathRefresh[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFiel
 	}
 
 	r2bi, r2ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r1bo, r1uo)
-	newShards := make(map[sharing.ID]*redistribute.BaseShard[G, S])
+	newShards := make(map[sharing.ID]*mpc.BaseShard[G, S])
 	for id, p := range participants {
 		newShards[id], err = p.Round2(r2bi[id], r2ui[id])
 		require.NoError(tb, err)
@@ -68,23 +69,23 @@ func testHappyPathRefresh[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFiel
 	scheme, err := feldman.NewScheme(group, as)
 	require.NoError(tb, err)
 	for _, shard := range newShards {
-		err := scheme.Verify(shard.Share, shard.VerificationVector)
+		err := scheme.Verify(shard.Share(), shard.VerificationVector())
 		require.NoError(tb, err)
 	}
 
 	// new shares are refreshed but keep the same public key
 	for id := range as.Shareholders().Iter() {
-		require.False(tb, oldShards[id].Share.Equal(newShards[id].Share))
-		require.False(tb, oldShards[id].VerificationVector.Equal(newShards[id].VerificationVector))
+		require.False(tb, oldShards[id].Share().Equal(newShards[id].Share()))
+		require.False(tb, oldShards[id].VerificationVector().Equal(newShards[id].VerificationVector()))
 
-		oldPk, _ := oldShards[id].VerificationVector.Value().Get(0, 0)
-		newPk, _ := newShards[id].VerificationVector.Value().Get(0, 0)
+		oldPk, _ := oldShards[id].VerificationVector().Value().Get(0, 0)
+		newPk, _ := newShards[id].VerificationVector().Value().Get(0, 0)
 		require.True(tb, oldPk.Equal(newPk))
 	}
 
 	// new shares reconstruct to the same value
 	for ids := range sliceutils.KCoveringCombinations(shareholders.List(), th) {
-		shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share })
+		shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share() })
 		newSecret, err := scheme.Reconstruct(shares...)
 		require.NoError(tb, err)
 		require.True(tb, newSecret.Value().Equal(secretValue))

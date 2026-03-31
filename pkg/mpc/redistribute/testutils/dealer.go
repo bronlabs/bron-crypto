@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Deal[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, accessStructure accessstructures.Linear, group algebra.PrimeGroup[G, S], secret S) map[sharing.ID]*redistribute.BaseShard[G, S] {
+func Deal[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, accessStructure accessstructures.Monotone, group algebra.PrimeGroup[G, S], secret S) map[sharing.ID]*mpc.BaseShard[G, S] {
 	tb.Helper()
 
 	vss, err := feldman.NewScheme(group, accessStructure)
@@ -22,18 +22,13 @@ func Deal[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb 
 	dealOut, err := vss.Deal(kwSecret, pcg.NewRandomised())
 	require.NoError(tb, err)
 
-	result := make(map[sharing.ID]*redistribute.BaseShard[G, S])
+	result := make(map[sharing.ID]*mpc.BaseShard[G, S])
 	for id := range accessStructure.Shareholders().Iter() {
 		share, ok := dealOut.Shares().Get(id)
 		require.True(tb, ok)
 
-		baseShard := &redistribute.BaseShard[G, S]{
-			BasePublicMaterial: redistribute.BasePublicMaterial[G, S]{
-				MSP:                vss.MSP(),
-				VerificationVector: dealOut.VerificationMaterial(),
-			},
-			Share: share,
-		}
+		baseShard, err := mpc.NewBaseShard(share, dealOut.VerificationMaterial(), vss.MSP())
+		require.NoError(tb, err)
 		result[id] = baseShard
 	}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -29,7 +30,6 @@ func Test_HappyPathRecover(t *testing.T) {
 	testHappyRecover(t, k256.NewCurve())
 }
 
-// This simulates adding a new TTP and converting the threshold access structure to a hierarchical one
 func testHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[G, S]) {
 	tb.Helper()
 
@@ -47,7 +47,7 @@ func testHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 	ctxs := session_testutils.MakeRandomContexts(tb, shareholders, prng)
 	participants := make(map[sharing.ID]*redistribute.Participant[G, S])
 	for id := range shareholders.Iter() {
-		var shard *redistribute.BaseShard[G, S]
+		var shard *mpc.BaseShard[G, S]
 		if recoverers.Contains(id) {
 			shard = shards[id]
 		}
@@ -64,7 +64,7 @@ func testHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 	}
 
 	r2bi, r2ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r1bo, r1uo)
-	newShards := make(map[sharing.ID]*redistribute.BaseShard[G, S])
+	newShards := make(map[sharing.ID]*mpc.BaseShard[G, S])
 	for id, p := range participants {
 		newShards[id], err = p.Round2(r2bi[id], r2ui[id])
 		require.NoError(tb, err)
@@ -76,13 +76,13 @@ func testHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 	for id := range as.Shareholders().Iter() {
 		shard, ok := newShards[id]
 		require.True(tb, ok)
-		err := scheme.Verify(shard.Share, shard.VerificationVector)
+		err := scheme.Verify(shard.Share(), shard.VerificationVector())
 		require.NoError(tb, err)
 	}
 
 	// new shares reconstruct to the same value
 	for ids := range sliceutils.KCoveringCombinations(as.Shareholders().List(), 2) {
-		shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share })
+		shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share() })
 		newSecret, err := scheme.Reconstruct(shares...)
 		require.NoError(tb, err)
 		require.True(tb, newSecret.Value().Equal(secretValue))
