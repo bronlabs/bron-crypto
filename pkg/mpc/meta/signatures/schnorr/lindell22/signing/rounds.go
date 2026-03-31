@@ -95,7 +95,6 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		return nil, errs.Wrap(err).WithMessage("invalid input")
 	}
 
-	myBigRi := c.state.bigR.Clone()
 	for pid := range c.ctx.OtherPartiesOrdered() {
 		received, _ := inb.Get(pid)
 		theirBigR := received.BigR
@@ -134,10 +133,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("cannot correct partial nonce commitment parity for participant")
 		}
 	}
-	c.state.correctedBigRs[c.ctx.HolderID()], err = c.variant.CorrectPartialNonceCommitmentParity(c.state.bigR, myBigRi)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot correct partial nonce commitment parity for self")
-	}
+	c.state.correctedBigRs[c.ctx.HolderID()] = psig.Sig.R
 
 	c.round++
 	return psig, nil

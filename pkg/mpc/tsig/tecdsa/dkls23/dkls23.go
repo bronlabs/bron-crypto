@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -82,7 +83,7 @@ func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 		u = u.Add(partialSignature.u)
 
 		if !partialSignature.r.Equal(r) {
-			return nil, ErrFailed.WithMessage("partial signature mismatch between indices 0 and %d", i)
+			return nil, base.ErrAbort.WithMessage("partial signature mismatch between indices 0 and %d", i)
 		}
 	}
 
@@ -121,7 +122,7 @@ func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 		return nil, errs.Wrap(err).WithMessage("could not create verifier")
 	}
 	if err := verifier.Verify(signature, publicKey, message); err != nil {
-		return nil, errs.Wrap(err).WithMessage("signature is invalid")
+		return nil, errs.Join(base.ErrAbort, errs.Wrap(err)).WithMessage("signature is invalid")
 	}
 
 	return signature, nil
