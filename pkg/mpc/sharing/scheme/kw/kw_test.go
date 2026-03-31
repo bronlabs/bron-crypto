@@ -1369,7 +1369,7 @@ func TestConvertShareToAdditive_AliceBobOrCharlieDarcy(t *testing.T) {
 	require.True(t, addValues[Darcy].Equal(field.Zero()), "Darcy must be zero")
 }
 
-func TestConvertShareToAdditive_ThresholdAllNonZero(t *testing.T) {
+func TestConvertShareToAdditive_ThresholdHasZerosToo(t *testing.T) {
 	t.Parallel()
 
 	const (
