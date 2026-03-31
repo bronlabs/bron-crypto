@@ -48,14 +48,6 @@ func NewInducedScheme[FE algebra.PrimeFieldElement[FE]](mspMatrix *msp.MSP[FE]) 
 	}, nil
 }
 
-func NewSchemeMSP[FE algebra.PrimeFieldElement[FE]](mspMat *msp.MSP[FE]) *Scheme[FE] {
-	// TODO: add validation
-	return &Scheme[FE]{
-		msp: mspMat,
-		ac:  nil,
-	}
-}
-
 // Name returns the canonical name of this scheme.
 func (*Scheme[FE]) Name() sharing.Name {
 	return Name
