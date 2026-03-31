@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gennaro"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gennaro/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -51,7 +51,7 @@ func TestRunnerHappyPath(t *testing.T) {
 	}
 }
 
-func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, group algebra.PrimeGroup[G, S], ac accessstructures.Linear, niCompiler compiler.Name) {
+func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, group algebra.PrimeGroup[G, S], ac accessstructures.Monotone, niCompiler compiler.Name) {
 	t.Helper()
 
 	prng := pcg.NewRandomised()
@@ -64,24 +64,17 @@ func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	t.Run("public materials are consistent", func(t *testing.T) {
 		t.Parallel()
 
-		var commonPublicMaterial *gennaro.DKGPublicOutput[G, S]
+		var commonPublicMaterial *mpc.BasePublicMaterial[G, S]
 		for id := range quorum.Iter() {
-			publicMaterial := dkgOutputs[id].PublicMaterial()
+			publicMaterial := dkgOutputs[id].BasePublicMaterial
 			require.NotNil(t, publicMaterial)
 
 			if commonPublicMaterial == nil {
-				commonPublicMaterial = publicMaterial
+				commonPublicMaterial = &publicMaterial
 			} else {
 				require.True(t, commonPublicMaterial.VerificationVector().Equal(publicMaterial.VerificationVector()))
 				require.True(t, commonPublicMaterial.PublicKeyValue().Equal(publicMaterial.PublicKeyValue()))
-				require.True(t, commonPublicMaterial.AccessStructure().Shareholders().Equal(publicMaterial.AccessStructure().Shareholders()))
-				for id2 := range quorum.Iter() {
-					l, ok := commonPublicMaterial.PartialPublicKeyValues().Get(id2)
-					require.True(t, ok)
-					r, ok := publicMaterial.PartialPublicKeyValues().Get(id2)
-					require.True(t, ok)
-					require.True(t, l.Equal(r))
-				}
+				require.True(t, commonPublicMaterial.MSP().Shareholders().Equal(publicMaterial.MSP().Shareholders()))
 			}
 		}
 	})
@@ -94,7 +87,7 @@ func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 		require.NoError(t, err)
 
 		vv := dkgOutputs[quorum.List()[0]].VerificationVector()
-		shares := slices.Collect(iterutils.Map(maps.Values(dkgOutputs), func(output *gennaro.DKGOutput[G, S]) *kw.Share[S] { return output.Share() }))
+		shares := slices.Collect(iterutils.Map(maps.Values(dkgOutputs), func(output *mpc.BaseShard[G, S]) *kw.Share[S] { return output.Share() }))
 
 		// Reconstruct from all shares and verify against public key.
 		secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
@@ -123,7 +116,7 @@ func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 			// Partial public key must match VV-derived lifted share.
 			expectedPPK, err := ldf.ShareOf(id)
 			require.NoError(t, err)
-			actualPPK, ok := ref.PartialPublicKeyValues().Get(id)
+			actualPPK, ok := ref.PublicKeyShares().Get(id)
 			require.True(t, ok)
 			require.True(t, expectedPPK.Equal(actualPPK),
 				"partial public key for %d doesn't match VV-derived lifted share", id)

@@ -11,9 +11,9 @@ import (
 
 func _[E algebra.PrimeFieldElement[E]]() {
 	var (
-		_ accessstructures.Linear = (*cnf.CNF)(nil)
-		_ accessstructures.Linear = (*threshold.Threshold)(nil)
-		_ accessstructures.Linear = (*hierarchical.HierarchicalConjunctiveThreshold)(nil)
-		_ accessstructures.Linear = (*unanimity.Unanimity)(nil)
+		_ accessstructures.Monotone = (*cnf.CNF)(nil)
+		_ accessstructures.Monotone = (*threshold.Threshold)(nil)
+		_ accessstructures.Monotone = (*hierarchical.HierarchicalConjunctiveThreshold)(nil)
+		_ accessstructures.Monotone = (*unanimity.Unanimity)(nil)
 	)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
@@ -32,7 +31,10 @@ type shareDTO[S algebra.PrimeFieldElement[S]] struct {
 
 // NewShare creates a new Pedersen share with the given ID, secret, and blinding value.
 // If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret, blinding *kw.Share[S], ac accessstructures.Linear) (*Share[S], error) {
+func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret, blinding *kw.Share[S]) (*Share[S], error) {
+	if id == 0 {
+		return nil, sharing.ErrIsZero.WithMessage("share ID cannot be zero")
+	}
 	if secret == nil {
 		return nil, sharing.ErrIsNil.WithMessage("secret cannot be nil")
 	}
@@ -41,9 +43,6 @@ func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret, blinding *k
 	}
 	if len(secret.Value()) != len(blinding.Value()) {
 		return nil, sharing.ErrFailed.WithMessage("secret and blinding must have the same length")
-	}
-	if ac != nil && !ac.Shareholders().Contains(id) {
-		return nil, sharing.ErrUnauthorized.WithMessage("share ID %d is not a valid shareholder", id)
 	}
 	messages, err := sliceutils.MapOrError(secret.Value(), pedcom.NewMessage)
 	if err != nil {
@@ -192,7 +191,16 @@ func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 func (s *Share[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shareDTO[S]](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen Share")
+	}
+	if dto.ID == 0 {
+		return sharing.ErrIsZero.WithMessage("share ID cannot be zero")
+	}
+	if dto.Secret == nil {
+		return sharing.ErrIsNil.WithMessage("secret cannot be nil")
+	}
+	if dto.Blinding == nil {
+		return sharing.ErrIsNil.WithMessage("blinding cannot be nil")
 	}
 	if len(dto.Secret) != len(dto.Blinding) {
 		return sharing.ErrFailed.WithMessage("secret and blinding must have the same length")

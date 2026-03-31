@@ -12,7 +12,7 @@ The KW scheme generalises Shamir's threshold scheme to any monotone access struc
 
 ## Supported Access Structures
 
-Any `accessstructures.Linear` implementation, including:
+Any `accessstructures.Monotone` implementation, including:
 
 - **Threshold** — (t, n) quorums
 - **Unanimity** — all-or-nothing (n-of-n)

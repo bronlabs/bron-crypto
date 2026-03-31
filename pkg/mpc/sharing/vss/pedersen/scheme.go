@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -60,6 +61,16 @@ func (*Scheme[E, S]) Name() sharing.Name {
 // AccessStructure returns the threshold access structure.
 func (s *Scheme[E, S]) AccessStructure() *threshold.Threshold {
 	return s.shamirSSS.AccessStructure()
+}
+
+// CanReconstruct checks if the given shareholder IDs form a qualified set that can reconstruct the secret according to the access structure.
+func (s *Scheme[E, S]) CanReconstruct(ids ...sharing.ID) bool {
+	return s.shamirSSS.CanReconstruct(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs defined by the access structure.
+func (s *Scheme[E, S]) Shareholders() ds.Set[sharing.ID] {
+	return s.shamirSSS.Shareholders()
 }
 
 func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (*shamir.DealerOutput[S], *shamir.Secret[S], shamir.DealerFunc[S], error) {

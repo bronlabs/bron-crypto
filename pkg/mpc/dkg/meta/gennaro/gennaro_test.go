@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gennaro/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -40,7 +41,7 @@ func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
 	return hashset.NewComparable(ids...).Freeze()
 }
 
-func setup(tb testing.TB, ac accessstructures.Linear, group *k256.Curve, prng io.Reader) map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar] {
+func setup(tb testing.TB, ac accessstructures.Monotone, group *k256.Curve, prng io.Reader) map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar] {
 	tb.Helper()
 	ctxs := session_testutils.MakeRandomContexts(tb, ac.Shareholders(), prng)
 	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
@@ -52,7 +53,7 @@ func setup(tb testing.TB, ac accessstructures.Linear, group *k256.Curve, prng io
 	return parties
 }
 
-func firstOutput(outputs map[sharing.ID]*gennaro.DKGOutput[*k256.Point, *k256.Scalar]) *gennaro.DKGOutput[*k256.Point, *k256.Scalar] {
+func firstOutput(outputs map[sharing.ID]*mpc.BaseShard[*k256.Point, *k256.Scalar]) *mpc.BaseShard[*k256.Point, *k256.Scalar] {
 	keys := slices.Collect(maps.Keys(outputs))
 	slices.Sort(keys)
 	return outputs[keys[0]]
@@ -64,7 +65,7 @@ func firstOutput(outputs map[sharing.ID]*gennaro.DKGOutput[*k256.Point, *k256.Sc
 
 type acFixture struct {
 	name         string
-	ac           accessstructures.Linear
+	ac           accessstructures.Monotone
 	qualified    [][]sharing.ID
 	unqualified  [][]sharing.ID
 	shareholders []sharing.ID
@@ -181,7 +182,7 @@ func TestDKG_HappyPath(t *testing.T) {
 				require.NotNil(t, output.PublicKeyValue())
 				require.False(t, output.PublicKeyValue().IsZero())
 				require.NotNil(t, output.VerificationVector())
-				require.NotNil(t, output.AccessStructure())
+				require.NotNil(t, output.MSP())
 			}
 		})
 	}
@@ -216,41 +217,6 @@ func TestDKG_PublicKeyConsistency(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Partial public key consistency across participants
-// ---------------------------------------------------------------------------
-
-func TestDKG_PartialPublicKeyConsistency(t *testing.T) {
-	t.Parallel()
-
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-	fx := thresholdFixture(t)
-	parties := setup(t, fx.ac, group, prng)
-	outputs := tu.DoGennaroDKG(t, parties)
-
-	// Each participant should have the same partial public key map
-	allPartialPKs := make(map[sharing.ID]ds.Map[sharing.ID, *feldman.LiftedShare[*k256.Point, *k256.Scalar]])
-	for id, output := range outputs {
-		ppks := output.PartialPublicKeyValues()
-		require.NotNil(t, ppks)
-		require.Equal(t, len(fx.shareholders), ppks.Size())
-		allPartialPKs[id] = ppks
-	}
-
-	// Cross-check: for each shareholder, all participants agree on their partial PK
-	ids := slices.Sorted(maps.Keys(outputs))
-	for _, targetID := range fx.shareholders {
-		ref, _ := allPartialPKs[ids[0]].Get(targetID)
-		require.NotNil(t, ref)
-		for _, holderID := range ids[1:] {
-			ppk, _ := allPartialPKs[holderID].Get(targetID)
-			require.True(t, ref.Equal(ppk),
-				"partial PK for %d differs between holders %d and %d", targetID, ids[0], holderID)
-		}
 	}
 }
 
@@ -444,30 +410,6 @@ func TestDKG_OutputConsistency(t *testing.T) {
 				require.True(t, liftedSecret.Value().Equal(ref.PublicKeyValue()),
 					"LiftedDealerFunc.LiftedSecret() must equal the DKG public key")
 			})
-
-			t.Run("partial public keys match verification vector", func(t *testing.T) {
-				t.Parallel()
-				for _, id := range fx.shareholders {
-					expected, err := ldf.ShareOf(id)
-					require.NoError(t, err)
-					actual, ok := ref.PartialPublicKeyValues().Get(id)
-					require.True(t, ok)
-					require.True(t, expected.Equal(actual),
-						"partial public key for %d doesn't match VV-derived lifted share", id)
-				}
-			})
-
-			t.Run("partial public keys match lifted shares", func(t *testing.T) {
-				t.Parallel()
-				for id, output := range outputs {
-					lifted, err := feldman.LiftShare(output.Share(), group.Generator())
-					require.NoError(t, err)
-					ppk, ok := ref.PartialPublicKeyValues().Get(id)
-					require.True(t, ok)
-					require.True(t, lifted.Equal(ppk),
-						"LiftShare(share) for %d doesn't match partial public key", id)
-				}
-			})
 		})
 	}
 }
@@ -636,7 +578,7 @@ func TestDKG_ProofsAreNonEmpty(t *testing.T) {
 
 type securityFixture struct {
 	group   *k256.Curve
-	ac      accessstructures.Linear
+	ac      accessstructures.Monotone
 	parties map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar]
 	ids     []sharing.ID // sorted
 

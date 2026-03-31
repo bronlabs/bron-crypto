@@ -12,10 +12,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 )
 
-func TestCNFCBORAsLinear(t *testing.T) {
+func TestCNFCBORAsMonotone(t *testing.T) {
 	t.Parallel()
 
-	t.Run("two disjoint clauses deserializes as Linear", func(t *testing.T) {
+	t.Run("two disjoint clauses deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := cnf.NewCNFAccessStructure(
@@ -27,7 +27,7 @@ func TestCNFCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -40,7 +40,7 @@ func TestCNFCBORAsLinear(t *testing.T) {
 		require.False(t, decoded.IsQualified(1))
 	})
 
-	t.Run("three overlapping clauses deserializes as Linear", func(t *testing.T) {
+	t.Run("three overlapping clauses deserializes as Monotone", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := cnf.NewCNFAccessStructure(
@@ -53,7 +53,7 @@ func TestCNFCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 		require.NotNil(t, decoded)
 
@@ -68,7 +68,7 @@ func TestCNFCBORAsLinear(t *testing.T) {
 		}
 	})
 
-	t.Run("deserialized Linear has CNF concrete type", func(t *testing.T) {
+	t.Run("deserialized Monotone has CNF concrete type", func(t *testing.T) {
 		t.Parallel()
 
 		original, err := cnf.NewCNFAccessStructure(
@@ -80,7 +80,7 @@ func TestCNFCBORAsLinear(t *testing.T) {
 		data, err := serde.MarshalCBOR(original)
 		require.NoError(t, err)
 
-		decoded, err := serde.UnmarshalCBOR[accessstructures.Linear](data)
+		decoded, err := serde.UnmarshalCBOR[accessstructures.Monotone](data)
 		require.NoError(t, err)
 
 		_, ok := decoded.(*cnf.CNF)

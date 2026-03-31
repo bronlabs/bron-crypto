@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
@@ -37,7 +38,7 @@ type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] s
 // from the key's group. The key must consist of two independent generators
 // (G, H) of a prime-order group; the security of the hiding property relies
 // on the discrete-log relation between G and H being unknown.
-func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure accessstructures.Linear) (*Scheme[E, S], error) {
+func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure accessstructures.Monotone) (*Scheme[E, S], error) {
 	if key == nil {
 		return nil, sharing.ErrIsNil.WithMessage("pedersen commitment key is nil")
 	}
@@ -67,9 +68,14 @@ func (*Scheme[E, S]) Name() sharing.Name {
 	return Name
 }
 
-// AccessStructure returns the linear access structure underlying this scheme.
-func (s *Scheme[E, S]) AccessStructure() accessstructures.Linear {
-	return s.lsss.AccessStructure()
+// CanReconstruct checks whether the given set of shareholder IDs is qualified under the access structure, i.e. whether reconstruction is possible from shares belonging to these shareholders.
+func (s *Scheme[E, S]) CanReconstruct(ids ...sharing.ID) bool {
+	return s.lsss.MSP().Accepts(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs for this scheme, as defined by the underlying MSP.
+func (s *Scheme[E, S]) Shareholders() ds.Set[sharing.ID] {
+	return s.lsss.MSP().Shareholders()
 }
 
 // Deal creates shares for the given secret and returns the dealer output
@@ -120,7 +126,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *kw.Secret[S], prng io.Rea
 			return nil, nil, sharing.ErrFailed.WithMessage("missing blinding share for ID %d", id)
 		}
 
-		share, err := NewShare(id, secretShare, blindingShare, s.lsss.AccessStructure())
+		share, err := NewShare(id, secretShare, blindingShare)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("could not create Pedersen share")
 		}

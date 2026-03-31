@@ -3,10 +3,12 @@ package feldman
 import (
 	"io"
 	"maps"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -31,7 +33,7 @@ type Scheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]
 
 // NewScheme creates a new Feldman VSS scheme over the given prime-order group
 // and linear access structure. The scalar field is derived from the group.
-func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](group algebra.PrimeGroup[E, FE], accessStructure accessstructures.Linear) (*Scheme[E, FE], error) {
+func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](group algebra.PrimeGroup[E, FE], accessStructure accessstructures.Monotone) (*Scheme[E, FE], error) {
 	if group == nil {
 		return nil, sharing.ErrIsNil.WithMessage("group is nil")
 	}
@@ -51,14 +53,35 @@ func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 	}, nil
 }
 
+// NewSchemeFromKW creates a new Feldman VSS scheme from an existing KW scheme
+// and a prime-order group. This is useful when the KW scheme (and its MSP) is
+// already constructed, e.g. from a deserialized shard.
+func NewSchemeFromKW[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](group algebra.PrimeGroup[E, FE], lsss *kw.Scheme[FE]) (*Scheme[E, FE], error) {
+	if group == nil {
+		return nil, sharing.ErrIsNil.WithMessage("group is nil")
+	}
+	if lsss == nil {
+		return nil, sharing.ErrIsNil.WithMessage("KW scheme is nil")
+	}
+	return &Scheme[E, FE]{
+		group: group,
+		lsss:  lsss,
+	}, nil
+}
+
 // Name returns the canonical name of this scheme.
 func (*Scheme[E, FE]) Name() sharing.Name {
 	return Name
 }
 
-// AccessStructure returns the linear access structure underlying this scheme.
-func (s *Scheme[E, FE]) AccessStructure() accessstructures.Linear {
-	return s.lsss.AccessStructure()
+// CanReconstruct checks whether the given set of shareholder IDs is qualified under the access structure, i.e. whether reconstruction is possible from shares belonging to these shareholders.
+func (s *Scheme[E, FE]) CanReconstruct(ids ...sharing.ID) bool {
+	return s.lsss.MSP().Accepts(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs for this scheme, as defined by the underlying MSP.
+func (s *Scheme[E, FE]) Shareholders() ds.Set[sharing.ID] {
+	return s.lsss.MSP().Shareholders()
 }
 
 // DealRandom generates shares for a uniformly random secret and returns
@@ -203,6 +226,79 @@ func (s *Scheme[E, FE]) ConvertShareToAdditive(share *kw.Share[FE], quorum *unan
 	out, err := s.lsss.ConvertShareToAdditive(share, quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not convert share to additive share")
+	}
+	return out, nil
+}
+
+// ConvertLiftedShareToAdditive converts a lifted share (group-element vector)
+// into an additive share under the given unanimity quorum. It computes the
+// scalar-times-point product of the shareholder's reconstruction-vector
+// coefficients with their lifted share components, producing a single group
+// element. The product of all such additive shares across the quorum recovers
+// the lifted secret (public key value).
+//
+// This is the group-element analog of [kw.Scheme.ConvertShareToAdditive].
+// Where the scalar version computes Σ c_j · λ_j (field dot product), this
+// version computes Σ [c_j] · V_j (multi-scalar multiplication), where c_j are
+// the reconstruction-vector coefficients for this shareholder's MSP rows and
+// V_j = [λ_j]G are the corresponding lifted share components.
+func (s *Scheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[E, FE], quorum *unanimity.Unanimity) (*additive.Share[E], error) {
+	if share == nil {
+		return nil, sharing.ErrIsNil.WithMessage("lifted share cannot be nil")
+	}
+	if quorum == nil {
+		return nil, sharing.ErrIsNil.WithMessage("quorum cannot be nil")
+	}
+	if !quorum.Shareholders().Contains(share.ID()) {
+		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the unanimity quorum", share.ID())
+	}
+
+	quorumIDs := quorum.Shareholders().List()
+	reconVec, err := s.lsss.MSP().ReconstructionVector(quorumIDs...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector for unanimity quorum")
+	}
+
+	// reconVec is indexed 0..len(allQuorumRows)-1, with entries ordered by
+	// ascending absolute MSP row index across all quorum members. Map this
+	// shareholder's absolute row indices to their positions in reconVec.
+	htr := s.lsss.MSP().HoldersToRows()
+	var allQuorumRows []int
+	for _, id := range quorumIDs {
+		rows, ok := htr.Get(id)
+		if !ok {
+			return nil, sharing.ErrMembership.WithMessage("quorum shareholder %d is not in the MSP holders mapping", id)
+		}
+		allQuorumRows = append(allQuorumRows, rows.List()...)
+	}
+	slices.Sort(allQuorumRows)
+
+	shareholderRowsSet, ok := htr.Get(share.ID())
+	if !ok {
+		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", share.ID())
+	}
+	sortedShareholderRows := slices.Sorted(slices.Values(shareholderRowsSet.List()))
+
+	// For each of this shareholder's MSP rows, find its position in the
+	// sorted all-quorum-rows list and extract the corresponding reconstruction
+	// coefficient, then accumulate coeff · liftedValue into the result.
+	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](share.Value()[0].Structure())
+	result := group.OpIdentity()
+	for i, absRow := range sortedShareholderRows {
+		pos, found := slices.BinarySearch(allQuorumRows, absRow)
+		if !found {
+			return nil, sharing.ErrFailed.WithMessage("shareholder row %d not found in quorum rows", absRow)
+		}
+		coeff, err := reconVec.Get(pos, 0)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to get reconstruction coefficient at position %d", pos)
+		}
+		result = result.Op(share.Value()[i].ScalarOp(coeff))
+	}
+
+	out, err := additive.NewShare(share.ID(), result, quorum)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create additive share from lifted share")
 	}
 	return out, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
@@ -23,19 +24,27 @@ import (
 // qualification checks to the underlying access structure.
 type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 	msp *msp.MSP[FE]
-	ac  accessstructures.Linear
 }
 
 // NewScheme constructs a KW sharing scheme by inducing an MSP from the given
 // linear access structure over the prime field f.
-func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], ac accessstructures.Linear) (*Scheme[FE], error) {
+func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], ac accessstructures.Monotone) (*Scheme[FE], error) {
 	m, err := accessstructures.InducedMSP(f, ac)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create MSP for access structure")
 	}
 	return &Scheme[FE]{
 		msp: m,
-		ac:  ac,
+	}, nil
+}
+
+// NewInducedScheme creates a KW scheme directly from an MSP, bypassing the induction step. This is useful when the MSP is already known or constructed by other means.
+func NewInducedScheme[FE algebra.PrimeFieldElement[FE]](mspMatrix *msp.MSP[FE]) (*Scheme[FE], error) {
+	if mspMatrix == nil {
+		return nil, sharing.ErrIsNil.WithMessage("MSP cannot be nil")
+	}
+	return &Scheme[FE]{
+		msp: mspMatrix,
 	}, nil
 }
 
@@ -44,9 +53,14 @@ func (*Scheme[FE]) Name() sharing.Name {
 	return Name
 }
 
-// AccessStructure returns the linear access structure associated with this scheme.
-func (s *Scheme[FE]) AccessStructure() accessstructures.Linear {
-	return s.ac
+// CanReconstruct checks if the given shareholder IDs form a qualified set according to the underlying access structure.
+func (s *Scheme[FE]) CanReconstruct(ids ...sharing.ID) bool {
+	return s.msp.Accepts(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs defined by the underlying MSP.
+func (s *Scheme[FE]) Shareholders() ds.Set[sharing.ID] {
+	return s.msp.Shareholders()
 }
 
 // MSP returns the monotone span program induced by the scheme's access structure.
@@ -109,7 +123,7 @@ func (s *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create dealer function from random column")
 	}
 	shares := hashmap.NewComparable[sharing.ID, *Share[FE]]()
-	for id := range s.ac.Shareholders().Iter() {
+	for id := range s.msp.Shareholders().Iter() {
 		share, err := df.ShareOf(id)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("failed to get share for shareholder %d", id)
@@ -143,10 +157,6 @@ func (s *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
-	if !s.ac.IsQualified(ids...) {
-		return nil, sharing.ErrFailed.WithMessage("shares are not authorized by the access structure")
-	}
-
 	reconVec, err := s.msp.ReconstructionVector(ids...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector for given shares")
@@ -220,10 +230,6 @@ func (s *Scheme[FE]) ConvertShareToAdditive(share *Share[FE], quorum *unanimity.
 		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the unanimity quorum", share.ID())
 	}
 	quorumIDs := quorum.Shareholders().List()
-	if !s.ac.IsQualified(quorumIDs...) {
-		return nil, sharing.ErrMembership.WithMessage("quorum shareholders are not qualified by the access structure")
-	}
-
 	reconVec, err := s.msp.ReconstructionVector(quorumIDs...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector for unanimity quorum")

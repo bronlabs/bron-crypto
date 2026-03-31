@@ -45,7 +45,7 @@ func formatIDs(ids []sharing.ID) string {
 func newFeldmanScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](
 	tb testing.TB,
 	group algebra.PrimeGroup[E, FE],
-	ac accessstructures.Linear,
+	ac accessstructures.Monotone,
 ) *feldman.Scheme[E, FE] {
 	tb.Helper()
 	scheme, err := feldman.NewScheme(group, ac)
@@ -89,7 +89,7 @@ func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
 
 type acFixture struct {
 	name         string
-	ac           accessstructures.Linear
+	ac           accessstructures.Monotone
 	qualified    [][]sharing.ID
 	unqualified  [][]sharing.ID
 	shareholders []sharing.ID
@@ -429,7 +429,7 @@ func TestNewScheme(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
 				require.Equal(t, feldman.Name, scheme.Name())
-				require.Equal(t, len(fx.shareholders), scheme.AccessStructure().Shareholders().Size())
+				require.Equal(t, len(fx.shareholders), scheme.Shareholders().Size())
 			})
 		}
 	})
@@ -1461,6 +1461,145 @@ func TestConvertShareToAdditive_ViaAdditiveReconstruct(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// ConvertLiftedShareToAdditive: sum of additive lifted shares recovers PK
+// ---------------------------------------------------------------------------
+
+func TestConvertLiftedShareToAdditive(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+			out, _ := dealFeldman(t, scheme, secret)
+
+			expectedPK := curve.ScalarBaseOp(secret.Value())
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					sum := curve.OpIdentity()
+					for _, id := range qset {
+						sh, ok := out.Shares().Get(id)
+						require.True(t, ok)
+
+						lifted, err := feldman.LiftShare(sh, gen)
+						require.NoError(t, err)
+
+						addShare, err := scheme.ConvertLiftedShareToAdditive(lifted, quorum)
+						require.NoError(t, err)
+						sum = sum.Op(addShare.Value())
+					}
+					require.True(t, expectedPK.Equal(sum),
+						"product of additive lifted shares must equal [secret]G")
+				})
+			}
+		})
+	}
+}
+
+// TestConvertLiftedShareToAdditive_ConsistentWithScalar verifies that the
+// lifted conversion is the homomorphic image of the scalar conversion:
+// [ConvertShareToAdditive(share)]G == ConvertLiftedShareToAdditive([share]G).
+func TestConvertLiftedShareToAdditive_ConsistentWithScalar(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(99))
+			out, shares := dealFeldman(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					for _, id := range qset {
+						// Scalar path: convert scalar share → additive scalar → lift.
+						scalarAdd, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						liftedFromScalar := gen.ScalarOp(scalarAdd.Value())
+
+						// Group path: lift share → convert lifted → get value.
+						sh, ok := out.Shares().Get(id)
+						require.True(t, ok)
+						lifted, err := feldman.LiftShare(sh, gen)
+						require.NoError(t, err)
+						groupAdd, err := scheme.ConvertLiftedShareToAdditive(lifted, quorum)
+						require.NoError(t, err)
+
+						require.True(t, liftedFromScalar.Equal(groupAdd.Value()),
+							"scalar and group additive paths disagree for shareholder %d", id)
+					}
+				})
+			}
+		})
+	}
+}
+
+// TestConvertLiftedShareToAdditive_NilInputs verifies error handling.
+func TestConvertLiftedShareToAdditive_NilInputs(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(1))
+	out, _ := dealFeldman(t, scheme, secret)
+	gen := curve.Generator()
+
+	sh, ok := out.Shares().Get(fx.shareholders[0])
+	require.True(t, ok)
+	lifted, err := feldman.LiftShare(sh, gen)
+	require.NoError(t, err)
+
+	quorum := newUnanimity(t, fx.qualified[0]...)
+
+	t.Run("nil share", func(t *testing.T) {
+		t.Parallel()
+		_, err := scheme.ConvertLiftedShareToAdditive(nil, quorum)
+		require.Error(t, err)
+	})
+
+	t.Run("nil quorum", func(t *testing.T) {
+		t.Parallel()
+		_, err := scheme.ConvertLiftedShareToAdditive(lifted, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("share not in quorum", func(t *testing.T) {
+		t.Parallel()
+		// Create a quorum that does not contain the share's ID.
+		otherIDs := fx.qualified[0]
+		var excluded []sharing.ID
+		for _, id := range otherIDs {
+			if id != lifted.ID() {
+				excluded = append(excluded, id)
+			}
+		}
+		if len(excluded) >= 2 {
+			wrongQuorum := newUnanimity(t, excluded...)
+			_, err := scheme.ConvertLiftedShareToAdditive(lifted, wrongQuorum)
+			require.Error(t, err)
+		}
+	})
 }
 
 // ---------------------------------------------------------------------------

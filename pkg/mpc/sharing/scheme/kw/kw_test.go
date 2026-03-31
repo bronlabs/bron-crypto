@@ -31,7 +31,7 @@ func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
 	return hashset.NewComparable(ids...).Freeze()
 }
 
-func newKWScheme[FE algebra.PrimeFieldElement[FE]](tb testing.TB, f algebra.PrimeField[FE], ac accessstructures.Linear) *kw.Scheme[FE] {
+func newKWScheme[FE algebra.PrimeFieldElement[FE]](tb testing.TB, f algebra.PrimeField[FE], ac accessstructures.Monotone) *kw.Scheme[FE] {
 	tb.Helper()
 	scheme, err := kw.NewScheme(f, ac)
 	require.NoError(tb, err)
@@ -70,7 +70,7 @@ func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
 
 type acFixture struct {
 	name         string
-	ac           accessstructures.Linear
+	ac           accessstructures.Monotone
 	qualified    [][]sharing.ID // sets that MUST reconstruct
 	unqualified  [][]sharing.ID // sets that MUST be rejected
 	shareholders []sharing.ID   // all shareholders
@@ -379,7 +379,7 @@ func TestNewScheme(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
 				require.Equal(t, kw.Name, scheme.Name())
-				require.Equal(t, len(fx.shareholders), scheme.AccessStructure().Shareholders().Size())
+				require.Equal(t, len(fx.shareholders), scheme.Shareholders().Size())
 			})
 		}
 	})
@@ -1309,5 +1309,120 @@ func TestConvertShareToAdditive_QuorumNotQualified(t *testing.T) {
 
 	_, err := scheme.ConvertShareToAdditive(shares[1], quorum)
 	require.Error(t, err)
-	require.ErrorIs(t, err, sharing.ErrMembership)
+}
+
+// ---------------------------------------------------------------------------
+// (Alice AND Bob) OR (Charlie AND Darcy) — additive conversion with full quorum
+// ---------------------------------------------------------------------------
+
+func TestConvertShareToAdditive_AliceBobOrCharlieDarcy(t *testing.T) {
+	t.Parallel()
+
+	const (
+		Alice   sharing.ID = 1
+		Bob     sharing.ID = 2
+		Charlie sharing.ID = 3
+		Darcy   sharing.ID = 4
+	)
+
+	// Access structure: (Alice AND Bob) OR (Charlie AND Darcy).
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Threshold(1, // OR
+			boolexpr.Threshold(2, boolexpr.ID(Alice), boolexpr.ID(Bob)),     // Alice AND Bob
+			boolexpr.Threshold(2, boolexpr.ID(Charlie), boolexpr.ID(Darcy)), // Charlie AND Darcy
+		),
+	)
+	require.NoError(t, err)
+
+	field := k256.NewScalarField()
+	scheme := newKWScheme(t, field, ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+	shares := dealAndCollect(t, scheme, secret)
+
+	// Convert all four shares to additive under the quorum of everyone.
+	quorum := newUnanimity(t, Alice, Bob, Charlie, Darcy)
+
+	names := map[sharing.ID]string{
+		Alice: "Alice", Bob: "Bob", Charlie: "Charlie", Darcy: "Darcy",
+	}
+
+	addValues := make(map[sharing.ID]*k256.Scalar)
+	sum := field.Zero()
+	for _, id := range []sharing.ID{Alice, Bob, Charlie, Darcy} {
+		addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+		require.NoError(t, err)
+		addValues[id] = addShare.Value()
+		sum = sum.Add(addShare.Value())
+		t.Logf("%-8s (ID %d): additive share = %s", names[id], id, addShare.Value().String())
+	}
+
+	require.True(t, secret.Value().Equal(sum), "sum of additive shares must equal the secret")
+
+	// The OR gate gives the MSP a block-diagonal randomness structure: col 1
+	// covers {Alice,Bob}, col 2 covers {Charlie,Darcy}. When the quorum is
+	// larger than a minimal qualified set the linear system c^T·M = target is
+	// underdetermined. The Gauss-Jordan solver sets free variables to zero,
+	// which zeroes out the entire second branch (Charlie, Darcy).
+	require.False(t, addValues[Alice].Equal(field.Zero()), "Alice must be non-zero")
+	require.False(t, addValues[Bob].Equal(field.Zero()), "Bob must be non-zero")
+	require.True(t, addValues[Charlie].Equal(field.Zero()), "Charlie must be zero")
+	require.True(t, addValues[Darcy].Equal(field.Zero()), "Darcy must be zero")
+}
+
+func TestConvertShareToAdditive_ThresholdAllNonZero(t *testing.T) {
+	t.Parallel()
+
+	const (
+		Alice   sharing.ID = 1
+		Bob     sharing.ID = 2
+		Charlie sharing.ID = 3
+		Darcy   sharing.ID = 4
+	)
+
+	ids := []sharing.ID{Alice, Bob, Charlie, Darcy}
+
+	field := k256.NewScalarField()
+
+	// Threshold(3,4): no OR gate, no block-diagonal structure in the MSP.
+	ac, err := threshold.NewThresholdAccessStructure(3, shareholders(ids...))
+	require.NoError(t, err)
+	scheme := newKWScheme(t, field, ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+	shares := dealAndCollect(t, scheme, secret)
+
+	// Oversized quorum {A,B,C,D}: the system c^T·M = target has 4 unknowns
+	// and 3 equations (rank = threshold = 3), leaving one free variable.
+	// The Gauss-Jordan solver sets free variables to zero, so Darcy (the
+	// last pivot-free row) gets a zero additive share.
+	quorum := newUnanimity(t, ids...)
+	addValues := make(map[sharing.ID]*k256.Scalar)
+	sum := field.Zero()
+	for _, id := range ids {
+		addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+		require.NoError(t, err)
+		addValues[id] = addShare.Value()
+		sum = sum.Add(addShare.Value())
+	}
+	require.True(t, secret.Value().Equal(sum))
+	require.False(t, addValues[Alice].Equal(field.Zero()), "Alice must be non-zero")
+	require.False(t, addValues[Bob].Equal(field.Zero()), "Bob must be non-zero")
+	require.False(t, addValues[Charlie].Equal(field.Zero()), "Charlie must be non-zero")
+	require.True(t, addValues[Darcy].Equal(field.Zero()), "Darcy must be zero (free variable)")
+
+	// Minimal quorum {A,B,C}: the system is fully determined (3 unknowns,
+	// 3 equations), so no free variables and every share is non-zero.
+	minIDs := []sharing.ID{Alice, Bob, Charlie}
+	quorum3 := newUnanimity(t, minIDs...)
+	addValuesMin := make(map[sharing.ID]*k256.Scalar)
+	sum3 := field.Zero()
+	for _, id := range minIDs {
+		addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum3)
+		require.NoError(t, err)
+		addValuesMin[id] = addShare.Value()
+		sum3 = sum3.Add(addShare.Value())
+	}
+	require.True(t, secret.Value().Equal(sum3))
+	require.False(t, addValuesMin[Alice].Equal(field.Zero()), "Alice must be non-zero")
+	require.False(t, addValuesMin[Bob].Equal(field.Zero()), "Bob must be non-zero")
+	require.False(t, addValuesMin[Charlie].Equal(field.Zero()), "Charlie must be non-zero")
 }

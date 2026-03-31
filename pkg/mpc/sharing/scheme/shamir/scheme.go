@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
@@ -60,6 +61,16 @@ func (d *Scheme[FE]) SharingIDToLagrangeNode(id sharing.ID) FE {
 // AccessStructure returns the threshold access structure for this scheme.
 func (d *Scheme[FE]) AccessStructure() *threshold.Threshold {
 	return d.ac
+}
+
+// CanReconstruct checks if the given shareholder IDs form a qualified set that can reconstruct the secret according to the access structure.
+func (d *Scheme[FE]) CanReconstruct(ids ...sharing.ID) bool {
+	return d.ac.IsQualified(ids...)
+}
+
+// Shareholders returns the universe of shareholder IDs defined by the access structure.
+func (d *Scheme[FE]) Shareholders() ds.Set[sharing.ID] {
+	return d.ac.Shareholders()
 }
 
 // PolynomialRing returns the polynomial ring used for share generation.

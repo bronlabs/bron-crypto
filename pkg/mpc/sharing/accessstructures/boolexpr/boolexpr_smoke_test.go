@@ -5,4 +5,4 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
 )
 
-var _ accessstructures.Linear = (*boolexpr.ThresholdGateAccessStructure)(nil)
+var _ accessstructures.Monotone = (*boolexpr.ThresholdGateAccessStructure)(nil)

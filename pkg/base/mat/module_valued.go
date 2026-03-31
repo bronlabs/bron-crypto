@@ -133,6 +133,11 @@ func (m *ModuleValuedMatrixModule[E, S]) ScalarStructure() algebra.Structure[S] 
 	return m.baseStructure.ScalarStructure()
 }
 
+// BaseModule returns the underlying module structure for the matrices in this module.
+func (m *ModuleValuedMatrixModule[E, S]) BaseModule() algebra.FiniteModule[E, S] {
+	return m.baseStructure
+}
+
 // ModuleValuedMatrix is a generic rectangular matrix over a finite module. Elements are stored in
 // row-major order. Arithmetic operations are inherited from [MatrixGroupElementTrait].
 type ModuleValuedMatrix[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {

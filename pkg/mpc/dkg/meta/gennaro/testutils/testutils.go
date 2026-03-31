@@ -9,6 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/meta/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -18,10 +19,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
-func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, ctxs map[sharing.ID]*session.Context, ac accessstructures.Linear, niCompiler compiler.Name, group algebra.PrimeGroup[G, S]) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, ctxs map[sharing.ID]*session.Context, ac accessstructures.Monotone, niCompiler compiler.Name, group algebra.PrimeGroup[G, S]) map[sharing.ID]network.Runner[*mpc.BaseShard[G, S]] {
 	tb.Helper()
 
-	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])
+	runners := make(map[sharing.ID]network.Runner[*mpc.BaseShard[G, S]])
 	for id := range ac.Shareholders().Iter() {
 		runner, err := gennaro.NewRunner(ctxs[id], group, ac, niCompiler, pcg.NewRandomised())
 		require.NoError(tb, err)
@@ -54,9 +55,9 @@ func DoGennaroRound2[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	return r2bo
 }
 
-func DoGennaroRound3[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r3bi map[sharing.ID]network.RoundMessages[*gennaro.Round2Broadcast[E, S], *gennaro.Participant[E, S]]) map[sharing.ID]*gennaro.DKGOutput[E, S] {
+func DoGennaroRound3[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S], r3bi map[sharing.ID]network.RoundMessages[*gennaro.Round2Broadcast[E, S], *gennaro.Participant[E, S]]) map[sharing.ID]*mpc.BaseShard[E, S] {
 	tb.Helper()
-	dkgOutput := make(map[sharing.ID]*gennaro.DKGOutput[E, S])
+	dkgOutput := make(map[sharing.ID]*mpc.BaseShard[E, S])
 	for id, p := range participants {
 		v, err := p.Round3(r3bi[id])
 		require.NoError(tb, err)
@@ -65,7 +66,7 @@ func DoGennaroRound3[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	return dkgOutput
 }
 
-func DoGennaroDKG[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S]) map[sharing.ID]*gennaro.DKGOutput[E, S] {
+func DoGennaroDKG[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, participants map[sharing.ID]*gennaro.Participant[E, S]) map[sharing.ID]*mpc.BaseShard[E, S] {
 	tb.Helper()
 	r1bo, r1uo := DoGennaroRound1(tb, participants)
 	r2bi, r2ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r1bo, r1uo)

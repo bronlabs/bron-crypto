@@ -264,3 +264,24 @@ func (*Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.S
 	correctedR := k256.NewCurve().ScalarBaseOp(correctedK)
 	return correctedR, correctedK, nil
 }
+
+// CorrectPartialNonceCommitmentParity adjusts a partial nonce commitment for BIP-340's even-y requirement.
+//
+// Similar to CorrectPartialNonceParity, but operates on the nonce commitment R_i instead of the scalar k_i.
+// If the aggregate nonce commitment R has odd y, each party must negate their partial nonce commitment R_i
+// to ensure the aggregate R has even y.
+func (*Variant) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment, partialNonceCommitment *k256.Point) (*k256.Point, error) {
+	if aggregatedNonceCommitment == nil || partialNonceCommitment == nil {
+		return nil, ErrInvalidArgument.WithMessage("aggregated nonce commitment or partial nonce commitment is nil")
+	}
+	correctedPartialNonceCommitment := partialNonceCommitment
+	y, err := aggregatedNonceCommitment.AffineY()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute y")
+	}
+	if y.IsOdd() {
+		// If the aggregate nonce commitment is odd, we need to negate the partial nonce commitment to ensure that the parity is correct.
+		correctedPartialNonceCommitment = correctedPartialNonceCommitment.Neg()
+	}
+	return correctedPartialNonceCommitment, nil
+}

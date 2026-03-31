@@ -11,7 +11,7 @@ import (
 type Shard[
 	PK signatures.PublicKey[PK],
 	S sharing.Share[S],
-	AC accessstructures.Linear,
+	AC accessstructures.Monotone,
 ] interface {
 	Share() S
 	PublicMaterial[PK, AC]
@@ -21,7 +21,7 @@ type Shard[
 // PublicMaterial represents the public material shared among participants.
 type PublicMaterial[
 	PK signatures.PublicKey[PK],
-	AC accessstructures.Linear,
+	AC accessstructures.Monotone,
 ] interface {
 	PublicKey() PK
 	AccessStructure() AC

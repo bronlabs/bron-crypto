@@ -5,7 +5,6 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/isn"
 )
 
@@ -15,7 +14,7 @@ func _[E algebra.GroupElement[E]]() {
 		_ sharing.LSSS[
 			*isn.Share[E], ds.Map[bitset.ImmutableBitSet[sharing.ID], E],
 			*isn.Secret[E], E,
-			*isn.DealerOutput[E], *cnf.CNF, isn.DealerFunc[E],
+			*isn.DealerOutput[E], isn.DealerFunc[E],
 		] = (*isn.Scheme[E])(nil)
 	)
 }

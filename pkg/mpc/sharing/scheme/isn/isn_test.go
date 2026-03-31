@@ -41,7 +41,7 @@ func TestNewFiniteScheme_WithDifferentAccessStructures(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		ac           accessstructures.Linear
+		ac           accessstructures.Monotone
 		qualifiedIDs []sharing.ID
 	}{
 		{name: "threshold", ac: thresholdAS, qualifiedIDs: []sharing.ID{1, 2}},

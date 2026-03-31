@@ -23,12 +23,6 @@ type Monotone interface {
 	IsQualified(ids ...ID) bool
 	// Shareholders returns the universe of shareholders for this access structure.
 	Shareholders() ds.Set[ID]
-}
-
-// Linear extends Monotone with the ability to enumerate maximal unqualified
-// sets, which is required for MSP induction.
-type Linear interface {
-	Monotone
 	// MaximalUnqualifiedSetsIter streams maximal unqualified sets of the access structure.
 	MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]]
 }
@@ -39,7 +33,7 @@ type ID = internal.ID
 // InducedMSP constructs a monotone span programme from a linear access
 // structure. It dispatches to the most efficient construction for known
 // concrete types and falls back to CNF conversion for unknown implementations.
-func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac Linear) (*msp.MSP[E], error) {
+func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac Monotone) (*msp.MSP[E], error) {
 	var out *msp.MSP[E]
 	var err error
 	switch ac := ac.(type) {
