@@ -16,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
 // Scheme implements Feldman's verifiable secret sharing over a Karchmer-Wigderson
@@ -228,6 +229,10 @@ func (s *Scheme[E, FE]) ConvertShareToAdditive(share *kw.Share[FE], quorum *unan
 		return nil, errs.Wrap(err).WithMessage("could not convert share to additive share")
 	}
 	return out, nil
+}
+
+func (s *Scheme[E, FE]) MSP() *msp.MSP[FE] {
+	return s.lsss.MSP()
 }
 
 // ConvertLiftedShareToAdditive converts a lifted share (group-element vector)

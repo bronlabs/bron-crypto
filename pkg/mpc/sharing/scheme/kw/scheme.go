@@ -229,6 +229,7 @@ func (s *Scheme[FE]) ConvertShareToAdditive(share *Share[FE], quorum *unanimity.
 	if !quorum.Shareholders().Contains(share.ID()) {
 		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the unanimity quorum", share.ID())
 	}
+
 	quorumIDs := quorum.Shareholders().List()
 	reconVec, err := s.msp.ReconstructionVector(quorumIDs...)
 	if err != nil {
