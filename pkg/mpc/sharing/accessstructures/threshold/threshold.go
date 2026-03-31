@@ -2,6 +2,7 @@ package threshold
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -117,6 +118,7 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Thr
 	}
 
 	shareHolders := ac.Shareholders().List()
+	slices.Sort(shareHolders) // Ensure consistent ordering of shareholders
 
 	// Build the n × t Vandermonde matrix where M[i,j] = α_i^j.
 	// Each α_i is the field element corresponding to shareholder ID i.
