@@ -37,7 +37,7 @@ func Lift[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m *Matrix[S],
 		return nil, errs.Wrap(err).WithMessage("failed to create module-valued matrix module")
 	}
 	elements := make([]E, m.m*m.n)
-	for i, c := range m.data() {
+	for i, c := range m.Data() {
 		elements[i] = basePoint.ScalarOp(c)
 	}
 	out, err := module.NewRowMajor(elements...)
@@ -65,8 +65,8 @@ func LeftAction[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](actor *
 	}
 
 	elements := make([]E, actor.m*x.cols())
-	aData := actor.data()
-	xData := x.data()
+	aData := actor.Data()
+	xData := x.Data()
 	for i := range actor.m {
 		for j := range x.cols() {
 			sum := baseModule.OpIdentity()
@@ -102,8 +102,8 @@ func RightAction[E algebra.ModuleElement[E, S], S algebra.RingElement[S]](x *Mod
 	}
 
 	elements := make([]E, x.rows()*actor.n)
-	xData := x.data()
-	aData := actor.data()
+	xData := x.Data()
+	aData := actor.Data()
 	for i := range x.rows() {
 		for j := range actor.n {
 			sum := baseModule.OpIdentity()
@@ -161,7 +161,7 @@ func (m *ModuleValuedMatrix[E, S]) cols() int {
 	return m.n
 }
 
-func (m *ModuleValuedMatrix[E, S]) data() []E {
+func (m *ModuleValuedMatrix[E, S]) Data() []E {
 	return m.v
 }
 

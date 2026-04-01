@@ -19,7 +19,7 @@ import (
 type matrixWrapper[S algebra.GroupElement[S]] interface {
 	init(rows, cols int)
 	idx(row, col int) int
-	data() []S
+	Data() []S
 	rows() int
 	cols() int
 }
@@ -86,7 +86,7 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) FromBytes(data []byte) (W, error) {
 	var matrix WT
 	W(&matrix).init(mm.rows, mm.cols)
 	elementSize := mm.baseStructure.ElementSize()
-	d := W(&matrix).data()
+	d := W(&matrix).Data()
 	for i := range mm.rows * mm.cols {
 		start := i * elementSize
 		end := start + elementSize
@@ -104,7 +104,7 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) FromBytes(data []byte) (W, error) {
 func (mm *MatrixGroupTrait[G, S, W, WT]) OpIdentity() W {
 	var matrix WT
 	W(&matrix).init(mm.rows, mm.cols)
-	d := W(&matrix).data()
+	d := W(&matrix).Data()
 	for i := range d {
 		d[i] = mm.baseStructure.OpIdentity()
 	}
@@ -125,7 +125,7 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) New(rows [][]S) (W, error) {
 	}
 	var matrix WT
 	W(&matrix).init(mm.rows, mm.cols)
-	d := W(&matrix).data()
+	d := W(&matrix).Data()
 	for i, row := range rows {
 		if len(row) != mm.cols {
 			return nil, ErrDimension.WithMessage("row %d has %d columns, expected %d", i, len(row), mm.cols)
@@ -144,7 +144,7 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) NewRowMajor(elements ...S) (W, error) {
 	}
 	var matrix WT
 	W(&matrix).init(mm.rows, mm.cols)
-	copy(W(&matrix).data(), elements)
+	copy(W(&matrix).Data(), elements)
 	return W(&matrix), nil
 }
 
@@ -212,7 +212,7 @@ func (mm *MatrixModuleTrait[R, S, W, WT, RectW, RectWT]) NewStandardUnit(i int) 
 	}
 	var matrix RectWT
 	RectW(&matrix).init(1, mm.cols)
-	d := RectW(&matrix).data()
+	d := RectW(&matrix).Data()
 	for j := range d {
 		d[j] = mm.baseStructure.Zero()
 	}
@@ -262,7 +262,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) GetRow(i int) (RectW,
 	}
 	var rowMatrix RectWT
 	RectW(&rowMatrix).init(1, m.n)
-	copy(RectW(&rowMatrix).data(), m.v[i*m.n:(i+1)*m.n])
+	copy(RectW(&rowMatrix).Data(), m.v[i*m.n:(i+1)*m.n])
 	return RectW(&rowMatrix), nil
 }
 
@@ -288,7 +288,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IterInRow(i int) iter
 		if err != nil {
 			return
 		}
-		for _, ri := range row.data() {
+		for _, ri := range row.Data() {
 			if !yield(ri.Clone()) {
 				return
 			}
@@ -304,7 +304,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) GetColumn(j int) (Rec
 	var colMatrix RectWT
 	RectW(&colMatrix).init(m.m, 1)
 	for i := range m.m {
-		RectW(&colMatrix).data()[i] = m.v[m.idx(i, j)]
+		RectW(&colMatrix).Data()[i] = m.v[m.idx(i, j)]
 	}
 	return RectW(&colMatrix), nil
 }
@@ -331,7 +331,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) IterInColumn(j int) i
 		if err != nil {
 			return
 		}
-		for _, ci := range column.data() {
+		for _, ci := range column.Data() {
 			if !yield(ci.Clone()) {
 				return
 			}
@@ -355,7 +355,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) OpAssign(other W) {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
 		panic(ErrDimension.WithMessage("cannot add: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
 	}
-	otherData := other.data()
+	otherData := other.Data()
 	for i := range m.v {
 		m.v[i] = m.v[i].Op(otherData[i])
 	}
@@ -417,8 +417,8 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Augment(other RectW) 
 	}
 	var out RectWT
 	RectW(&out).init(m.m, m.n+other.cols())
-	d := RectW(&out).data()
-	otherData := other.data()
+	d := RectW(&out).Data()
+	otherData := other.Data()
 	for i := range m.m {
 		copy(d[i*(m.n+other.cols()):i*(m.n+other.cols())+m.n], m.v[i*m.n:(i+1)*m.n])
 		copy(d[i*(m.n+other.cols())+m.n:(i+1)*(m.n+other.cols())], otherData[i*other.cols():(i+1)*other.cols()])
@@ -434,8 +434,8 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Stack(other RectW) (R
 	}
 	var out RectWT
 	RectW(&out).init(m.m+other.rows(), m.n)
-	d := RectW(&out).data()
-	otherData := other.data()
+	d := RectW(&out).Data()
+	otherData := other.Data()
 	copy(d[:m.m*m.n], m.v)
 	copy(d[m.m*m.n:], otherData)
 	return RectW(&out), nil
@@ -453,7 +453,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SubMatrixGivenRows(in
 	}
 	var out RectWT
 	RectW(&out).init(len(indices), m.n)
-	d := RectW(&out).data()
+	d := RectW(&out).Data()
 	for j, i := range indices {
 		copy(d[j*m.n:(j+1)*m.n], m.v[i*m.n:(i+1)*m.n])
 	}
@@ -467,7 +467,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) RowSlice(start, end i
 	}
 	var out RectWT
 	RectW(&out).init(end-start, m.n)
-	d := RectW(&out).data()
+	d := RectW(&out).Data()
 	copy(d, m.v[start*m.n:end*m.n])
 	return RectW(&out), nil
 }
@@ -484,7 +484,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SubMatrixGivenColumns
 	}
 	var out RectWT
 	RectW(&out).init(m.m, len(indices))
-	d := RectW(&out).data()
+	d := RectW(&out).Data()
 	for i := range m.m {
 		for j, col := range indices {
 			d[i*len(indices)+j] = m.v[m.idx(i, col)]
@@ -500,7 +500,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) ColumnSlice(start, en
 	}
 	var out RectWT
 	RectW(&out).init(m.m, end-start)
-	d := RectW(&out).data()
+	d := RectW(&out).Data()
 	for i := range m.m {
 		copy(d[i*(end-start):i*(end-start)+(end-start)], m.v[i*m.n+start:i*m.n+end])
 	}
@@ -549,7 +549,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SwapRow(i, j int) (W,
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Transpose() W {
 	var out WT
 	W(&out).init(m.n, m.m)
-	outData := W(&out).data()
+	outData := W(&out).Data()
 	for i := range m.m {
 		for j := range m.n {
 			outData[W(&out).idx(j, i)] = m.v[m.idx(i, j)]
@@ -565,7 +565,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Minor(row, col int) (
 	}
 	var minor WT
 	W(&minor).init(m.m-1, m.n-1)
-	minorData := W(&minor).data()
+	minorData := W(&minor).Data()
 	for i := range W(&minor).rows() {
 		for j := range W(&minor).cols() {
 			srcRow := i
@@ -587,7 +587,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Equal(other W) bool {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
 		return false
 	}
-	otherData := other.data()
+	otherData := other.Data()
 	for i := range m.v {
 		if !m.v[i].Equal(otherData[i]) {
 			return false
@@ -640,7 +640,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) String() string {
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Clone() W {
 	var cloned WT
 	W(&cloned).init(m.m, m.n)
-	copy(W(&cloned).data(), m.v)
+	copy(W(&cloned).Data(), m.v)
 	return W(&cloned)
 }
 
@@ -743,7 +743,7 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) clone() MatrixGroupEl
 		self: clonedSelf,
 		m:    m.m,
 		n:    m.n,
-		v:    W(clonedSelf).data(),
+		v:    W(clonedSelf).Data(),
 	}
 }
 
@@ -773,7 +773,7 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SubAssign(other W) {
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
 		panic(ErrDimension.WithMessage("cannot subtract: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols()))
 	}
-	otherData := other.data()
+	otherData := other.Data()
 	for i := range m.v {
 		m.v[i] = m.v[i].Sub(otherData[i])
 	}
@@ -825,7 +825,7 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) clone() MatrixTrait[S, W, WT, Rec
 			self: clonedSelf,
 			m:    m.m,
 			n:    m.n,
-			v:    W(clonedSelf).data(),
+			v:    W(clonedSelf).Data(),
 		},
 	}
 }
@@ -927,8 +927,8 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) TryMul(other W) (W, error) {
 	}
 	var out WT
 	W(&out).init(m.m, other.cols())
-	outData := W(&out).data()
-	otherData := other.data()
+	outData := W(&out).Data()
+	otherData := other.Data()
 	ring := m.scalarRing()
 	for i := range m.m {
 		for j := range other.cols() {
@@ -947,7 +947,7 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) HadamardProductAssign(other W) er
 	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
 		return ErrDimension.WithMessage("cannot compute Hadamard product: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols())
 	}
-	otherData := other.data()
+	otherData := other.Data()
 	for i := range m.v {
 		m.v[i] = m.v[i].Mul(otherData[i])
 	}

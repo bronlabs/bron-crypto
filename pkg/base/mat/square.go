@@ -97,7 +97,7 @@ func (m *SquareMatrix[S]) cols() int {
 	return m.n
 }
 
-func (m *SquareMatrix[S]) data() []S {
+func (m *SquareMatrix[S]) Data() []S {
 	return m.v
 }
 

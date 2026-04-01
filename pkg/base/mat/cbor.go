@@ -18,7 +18,7 @@ func (m *Matrix[S]) MarshalCBOR() ([]byte, error) {
 	dto := &matrixDTO[S]{
 		Rows: m.rows(),
 		Cols: m.cols(),
-		Data: m.data(),
+		Data: m.Data(),
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -40,7 +40,7 @@ func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
 	}
 	m.init(dto.Rows, dto.Cols)
-	copy(m.data(), dto.Data)
+	copy(m.Data(), dto.Data)
 	return nil
 }
 
@@ -55,7 +55,7 @@ func (m *ModuleValuedMatrix[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &moduleValuedMatrixDTO[E, S]{
 		Rows: m.rows(),
 		Cols: m.cols(),
-		Data: m.data(),
+		Data: m.Data(),
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -77,7 +77,7 @@ func (m *ModuleValuedMatrix[E, S]) UnmarshalCBOR(data []byte) error {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
 	}
 	m.init(dto.Rows, dto.Cols)
-	copy(m.data(), dto.Data)
+	copy(m.Data(), dto.Data)
 	return nil
 }
 
@@ -90,7 +90,7 @@ type squareMatrixDTO[S algebra.RingElement[S]] struct {
 func (m *SquareMatrix[S]) MarshalCBOR() ([]byte, error) {
 	dto := &squareMatrixDTO[S]{
 		Size: m.rows(),
-		Data: m.data(),
+		Data: m.Data(),
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -112,6 +112,6 @@ func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Size*dto.Size)
 	}
 	m.init(dto.Size, dto.Size)
-	copy(m.data(), dto.Data)
+	copy(m.Data(), dto.Data)
 	return nil
 }
