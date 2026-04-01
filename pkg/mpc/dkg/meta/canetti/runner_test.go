@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -20,7 +22,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHappyPathRunner(t *testing.T) {
@@ -33,6 +34,7 @@ func TestHappyPathRunner(t *testing.T) {
 		hierarchical.WithLevel(1, sharing.ID(1), sharing.ID(2)),
 		hierarchical.WithLevel(2, sharing.ID(3), sharing.ID(4)),
 	)
+	require.NoError(t, err)
 	testAccessStructures := []accessstructures.Monotone{thresholdAS, hierarchyAS}
 
 	for _, as := range testAccessStructures {

@@ -4,6 +4,8 @@ import (
 	"crypto/subtle"
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
@@ -11,12 +13,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/errs-go/errs"
 )
 
+// Round1 samples the local dealer contribution, commits to its opening
+// material, and returns the round 1 broadcast.
 func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 	if p.round != 1 {
-		return nil, ErrRound.WithMessage("actual=%d, expected=%d", 1, p.round)
+		return nil, ErrRound.WithMessage("actual=%d, expected=%d", p.round, 1)
 	}
 
 	dealerOutput, _, dealerFunc, err := p.sharingScheme.DealRandomAndRevealDealerFunc(p.prng)
@@ -71,9 +74,11 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 	return r1b, nil
 }
 
+// Round2 opens the sender's commitment and privately distributes dealer shares
+// to the other parties.
 func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]]) (*Round2Broadcast[G, S], network.OutgoingUnicasts[*Round2P2P[G, S], *Participant[G, S]], error) {
 	if p.round != 2 {
-		return nil, nil, ErrRound.WithMessage("actual=%d, expected=%d", 1, p.round)
+		return nil, nil, ErrRound.WithMessage("actual=%d, expected=%d", p.round, 2)
 	}
 	if err := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r1b); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid incoming messages")
@@ -102,9 +107,11 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 	return r2b, r2u.Freeze(), nil
 }
 
+// Round3 verifies incoming openings and shares, aggregates all dealer
+// contributions, and returns the local batch Schnorr response.
 func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S], *Participant[G, S]], r2u network.RoundMessages[*Round2P2P[G, S], *Participant[G, S]]) (*Round3Broadcast[G, S], error) {
 	if p.round != 3 {
-		return nil, ErrRound.WithMessage("actual=%d, expected=%d", 3, p.round)
+		return nil, ErrRound.WithMessage("actual=%d, expected=%d", p.round, 3)
 	}
 	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r2b); errB != nil {
 		return nil, errs.Wrap(errB).WithMessage("invalid incoming broadcast messages")
@@ -140,10 +147,10 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
 		}
 		if p.rhoLen != len(b.Message.Rho) {
-			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid rho")
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid rho")
 		}
 
-		subtle.XORBytes(p.state.rho[:], p.state.rho[:], b.Message.Rho[:])
+		subtle.XORBytes(p.state.rho, p.state.rho, b.Message.Rho)
 		p.state.verificationVector = p.state.verificationVector.Op(b.Message.X)
 		share = share.Op(u.Share)
 		p.state.msg[id] = b.Message
@@ -164,9 +171,11 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 	return r3b, nil
 }
 
+// Round4 verifies the other parties' proofs and returns the final aggregated
+// shard for the configured access structure.
 func (p *Participant[G, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[G, S], *Participant[G, S]]) (*mpc.BaseShard[G, S], error) {
 	if p.round != 4 {
-		return nil, ErrRound.WithMessage("actual=%d, expected=%d", 4, p.round)
+		return nil, ErrRound.WithMessage("actual=%d, expected=%d", p.round, 4)
 	}
 	if err := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r3b); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid incoming messages")

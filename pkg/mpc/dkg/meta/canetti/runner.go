@@ -3,13 +3,14 @@ package canetti
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -26,6 +27,8 @@ type runner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] s
 	p *Participant[G, S]
 }
 
+// NewRunner creates a network runner that executes all four protocol rounds and
+// returns the resulting base shard.
 func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, accessStructure accessstructures.Monotone, group algebra.PrimeGroup[G, S], prng io.Reader) (network.Runner[*mpc.BaseShard[G, S]], error) {
 	p, err := NewParticipant(ctx, accessStructure, group, prng)
 	if err != nil {
@@ -38,6 +41,7 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	return r, nil
 }
 
+// Run executes the protocol against the provided router.
 func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	// r1
 	r1bOut, err := r.p.Round1()

@@ -12,10 +12,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 )
 
+// Round1Broadcast carries the dealer's commitment digest for round 1.
 type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	V hash_comm.Commitment
 }
 
+// Validate checks whether the round 1 broadcast is well formed.
 func (m *Round1Broadcast[G, S]) Validate(*Participant[G, S], sharing.ID) error {
 	if m == nil {
 		return ErrVerificationFailed.WithMessage("nil message")
@@ -27,6 +29,8 @@ func (m *Round1Broadcast[G, S]) Validate(*Participant[G, S], sharing.ID) error {
 	return nil
 }
 
+// CommitmentMessage contains the dealer material opened in round 2 and later
+// used to derive the common challenge and verify the proof of knowledge.
 type CommitmentMessage[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	SessionID network.SID
 	SharingID sharing.ID
@@ -49,11 +53,14 @@ func (m *CommitmentMessage[G, S]) bytes() []byte {
 	return data
 }
 
+// Round2Broadcast opens the sender's round 1 commitment.
 type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	Message *CommitmentMessage[G, S]
 	U       hash_comm.Witness
 }
 
+// Validate checks whether the round 2 broadcast is well formed for the local
+// participant configuration.
 func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], senderID sharing.ID) error {
 	if m == nil || m.Message == nil || m.Message.X == nil || m.Message.Rho == nil || m.Message.A == nil {
 		return ErrVerificationFailed.WithMessage("nil argument")
@@ -78,10 +85,12 @@ func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], senderID sharing.
 	return nil
 }
 
+// Round2P2P carries the sender's private share for the receiver.
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	Share *kw.Share[S]
 }
 
+// Validate checks whether the round 2 unicast targets the local participant.
 func (m *Round2P2P[G, S]) Validate(p *Participant[G, S], _ sharing.ID) error {
 	if m == nil || m.Share == nil {
 		return ErrVerificationFailed.WithMessage("nil argument")
@@ -93,10 +102,12 @@ func (m *Round2P2P[G, S]) Validate(p *Participant[G, S], _ sharing.ID) error {
 	return nil
 }
 
+// Round3Broadcast carries the sender's batch Schnorr response.
 type Round3Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	Psi *batch_schnorr.Response[S]
 }
 
+// Validate checks whether the round 3 broadcast is well formed.
 func (m *Round3Broadcast[G, S]) Validate(*Participant[G, S], sharing.ID) error {
 	if m == nil || m.Psi == nil {
 		return ErrVerificationFailed.WithMessage("nil argument")
