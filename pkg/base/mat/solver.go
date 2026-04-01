@@ -59,9 +59,9 @@ func SolveLeft[S algebra.FiniteFieldElement[S]](m, row *Matrix[S]) (*Matrix[S], 
 	// Column j of aug = row j of M for j<m, column m = r^T.
 	var aug Matrix[S]
 	aug.init(m.n, m.m+1)
-	d := aug.data()
-	mData := m.data()
-	rData := row.data()
+	d := aug.Data()
+	mData := m.Data()
+	rData := row.Data()
 	for i := range m.n {
 		for j := range m.m {
 			d[aug.idx(i, j)] = mData[m.idx(j, i)]
@@ -97,7 +97,7 @@ func SolveLeft[S algebra.FiniteFieldElement[S]](m, row *Matrix[S]) (*Matrix[S], 
 func solveAugmented[S algebra.FiniteFieldElement[S]](field algebra.Field[S], aug matrixWrapper[S]) ([]S, error) {
 	rows, cols := aug.rows(), aug.cols()
 	numVars := cols - 1
-	d := aug.data()
+	d := aug.Data()
 
 	pivotCols := make([]int, 0, min(rows, numVars))
 	pivotRow := 0

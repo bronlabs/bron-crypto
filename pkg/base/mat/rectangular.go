@@ -58,7 +58,7 @@ func (m *Matrix[S]) cols() int {
 	return m.n
 }
 
-func (m *Matrix[S]) data() []S {
+func (m *Matrix[S]) Data() []S {
 	return m.v
 }
 
