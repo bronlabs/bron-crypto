@@ -1,6 +1,7 @@
 package canetti
 
 import (
+	"encoding/binary"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -8,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -28,7 +30,7 @@ type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	commitmentKey hash_comm.Key
 	group         algebra.PrimeGroup[G, S]
 	sharingScheme *feldman.Scheme[G, S]
-	pokScheme     *batch_schnorr.Protocol[G, S] // TODO: replace with batch schnorr
+	schScheme     *batch_schnorr.Protocol[G, S]
 	round         network.Round
 	prng          io.Reader
 	rhoLen        int
@@ -69,7 +71,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
 	}
-	pokScheme, err := batch_schnorr.NewProtocol(int(sharingScheme.MSP().D()), group, prng)
+	schScheme, err := batch_schnorr.NewProtocol(int(sharingScheme.MSP().D()), group, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create ZK scheme")
 	}
@@ -81,7 +83,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 		ctx:           ctx,
 		commitmentKey: commitmentKey,
 		sharingScheme: sharingScheme,
-		pokScheme:     pokScheme,
+		schScheme:     schScheme,
 		group:         group,
 		rhoLen:        rhoLen,
 		round:         1,
@@ -93,4 +95,61 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 // SharingID returns the sharing identifier of the local participant.
 func (p *Participant[G, S]) SharingID() sharing.ID {
 	return p.ctx.HolderID()
+}
+
+func (p *Participant[G, S]) commit(message base.BytesLike) (hash_comm.Commitment, hash_comm.Witness, error) {
+	messageBytes := message.Bytes()
+	commitmentScheme, err := hash_comm.NewScheme(p.commitmentKey)
+	if err != nil {
+		return hash_comm.Commitment{}, hash_comm.Witness{}, errs.Wrap(err).WithMessage("cannot create commitment scheme")
+	}
+	committer, err := commitmentScheme.Committer()
+	if err != nil {
+		return hash_comm.Commitment{}, hash_comm.Witness{}, errs.Wrap(err).WithMessage("cannot create committer")
+	}
+	commitment, witness, err := committer.Commit(messageBytes, p.prng)
+	if err != nil {
+		return hash_comm.Commitment{}, hash_comm.Witness{}, errs.Wrap(err).WithMessage("cannot commit")
+	}
+
+	return commitment, witness, nil
+}
+
+func (p *Participant[G, S]) verify(message base.BytesLike, commitment hash_comm.Commitment, witness hash_comm.Witness) error {
+	messageBytes := message.Bytes()
+	commitmentScheme, err := hash_comm.NewScheme(p.commitmentKey)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot create commitment scheme")
+	}
+	verifier, err := commitmentScheme.Verifier()
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot create verifier")
+	}
+	if err := verifier.Verify(commitment, messageBytes, witness); err != nil {
+		return errs.Wrap(err).WithMessage("invalid commitment")
+	}
+
+	return nil
+}
+
+type aux struct {
+	sessionID network.SID
+	sharingID sharing.ID
+	rho       []byte
+}
+
+func newAux(sessionID network.SID, sharingID sharing.ID, rho []byte) *aux {
+	return &aux{
+		sessionID: sessionID,
+		sharingID: sharingID,
+		rho:       rho,
+	}
+}
+
+func (aux *aux) Bytes() []byte {
+	var out []byte
+	out = append(out, aux.sessionID[:]...)
+	out = binary.LittleEndian.AppendUint64(out, uint64(aux.sharingID))
+	out = sliceutils.AppendLengthPrefixed(out, aux.rho)
+	return out
 }

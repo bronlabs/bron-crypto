@@ -3,6 +3,7 @@ package canetti
 import (
 	"crypto/subtle"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -33,9 +34,9 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 		return nil, errs.Wrap(err).WithMessage("cannot sample rho")
 	}
 
-	pokStatement := batch_schnorr.NewStatement(p.group.Generator(), dealerOutput.VerificationMaterial().Value().Data()...)
-	pokWitness := batch_schnorr.NewWitness(dealerFunc.RandomColumn().Data()...)
-	bigA, tau, err := p.pokScheme.ComputeProverCommitment(pokStatement, pokWitness)
+	schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(dealerOutput.VerificationMaterial().Value().Iter())...)
+	schWitness := batch_schnorr.NewWitness(slices.Collect(dealerFunc.RandomColumn().Iter())...)
+	bigA, tau, err := zkCom(p.schScheme, schStatement, schWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("prove commitment failed")
 	}
@@ -47,15 +48,8 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 		X:         dealerOutput.VerificationMaterial(),
 		A:         bigA,
 	}
-	commitmentScheme, err := hash_comm.NewScheme(p.commitmentKey)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create committer")
-	}
-	committer, err := commitmentScheme.Committer()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create committer")
-	}
-	bigV, u, err := committer.Commit(msg.bytes(), p.prng)
+
+	bigV, u, err := p.commit(msg)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
@@ -120,21 +114,16 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		return nil, errs.Wrap(errU).WithMessage("invalid incoming unicast messages")
 	}
 
-	commitmentScheme, err := hash_comm.NewScheme(p.commitmentKey)
+	share, err := p.state.dealerFunc.ShareOf(p.ctx.HolderID())
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create committer")
-	}
-	verifier, err := commitmentScheme.Verifier()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create committer")
+		return nil, errs.Wrap(err).WithMessage("cannot get share")
 	}
 
-	share, _ := p.state.dealerFunc.ShareOf(p.ctx.HolderID())
 	for id := range p.ctx.OtherPartiesOrdered() {
 		b, _ := r2b.Get(id)
 		u, _ := r2u.Get(id)
 
-		if err := verifier.Verify(p.state.vs[id], b.Message.bytes(), b.U); err != nil {
+		if err := p.verify(b.Message, p.state.vs[id], b.U); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
 		if b.Message.SessionID != p.ctx.SessionID() {
@@ -156,9 +145,10 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		p.state.msg[id] = b.Message
 	}
 
-	statement := batch_schnorr.NewStatement(p.group.Generator(), p.state.msg[p.ctx.HolderID()].X.Value().Data()...)
-	witness := batch_schnorr.NewWitness(p.state.dealerFunc.RandomColumn().Data()...)
-	psi, err := p.pokScheme.ComputeProverResponse(statement, witness, p.state.msg[p.ctx.HolderID()].A, p.state.tau, p.state.rho)
+	schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(p.state.msg[p.ctx.HolderID()].X.Value().Iter())...)
+	schWitness := batch_schnorr.NewWitness(slices.Collect(p.state.dealerFunc.RandomColumn().Iter())...)
+	schAux := newAux(p.ctx.SessionID(), p.ctx.HolderID(), p.state.rho)
+	psi, err := zkProve(p.schScheme, schStatement, schWitness, p.state.msg[p.ctx.HolderID()].A, p.state.tau, schAux)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove")
 	}
@@ -183,9 +173,9 @@ func (p *Participant[G, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[G,
 
 	for id := range p.ctx.OtherPartiesOrdered() {
 		b, _ := r3b.Get(id)
-		statement := batch_schnorr.NewStatement(p.group.Generator(), p.state.msg[id].X.Value().Data()...)
-		commitment := p.state.msg[id].A
-		if err := p.pokScheme.Verify(statement, commitment, p.state.rho, b.Psi); err != nil {
+		schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(p.state.msg[id].X.Value().Iter())...)
+		schAux := newAux(p.ctx.SessionID(), id, p.state.rho)
+		if err := zkVrfy(p.schScheme, schStatement, schAux, b.Psi); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid proof")
 		}
 	}

@@ -2,6 +2,7 @@ package canetti
 
 import (
 	"encoding/binary"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
@@ -39,14 +40,14 @@ type CommitmentMessage[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEl
 	A         *batch_schnorr.Commitment[G, S]
 }
 
-func (m *CommitmentMessage[G, S]) bytes() []byte {
+func (m *CommitmentMessage[G, S]) Bytes() []byte {
 	var data []byte
 	data = append(data, m.SessionID[:]...)
 	data = binary.LittleEndian.AppendUint64(data, uint64(m.SharingID))
 	data = binary.LittleEndian.AppendUint64(data, uint64(len(m.Rho)))
 	data = append(data, m.Rho...)
-	data = binary.LittleEndian.AppendUint64(data, uint64(len(m.X.Value().Data())))
-	for _, x := range m.X.Value().Data() {
+	data = binary.LittleEndian.AppendUint64(data, uint64(len(slices.Collect(m.X.Value().Iter()))))
+	for x := range m.X.Value().Iter() {
 		data = append(data, x.Bytes()...)
 	}
 	data = append(data, m.A.Bytes()...)
@@ -104,7 +105,7 @@ func (m *Round2P2P[G, S]) Validate(p *Participant[G, S], _ sharing.ID) error {
 
 // Round3Broadcast carries the sender's batch Schnorr response.
 type Round3Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	Psi *batch_schnorr.Response[S]
+	Psi *ZKResponse[*batch_schnorr.Commitment[G, S], *batch_schnorr.Response[S]]
 }
 
 // Validate checks whether the round 3 broadcast is well formed.
