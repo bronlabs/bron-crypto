@@ -28,6 +28,9 @@ func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	if !ctx.Quorum().IsSubSet(as.Shareholders()) {
 		return nil, ErrInvalidArgument.WithMessage("access structure doesn't match context")
 	}
+	if !as.IsQualified(ctx.Quorum().List()...) {
+		return nil, ErrInvalidArgument.WithMessage("recovery quorum is not qualified for the access structure")
+	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	scheme, err := feldman.NewScheme(group.Generator(), as)

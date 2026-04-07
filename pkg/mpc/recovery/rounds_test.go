@@ -81,3 +81,20 @@ func Test_HappyPath(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, o.Share().Equal(lostShare))
 }
+
+func TestNewMislayer_RejectsUnqualifiedRecoveryQuorum(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	group := k256.NewCurve()
+	as, err := threshold.NewThresholdAccessStructure(3, sharing.NewOrdinalShareholderSet(4))
+	require.NoError(t, err)
+
+	quorum := hashset.NewComparable[sharing.ID](2, 3).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	mislayer, err := recovery.NewMislayer(ctxs[3], as, group)
+	require.Error(t, err)
+	require.ErrorIs(t, err, recovery.ErrInvalidArgument)
+	require.Nil(t, mislayer)
+}
