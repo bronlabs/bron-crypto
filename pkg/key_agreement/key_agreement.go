@@ -116,6 +116,9 @@ func (k *SharedKey) Equal(other *SharedKey) bool {
 	if k == nil || other == nil {
 		return k == other
 	}
+	if len(k.v) != len(other.v) {
+		return false
+	}
 	return ct.SliceEqual(k.v, other.v) == ct.True && k.t == other.t
 }
 
