@@ -36,6 +36,9 @@ func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) == 0 {
 		return ErrFailed.WithMessage("empty data")
 	}
+	if dto.Rows <= 0 || dto.Cols <= 0 {
+		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
+	}
 	if len(dto.Data) != dto.Rows*dto.Cols {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
 	}
@@ -73,6 +76,9 @@ func (m *ModuleValuedMatrix[E, S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) == 0 {
 		return ErrFailed.WithMessage("empty data")
 	}
+	if dto.Rows <= 0 || dto.Cols <= 0 {
+		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
+	}
 	if len(dto.Data) != dto.Rows*dto.Cols {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
 	}
@@ -107,6 +113,9 @@ func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 	}
 	if len(dto.Data) == 0 {
 		return ErrFailed.WithMessage("empty data")
+	}
+	if dto.Size <= 0 {
+		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Size, dto.Size)
 	}
 	if len(dto.Data) != dto.Size*dto.Size {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Size*dto.Size)

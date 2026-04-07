@@ -521,6 +521,9 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SwapColumnAssign(i, j
 
 // SwapColumn returns a new matrix with columns i and j swapped.
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SwapColumn(i, j int) (W, error) {
+	if i < 0 || i >= m.n || j < 0 || j >= m.n {
+		return nil, ErrDimension.WithMessage("column index out of bounds: i=%d, j=%d for matrix with %d columns", i, j, m.n)
+	}
 	c := m.clone()
 	c.SwapColumnAssign(i, j)
 	return c.self, nil
@@ -540,6 +543,9 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SwapRowAssign(i, j in
 
 // SwapRow returns a new matrix with rows i and j swapped.
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) SwapRow(i, j int) (W, error) {
+	if i < 0 || i >= m.m || j < 0 || j >= m.m {
+		return nil, ErrDimension.WithMessage("row index out of bounds: i=%d, j=%d for matrix with %d rows", i, j, m.m)
+	}
 	c := m.clone()
 	c.SwapRowAssign(i, j)
 	return c.self, nil
@@ -562,6 +568,9 @@ func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Transpose() W {
 func (m *MatrixGroupElementTrait[S, W, WT, RectW, RectWT]) Minor(row, col int) (W, error) {
 	if row < 0 || row >= m.m || col < 0 || col >= m.n {
 		return nil, ErrDimension.WithMessage("index out of bounds: row %d, col %d for matrix of dimensions %dx%d", row, col, m.m, m.n)
+	}
+	if m.m <= 1 || m.n <= 1 {
+		return nil, ErrDimension.WithMessage("minor is undefined for matrix of dimensions %dx%d", m.m, m.n)
 	}
 	var minor WT
 	W(&minor).init(m.m-1, m.n-1)
@@ -781,6 +790,9 @@ func (m *MatrixTrait[S, W, WT, RectW, RectWT]) SubAssign(other W) {
 
 // TrySub returns m - other. The error return exists for interface compatibility.
 func (m *MatrixTrait[S, W, WT, RectW, RectWT]) TrySub(other W) (W, error) {
+	if m.self.rows() != other.rows() || m.self.cols() != other.cols() {
+		return nil, ErrDimension.WithMessage("cannot subtract: dimensions of first matrix (%dx%d) do not match dimensions of second matrix (%dx%d)", m.m, m.n, other.rows(), other.cols())
+	}
 	return m.Sub(other), nil
 }
 
