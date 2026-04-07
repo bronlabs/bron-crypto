@@ -70,3 +70,54 @@ func Test_HappyPath(t *testing.T) {
 		require.True(t, bytes.Equal(aliceBytes, bobBytes))
 	})
 }
+
+func setupRound3Message(t *testing.T) (*rvole_bbot.Bob[*k256.Point, *k256.Scalar], *rvole_bbot.Round3P2P[*k256.Point, *k256.Scalar]) {
+	t.Helper()
+	prng := pcg.NewRandomised()
+	curve := k256.NewCurve()
+	suite, err := rvole_bbot.NewSuite(8, curve)
+	require.NoError(t, err)
+
+	const aliceID = 1
+	const bobID = 2
+	quorum := hashset.NewComparable[sharing.ID](aliceID, bobID).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	alice, err := rvole_bbot.NewAlice(ctxs[aliceID], suite, prng)
+	require.NoError(t, err)
+	bob, err := rvole_bbot.NewBob(ctxs[2], suite, prng)
+	require.NoError(t, err)
+
+	r1, err := alice.Round1()
+	require.NoError(t, err)
+	r2, _, err := bob.Round2(r1)
+	require.NoError(t, err)
+	a := make([]*k256.Scalar, 8)
+	for i := range a {
+		a[i], err = k256.NewScalarField().Random(prng)
+		require.NoError(t, err)
+	}
+	r3, _, err := alice.Round3(r2, a)
+	require.NoError(t, err)
+
+	return bob, r3
+}
+
+func TestRound4RejectsNilATildeEntry(t *testing.T) {
+	t.Parallel()
+
+	bob, msg := setupRound3Message(t)
+	msg.ATilde[0][0] = nil
+
+	_, err := bob.Round4(msg)
+	require.Error(t, err)
+}
+
+func TestRound4RejectsNilEtaEntry(t *testing.T) {
+	t.Parallel()
+
+	bob, msg := setupRound3Message(t)
+	msg.Eta[0] = nil
+
+	_, err := bob.Round4(msg)
+	require.Error(t, err)
+}
