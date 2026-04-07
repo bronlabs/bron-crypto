@@ -18,6 +18,9 @@ const (
 type Base58 string
 
 func (b Base58) Equal(other Base58) bool {
+	if len(b) != len(other) {
+		return false
+	}
 	return ct.SliceEqual([]byte(b), []byte(other)) == 1
 }
 
@@ -40,6 +43,9 @@ func init() { //nolint:gochecknoinits // initialises base58 decoding table
 }
 
 func Encode(data []byte) Base58 {
+	if len(data) == 0 {
+		return ""
+	}
 	x, err := num.N().FromBytes(data)
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("failed to convert bytes to Nat"))
