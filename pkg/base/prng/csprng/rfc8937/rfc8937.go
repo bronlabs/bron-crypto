@@ -26,6 +26,12 @@ type WrappedReader struct {
 }
 
 func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceID []byte) (*WrappedReader, error) {
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("wrapped reader is nil")
+	}
+	if signer == nil {
+		return nil, ErrInvalidArgument.WithMessage("signer is nil")
+	}
 	if !signer.IsDeterministic() {
 		return nil, ErrSignerDeterminism.WithMessage("signer must be deterministic")
 	}
@@ -69,4 +75,5 @@ func (r *WrappedReader) Read(p []byte) (n int, err error) {
 
 var (
 	ErrSignerDeterminism = errs.New("signer must be deterministic")
+	ErrInvalidArgument   = errs.New("invalid argument")
 )
