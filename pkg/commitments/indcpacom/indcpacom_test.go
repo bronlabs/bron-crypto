@@ -350,6 +350,20 @@ func TestReRandomizeNilInputErrors(t *testing.T) {
 		_, err := commitment.ReRandomiseWithWitness(key, nil)
 		require.Error(t, err)
 	})
+
+	t.Run("re-randomise with nil receiver", func(t *testing.T) {
+		t.Parallel()
+		var nilCommitment *indcpacom.Commitment[*paillier.Ciphertext, *paillier.Nonce, *paillier.PublicKey]
+		_, _, err := nilCommitment.ReRandomise(key, pcg.NewRandomised())
+		require.Error(t, err)
+	})
+
+	t.Run("re-randomise with witness nil receiver", func(t *testing.T) {
+		t.Parallel()
+		var nilCommitment *indcpacom.Commitment[*paillier.Ciphertext, *paillier.Nonce, *paillier.PublicKey]
+		_, err := nilCommitment.ReRandomiseWithWitness(key, witness)
+		require.Error(t, err)
+	})
 }
 
 func TestSchemeName(t *testing.T) {

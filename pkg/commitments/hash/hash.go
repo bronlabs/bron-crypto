@@ -157,6 +157,9 @@ func (c *Committer) CommitWithWitness(message Message, witness Witness) (commitm
 
 // Commit samples fresh witness randomness and computes a commitment to the message.
 func (c *Committer) Commit(message Message, prng io.Reader) (commitment Commitment, witness Witness, err error) {
+	if prng == nil {
+		return commitment, witness, ErrInvalidArgument.WithMessage("prng cannot be nil")
+	}
 	if _, err = io.ReadFull(prng, witness[:]); err != nil {
 		return commitment, witness, errs.Wrap(err).WithMessage("cannot sample witness")
 	}

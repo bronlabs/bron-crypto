@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // CommitterOption is a functional option for configuring committers.
@@ -27,11 +28,14 @@ func (c *Committer[E, S]) Commit(message *Message[S], prng io.Reader) (*Commitme
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](c.key.h.Structure())
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
-	wv, err := field.Random(prng)
+	wv, err := algebrautils.RandomNonIdentity(field, prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random witness")
 	}
-	witness := &Witness[S]{v: wv}
+	witness, err := NewWitness(wv)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot construct witness")
+	}
 	com, err := c.CommitWithWitness(message, witness)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot commit with witness")
