@@ -8,10 +8,15 @@ import (
 
 // BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
+	// The compiler currently only optimises this form.
+	// See issue 6011.
+	var i T
 	if b {
-		return 1
+		i = 1
+	} else {
+		i = 0
 	}
-	return 0
+	return i
 }
 
 // IsNil returns true if the given value is nil.

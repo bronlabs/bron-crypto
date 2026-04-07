@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// NewShard creates a threshold Schnorr shard from DKG output.
+// NewShard creates a DKLs23 shard from the base shard.
 func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S]) (*dkls23.Shard[P, B, S], error) {
 	shard, err := dkls23.NewShard(baseShard)
 	if err != nil {
