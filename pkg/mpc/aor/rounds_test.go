@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/aor"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/aor/testutils"
@@ -69,4 +70,35 @@ func Test_HappyPath(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestRound2ReturnsErrorOnMalformedBroadcast(t *testing.T) {
+	t.Parallel()
+
+	const total = 4
+	const sampleLength = 64
+
+	prng := pcg.NewRandomised()
+	quorum := ntu.MakeRandomQuorum(t, prng, total)
+	tapes := ttu.MakeRandomTapes(t, prng, quorum)
+	participants := slices.Collect(maps.Values(tu.MakeAgreeOnRandomParticipants(t, quorum, tapes, sampleLength)))
+
+	r1Out := make(map[sharing.ID]*aor.Round1Broadcast)
+	var err error
+	for _, p := range participants {
+		r1Out[p.SharingID()], err = p.Round1()
+		require.NoError(t, err)
+	}
+
+	r2In := ntu.MapBroadcastO2I(t, participants, r1Out)
+	receiver := participants[0]
+	sender := participants[1].SharingID()
+	corrupted := hashmap.NewComparable[sharing.ID, *aor.Round1Broadcast]()
+	for id, msg := range r2In[receiver.SharingID()].Iter() {
+		corrupted.Put(id, msg)
+	}
+	corrupted.Put(sender, &aor.Round1Broadcast{})
+
+	_, err = receiver.Round2(corrupted.Freeze())
+	require.Error(t, err)
 }
