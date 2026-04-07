@@ -3,7 +3,6 @@ package gennaro
 import (
 	"fmt"
 	"io"
-	"maps"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
@@ -55,11 +54,7 @@ func (p *Participant[E, S]) SharingID() sharing.ID {
 }
 
 func (p *Participant[E, S]) MSP() *msp.MSP[S] {
-	cloned, err := msp.NewMSP(p.state.lsss.MSP().Matrix().Clone(), maps.Collect(p.state.lsss.MSP().RowsToHolders().Iter()))
-	if err != nil {
-		panic(err)
-	}
-	return cloned
+	return p.state.lsss.MSP().Clone()
 }
 
 func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
