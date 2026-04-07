@@ -20,8 +20,8 @@ func TestChoice(t *testing.T) {
 		{"Not(1)", ct.One, ct.Zero},
 		{"Not(False)", ct.False, ct.True},
 		{"Not(True)", ct.True, ct.False},
-		{"Not(2) normalizes", ct.Choice(2), ct.One},
-		{"Not(3) normalizes", ct.Choice(3), ct.Zero},
+		{"Not(2) normalises", ct.Choice(2), ct.One},
+		{"Not(3) normalises", ct.Choice(3), ct.Zero},
 	}
 
 	for _, tt := range tests {

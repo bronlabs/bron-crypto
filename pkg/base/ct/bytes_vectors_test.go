@@ -53,17 +53,17 @@ type testVectors struct {
 func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(dst, x, y []byte) int) {
 	t.Helper()
 
-		t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
-			t.Parallel()
-			for _, v := range vectors {
-				x := []byte(v.X)
-				y := []byte(v.Y)
-				if len(x) != len(y) {
-					continue
-				}
-				expectedZ := []byte(v.Z)
+	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
+		t.Parallel()
+		for _, v := range vectors {
+			x := []byte(v.X)
+			y := []byte(v.Y)
+			if len(x) != len(y) {
+				continue
+			}
+			expectedZ := []byte(v.Z)
 
-				actualZ := make([]byte, len(expectedZ))
+			actualZ := make([]byte, len(expectedZ))
 			op(actualZ, x, y)
 
 			require.Equal(t, expectedZ, actualZ)

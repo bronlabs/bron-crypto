@@ -1,6 +1,7 @@
 package bls12381_test
 
 import (
+	"encoding"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -87,3 +88,58 @@ func Test_G2PointCBORRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, deserialized.Equal(e))
 }
+
+func Test_G2BaseFieldElementTraitBehaviour(t *testing.T) {
+	t.Parallel()
+
+	f := bls12381.NewG2BaseField()
+	zero := f.Zero()
+	one := f.One()
+
+	require.True(t, zero.IsZero())
+	require.False(t, zero.IsOne())
+	require.True(t, one.IsOne())
+	require.False(t, one.IsZero())
+	require.True(t, one.Double().Equal(one.Add(one)))
+
+	x, err := f.Hash([]byte("clone-me"))
+	require.NoError(t, err)
+	clone := x.Clone()
+	require.True(t, clone.Equal(x))
+	require.False(t, clone.IsZero())
+}
+
+func Test_GtBinaryRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	gt := bls12381.NewGt()
+	one := gt.One()
+
+	require.Equal(t, len(one.Bytes()), gt.ElementSize())
+
+	decoded, err := gt.FromBytes(one.Bytes())
+	require.NoError(t, err)
+	require.True(t, decoded.Equal(one))
+
+	data, err := one.MarshalBinary()
+	require.NoError(t, err)
+	require.Len(t, data, gt.ElementSize())
+
+	var unmarshaled bls12381.GtElement
+	err = unmarshaled.UnmarshalBinary(data)
+	require.NoError(t, err)
+	require.True(t, unmarshaled.Equal(one))
+}
+
+func Test_G2BaseFieldOrder(t *testing.T) {
+	t.Parallel()
+
+	fpOrder := bls12381.NewG1BaseField().Order()
+	expected := fpOrder.Mul(fpOrder)
+	require.Equal(t, expected.String(), bls12381.NewG2BaseField().Order().String())
+}
+
+var (
+	_ encoding.BinaryMarshaler   = (*bls12381.GtElement)(nil)
+	_ encoding.BinaryUnmarshaler = (*bls12381.GtElement)(nil)
+)

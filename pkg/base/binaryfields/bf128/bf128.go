@@ -26,7 +26,6 @@ const (
 
 	// FieldElementLimbs is the number of uint64 limbs used to represent a field element internally.
 	FieldElementLimbs = 2
-
 )
 
 var (
