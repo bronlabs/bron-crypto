@@ -2,6 +2,7 @@
 package hierarchical
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,18 @@ func TestNewHierarchicalConjunctiveThresholdAccessStructure(t *testing.T) {
 		h, err := NewHierarchicalConjunctiveThresholdAccessStructure()
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrValue)
+		require.Nil(t, h)
+	})
+
+	t.Run("nil level", func(t *testing.T) {
+		t.Parallel()
+
+		h, err := NewHierarchicalConjunctiveThresholdAccessStructure(
+			WithLevel(1, 1, 2),
+			nil,
+		)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrIsNil)
 		require.Nil(t, h)
 	})
 
@@ -143,4 +156,36 @@ func TestHierarchicalConjunctiveThresholdShareholders(t *testing.T) {
 		WithLevel(3, 3, 4, 4),
 	)
 	require.Error(t, err)
+}
+
+func TestHierarchicalConjunctiveThresholdLevelsReturnsSliceCopy(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHierarchicalConjunctiveThresholdAccessStructure(
+		WithLevel(1, 1, 2),
+		WithLevel(2, 3, 4),
+	)
+	require.NoError(t, err)
+
+	levels := h.Levels()
+	levels[0] = WithLevel(99, 99)
+
+	require.Equal(t, 1, h.Levels()[0].Threshold())
+	require.True(t, slices.Equal(h.Levels()[0].Shareholders().List(), []ID{1, 2}) || slices.Equal(h.Levels()[0].Shareholders().List(), []ID{2, 1}))
+}
+
+func TestHierarchicalConjunctiveThresholdMaximalUnqualifiedSetsIter(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHierarchicalConjunctiveThresholdAccessStructure(
+		WithLevel(1, 1, 2),
+		WithLevel(2, 3, 4),
+	)
+	require.NoError(t, err)
+
+	got := slices.Collect(h.MaximalUnqualifiedSetsIter())
+	require.Len(t, got, 3)
+	require.Contains(t, got, hashset.NewComparable[ID](1).Freeze())
+	require.Contains(t, got, hashset.NewComparable[ID](2).Freeze())
+	require.Contains(t, got, hashset.NewComparable[ID](3, 4).Freeze())
 }

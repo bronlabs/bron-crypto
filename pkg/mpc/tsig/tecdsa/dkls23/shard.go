@@ -39,7 +39,13 @@ func (a *AuxiliaryInfo) OTReceiverSeeds() ds.Map[sharing.ID, *vsot.ReceiverOutpu
 
 // Equal reports whether the value equals other.
 func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
+	if a == nil || rhs == nil {
+		return a == rhs
+	}
 	if a.otSenderSeeds.Size() != rhs.otSenderSeeds.Size() {
+		return false
+	}
+	if a.otReceiverSeeds.Size() != rhs.otReceiverSeeds.Size() {
 		return false
 	}
 	for id, l := range a.otSenderSeeds.Iter() {
@@ -59,6 +65,28 @@ func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
 					return false
 				}
 				if !bytes.Equal(l.Messages[xi][1][ell], r.Messages[xi][1][ell]) {
+					return false
+				}
+			}
+		}
+	}
+	for id, l := range a.otReceiverSeeds.Iter() {
+		r, ok := rhs.otReceiverSeeds.Get(id)
+		if !ok {
+			return false
+		}
+		if l.InferredXi() != r.InferredXi() {
+			return false
+		}
+		if l.InferredL() != r.InferredL() {
+			return false
+		}
+		if !bytes.Equal(l.Choices, r.Choices) {
+			return false
+		}
+		for xi := range l.InferredXi() {
+			for ell := range l.InferredL() {
+				if !bytes.Equal(l.Messages[xi][ell], r.Messages[xi][ell]) {
 					return false
 				}
 			}

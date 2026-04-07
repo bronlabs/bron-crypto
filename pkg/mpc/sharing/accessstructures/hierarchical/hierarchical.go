@@ -52,6 +52,9 @@ func NewHierarchicalConjunctiveThresholdAccessStructure(levels ...*ThresholdLeve
 	cumulativeParties := hashset.NewComparable[ID]()
 	currentThreshold := 0
 	for _, l := range levels {
+		if l == nil {
+			return nil, ErrIsNil.WithMessage("level cannot be nil")
+		}
 		parties := hashset.NewComparable(l.parties...)
 		if parties.Contains(0) {
 			return nil, ErrValue.WithMessage("parties cannot contain shareholder ID 0")
@@ -79,7 +82,7 @@ func NewHierarchicalConjunctiveThresholdAccessStructure(levels ...*ThresholdLeve
 
 // Levels returns levels in policy evaluation order.
 func (h *HierarchicalConjunctiveThreshold) Levels() []*ThresholdLevel {
-	return h.levels
+	return slices.Clone(h.levels)
 }
 
 func (h *HierarchicalConjunctiveThreshold) Thresholds() []int {
@@ -110,8 +113,44 @@ func (h *HierarchicalConjunctiveThreshold) Shareholders() ds.Set[ID] {
 }
 
 // MaximalUnqualifiedSetsIter streams all maximal unqualified sets.
-func (*HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
-	panic("not implemented")
+func (h *HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
+	if h == nil {
+		return slices.Values([]ds.Set[ID]{})
+	}
+	shareholders := h.Shareholders().List()
+	slices.Sort(shareholders)
+
+	maximalUnqualified := make([]ds.Set[ID], 0)
+	subset := make([]ID, 0, len(shareholders))
+	var enumerate func(int)
+	enumerate = func(i int) {
+		if i == len(shareholders) {
+			if h.IsQualified(subset...) {
+				return
+			}
+			candidate := hashset.NewComparable(subset...).Freeze()
+			for j := 0; j < len(maximalUnqualified); {
+				switch {
+				case candidate.IsSubSet(maximalUnqualified[j]):
+					return
+				case maximalUnqualified[j].IsSubSet(candidate):
+					maximalUnqualified = append(maximalUnqualified[:j], maximalUnqualified[j+1:]...)
+				default:
+					j++
+				}
+			}
+			maximalUnqualified = append(maximalUnqualified, candidate)
+			return
+		}
+
+		enumerate(i + 1)
+		subset = append(subset, shareholders[i])
+		enumerate(i + 1)
+		subset = subset[:len(subset)-1]
+	}
+	enumerate(0)
+
+	return slices.Values(maximalUnqualified)
 }
 
 func (h *HierarchicalConjunctiveThreshold) Rank(id ID) (int, error) {
