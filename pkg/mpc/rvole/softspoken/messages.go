@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
@@ -47,7 +48,10 @@ func (r2 *Round2P2P[P, B, S]) Validate(bob *Bob[P, B, S], _ sharing.ID) error {
 			return ErrValidation.WithMessage("invalid message")
 		}
 		for _, aa := range a {
-			if aa.IsZero() {
+			if utils.IsNil(aa) {
+				return ErrValidation.WithMessage("invalid message")
+			}
+			if aa.Structure().Name() != bob.suite.field.Name() {
 				return ErrValidation.WithMessage("invalid message")
 			}
 		}
@@ -57,7 +61,10 @@ func (r2 *Round2P2P[P, B, S]) Validate(bob *Bob[P, B, S], _ sharing.ID) error {
 		return ErrValidation.WithMessage("invalid message")
 	}
 	for _, e := range r2.Eta {
-		if e.IsZero() {
+		if utils.IsNil(e) {
+			return ErrValidation.WithMessage("invalid message")
+		}
+		if e.Structure().Name() != bob.suite.field.Name() {
 			return ErrValidation.WithMessage("invalid message")
 		}
 	}
