@@ -2,6 +2,7 @@ package serde
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -15,11 +16,15 @@ const (
 )
 
 var (
+	mu sync.RWMutex
+
 	enc cbor.EncMode
 	dec cbor.DecMode
 
 	// Global TagSet for type registration.
 	tags = cbor.NewTagSet()
+
+	registeredTags = map[reflect.Type]uint64{}
 )
 
 // Register registers the concrete type parameter T with a fixed CBOR tag.
@@ -29,13 +34,16 @@ func Register[T any](tag uint64) {
 	if typ == nil {
 		panic("serde.RegisterWithTag: nil type for generic parameter T")
 	}
+	mu.Lock()
+	defer mu.Unlock()
 	if err := tags.Add(
-		cbor.TagOptions{DecTag: cbor.DecTagOptional, EncTag: cbor.EncTagRequired},
+		cbor.TagOptions{DecTag: cbor.DecTagRequired, EncTag: cbor.EncTagRequired},
 		typ,
 		tag,
 	); err != nil {
 		panic(err)
 	}
+	registeredTags[typ] = tag
 	// ensure enc/dec modes see the new tag
 	updateModes()
 }
@@ -84,7 +92,10 @@ func updateModes() {
 
 // MarshalCBOR serialises the given value to CBOR format.
 func MarshalCBOR[T any](t T) ([]byte, error) {
-	data, err := enc.Marshal(t)
+	mu.RLock()
+	mode := enc
+	mu.RUnlock()
+	data, err := mode.Marshal(t)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("serialisation error")
 	}
@@ -93,11 +104,18 @@ func MarshalCBOR[T any](t T) ([]byte, error) {
 
 // MarshalCBORTagged serialises the given value to CBOR format with the specified tag.
 func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
+	mu.RLock()
+	mode := enc
+	registeredTag, isRegistered := registeredTags[reflect.TypeOf(t)]
+	mu.RUnlock()
+	if isRegistered {
+		return nil, errs.New("type is already registered with tag %d", registeredTag)
+	}
 	wrapped := cbor.Tag{
 		Number:  tag,
 		Content: t,
 	}
-	data, err := enc.Marshal(wrapped)
+	data, err := mode.Marshal(wrapped)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("serialisation error")
 	}
@@ -107,7 +125,10 @@ func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
 // UnmarshalCBOR deserialises the given CBOR data into the specified type.
 func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
-	err := dec.Unmarshal(data, &t)
+	mu.RLock()
+	mode := dec
+	mu.RUnlock()
+	err := mode.Unmarshal(data, &t)
 	if err != nil {
 		return t, errs.Wrap(err).WithMessage("deserialisation error")
 	}
