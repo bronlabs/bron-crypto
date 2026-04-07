@@ -110,6 +110,9 @@ func (e *Encrypter) EncryptMany(plaintexts []*Plaintext, receiver *PublicKey, pr
 // EncryptManyWithNonces encrypts multiple plaintexts in parallel using provided nonces.
 // The length of plaintexts and nonces must match.
 func (e *Encrypter) EncryptManyWithNonces(plaintexts []*Plaintext, receiver *PublicKey, nonces []*Nonce) ([]*Ciphertext, error) {
+	if len(plaintexts) != len(nonces) {
+		return nil, ErrInvalidArgument.WithMessage("plaintexts and nonces must have the same length")
+	}
 	cts := make([]*Ciphertext, len(plaintexts))
 	var eg errgroup.Group
 	for i, p := range plaintexts {
@@ -197,6 +200,9 @@ func (se *SelfEncrypter) SelfEncryptMany(plaintexts []*Plaintext, prng io.Reader
 // SelfEncryptManyWithNonces encrypts multiple plaintexts to oneself using provided nonces.
 // The length of plaintexts and nonces must match.
 func (se *SelfEncrypter) SelfEncryptManyWithNonces(plaintexts []*Plaintext, nonces []*Nonce) ([]*Ciphertext, error) {
+	if len(plaintexts) != len(nonces) {
+		return nil, ErrInvalidArgument.WithMessage("plaintexts and nonces must have the same length")
+	}
 	cts := make([]*Ciphertext, len(plaintexts))
 	var eg errgroup.Group
 	for i, p := range plaintexts {
@@ -224,6 +230,9 @@ type Decrypter struct {
 // Decrypt decrypts a ciphertext and returns the plaintext.
 // Uses CRT-based decryption for efficiency.
 func (d *Decrypter) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
+	if ciphertext == nil {
+		return nil, ErrInvalidArgument.WithMessage("ciphertext cannot be nil")
+	}
 	var mp, mq numct.Nat
 	var wg sync.WaitGroup
 	wg.Add(2)

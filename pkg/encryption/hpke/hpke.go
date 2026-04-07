@@ -368,5 +368,8 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 
 // Equal reports whether both ciphertexts are equal.
 func (c Ciphertext) Equal(other Ciphertext) bool {
+	if len(c) != len(other) {
+		return false
+	}
 	return ct.SliceEqual([]byte(c), []byte(other)) == ct.True
 }

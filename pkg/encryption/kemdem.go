@@ -111,6 +111,9 @@ func (k *SymmetricKey) Equal(other *SymmetricKey) bool {
 	if k == nil || other == nil {
 		return k == other
 	}
+	if len(k.v) != len(other.v) {
+		return false
+	}
 	return ct.SliceEqual(k.v, other.v) == ct.True
 }
 
