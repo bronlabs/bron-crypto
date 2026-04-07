@@ -2,11 +2,13 @@ package redistribute
 
 import (
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -55,7 +57,8 @@ func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	}
 
 	// r2
-	r1uIn, err := exchange.UnicastReceive[*Round1P2P[G, S], *Participant[G, S]](rt, r1CorrelationID, r.participant.prevShareholders)
+	prevSenders := hashset.NewComparable(slices.Collect(r.participant.otherPrevShareholders())...).Freeze()
+	r1uIn, err := exchange.UnicastReceive[*Round1P2P[G, S], *Participant[G, S]](rt, r1CorrelationID, prevSenders)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot receive round 1 p2p")
 	}
