@@ -82,17 +82,20 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 
 // GenerateSafePrimePair generates two distinct safe primes of the specified bit length using the provided PrimeSamplable set.
 func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint) (p, q N, err error) {
-	g := errgroup.Group{}
 	for {
+		var pCandidate, qCandidate N
+		g := errgroup.Group{}
 		g.Go(func() error {
-			p, err = GenerateSafePrime(set, bits)
+			var err error
+			pCandidate, err = GenerateSafePrime(set, bits)
 			if err != nil {
 				return err
 			}
 			return nil
 		})
 		g.Go(func() error {
-			q, err = GenerateSafePrime(set, bits)
+			var err error
+			qCandidate, err = GenerateSafePrime(set, bits)
 			if err != nil {
 				return err
 			}
@@ -101,8 +104,8 @@ func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits
 		if err := g.Wait(); err != nil {
 			return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot generate same primes")
 		}
-		if !p.Equal(q) {
-			return p, q, nil
+		if !pCandidate.Equal(qCandidate) {
+			return pCandidate, qCandidate, nil
 		}
 	}
 }
