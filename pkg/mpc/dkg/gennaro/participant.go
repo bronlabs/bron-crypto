@@ -209,11 +209,15 @@ func (o *DKGOutput[E, S]) PublicMaterial() *DKGPublicOutput[E, S] {
 	if o == nil {
 		return nil
 	}
+	partialPublicKeys := hashmap.NewComparable[sharing.ID, E]()
+	for id, value := range o.partialPublicKeyValues.Iter() {
+		partialPublicKeys.Put(id, value.Clone())
+	}
 	return &DKGPublicOutput[E, S]{
-		publicKeyValue:         o.publicKeyValue,
-		partialPublicKeyValues: o.partialPublicKeyValues,
-		fv:                     o.fv,
-		accessStructure:        o.accessStructure,
+		publicKeyValue:         o.publicKeyValue.Clone(),
+		partialPublicKeyValues: partialPublicKeys.Freeze(),
+		fv:                     o.fv.Clone(),
+		accessStructure:        o.accessStructure.Clone(),
 	}
 }
 
