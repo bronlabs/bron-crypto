@@ -1,6 +1,7 @@
 package session_test
 
 import (
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -88,4 +89,29 @@ func Test_SubContextTranscriptAndZeroShare(t *testing.T) {
 	subChallenge, err := subCtxs[sharing.ID(1)].Transcript().ExtractBytes("challenge", 32)
 	require.NoError(t, err)
 	require.NotEqual(t, baseChallenge, subChallenge)
+}
+
+func TestSeedsReturnsIndependentReaders(t *testing.T) {
+	t.Parallel()
+	prng := pcg.NewRandomised()
+	quorum := sharing.NewOrdinalShareholderSet(3)
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	ctx := ctxs[1]
+	seeds1 := ctx.Seeds()
+	seeds2 := ctx.Seeds()
+
+	buf1 := make([]byte, 32)
+	_, err := io.ReadFull(seeds1[2], buf1)
+	require.NoError(t, err)
+
+	buf2 := make([]byte, 32)
+	_, err = io.ReadFull(seeds2[2], buf2)
+	require.NoError(t, err)
+	require.Equal(t, buf1, buf2)
+
+	buf3 := make([]byte, 32)
+	_, err = io.ReadFull(ctx.Seeds()[2], buf3)
+	require.NoError(t, err)
+	require.Equal(t, buf1, buf3)
 }

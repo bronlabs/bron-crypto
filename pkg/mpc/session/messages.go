@@ -1,8 +1,6 @@
 package session
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
@@ -16,9 +14,6 @@ func (m *Round1Broadcast) Validate(*Participant, sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round1Broadcast message")
 	}
-	if ct.SliceIsZero(m.Ck[:]) == ct.True {
-		return ErrValidation.WithMessage("missing commitment key in Round1Broadcast message")
-	}
 	return nil
 }
 
@@ -31,27 +26,18 @@ func (m *Round2P2P) Validate(*Participant, sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round2P2P message")
 	}
-	if ct.SliceIsZero(m.Commitment[:]) == ct.True {
-		return ErrValidation.WithMessage("missing commitment in Round2P2P message")
-	}
 	return nil
 }
 
 // Round3P2P carries a contribution and its opening witness.
 type Round3P2P struct {
-	Contribution        [base.CollisionResistanceBytesCeil]byte
+	Contribution        [32]byte
 	ContributionWitness hash_comm.Witness
 }
 
 func (m *Round3P2P) Validate(*Participant, sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round3P2P message")
-	}
-	if ct.SliceIsZero(m.Contribution[:]) == ct.True {
-		return ErrValidation.WithMessage("missing contribution in Round3P2P message")
-	}
-	if ct.SliceIsZero(m.ContributionWitness[:]) == ct.True {
-		return ErrValidation.WithMessage("missing contribution witness in Round3P2P message")
 	}
 	return nil
 }
