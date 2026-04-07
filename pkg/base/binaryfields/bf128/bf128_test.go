@@ -192,3 +192,72 @@ func TestComponentsBytesRoundtrip(t *testing.T) {
 		require.True(t, x.Equal(reconstructed))
 	}
 }
+
+func TestSelectSemantics(t *testing.T) {
+	t.Parallel()
+
+	f := bf128.NewField()
+	x, err := f.FromBytes(make128(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+	require.NoError(t, err)
+	y, err := f.FromBytes(make128(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2))
+	require.NoError(t, err)
+
+	require.True(t, f.Select(0, x, y).Equal(x))
+	require.True(t, f.Select(1, x, y).Equal(y))
+}
+
+func TestEqualNilSemantics(t *testing.T) {
+	t.Parallel()
+
+	f := bf128.NewField()
+	x, err := f.FromBytes(make128(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5))
+	require.NoError(t, err)
+
+	require.False(t, x.Equal(nil))
+	require.False(t, ((*bf128.FieldElement)(nil)).Equal(x))
+	require.True(t, ((*bf128.FieldElement)(nil)).Equal(nil))
+}
+
+func TestBytesRoundtrip(t *testing.T) {
+	t.Parallel()
+
+	f := bf128.NewField()
+	prng := pcg.NewRandomised()
+
+	for range reps {
+		x, err := f.Random(prng)
+		require.NoError(t, err)
+
+		roundtrip, err := f.FromBytes(x.Bytes())
+		require.NoError(t, err)
+		require.True(t, x.Equal(roundtrip))
+	}
+}
+
+func TestFromBytesInvalidLength(t *testing.T) {
+	t.Parallel()
+
+	_, err := bf128.NewField().FromBytes(make([]byte, bf128.FieldElementSize-1))
+	require.ErrorIs(t, err, bf128.ErrInvalidLength)
+}
+
+func TestFromComponentsBytesInvalidInput(t *testing.T) {
+	t.Parallel()
+
+	f := bf128.NewField()
+
+	_, err := f.FromComponentsBytes(make([][]byte, 127))
+	require.ErrorIs(t, err, bf128.ErrInvalidLength)
+
+	components := make([][]byte, 128)
+	for i := range components {
+		components[i] = []byte{0}
+	}
+	components[7] = []byte{0, 1}
+	_, err = f.FromComponentsBytes(components)
+	require.ErrorIs(t, err, bf128.ErrInvalidLength)
+
+	components[7] = []byte{2}
+	_, err = f.FromComponentsBytes(components)
+	require.ErrorIs(t, err, bf128.ErrInvalidLength)
+}
