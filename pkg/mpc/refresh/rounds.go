@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -33,7 +34,7 @@ func (p *Participant[G, S]) Round1() (broadcast *Round1Broadcast[G, S], unicasts
 }
 
 // Round2 finishes the refresh by adding the zero-share to the existing shard.
-func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r2u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (output *Output[G, S], err error) {
+func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r2u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (output *tsig.BaseShard[G, S], err error) {
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("expected round 2")
 	}
@@ -62,9 +63,9 @@ func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G,
 	share = share.Add(p.shard.Share())
 	verification = verification.Op(p.shard.VerificationVector())
 
-	output = &Output[G, S]{
-		share:              share,
-		verificationVector: verification,
+	output, err = tsig.NewBaseShard(share, verification, p.shard.AccessStructure())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to build validated refreshed shard")
 	}
 	p.round++
 	return output, nil
