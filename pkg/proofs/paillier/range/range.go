@@ -199,6 +199,13 @@ func (*Protocol) Name() sigma.Name {
 
 // ComputeProverCommitment generates the initial commitment and state.
 func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
+	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
+	}
+	if witness == nil || witness.Sk == nil || witness.X == nil || witness.R == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("invalid witness")
+	}
+
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
@@ -251,6 +258,18 @@ func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witnes
 
 // ComputeProverResponse generates the response for a given challenge.
 func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
+	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+		return nil, ErrInvalidArgument.WithMessage("invalid statement")
+	}
+	if witness == nil || witness.Sk == nil || witness.X == nil || witness.R == nil {
+		return nil, ErrInvalidArgument.WithMessage("invalid witness")
+	}
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("state is nil")
+	}
+	if len(challenge) != p.GetChallengeBytesLength() {
+		return nil, ErrInvalidArgument.WithMessage("invalid challenge length")
+	}
 	if len(state.W1) != int(p.t) || len(state.R1) != int(p.t) || len(state.W2) != int(p.t) || len(state.R2) != int(p.t) {
 		return nil, ErrInvalidArgument.WithMessage("inconsistent input")
 	}
@@ -304,6 +323,15 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 
 // Verify checks a prover response against the statement and commitment.
 func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+		return ErrInvalidArgument.WithMessage("invalid statement")
+	}
+	if commitment == nil || response == nil {
+		return ErrInvalidArgument.WithMessage("invalid commitment or response")
+	}
+	if len(challenge) != p.GetChallengeBytesLength() {
+		return ErrInvalidArgument.WithMessage("invalid challenge length")
+	}
 	if len(commitment.C1) != int(p.t) || len(commitment.C2) != int(p.t) {
 		return ErrFailed.WithMessage("inconsistent input")
 	}
@@ -399,6 +427,12 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 
 // RunSimulator creates a simulated transcript for a given challenge.
 func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
+	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
+	}
+	if len(challenge) != p.GetChallengeBytesLength() {
+		return nil, nil, ErrInvalidArgument.WithMessage("invalid challenge length")
+	}
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
@@ -509,6 +543,12 @@ func (*Protocol) SpecialSoundness() uint {
 
 // ValidateStatement checks the witness against the statement.
 func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error {
+	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+		return ErrInvalidArgument.WithMessage("invalid statement")
+	}
+	if witness == nil || witness.Sk == nil || witness.X == nil || witness.R == nil {
+		return ErrInvalidArgument.WithMessage("invalid witness")
+	}
 	if !statement.Pk.Equal(witness.Sk.PublicKey()) {
 		return ErrValidationFailed.WithMessage("paillier keys mismatch")
 	}
