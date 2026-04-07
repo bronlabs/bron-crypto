@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
@@ -40,4 +41,42 @@ func TestCompareBytes(t *testing.T) {
 			assert.Equal(t, tt.gt, gt, "gt")
 		})
 	}
+}
+
+func TestAndBytes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("equal lengths", func(t *testing.T) {
+		t.Parallel()
+		dst := make([]byte, 3)
+		n := ct.AndBytes(dst, []byte{0xff, 0x0f, 0xf0}, []byte{0x0f, 0xff, 0x0f})
+		require.Equal(t, 3, n)
+		require.Equal(t, []byte{0x0f, 0x0f, 0x00}, dst)
+	})
+
+	t.Run("panic on different lengths", func(t *testing.T) {
+		t.Parallel()
+		assert.Panics(t, func() {
+			ct.AndBytes(make([]byte, 3), []byte{1, 2, 3}, []byte{1})
+		})
+	})
+}
+
+func TestOrBytes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("equal lengths", func(t *testing.T) {
+		t.Parallel()
+		dst := make([]byte, 3)
+		n := ct.OrBytes(dst, []byte{0xf0, 0x0f, 0x00}, []byte{0x0f, 0xf0, 0x0f})
+		require.Equal(t, 3, n)
+		require.Equal(t, []byte{0xff, 0xff, 0x0f}, dst)
+	})
+
+	t.Run("panic on different lengths", func(t *testing.T) {
+		t.Parallel()
+		assert.Panics(t, func() {
+			ct.OrBytes(make([]byte, 3), []byte{1, 2, 3}, []byte{1})
+		})
+	})
 }
