@@ -55,6 +55,9 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	if err := r1out.Validate(r, r.copartyID); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid round %d input", r.round)
 	}
+	if len(choices)*8 != r.suite.Xi() {
+		return nil, nil, ot.ErrInvalidArgument.WithMessage("choices must be %d bits", r.suite.Xi())
+	}
 
 	// Setup ROs
 	r.ctx.Transcript().AppendBytes(TaggedKeyAgreementMs, r1out.Ms.Bytes())

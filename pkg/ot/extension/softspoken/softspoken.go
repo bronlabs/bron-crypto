@@ -32,6 +32,9 @@ type Suite struct {
 
 // NewSuite configures SoftSpokenOT for batch size xi, block length l, and hash function.
 func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
+	if hashFunc == nil {
+		return nil, ot.ErrInvalidArgument.WithMessage("hashFunc cannot be nil")
+	}
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create default OT suite")
