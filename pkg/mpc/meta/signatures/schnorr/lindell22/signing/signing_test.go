@@ -2,6 +2,7 @@ package signing_test
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"maps"
 	"slices"
 	"testing"
@@ -36,6 +37,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
+	vanilla "github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/schnorr"
 )
 
 // ---------------------------------------------------------------------------
@@ -833,12 +835,15 @@ func TestIdentifiableAbort_CorruptedR_CosigningAggregator(t *testing.T) {
 // and PK are adjusted by matching amounts, the check passes. The aggregated
 // signature fails but no culprit is found because the self-reported shift is
 // trusted at face value.
+//
+// This test uses vanilla Schnorr (not BIP340) to avoid BIP340's parity
+// correction, which would probabilistically interfere with the attack.
 func TestIdentifiableAbort_FakedShift_EscapesBlame(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	scheme, err := bip340.NewScheme(prng)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 	require.NoError(t, err)
 	sf := k256.NewScalarField()
 

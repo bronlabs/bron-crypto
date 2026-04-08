@@ -540,7 +540,7 @@ func TestAggregatorCreationErrors(t *testing.T) {
 		t.Parallel()
 		_, err := signing.NewShortKeyAggregator(curveFamily, publicMaterial, bls.RogueKeyPreventionAlgorithm(99))
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "not supported")
+		require.ErrorIs(t, err, signing.ErrInvalidArgument)
 	})
 
 }
