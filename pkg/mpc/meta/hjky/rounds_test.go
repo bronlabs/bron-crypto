@@ -9,11 +9,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/hjky"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 )
@@ -22,9 +22,13 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	prng := pcg.NewRandomised()
-	quorum := ntu.MakeRandomQuorum(t, prng, 3)
+	as, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(1, sharing.ID(1), sharing.ID(2)),
+		hierarchical.WithLevel(2, sharing.ID(3), sharing.ID(4)),
+	)
+	require.NoError(t, err)
+	quorum := as.Shareholders()
 	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-	as, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
 
@@ -43,7 +47,7 @@ func Test_HappyPath(t *testing.T) {
 
 	r2bi, r2ui := ntu.MapO2I(t, slices.Collect(maps.Values(participants)), r1bo, r1uo)
 	shares := make(map[sharing.ID]*feldman.Share[*k256.Scalar])
-	verificationVectors := make(map[sharing.ID]feldman.VerificationVector[*k256.Point, *k256.Scalar])
+	verificationVectors := make(map[sharing.ID]*feldman.VerificationVector[*k256.Point, *k256.Scalar])
 	for id, p := range participants {
 		shares[id], verificationVectors[id], err = p.Round2(r2bi[id], r2ui[id])
 		require.NoError(t, err)
@@ -52,11 +56,16 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("should generate valid shares", func(t *testing.T) {
 		t.Parallel()
 
-		scheme, err := feldman.NewScheme(k256.NewCurve().Generator(), as)
+		scheme, err := feldman.NewScheme(k256.NewCurve(), as)
 		require.NoError(t, err)
 		zero, err := scheme.Reconstruct(slices.Collect(maps.Values(shares))...)
 		require.NoError(t, err)
 		require.True(t, zero.Value().Equal(k256.NewScalarField().Zero()))
+
+		for id, s := range shares {
+			err := scheme.Verify(s, verificationVectors[id])
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("should generate valid verification vectors", func(t *testing.T) {

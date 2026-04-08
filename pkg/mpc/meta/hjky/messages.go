@@ -8,15 +8,17 @@ import (
 
 // Round1Broadcast carries the Feldman verification vector for the zero-share.
 type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	VerificationVector feldman.VerificationVector[G, S] `cbor:"verificationVector"`
+	VerificationVector *feldman.VerificationVector[G, S] `cbor:"verificationVector"`
 }
 
 func (m *Round1Broadcast[G, S]) Validate(participant *Participant[G, S], _ sharing.ID) error {
-	if m.VerificationVector == nil {
-		return ErrValidation.WithMessage("missing Feldman verification vector")
+	if m == nil || m.VerificationVector == nil {
+		return ErrValidationFailed.WithMessage("missing Feldman verification vector")
 	}
-	if m.VerificationVector.Degree()+1 != int(participant.accessStructure.Threshold()) {
-		return ErrValidation.WithMessage("invalid Feldman verification vector degree: %d", m.VerificationVector.Degree())
+
+	r, c := m.VerificationVector.Value().Dimensions()
+	if r != int(participant.scheme.MSP().D()) || c != 1 {
+		return ErrValidationFailed.WithMessage("invalid Feldman verification vector")
 	}
 	return nil
 }
@@ -27,11 +29,11 @@ type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 func (m *Round1P2P[G, S]) Validate(participant *Participant[G, S], _ sharing.ID) error {
-	if m.ZeroShare == nil {
-		return ErrValidation.WithMessage("missing zero share")
+	if m == nil || m.ZeroShare == nil {
+		return ErrValidationFailed.WithMessage("missing zero share")
 	}
 	if m.ZeroShare.ID() != participant.SharingID() {
-		return ErrValidation.WithMessage("zero share ID does not match recipient ID")
+		return ErrValidationFailed.WithMessage("zero share ID does not match recipient ID")
 	}
 	return nil
 }

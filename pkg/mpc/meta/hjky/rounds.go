@@ -1,15 +1,12 @@
 package hjky
 
 import (
-	"maps"
-	"slices"
-
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -24,7 +21,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not deal shares")
 	}
-	p.state.verificationVectors = make(map[sharing.ID]feldman.VerificationVector[G, S])
+	p.state.verificationVectors = make(map[sharing.ID]*feldman.VerificationVector[G, S])
 	p.state.verificationVectors[p.ctx.HolderID()] = dealerOut.VerificationMaterial()
 
 	var ok bool
@@ -52,7 +49,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 }
 
 // Round2 verifies all zero-shares and aggregates them into a single zero-share and verification vector.
-func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
+func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (share *feldman.Share[S], verification *feldman.VerificationVector[G, S], err error) {
 	if p.round != 2 {
 		return nil, nil, ErrRound.WithMessage("expected round 2")
 	}
@@ -93,7 +90,7 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 }
 
 func (p *Participant[G, S]) writeVerificationVectorToTranscript() {
-	for _, id := range slices.Sorted(maps.Keys(p.state.verificationVectors)) {
+	for id := range p.ctx.AllPartiesOrdered() {
 		v := p.state.verificationVectors[id].Value()
 		for c := range v.Iter() {
 			p.ctx.Transcript().AppendBytes(coefficientLabel, c.Bytes())
