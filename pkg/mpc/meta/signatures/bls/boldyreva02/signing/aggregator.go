@@ -41,13 +41,6 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *boldyreva02.
 
 // NewShortKeyAggregator creates a new Aggregator for the short key variant of BLS signatures.
 // In this variant, public keys are in G1 (smaller) and signatures are in G2 (larger).
-//
-// Parameters:
-//   - curveFamily: The pairing-friendly curve family to use
-//   - publicMaterial: The public cryptographic material for the scheme
-//   - rogueKeyAlg: The rogue key prevention algorithm (Basic, MessageAugmentation, or POP)
-//
-// Returns an error if any parameter is invalid.
 func NewShortKeyAggregator[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
@@ -60,44 +53,19 @@ func NewShortKeyAggregator[
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
-	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
-		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
-	}
 	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
 	}
-	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.ShortKey)
+	out, err := newAggregator(scheme, publicMaterial, curveFamily.TwistedSubGroup(), rogueKeyAlg, bls.ShortKey)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
+		return nil, errs.Wrap(err).WithMessage("failed to create short key aggregator")
 	}
-	kwScheme, err := kw.NewInducedScheme(publicMaterial.MSP())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create KW scheme")
-	}
-	feldmanScheme, err := feldman.NewSchemeFromKW(curveFamily.TwistedSubGroup(), kwScheme)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create Feldman scheme from KW scheme")
-	}
-
-	return &Aggregator[P1, FE1, P2, FE2, E, S]{
-		scheme:            scheme,
-		targetRogueKeyAlg: rogueKeyAlg,
-		targetDst:         blsDst,
-		publicMaterial:    publicMaterial,
-		feldmanScheme:     feldmanScheme,
-	}, nil
+	return out, nil
 }
 
 // NewLongKeyAggregator creates a new Aggregator for the long key variant of BLS signatures.
 // In this variant, public keys are in G2 (larger) and signatures are in G1 (smaller).
-//
-// Parameters:
-//   - curveFamily: The pairing-friendly curve family to use
-//   - publicMaterial: The public cryptographic material for the scheme
-//   - rogueKeyAlg: The rogue key prevention algorithm (Basic, MessageAugmentation, or POP)
-//
-// Returns an error if any parameter is invalid.
 func NewLongKeyAggregator[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
@@ -110,14 +78,32 @@ func NewLongKeyAggregator[
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
-	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
-		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
-	}
 	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS long key scheme")
 	}
-	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, bls.LongKey)
+	out, err := newAggregator(scheme, publicMaterial, curveFamily.SourceSubGroup(), rogueKeyAlg, bls.LongKey)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create long key aggregator")
+	}
+	return out, nil
+}
+
+func newAggregator[
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](
+	scheme *bls.Scheme[PK, PKFE, SG, SGFE, E, S],
+	publicMaterial *boldyreva02.PublicMaterial[PK, PKFE, SG, SGFE, E, S],
+	signatureSubGroup curves.PairingFriendlyCurve[SG, SGFE, PK, PKFE, E, S],
+	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
+	variant bls.Variant,
+) (*Aggregator[PK, PKFE, SG, SGFE, E, S], error) {
+	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
+		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
+	}
+	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, variant)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
@@ -125,11 +111,11 @@ func NewLongKeyAggregator[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create KW scheme")
 	}
-	feldmanScheme, err := feldman.NewSchemeFromKW(curveFamily.SourceSubGroup(), kwScheme)
+	feldmanScheme, err := feldman.NewSchemeFromKW(signatureSubGroup, kwScheme)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Feldman scheme from KW scheme")
 	}
-	return &Aggregator[P2, FE2, P1, FE1, E, S]{
+	return &Aggregator[PK, PKFE, SG, SGFE, E, S]{
 		scheme:            scheme,
 		targetRogueKeyAlg: rogueKeyAlg,
 		targetDst:         blsDst,
