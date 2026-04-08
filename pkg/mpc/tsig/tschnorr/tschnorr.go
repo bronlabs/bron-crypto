@@ -78,11 +78,10 @@ type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 // PublicKey returns the threshold public key as a schnorrlike.PublicKey.
 func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	pm.pkOnce.Do(func() {
-		var err error
-		pm.pk, err = schnorrlike.NewPublicKey(pm.PublicKeyValue())
-		if err != nil {
-			panic(err)
+		if pm == nil || pm.VerificationVector() == nil {
+			return
 		}
+		pm.pk, _ = schnorrlike.NewPublicKey(pm.PublicKeyValue())
 	})
 	return pm.pk
 }
@@ -110,11 +109,10 @@ func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
 // PublicKey returns the threshold public key as a schnorrlike.PublicKey.
 func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	sh.pkOnce.Do(func() {
-		var err error
-		sh.pk, err = schnorrlike.NewPublicKey(sh.PublicKeyValue())
-		if err != nil {
-			panic(err)
+		if sh == nil || sh.VerificationVector() == nil {
+			return
 		}
+		sh.pk, _ = schnorrlike.NewPublicKey(sh.PublicKeyValue())
 	})
 	return sh.pk
 }
@@ -130,11 +128,43 @@ func (sh *Shard[E, S]) AsSchnorrPrivateKey() (*schnorrlike.PrivateKey[E, S], err
 	if sh == nil || sh.Share() == nil {
 		return nil, ErrInvalidArgument.WithMessage("shard or share is nil")
 	}
-	sk, err := schnorrlike.NewPrivateKey(sh.Share().Value(), sh.PublicKey())
+	pk := sh.PublicKey()
+	if pk == nil {
+		return nil, ErrInvalidArgument.WithMessage("invalid public key material")
+	}
+	sk, err := schnorrlike.NewPrivateKey(sh.Share().Value(), pk)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create schnorr private key from share")
 	}
 	return sk, nil
+}
+
+// UnmarshalCBOR deserializes the public material from CBOR format and validates the Schnorr public key.
+func (pm *PublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
+	if err := pm.BasePublicMaterial.UnmarshalCBOR(data); err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal BasePublicMaterial")
+	}
+	pk, err := schnorrlike.NewPublicKey(pm.PublicKeyValue())
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create schnorr public key from deserialized public material")
+	}
+	pm.pk = pk
+	pm.pkOnce = sync.Once{}
+	return nil
+}
+
+// UnmarshalCBOR deserializes the shard from CBOR format and validates the Schnorr public key.
+func (sh *Shard[E, S]) UnmarshalCBOR(data []byte) error {
+	if err := sh.BaseShard.UnmarshalCBOR(data); err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal BaseShard")
+	}
+	pk, err := schnorrlike.NewPublicKey(sh.PublicKeyValue())
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create schnorr public key from deserialized shard")
+	}
+	sh.pk = pk
+	sh.pkOnce = sync.Once{}
+	return nil
 }
 
 // NewShard creates a new threshold Schnorr shard from a Feldman share, verification vector, and access structure.

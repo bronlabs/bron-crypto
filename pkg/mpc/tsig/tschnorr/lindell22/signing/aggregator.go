@@ -51,7 +51,11 @@ func NewAggregator[
 	if pk == nil {
 		return nil, ErrNilArgument.WithMessage("public material cannot be nil")
 	}
-	group := pk.PublicKey().Group()
+	fullPublicKey := pk.PublicKey()
+	if fullPublicKey == nil {
+		return nil, ErrInvalidType.WithMessage("public material contains an invalid public key")
+	}
+	group := fullPublicKey.Group()
 	sf, ok := group.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
 		return nil, ErrInvalidType.WithMessage("group scalar structure is not a prime field")
@@ -60,7 +64,7 @@ func NewAggregator[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create verifier for scheme %s", scheme.Name())
 	}
-	psigVerifier, err := scheme.PartialSignatureVerifier(pk.PublicKey())
+	psigVerifier, err := scheme.PartialSignatureVerifier(fullPublicKey)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create partial signature verifier for scheme %s", scheme.Name())
 	}
@@ -143,5 +147,5 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		return nil, errs.Join(identityAborts...).WithMessage("verification failed")
 	}
 
-	panic("should not reach here: not all partial signatures should have been valid")
+	return nil, ErrValidation.WithMessage("aggregate signature verification failed, but no invalid partial signature was identified")
 }
