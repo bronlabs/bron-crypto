@@ -21,10 +21,10 @@ type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElem
 // Validate checks whether the round 1 broadcast is well formed.
 func (m *Round1Broadcast[G, S]) Validate(*Participant[G, S], sharing.ID) error {
 	if m == nil {
-		return ErrVerificationFailed.WithMessage("nil message")
+		return ErrValidationFailed.WithMessage("nil message")
 	}
 	if m.V == ([hash_comm.DigestSize]byte{}) {
-		return ErrVerificationFailed.WithMessage("empty commitment")
+		return ErrValidationFailed.WithMessage("empty commitment")
 	}
 
 	return nil
@@ -64,23 +64,23 @@ type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElem
 // participant configuration.
 func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], senderID sharing.ID) error {
 	if m == nil || m.Message == nil || m.Message.X == nil || m.Message.Rho == nil || m.Message.A == nil {
-		return ErrVerificationFailed.WithMessage("nil argument")
+		return ErrValidationFailed.WithMessage("nil argument")
 	}
 	if m.U == ([hash_comm.DigestSize]byte{}) {
-		return ErrVerificationFailed.WithMessage("empty witness")
+		return ErrValidationFailed.WithMessage("empty witness")
 	}
 	if m.Message.SessionID != p.ctx.SessionID() {
-		return ErrVerificationFailed.WithMessage("invalid session id")
+		return ErrValidationFailed.WithMessage("invalid session id")
 	}
 	if m.Message.SharingID != senderID {
-		return ErrVerificationFailed.WithMessage("invalid sharing id")
+		return ErrValidationFailed.WithMessage("invalid sharing id")
 	}
 	if len(m.Message.Rho) != p.rhoLen {
-		return ErrVerificationFailed.WithMessage("invalid rho length")
+		return ErrValidationFailed.WithMessage("invalid rho length")
 	}
 	r, c := m.Message.X.Value().Dimensions()
 	if r != int(p.sharingScheme.MSP().D()) || c != 1 {
-		return ErrVerificationFailed.WithMessage("invalid x dimensions")
+		return ErrValidationFailed.WithMessage("invalid x dimensions")
 	}
 
 	return nil
@@ -94,10 +94,10 @@ type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 // Validate checks whether the round 2 unicast targets the local participant.
 func (m *Round2P2P[G, S]) Validate(p *Participant[G, S], _ sharing.ID) error {
 	if m == nil || m.Share == nil {
-		return ErrVerificationFailed.WithMessage("nil argument")
+		return ErrValidationFailed.WithMessage("nil argument")
 	}
 	if m.Share.ID() != p.SharingID() {
-		return ErrVerificationFailed.WithMessage("invalid share sharing id")
+		return ErrValidationFailed.WithMessage("invalid share sharing id")
 	}
 
 	return nil
@@ -111,7 +111,7 @@ type Round3Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElem
 // Validate checks whether the round 3 broadcast is well formed.
 func (m *Round3Broadcast[G, S]) Validate(*Participant[G, S], sharing.ID) error {
 	if m == nil || m.Psi == nil {
-		return ErrVerificationFailed.WithMessage("nil argument")
+		return ErrValidationFailed.WithMessage("nil argument")
 	}
 
 	return nil
