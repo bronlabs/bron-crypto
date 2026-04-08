@@ -171,7 +171,7 @@ func TestHierarchicalConjunctiveThresholdLevelsReturnsSliceCopy(t *testing.T) {
 	levels[0] = WithLevel(99, 99)
 
 	require.Equal(t, 1, h.Levels()[0].Threshold())
-	require.True(t, slices.Equal(h.Levels()[0].Shareholders().List(), []ID{1, 2}) || slices.Equal(h.Levels()[0].Shareholders().List(), []ID{2, 1}))
+	require.True(t, h.Levels()[0].Shareholders().Equal(hashset.NewComparable[ID](1, 2).Freeze()))
 }
 
 func TestHierarchicalConjunctiveThresholdMaximalUnqualifiedSetsIter(t *testing.T) {
