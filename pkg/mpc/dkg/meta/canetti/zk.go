@@ -1,18 +1,20 @@
 package canetti
 
 import (
-	"crypto/sha3"
-	"io"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
-const zkDomainSeparator = "BRON_CRYPTO_DKG_CANETTI_ZK"
+const (
+	statementLabel  = "BRON_CRYPTO_DKG_CANETTI_ZK_STATEMENT-"
+	commitmentLabel = "BRON_CRYPTO_DKG_CANETTI_ZK_COMMITMENT-"
+	challengeLabel  = "BRON_CRYPTO_DKG_CANETTI_ZK_CHALLENGE-"
+	responseLabel   = "BRON_CRYPTO_DKG_CANETTI_ZK_RESPONSE-"
+)
 
 type ZKResponse[A sigma.Commitment, Z sigma.Response] struct {
 	A A
@@ -34,17 +36,14 @@ func zkCom[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State
 	return a, s, nil
 }
 
-func zkProve[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](protocol sigma.Protocol[X, W, A, S, Z], statement X, witness W, commitment A, state S, aux base.BytesLike) (*ZKResponse[A, Z], error) {
-	h := sha3.NewCSHAKE256(nil, []byte(zkDomainSeparator))
-	auxBytes := aux.Bytes()
-	xBytes := statement.Bytes()
-	aBytes := commitment.Bytes()
-	_, err := h.Write(sliceutils.AppendLengthPrefixedSlices(auxBytes, xBytes, aBytes))
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot write to hasher")
+func zkProve[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, protocol sigma.Protocol[X, W, A, S, Z], statement X, witness W, commitment A, state S) (*ZKResponse[A, Z], error) {
+	if ctx == nil || protocol == nil {
+		return nil, ErrInvalidArgument.WithMessage("ctx/protocol is nil")
 	}
-	e := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(h, e)
+
+	ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
+	ctx.Transcript().AppendBytes(commitmentLabel, commitment.Bytes())
+	e, err := ctx.Transcript().ExtractBytes(challengeLabel, uint(protocol.GetChallengeBytesLength()))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot sample challenge")
 	}
@@ -53,6 +52,7 @@ func zkProve[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove")
 	}
+	ctx.Transcript().AppendBytes(responseLabel, z.Bytes())
 
 	psi := &ZKResponse[A, Z]{
 		A: commitment,
@@ -62,17 +62,14 @@ func zkProve[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 	return psi, nil
 }
 
-func zkVrfy[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](protocol sigma.Protocol[X, W, A, S, Z], statement X, aux base.BytesLike, response *ZKResponse[A, Z]) error {
-	h := sha3.NewCSHAKE256(nil, []byte(zkDomainSeparator))
-	auxBytes := aux.Bytes()
-	xBytes := statement.Bytes()
-	aBytes := response.A.Bytes()
-	_, err := h.Write(sliceutils.AppendLengthPrefixedSlices(auxBytes, xBytes, aBytes))
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot write to hasher")
+func zkVrfy[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, protocol sigma.Protocol[X, W, A, S, Z], statement X, response *ZKResponse[A, Z]) error {
+	if ctx == nil || protocol == nil || response == nil {
+		return ErrInvalidArgument.WithMessage("ctx/protocol/response is nil")
 	}
-	ePrime := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(h, ePrime)
+
+	ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
+	ctx.Transcript().AppendBytes(commitmentLabel, response.A.Bytes())
+	ePrime, err := ctx.Transcript().ExtractBytes(challengeLabel, uint(protocol.GetChallengeBytesLength()))
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot sample challenge")
 	}
@@ -82,6 +79,7 @@ func zkVrfy[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 	if err := protocol.Verify(statement, response.A, ePrime, response.Z); err != nil {
 		return ErrVerificationFailed.WithMessage("invalid proof")
 	}
+	ctx.Transcript().AppendBytes(responseLabel, response.Z.Bytes())
 
 	return nil
 }

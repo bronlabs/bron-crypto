@@ -1,7 +1,6 @@
 package canetti
 
 import (
-	"encoding/binary"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -9,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -22,6 +20,8 @@ import (
 const (
 	domainSeparator = "BRON_CRYPTO_DKG_CANETTI-"
 	ckLabel         = "BRON_CRYPTO_DKG_CANETTI_CK-"
+	proverIDLabel   = "BRON_CRYPTO_DKG_CANETTI_PROVER_ID-"
+	rhoLabel        = "BRON_CRYPTO_DKG_CANETTI_RHO-"
 )
 
 // Participant executes the Canetti-style DKG rounds for one party.
@@ -38,6 +38,9 @@ type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 }
 
 type state[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	proverCtx    *session.Context
+	verifierCtxs map[sharing.ID]*session.Context
+
 	dealerFunc         *feldman.DealerFunc[S]
 	share              *feldman.Share[S]
 	verificationVector *feldman.VerificationVector[G, S]
@@ -78,6 +81,15 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	rhoLenBits := base.ComputationalSecurityBits + mathutils.CeilLog2(int(sharingScheme.MSP().D()))
 	rhoLen := mathutils.CeilDiv(rhoLenBits, 8)
 
+	proverCtx := ctx.Clone()
+	proverCtx.Transcript().AppendBytes(proverIDLabel, ctx.HolderID().Bytes())
+	verifierCtxs := make(map[sharing.ID]*session.Context)
+	for id := range ctx.OtherPartiesOrdered() {
+		verifierCtx := ctx.Clone()
+		verifierCtx.Transcript().AppendBytes(proverIDLabel, id.Bytes())
+		verifierCtxs[id] = verifierCtx
+	}
+
 	//nolint:exhaustruct // state is lazy initialised
 	p := &Participant[G, S]{
 		ctx:           ctx,
@@ -88,6 +100,10 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 		rhoLen:        rhoLen,
 		round:         1,
 		prng:          prng,
+		state: state[G, S]{
+			proverCtx:    proverCtx,
+			verifierCtxs: verifierCtxs,
+		},
 	}
 	return p, nil
 }
@@ -130,26 +146,4 @@ func (p *Participant[G, S]) verify(message base.BytesLike, commitment hash_comm.
 	}
 
 	return nil
-}
-
-type aux struct {
-	sessionID network.SID
-	sharingID sharing.ID
-	rho       []byte
-}
-
-func newAux(sessionID network.SID, sharingID sharing.ID, rho []byte) *aux {
-	return &aux{
-		sessionID: sessionID,
-		sharingID: sharingID,
-		rho:       rho,
-	}
-}
-
-func (aux *aux) Bytes() []byte {
-	var out []byte
-	out = append(out, aux.sessionID[:]...)
-	out = binary.LittleEndian.AppendUint64(out, uint64(aux.sharingID))
-	out = sliceutils.AppendLengthPrefixed(out, aux.rho)
-	return out
 }

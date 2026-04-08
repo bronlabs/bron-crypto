@@ -23,17 +23,18 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 		return nil, ErrRound.WithMessage("actual=%d, expected=%d", p.round, 1)
 	}
 
+	// step 1
 	dealerOutput, _, dealerFunc, err := p.sharingScheme.DealRandomAndRevealDealerFunc(p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot deal random field element")
 	}
 
+	// step 2
 	rho := make([]byte, p.rhoLen)
 	_, err = io.ReadFull(p.prng, rho)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot sample rho")
 	}
-
 	schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(dealerOutput.VerificationMaterial().Value().Iter())...)
 	schWitness := batch_schnorr.NewWitness(slices.Collect(dealerFunc.RandomColumn().Iter())...)
 	bigA, tau, err := zkCom(p.schScheme, schStatement, schWitness)
@@ -41,6 +42,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 		return nil, errs.Wrap(err).WithMessage("prove commitment failed")
 	}
 
+	// step 3
 	msg := &CommitmentMessage[G, S]{
 		SessionID: p.ctx.SessionID(),
 		SharingID: p.ctx.HolderID(),
@@ -48,7 +50,6 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 		X:         dealerOutput.VerificationMaterial(),
 		A:         bigA,
 	}
-
 	bigV, u, err := p.commit(msg)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create commitment")
@@ -62,6 +63,8 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 	p.state.u = u
 	p.state.msg = make(map[sharing.ID]*CommitmentMessage[G, S])
 	p.state.msg[p.ctx.HolderID()] = msg
+
+	// step 4
 	r1b := &Round1Broadcast[G, S]{
 		V: bigV,
 	}
@@ -84,6 +87,7 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		vs[id] = b.V
 	}
 
+	// step 2
 	r2b := &Round2Broadcast[G, S]{
 		Message: p.state.msg[p.ctx.HolderID()],
 		U:       p.state.u,
@@ -123,39 +127,36 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		b, _ := r2b.Get(id)
 		u, _ := r2u.Get(id)
 
+		// step 1.i
 		if err := p.verify(b.Message, p.state.vs[id], b.U); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
-		}
-		if b.Message.SessionID != p.ctx.SessionID() {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid message")
-		}
-		if b.Message.SharingID != id {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid message")
 		}
 		if err := p.sharingScheme.Verify(u.Share, b.Message.X); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
 		}
-		if p.rhoLen != len(b.Message.Rho) {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid rho")
-		}
 
+		// step 2.i
 		subtle.XORBytes(p.state.rho, p.state.rho, b.Message.Rho)
 		p.state.verificationVector = p.state.verificationVector.Op(b.Message.X)
+
 		share = share.Op(u.Share)
 		p.state.msg[id] = b.Message
 	}
 
+	// step 2.ii
 	schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(p.state.msg[p.ctx.HolderID()].X.Value().Iter())...)
 	schWitness := batch_schnorr.NewWitness(slices.Collect(p.state.dealerFunc.RandomColumn().Iter())...)
-	schAux := newAux(p.ctx.SessionID(), p.ctx.HolderID(), p.state.rho)
-	psi, err := zkProve(p.schScheme, schStatement, schWitness, p.state.msg[p.ctx.HolderID()].A, p.state.tau, schAux)
+	p.state.proverCtx.Transcript().AppendBytes(rhoLabel, p.state.rho)
+	psi, err := zkProve(p.state.proverCtx, p.schScheme, schStatement, schWitness, p.state.msg[p.ctx.HolderID()].A, p.state.tau)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove")
 	}
 
+	// step 3
 	r3b := &Round3Broadcast[G, S]{
 		Psi: psi,
 	}
+
 	p.round.IncrementBy(1)
 	p.state.share = share
 	return r3b, nil
@@ -173,13 +174,21 @@ func (p *Participant[G, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[G,
 
 	for id := range p.ctx.OtherPartiesOrdered() {
 		b, _ := r3b.Get(id)
+
+		// step 1.i
+		if !b.Psi.A.A.Equal(p.state.msg[id].A.A) {
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid proof")
+		}
+
+		// step 1.ii
 		schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(p.state.msg[id].X.Value().Iter())...)
-		schAux := newAux(p.ctx.SessionID(), id, p.state.rho)
-		if err := zkVrfy(p.schScheme, schStatement, schAux, b.Psi); err != nil {
+		p.state.verifierCtxs[id].Transcript().AppendBytes(rhoLabel, p.state.rho)
+		if err := zkVrfy(p.state.verifierCtxs[id], p.schScheme, schStatement, b.Psi); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid proof")
 		}
 	}
 
+	// step 2, 3
 	shard, err := mpc.NewBaseShard(p.state.share, p.state.verificationVector, p.sharingScheme.MSP())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create shard")
