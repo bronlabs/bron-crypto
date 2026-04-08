@@ -87,7 +87,7 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		vs[id] = b.V
 	}
 
-	// step 2
+	// step 1
 	r2b := &Round2Broadcast[G, S]{
 		Message: p.state.msg[p.ctx.HolderID()],
 		U:       p.state.u,
