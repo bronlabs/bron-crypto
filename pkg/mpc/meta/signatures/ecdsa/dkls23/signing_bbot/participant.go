@@ -16,6 +16,8 @@ import (
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
@@ -28,11 +30,12 @@ const (
 
 // Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ctx   *session.Context
-	suite *ecdsa.Suite[P, B, S]
-	shard *dkls23.Shard[P, B, S]
-	prng  io.Reader
-	state CosignerState[P, B, S]
+	ctx           *session.Context
+	suite         *ecdsa.Suite[P, B, S]
+	shard         *dkls23.Shard[P, B, S]
+	sharingScheme *feldman.Scheme[P, S]
+	prng          io.Reader
+	state         CosignerState[P, B, S]
 }
 
 // CosignerState tracks per-round signing state.
@@ -68,15 +71,25 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, dkls23.ErrValidationFailed.WithMessage("unqualified quorum")
 	}
 
+	kwScheme, err := kw.NewInducedScheme(shard.MSP())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create signing scheme")
+	}
+	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](shard.PublicKeyValue().Structure())
+	vssScheme, err := feldman.NewSchemeFromKW(curve, kwScheme)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
+	}
 	sid := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
 
 	//nolint:exhaustruct // lazy initialisation
 	c := &Cosigner[P, B, S]{
-		ctx:   ctx,
-		shard: shard,
-		suite: suite,
-		prng:  prng,
+		ctx:           ctx,
+		shard:         shard,
+		suite:         suite,
+		sharingScheme: vssScheme,
+		prng:          prng,
 	}
 
 	mulSuite, err := rvole_bbot.NewSuite(2, suite.Curve())

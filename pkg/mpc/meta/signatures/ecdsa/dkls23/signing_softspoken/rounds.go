@@ -20,7 +20,6 @@ import (
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
@@ -218,15 +217,11 @@ func (c *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P,
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run zero setup round3")
 	}
 
-	sharingScheme, err := kw.NewInducedScheme(c.shard.MSP())
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create signing scheme")
-	}
 	quorum, err := unanimity.NewUnanimityAccessStructure(c.ctx.Quorum())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure")
 	}
-	sk, err := sharingScheme.ConvertShareToAdditive(c.shard.Share(), quorum)
+	sk, err := c.sharingScheme.ConvertShareToAdditive(c.shard.Share(), quorum)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("to additive share failed")
 	}

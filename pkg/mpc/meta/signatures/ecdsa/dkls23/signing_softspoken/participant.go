@@ -16,6 +16,8 @@ import (
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
@@ -38,10 +40,11 @@ const (
 
 // Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ctx   *session.Context
-	shard *dkls23.Shard[P, B, S]
-	suite *ecdsa.Suite[P, B, S]
-	prng  io.Reader
+	ctx           *session.Context
+	shard         *dkls23.Shard[P, B, S]
+	suite         *ecdsa.Suite[P, B, S]
+	sharingScheme *feldman.Scheme[P, S]
+	prng          io.Reader
 
 	baseOtSenders   map[sharing.ID]*ecbbot.Sender[P, S]
 	baseOtReceivers map[sharing.ID]*ecbbot.Receiver[P, S]
@@ -87,6 +90,15 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, dkls23.ErrValidationFailed.WithMessage("unqualified quorum")
 	}
 
+	kwScheme, err := kw.NewInducedScheme(shard.MSP())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create signing scheme")
+	}
+	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](shard.PublicKeyValue().Structure())
+	vssScheme, err := feldman.NewSchemeFromKW(curve, kwScheme)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
+	}
 	sid := ctx.SessionID()
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
 
@@ -127,6 +139,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		ctx:             ctx,
 		shard:           shard,
 		suite:           suite,
+		sharingScheme:   vssScheme,
 		prng:            prng,
 		baseOtSenders:   otSenders,
 		baseOtReceivers: otReceivers,
