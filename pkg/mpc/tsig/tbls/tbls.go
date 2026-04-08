@@ -41,7 +41,8 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[
 	if spm == nil {
 		return nil
 	}
-	return errs.Must1(bls.NewPublicKey(spm.PublicKeyValue()))
+	pk, _ := bls.NewPublicKey(spm.PublicKeyValue())
+	return pk
 }
 
 // Equal returns true if two PublicMaterial instances are equal.
@@ -86,6 +87,9 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) 
 	}
 
 	spm.BasePublicMaterial = *dto.Base
+	if _, err := bls.NewPublicKey(spm.PublicKeyValue()); err != nil {
+		return errs.Wrap(err).WithMessage("failed to create BLS public key from deserialized public material")
+	}
 	return nil
 }
 
@@ -110,7 +114,11 @@ type shardDTO[
 
 // PublicKey returns the BLS public key associated with the shard.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[PK, PKFE, SG, SGFE, E, S] {
-	return errs.Must1(bls.NewPublicKey(s.PublicKeyValue()))
+	if s == nil {
+		return nil
+	}
+	pk, _ := bls.NewPublicKey(s.PublicKeyValue())
+	return pk
 }
 
 // Equal returns true if two Shard instances are equal.
@@ -157,7 +165,11 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsPrivateKey() (*bls.PrivateKey[PK, PK
 	if s == nil {
 		return nil, ErrIsNil.WithMessage("Shard is nil")
 	}
-	out, err := bls.NewPrivateKey(s.PublicKey().Group(), s.Share().Value())
+	publicKey := s.PublicKey()
+	if publicKey == nil {
+		return nil, ErrInvalidArgument.WithMessage("invalid public key material")
+	}
+	out, err := bls.NewPrivateKey(publicKey.Group(), s.Share().Value())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS private key from shard")
 	}
@@ -182,7 +194,11 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsAdditivePrivateKey(quorum *unanimity
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert to additive")
 	}
-	out, err := bls.NewPrivateKey(s.PublicKey().Group(), additiveShare.Value())
+	publicKey := s.PublicKey()
+	if publicKey == nil {
+		return nil, ErrInvalidArgument.WithMessage("invalid public key material")
+	}
+	out, err := bls.NewPrivateKey(publicKey.Group(), additiveShare.Value())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS private key from shard")
 	}
@@ -212,6 +228,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
 	}
 
 	s.BaseShard = *dto.Base
+	if _, err := bls.NewPublicKey(s.PublicKeyValue()); err != nil {
+		return errs.Wrap(err).WithMessage("failed to create BLS public key from deserialized shard")
+	}
 	return nil
 }
 
@@ -252,6 +271,9 @@ func NewShortKeyShard[
 	}
 	if !publicKey.IsShort() {
 		return nil, ErrInvalidArgument.WithMessage("public key is not a short key variant")
+	}
+	if !publicKey.Value().Equal(vector.Coefficients()[0]) {
+		return nil, ErrInvalidArgument.WithMessage("public key does not match verification vector")
 	}
 
 	baseShard, err := tsig.NewBaseShard(share, vector, accessStructure)
@@ -300,6 +322,9 @@ func NewLongKeyShard[
 	}
 	if publicKey.IsShort() {
 		return nil, ErrInvalidArgument.WithMessage("public key is not a long key variant")
+	}
+	if !publicKey.Value().Equal(vector.Coefficients()[0]) {
+		return nil, ErrInvalidArgument.WithMessage("public key does not match verification vector")
 	}
 
 	baseShard, err := tsig.NewBaseShard(share, vector, accessStructure)

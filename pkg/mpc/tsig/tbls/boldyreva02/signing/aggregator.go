@@ -59,6 +59,9 @@ func NewShortKeyAggregator[
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
+	if publicMaterial == nil {
+		return nil, ErrInvalidArgument.WithMessage("publicMaterial is nil")
+	}
 	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
@@ -98,6 +101,9 @@ func NewLongKeyAggregator[
 ) (*Aggregator[P2, FE2, P1, FE1, E, S], error) {
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
+	}
+	if publicMaterial == nil {
+		return nil, ErrInvalidArgument.WithMessage("publicMaterial is nil")
 	}
 	if !bls.RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
