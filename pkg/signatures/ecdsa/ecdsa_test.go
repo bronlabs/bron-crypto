@@ -234,3 +234,17 @@ func Test_RFC6979(t *testing.T) {
 		require.Equal(t, v.s, strings.ToUpper(hex.EncodeToString(signature.S().Bytes())))
 	}
 }
+
+func Test_NilEllipticConversions(t *testing.T) {
+	t.Parallel()
+
+	var pk *ecdsa.PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
+	var sk *ecdsa.PrivateKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
+	var sig *ecdsa.Signature[*k256.Scalar]
+
+	require.Nil(t, pk.ToElliptic())
+	require.Nil(t, sk.ToElliptic())
+	r, s := sig.ToElliptic()
+	require.Nil(t, r)
+	require.Nil(t, s)
+}

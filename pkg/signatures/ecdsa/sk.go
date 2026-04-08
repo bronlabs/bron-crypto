@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // PrivateKey represents an ECDSA private key as a scalar value d in [1, n-1],
@@ -78,8 +79,15 @@ func (sk *PrivateKey[P, B, S]) Clone() *PrivateKey[P, B, S] {
 // ToElliptic converts the private key to Go's standard library ecdsa.PrivateKey format.
 // This enables interoperability with Go's crypto/ecdsa package.
 func (sk *PrivateKey[P, B, S]) ToElliptic() *nativeEcdsa.PrivateKey {
+	if sk == nil || sk.pk == nil || utils.IsNil(sk.sk) {
+		return nil
+	}
+	nativePk := sk.pk.ToElliptic()
+	if nativePk == nil {
+		return nil
+	}
 	nativeSk := &nativeEcdsa.PrivateKey{
-		PublicKey: *sk.pk.ToElliptic(),
+		PublicKey: *nativePk,
 		D:         sk.sk.Cardinal().Big(),
 	}
 
