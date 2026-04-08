@@ -49,7 +49,7 @@ func (c Commitment) Bytes() []byte {
 }
 
 func (c Commitment) Equal(other Commitment) bool {
-	return ct.SliceEqual(c[:], other[:]) == 1
+	return ct.SliceEqual(c[:], other[:]) != ct.False
 }
 
 // Bytes returns the raw witness bytes.

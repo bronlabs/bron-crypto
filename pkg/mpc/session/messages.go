@@ -1,6 +1,7 @@
 package session
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
@@ -31,7 +32,7 @@ func (m *Round2P2P) Validate(*Participant, sharing.ID) error {
 
 // Round3P2P carries a contribution and its opening witness.
 type Round3P2P struct {
-	Contribution        [32]byte
+	Contribution        [base.CollisionResistanceBytesCeil]byte
 	ContributionWitness hash_comm.Witness
 }
 

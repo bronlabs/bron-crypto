@@ -18,10 +18,7 @@ const (
 type Base58 string
 
 func (b Base58) Equal(other Base58) bool {
-	if len(b) != len(other) {
-		return false
-	}
-	return ct.SliceEqual([]byte(b), []byte(other)) == 1
+	return ct.SliceEqual([]byte(b), []byte(other)) != ct.False
 }
 
 var (
