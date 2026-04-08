@@ -19,6 +19,6 @@ enabling share refresh without changing the underlying secret.
 
 ## Usage
 
-1. Create a participant with `NewParticipant(sessionID, id, accessStructure, group, tape, prng)`.
+1. Create a participant with `NewParticipant(ctx, id, accessStructure, group, prng)`.
 2. Run `Round1` to produce `Round1Broadcast` and unicasts of zero-shares.
-3. Exchange messages, then run `Round2` to obtain the aggregated zero-share and verification vector.
+3. Exchange messages, then run `Round2` to get the aggregated zero-share and verification vector.
