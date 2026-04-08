@@ -825,7 +825,7 @@ func blsSetup(t *testing.T, thresh, total uint) (
 }
 
 // TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed corrupts one partial BLS
-// signature by adding the G2 generator to the signature point. The aggregator
+// signature by adding the G2 generator to the first component. The aggregator
 // must detect the corrupted signer during individual verification and blame
 // only that party.
 func TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed(t *testing.T) {
@@ -837,18 +837,20 @@ func TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed(t *testing.T) {
 	partialSigs, err := tu.ProducePartialSignatures(cosigners, message)
 	require.NoError(t, err)
 
-	// Corrupt one signer by adding the G2 generator to their signature point.
+	// Corrupt one signer by adding the G2 generator to their first signature component.
 	corruptedID := quorumIDs[0]
 	g2 := bls12381.NewG2()
 	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *boldyreva02.PartialSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]]()
 	for id, psig := range partialSigs {
 		if id == corruptedID {
-			corruptedSigValue := psig.SigmaI.Value().Op(g2.Generator())
-			corruptedSig, err := bls.NewSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar](corruptedSigValue, nil)
+			corruptedSigmaI := make([]*bls.Signature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar], len(psig.SigmaI))
+			copy(corruptedSigmaI, psig.SigmaI)
+			corruptedValue := psig.SigmaI[0].Value().Op(g2.Generator())
+			corruptedSigmaI[0], err = bls.NewSignature(corruptedValue, nil)
 			require.NoError(t, err)
 			corruptedSigsMap.Put(id, &boldyreva02.PartialSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]{
-				SigmaI:             corruptedSig,
-				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
+				SigmaI:    corruptedSigmaI,
+				SigmaPopI: psig.SigmaPopI,
 			})
 		} else {
 			corruptedSigsMap.Put(id, psig)
@@ -870,8 +872,8 @@ func TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed(t *testing.T) {
 
 // TestIdentifiableAbort_IncorrectShare simulates a signer who followed the
 // protocol but whose underlying secret share is wrong. The partial signature
-// is a valid BLS signature — just for the wrong key. The aggregator must
-// detect this during individual verification.
+// components are valid BLS signatures — just for the wrong keys. The aggregator
+// must detect this during individual verification.
 func TestIdentifiableAbort_IncorrectShare(t *testing.T) {
 	t.Parallel()
 
@@ -881,32 +883,34 @@ func TestIdentifiableAbort_IncorrectShare(t *testing.T) {
 	partialSigs, err := tu.ProducePartialSignatures(cosigners, message)
 	require.NoError(t, err)
 
-	// Simulate a wrong share: sign the message with a random private key
-	// instead of the real additive share. The result is a valid BLS signature
-	// for a different key.
+	// Simulate a wrong share: replace all signature components with signatures
+	// from random private keys.
 	corruptedID := quorumIDs[0]
 	curveFamily := &bls12381.FamilyTrait{}
 	g1 := bls12381.NewG1()
 	sf := bls12381.NewScalarField()
-	randomScalar, err := sf.Random(pcg.NewRandomised())
-	require.NoError(t, err)
-	randomKey, err := bls.NewPrivateKey[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar](g1, randomScalar)
-	require.NoError(t, err)
 	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
 	require.NoError(t, err)
 	blsDst, err := scheme.CipherSuite().GetDst(bls.Basic, bls.ShortKey)
-	require.NoError(t, err)
-	signer, err := scheme.Signer(randomKey, bls.SignWithCustomDST[*bls12381.PointG1](blsDst))
-	require.NoError(t, err)
-	wrongSig, err := signer.Sign(message)
 	require.NoError(t, err)
 
 	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *boldyreva02.PartialSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]]()
 	for id, psig := range partialSigs {
 		if id == corruptedID {
+			wrongSigmaI := make([]*bls.Signature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar], len(psig.SigmaI))
+			for i := range wrongSigmaI {
+				randomScalar, err := sf.Random(pcg.NewRandomised())
+				require.NoError(t, err)
+				randomKey, err := bls.NewPrivateKey(g1, randomScalar)
+				require.NoError(t, err)
+				signer, err := scheme.Signer(randomKey, bls.SignWithCustomDST[*bls12381.PointG1](blsDst))
+				require.NoError(t, err)
+				wrongSigmaI[i], err = signer.Sign(message)
+				require.NoError(t, err)
+			}
 			corruptedSigsMap.Put(id, &boldyreva02.PartialSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]{
-				SigmaI:             wrongSig,
-				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
+				SigmaI:    wrongSigmaI,
+				SigmaPopI: psig.SigmaPopI,
 			})
 		} else {
 			corruptedSigsMap.Put(id, psig)
@@ -919,76 +923,6 @@ func TestIdentifiableAbort_IncorrectShare(t *testing.T) {
 	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
 	require.NotEmpty(t, culprits, "aggregator must detect the bad signer")
 	assert.Contains(t, culprits, corruptedID, "signer with wrong share must be blamed")
-	for _, id := range quorumIDs {
-		if id != corruptedID {
-			assert.NotContains(t, culprits, id, "honest signer %d must not be blamed", id)
-		}
-	}
-}
-
-// TestIdentifiableAbort_FakedShift_CaughtByPOP verifies that the BLS internal
-// proof-of-possession mechanism prevents the faked-shift attack. A malicious
-// signer adds δ·H(m) to the signature and δ·G to the shift, making the
-// pairing equation consistent. However, each BLS signature carries an internal
-// POP that ties it to the signer's original public key. Changing the shift
-// changes the effective PK, invalidating the POP — so the aggregator catches
-// the cheater and attributes blame.
-func TestIdentifiableAbort_FakedShift_CaughtByPOP(t *testing.T) {
-	t.Parallel()
-
-	cosigners, aggregator, quorumIDs := blsSetup(t, 2, 3)
-
-	message := []byte("faked shift BLS test")
-	partialSigs, err := tu.ProducePartialSignatures(cosigners, message)
-	require.NoError(t, err)
-
-	// Add δ·G to the shift and δ·H(m) to the signature point. The pairing
-	// equation e(σ', G) == e(H(m), PK') would hold, but the BLS scheme uses
-	// POP internally: each signature carries sk·H(PK). When the shift is
-	// faked, the verifier's PK differs from the PK used in the POP, so the
-	// POP check fails and the corrupted signer is identified.
-	corruptedID := quorumIDs[0]
-	g1 := bls12381.NewG1()
-	sf := bls12381.NewScalarField()
-	delta, err := sf.Random(pcg.NewRandomised())
-	require.NoError(t, err)
-	deltaG1 := g1.ScalarBaseOp(delta)
-
-	curveFamily := &bls12381.FamilyTrait{}
-	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
-	require.NoError(t, err)
-	blsDst, err := scheme.CipherSuite().GetDst(bls.Basic, bls.ShortKey)
-	require.NoError(t, err)
-	deltaKey, err := bls.NewPrivateKey(g1, delta)
-	require.NoError(t, err)
-	deltaSigner, err := scheme.Signer(deltaKey, bls.SignWithCustomDST[*bls12381.PointG1](blsDst))
-	require.NoError(t, err)
-	deltaSig, err := deltaSigner.Sign(message)
-	require.NoError(t, err)
-	deltaHm := deltaSig.Value() // δ·H(m) in G2
-
-	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *boldyreva02.PartialSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]]()
-	for id, psig := range partialSigs {
-		if id == corruptedID {
-			corruptedSigValue := psig.SigmaI.Value().Op(deltaHm)
-			corruptedSig, err := bls.NewSignature[*bls12381.PointG2](corruptedSigValue, nil)
-			require.NoError(t, err)
-			corruptedShift := psig.ZeroPublicKeyShift.Op(deltaG1)
-			corruptedSigsMap.Put(id, &boldyreva02.PartialSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]{
-				SigmaI:             corruptedSig,
-				ZeroPublicKeyShift: corruptedShift,
-			})
-		} else {
-			corruptedSigsMap.Put(id, psig)
-		}
-	}
-
-	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), message)
-	require.Error(t, err, "aggregation must fail — the POP catches the faked shift")
-
-	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
-	require.NotEmpty(t, culprits, "the corrupted signer must be identified")
-	assert.Contains(t, culprits, corruptedID, "signer who faked the shift must be blamed")
 	for _, id := range quorumIDs {
 		if id != corruptedID {
 			assert.NotContains(t, culprits, id, "honest signer %d must not be blamed", id)

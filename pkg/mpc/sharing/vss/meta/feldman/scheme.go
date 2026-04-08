@@ -307,3 +307,54 @@ func (s *Scheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[E, FE], 
 	}
 	return out, nil
 }
+
+// ReconstructInTheExponent recovers the lifted secret [secret]G from a
+// qualified set of lifted shares. It computes the multi-scalar multiplication
+// Σ c_j · V_j, where c_j are the reconstruction-vector coefficients and V_j
+// are the group-element share components, all ordered by ascending MSP row
+// index. This is the group-element analog of [kw.Scheme.Reconstruct].
+func (s *Scheme[E, FE]) ReconstructInTheExponent(shares ...*LiftedShare[E, FE]) (*LiftedSecret[E, FE], error) {
+	if len(shares) == 0 {
+		return nil, sharing.ErrValue.WithMessage("no shares provided for reconstruction")
+	}
+
+	ids := make([]sharing.ID, len(shares))
+	for i, sh := range shares {
+		if sh == nil {
+			return nil, sharing.ErrIsNil.WithMessage("share %d is nil", i)
+		}
+		ids[i] = sh.ID()
+	}
+
+	reconVec, err := s.lsss.MSP().ReconstructionVector(ids...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector for given shares")
+	}
+
+	// Build a map from absolute MSP row index to the corresponding group
+	// element, ordered by ascending row index to match reconVec.
+	htr := s.lsss.MSP().HoldersToRows()
+	liftedByRow := make(map[int]E)
+	for _, sh := range shares {
+		rowSet, ok := htr.Get(sh.ID())
+		if !ok {
+			return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", sh.ID())
+		}
+		sortedRows := slices.Sorted(slices.Values(rowSet.List()))
+		for i, r := range sortedRows {
+			liftedByRow[r] = sh.Value()[i]
+		}
+	}
+
+	sortedRows := slices.Sorted(maps.Keys(liftedByRow))
+	result := s.group.OpIdentity()
+	for i, r := range sortedRows {
+		coeff, err := reconVec.Get(i, 0)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to get reconstruction coefficient at position %d", i)
+		}
+		result = result.Op(liftedByRow[r].ScalarOp(coeff))
+	}
+
+	return NewLiftedSecret(result), nil
+}

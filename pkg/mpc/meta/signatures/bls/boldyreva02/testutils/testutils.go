@@ -24,7 +24,7 @@ import (
 type ShortKeyShard = boldyreva02.Shard[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 type LongKeyShard = boldyreva02.Shard[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]
 
-// DoBoldyrevaDKG runs the complete DKG process for Boldyreva02 threshold BLS
+// DoBoldyrevaDKG runs the complete DKG process for Boldyreva02 BLS
 // It uses Gennaro DKG under the hood and converts the output to BLS shards.
 func DoBoldyrevaDKG[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
@@ -78,7 +78,7 @@ func ProducePartialSignatures[
 	return partialSigs, nil
 }
 
-// DoThresholdSign performs the complete threshold signing process.
+// DoThresholdSign performs the complete signing process.
 func DoThresholdSign[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],

@@ -11,31 +11,27 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/bls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 
 const transcriptLabel = "BRON_CRYPTO_TBLS_BOLDYREVA-"
 
-// Cosigner represents a participant in the Boldyreva threshold BLS signing protocol.
+// Cosigner represents a participant in the Boldyreva BLS signing protocol.
 // Each cosigner holds a shard of the secret key and can produce partial signatures
-// that are later aggregated into a full threshold signature.
+// that are later aggregated into a full signature.
 type Cosigner[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
-	ctx                       *session.Context
-	shard                     *boldyreva02.Shard[PK, PKFE, SG, SGFE, E, S]
-	round                     network.Round
-	targetRogueKeyAlg         bls.RogueKeyPreventionAlgorithm
-	targetDst                 string
-	additiveShareAsPrivateKey *bls.PrivateKey[PK, PKFE, SG, SGFE, E, S]
-	zeroSharingPublicKeyShift PK
-	scheme                    *bls.Scheme[PK, PKFE, SG, SGFE, E, S]
+	ctx               *session.Context
+	shard             *boldyreva02.Shard[PK, PKFE, SG, SGFE, E, S]
+	round             network.Round
+	targetRogueKeyAlg bls.RogueKeyPreventionAlgorithm
+	targetDst         string
+	shareAsPrivateKey []*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S]
+	scheme            *bls.Scheme[PK, PKFE, SG, SGFE, E, S]
 }
 
 // SharingID returns the sharing identifier for this cosigner's share.
@@ -148,28 +144,13 @@ func newCosigner[
 	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamilyName, variant, rogueKeyAlg)
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	kwScheme, err := kw.NewInducedScheme(shard.MSP())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create kw scheme")
-	}
-	quorum, err := unanimity.NewUnanimityAccessStructure(ctx.Quorum())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
-	}
-	zero, err := przs.SampleZeroShare(ctx, keySubGroup.ScalarField())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot sample zero share")
-	}
-	ashare, err := kwScheme.ConvertShareToAdditive(shard.Share(), quorum)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot convert share %d to additive share", shard.Share().ID())
-	}
-	ashare = ashare.Add(zero)
-	shift := keySubGroup.ScalarBaseOp(zero.Value())
-
-	additiveShareAsPrivateKey, err := bls.NewPrivateKey(keySubGroup, ashare.Value())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create additive share as private key")
+	shareAsPrivateKey := make([]*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S], len(shard.Share().Value()))
+	for i, shareValue := range shard.Share().Value() {
+		privKey, err := bls.NewPrivateKey(keySubGroup, shareValue)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create additive share as private key")
+		}
+		shareAsPrivateKey[i] = privKey
 	}
 
 	blsDst, err := scheme.CipherSuite().GetDst(rogueKeyAlg, variant)
@@ -177,14 +158,13 @@ func newCosigner[
 		return nil, errs.Wrap(err).WithMessage("failed to get BLS destination for rogue key prevention algorithm")
 	}
 	return &Cosigner[PK, PKFE, SG, SGFE, E, S]{
-		ctx:                       ctx,
-		shard:                     shard,
-		scheme:                    scheme,
-		targetRogueKeyAlg:         rogueKeyAlg,
-		targetDst:                 blsDst,
-		additiveShareAsPrivateKey: additiveShareAsPrivateKey,
-		zeroSharingPublicKeyShift: shift,
-		round:                     1,
+		ctx:               ctx,
+		shard:             shard,
+		scheme:            scheme,
+		targetRogueKeyAlg: rogueKeyAlg,
+		targetDst:         blsDst,
+		shareAsPrivateKey: shareAsPrivateKey,
+		round:             1,
 	}, nil
 }
 
@@ -200,7 +180,7 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) ProducePartialSignature(message []b
 		return nil, ErrInvalidArgument.WithMessage("message cannot be empty")
 	}
 	var err error
-	var sigmaPopI *bls.Signature[SG, SGFE, PK, PKFE, E, S]
+	sigmaPopI := make([]*bls.Signature[SG, SGFE, PK, PKFE, E, S], len(c.shareAsPrivateKey))
 	switch c.targetRogueKeyAlg {
 	case bls.Basic:
 	case bls.MessageAugmentation:
@@ -211,29 +191,33 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) ProducePartialSignature(message []b
 	case bls.POP:
 		popMsg := c.shard.PublicKey().Bytes()
 		popDst := c.scheme.CipherSuite().GetPopDst(c.Variant())
-		popSigner, err := c.scheme.Signer(c.additiveShareAsPrivateKey, bls.SignWithCustomDST[PK](popDst))
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create signer for POP")
-		}
-		sigmaPopI, err = popSigner.Sign(popMsg)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to sign POP message")
+		for i := range sigmaPopI {
+			popSigner, err := c.scheme.Signer(c.shareAsPrivateKey[i], bls.SignWithCustomDST[PK](popDst))
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("failed to create signer for POP")
+			}
+			sigmaPopI[i], err = popSigner.Sign(popMsg)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("failed to sign POP message")
+			}
 		}
 	default:
 		return nil, ErrInvalidArgument.WithMessage("unsupported rogue key prevention algorithm: %d", c.targetRogueKeyAlg)
 	}
-	signer, err := c.scheme.Signer(c.additiveShareAsPrivateKey, bls.SignWithCustomDST[PK](c.targetDst))
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create signer")
-	}
-	sigmaI, err := signer.Sign(message)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to sign message")
+	sigmaI := make([]*bls.Signature[SG, SGFE, PK, PKFE, E, S], len(c.shareAsPrivateKey))
+	for i := range sigmaI {
+		signer, err := c.scheme.Signer(c.shareAsPrivateKey[i], bls.SignWithCustomDST[PK](c.targetDst))
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create signer")
+		}
+		sigmaI[i], err = signer.Sign(message)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to sign message")
+		}
 	}
 	c.round++
 	return &boldyreva02.PartialSignature[SG, SGFE, PK, PKFE, E, S]{
-		SigmaI:             sigmaI,
-		SigmaPopI:          sigmaPopI,
-		ZeroPublicKeyShift: c.zeroSharingPublicKeyShift,
+		SigmaI:    sigmaI,
+		SigmaPopI: sigmaPopI,
 	}, nil
 }

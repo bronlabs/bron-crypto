@@ -1,10 +1,10 @@
 # boldyreva02
 
-Implementation of the Boldyreva threshold BLS signature scheme.
+Implementation of the Boldyreva BLS signature scheme over arbitrary monotone access structures.
 
 ## Overview
 
-This package implements threshold BLS signatures based on the Boldyreva's construction. It provides a simple non-interactive signing protocol where each party produces a partial signature that can be aggregated into a full threshold signature.
+This package implements BLS signatures based on the Boldyreva construction, generalised from simple threshold to arbitrary monotone access structures via MSP-based secret sharing (Karchmer-Wigderson). It provides a simple non-interactive signing protocol where each party produces a partial signature that can be aggregated into a full signature.
 
 ## Rogue Key Prevention
 
@@ -16,7 +16,7 @@ Supports three algorithms to prevent rogue key attacks:
 ## Subpackages
 
 - `keygen` - Shard creation from DKG output
-- `signing` - Threshold signing protocol with cosigners and aggregator
+- `signing` - Signing protocol with cosigners and aggregator
 
 ## Reference
 - [B02]: [Threshold Signatures, Multisignatures and Blind Signatures Based on the Gap-Diffie-Hellman-Group Signature Scheme](https://link.springer.com/chapter/10.1007/3-540-36288-6_3)

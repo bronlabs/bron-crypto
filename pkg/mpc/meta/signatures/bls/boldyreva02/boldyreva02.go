@@ -5,7 +5,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	mpcbls "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
@@ -13,7 +12,7 @@ import (
 var ErrValidation = errs.New("validation error")
 
 // PartialSignature represents a partial BLS signature produced by a single party
-// in the Boldyreva threshold BLS scheme. It contains the partial signature on
+// in the Boldyreva BLS scheme. It contains the partial signature on
 // the message (SigmaI) and optionally a proof-of-possession signature (SigmaPopI)
 // when using the POP rogue key prevention algorithm.
 type PartialSignature[
@@ -22,29 +21,32 @@ type PartialSignature[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	// SigmaI is the partial signature on the message.
-	SigmaI *bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_i"`
+	SigmaI []*bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_i"`
 	// SigmaPopI is the proof-of-possession signature, present only when using POP algorithm.
-	SigmaPopI          *bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_pop_i"`
-	ZeroPublicKeyShift PK                                         `cbor:"zero_public_key_shift"` // zero-shift for the party's public key, as the shares are randomised with a sharing of zero.
+	SigmaPopI []*bls.Signature[Sig, SigFE, PK, PKFE, E, S] `cbor:"sigma_pop_i"`
 }
 
 func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Validate(rogueKeyPrevention bls.RogueKeyPreventionAlgorithm) error {
 	if ps == nil || ps.SigmaI == nil {
 		return ErrValidation.WithMessage("partial signature cannot be nil")
 	}
-	if ps.SigmaI.Value().IsOpIdentity() || !ps.SigmaI.Value().IsTorsionFree() {
-		return ErrValidation.WithMessage("partial signature point must be non-identity and torsion-free")
+	for _, sigma := range ps.SigmaI {
+		if sigma.Value().IsOpIdentity() || !sigma.Value().IsTorsionFree() {
+			return ErrValidation.WithMessage("partial signature point must be non-identity and torsion-free")
+		}
 	}
 	if rogueKeyPrevention == bls.POP {
 		if ps.SigmaPopI == nil {
 			return ErrValidation.WithMessage("partial signature POP cannot be nil when using POP algorithm")
 		}
-		if ps.SigmaPopI.Value().IsOpIdentity() || !ps.SigmaPopI.Value().IsTorsionFree() {
-			return ErrValidation.WithMessage("partial signature POP point must be non-identity and torsion-free")
+		if len(ps.SigmaPopI) != len(ps.SigmaI) {
+			return ErrValidation.WithMessage("partial signature POP length must match message signature length")
 		}
-	}
-	if utils.IsNil(ps.ZeroPublicKeyShift) {
-		return ErrValidation.WithMessage("zero public key shift cannot be nil")
+		for _, sigmaPop := range ps.SigmaPopI {
+			if sigmaPop.Value().IsOpIdentity() || !sigmaPop.Value().IsTorsionFree() {
+				return ErrValidation.WithMessage("partial signature POP point must be non-identity and torsion-free")
+			}
+		}
 	}
 	return nil
 }
@@ -55,22 +57,28 @@ func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Equal(other *PartialSign
 	if ps == nil || other == nil {
 		return ps == other
 	}
-	return ps.SigmaI.Equal(other.SigmaI) && ps.SigmaPopI.Equal(other.SigmaPopI)
-}
-
-// Bytes returns the byte representation of the partial signature.
-// It concatenates the message signature bytes with the POP signature bytes (if present).
-func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
-	buf := ps.SigmaI.Bytes()
-	if ps.SigmaPopI != nil {
-		buf = append(buf, ps.SigmaPopI.Bytes()...)
+	if len(ps.SigmaI) != len(other.SigmaI) {
+		return false
 	}
-	return buf
+	for i := range ps.SigmaI {
+		if !ps.SigmaI[i].Equal(other.SigmaI[i]) {
+			return false
+		}
+	}
+	if len(ps.SigmaPopI) != len(other.SigmaPopI) {
+		return false
+	}
+	for i := range ps.SigmaPopI {
+		if !ps.SigmaPopI[i].Equal(other.SigmaPopI[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 type (
 	// Shard is an alias for tbls.Shard, representing a party's secret share
-	// in the Boldyreva threshold BLS signature scheme.
+	// in the Boldyreva BLS signature scheme.
 	Shard[
 		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 		SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -78,7 +86,7 @@ type (
 	] = mpcbls.Shard[PK, PKFE, SG, SGFE, E, S]
 
 	// PublicMaterial is an alias for tbls.PublicMaterial, containing the public
-	// cryptographic material for the Boldyreva threshold BLS scheme.
+	// cryptographic material for the Boldyreva BLS scheme.
 	PublicMaterial[
 		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 		SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],

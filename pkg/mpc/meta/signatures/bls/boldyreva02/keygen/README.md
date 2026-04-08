@@ -1,10 +1,10 @@
 # keygen
 
-Shard creation for Boldyreva threshold BLS signatures.
+Shard creation for the Boldyreva BLS signature scheme over arbitrary monotone access structures.
 
 ## Overview
 
-This package converts distributed key generation (DKG) output into threshold BLS shards that can be used for signing.
+This package converts distributed key generation (DKG) output into BLS shards that can be used for signing.
 
 ## Functions
 

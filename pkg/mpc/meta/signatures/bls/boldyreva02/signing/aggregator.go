@@ -7,19 +7,17 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/bls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 
 // Aggregator collects and combines partial BLS signatures from multiple cosigners
-// into a single threshold signature. It verifies each partial signature before aggregation.
+// into a single signature. It verifies each partial signature before aggregation.
 type Aggregator[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -29,7 +27,7 @@ type Aggregator[
 	targetRogueKeyAlg bls.RogueKeyPreventionAlgorithm
 	targetDst         string
 	scheme            *bls.Scheme[PK, PKFE, SG, SGFE, E, S]
-	feldmanScheme     *feldman.Scheme[PK, S]
+	feldmanScheme     *feldman.Scheme[SG, S]
 }
 
 // PublicKeyMaterial returns the public cryptographic material used for verification.
@@ -46,7 +44,7 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *boldyreva02.
 //
 // Parameters:
 //   - curveFamily: The pairing-friendly curve family to use
-//   - publicMaterial: The public cryptographic material for the threshold scheme
+//   - publicMaterial: The public cryptographic material for the scheme
 //   - rogueKeyAlg: The rogue key prevention algorithm (Basic, MessageAugmentation, or POP)
 //
 // Returns an error if any parameter is invalid.
@@ -77,7 +75,7 @@ func NewShortKeyAggregator[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create KW scheme")
 	}
-	feldmanScheme, err := feldman.NewSchemeFromKW(curveFamily.SourceSubGroup(), kwScheme)
+	feldmanScheme, err := feldman.NewSchemeFromKW(curveFamily.TwistedSubGroup(), kwScheme)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Feldman scheme from KW scheme")
 	}
@@ -96,7 +94,7 @@ func NewShortKeyAggregator[
 //
 // Parameters:
 //   - curveFamily: The pairing-friendly curve family to use
-//   - publicMaterial: The public cryptographic material for the threshold scheme
+//   - publicMaterial: The public cryptographic material for the scheme
 //   - rogueKeyAlg: The rogue key prevention algorithm (Basic, MessageAugmentation, or POP)
 //
 // Returns an error if any parameter is invalid.
@@ -127,7 +125,7 @@ func NewLongKeyAggregator[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create KW scheme")
 	}
-	feldmanScheme, err := feldman.NewSchemeFromKW(curveFamily.TwistedSubGroup(), kwScheme)
+	feldmanScheme, err := feldman.NewSchemeFromKW(curveFamily.SourceSubGroup(), kwScheme)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Feldman scheme from KW scheme")
 	}
@@ -140,7 +138,7 @@ func NewLongKeyAggregator[
 	}, nil
 }
 
-// Aggregate combines partial signatures from multiple cosigners into a single threshold signature.
+// Aggregate combines partial signatures from multiple cosigners into a single signature.
 // It verifies each partial signature against the corresponding partial public key before aggregation.
 // For POP algorithm, it also verifies the proof-of-possession signatures.
 //
@@ -167,13 +165,10 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create verifier for partial signature")
 	}
-	quorum, err := unanimity.NewUnanimityAccessStructure(hashset.NewComparable(partialSigs.Keys()...).Freeze())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create unanimity access structure")
-	}
 	publicKeyShares := A.PublicKeyMaterial().PublicKeyShares()
-	sigShares := []SG{}
-	popShares := []SG{}
+	n := partialSigs.Size()
+	sigShares := make([]*feldman.LiftedShare[SG, S], 0, n)
+	popShares := make([]*feldman.LiftedShare[SG, S], 0, n)
 	for sender, psig := range partialSigs.Iter() {
 		if err := psig.Validate(A.targetRogueKeyAlg); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("invalid partial signature from sender %d", sender)
@@ -183,13 +178,12 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		if !exists {
 			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d does not exist in public material", sender)
 		}
-		additivePublicKeyShare, err := A.feldmanScheme.ConvertLiftedShareToAdditive(publicKeyShare, quorum)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
-		}
-		partialPublicKey, err := bls.NewPublicKey(additivePublicKeyShare.Value().Op(psig.ZeroPublicKeyShift))
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create partial public key for sender %d", sender)
+		partialPublicKey := make([]*bls.PublicKey[PK, PKFE, SG, SGFE, E, S], len(publicKeyShare.Value()))
+		for i, shareValue := range publicKeyShare.Value() {
+			partialPublicKey[i], err = bls.NewPublicKey(shareValue)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("failed to create partial public key for sender %d", sender)
+			}
 		}
 		var internalMessage []byte
 		switch A.targetRogueKeyAlg {
@@ -208,38 +202,61 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("failed to create verifier for POP")
 			}
-			if err := popVerifier.Verify(psig.SigmaPopI, partialPublicKey, internalPopMessage); err != nil {
-				return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify POP signature")
+			for i, pki := range partialPublicKey {
+				if err := popVerifier.Verify(psig.SigmaPopI[i], pki, internalPopMessage); err != nil {
+					return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify POP signature for component %d", i)
+				}
 			}
 		default:
 			return nil, ErrInvalidArgument.WithMessage("unsupported rogue key prevention algorithm: %d", A.scheme.RogueKeyPreventionAlgorithm())
 		}
-		if err := partialSignatureVerifier.Verify(psig.SigmaI, partialPublicKey, internalMessage); err != nil {
-			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature")
+		for i, pki := range partialPublicKey {
+			if err := partialSignatureVerifier.Verify(psig.SigmaI[i], pki, internalMessage); err != nil {
+				return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature for component %d", i)
+			}
 		}
-		sigShares = append(sigShares, psig.SigmaI.Value())
+
+		sigShare, err := feldman.NewLiftedShare(sender, sliceutils.Map(psig.SigmaI, func(sigma *bls.Signature[SG, SGFE, PK, PKFE, E, S]) SG {
+			return sigma.Value()
+		})...)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create lifted share from partial signature for sender %d", sender)
+		}
+		sigShares = append(sigShares, sigShare)
 		if A.targetRogueKeyAlg == bls.POP {
-			popShares = append(popShares, psig.SigmaPopI.Value())
+			popShare, err := feldman.NewLiftedShare(sender, sliceutils.Map(psig.SigmaPopI, func(sigmaPop *bls.Signature[SG, SGFE, PK, PKFE, E, S]) SG {
+				return sigmaPop.Value()
+			})...)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("failed to create lifted share from POP partial signature for sender %d", sender)
+			}
+			popShares = append(popShares, popShare)
 		}
 	}
 
-	aggregatedSignatureValue := algebrautils.Fold(sigShares[0], sigShares[1:]...)
+	reconstructedSignature, err := A.feldmanScheme.ReconstructInTheExponent(sigShares...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to reconstruct aggregated signature value from shares")
+	}
 	if A.targetRogueKeyAlg == bls.POP {
-		aggregatedPopValue := algebrautils.Fold(popShares[0], popShares[1:]...)
-		pop, err := bls.NewProofOfPossession(aggregatedPopValue)
+		reconstructedPop, err := A.feldmanScheme.ReconstructInTheExponent(popShares...)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to reconstruct aggregated POP value from shares")
+		}
+		pop, err := bls.NewProofOfPossession(reconstructedPop.Value())
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create POP from aggregated value")
 		}
-		sig, err := bls.NewSignature(aggregatedSignatureValue, pop)
+		sig, err := bls.NewSignature(reconstructedSignature.Value(), pop)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create signature from aggregated value")
+		}
+		return sig, nil
+	} else {
+		sig, err := bls.NewSignature(reconstructedSignature.Value(), nil)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create signature from aggregated value")
 		}
 		return sig, nil
 	}
-
-	sig, err := bls.NewSignature(aggregatedSignatureValue, nil)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create signature from aggregated value")
-	}
-	return sig, nil
 }
