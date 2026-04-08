@@ -14,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Round1 samples the local dealer contribution, commits to its opening
@@ -124,7 +123,6 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		return nil, errs.Wrap(err).WithMessage("cannot get share")
 	}
 
-	share, _ := p.state.dealerFunc.ShareOf(p.ctx.HolderID())
 	for id := range p.ctx.OtherPartiesOrdered() {
 		b, _ := r2b.Get(id)
 		u, _ := r2u.Get(id)
@@ -133,17 +131,8 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		if err := p.verify(b.Message, p.state.vs[id], b.U); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
-		if b.Message.SessionID != p.ctx.SessionID() {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid message")
-		}
-		if b.Message.SharingID != id {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid message")
-		}
 		if err := p.sharingScheme.Verify(u.Share, b.Message.X); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
-		}
-		if p.rhoLen != len(b.Message.Rho) {
-			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid rho")
 		}
 
 		// step 2.i
