@@ -27,8 +27,7 @@ type (
 		GE algebra.PrimeGroupElement[GE, S],
 		S algebra.PrimeFieldElement[S],
 	] struct {
-		Sig                schnorrlike.Signature[GE, S] `cbor:"signature"`
-		ZeroPublicKeyShift GE                           `cbor:"zero_public_key_shift"` // zero-shift for the party's public key, as the shares are randomised with a sharing of zero.
+		Sig schnorrlike.Signature[GE, S] `cbor:"signature"`
 	}
 )
 

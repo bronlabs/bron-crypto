@@ -7,12 +7,14 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/przs"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -22,9 +24,9 @@ import (
 const transcriptDLogSLabel = "Lindell2022SignDLogS-"
 
 // Round1 samples a random nonce, commits to it, and broadcasts the commitment.
-func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast[E, S, M], error) {
+func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast[E, S, M], network.OutgoingUnicasts[*Round1P2P[E, S, M], *Cosigner[E, S, M]], error) {
 	if c.round != 1 {
-		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 1, c.round)
+		return nil, nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 1, c.round)
 	}
 
 	// step 1.1: Sample k_i <-$- ℤ_q  &  compute R_i = k_i * G
@@ -32,19 +34,31 @@ func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast[E, S, M], error) {
 	// Any usable single party schnorr variant will have extra methods to allows us to correct parity and alike later.
 	k, err := algebrautils.RandomNonIdentity(c.sf, c.prng)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create randomised nonce commitment")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create randomised nonce commitment")
 	}
 	bigR := c.group.ScalarBaseOp(k)
+
+	zeroR1b, zeroR1u, err := c.zeroParticipant.Round1()
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot compute zero participant round 1")
+	}
 
 	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
 	commitment, opening, err := commitBigR(c, bigR)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot commit to R")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot commit to R")
 	}
 
 	// step 1.4: Broadcast(c_i)
 	broadcast := &Round1Broadcast[E, S, M]{
 		BigRCommitment: commitment,
+		ZeroR1:         zeroR1b,
+	}
+	unicast := hashmap.NewComparable[sharing.ID, *Round1P2P[E, S, M]]()
+	for id, m := range zeroR1u.Iter() {
+		unicast.Put(id, &Round1P2P[E, S, M]{
+			ZeroR1: m,
+		})
 	}
 
 	c.state.k = k
@@ -52,22 +66,73 @@ func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast[E, S, M], error) {
 	c.state.opening = opening
 
 	c.round++
-	return broadcast, nil
+	return broadcast, unicast.Freeze(), nil
 }
 
 // Round2 receives commitments from other parties and broadcasts the nonce with a discrete log proof.
-func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E, S, M], *Cosigner[E, S, M]]) (*Round2Broadcast[E, S, M], error) {
+func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E, S, M], *Cosigner[E, S, M]], inu network.RoundMessages[*Round1P2P[E, S, M], *Cosigner[E, S, M]]) (*Round2Broadcast[E, S, M], error) {
 	if c.round != 2 {
 		return nil, ErrInvalidRound.WithMessage("Running round %d but participant expected round %d", 2, c.round)
 	}
-	if err := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), inb); err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid input")
+	if errB := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), inb); errB != nil {
+		return nil, errs.Wrap(errB).WithMessage("invalid broadcast input")
+	}
+	if errU := network.ValidateIncomingMessages(c, c.ctx.OtherPartiesOrdered(), inu); errU != nil {
+		return nil, errs.Wrap(errU).WithMessage("invalid unicast input")
 	}
 
+	zeroR1b := hashmap.NewComparable[sharing.ID, *hjky.Round1Broadcast[E, S]]()
+	zeroR1u := hashmap.NewComparable[sharing.ID, *hjky.Round1P2P[E, S]]()
 	for pid := range c.ctx.OtherPartiesOrdered() {
-		received, _ := inb.Get(pid)
-		c.state.theirBigRCommitments[pid] = received.BigRCommitment
+		receivedB, _ := inb.Get(pid)
+		receivedU, _ := inu.Get(pid)
+		c.state.theirBigRCommitments[pid] = receivedB.BigRCommitment
+		zeroR1b.Put(pid, receivedB.ZeroR1)
+		zeroR1u.Put(pid, receivedU.ZeroR1)
 	}
+
+	zeroShare, zeroVerificationVector, err := c.zeroParticipant.Round2(zeroR1b.Freeze(), zeroR1u.Freeze())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute zero participant round 2")
+	}
+	additiveLsss, err := feldman.NewScheme(c.group, c.state.zeroAc)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create Feldman scheme")
+	}
+	additiveZeroShare, err := additiveLsss.ConvertShareToAdditive(zeroShare, c.state.zeroAc)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot convert zero share to additive share")
+	}
+	c.state.zeroShift = additiveZeroShare
+	additiveLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(zeroVerificationVector, additiveLsss.MSP())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create Feldman lifted dealer function")
+	}
+
+	partialPublicKeyValues := make(map[sharing.ID]E)
+	publicKeyShares := c.shard.PublicKeyShares()
+	for id := range c.ctx.AllPartiesOrdered() {
+		pkShare, _ := publicKeyShares.Get(id)
+		partialPublicKeyAdditiveShare, err := c.lsss.ConvertLiftedShareToAdditive(pkShare, c.state.zeroAc)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot convert share to additive share")
+		}
+		partialPublicKeyValue := partialPublicKeyAdditiveShare.Value()
+
+		liftedZeroShiftShare, err := additiveLiftedDealerFunc.ShareOf(id)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot compute zero shift share")
+		}
+		shiftShare, err := additiveLsss.ConvertLiftedShareToAdditive(liftedZeroShiftShare, c.state.zeroAc)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot convert zero shift share to additive share")
+		}
+		zeroShiftValue := shiftShare.Value()
+
+		partialPublicKeyValues[id] = partialPublicKeyValue.Op(zeroShiftValue)
+	}
+	c.state.partialPublicKeys = partialPublicKeyValues
+
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
 	c.state.ctxFrozenBeforeDlogProof = c.ctx.Clone()
 	bigRProof, statement, err := dlogProve(c, c.state.k, c.state.bigR, c.state.quorumBytes)
@@ -152,16 +217,12 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.Quorum())
 	}
-	zero, err := przs.SampleZeroShare(c.ctx, c.sf)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot sample zero share")
-	}
+
 	ashare, err := c.lsss.ConvertShareToAdditive(c.shard.Share(), quorum)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert share %d to additive share", c.shard.Share().ID())
 	}
-	ashare = ashare.Add(zero)
-	shift := c.group.ScalarBaseOp(zero.Value())
+	ashare = ashare.Add(c.state.zeroShift)
 
 	myAdditiveShare, err := c.variant.CorrectAdditiveSecretShareParity(c.shard.PublicKey(), ashare)
 	if err != nil {
@@ -181,7 +242,6 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 			R: correctedR,
 			S: s,
 		},
-		ZeroPublicKeyShift: shift,
 	}, nil
 }
 

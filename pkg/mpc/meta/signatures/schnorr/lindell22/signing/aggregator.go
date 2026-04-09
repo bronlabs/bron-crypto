@@ -15,7 +15,6 @@ import (
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -33,8 +32,9 @@ type Aggregator[
 	psigVerifier schnorrlike.Verifier[VR, GE, S, M]
 	feldmanVSS   *feldman.Scheme[GE, S]
 
-	bigR           GE
-	correctedBigRs map[sharing.ID]GE
+	bigR                      GE
+	correctedBigRs            map[sharing.ID]GE
+	optionalPartialPublicKeys map[sharing.ID]GE
 }
 
 // PublicMaterial returns the public key material for signature verification.
@@ -115,6 +115,7 @@ func NewCosigningAggregator[
 	}
 	agg.bigR = cosigner.state.bigR
 	agg.correctedBigRs = cosigner.state.correctedBigRs
+	agg.optionalPartialPublicKeys = cosigner.state.partialPublicKeys
 	return agg, nil
 }
 
@@ -127,42 +128,47 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if a == nil {
 		return nil, ErrNilArgument.WithMessage("aggregator cannot be nil")
 	}
+
 	quorum := hashset.NewComparable(partialSignatures.Keys()...).Freeze()
 	if !a.pkm.MSP().Accepts(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
 	}
-	for sender, psig := range partialSignatures.Iter() {
-		if psig == nil {
-			return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
-				base.IdentifiableAbortPartyIDTag, sender,
-			)
-		}
-	}
-	// If Aggregator was also a Cosigner, then it would be aware of the aggregated nonce R.
-	var R GE
+
 	if a.IsCosigning() {
-		R = a.bigR
+		var identityAborts []error
 		for sender, psig := range partialSignatures.Iter() {
 			if psig == nil {
 				return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
 					base.IdentifiableAbortPartyIDTag, sender,
 				)
 			}
+
 			if !psig.Sig.R.Equal(a.correctedBigRs[sender]) {
-				return nil, base.ErrAbort.WithMessage("partial signature from sender %d has inconsistent nonce commitment", sender).WithTag(
-					base.IdentifiableAbortPartyIDTag, sender,
-				)
+				identityAborts = append(identityAborts, base.ErrAbort.WithMessage("partial signature from sender %d has inconsistent nonce commitment", sender).WithTag(base.IdentifiableAbortPartyIDTag, sender))
+			}
+
+			senderAdditivePKShareValue := a.optionalPartialPublicKeys[sender]
+			senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShareValue)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
+			}
+			if err := a.psigVerifier.Verify(&psig.Sig, senderAdditivePK, message); err != nil {
+				identityAborts = append(identityAborts, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature"))
 			}
 		}
-	} else {
-		R = iterutils.Reduce(slices.Values(partialSignatures.Values()),
-			a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
-		)
+
+		if len(identityAborts) > 0 {
+			return nil, errs.Join(identityAborts...).WithMessage("verification failed")
+		}
 	}
+
+	bigR := iterutils.Reduce(slices.Values(partialSignatures.Values()),
+		a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
+	)
 	s := iterutils.Reduce(slices.Values(partialSignatures.Values()),
 		a.sf.Zero(), func(acc S, x *lindell22.PartialSignature[GE, S]) S { return acc.Add(x.Sig.S) },
 	)
-	e, err := a.variant.ComputeChallenge(R, a.pkm.PublicKey().Value(), message)
+	e, err := a.variant.ComputeChallenge(bigR, a.pkm.PublicKey().Value(), message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute challenge")
 	}
@@ -172,51 +178,13 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 
 		return nil, base.ErrAbort.WithMessage("partial signatures have inconsistent challenges")
 	}
-	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)
+	aggregatedSignature, err := schnorrlike.NewSignature(e, bigR, s)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create aggregated signature")
 	}
-
-	if err := a.verifier.Verify(aggregatedSignature, a.pkm.PublicKey(), message); err == nil {
-		return aggregatedSignature, nil
+	if err := a.verifier.Verify(aggregatedSignature, a.pkm.PublicKey(), message); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to verify aggregated signature")
 	}
 
-	// aggregated signature verification failed, now doing identifiable abort
-
-	identityAborts := []error{}
-	quorumAsUnanimitySet, err := unanimity.NewUnanimityAccessStructure(quorum)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create minimal qualified access structure")
-	}
-	for sender, psig := range partialSignatures.Iter() {
-		if psig == nil {
-			return nil, ErrNilArgument.WithMessage("partial signature cannot be nil").WithTag(
-				base.IdentifiableAbortPartyIDTag, sender,
-			)
-		}
-		if utils.IsNil(psig.ZeroPublicKeyShift) {
-			return nil, ErrNilArgument.WithMessage("zero public key shift cannot be nil for sender %d", sender).WithTag(
-				base.IdentifiableAbortPartyIDTag, sender,
-			)
-		}
-		senderPKShare, ok := a.pkm.PublicKeyShares().Get(sender)
-		if !ok {
-			return nil, ErrInvalidMembership.WithMessage("invalid authorization: sender %d is not in public material", sender)
-		}
-		senderAdditivePKShare, err := a.feldmanVSS.ConvertLiftedShareToAdditive(senderPKShare, quorumAsUnanimitySet)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to convert lifted share to additive share for sender %d", sender)
-		}
-		senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShare.Value().Op(psig.ZeroPublicKeyShift))
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
-		}
-		if err := a.psigVerifier.Verify(&psig.Sig, senderAdditivePK, message); err != nil {
-			identityAborts = append(identityAborts, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature"))
-		}
-	}
-	if len(identityAborts) != 0 {
-		return nil, errs.Join(identityAborts...).WithMessage("verification failed")
-	}
-	return nil, base.ErrAbort.WithMessage("verification, as well as identification of the culprit, have failed")
+	return aggregatedSignature, nil
 }

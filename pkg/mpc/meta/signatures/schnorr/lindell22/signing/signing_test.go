@@ -528,13 +528,37 @@ func TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed(t *testing.T) {
 	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
 
 	variant := scheme.Variant()
-	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+	cosigners := make(map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.Scalar, []byte])
 	for _, id := range quorum {
-		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, []byte("identifiable abort"), pcg.NewRandomised())
+		cosigner, err := signing.NewCosigner(signingCtxs[id], shards[id], fiatshamir.Name, variant, pcg.NewRandomised())
 		require.NoError(t, err)
-		runners[id] = runner
+		cosigners[id] = cosigner
 	}
-	partialSigs := ntu.TestExecuteRunners(t, runners)
+	r1bo := make(map[sharing.ID]*signing.Round1Broadcast[*k256.Point, *k256.Scalar, []byte])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*signing.Round1P2P[*k256.Point, *k256.Scalar, []byte], *signing.Cosigner[*k256.Point, *k256.Scalar, []byte]])
+	for id, c := range cosigners {
+		bOut, uOut, err := c.Round1()
+		require.NoError(t, err)
+		r1bo[id] = bOut
+		r1uo[id] = uOut
+	}
+	participants := slices.Collect(maps.Values(cosigners))
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+
+	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[*k256.Point, *k256.Scalar, []byte])
+	for id, c := range cosigners {
+		out, err := c.Round2(r2bi[id], r2ui[id])
+		require.NoError(t, err)
+		r2bo[id] = out
+	}
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	partialSigs := make(map[sharing.ID]*lindell22.PartialSignature[*k256.Point, *k256.Scalar])
+	for id, c := range cosigners {
+		psig, err := c.Round3(r3bi[id], []byte("identifiable abort"))
+		require.NoError(t, err)
+		partialSigs[id] = psig
+	}
 	require.Len(t, partialSigs, len(quorum))
 
 	// Corrupt exactly one signer by adding 1 to its S value.
@@ -556,7 +580,7 @@ func TestIdentifiableAbort_OnlyCorruptedSignerIsBlamed(t *testing.T) {
 		}
 	}
 
-	aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
+	aggregator, err := signing.NewCosigningAggregator(cosigners[quorum[0]], shards[quorum[0]].PublicKeyMaterial(), scheme)
 	require.NoError(t, err)
 
 	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), []byte("identifiable abort"))
@@ -599,13 +623,37 @@ func TestIdentifiableAbort_IncorrectShare(t *testing.T) {
 	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
 
 	variant := scheme.Variant()
-	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+	cosigners := make(map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.Scalar, []byte])
 	for _, id := range quorum {
-		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, message, pcg.NewRandomised())
+		cosigner, err := signing.NewCosigner(signingCtxs[id], shards[id], fiatshamir.Name, variant, pcg.NewRandomised())
 		require.NoError(t, err)
-		runners[id] = runner
+		cosigners[id] = cosigner
 	}
-	partialSigs := ntu.TestExecuteRunners(t, runners)
+	r1bo := make(map[sharing.ID]*signing.Round1Broadcast[*k256.Point, *k256.Scalar, []byte])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*signing.Round1P2P[*k256.Point, *k256.Scalar, []byte], *signing.Cosigner[*k256.Point, *k256.Scalar, []byte]])
+	for id, c := range cosigners {
+		bOut, uOut, err := c.Round1()
+		require.NoError(t, err)
+		r1bo[id] = bOut
+		r1uo[id] = uOut
+	}
+	participants := slices.Collect(maps.Values(cosigners))
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+
+	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[*k256.Point, *k256.Scalar, []byte])
+	for id, c := range cosigners {
+		out, err := c.Round2(r2bi[id], r2ui[id])
+		require.NoError(t, err)
+		r2bo[id] = out
+	}
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	partialSigs := make(map[sharing.ID]*lindell22.PartialSignature[*k256.Point, *k256.Scalar])
+	for id, c := range cosigners {
+		psig, err := c.Round3(r3bi[id], message)
+		require.NoError(t, err)
+		partialSigs[id] = psig
+	}
 
 	// Simulate a signer whose share is off by delta. A partial signature
 	// computed with share (d_i' + δ) instead of d_i' satisfies:
@@ -623,14 +671,13 @@ func TestIdentifiableAbort_IncorrectShare(t *testing.T) {
 					R: psig.Sig.R,
 					S: psig.Sig.S.Add(delta.Mul(psig.Sig.E)),
 				},
-				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
 			})
 		} else {
 			corruptedSigsMap.Put(id, psig)
 		}
 	}
 
-	aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
+	aggregator, err := signing.NewCosigningAggregator(cosigners[quorum[0]], shards[quorum[0]].PublicKeyMaterial(), scheme)
 	require.NoError(t, err)
 
 	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), message)
@@ -646,19 +693,18 @@ func TestIdentifiableAbort_IncorrectShare(t *testing.T) {
 	}
 }
 
-// TestIdentifiableAbort_CorruptedR_EscapesBlame demonstrates that a malicious
-// signer can substitute a different R in their partial signature without being
-// identified. Given a valid partial signature (e, R_i, s_i) that satisfies
-// s_i·G = R_i + e·PK_i, the adversary adds a random δ to both the response
-// and the nonce commitment:
+// TestIdentifiableAbort_CorruptedR verifies that a cosigning
+// aggregator catches a malicious signer who substitutes a different R in their
+// partial signature. Given a valid partial signature (e, R_i, s_i) that
+// satisfies s_i·G = R_i + e·PK_i, the adversary adds a random δ to both the
+// response and the nonce commitment:
 //
 //	R' = R_i + δ·G,  s' = s_i + δ   →   s'·G = R' + e·PK_i  ✓
 //
-// The resulting partial signature individually verifies, but the aggregated R
-// is wrong, so the recomputed challenge e' ≠ e. The aggregator detects the
-// inconsistency but cannot attribute blame because every partial signature
-// carries the original (now stale) challenge.
-func TestIdentifiableAbort_CorruptedR_EscapesBlame(t *testing.T) {
+// The resulting partial signature individually verifies, but the cosigning
+// aggregator knows the expected committed R_i from the protocol and can
+// attribute blame immediately.
+func TestIdentifiableAbort_CorruptedR(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewCurve()
@@ -674,19 +720,44 @@ func TestIdentifiableAbort_CorruptedR_EscapesBlame(t *testing.T) {
 	message := []byte("corrupted R test")
 	quorum := fx.qualified[0]
 	quorumSet := hashset.NewComparable(quorum...).Freeze()
-	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
-
 	variant := scheme.Variant()
-	runners := make(map[sharing.ID]network.Runner[*lindell22.PartialSignature[*k256.Point, *k256.Scalar]])
+
+	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
+	cosigners := make(map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.Scalar, []byte])
 	for _, id := range quorum {
-		runner, err := signing.NewRunner(signingCtxs[id], shards[id], fiatshamir.Name, variant, message, pcg.NewRandomised())
+		c, err := signing.NewCosigner(signingCtxs[id], shards[id], fiatshamir.Name, variant, pcg.NewRandomised())
 		require.NoError(t, err)
-		runners[id] = runner
+		cosigners[id] = c
 	}
-	partialSigs := ntu.TestExecuteRunners(t, runners)
+
+	r1bo := make(map[sharing.ID]*signing.Round1Broadcast[*k256.Point, *k256.Scalar, []byte])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*signing.Round1P2P[*k256.Point, *k256.Scalar, []byte], *signing.Cosigner[*k256.Point, *k256.Scalar, []byte]])
+	for id, c := range cosigners {
+		bOut, uOut, err := c.Round1()
+		require.NoError(t, err)
+		r1bo[id] = bOut
+		r1uo[id] = uOut
+	}
+	participants := slices.Collect(maps.Values(cosigners))
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+
+	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[*k256.Point, *k256.Scalar, []byte])
+	for id, c := range cosigners {
+		out, err := c.Round2(r2bi[id], r2ui[id])
+		require.NoError(t, err)
+		r2bo[id] = out
+	}
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	partialSigs := make(map[sharing.ID]*lindell22.PartialSignature[*k256.Point, *k256.Scalar])
+	for id, c := range cosigners {
+		psig, err := c.Round3(r3bi[id], message)
+		require.NoError(t, err)
+		partialSigs[id] = psig
+	}
 
 	// Corrupt one signer's R: add δ·G to R and δ to S. The resulting partial
-	// signature individually verifies but shifts the aggregated R.
+	// signature individually verifies but shifts the committed nonce.
 	corruptedID := quorum[0]
 	delta, err := sf.Random(prng)
 	require.NoError(t, err)
@@ -702,25 +773,26 @@ func TestIdentifiableAbort_CorruptedR_EscapesBlame(t *testing.T) {
 					R: psig.Sig.R.Op(deltaG),
 					S: psig.Sig.S.Add(delta),
 				},
-				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
 			})
 		} else {
 			corruptedSigsMap.Put(id, psig)
 		}
 	}
 
-	aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
+	aggregator, err := signing.NewCosigningAggregator(cosigners[quorum[1]], shards[quorum[0]].PublicKeyMaterial(), scheme)
 	require.NoError(t, err)
 
 	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), message)
 	require.Error(t, err, "aggregation must fail when R is corrupted")
 
-	// The corrupted R shifts the aggregated nonce commitment, so the
-	// recomputed challenge e' ≠ e. The aggregator catches this as
-	// "inconsistent challenges" but never enters the identification phase.
-	// No culprit is attributed.
 	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
-	assert.Empty(t, culprits, "no culprit is identified — the cheater escapes blame")
+	require.NotEmpty(t, culprits, "cosigning aggregator must identify the cheater")
+	assert.Contains(t, culprits, corruptedID, "signer who corrupted R must be blamed")
+	for _, id := range quorum {
+		if id != corruptedID {
+			assert.NotContains(t, culprits, id, "honest signer %d must not be blamed", id)
+		}
+	}
 	require.ErrorIs(t, err, base.ErrAbort)
 }
 
@@ -758,18 +830,20 @@ func TestIdentifiableAbort_CorruptedR_CosigningAggregator(t *testing.T) {
 
 	// Round 1
 	r1bo := make(map[sharing.ID]*signing.Round1Broadcast[*k256.Point, *k256.Scalar, []byte])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*signing.Round1P2P[*k256.Point, *k256.Scalar, []byte], *signing.Cosigner[*k256.Point, *k256.Scalar, []byte]])
 	for id, c := range cosigners {
-		out, err := c.Round1()
+		bOut, uOut, err := c.Round1()
 		require.NoError(t, err)
-		r1bo[id] = out
+		r1bo[id] = bOut
+		r1uo[id] = uOut
 	}
 	participants := slices.Collect(maps.Values(cosigners))
-	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
 
 	// Round 2
 	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[*k256.Point, *k256.Scalar, []byte])
 	for id, c := range cosigners {
-		out, err := c.Round2(r2bi[id])
+		out, err := c.Round2(r2bi[id], r2ui[id])
 		require.NoError(t, err)
 		r2bo[id] = out
 	}
@@ -803,7 +877,6 @@ func TestIdentifiableAbort_CorruptedR_CosigningAggregator(t *testing.T) {
 					R: psig.Sig.R.Op(deltaG),
 					S: psig.Sig.S.Add(delta),
 				},
-				ZeroPublicKeyShift: psig.ZeroPublicKeyShift,
 			})
 		} else {
 			corruptedSigsMap.Put(id, psig)

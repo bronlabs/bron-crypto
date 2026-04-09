@@ -269,10 +269,49 @@ func TestInducedByUnanimity_Dimensions(t *testing.T) {
 	m, err := InducedMSP(field, ac)
 	require.NoError(t, err)
 
-	// For unanimity with n shareholders, the CNF has n maximal unqualified sets,
-	// each clause is a singleton, so MSP has n rows and n columns.
 	require.Equal(t, uint(len(ids)), m.Size(), "MSP should have one row per shareholder")
 	require.Equal(t, uint(len(ids)), m.D(), "MSP dimension should equal number of shareholders")
+}
+
+func TestInducedByUnanimity_MatrixShape(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	ids := []ID{10, 20, 30, 40}
+	ac, err := NewUnanimityAccessStructure(hashset.NewComparable(ids...).Freeze())
+	require.NoError(t, err)
+
+	m, err := InducedMSP(field, ac)
+	require.NoError(t, err)
+
+	rows, cols := m.Matrix().Dimensions()
+	require.Equal(t, len(ids), rows)
+	require.Equal(t, len(ids), cols)
+
+	one := field.One()
+	minusOne := one.OpInv()
+	zero := field.Zero()
+
+	expected := [][]*k256.Scalar{
+		{zero, one, zero, zero},
+		{zero, zero, one, zero},
+		{zero, zero, zero, one},
+		{one, minusOne, minusOne, minusOne},
+	}
+
+	for i := range rows {
+		for j := range cols {
+			got, err := m.Matrix().Get(i, j)
+			require.NoError(t, err)
+			require.Truef(t, got.Equal(expected[i][j]), "unexpected entry at (%d,%d)", i, j)
+		}
+	}
+
+	for i, id := range ids {
+		gotID, ok := m.RowsToHolders().Get(i)
+		require.True(t, ok)
+		require.Equal(t, id, gotID)
+	}
 }
 
 func canonicalIDs(s ds.Set[ID]) string {
