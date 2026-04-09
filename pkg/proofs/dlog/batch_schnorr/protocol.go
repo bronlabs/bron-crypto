@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -30,25 +31,19 @@ var (
 
 // Statement contains the generator and public group elements X_i being proven.
 type Statement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	Gen G   `cbor:"gen"`
-	Xs  []G `cbor:"xs"`
+	Xs []G `cbor:"xs"`
 }
 
 // NewStatement creates a new statement from a generator and public group elements.
-func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](g G, xs ...G) *Statement[G, S] {
+func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](xs ...G) *Statement[G, S] {
 	return &Statement[G, S]{
-		Gen: g,
-		Xs:  xs,
+		Xs: xs,
 	}
 }
 
 // Bytes serialises the statement to a byte slice.
 func (x *Statement[G, S]) Bytes() []byte {
 	var d []byte
-
-	gBytes := x.Gen.Bytes()
-	d = binary.LittleEndian.AppendUint64(d, uint64(len(gBytes)))
-	d = append(d, gBytes...)
 
 	t := len(x.Xs)
 	d = binary.LittleEndian.AppendUint64(d, uint64(t))
@@ -133,19 +128,19 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 	soundnessError  int
 	group           algebra.PrimeGroup[G, S]
 	scalarField     algebra.PrimeField[S]
-	prng            io.Reader
+	basePoint       G
 }
 
 // NewProtocol creates a new batch Schnorr protocol for k discrete logarithms.
-func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](k int, group algebra.PrimeGroup[G, S], prng io.Reader) (*Protocol[G, S], error) {
+func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](k int, group algebra.PrimeGroup[G, S], basePoint G) (*Protocol[G, S], error) {
 	if k < 2 {
 		return nil, ErrInvalidArgument.WithMessage("k must be >= 2")
 	}
 	if group == nil {
 		return nil, ErrInvalidArgument.WithMessage("group is nil")
 	}
-	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+	if utils.IsNil(basePoint) {
+		return nil, ErrInvalidArgument.WithMessage("base point is nil")
 	}
 
 	challengeLengthBits := base.ComputationalSecurityBits + mathutils.CeilLog2(k)
@@ -158,7 +153,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		soundnessError:  soundnessError,
 		group:           group,
 		scalarField:     scalarField,
-		prng:            prng,
+		basePoint:       basePoint,
 	}
 	return p, nil
 }
@@ -168,29 +163,32 @@ func (*Protocol[G, S]) Name() sigma.Name {
 	return Name
 }
 
-// ComputeProverCommitment generates the prover's first message and internal state.
-func (p *Protocol[G, S]) ComputeProverCommitment(statement *Statement[G, S], _ *Witness[S]) (*Commitment[G, S], *State[S], error) {
-	if statement == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("statement is nil")
+func (p *Protocol[G, S]) SampleProverState(prng io.Reader) (*State[S], error) {
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil prng")
 	}
-
-	s, err := p.scalarField.Random(p.prng)
+	s, err := p.scalarField.Random(prng)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random scalar")
+		return nil, errs.Wrap(err).WithMessage("cannot sample random scalar")
 	}
-	a := statement.Gen.ScalarOp(s)
+	return &State[S]{S: s}, nil
+}
 
-	commitment := &Commitment[G, S]{
+// ComputeProverCommitment generates the prover's first message and internal state.
+func (p *Protocol[G, S]) ComputeProverCommitment(state *State[S]) (*Commitment[G, S], error) {
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("state is nil")
+	}
+
+	a := p.group.ScalarBaseOp(state.S)
+
+	return &Commitment[G, S]{
 		A: a,
-	}
-	state := &State[S]{
-		S: s,
-	}
-	return commitment, state, nil
+	}, nil
 }
 
 // ComputeProverResponse computes the prover's response to the verifier's challenge.
-func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witness[S], _ *Commitment[G, S], state *State[S], challenge sigma.ChallengeBytes) (*Response[S], error) {
+func (p *Protocol[G, S]) ComputeProverResponse(witness *Witness[S], state *State[S], challenge sigma.ChallengeBytes) (*Response[S], error) {
 	if state == nil {
 		return nil, ErrInvalidArgument.WithMessage("state is nil")
 	}
@@ -260,7 +258,7 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 	}
 
 	rCheck := poly.Eval(e)
-	if !rCheck.Equal(statement.Gen.ScalarOp(response.Z)) {
+	if !rCheck.Equal(p.basePoint.ScalarOp(response.Z)) {
 		return ErrVerificationFailed.WithMessage("invalid proof")
 	}
 
@@ -268,8 +266,20 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 }
 
 // RunSimulator generates a simulated proof transcript for the given statement and challenge.
-func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigma.ChallengeBytes) (*Commitment[G, S], *Response[S], error) {
-	z, err := p.scalarField.Random(p.prng)
+func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigma.ChallengeBytes, prng io.Reader) (*Commitment[G, S], *Response[S], error) {
+	if statement == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("statement is nil")
+	}
+	if prng == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("nil prng")
+	}
+	if len(statement.Xs) != p.k {
+		return nil, nil, ErrInvalidArgument.WithMessage("invalid number of statements")
+	}
+	if len(challenge) != p.challengeLength {
+		return nil, nil, ErrInvalidArgument.WithMessage("invalid challenge length")
+	}
+	z, err := p.scalarField.Random(prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample random scalar")
 	}
@@ -288,7 +298,7 @@ func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigm
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create polynomial")
 	}
-	a := statement.Gen.ScalarOp(z).Op(poly.Eval(e).OpInv())
+	a := p.basePoint.ScalarOp(z).Op(poly.Eval(e).OpInv())
 
 	commitment := &Commitment[G, S]{
 		A: a,
@@ -314,6 +324,22 @@ func (p *Protocol[G, S]) GetChallengeBytesLength() int {
 	return p.challengeLength
 }
 
+// DeriveStatement derives the statement from a given witness.
+func (p *Protocol[G, S]) DeriveStatement(witness *Witness[S]) (*Statement[G, S], error) {
+	if witness == nil {
+		return nil, ErrInvalidArgument.WithMessage("witness is nil")
+	}
+	if len(witness.Ws) != p.k {
+		return nil, ErrInvalidArgument.WithMessage("invalid number of witnesses")
+	}
+
+	xs := make([]G, p.k)
+	for i := range p.k {
+		xs[i] = p.basePoint.ScalarOp(witness.Ws[i])
+	}
+	return &Statement[G, S]{Xs: xs}, nil
+}
+
 // ValidateStatement checks that the statement and witness are consistent.
 func (p *Protocol[G, S]) ValidateStatement(statement *Statement[G, S], witness *Witness[S]) error {
 	if statement == nil {
@@ -330,7 +356,7 @@ func (p *Protocol[G, S]) ValidateStatement(statement *Statement[G, S], witness *
 	}
 
 	for i := range p.k {
-		if !statement.Gen.ScalarOp(witness.Ws[i]).Equal(statement.Xs[i]) {
+		if !p.basePoint.ScalarOp(witness.Ws[i]).Equal(statement.Xs[i]) {
 			return ErrValidationFailed.WithMessage("invalid statement")
 		}
 	}

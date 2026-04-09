@@ -93,7 +93,7 @@ func NewVerifier(ctx *session.Context, k int, pk *paillier.PublicKey, prng io.Re
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	nthRootsSigmaProtocol, err := nthroot.NewProtocol(pk.Group(), prng)
+	nthRootsSigmaProtocol, err := nthroot.NewProtocol(pk.Group())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Nth root protocol")
 	}
@@ -155,7 +155,7 @@ func NewProver(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Rea
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	nthRootsSigmaProtocol, err := nthroot.NewProtocol(sk.Group(), prng)
+	nthRootsSigmaProtocol, err := nthroot.NewProtocol(sk.Group())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Nth root protocol")
 	}

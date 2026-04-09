@@ -43,7 +43,7 @@ type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	Z   []Z      `cbor:"z"`
 }
 
-var _ compiler.NonInteractiveProtocol[sigma.Statement, sigma.Witness] = (*simplifiedFischlin[
+var _ compiler.NonInteractiveProtocol[sigma.Statement, sigma.Witness, sigma.State] = (*simplifiedFischlin[
 	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
 ])(nil)
 
@@ -57,7 +57,7 @@ type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S
 
 // NewCompiler creates a new Fischlin compiler for the given sigma protocol.
 // The prng is used for randomness during proof generation.
-func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
+func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W, S], error) {
 	if sigmaProtocol == nil || prng == nil {
 		return nil, ErrNil.WithMessage("sigmaProtocol or prng")
 	}
@@ -85,7 +85,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 
 // NewProver creates a new non-interactive prover for generating Fischlin proofs.
 // The sessionID and transcript are used for domain separation.
-func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[W, S], error) {
 	if ctx == nil {
 		return nil, ErrNil.WithMessage("ctx")
 	}

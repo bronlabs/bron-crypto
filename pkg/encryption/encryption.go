@@ -26,11 +26,6 @@ type (
 	KeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
 		Generate(prng io.Reader) (SK, PK, error)
 	}
-	ExtendedKeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
-		KeyGenerator[SK, PK]
-		GenerateWithSeed(ikm []byte) (SK, PK, error)
-	}
-
 	KeyGeneratorOption[
 		KG KeyGenerator[SK, PK], SK PrivateKey[SK], PK PublicKey[PK],
 	] = func(KG) error
@@ -47,19 +42,6 @@ type (
 	}] interface {
 		Encrypter[PK, M, C, N]
 		EncryptWithNonce(plaintext M, receiver PK, nonce N) (ciphertext C, err error)
-	}
-
-	SelfEncrypter[SK PrivateKey[SK], M Plaintext, C Ciphertext[C], X any] interface {
-		PrivateKey() SK
-		SelfEncrypt(plaintext M, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
-	}
-
-	LinearlyRandomisedSelfEncrypter[SK PrivateKey[SK], PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N interface {
-		Nonce
-		algebra.Operand[N]
-	}] interface {
-		SelfEncrypter[SK, M, C, N]
-		SelfEncryptWithNonce(plaintext M, nonce N) (ciphertext C, err error)
 	}
 
 	EncrypterOption[

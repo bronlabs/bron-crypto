@@ -1,14 +1,13 @@
 package okamoto
 
 import (
-	"io"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -73,9 +72,14 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 
 // NewProtocol creates a new Okamoto protocol instance for the given generators and randomness source.
 // The number of generators m determines the dimension of the representation.
-func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generators []G, prng io.Reader) (*Protocol[G, S], error) {
+func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generators []G) (*Protocol[G, S], error) {
 	if len(generators) == 0 {
 		return nil, ErrInvalidArgument.WithMessage("at least one generator is required")
+	}
+	for i, g := range generators {
+		if utils.IsNil(g) {
+			return nil, ErrInvalidArgument.WithMessage("generator at index %d is nil", i)
+		}
 	}
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](generators[0].Structure())
 	baseScalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
@@ -114,7 +118,6 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		scalarDirectPowerRing,
 		homomorphism,
 		anc,
-		prng,
 	)
 	if err != nil {
 		return nil, errs.Wrap(err)

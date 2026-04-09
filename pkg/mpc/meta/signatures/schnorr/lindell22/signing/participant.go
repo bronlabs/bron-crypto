@@ -108,7 +108,7 @@ func NewCosigner[
 		return nil, ErrNilArgument.WithMessage("prng cannot be nil")
 	}
 
-	schnorrProtocol, err := schnorrpok.NewProtocol(group.Generator(), prng)
+	schnorrProtocol, err := schnorrpok.NewProtocol(group.Generator())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}

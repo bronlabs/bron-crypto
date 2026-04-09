@@ -74,7 +74,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
 	}
-	schScheme, err := batch_schnorr.NewProtocol(int(sharingScheme.MSP().D()), group, prng)
+	schScheme, err := batch_schnorr.NewProtocol(int(sharingScheme.MSP().D()), group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create ZK scheme")
 	}

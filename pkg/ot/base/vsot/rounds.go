@@ -26,7 +26,7 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	}
 	s.state.bigB = s.suite.Curve().ScalarBaseMul(s.state.b)
 
-	dlogProtocol, err := dlogschnorr.NewProtocol(s.suite.Curve().Generator(), s.prng)
+	dlogProtocol, err := dlogschnorr.NewProtocol(s.suite.Curve().Generator())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dlog protocol")
 	}
@@ -65,7 +65,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 		return nil, nil, ot.ErrInvalidArgument.WithMessage("invalid choices length")
 	}
 
-	dlogProtocol, err := dlogschnorr.NewProtocol(r.suite.curve.Generator(), r.prng)
+	dlogProtocol, err := dlogschnorr.NewProtocol(r.suite.curve.Generator())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog protocol")
 	}

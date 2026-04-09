@@ -122,7 +122,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		commitmentSchemes[id] = scheme
 	}
 
-	schnorrProtocol, err := schnorrpok.NewProtocol(curve.Generator(), prng)
+	schnorrProtocol, err := schnorrpok.NewProtocol(curve.Generator())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}

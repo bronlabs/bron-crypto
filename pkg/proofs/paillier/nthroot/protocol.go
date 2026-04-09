@@ -1,8 +1,6 @@
 package nthroot
 
 import (
-	"io"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -47,7 +45,10 @@ type Protocol[A znstar.ArithmeticPaillier] struct {
 }
 
 // NewProtocol constructs a Paillier nth-root protocol instance.
-func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], prng io.Reader) (*Protocol[A], error) {
+func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A]) (*Protocol[A], error) {
+	if group == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil group")
+	}
 	oneWayHomomorphism := func(x *znstar.PaillierGroupElement[A]) *znstar.PaillierGroupElement[A] {
 		y, _ := group.NthResidue(x.ForgetOrder())
 		return y
@@ -71,7 +72,6 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 		group,
 		oneWayHomomorphism,
 		anc,
-		prng,
 		maurer09.WithImageScalarMul[*znstar.PaillierGroupElement[A], *znstar.PaillierGroupElement[A]](scalarMul),
 		maurer09.WithPreImageScalarMul[*znstar.PaillierGroupElement[A]](scalarMul),
 	)
@@ -92,3 +92,5 @@ func (a *anchor[A]) L() *num.Nat {
 func (*anchor[A]) PreImage(x *znstar.PaillierGroupElement[A]) (w *znstar.PaillierGroupElement[A]) {
 	return x
 }
+
+var ErrInvalidArgument = errs.New("invalid argument")

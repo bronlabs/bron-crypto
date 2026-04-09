@@ -1,6 +1,8 @@
 package sigma
 
 import (
+	"io"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 )
@@ -37,8 +39,9 @@ type (
 // Protocol defines the sigma protocol interface.
 type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interface {
 	Name() Name
-	ComputeProverCommitment(statement X, witness W) (A, S, error)
-	ComputeProverResponse(statement X, witness W, commitment A, state S, challenge ChallengeBytes) (Z, error)
+	SampleProverState(prng io.Reader) (S, error)
+	ComputeProverCommitment(state S) (A, error)
+	ComputeProverResponse(witness W, state S, challenge ChallengeBytes) (Z, error)
 	Verify(statement X, commitment A, challenge ChallengeBytes, response Z) error
 
 	// RunSimulator produces a transcript that's statistically identical to (or indistinguishable from)
@@ -49,7 +52,7 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	// To fake it, the simulator "rewinds" (aka does things in reverse order):
 	// first create a response, and then compute the commitment intelligently so that the full transcript (a, e, z)
 	// would be valid if played in the right order.
-	RunSimulator(statement X, challenge ChallengeBytes) (A, Z, error)
+	RunSimulator(statement X, challenge ChallengeBytes, prng io.Reader) (A, Z, error)
 
 	// SpecialSoundness returns n for which protocol has n-special soundness.
 	// In other words, it returns a minimal number of how many distinct, valid
@@ -64,6 +67,7 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	SoundnessError() uint
 	GetChallengeBytesLength() int
 
+	DeriveStatement(witness W) (X, error)
 	ValidateStatement(statement X, witness W) error
 }
 

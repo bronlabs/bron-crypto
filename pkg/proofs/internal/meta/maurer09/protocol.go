@@ -119,7 +119,6 @@ type Protocol[I algebra.GroupElement[I], P algebra.GroupElement[P]] struct {
 	anchor             sigma.Anchor[I, P]
 	imageScalarMul     func(I, []byte) I
 	preImageScalarMul  func(P, []byte) P
-	prng               io.Reader
 }
 
 // NewProtocol constructs a Maurer09 protocol instance.
@@ -131,10 +130,9 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 	preImageGroup algebra.FiniteGroup[P],
 	oneWayHomomorphism sigma.OneWayHomomorphism[I, P],
 	anchor sigma.Anchor[I, P],
-	prng io.Reader,
 	options ...MaurerOption[I, P],
 ) (*Protocol[I, P], error) {
-	if challengeByteLen <= 0 || soundnessError < 1 || imageGroup == nil || preImageGroup == nil || oneWayHomomorphism == nil || anchor == nil || prng == nil {
+	if challengeByteLen <= 0 || soundnessError < 1 || imageGroup == nil || preImageGroup == nil || oneWayHomomorphism == nil || anchor == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 
@@ -148,7 +146,6 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 		anchor:             anchor,
 		imageScalarMul:     defaultScalarMul[I],
 		preImageScalarMul:  defaultScalarMul[P],
-		prng:               prng,
 	}
 	for _, option := range options {
 		option(p)
@@ -156,25 +153,51 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 	return p, nil
 }
 
-// ComputeProverCommitment creates the Maurer09 commitment and state.
-func (p *Protocol[I, P]) ComputeProverCommitment(_ *Statement[I], _ *Witness[P]) (*Commitment[I], *State[P], error) {
-	s, err := p.preImageGroup.Random(p.prng)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot sample element group")
+// SampleProverState samples the prover's internal state.
+func (p *Protocol[I, P]) SampleProverState(prng io.Reader) (*State[P], error) {
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil prng")
 	}
-	a := p.oneWayHomomorphism(s)
+	s, err := p.preImageGroup.Random(prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot sample element group")
+	}
+	return &State[P]{S: s}, nil
+}
 
-	return &Commitment[I]{A: a}, &State[P]{S: s}, nil
+// ComputeProverCommitment creates the Maurer09 commitment and state.
+func (p *Protocol[I, P]) ComputeProverCommitment(state *State[P]) (*Commitment[I], error) {
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil state")
+	}
+	a := p.oneWayHomomorphism(state.S)
+
+	return &Commitment[I]{A: a}, nil
 }
 
 // ComputeProverResponse computes the Maurer09 response.
-func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness[P], _ *Commitment[I], state *State[P], challengeBytes sigma.ChallengeBytes) (*Response[P], error) {
+func (p *Protocol[I, P]) ComputeProverResponse(witness *Witness[P], state *State[P], challengeBytes sigma.ChallengeBytes) (*Response[P], error) {
+	if witness == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil witness")
+	}
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil state")
+	}
 	z := state.S.Op(p.preImageScalarMul(witness.W, challengeBytes))
 	return &Response[P]{Z: z}, nil
 }
 
 // Verify checks a Maurer09 proof response.
 func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[I], challengeBytes sigma.ChallengeBytes, response *Response[P]) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("nil statement")
+	}
+	if commitment == nil {
+		return ErrInvalidArgument.WithMessage("nil commitment")
+	}
+	if response == nil {
+		return ErrInvalidArgument.WithMessage("nil response")
+	}
 	if !p.oneWayHomomorphism(response.Z).Equal(commitment.A.Op(p.imageScalarMul(statement.X, challengeBytes))) {
 		return ErrVerificationFailed.WithMessage("invalid response")
 	}
@@ -183,8 +206,14 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 }
 
 // RunSimulator simulates a Maurer09 transcript for a given challenge.
-func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes sigma.ChallengeBytes) (*Commitment[I], *Response[P], error) {
-	z, err := p.preImageGroup.Random(p.prng)
+func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes sigma.ChallengeBytes, prng io.Reader) (*Commitment[I], *Response[P], error) {
+	if statement == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("nil statement")
+	}
+	if prng == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("nil prng")
+	}
+	z, err := p.preImageGroup.Random(prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample element group")
 	}
@@ -228,11 +257,26 @@ func (*Protocol[I, P]) SpecialSoundness() uint {
 
 // ValidateStatement checks statement/witness consistency.
 func (p *Protocol[I, P]) ValidateStatement(statement *Statement[I], witness *Witness[P]) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("nil statement")
+	}
+	if witness == nil {
+		return ErrInvalidArgument.WithMessage("nil witness")
+	}
 	if !p.oneWayHomomorphism(witness.W).Equal(statement.X) {
 		return ErrValidationFails.WithMessage("invalid statement")
 	}
 
 	return nil
+}
+
+// DeriveStatement derives the statement from a given witness.
+func (p *Protocol[I, P]) DeriveStatement(witness *Witness[P]) (*Statement[I], error) {
+	if witness == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil witness")
+	}
+	x := p.oneWayHomomorphism(witness.W)
+	return &Statement[I]{X: x}, nil
 }
 
 // GetChallengeBytesLength returns the challenge size in bytes.

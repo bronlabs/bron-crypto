@@ -75,7 +75,7 @@ type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 // computational security of the resulting non-interactive proof.
 func NewCompiler[
 	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
-](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NonInteractiveProtocol[X, W], error) {
+](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NonInteractiveProtocol[X, W, S], error) {
 	if sigmaProtocol == nil {
 		return nil, ErrNil.WithMessage("sigmaProtocol")
 	}
@@ -90,7 +90,7 @@ func NewCompiler[
 
 // NewProver creates a new non-interactive prover for generating Fiat-Shamir proofs.
 // The sessionID and transcript are used for domain separation.
-func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[W, S], error) {
 	if ctx == nil {
 		return nil, ErrNil.WithMessage("ctx")
 	}

@@ -45,7 +45,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		witnesses[i] = nthroot.NewWitness(embeddedNonce)
 	}
 	verifier.state.y = sigand.ComposeWitnesses(witnesses...)
-	verifier.state.rootsProver, err = sigma.NewProver(verifier.ctx, verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
+	verifier.state.rootsProver, err = sigma.NewProver(verifier.ctx, verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y, verifier.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create sigma protocol prover")
 	}

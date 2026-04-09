@@ -9,12 +9,13 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
-var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
+var _ compiler.NIProver[sigma.Witness, sigma.State] = (*prover[
 	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
@@ -28,7 +29,15 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 // Prove generates a non-interactive randomised Fischlin proof for the given statement
 // and witness. It runs R parallel executions, randomly sampling challenges until
 // finding ones that hash to zero. Returns the serialised proof containing all R transcripts.
-func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
+func (p prover[X, W, A, S, Z]) Prove(witness W, prng io.Reader) (proofBytes compiler.NIZKPoKProof, err error) {
+	if utils.IsNil(witness) || prng == nil {
+		return nil, ErrNil.WithMessage("nil arguments")
+	}
+	statement, err := p.sigmaProtocol.DeriveStatement(witness)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot derive statement from witness")
+	}
+
 	sessionID := p.ctx.SessionID()
 	p.ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	crs, err := p.ctx.Transcript().ExtractBytes(crsLabel, 32)
@@ -44,7 +53,11 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	// step 1. for each i in [r] compute SigmaP_a(x, w)
 	for i := range R {
 		var err error
-		aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
+		stateI[i], err = p.sigmaProtocol.SampleProverState(prng)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot sample prover state")
+		}
+		aI[i], err = p.sigmaProtocol.ComputeProverCommitment(stateI[i])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot generate commitment")
 		}
@@ -70,7 +83,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 			}
 
 			// ...and compute z_i = SigmaP_z(state_i, e_i)
-			z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, aI[i], stateI[i], e)
+			z, err := p.sigmaProtocol.ComputeProverResponse(witness, stateI[i], e)
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot generate response")
 			}

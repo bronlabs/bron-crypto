@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"io"
+
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -15,9 +17,9 @@ type NIZKPoKProof []byte
 // NIProver is the interface for generating non-interactive proofs.
 // Given a statement and witness, it produces a proof that the prover knows
 // a valid witness for the statement.
-type NIProver[X sigma.Statement, W sigma.Witness] interface {
+type NIProver[W sigma.Witness, S sigma.State] interface {
 	// Prove generates a non-interactive proof for the given statement and witness.
-	Prove(statement X, witness W) (NIZKPoKProof, error)
+	Prove(witness W, prng io.Reader) (NIZKPoKProof, error)
 }
 
 // NIVerifier is the interface for verifying non-interactive proofs.
@@ -31,13 +33,13 @@ type NIVerifier[X sigma.Statement] interface {
 // NonInteractiveProtocol is the interface for a compiled non-interactive protocol.
 // It provides factory methods to create provers and verifiers that share the same
 // session ID and transcript for domain separation.
-type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness] interface {
+type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness, S sigma.State] interface {
 	// Name returns the name of this compiler (e.g., "FiatShamir").
 	Name() Name
 	// SigmaProtocolName returns the name of the underlying sigma protocol.
 	SigmaProtocolName() sigma.Name
 	// NewProver creates a new prover for generating proofs.
-	NewProver(ctx *session.Context) (NIProver[X, W], error)
+	NewProver(ctx *session.Context) (NIProver[W, S], error)
 	// NewVerifier creates a new verifier for checking proofs.
 	NewVerifier(ctx *session.Context) (NIVerifier[X], error)
 }

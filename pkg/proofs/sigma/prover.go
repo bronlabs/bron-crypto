@@ -3,10 +3,12 @@ package sigma
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 )
 
@@ -16,12 +18,22 @@ type Prover[X Statement, W Witness, A Commitment, S State, Z Response] struct {
 
 	witness W
 	state   S
+	prng    io.Reader
 }
 
 // NewProver constructs a sigma protocol prover.
-func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](ctx *session.Context, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](ctx *session.Context, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W, prng io.Reader) (*Prover[X, W, A, S, Z], error) {
 	if ctx == nil {
 		return nil, ErrInvalidArgument.WithMessage("ctx is nil")
+	}
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+	}
+	if utils.IsNil(statement) {
+		return nil, ErrInvalidArgument.WithMessage("statement is nil")
+	}
+	if utils.IsNil(witness) {
+		return nil, ErrInvalidArgument.WithMessage("witness is nil")
 	}
 	if sigmaProtocol == nil {
 		return nil, ErrInvalidArgument.WithMessage("protocol, statement or witness is nil")
@@ -45,6 +57,7 @@ func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](ctx *s
 			round:         1,
 		},
 		witness: witness,
+		prng:    prng,
 	}, nil
 }
 
@@ -55,17 +68,19 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 	if p.round != 1 {
 		return zero, ErrRound.WithMessage("r != 1 (%d)", p.round)
 	}
-
-	commitment, state, err := p.sigmaProtocol.ComputeProverCommitment(p.statement, p.witness)
+	var err error
+	p.state, err = p.sigmaProtocol.SampleProverState(p.prng)
+	if err != nil {
+		return zero, errs.Wrap(err).WithMessage("cannot sample prover state")
+	}
+	p.commitment, err = p.sigmaProtocol.ComputeProverCommitment(p.state)
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
 
-	p.ctx.Transcript().AppendBytes(commitmentLabel, commitment.Bytes())
-	p.commitment = commitment
-	p.state = state
+	p.ctx.Transcript().AppendBytes(commitmentLabel, p.commitment.Bytes())
 	p.round += 2 // prover doesn't send anything in round 2 (skip to round 3)
-	return commitment, nil
+	return p.commitment, nil
 }
 
 // Round3 runs the prover's third round.
@@ -77,7 +92,7 @@ func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 		return zero, ErrRound.WithMessage("r != 3 (%d)", p.round)
 	}
 
-	response, err := p.sigmaProtocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, challengeBytes)
+	response, err := p.sigmaProtocol.ComputeProverResponse(p.witness, p.state, challengeBytes)
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot generate response")
 	}

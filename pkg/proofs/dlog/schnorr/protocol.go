@@ -1,13 +1,12 @@
 package schnorr
 
 import (
-	"io"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -46,7 +45,10 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 }
 
 // NewProtocol creates a new Schnorr protocol instance with the given generator and randomness source.
-func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generator G, prng io.Reader) (*Protocol[G, S], error) {
+func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generator G) (*Protocol[G, S], error) {
+	if utils.IsNil(generator) {
+		return nil, ErrIsNil.WithMessage("generator is nil")
+	}
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](generator.Structure())
 	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	challengeByteLen := base.ComputationalSecurityBytesCeil // To make it non interactive, it has to be at least equal to computational security parameter.
@@ -66,7 +68,6 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		scalarField,
 		homomorphism,
 		anc,
-		prng,
 	)
 	if err != nil {
 		return nil, errs.Wrap(err)
@@ -87,6 +88,8 @@ func (a *anchor[G, S]) L() *num.Nat {
 func (a *anchor[G, S]) PreImage(_ G) (w S) {
 	return a.id
 }
+
+var ErrIsNil = errs.New("nil argument")
 
 func _[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](proto *Protocol[G, S]) {
 	var _ sigma.MaurerProtocol[G, S, *Statement[G, S], *Witness[S], *Commitment[G, S], *State[S], *Response[S]] = proto

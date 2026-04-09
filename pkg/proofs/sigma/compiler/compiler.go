@@ -19,20 +19,20 @@ type Name = internal.Name
 type NIZKPoKProof = internal.NIZKPoKProof
 
 // NIProver is the interface for generating non-interactive proofs.
-type NIProver[X sigma.Statement, W sigma.Witness] = internal.NIProver[X, W]
+type NIProver[W sigma.Witness, S sigma.State] = internal.NIProver[W, S]
 
 // NIVerifier is the interface for verifying non-interactive proofs.
 type NIVerifier[X sigma.Statement] = internal.NIVerifier[X]
 
 // NonInteractiveProtocol is the interface for a compiled non-interactive protocol
 // that can create provers and verifiers for generating and verifying proofs.
-type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness] = internal.NonInteractiveProtocol[X, W]
+type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness, S sigma.State] = internal.NonInteractiveProtocol[X, W, S]
 
 // Compile transforms an interactive sigma protocol into a non-interactive protocol
 // using the specified compiler. The compilerName must be one of fiatshamir.Name,
 // fischlin.Name, or randfischlin.Name. The prng is used by Fischlin-based compilers
 // for randomness during proof generation.
-func Compile[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](compilerName Name, sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (NonInteractiveProtocol[X, W], error) {
+func Compile[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](compilerName Name, sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (NonInteractiveProtocol[X, W, S], error) {
 	switch compilerName {
 	case fiatshamir.Name:
 		return fiatshamir.NewCompiler(sigmaProtocol) //nolint:wrapcheck // pass through

@@ -88,7 +88,7 @@ func testSchnorrFiatShamir[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	require.NoError(t, err)
 	statementValue := g.ScalarOp(witnessValue)
 
-	scheme, err := schnorr.NewProtocol(g, prng)
+	scheme, err := schnorr.NewProtocol(g)
 	require.NoError(t, err)
 	witness := schnorr.NewWitness(witnessValue)
 	statement := schnorr.NewStatement(statementValue)

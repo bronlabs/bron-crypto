@@ -1,6 +1,8 @@
 package zk
 
 import (
+	"io"
+
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -18,12 +20,16 @@ type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 	challengeCommitment hash_comm.Commitment
 	witness             W
 	state               S
+	prng                io.Reader
 }
 
 // NewProver creates a new prover for the zero-knowledge compiled protocol.
 // The sigma protocol must have soundness error at least 2^(-80) (statistical security).
 // The prover will execute rounds 2 and 4 of the protocol.
-func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W, prng io.Reader) (*Prover[X, W, A, S, Z], error) {
+	if prng == nil {
+		return nil, ErrNil.WithMessage("prng")
+	}
 	if utils.IsNil(witness) {
 		return nil, ErrNil.WithMessage("witness")
 	}
@@ -37,6 +43,7 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 		challengeCommitment: hash_comm.Commitment{},
 		witness:             witness,
 		state:               *new(S),
+		prng:                prng,
 	}, nil
 }
 
@@ -52,7 +59,12 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 
 	p.challengeCommitment = eCommitment
 
-	commitment, state, err := p.protocol.ComputeProverCommitment(p.statement, p.witness)
+	state, err := p.protocol.SampleProverState(p.prng)
+	if err != nil {
+		return zero, errs.Wrap(err).WithMessage("cannot sample prover state")
+	}
+
+	commitment, err := p.protocol.ComputeProverCommitment(state)
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
@@ -81,7 +93,7 @@ func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash
 		return zero, errs.Wrap(err).WithMessage("invalid challenge")
 	}
 
-	response, err := p.protocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, sigma.ChallengeBytes(challenge))
+	response, err := p.protocol.ComputeProverResponse(p.witness, p.state, sigma.ChallengeBytes(challenge))
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot generate response")
 	}

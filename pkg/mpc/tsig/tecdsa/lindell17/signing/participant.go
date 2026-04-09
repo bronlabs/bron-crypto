@@ -92,7 +92,7 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create commitment scheme")
 	}
-	schnorrProtocol, err := schnorrpok.NewProtocol(suite.Curve().Generator(), prng)
+	schnorrProtocol, err := schnorrpok.NewProtocol(suite.Curve().Generator())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}

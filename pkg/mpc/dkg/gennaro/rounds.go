@@ -57,7 +57,7 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	}
 
 	// Proof of knowledge of opening
-	okamotoProtocol, err := okamoto.NewProtocol([]E{p.state.key.G(), p.state.key.H()}, p.prng)
+	okamotoProtocol, err := okamoto.NewProtocol([]E{p.state.key.G(), p.state.key.H()})
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto protocol")
 	}
@@ -121,7 +121,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		inU, _ := r2uin.Get(pid)
 
 		// Verify Okamoto proof of knowledge of opening
-		okamotoProtocol, err := okamoto.NewProtocol([]E{p.state.key.G(), p.state.key.H()}, p.prng)
+		okamotoProtocol, err := okamoto.NewProtocol([]E{p.state.key.G(), p.state.key.H()})
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto protocol")
 		}
@@ -163,7 +163,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	}
 
 	// Produce batch schnorr proof of knowledge of Feldman verification vector's coefficients' dlog.
-	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
 	}
@@ -201,7 +201,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		return nil, errs.Wrap(errB)
 	}
 
-	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
 	}
