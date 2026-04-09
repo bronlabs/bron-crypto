@@ -27,8 +27,8 @@ type PartialSignature[
 }
 
 func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Validate(rogueKeyPrevention bls.RogueKeyPreventionAlgorithm) error {
-	if ps == nil || ps.SigmaI == nil {
-		return ErrValidation.WithMessage("partial signature cannot be nil")
+	if ps == nil || len(ps.SigmaI) == 0 {
+		return ErrValidation.WithMessage("partial signature cannot be nil or empty")
 	}
 	for _, sigma := range ps.SigmaI {
 		if sigma.Value().IsOpIdentity() || !sigma.Value().IsTorsionFree() {

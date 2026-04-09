@@ -180,7 +180,7 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) ProducePartialSignature(message []b
 		return nil, ErrInvalidArgument.WithMessage("message cannot be empty")
 	}
 	var err error
-	sigmaPopI := make([]*bls.Signature[SG, SGFE, PK, PKFE, E, S], len(c.shareAsPrivateKey))
+	var sigmaPopI []*bls.Signature[SG, SGFE, PK, PKFE, E, S]
 	switch c.targetRogueKeyAlg {
 	case bls.Basic:
 	case bls.MessageAugmentation:
@@ -191,6 +191,7 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) ProducePartialSignature(message []b
 	case bls.POP:
 		popMsg := c.shard.PublicKey().Bytes()
 		popDst := c.scheme.CipherSuite().GetPopDst(c.Variant())
+		sigmaPopI = make([]*bls.Signature[SG, SGFE, PK, PKFE, E, S], len(c.shareAsPrivateKey))
 		for i := range sigmaPopI {
 			popSigner, err := c.scheme.Signer(c.shareAsPrivateKey[i], bls.SignWithCustomDST[PK](popDst))
 			if err != nil {

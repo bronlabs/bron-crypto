@@ -201,7 +201,7 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 				}
 			}
 		default:
-			return nil, ErrInvalidArgument.WithMessage("unsupported rogue key prevention algorithm: %d", A.scheme.RogueKeyPreventionAlgorithm())
+			return nil, ErrInvalidArgument.WithMessage("unsupported rogue key prevention algorithm: %d", A.targetRogueKeyAlg)
 		}
 		for i, pki := range partialPublicKey {
 			if err := partialSignatureVerifier.Verify(psig.SigmaI[i], pki, internalMessage); err != nil {
