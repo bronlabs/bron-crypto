@@ -115,44 +115,9 @@ func (a *ThresholdGateAccessStructure) Shareholders() ds.Set[internal.ID] {
 }
 
 // MaximalUnqualifiedSetsIter streams maximal unqualified sets of the access structure.
-func (a *ThresholdGateAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[internal.ID]] {
-	if a == nil {
-		return slices.Values([]ds.Set[internal.ID]{})
-	}
-	shareholders := a.Shareholders().List()
-	slices.Sort(shareholders)
-
-	maximalUnqualified := make([]ds.Set[internal.ID], 0)
-	subset := make([]internal.ID, 0, len(shareholders))
-	var enumerate func(int)
-	enumerate = func(i int) {
-		if i == len(shareholders) {
-			if a.IsQualified(subset...) {
-				return
-			}
-			candidate := hashset.NewComparable(subset...).Freeze()
-			for j := 0; j < len(maximalUnqualified); {
-				switch {
-				case candidate.IsSubSet(maximalUnqualified[j]):
-					return
-				case maximalUnqualified[j].IsSubSet(candidate):
-					maximalUnqualified = append(maximalUnqualified[:j], maximalUnqualified[j+1:]...)
-				default:
-					j++
-				}
-			}
-			maximalUnqualified = append(maximalUnqualified, candidate)
-			return
-		}
-
-		enumerate(i + 1)
-		subset = append(subset, shareholders[i])
-		enumerate(i + 1)
-		subset = subset[:len(subset)-1]
-	}
-	enumerate(0)
-
-	return slices.Values(maximalUnqualified)
+func (*ThresholdGateAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[internal.ID]] {
+	// TODO implement me
+	panic("implement me")
 }
 
 // CountLeaves returns the number of attribute leaves in the threshold-gate

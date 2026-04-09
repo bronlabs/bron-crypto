@@ -1,7 +1,6 @@
 package boolexpr_test
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,35 +12,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
-
-func TestThresholdGateAccessStructureMaximalUnqualifiedSetsIter(t *testing.T) {
-	t.Parallel()
-
-	as, err := boolexpr.NewThresholdGateAccessStructure(
-		boolexpr.Threshold(2,
-			boolexpr.ID(1),
-			boolexpr.ID(2),
-			boolexpr.ID(3),
-		),
-	)
-	require.NoError(t, err)
-
-	got := slices.Collect(as.MaximalUnqualifiedSetsIter())
-	require.Len(t, got, 3)
-	for _, want := range []uint64{1, 2, 3} {
-		found := false
-		for _, have := range got {
-			if have.Size() == 1 && have.Contains(internal.ID(want)) {
-				found = true
-				break
-			}
-		}
-		require.True(t, found)
-	}
-}
 
 func TestThresholdGateAccessStructureIsQualified(t *testing.T) {
 	t.Parallel()

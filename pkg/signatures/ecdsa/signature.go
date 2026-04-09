@@ -127,6 +127,7 @@ func (sig *Signature[S]) ToElliptic() (r, s *big.Int) {
 	if sig == nil || utils.IsNil(sig.r) || utils.IsNil(sig.s) {
 		return nil, nil
 	}
+
 	nativeR := sig.r.Cardinal().Big()
 	nativeS := sig.s.Cardinal().Big()
 	return nativeR, nativeS

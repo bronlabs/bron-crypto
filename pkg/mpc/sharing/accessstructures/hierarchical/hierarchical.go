@@ -113,44 +113,8 @@ func (h *HierarchicalConjunctiveThreshold) Shareholders() ds.Set[ID] {
 }
 
 // MaximalUnqualifiedSetsIter streams all maximal unqualified sets.
-func (h *HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
-	if h == nil {
-		return slices.Values([]ds.Set[ID]{})
-	}
-	shareholders := h.Shareholders().List()
-	slices.Sort(shareholders)
-
-	maximalUnqualified := make([]ds.Set[ID], 0)
-	subset := make([]ID, 0, len(shareholders))
-	var enumerate func(int)
-	enumerate = func(i int) {
-		if i == len(shareholders) {
-			if h.IsQualified(subset...) {
-				return
-			}
-			candidate := hashset.NewComparable(subset...).Freeze()
-			for j := 0; j < len(maximalUnqualified); {
-				switch {
-				case candidate.IsSubSet(maximalUnqualified[j]):
-					return
-				case maximalUnqualified[j].IsSubSet(candidate):
-					maximalUnqualified = append(maximalUnqualified[:j], maximalUnqualified[j+1:]...)
-				default:
-					j++
-				}
-			}
-			maximalUnqualified = append(maximalUnqualified, candidate)
-			return
-		}
-
-		enumerate(i + 1)
-		subset = append(subset, shareholders[i])
-		enumerate(i + 1)
-		subset = subset[:len(subset)-1]
-	}
-	enumerate(0)
-
-	return slices.Values(maximalUnqualified)
+func (*HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
+	panic("not implemented")
 }
 
 func (h *HierarchicalConjunctiveThreshold) Rank(id ID) (int, error) {

@@ -76,6 +76,7 @@ func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 	if pk == nil || utils.IsNil(pk.pk) {
 		return nil
 	}
+
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())
 	nativeCurve := curve.ToElliptic()
 	affineX, err := pk.Value().AffineX()
