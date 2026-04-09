@@ -164,6 +164,13 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 		if !exists {
 			return nil, ErrInvalidArgument.WithMessage("partial public key for sender %d does not exist in public material", sender)
 		}
+
+		if len(psig.SigmaI) != len(publicKeyShare.Value()) {
+			return nil, ErrInvalidArgument.WithTag(base.IdentifiableAbortPartyIDTag, sender).
+				WithMessage("partial signature SigmaI length %d does not match expected %d for sender %d",
+					len(psig.SigmaI), len(publicKeyShare.Value()), sender)
+		}
+
 		partialPublicKey := make([]*bls.PublicKey[PK, PKFE, SG, SGFE, E, S], len(publicKeyShare.Value()))
 		for i, shareValue := range publicKeyShare.Value() {
 			partialPublicKey[i], err = bls.NewPublicKey(shareValue)
