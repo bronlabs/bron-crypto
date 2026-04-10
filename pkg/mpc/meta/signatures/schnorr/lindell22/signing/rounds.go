@@ -248,7 +248,11 @@ func (c *Cosigner[GE, S, M]) computeEffectivePartialPublicKeys(zeroShare *feldma
 		}
 		zeroShiftValue := shiftShare.Value()
 
-		partialPublicKeyValues[id] = partialPublicKeyValue.Op(zeroShiftValue)
+		effectivePK := partialPublicKeyValue.Op(zeroShiftValue)
+		if effectivePK.IsOpIdentity() {
+			return nil, nil, errs.Wrap(base.ErrAbort).WithMessage("effective partial public key for shareholder %d is the identity element after zero-shift; zero sharing must be retried", id)
+		}
+		partialPublicKeyValues[id] = effectivePK
 	}
 
 	return partialPublicKeyValues, additiveZeroShare, nil
