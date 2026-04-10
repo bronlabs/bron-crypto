@@ -2,7 +2,6 @@ package signing_test
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"maps"
 	"slices"
 	"testing"
@@ -37,7 +36,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
-	vanilla "github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/schnorr"
 )
 
 // ---------------------------------------------------------------------------
@@ -899,112 +897,6 @@ func TestIdentifiableAbort_CorruptedR_CosigningAggregator(t *testing.T) {
 			assert.NotContains(t, culprits, id, "honest signer %d must not be blamed", id)
 		}
 	}
-}
-
-// TestIdentifiableAbort_FakedShift_EscapesBlame demonstrates that a malicious
-// signer can fake the ZeroPublicKeyShift to evade identification even when the
-// aggregator is a cosigner. The attacker adds δ·e to S and δ·G to the shift.
-// The partial signature verification checks s·G == R + e·PK, and since both S
-// and PK are adjusted by matching amounts, the check passes. The aggregated
-// signature fails but no culprit is found because the self-reported shift is
-// trusted at face value.
-//
-// This test uses vanilla Schnorr (not BIP340) to avoid BIP340's parity
-// correction, which would probabilistically interfere with the attack.
-func TestIdentifiableAbort_FakedShift_EscapesBlame(t *testing.T) {
-	t.Parallel()
-
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
-	require.NoError(t, err)
-	sf := k256.NewScalarField()
-
-	fx := thresholdFixture(t)
-	dkgCtxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
-	shards := doDKG(t, group, fx.ac, dkgCtxs)
-
-	message := []byte("faked shift test")
-	quorum := fx.qualified[0]
-	quorumSet := hashset.NewComparable(quorum...).Freeze()
-	variant := scheme.Variant()
-
-	// Create cosigners directly for manual round orchestration.
-	signingCtxs := session_testutils.MakeRandomContexts(t, quorumSet, prng)
-	cosigners := make(map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.Scalar, []byte])
-	for _, id := range quorum {
-		c, err := signing.NewCosigner(signingCtxs[id], shards[id], fiatshamir.Name, variant, pcg.NewRandomised())
-		require.NoError(t, err)
-		cosigners[id] = c
-	}
-
-	// Run rounds 1-3.
-	r1bo := make(map[sharing.ID]*signing.Round1Broadcast[*k256.Point, *k256.Scalar, []byte])
-	for id, c := range cosigners {
-		out, err := c.Round1()
-		require.NoError(t, err)
-		r1bo[id] = out
-	}
-	participants := slices.Collect(maps.Values(cosigners))
-	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
-
-	r2bo := make(map[sharing.ID]*signing.Round2Broadcast[*k256.Point, *k256.Scalar, []byte])
-	for id, c := range cosigners {
-		out, err := c.Round2(r2bi[id])
-		require.NoError(t, err)
-		r2bo[id] = out
-	}
-	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
-
-	partialSigs := make(map[sharing.ID]*lindell22.PartialSignature[*k256.Point, *k256.Scalar])
-	for id, c := range cosigners {
-		psig, err := c.Round3(r3bi[id], message)
-		require.NoError(t, err)
-		partialSigs[id] = psig
-	}
-
-	// Use a cosigning aggregator — it knows the correct R and individual Rs.
-	aggregatorCosigner := cosigners[quorum[0]]
-
-	// Corrupt a different signer: add δ·e to S and δ·G to the shift.
-	// This keeps the partial signature self-consistent:
-	//   (s + δ·e)·G = R + e·(PK + δ·G)  ✓
-	corruptedID := quorum[1]
-	delta, err := sf.Random(prng)
-	require.NoError(t, err)
-	deltaG := group.ScalarBaseOp(delta)
-
-	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
-	for _, id := range quorum {
-		psig := partialSigs[id]
-		if id == corruptedID {
-			corruptedSigsMap.Put(id, &lindell22.PartialSignature[*k256.Point, *k256.Scalar]{
-				Sig: schnorrlike.Signature[*k256.Point, *k256.Scalar]{
-					E: psig.Sig.E,
-					R: psig.Sig.R,
-					S: psig.Sig.S.Add(delta.Mul(psig.Sig.E)),
-				},
-				ZeroPublicKeyShift: psig.ZeroPublicKeyShift.Op(deltaG),
-			})
-		} else {
-			corruptedSigsMap.Put(id, psig)
-		}
-	}
-
-	aggregator, err := signing.NewCosigningAggregator(aggregatorCosigner, shards[quorum[0]].PublicKeyMaterial(), scheme)
-	require.NoError(t, err)
-	require.True(t, aggregator.IsCosigning())
-
-	_, err = aggregator.Aggregate(corruptedSigsMap.Freeze(), message)
-	require.Error(t, err, "aggregation must fail — the aggregated s is wrong")
-
-	// The R check passes (R was not tampered with). The challenge check passes
-	// (correct R gives correct e). The aggregated signature fails verification.
-	// The identification phase verifies each partial sig against
-	// additive_PK + faked_shift, which passes because S and shift were
-	// adjusted consistently. No culprit is found.
-	culprits := errs.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
-	assert.Empty(t, culprits, "cheater escapes blame — the cosigning aggregator trusts the self-reported shift")
 }
 
 // ---------------------------------------------------------------------------

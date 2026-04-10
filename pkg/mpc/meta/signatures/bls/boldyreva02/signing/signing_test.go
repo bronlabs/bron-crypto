@@ -119,7 +119,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 		message := []byte("Hello, thresh BLS!")
 		scheme, err := bls.NewShortKeyScheme(curveFamily, bls.Basic)
 		require.NoError(t, err)
-		signature, err := tu.DoThresholdSign(t, cosigners, scheme, message, aggregator)
+		signature, err := tu.DoThresholdSign(t, cosigners, message, aggregator)
 		require.NoError(t, err)
 		require.NotNil(t, signature)
 
@@ -216,7 +216,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		message := []byte(fmt.Sprintf("Test message for %d", rogueKeyAlg))
 		scheme, err := bls.NewShortKeyScheme(curveFamily, rogueKeyAlg)
 		require.NoError(t, err)
-		signature, err := tu.DoThresholdSign(t, cosigners, scheme, message, aggregator)
+		signature, err := tu.DoThresholdSign(t, cosigners, message, aggregator)
 		require.NoError(t, err)
 		require.NotNil(t, signature)
 
@@ -263,7 +263,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		message := []byte(fmt.Sprintf("Test message for %d", rogueKeyAlg))
 		scheme, err := bls.NewLongKeyScheme(curveFamily, rogueKeyAlg)
 		require.NoError(t, err)
-		signature, err := tu.DoThresholdSign(t, cosigners, scheme, message, aggregator)
+		signature, err := tu.DoThresholdSign(t, cosigners, message, aggregator)
 		require.NoError(t, err)
 		require.NotNil(t, signature)
 
@@ -473,10 +473,10 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 	quorumSet.Add(sharing.ID(2))
 	quorum := quorumSet.Freeze()
 
-	signCtx, err := ctxs[shard.Share().ID()].SubContext(quorum)
-	require.NoError(t, err)
 	t.Run("EmptyMessage", func(t *testing.T) {
 		t.Parallel()
+		signCtx, err := ctxs[shard.Share().ID()].SubContext(quorum)
+		require.NoError(t, err)
 		cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
 		require.NoError(t, err)
 
@@ -487,6 +487,8 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 
 	t.Run("WrongRound", func(t *testing.T) {
 		t.Parallel()
+		signCtx, err := ctxs[shard.Share().ID()].SubContext(quorum)
+		require.NoError(t, err)
 		cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
 		require.NoError(t, err)
 
@@ -689,7 +691,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 			message := []byte("Test quorum " + tc.name)
 			scheme, err := bls.NewShortKeyScheme(curveFamily, bls.Basic)
 			require.NoError(t, err)
-			signature, err := tu.DoThresholdSign(t, cosigners, scheme, message, aggregator)
+			signature, err := tu.DoThresholdSign(t, cosigners, message, aggregator)
 			require.NoError(t, err)
 
 			// Verify
@@ -771,6 +773,9 @@ func TestCosignerGetters(t *testing.T) {
 		var nilCosigner *signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 		require.Nil(t, nilCosigner.Quorum())
 		require.Nil(t, nilCosigner.Shard())
+		require.Equal(t, sharing.ID(0), nilCosigner.SharingID())
+		require.Equal(t, bls.Variant(0), nilCosigner.Variant())
+		require.Equal(t, bls.RogueKeyPreventionAlgorithm(0), nilCosigner.TargetRogueKeyPreventionAlgorithm())
 	})
 }
 

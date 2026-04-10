@@ -86,7 +86,6 @@ func DoThresholdSign[
 ](
 	tb testing.TB,
 	cosigners []*signing.Cosigner[PK, PKFE, SG, SGFE, E, S],
-	scheme *bls.Scheme[PK, PKFE, SG, SGFE, E, S],
 	message []byte,
 	aggregator *signing.Aggregator[PK, PKFE, SG, SGFE, E, S],
 ) (

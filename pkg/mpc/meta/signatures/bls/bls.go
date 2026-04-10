@@ -62,7 +62,7 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 	return spm.PublicKeyValue().HashCode()
 }
 
-// MarshalCBOR serialises a shard's public material.
+// MarshalCBOR serialises public material.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicMaterialDTO[PK, PKFE, SG, SGFE, E, S]{
 		Base: &spm.BasePublicMaterial,
@@ -74,7 +74,7 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) MarshalCBOR() ([]byte, erro
 	return data, nil
 }
 
-// UnmarshalCBOR deserialises a shard.
+// UnmarshalCBOR deserialises public material.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*publicMaterialDTO[PK, PKFE, SG, SGFE, E, S]](data)
 	if err != nil {
