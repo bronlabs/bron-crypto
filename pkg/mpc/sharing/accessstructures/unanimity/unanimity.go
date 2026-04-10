@@ -2,14 +2,15 @@ package unanimity
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
@@ -93,8 +94,9 @@ func (u *Unanimity) Clone() *Unanimity {
 	}
 }
 
-// InducedMSP constructs a monotone span programme from a unanimity
-// access structure by converting to CNF form.
+// InducedMSP constructs the ideal monotone span programme for additive sharing.
+// For n shareholders, the MSP is an n×n matrix with 1s on the superdiagonal and
+// a last row equal to (1, -1, -1, ..., -1).
 func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Unanimity) (*msp.MSP[E], error) {
 	if f == nil {
 		return nil, ErrIsNil.WithMessage("field cannot be nil")
@@ -102,15 +104,42 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], ac *Una
 	if ac == nil {
 		return nil, ErrIsNil.WithMessage("access structure cannot be nil")
 	}
-	// For unanimity with n shareholders, the CNF has n maximal unqualified sets,
-	// each clause is a singleton, so MSP has n rows and n columns, which is already minimal.
-	ascnf, err := cnf.ConvertToCNF(ac)
+	shareholders := ac.Shareholders().List()
+	slices.Sort(shareholders)
+
+	n := len(shareholders)
+	module, err := mat.NewMatrixModule(uint(n), uint(n), f)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to convert unanimity to CNF")
+		return nil, errs.Wrap(err).WithMessage("failed to create matrix module for unanimity MSP")
 	}
-	out, err := cnf.InducedMSP(f, ascnf)
+
+	values := make([]E, n*n)
+	one := f.One()
+	minusOne := one.OpInv()
+	zero := f.Zero()
+	for i := range values {
+		values[i] = zero
+	}
+	for row := range n - 1 {
+		values[row*n+row+1] = one
+	}
+	values[(n-1)*n] = one
+	for col := 1; col < n; col++ {
+		values[(n-1)*n+col] = minusOne
+	}
+
+	matrix, err := module.NewRowMajor(values...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to induce MSP from CNF conversion of unanimity")
+		return nil, errs.Wrap(err).WithMessage("failed to build unanimity MSP matrix")
+	}
+
+	rowsToHolders := make(map[int]ID, n)
+	for i, id := range shareholders {
+		rowsToHolders[i] = id
+	}
+	out, err := msp.NewMSP(matrix, rowsToHolders)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create MSP from unanimity access structure")
 	}
 	return out, nil
 }

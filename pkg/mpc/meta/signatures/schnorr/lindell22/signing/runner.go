@@ -47,16 +47,16 @@ func NewRunner[
 }
 
 func (r *signingRunner[GE, S, M]) Run(rt *network.Router) (*lindell22.PartialSignature[GE, S], error) {
-	r1bOut, err := r.cosigner.Round1()
+	r1bOut, r1uOut, err := r.cosigner.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bIn, err := exchange.BroadcastExchange(rt, r1CorrelationID, r.cosigner.Quorum(), r1bOut)
+	r2bIn, r2uIn, err := exchange.Exchange(rt, r1CorrelationID, r.cosigner.Quorum(), r1bOut, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
 
-	r2bOut, err := r.cosigner.Round2(r2bIn)
+	r2bOut, err := r.cosigner.Round2(r2bIn, r2uIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}

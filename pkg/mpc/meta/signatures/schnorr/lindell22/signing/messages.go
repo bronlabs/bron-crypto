@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -13,15 +14,27 @@ import (
 
 // Round1Broadcast is the message broadcast in round 1 containing the nonce commitment.
 type Round1Broadcast[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] struct {
-	BigRCommitment lindell22.Commitment `cbor:"bigRCommitment"`
+	BigRCommitment lindell22.Commitment         `cbor:"bigRCommitment"`
+	ZeroR1         *hjky.Round1Broadcast[GE, S] `cbor:"zeroR1"`
 }
 
 func (m *Round1Broadcast[GE, S, M]) Validate(_ *Cosigner[GE, S, M], _ sharing.ID) error {
-	if m == nil {
+	if m == nil || m.ZeroR1 == nil {
 		return ErrValidation.WithMessage("missing fields in Round1Broadcast message")
 	}
 	if m.BigRCommitment == (lindell22.Commitment{}) {
 		return ErrValidation.WithMessage("missing BigR commitment in Round1Broadcast message")
+	}
+	return nil
+}
+
+type Round1P2P[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] struct {
+	ZeroR1 *hjky.Round1P2P[GE, S] `cbor:"zeroR1"`
+}
+
+func (m *Round1P2P[GE, S, M]) Validate(_ *Cosigner[GE, S, M], _ sharing.ID) error {
+	if m == nil || m.ZeroR1 == nil {
+		return ErrValidation.WithMessage("missing fields in Round1P2P message")
 	}
 	return nil
 }
