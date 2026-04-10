@@ -16,8 +16,6 @@ import (
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -31,7 +29,6 @@ type Aggregator[
 	variant      VR
 	verifier     schnorrlike.Verifier[VR, GE, S, M]
 	psigVerifier schnorrlike.Verifier[VR, GE, S, M]
-	feldmanVSS   *feldman.Scheme[GE, S]
 
 	bigR              GE
 	correctedBigRs    map[sharing.ID]GE
@@ -80,14 +77,6 @@ func NewAggregator[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create partial signature verifier for scheme %s", scheme.Name())
 	}
-	kwScheme, err := kw.NewInducedScheme(pk.MSP())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create KW scheme for aggregator")
-	}
-	feldmanVSS, err := feldman.NewSchemeFromKW(group, kwScheme)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create Feldman VSS scheme for aggregator")
-	}
 	return &Aggregator[VR, GE, S, M]{ //nolint:exhaustruct // the other fields are for the cosigning aggregator.
 		pkm:          pk,
 		group:        group,
@@ -95,7 +84,6 @@ func NewAggregator[
 		variant:      scheme.Variant(),
 		verifier:     verifier,
 		psigVerifier: psigVerifier,
-		feldmanVSS:   feldmanVSS,
 	}, nil
 }
 
@@ -157,12 +145,6 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 
 		var identityAborts []error
 		for sender, psig := range partialSignatures.Iter() {
-			if psig == nil {
-				return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
-					base.IdentifiableAbortPartyIDTag, sender,
-				)
-			}
-
 			if !psig.Sig.R.Equal(a.correctedBigRs[sender]) {
 				identityAborts = append(identityAborts, base.ErrAbort.WithMessage("partial signature from sender %d has inconsistent nonce commitment", sender).WithTag(base.IdentifiableAbortPartyIDTag, sender))
 			}
@@ -170,7 +152,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 			senderAdditivePKShareValue := a.partialPublicKeys[sender]
 			senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShareValue)
 			if err != nil {
-				return nil, errs.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
+				identityAborts = append(identityAborts, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to create public key for sender %d", sender)) // public key value may have been identity due to adversarial manipulation of HJKY zero sharing.
 			}
 			if err := a.psigVerifier.Verify(&psig.Sig, senderAdditivePK, message); err != nil {
 				identityAborts = append(identityAborts, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature"))
