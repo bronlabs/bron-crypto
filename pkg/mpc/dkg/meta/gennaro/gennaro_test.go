@@ -26,6 +26,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -681,6 +682,39 @@ func TestTamperedPedersenVVRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
+func TestMalformedPedersenVVEntryRejected(t *testing.T) {
+	t.Parallel()
+	f := newSecurityFixture(t)
+	victim, attacker := f.ids[0], f.ids[1]
+
+	originalBC, _ := f.r2bi[victim].Get(attacker)
+	rows, _ := originalBC.PedersenVerificationVector.Value().Dimensions()
+	module, err := mat.NewModuleValuedColumnVectorModule(uint(rows), f.group)
+	require.NoError(t, err)
+	entries := make([]*k256.Point, rows)
+	for i := range rows {
+		entries[i], err = originalBC.PedersenVerificationVector.Value().Get(i, 0)
+		require.NoError(t, err)
+	}
+	entries[0] = nil
+	malformedMatrix, err := module.NewRowMajor(entries...)
+	require.NoError(t, err)
+	malformedVV, err := feldman.NewVerificationVector(malformedMatrix, nil)
+	require.NoError(t, err)
+
+	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{
+		PedersenVerificationVector: malformedVV,
+		Proof:                      originalBC.Proof,
+	}
+	tamperedR2bi := replaceBroadcastFrom(f.r2bi[victim], attacker, tampered)
+
+	_, err = f.parties[victim].Round2(tamperedR2bi, f.r2ui[victim])
+	require.Error(t, err)
+	require.True(t, base.IsIdentifiableAbortError(err))
+	culprits := base.GetMaliciousIdentities[sharing.ID](err)
+	require.Contains(t, culprits, attacker)
+}
+
 // ---------------------------------------------------------------------------
 // Security: tampered Pedersen share → identifiable abort
 // ---------------------------------------------------------------------------
@@ -758,6 +792,66 @@ func TestTamperedFeldmanVVRejected(t *testing.T) {
 	require.True(t, base.IsIdentifiableAbortError(err))
 	culprits := base.GetMaliciousIdentities[sharing.ID](err)
 	require.Contains(t, culprits, attacker)
+}
+
+func TestMalformedFeldmanVVEntryRejected(t *testing.T) {
+	t.Parallel()
+	f := newSecurityFixture(t)
+	victim, attacker := f.ids[0], f.ids[1]
+
+	r2bo := tu.DoGennaroRound2(t, f.parties, f.r2bi, f.r2ui)
+	participants := slices.Collect(maps.Values(f.parties))
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	originalBC, _ := r3bi[victim].Get(attacker)
+	rows, _ := originalBC.FeldmanVerificationVector.Value().Dimensions()
+	module, err := mat.NewModuleValuedColumnVectorModule(uint(rows), f.group)
+	require.NoError(t, err)
+	entries := make([]*k256.Point, rows)
+	for i := range rows {
+		entries[i], err = originalBC.FeldmanVerificationVector.Value().Get(i, 0)
+		require.NoError(t, err)
+	}
+	entries[0] = nil
+	malformedMatrix, err := module.NewRowMajor(entries...)
+	require.NoError(t, err)
+	malformedVV, err := feldman.NewVerificationVector(malformedMatrix, nil)
+	require.NoError(t, err)
+
+	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
+		FeldmanVerificationVector: malformedVV,
+		Proof:                     originalBC.Proof,
+	}
+	tamperedR3bi := replaceBroadcastFrom(r3bi[victim], attacker, tampered)
+
+	_, err = f.parties[victim].Round3(tamperedR3bi)
+	require.Error(t, err)
+	require.True(t, base.IsIdentifiableAbortError(err))
+	culprits := base.GetMaliciousIdentities[sharing.ID](err)
+	require.Contains(t, culprits, attacker)
+}
+
+func TestParticipantMSPReturnsIndependentCopy(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	parties := setup(t, fx.ac, group, prng)
+	participant := parties[fx.shareholders[0]]
+
+	first := participant.MSP()
+	mutated, err := first.Matrix().Set(0, 0, group.ScalarField().Zero())
+	require.NoError(t, err)
+	first = func() *msp.MSP[*k256.Scalar] {
+		copyMSP, err := msp.NewMSP(mutated, maps.Collect(first.RowsToHolders().Iter()))
+		require.NoError(t, err)
+		return copyMSP
+	}()
+
+	second := participant.MSP()
+	require.False(t, first.Equal(second))
+	require.True(t, second.Equal(participant.MSP()))
 }
 
 // ---------------------------------------------------------------------------

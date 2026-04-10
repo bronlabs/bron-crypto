@@ -35,6 +35,18 @@ func TestNewHierarchicalConjunctiveThresholdAccessStructure(t *testing.T) {
 		require.Nil(t, h)
 	})
 
+	t.Run("nil level", func(t *testing.T) {
+		t.Parallel()
+
+		h, err := NewHierarchicalConjunctiveThresholdAccessStructure(
+			WithLevel(1, 1, 2),
+			nil,
+		)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrIsNil)
+		require.Nil(t, h)
+	})
+
 	t.Run("rejects shareholder zero", func(t *testing.T) {
 		t.Parallel()
 
@@ -143,4 +155,20 @@ func TestHierarchicalConjunctiveThresholdShareholders(t *testing.T) {
 		WithLevel(3, 3, 4, 4),
 	)
 	require.Error(t, err)
+}
+
+func TestHierarchicalConjunctiveThresholdLevelsReturnsSliceCopy(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHierarchicalConjunctiveThresholdAccessStructure(
+		WithLevel(1, 1, 2),
+		WithLevel(2, 3, 4),
+	)
+	require.NoError(t, err)
+
+	levels := h.Levels()
+	levels[0] = WithLevel(99, 99)
+
+	require.Equal(t, 1, h.Levels()[0].Threshold())
+	require.True(t, h.Levels()[0].Shareholders().Equal(hashset.NewComparable[ID](1, 2).Freeze()))
 }

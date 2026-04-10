@@ -57,11 +57,9 @@ func TestSliceEqual(t *testing.T) {
 		})
 	}
 
-	t.Run("panic on different lengths", func(t *testing.T) {
+	t.Run("different lengths return zero", func(t *testing.T) {
 		t.Parallel()
-		assert.Panics(t, func() {
-			ct.SliceEqual([]uint8{1, 2}, []uint8{1, 2, 3})
-		})
+		assert.Equal(t, ct.Zero, ct.SliceEqual([]uint8{1, 2}, []uint8{1, 2, 3}))
 	})
 }
 

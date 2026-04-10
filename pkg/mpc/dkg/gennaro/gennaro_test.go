@@ -536,6 +536,28 @@ func TestTamperedPedersenVVRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
+func TestMalformedPedersenVVRejected(t *testing.T) {
+	t.Parallel()
+	f := newSecurityFixture(t)
+	victim, attacker := f.ids[0], f.ids[1]
+
+	originalBC, _ := f.r2bi[victim].Get(attacker)
+	malformedVV := originalBC.PedersenVerificationVector.Clone()
+	coeffs := malformedVV.Coefficients()
+	coeffs[0] = nil
+	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{
+		PedersenVerificationVector: malformedVV,
+		Proof:                      originalBC.Proof,
+	}
+	tamperedR2bi := replaceBroadcastFrom(f.r2bi[victim], attacker, tampered)
+
+	_, err := f.parties[victim].Round2(tamperedR2bi, f.r2ui[victim])
+	require.Error(t, err)
+	require.True(t, base.IsIdentifiableAbortError(err))
+	culprits := base.GetMaliciousIdentities[sharing.ID](err)
+	require.Contains(t, culprits, attacker)
+}
+
 func TestTamperedPedersenShareRejected(t *testing.T) {
 	t.Parallel()
 	f := newSecurityFixture(t)
@@ -652,6 +674,34 @@ func TestSwappedSchnorrProofIdentityRejected(t *testing.T) {
 	require.True(t, base.IsIdentifiableAbortError(err))
 	culprits := base.GetMaliciousIdentities[sharing.ID](err)
 	require.Contains(t, culprits, attacker)
+}
+
+func TestPublicMaterialReturnsIndependentCopy(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	quorum := sharing.NewOrdinalShareholderSet(4)
+	ac, err := threshold.NewThresholdAccessStructure(3, quorum)
+	require.NoError(t, err)
+	parties := setup(t, ac, group, prng)
+	outputs := tu.DoGennaroDKG(t, parties)
+	first := firstOutput(outputs)
+	publicMaterial := first.PublicMaterial()
+
+	originalVV := first.VerificationVector().Clone()
+	originalPK := first.PublicKeyValue().Clone()
+	originalPartials := maps.Collect(first.PartialPublicKeyValues().Iter())
+
+	publicMaterial.VerificationVector().Coefficients()[0] = publicMaterial.VerificationVector().Coefficients()[0].Double()
+
+	require.True(t, first.VerificationVector().Equal(originalVV))
+	require.True(t, first.PublicKeyValue().Equal(originalPK))
+	for id, value := range originalPartials {
+		actual, ok := first.PartialPublicKeyValues().Get(id)
+		require.True(t, ok)
+		require.True(t, actual.Equal(value))
+	}
 }
 
 func TestFeldmanPedersenConsistencyCheck(t *testing.T) {

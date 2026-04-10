@@ -54,7 +54,7 @@ func (p *Participant[E, S]) SharingID() sharing.ID {
 }
 
 func (p *Participant[E, S]) MSP() *msp.MSP[S] {
-	return p.state.lsss.MSP()
+	return p.state.lsss.MSP().Clone()
 }
 
 func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](

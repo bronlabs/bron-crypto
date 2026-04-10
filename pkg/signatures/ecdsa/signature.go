@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // Signature represents an ECDSA signature consisting of two scalar values (r, s)
@@ -123,6 +124,10 @@ func (sig *Signature[S]) IsNormalized() bool {
 
 // ToElliptic returns the r and s values as big.Int for use with Go's crypto/ecdsa package.
 func (sig *Signature[S]) ToElliptic() (r, s *big.Int) {
+	if sig == nil || utils.IsNil(sig.r) || utils.IsNil(sig.s) {
+		return nil, nil
+	}
+
 	nativeR := sig.r.Cardinal().Big()
 	nativeS := sig.s.Cardinal().Big()
 	return nativeR, nativeS

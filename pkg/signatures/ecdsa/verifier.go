@@ -63,7 +63,13 @@ func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []
 		return errs.Wrap(err).WithMessage("cannot hash message")
 	}
 
-	nativePk := pk.ToElliptic()
+	nativePk, err := pk.ToElliptic()
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot convert public key to native ECDSA format")
+	}
+	if nativePk == nil {
+		return ErrInvalidArgument.WithMessage("public key cannot be converted to native ECDSA format")
+	}
 	nativeR, nativeS := s.ToElliptic()
 	ok := nativeEcdsa.Verify(nativePk, digest, nativeR, nativeS)
 	if !ok {

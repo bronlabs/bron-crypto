@@ -59,6 +59,7 @@ func TestGenerateSafePrimePair(t *testing.T) {
 	bitSize := uint(128) // this is to keep the test reliably fast
 	p, q, err := GenerateSafePrimePair(num.N(), bitSize)
 	require.NoError(t, err)
+	require.False(t, p.Equal(q))
 
 	require.True(t, p.IsProbablyPrime())
 	pMinus1, err := p.TrySub(num.N().One())

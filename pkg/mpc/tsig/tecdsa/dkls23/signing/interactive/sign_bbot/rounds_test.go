@@ -68,7 +68,8 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 			t.Run(fmt.Sprintf("signature is valid %s", stringifyShareholders(shareholdersSubset)), func(t *testing.T) {
 				t.Parallel()
 
-				nativePk := pk.ToElliptic()
+				nativePk, err := pk.ToElliptic()
+				require.NoError(t, err)
 				nativeR, nativeS := signature.ToElliptic()
 				digest, err := hashing.Hash(hashFunc, message)
 				require.NoError(t, err)

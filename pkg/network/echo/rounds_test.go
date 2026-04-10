@@ -17,6 +17,9 @@ type dummyParticipant struct{}
 type dummyMessage uint64
 
 func (m dummyMessage) Validate(p *dummyParticipant, _ sharing.ID) error {
+	if m == 0 {
+		return network.ErrMissing.WithMessage("zero message")
+	}
 	return nil
 }
 

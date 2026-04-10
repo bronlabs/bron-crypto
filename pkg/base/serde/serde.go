@@ -2,6 +2,7 @@ package serde
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -15,6 +16,8 @@ const (
 )
 
 var (
+	mu sync.RWMutex
+
 	enc cbor.EncMode
 	dec cbor.DecMode
 
@@ -29,8 +32,10 @@ func Register[T any](tag uint64) {
 	if typ == nil {
 		panic("serde.RegisterWithTag: nil type for generic parameter T")
 	}
+	mu.Lock()
+	defer mu.Unlock()
 	if err := tags.Add(
-		cbor.TagOptions{DecTag: cbor.DecTagOptional, EncTag: cbor.EncTagRequired},
+		cbor.TagOptions{DecTag: cbor.DecTagRequired, EncTag: cbor.EncTagRequired},
 		typ,
 		tag,
 	); err != nil {
@@ -84,30 +89,42 @@ func updateModes() {
 
 // MarshalCBOR serialises the given value to CBOR format.
 func MarshalCBOR[T any](t T) ([]byte, error) {
-	data, err := enc.Marshal(t)
+	mu.RLock()
+	mode := enc
+	mu.RUnlock()
+	data, err := mode.Marshal(t)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("serialisation error")
 	}
 	return data, nil
 }
 
-// MarshalCBORTagged serialises the given value to CBOR format with the specified tag.
+// MarshalCBORTagged serialises the given value to CBOR format wrapped in an
+// explicit outer tag.
+//
+// This helper is intended for custom MarshalCBOR implementations that encode a
+// DTO payload instead of the registered concrete Go type itself. In that case
+// Register alone is not enough to emit the desired outer type tag, because the
+// encoder only sees the DTO value. MarshalCBORTagged should therefore be used
+// by such custom marshalers to wrap the DTO in the concrete type's registered
+// tag.
+//
+// For ordinary values of registered types, prefer MarshalCBOR directly and do
+// not wrap them again with MarshalCBORTagged.
 func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
-	wrapped := cbor.Tag{
+	return MarshalCBOR(cbor.Tag{
 		Number:  tag,
 		Content: t,
-	}
-	data, err := enc.Marshal(wrapped)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("serialisation error")
-	}
-	return data, nil
+	})
 }
 
 // UnmarshalCBOR deserialises the given CBOR data into the specified type.
 func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
-	err := dec.Unmarshal(data, &t)
+	mu.RLock()
+	mode := dec
+	mu.RUnlock()
+	err := mode.Unmarshal(data, &t)
 	if err != nil {
 		return t, errs.Wrap(err).WithMessage("deserialisation error")
 	}

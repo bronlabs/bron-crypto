@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
@@ -31,6 +32,62 @@ func Test_HappyPathRedistribute(t *testing.T) {
 
 	testHappyPathAddTTP(t, k256.NewCurve())
 	testHappyPathDisjoint(t, p256.NewCurve())
+}
+
+func TestRound2RejectsInvalidSubShareVerificationVectorDimensions(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	field := algebra.StructureMustBeAs[algebra.PrimeField[*k256.Scalar]](group.ScalarStructure())
+	secretValue, err := field.Random(prng)
+	require.NoError(t, err)
+
+	oldShareholders := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
+	oldAS, err := threshold.NewThresholdAccessStructure(2, oldShareholders)
+	require.NoError(t, err)
+	oldShards := testutils.Deal(t, oldAS, group, secretValue)
+
+	newShareholders := hashset.NewComparable[sharing.ID](4, 5, 6, 7).Freeze()
+	newAS, err := threshold.NewThresholdAccessStructure(3, newShareholders)
+	require.NoError(t, err)
+
+	quorum := oldShareholders.Union(newShareholders)
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	participants := make(map[sharing.ID]*redistribute.Participant[*k256.Point, *k256.Scalar])
+	for id := range quorum.Iter() {
+		p, err := redistribute.NewParticipant(ctxs[id], oldShareholders, oldShards[id], newAS, pcg.NewRandomised())
+		require.NoError(t, err)
+		participants[id] = p
+	}
+
+	r1bo := make(map[sharing.ID]*redistribute.Round1Broadcast[*k256.Point, *k256.Scalar])
+	r1uo := make(map[sharing.ID]network.RoundMessages[*redistribute.Round1P2P[*k256.Point, *k256.Scalar], *redistribute.Participant[*k256.Point, *k256.Scalar]])
+	for id, p := range participants {
+		r1bo[id], r1uo[id], err = p.Round1()
+		require.NoError(t, err)
+	}
+
+	rows, _ := r1bo[1].SubShareVerificationVector.Value().Dimensions()
+	wrongModule, err := mat.NewModuleValuedColumnVectorModule(uint(rows+1), group)
+	require.NoError(t, err)
+	wrongEntries := make([]*k256.Point, rows+1)
+	for i := range wrongEntries {
+		wrongEntries[i] = group.Generator()
+	}
+	wrongVVV, err := wrongModule.NewRowMajor(wrongEntries...)
+	require.NoError(t, err)
+	wrongVV, err := feldman.NewVerificationVector(wrongVVV, nil)
+	require.NoError(t, err)
+	r1bo[1] = &redistribute.Round1Broadcast[*k256.Point, *k256.Scalar]{
+		ShareVerificationVector:    r1bo[1].ShareVerificationVector,
+		SubShareVerificationVector: wrongVV,
+	}
+
+	r2bi, r2ui := ntu.MapO2I(t, slices.Collect(maps.Values(participants)), r1bo, r1uo)
+
+	_, err = participants[4].Round2(r2bi[4], r2ui[4])
+	require.Error(t, err)
 }
 
 // This simulates adding a new TTP and converting the threshold access structure to a hierarchical one

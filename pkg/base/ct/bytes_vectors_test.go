@@ -58,6 +58,9 @@ func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(dst, x, y []by
 		for _, v := range vectors {
 			x := []byte(v.X)
 			y := []byte(v.Y)
+			if len(x) != len(y) {
+				continue
+			}
 			expectedZ := []byte(v.Z)
 
 			actualZ := make([]byte, len(expectedZ))

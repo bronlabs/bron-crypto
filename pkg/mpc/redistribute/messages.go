@@ -1,8 +1,11 @@
 package redistribute
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 )
@@ -32,6 +35,22 @@ func (m *Round1Broadcast[G, S]) Validate(p *Participant[G, S], _ sharing.ID) err
 		if r, _ := m.ShareVerificationVector.Value().Dimensions(); r != int(p.prevShard.MSP().D()) {
 			return ErrValidation.WithMessage("invalid share verification vector dimensions")
 		}
+	}
+	basePoint, err := m.SubShareVerificationVector.Value().Get(0, 0)
+	if err != nil {
+		return ErrValidation.WithMessage("invalid sub-share verification vector")
+	}
+	nextMSP, err := accessstructures.InducedMSP(
+		algebra.StructureMustBeAs[algebra.PrimeField[S]](
+			algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](basePoint.Structure()).ScalarStructure(),
+		),
+		p.nextAccessStructures,
+	)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot induce MSP for next access structure")
+	}
+	if r, _ := m.SubShareVerificationVector.Value().Dimensions(); r != int(nextMSP.D()) {
+		return ErrValidation.WithMessage("invalid sub-share verification vector dimensions")
 	}
 
 	return nil

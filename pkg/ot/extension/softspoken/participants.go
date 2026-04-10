@@ -48,6 +48,8 @@ type Receiver struct {
 }
 
 // NewSender constructs a SoftSpoken sender with VSOT seed outputs.
+//
+//nolint:dupl // false positive
 func NewSender(ctx *session.Context, receiverSeeds *vsot.ReceiverOutput, suite *Suite, prng io.Reader) (*Sender, error) {
 	if receiverSeeds == nil || suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
@@ -57,6 +59,9 @@ func NewSender(ctx *session.Context, receiverSeeds *vsot.ReceiverOutput, suite *
 	}
 	if receiverSeeds.InferredXi() != Kappa || receiverSeeds.InferredL() != 1 {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid receiver seeds")
+	}
+	if receiverSeeds.InferredMessageBytesLen() == 0 {
+		return nil, ot.ErrInvalidArgument.WithMessage("receiver seeds must contain non-empty messages")
 	}
 
 	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
@@ -77,6 +82,8 @@ func NewSender(ctx *session.Context, receiverSeeds *vsot.ReceiverOutput, suite *
 }
 
 // NewReceiver constructs a SoftSpoken receiver with VSOT seed outputs.
+//
+//nolint:dupl // false positive
 func NewReceiver(ctx *session.Context, senderSeeds *vsot.SenderOutput, suite *Suite, prng io.Reader) (*Receiver, error) {
 	if senderSeeds == nil || suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
@@ -86,6 +93,9 @@ func NewReceiver(ctx *session.Context, senderSeeds *vsot.SenderOutput, suite *Su
 	}
 	if senderSeeds.InferredXi() != Kappa || senderSeeds.InferredL() != 1 {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid sender seeds")
+	}
+	if senderSeeds.InferredMessageBytesLen() == 0 {
+		return nil, ot.ErrInvalidArgument.WithMessage("sender seeds must contain non-empty messages")
 	}
 
 	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]

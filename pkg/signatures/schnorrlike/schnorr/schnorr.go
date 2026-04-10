@@ -197,7 +197,7 @@ type Signer[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]]
 // Variant returns the Schnorr variant used by this signer.
 func (sg *Signer[GE, S]) Variant() *Variant[GE, S] {
 	if sg == nil {
-		panic(ErrInvalidArgument.WithMessage("signer is nil"))
+		return nil
 	}
 	return sg.V
 }
@@ -213,7 +213,7 @@ type Verifier[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 // Variant returns the Schnorr variant used by this verifier.
 func (v *Verifier[GE, S]) Variant() *Variant[GE, S] {
 	if v == nil {
-		panic(ErrInvalidArgument.WithMessage("verifier is nil"))
+		return nil
 	}
 	return v.V
 }

@@ -13,49 +13,89 @@ import (
 func DecomposeTwoThirds[S algebra.PrimeFieldElement[S]](scalar S, prng io.Reader) (xPrime, xDoublePrime S, err error) {
 	var nilS S
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](scalar.Structure())
+	inRange := func(lowBoundInclusive, highBoundExclusive uint64, x S) (bool, error) {
+		ok, err := inEighteenth(lowBoundInclusive, highBoundExclusive, x)
+		if err != nil {
+			return false, errs.Wrap(err).WithMessage("could not classify scalar interval")
+		}
+		return ok, nil
+	}
+
+	inFirst, err := inRange(0, 3, scalar)
+	if err != nil {
+		return nilS, nilS, err
+	}
+	inSecond, err := inRange(3, 6, scalar)
+	if err != nil {
+		return nilS, nilS, err
+	}
+	inThird, err := inRange(6, 9, scalar)
+	if err != nil {
+		return nilS, nilS, err
+	}
+	inFourth, err := inRange(9, 12, scalar)
+	if err != nil {
+		return nilS, nilS, err
+	}
+	inFifth, err := inRange(12, 15, scalar)
+	if err != nil {
+		return nilS, nilS, err
+	}
+	inSixth, err := inRange(15, 18, scalar)
+	if err != nil {
+		return nilS, nilS, err
+	}
 
 	switch {
-	case inEighteenth(0, 3, scalar):
+	case inFirst:
 		xPrime, err = randomInEighteenth(9, 10, field, prng)
 		if err != nil {
 			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	case inEighteenth(3, 6, scalar):
+	case inSecond:
 		xPrime, err = randomInEighteenth(10, 11, field, prng)
 		if err != nil {
 			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	case inEighteenth(6, 9, scalar):
+	case inThird:
 		xPrime, err = randomInEighteenth(11, 12, field, prng)
 		if err != nil {
 			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	case inEighteenth(9, 12, scalar):
+	case inFourth:
 		xPrime, err = randomInEighteenth(6, 7, field, prng)
 		if err != nil {
 			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	case inEighteenth(12, 15, scalar):
+	case inFifth:
 		xPrime, err = randomInEighteenth(7, 8, field, prng)
 		if err != nil {
 			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	case inEighteenth(15, 18, scalar):
+	case inSixth:
 		xPrime, err = randomInEighteenth(8, 9, field, prng)
 		if err != nil {
 			return nilS, nilS, errs.Wrap(err).WithMessage("could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	default:
-		panic("this should never happen")
+		return nilS, nilS, ErrFailed.WithMessage("scalar not in expected decomposition range")
 	}
 
-	if !inEighteenth(6, 12, xPrime) || !inEighteenth(6, 12, xDoublePrime) {
+	xPrimeInRange, err := inEighteenth(6, 12, xPrime)
+	if err != nil {
+		return nilS, nilS, errs.Wrap(err).WithMessage("could not validate xPrime range")
+	}
+	xDoublePrimeInRange, err := inEighteenth(6, 12, xDoublePrime)
+	if err != nil {
+		return nilS, nilS, errs.Wrap(err).WithMessage("could not validate xDoublePrime range")
+	}
+	if !xPrimeInRange || !xDoublePrimeInRange {
 		return nilS, nilS, ErrFailed.WithMessage("split failed")
 	}
 	if !xPrime.Add(xPrime).Add(xPrime).Add(xDoublePrime).Equal(scalar) {
@@ -64,19 +104,17 @@ func DecomposeTwoThirds[S algebra.PrimeFieldElement[S]](scalar S, prng io.Reader
 	return xPrime, xDoublePrime, nil
 }
 
-func inEighteenth[S algebra.PrimeFieldElement[S]](lowBoundInclusive, highBoundExclusive uint64, x S) bool {
+func inEighteenth[S algebra.PrimeFieldElement[S]](lowBoundInclusive, highBoundExclusive uint64, x S) (bool, error) {
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](x.Structure())
 	orderNat, err := num.N().FromCardinal(field.Order())
 	if err != nil {
-		// this should never happen
-		panic(err)
+		return false, errs.Wrap(err).WithMessage("could not convert field order")
 	}
 	order := orderNat.Lift()
 
 	xNat, err := num.N().FromBytes(x.Bytes())
 	if err != nil {
-		// this should never happen
-		panic(err)
+		return false, errs.Wrap(err).WithMessage("could not convert scalar bytes")
 	}
 	xInt := xNat.Lift()
 
@@ -84,18 +122,17 @@ func inEighteenth[S algebra.PrimeFieldElement[S]](lowBoundInclusive, highBoundEx
 	low18 := order.Mul(num.Z().FromUint64(lowBoundInclusive))
 	high18 := order.Mul(num.Z().FromUint64(highBoundExclusive))
 	if low18.IsLessThanOrEqual(x18) && !high18.IsLessThanOrEqual(x18) {
-		return true
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
 
 func randomInEighteenth[S algebra.PrimeFieldElement[S]](lowBoundInclusive, highBoundExclusive uint64, field algebra.PrimeField[S], prng io.Reader) (S, error) {
 	var nilS S
 	orderNat, err := num.N().FromCardinal(field.Order())
 	if err != nil {
-		// this should never happen
-		panic(err)
+		return nilS, errs.Wrap(err).WithMessage("could not convert field order")
 	}
 	order := orderNat.Lift()
 

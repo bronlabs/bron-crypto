@@ -1,6 +1,7 @@
 package msp
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -161,6 +162,18 @@ func (m *MSP[E]) ReconstructionVector(IDs ...ID) (*mat.Matrix[E], error) {
 func (m *MSP[E]) Accepts(IDs ...ID) bool {
 	_, err := m.ReconstructionVector(IDs...)
 	return err == nil
+}
+
+// Clone returns an independent copy of the MSP.
+func (m *MSP[E]) Clone() *MSP[E] {
+	if m == nil {
+		return nil
+	}
+	cloned, err := NewMSP(m.matrix.Clone(), maps.Collect(m.rowsToHolders.Iter()))
+	if err != nil {
+		panic(errs.Wrap(err).WithMessage("failed to clone MSP"))
+	}
+	return cloned
 }
 
 // Equal returns true if this MSP equals another.

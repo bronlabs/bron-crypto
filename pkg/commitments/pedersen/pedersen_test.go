@@ -240,6 +240,26 @@ func TestWitnessCreation(t *testing.T) {
 		require.Contains(t, err.Error(), "witness value cannot be zero")
 	})
 
+	t.Run("commit rejects zero witness sample", func(t *testing.T) {
+		t.Parallel()
+
+		curve := k256.NewCurve()
+		g := curve.Generator()
+		h, err := curve.Hash([]byte("pedersen-test-zero-witness"))
+		require.NoError(t, err)
+		key, err := pedersen.NewCommitmentKey(g, h)
+		require.NoError(t, err)
+		scheme, err := pedersen.NewScheme(key)
+		require.NoError(t, err)
+		committer, err := scheme.Committer()
+		require.NoError(t, err)
+		message, err := pedersen.NewMessage(field.FromUint64(1))
+		require.NoError(t, err)
+
+		_, _, err = committer.Commit(message, bytes.NewReader(make([]byte, 4096)))
+		require.Error(t, err)
+	})
+
 	t.Run("witness operations", func(t *testing.T) {
 		t.Parallel()
 		w1, err := pedersen.NewWitness(field.FromUint64(10))

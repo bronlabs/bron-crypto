@@ -163,10 +163,12 @@ func (r *PolynomialRing[RE]) ScalarStructure() algebra.Structure[RE] {
 
 // NewPolynomialRing constructs a polynomial ring over the given finite ring.
 func NewPolynomialRing[RE algebra.RingElement[RE]](ring algebra.FiniteRing[RE]) (*PolynomialRing[RE], error) {
-	r := &PolynomialRing[RE]{
-		ring: ring,
+	if ring == nil {
+		return nil, ErrValidation.WithMessage("nil ring")
 	}
-	return r, nil
+	return &PolynomialRing[RE]{
+		ring: ring,
+	}, nil
 }
 
 // Polynomial is a univariate polynomial with coefficients in a ring RE,
@@ -523,7 +525,7 @@ func (p *Polynomial[RE]) EuclideanValuation() algebra.Cardinal {
 	return cardinal.New(uint64(deg))
 }
 
-// IsConstant reports whether p has degree 0 (possibly the zero polynomial).
+// IsConstant reports whether p has degree 0.
 func (p *Polynomial[RE]) IsConstant() bool {
 	return p.Degree() == 0
 }

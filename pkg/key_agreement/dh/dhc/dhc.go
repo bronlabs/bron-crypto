@@ -131,7 +131,7 @@ func (sk *PrivateKey) Equal(other *PrivateKey) bool {
 	if sk == nil || other == nil {
 		return sk == other
 	}
-	return ct.SliceEqual(sk.v, other.v) == ct.True
+	return ct.SliceEqual(sk.v, other.v) != ct.False
 }
 
 // ExtendPrivateKey extends a PrivateKey to an ExtendedPrivateKey with scalar value.
@@ -178,7 +178,7 @@ func (esk *ExtendedPrivateKey[S]) Equal(other *ExtendedPrivateKey[S]) bool {
 	if esk == nil || other == nil {
 		return esk == other
 	}
-	return ct.SliceEqual(esk.v, other.v) == ct.True && esk.s.Equal(other.s)
+	return ct.SliceEqual(esk.v, other.v) != ct.False && esk.s.Equal(other.s)
 }
 
 // NewPublicKey creates a new PublicKey instance.

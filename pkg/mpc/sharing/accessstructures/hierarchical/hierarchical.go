@@ -52,6 +52,9 @@ func NewHierarchicalConjunctiveThresholdAccessStructure(levels ...*ThresholdLeve
 	cumulativeParties := hashset.NewComparable[ID]()
 	currentThreshold := 0
 	for _, l := range levels {
+		if l == nil {
+			return nil, ErrIsNil.WithMessage("level cannot be nil")
+		}
 		parties := hashset.NewComparable(l.parties...)
 		if parties.Contains(0) {
 			return nil, ErrValue.WithMessage("parties cannot contain shareholder ID 0")
@@ -79,7 +82,7 @@ func NewHierarchicalConjunctiveThresholdAccessStructure(levels ...*ThresholdLeve
 
 // Levels returns levels in policy evaluation order.
 func (h *HierarchicalConjunctiveThreshold) Levels() []*ThresholdLevel {
-	return h.levels
+	return slices.Clone(h.levels)
 }
 
 func (h *HierarchicalConjunctiveThreshold) Thresholds() []int {

@@ -485,6 +485,35 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with Vanilla Schnorr")
 }
 
+func TestNewAggregatorRejectsInvalidPublicMaterial(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	scheme, err := bip340.NewScheme(prng)
+	require.NoError(t, err)
+
+	shareholders := sharing.NewOrdinalShareholderSet(3)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders)
+	require.NoError(t, err)
+	ctxs := session_testutils.MakeRandomContexts(t, shareholders, prng)
+
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar], 3)
+	for id := range shareholders.Iter() {
+		participant, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng)
+		require.NoError(t, err)
+		parties[id] = participant
+	}
+
+	shard := ltu.DoLindell22DKG(t, parties)[1]
+	publicMaterial := shard.PublicKeyMaterial()
+	publicMaterial.VerificationVector().Coefficients()[0] = group.OpIdentity()
+
+	aggregator, err := signing.NewAggregator(publicMaterial, scheme)
+	require.Error(t, err)
+	require.Nil(t, aggregator)
+}
+
 // TestLindell22ConcurrentSigning tests signing multiple messages concurrently
 func TestLindell22ConcurrentSigning(t *testing.T) {
 	t.Parallel()

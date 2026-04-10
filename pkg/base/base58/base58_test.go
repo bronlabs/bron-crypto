@@ -74,10 +74,21 @@ func TestBase58(t *testing.T) {
 	for i, test := range hexTests {
 		t.Run(fmt.Sprintf("hexTest-%d", i), func(t *testing.T) {
 			t.Parallel()
-			b, err := hex.DecodeString(test.in)
+			actual, err := base58.Decode(test.out)
 			require.NoError(t, err)
-			actual := base58.Encode(b)
-			require.Equal(t, test.out, actual)
+			expected, err := hex.DecodeString(test.in)
+			require.NoError(t, err)
+			require.Equal(t, expected, actual)
+		})
+	}
+
+	// Encode/decode roundtrip tests
+	for i, test := range hexTests {
+		t.Run(fmt.Sprintf("roundtripHexTest-%d", i), func(t *testing.T) {
+			t.Parallel()
+			decoded, err := base58.Decode(test.out)
+			require.NoError(t, err)
+			require.Equal(t, test.out, base58.Encode(decoded))
 		})
 	}
 
@@ -87,6 +98,47 @@ func TestBase58(t *testing.T) {
 			t.Parallel()
 			_, err := base58.Decode(test.in)
 			require.ErrorIs(t, err, base58.ErrInvalidCharacter)
+		})
+	}
+}
+
+func TestEncodeNilMatchesEmpty(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, base58.Base58(""), base58.Encode(nil))
+	require.Equal(t, base58.Encode([]byte{}), base58.Encode(nil))
+}
+
+func TestBase58EqualDifferentLengths(t *testing.T) {
+	t.Parallel()
+
+	require.False(t, base58.Base58("1").Equal("12"))
+}
+
+func TestDecodeRoundtripEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	testCases := [][]byte{
+		nil,
+		{},
+		{0},
+		{0, 0, 0},
+		{0, 0, 1, 2, 3},
+		{1, 2, 3, 0, 0},
+	}
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("edge-%d", i), func(t *testing.T) {
+			t.Parallel()
+
+			encoded := base58.Encode(tc)
+			decoded, err := base58.Decode(encoded)
+			require.NoError(t, err)
+			expected := []byte(tc)
+			if tc == nil {
+				expected = []byte{}
+			}
+			require.Equal(t, expected, decoded)
 		})
 	}
 }

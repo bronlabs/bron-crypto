@@ -25,7 +25,7 @@ type (
 )
 
 func (c Checksum) Equal(other Checksum) bool {
-	return ct.SliceEqual(c[:], other[:]) == 1
+	return ct.SliceEqual(c[:], other[:]) != ct.False
 }
 
 func DeriveChecksum(input []byte) (cksum Checksum) {

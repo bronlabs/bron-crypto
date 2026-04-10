@@ -1,7 +1,6 @@
 package pcg
 
 import (
-	"bytes"
 	"encoding/binary"
 	mrand "math/rand/v2"
 
@@ -35,17 +34,17 @@ func NewRandomised() *Pcg {
 
 // Read fills the provided byte slice p with random bytes.
 func (r *Pcg) Read(p []byte) (int, error) {
-	buf := new(bytes.Buffer)
-	buf.Grow(len(p) + 8)
-	for buf.Len() < len(p) {
-		_, err := buf.Write(binary.LittleEndian.AppendUint64(nil, r.v.Uint64()))
-		if err != nil {
-			return 0, errs.Wrap(err).WithMessage("failed to write random bytes to buffer")
-		}
+	n := len(p)
+	for len(p) >= 8 {
+		binary.LittleEndian.PutUint64(p[:8], r.v.Uint64())
+		p = p[8:]
 	}
-
-	copy(p, buf.Bytes()[:len(p)])
-	return len(p), nil
+	if len(p) > 0 {
+		var tail [8]byte
+		binary.LittleEndian.PutUint64(tail[:], r.v.Uint64())
+		copy(p, tail[:len(p)])
+	}
+	return n, nil
 }
 
 // Seed resets the internal state of the PRNG with the provided seed and salt.
