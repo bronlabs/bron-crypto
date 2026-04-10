@@ -59,7 +59,7 @@ var _ sigma.Commitment = (Commitment[sigma.Commitment])(nil)
 // State holds the prover's internal state between commitment and response phases.
 // It stores information needed to compute the final response, including which branch
 // is the "true" branch and the simulated responses for false branches.
-type State[S sigma.State, Z sigma.Response] struct {
+type State[S sigma.State, A sigma.Commitment, Z sigma.Response] struct {
 	// B is the index of the branch for which the prover knows a valid witness.
 	B uint
 	// S contains the prover states for each branch. Only S[B] is meaningful;
@@ -71,9 +71,12 @@ type State[S sigma.State, Z sigma.Response] struct {
 	// Z contains the simulated responses for false branches.
 	// Z[i] is the simulated response for branch i when i != B. Z[B] is unused.
 	Z []Z
+	// A contains the simulated commitments for false branches.
+	// A[i] is the simulated response for branch i when i != B. Z[B] is unused.
+	A []A
 }
 
-var _ sigma.State = (*State[sigma.State, sigma.Response])(nil)
+var _ sigma.State = (*State[sigma.State, sigma.Commitment, sigma.Response])(nil)
 
 // Response represents the prover's response in the OR composition.
 // It contains challenges and responses for all branches, satisfying the XOR constraint.
@@ -122,7 +125,7 @@ type protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // Returns an error if p is nil, prng is nil, or count < 2.
 func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](
 	p sigma.Protocol[X, W, A, S, Z], count uint, prng io.Reader,
-) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], *State[S, Z], *Response[Z]], error) {
+) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], *State[S, A, Z], *Response[Z]], error) {
 	if p == nil || prng == nil {
 		return nil, ErrIsNil.WithMessage("p or prng is nil")
 	}
@@ -140,6 +143,65 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 // which equals the soundness error of the underlying protocol.
 func (p *protocol[X, W, A, S, Z]) SoundnessError() uint {
 	return p.sigma.SoundnessError()
+}
+
+func (p *protocol[X, W, A, S, Z]) SampleProverState(witness Witness[W], prng io.Reader) (*State[S, A, Z], error) {
+	statement, err := p.DeriveStatement(witness)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot derive statement from witness")
+	}
+	if len(witness.v) != p.count {
+		return nil, ErrInvalidLength.WithMessage("invalid statement length")
+	}
+	a := make(Commitment[A], p.count)
+	s := &State[S, Z]{
+		B: 0,
+		S: make([]S, p.count),
+		E: make([][]byte, p.count),
+		Z: make([]Z, p.count),
+	}
+
+	s.B, err = p.getB(statement, witness)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot determine valid statement index")
+	}
+
+	// Sample random challenges for all false branches
+	var eg errgroup.Group
+	for i := range p.count {
+		if i == int(s.B) {
+			// True branch: compute real commitment
+			eg.Go(func() error {
+				var err error
+				a[i], s.S[i], err = p.sigma.ComputeProverCommitment(statement[i], witness.v)
+				if err != nil {
+					return errs.Wrap(err)
+				}
+				return nil
+			})
+		} else {
+			// False branch: sample random challenge and run simulator
+			eg.Go(func() error {
+				s.E[i] = make([]byte, p.GetChallengeBytesLength())
+				_, err := io.ReadFull(p.prng, s.E[i])
+				if err != nil {
+					return errs.Wrap(err)
+				}
+				var simErr error
+				a[i], s.Z[i], simErr = p.sigma.RunSimulator(statement[i], s.E[i])
+				if simErr != nil {
+					return errs.Wrap(simErr)
+				}
+				return nil
+			})
+		}
+	}
+
+	if err := eg.Wait(); err != nil {
+		return nil, nil, errs.Wrap(err)
+	}
+
+	return a, s, nil
 }
 
 // ComputeProverCommitment generates the prover's first message in the OR composition.
@@ -386,9 +448,27 @@ func (p *protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witn
 	return ErrNotAtLeastOneOutOfN.WithMessage("no valid statement/witness pair found")
 }
 
+// DeriveStatement derives the composed statement from the witness.
+func (p *protocol[X, W, A, S, Z]) DeriveStatement(witness Witness[W]) (Statement[X], error) {
+	// For OR composition, we can derive all statements from the witness since they are all the same
+	statement := make(Statement[X], p.count)
+	for i := range p.count {
+		var err error
+		statement[i], err = p.sigma.DeriveStatement(witness.v)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot derive statement from witness")
+		}
+	}
+	return statement, nil
+}
+
 // getB finds the index of the first branch with a valid statement/witness pair.
 // Returns an error if no valid pair is found.
-func (p *protocol[X, W, A, S, Z]) getB(statement Statement[X], witness Witness[W]) (uint, error) {
+func (p *protocol[X, W, A, S, Z]) getB(witness Witness[W]) (uint, error) {
+	statement, err := p.DeriveStatement(witness)
+	if err != nil {
+		return 0, errs.Wrap(err).WithMessage("cannot derive statement from witness")
+	}
 	for i := range p.count {
 		if invalid := p.sigma.ValidateStatement(statement[i], witness.v); invalid == nil {
 			return uint(i), nil

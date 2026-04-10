@@ -31,7 +31,7 @@ func (p prover[X, W, A, S, Z]) Prove(witness W, prng io.Reader) (compiler.NIZKPo
 	}
 	p.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
-	state, err := p.sigmaProtocol.SampleProverState(prng)
+	state, err := p.sigmaProtocol.SampleProverState(witness, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot sample prover state")
 	}

@@ -154,7 +154,7 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 }
 
 // SampleProverState samples the prover's internal state.
-func (p *Protocol[I, P]) SampleProverState(prng io.Reader) (*State[P], error) {
+func (p *Protocol[I, P]) SampleProverState(_ *Witness[P], prng io.Reader) (*State[P], error) {
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil prng")
 	}

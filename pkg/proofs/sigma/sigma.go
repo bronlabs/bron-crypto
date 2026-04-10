@@ -39,7 +39,7 @@ type (
 // Protocol defines the sigma protocol interface.
 type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interface {
 	Name() Name
-	SampleProverState(prng io.Reader) (S, error)
+	SampleProverState(witness W, prng io.Reader) (S, error)
 	ComputeProverCommitment(state S) (A, error)
 	ComputeProverResponse(witness W, state S, challenge ChallengeBytes) (Z, error)
 	Verify(statement X, commitment A, challenge ChallengeBytes, response Z) error

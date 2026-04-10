@@ -53,7 +53,7 @@ func (p prover[X, W, A, S, Z]) Prove(witness W, prng io.Reader) (proofBytes comp
 	// step 1. for each i in [r] compute SigmaP_a(x, w)
 	for i := range R {
 		var err error
-		stateI[i], err = p.sigmaProtocol.SampleProverState(prng)
+		stateI[i], err = p.sigmaProtocol.SampleProverState(witness, prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot sample prover state")
 		}

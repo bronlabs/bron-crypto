@@ -72,7 +72,7 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E,
 	}
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
 	c.state.ctxFrozenBeforeDlogProof = c.ctx.Clone()
-	bigRProof, statement, err := dlogProve(c, c.state.k, c.state.bigR, c.state.quorumBytes)
+	bigRProof, statement, err := dlogProve(c, c.state.k, c.state.quorumBytes)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove dlog")
 	}
@@ -180,7 +180,7 @@ func verifyBigRCommitment[
 
 func dlogProve[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
-](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (proof compiler.NIZKPoKProof, statement *schnorrpok.Statement[E, S], err error) {
+](c *Cosigner[E, S, M], k S, quorumBytes [][]byte) (proof compiler.NIZKPoKProof, statement *schnorrpok.Statement[E, S], err error) {
 	proverCtx := c.ctx.Clone()
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	proverCtx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes...)
@@ -189,13 +189,10 @@ func dlogProve[
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog prover")
 	}
-	statement = &schnorrpok.Statement[E, S]{
-		X: bigR,
-	}
 	witness := &schnorrpok.Witness[S]{
 		W: k,
 	}
-	proof, err = prover.Prove(statement, witness)
+	proof, err = prover.Prove(witness, c.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create dlog proof")
 	}
@@ -204,7 +201,7 @@ func dlogProve[
 
 func dlogVerify[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-](proverCtx *session.Context, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
+](proverCtx *session.Context, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S], *schnorrpok.State[S]], proverID sharing.ID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	proverCtx.Transcript().AppendBytes(transcriptDLogSLabel, quorumBytes...)
 	proverCtx.Transcript().AppendBytes("prover", proverIDBytes)

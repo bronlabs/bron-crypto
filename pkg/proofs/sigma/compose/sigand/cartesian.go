@@ -2,6 +2,7 @@ package sigand
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -147,35 +148,57 @@ func CartesianCompose[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma
 	}
 }
 
+func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SampleProverState(witness *WitnessCartesian[W0, W1], prng io.Reader) (*StateCartesian[S0, S1], error) {
+	if witness == nil || prng == nil {
+		return nil, ErrIsNil.WithMessage("witness or prng is nil")
+	}
+	var err error
+	s := new(StateCartesian[S0, S1])
+
+	if s.S0, err = p.sigma0.SampleProverState(witness.W0, prng); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot sample prover state")
+	}
+	if s.S1, err = p.sigma1.SampleProverState(witness.W1, prng); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot sample prover state")
+	}
+
+	return s, nil
+}
+
 // ComputeProverCommitment generates the prover's first message in the binary AND composition.
 //
 // This computes commitments for both branches using their respective protocols.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1]) (*CommitmentCartesian[A0, A1], *StateCartesian[S0, S1], error) {
+func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(state *StateCartesian[S0, S1]) (*CommitmentCartesian[A0, A1], error) {
+	if state == nil {
+		return nil, ErrIsNil.WithMessage("state is nil")
+	}
 	var err error
 	a := new(CommitmentCartesian[A0, A1])
-	s := new(StateCartesian[S0, S1])
 
-	if a.A0, s.S0, err = p.sigma0.ComputeProverCommitment(statement.X0, witness.W0); err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitment")
+	if a.A0, err = p.sigma0.ComputeProverCommitment(state.S0); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute commitment")
 	}
-	if a.A1, s.S1, err = p.sigma1.ComputeProverCommitment(statement.X1, witness.W1); err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitment")
+	if a.A1, err = p.sigma1.ComputeProverCommitment(state.S1); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute commitment")
 	}
 
-	return a, s, nil
+	return a, nil
 }
 
 // ComputeProverResponse generates the prover's response to the verifier's challenge.
 //
 // The same challenge is used for both branches.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1], commitment *CommitmentCartesian[A0, A1], state *StateCartesian[S0, S1], challengeBytes sigma.ChallengeBytes) (*ResponseCartesian[Z0, Z1], error) {
+func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(witness *WitnessCartesian[W0, W1], state *StateCartesian[S0, S1], challengeBytes sigma.ChallengeBytes) (*ResponseCartesian[Z0, Z1], error) {
+	if witness == nil || state == nil {
+		return nil, ErrIsNil.WithMessage("witness or state cannot be nil")
+	}
 	var err error
 	z := new(ResponseCartesian[Z0, Z1])
 
-	if z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, challengeBytes[:p.sigma0.GetChallengeBytesLength()]); err != nil {
+	if z.Z0, err = p.sigma0.ComputeProverResponse(witness.W0, state.S0, challengeBytes[:p.sigma0.GetChallengeBytesLength()]); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute response")
 	}
-	if z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, challengeBytes[:p.sigma1.GetChallengeBytesLength()]); err != nil {
+	if z.Z1, err = p.sigma1.ComputeProverResponse(witness.W1, state.S1, challengeBytes[:p.sigma1.GetChallengeBytesLength()]); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute response")
 	}
 
@@ -186,6 +209,9 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 //
 // Both branch transcripts are verified using the same challenge.
 func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *StatementCartesian[X0, X1], commitment *CommitmentCartesian[A0, A1], challengeBytes sigma.ChallengeBytes, response *ResponseCartesian[Z0, Z1]) error {
+	if statement == nil || commitment == nil || response == nil {
+		return ErrIsNil.WithMessage("statement, commitment, or response cannot be nil")
+	}
 	if err := p.sigma0.Verify(statement.X0, commitment.A0, challengeBytes[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
@@ -199,15 +225,18 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(state
 // RunSimulator produces a simulated transcript for the binary AND composition.
 //
 // This runs the simulator for both branches using the same challenge.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *StatementCartesian[X0, X1], challengeBytes sigma.ChallengeBytes) (*CommitmentCartesian[A0, A1], *ResponseCartesian[Z0, Z1], error) {
+func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *StatementCartesian[X0, X1], challengeBytes sigma.ChallengeBytes, prng io.Reader) (*CommitmentCartesian[A0, A1], *ResponseCartesian[Z0, Z1], error) {
+	if statement == nil || prng == nil {
+		return nil, nil, ErrIsNil.WithMessage("statement or prng cannot be nil")
+	}
 	var err error
 	a := new(CommitmentCartesian[A0, A1])
 	z := new(ResponseCartesian[Z0, Z1])
 
-	if a.A0, z.Z0, err = p.sigma0.RunSimulator(statement.X0, challengeBytes[:p.sigma0.GetChallengeBytesLength()]); err != nil {
+	if a.A0, z.Z0, err = p.sigma0.RunSimulator(statement.X0, challengeBytes[:p.sigma0.GetChallengeBytesLength()], prng); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 	}
-	if a.A1, z.Z1, err = p.sigma1.RunSimulator(statement.X1, challengeBytes[:p.sigma1.GetChallengeBytesLength()]); err != nil {
+	if a.A1, z.Z1, err = p.sigma1.RunSimulator(statement.X1, challengeBytes[:p.sigma1.GetChallengeBytesLength()], prng); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 	}
 
@@ -233,6 +262,9 @@ func (p protocolCartesian[_, _, _, _, _, _, _, _, _, _]) SoundnessError() uint {
 // ValidateStatement checks that both statement/witness pairs are valid.
 // For AND composition, both pairs must be valid.
 func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1]) error {
+	if statement == nil || witness == nil {
+		return ErrIsNil.WithMessage("statement or witness cannot be nil")
+	}
 	if err := p.sigma0.ValidateStatement(statement.X0, witness.W0); err != nil {
 		return errs.Wrap(err).WithMessage("invalid statement")
 	}
@@ -241,6 +273,24 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStat
 	}
 
 	return nil
+}
+
+// DeriveStatement derives the composed statement from the witness.
+func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) DeriveStatement(witness *WitnessCartesian[W0, W1]) (*StatementCartesian[X0, X1], error) {
+	if witness == nil {
+		return nil, ErrIsNil.WithMessage("witness cannot be nil")
+	}
+	x := new(StatementCartesian[X0, X1])
+	var err error
+
+	if x.X0, err = p.sigma0.DeriveStatement(witness.W0); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot derive statement")
+	}
+	if x.X1, err = p.sigma1.DeriveStatement(witness.W1); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot derive statement")
+	}
+
+	return x, nil
 }
 
 // Name returns a human-readable name for the composed protocol.

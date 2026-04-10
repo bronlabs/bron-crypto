@@ -62,7 +62,7 @@ redo:
 			var err error
 
 			// 1.a. compute (m_i, σ_i) ← ProverFirstMessage(x, w) independently for each i
-			stateI[i], err = p.sigmaProtocol.SampleProverState(prng)
+			stateI[i], err = p.sigmaProtocol.SampleProverState(witness, prng)
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot sample prover state")
 			}

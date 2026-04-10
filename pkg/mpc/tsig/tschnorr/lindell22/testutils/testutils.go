@@ -127,6 +127,6 @@ func NewFiatShamirCompiler[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S],
 ](
 	protocol *dlogschnorr.Protocol[GE, S],
-) (compiler.NonInteractiveProtocol[*dlogschnorr.Statement[GE, S], *dlogschnorr.Witness[S]], error) {
+) (compiler.NonInteractiveProtocol[*dlogschnorr.Statement[GE, S], *dlogschnorr.Witness[S], *dlogschnorr.State[S]], error) {
 	return fiatshamir.NewCompiler(protocol)
 }

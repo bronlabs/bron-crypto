@@ -36,7 +36,7 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 	round   network.Round
 	variant tschnorr.MPCFriendlyVariant[GE, S, M]
 
-	niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[GE, S], *schnorrpok.Witness[S]]
+	niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[GE, S], *schnorrpok.Witness[S], *schnorrpok.State[S]]
 	state        *State[GE, S]
 }
 

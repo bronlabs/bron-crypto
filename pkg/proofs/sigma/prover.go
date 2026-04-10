@@ -69,7 +69,7 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 		return zero, ErrRound.WithMessage("r != 1 (%d)", p.round)
 	}
 	var err error
-	p.state, err = p.sigmaProtocol.SampleProverState(p.prng)
+	p.state, err = p.sigmaProtocol.SampleProverState(p.witness, p.prng)
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot sample prover state")
 	}

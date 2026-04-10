@@ -210,7 +210,7 @@ func (*Protocol) Name() sigma.Name {
 	return Name
 }
 
-func (p *Protocol) SampleProverState(prng io.Reader) (*State, error) {
+func (p *Protocol) SampleProverState(_ *Witness, prng io.Reader) (*State, error) {
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil prng")
 	}

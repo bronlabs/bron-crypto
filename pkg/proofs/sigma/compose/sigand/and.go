@@ -2,6 +2,7 @@ package sigand
 
 import (
 	"fmt"
+	"io"
 
 	"golang.org/x/sync/errgroup"
 
@@ -101,23 +102,42 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 	return sliceutils.Repeat[protocol[X, W, A, S, Z]](p, int(count)), nil
 }
 
-// ComputeProverCommitment generates the prover's first message in the AND composition.
-//
-// This computes commitments for all branches in parallel using the underlying protocol.
-func (p protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X], witness Witness[W]) (Commitment[A], State[S], error) {
-	if len(statement) != len(p) {
-		return nil, nil, ErrInvalidLength.WithMessage("invalid number of statements")
+// SampleProverState generates the prover's internal state for all branches in parallel.
+func (p protocol[X, W, A, S, Z]) SampleProverState(witness Witness[W], prng io.Reader) (State[S], error) {
+	if witness == nil || prng == nil {
+		return nil, ErrIsNil.WithMessage("witness/prng is nil")
 	}
-	if len(witness) != len(p) {
-		return nil, nil, ErrInvalidLength.WithMessage("invalid number of witnesses")
-	}
-	a := make(Commitment[A], len(p))
 	s := make(State[S], len(p))
 	var eg errgroup.Group
 	for i, sigmai := range p {
 		eg.Go(func() error {
 			var err error
-			a[i], s[i], err = sigmai.ComputeProverCommitment(statement[i], witness[i])
+			s[i], err = sigmai.SampleProverState(witness[i], prng)
+			if err != nil {
+				return errs.Wrap(err).WithMessage("failed to sample prover state")
+			}
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot sample prover states")
+	}
+	return s, nil
+}
+
+// ComputeProverCommitment generates the prover's first message in the AND composition.
+//
+// This computes commitments for all branches in parallel using the underlying protocol.
+func (p protocol[X, W, A, S, Z]) ComputeProverCommitment(state State[S]) (Commitment[A], error) {
+	if len(state) != len(p) {
+		return nil, ErrInvalidLength.WithMessage("invalid number of states")
+	}
+	a := make(Commitment[A], len(p))
+	var eg errgroup.Group
+	for i, sigmai := range p {
+		eg.Go(func() error {
+			var err error
+			a[i], err = sigmai.ComputeProverCommitment(state[i])
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to compute prover commitment")
 			}
@@ -125,23 +145,17 @@ func (p protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X],
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitments")
+		return nil, errs.Wrap(err).WithMessage("cannot compute commitments")
 	}
-	return a, s, nil
+	return a, nil
 }
 
 // ComputeProverResponse generates the prover's response to the verifier's challenge.
 //
 // The same challenge is used for all branches, computed in parallel.
-func (p protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], witness Witness[W], commitment Commitment[A], state State[S], challengeBytes sigma.ChallengeBytes) (Response[Z], error) {
-	if len(statement) != len(p) {
-		return nil, ErrInvalidLength.WithMessage("invalid number of statements")
-	}
+func (p protocol[X, W, A, S, Z]) ComputeProverResponse(witness Witness[W], state State[S], challengeBytes sigma.ChallengeBytes) (Response[Z], error) {
 	if len(witness) != len(p) {
 		return nil, ErrInvalidLength.WithMessage("invalid number of witnesses")
-	}
-	if len(commitment) != len(p) {
-		return nil, ErrInvalidLength.WithMessage("invalid number of commitments")
 	}
 	if len(state) != len(p) {
 		return nil, ErrInvalidLength.WithMessage("invalid number of states")
@@ -151,7 +165,7 @@ func (p protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], w
 	for i, sigmai := range p {
 		eg.Go(func() error {
 			var err error
-			z[i], err = sigmai.ComputeProverResponse(statement[i], witness[i], commitment[i], state[i], challengeBytes)
+			z[i], err = sigmai.ComputeProverResponse(witness[i], state[i], challengeBytes)
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to compute prover response")
 			}
@@ -192,7 +206,10 @@ func (p protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commi
 // RunSimulator produces a simulated transcript for the AND composition.
 //
 // This runs the simulator for each branch in parallel using the same challenge.
-func (p protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeBytes sigma.ChallengeBytes) (Commitment[A], Response[Z], error) {
+func (p protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeBytes sigma.ChallengeBytes, prng io.Reader) (Commitment[A], Response[Z], error) {
+	if prng == nil {
+		return nil, nil, ErrIsNil.WithMessage("prng is nil")
+	}
 	if len(statement) != len(p) {
 		return nil, nil, ErrInvalidLength.WithMessage("invalid number of statements")
 	}
@@ -202,7 +219,7 @@ func (p protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeB
 	for i, sigmai := range p {
 		eg.Go(func() error {
 			var err error
-			a[i], s[i], err = sigmai.RunSimulator(statement[i], challengeBytes)
+			a[i], s[i], err = sigmai.RunSimulator(statement[i], challengeBytes, prng)
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to run simulator")
 			}
@@ -245,6 +262,25 @@ func (p protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witne
 		}
 	}
 	return nil
+}
+
+func (p protocol[X, W, A, S, Z]) DeriveStatement(witness Witness[W]) (Statement[X], error) {
+	x := make(Statement[X], len(witness))
+	var eg errgroup.Group
+	for i, sigmai := range p {
+		eg.Go(func() error {
+			var err error
+			x[i], err = sigmai.DeriveStatement(witness[i])
+			if err != nil {
+				return errs.Wrap(err).WithMessage("failed to derive statement")
+			}
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot derive statements")
+	}
+	return x, nil
 }
 
 // Name returns a human-readable name for the composed protocol.

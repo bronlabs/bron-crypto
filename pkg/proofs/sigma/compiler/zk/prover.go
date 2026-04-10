@@ -59,7 +59,7 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 
 	p.challengeCommitment = eCommitment
 
-	state, err := p.protocol.SampleProverState(p.prng)
+	state, err := p.protocol.SampleProverState(p.witness, p.prng)
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot sample prover state")
 	}
