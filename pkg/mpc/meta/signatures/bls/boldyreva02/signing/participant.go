@@ -141,7 +141,7 @@ func newCosigner[
 		return nil, ErrInvalidArgument.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
 	sid := ctx.SessionID()
-	dst := fmt.Sprintf("%s-%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamilyName, variant, rogueKeyAlg)
+	dst := fmt.Sprintf("%s%s-%s-%d-%d", transcriptLabel, hex.EncodeToString(sid[:]), curveFamilyName, variant, rogueKeyAlg)
 	ctx.Transcript().AppendDomainSeparator(dst)
 
 	shareAsPrivateKey := make([]*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S], len(shard.Share().Value()))

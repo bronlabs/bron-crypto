@@ -55,15 +55,11 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) Equal(other *PublicMaterial
 }
 
 // HashCode returns a hash code for the public material, derived from the public key.
-// Returns 0 if the receiver is nil.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
-	if spm == nil {
-		return 0
-	}
 	return spm.PublicKeyValue().HashCode()
 }
 
-// MarshalCBOR serialises a shard.
+// MarshalCBOR serialises a shard's public material.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicMaterialDTO[PK, PKFE, SG, SGFE, E, S]{
 		Base: &spm.BasePublicMaterial,

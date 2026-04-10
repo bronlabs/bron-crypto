@@ -31,7 +31,7 @@ func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Validate(rogueKeyPrevent
 		return ErrValidation.WithMessage("partial signature cannot be nil or empty")
 	}
 	for _, sigma := range ps.SigmaI {
-		if sigma.Value().IsOpIdentity() || !sigma.Value().IsTorsionFree() {
+		if sigma == nil || sigma.Value().IsOpIdentity() || !sigma.Value().IsTorsionFree() {
 			return ErrValidation.WithMessage("partial signature point must be non-identity and torsion-free")
 		}
 	}
@@ -43,7 +43,7 @@ func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Validate(rogueKeyPrevent
 			return ErrValidation.WithMessage("partial signature POP length must match message signature length")
 		}
 		for _, sigmaPop := range ps.SigmaPopI {
-			if sigmaPop.Value().IsOpIdentity() || !sigmaPop.Value().IsTorsionFree() {
+			if sigmaPop == nil || sigmaPop.Value().IsOpIdentity() || !sigmaPop.Value().IsTorsionFree() {
 				return ErrValidation.WithMessage("partial signature POP point must be non-identity and torsion-free")
 			}
 		}

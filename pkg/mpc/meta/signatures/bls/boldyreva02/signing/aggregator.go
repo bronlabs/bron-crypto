@@ -53,6 +53,9 @@ func NewShortKeyAggregator[
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
+	if publicMaterial == nil {
+		return nil, ErrInvalidArgument.WithMessage("publicMaterial is nil")
+	}
 	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
@@ -77,6 +80,9 @@ func NewLongKeyAggregator[
 ) (*Aggregator[P2, FE2, P1, FE1, E, S], error) {
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
+	}
+	if publicMaterial == nil {
+		return nil, ErrInvalidArgument.WithMessage("publicMaterial is nil")
 	}
 	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
 	if err != nil {
