@@ -283,6 +283,9 @@ func (s *Scheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[E, FE], 
 		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", share.ID())
 	}
 	sortedShareholderRows := slices.Sorted(slices.Values(shareholderRowsSet.List()))
+	if len(share.Value()) != len(sortedShareholderRows) {
+		return nil, sharing.ErrValue.WithMessage("shareholder %d has %d lifted values but MSP row count is %d", share.ID(), len(share.Value()), len(sortedShareholderRows))
+	}
 
 	// For each of this shareholder's MSP rows, find its position in the
 	// sorted all-quorum-rows list and extract the corresponding reconstruction
@@ -341,6 +344,9 @@ func (s *Scheme[E, FE]) ReconstructInTheExponent(shares ...*LiftedShare[E, FE]) 
 			return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", sh.ID())
 		}
 		sortedRows := slices.Sorted(slices.Values(rowSet.List()))
+		if len(sh.Value()) != len(sortedRows) {
+			return nil, sharing.ErrValue.WithMessage("shareholder %d has %d lifted values but MSP row count is %d", sh.ID(), len(sh.Value()), len(sortedRows))
+		}
 		for i, r := range sortedRows {
 			liftedByRow[r] = sh.Value()[i]
 		}

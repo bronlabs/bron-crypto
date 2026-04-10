@@ -10,6 +10,8 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+var ErrIsNil = errs.New("input is nil")
+
 func NewShortKeyShard[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -17,6 +19,9 @@ func NewShortKeyShard[
 ](
 	output *mpc.BaseShard[PK, S],
 ) (*boldyreva02.Shard[PK, PKFE, SG, SGFE, E, S], error) {
+	if output == nil {
+		return nil, ErrIsNil.WithMessage("output is nil")
+	}
 	pk, err := bls.NewPublicKey(output.PublicKeyValue())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS public key")
@@ -35,6 +40,9 @@ func NewLongKeyShard[
 ](
 	output *mpc.BaseShard[PK, S],
 ) (*boldyreva02.Shard[PK, PKFE, SG, SGFE, E, S], error) {
+	if output == nil {
+		return nil, ErrIsNil.WithMessage("output is nil")
+	}
 	pk, err := bls.NewPublicKey(output.PublicKeyValue())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create BLS public key")

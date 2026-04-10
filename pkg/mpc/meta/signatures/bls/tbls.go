@@ -56,6 +56,9 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) Equal(other *PublicMaterial
 
 // HashCode returns a hash code for the public material, derived from the public key.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
+	if spm == nil {
+		return 0
+	}
 	return spm.PublicKeyValue().HashCode()
 }
 
@@ -112,6 +115,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[PK, PKFE, S
 // HashCode returns a hash code for the shard, derived from both the share and public key.
 // Returns 0 if the receiver is nil.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
+	if s == nil {
+		return 0
+	}
 	acc := s.PublicKeyValue().HashCode()
 	for _, si := range s.Share().Value() {
 		acc = acc.Combine(si.HashCode())
@@ -121,6 +127,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 
 // Equal returns true if this shard equals another shard.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Equal(other mpcsig.Shard[*bls.PublicKey[PK, PKFE, SG, SGFE, E, S], *feldman.Share[S]]) bool {
+	if s == nil || other == nil {
+		return s == other
+	}
 	o, ok := other.(*Shard[PK, PKFE, SG, SGFE, E, S])
 	return ok && s.BaseShard.Equal(&o.BaseShard)
 }
