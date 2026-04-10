@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -112,6 +113,9 @@ func NewCosigningAggregator[
 	if cosigner == nil {
 		return nil, ErrNilArgument.WithMessage("cosigner cannot be nil")
 	}
+	if cosigner.round < 4 {
+		return nil, ErrInvalidRound.WithMessage("cosigner is not far enough along to create aggregator: round %d", cosigner.round)
+	}
 	agg, err := NewAggregator(pk, scheme)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create aggregator")
@@ -136,6 +140,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	if !a.pkm.MSP().Accepts(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
 	}
+
 	for sender, psig := range partialSignatures.Iter() {
 		if psig == nil {
 			return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
@@ -145,6 +150,11 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	}
 
 	if a.IsCosigning() {
+		quromFromCosigning := hashset.NewComparable(slices.Collect(maps.Keys(a.correctedBigRs))...).Freeze()
+		if !quromFromCosigning.Equal(quorum) {
+			return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified according to cosigning state")
+		}
+
 		var identityAborts []error
 		for sender, psig := range partialSignatures.Iter() {
 			if psig == nil {
