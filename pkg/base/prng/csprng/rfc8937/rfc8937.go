@@ -27,7 +27,7 @@ type WrappedReader struct {
 
 func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceID []byte) (*WrappedReader, error) {
 	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("wrapped reader is nil")
+		return nil, ErrInvalidArgument.WithMessage("underlying prng is nil")
 	}
 	if signer == nil {
 		return nil, ErrInvalidArgument.WithMessage("signer is nil")

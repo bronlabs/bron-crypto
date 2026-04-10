@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 type matrixDTO[S algebra.RingElement[S]] struct {
@@ -35,6 +36,11 @@ func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 	}
 	if len(dto.Data) == 0 {
 		return ErrFailed.WithMessage("empty data")
+	}
+	for _, v := range dto.Data {
+		if utils.IsNil(v) {
+			return ErrFailed.WithMessage("data contains nil element")
+		}
 	}
 	if dto.Rows <= 0 || dto.Cols <= 0 {
 		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
@@ -82,6 +88,11 @@ func (m *ModuleValuedMatrix[E, S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) != dto.Rows*dto.Cols {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
 	}
+	for _, v := range dto.Data {
+		if utils.IsNil(v) {
+			return ErrFailed.WithMessage("data contains nil element")
+		}
+	}
 	m.init(dto.Rows, dto.Cols)
 	copy(m.data(), dto.Data)
 	return nil
@@ -119,6 +130,11 @@ func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 	}
 	if len(dto.Data) != dto.Size*dto.Size {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Size*dto.Size)
+	}
+	for _, v := range dto.Data {
+		if utils.IsNil(v) {
+			return ErrFailed.WithMessage("data contains nil element")
+		}
 	}
 	m.init(dto.Size, dto.Size)
 	copy(m.data(), dto.Data)
