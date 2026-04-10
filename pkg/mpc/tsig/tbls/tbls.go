@@ -324,7 +324,8 @@ func NewLongKeyShard[
 	if publicKey.IsShort() {
 		return nil, ErrInvalidArgument.WithMessage("public key is not a long key variant")
 	}
-	if !publicKey.Value().Equal(vector.Coefficients()[0]) {
+	c := vector.Coefficients()
+	if len(c) == 0 || !publicKey.Value().Equal(c[0]) {
 		return nil, ErrInvalidArgument.WithMessage("public key does not match verification vector")
 	}
 

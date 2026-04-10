@@ -27,7 +27,7 @@ func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](ctx 
 		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	if sigmaProtocol == nil {
-		return nil, ErrInvalidArgument.WithMessage("protocol or is nil")
+		return nil, ErrInvalidArgument.WithMessage("protocol is nil")
 	}
 	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurityBits {
 		return nil, ErrInvalidArgument.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
