@@ -8,11 +8,15 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/hjky"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/meta/signatures/schnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -33,9 +37,10 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 	round   network.Round
 	variant mpcschnorr.MPCFriendlyVariant[GE, S, M]
 
-	niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[GE, S], *schnorrpok.Witness[S]]
-	lsss         *kw.Scheme[S]
-	state        *State[GE, S]
+	zeroParticipant *hjky.Participant[GE, S]
+	niDlogScheme    compiler.NonInteractiveProtocol[*schnorrpok.Statement[GE, S], *schnorrpok.Witness[S]]
+	lsss            *feldman.Scheme[GE, S]
+	state           *State[GE, S]
 }
 
 // State holds the cosigner's internal state during the signing protocol.
@@ -47,6 +52,9 @@ type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] 
 	correctedBigRs           map[sharing.ID]GE
 	theirBigRCommitments     map[sharing.ID]lindell22.Commitment
 	ctxFrozenBeforeDlogProof *session.Context
+	zeroAc                   *unanimity.Unanimity
+	zeroShift                *additive.Share[S]
+	partialPublicKeys        map[sharing.ID]GE
 }
 
 // SessionID returns the session identifier for this signing session.
@@ -126,17 +134,31 @@ func NewCosigner[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create kw scheme")
 	}
+	feldmanScheme, err := feldman.NewSchemeFromKW(group, kwScheme)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create feldman scheme")
+	}
+
+	zeroAc, err := unanimity.NewUnanimityAccessStructure(ctx.Quorum())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create minimal qualified access structure")
+	}
+	zeroParticipant, err := hjky.NewParticipant(ctx, zeroAc, group, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create zero participant")
+	}
 
 	return &Cosigner[GE, S, M]{
-		ctx:          ctx,
-		shard:        shard,
-		group:        group,
-		sf:           sf,
-		prng:         prng,
-		lsss:         kwScheme,
-		niDlogScheme: niDlogScheme,
-		variant:      variant,
-		round:        1,
+		ctx:             ctx,
+		shard:           shard,
+		group:           group,
+		sf:              sf,
+		prng:            prng,
+		lsss:            feldmanScheme,
+		niDlogScheme:    niDlogScheme,
+		zeroParticipant: zeroParticipant,
+		variant:         variant,
+		round:           1,
 		state: &State[GE, S]{
 			quorumBytes:              quorumBytes,
 			k:                        *new(S),
@@ -145,6 +167,9 @@ func NewCosigner[
 			theirBigRCommitments:     make(map[sharing.ID]lindell22.Commitment, ctx.Quorum().Size()-1),
 			correctedBigRs:           make(map[sharing.ID]GE, ctx.Quorum().Size()),
 			ctxFrozenBeforeDlogProof: nil,
+			zeroAc:                   zeroAc,
+			zeroShift:                nil,
+			partialPublicKeys:        nil,
 		},
 	}, nil
 }

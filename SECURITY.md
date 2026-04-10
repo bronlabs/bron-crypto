@@ -23,25 +23,14 @@ please report it privately using one of the methods below. **Do not disclose it 
 
 ### How to Report
 
-#### Preferred Method: GitHub Security Advisories
-
-We use GitHub's private vulnerability reporting feature for coordinated disclosure. This allows us to:
-
-- Privately discuss the vulnerability with you
-- Collaborate on fixes in a temporary private fork (visible only to you and our security team)
-- Prepare a patch before public disclosure
-
-Please report vulnerabilities using GitHub Security Advisories:
-**[Report a Security Vulnerability](https://github.com/bronlabs/bron-crypto/security/advisories/new)**
-
-#### Alternative Method: Email
-
-If you cannot use GitHub Security Advisories, you can email us directly at:
+All vulnerability reports must be submitted via email to:
 **[bugbounty@bron.org](mailto:bugbounty@bron.org)**
 
 Please use the [Vulnerability Report Template](https://bugbounty.bron.org/report) when submitting your report.
 The template includes the required format for email subject and body,
 ensuring all necessary information is included for efficient triage.
+
+> **Note:** GitHub Security Advisories are no longer accepted as a submission channel. All reports must go through email.
 
 ### What Happens Next
 
