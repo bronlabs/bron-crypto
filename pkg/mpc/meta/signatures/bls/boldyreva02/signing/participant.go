@@ -36,6 +36,9 @@ type Cosigner[
 
 // SharingID returns the sharing identifier for this cosigner's share.
 func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) SharingID() sharing.ID {
+	if c == nil {
+		return 0
+	}
 	return c.shard.Share().ID()
 }
 
@@ -59,12 +62,18 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) Shard() *boldyreva02.Shard[PK, PKFE
 
 // Variant returns the BLS variant (short key or long key) used by this cosigner.
 func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) Variant() bls.Variant {
+	if c == nil {
+		return 0
+	}
 	return c.scheme.Variant()
 }
 
 // TargetRogueKeyPreventionAlgorithm returns the rogue key prevention algorithm
 // (Basic, MessageAugmentation, or POP) used by this cosigner.
 func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) TargetRogueKeyPreventionAlgorithm() bls.RogueKeyPreventionAlgorithm {
+	if c == nil {
+		return 0
+	}
 	return c.targetRogueKeyAlg
 }
 

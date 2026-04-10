@@ -109,6 +109,9 @@ type shardDTO[
 
 // PublicKey returns the BLS public key associated with the shard.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[PK, PKFE, SG, SGFE, E, S] {
+	if s == nil {
+		return nil
+	}
 	return errs.Must1(bls.NewPublicKey(s.PublicKeyValue()))
 }
 
@@ -149,6 +152,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *PublicMaterial[PK
 
 // MarshalCBOR serialises shard.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) MarshalCBOR() ([]byte, error) {
+	if s == nil {
+		return nil, ErrIsNil.WithMessage("cannot marshal nil shard")
+	}
 	dto := &shardDTO[PK, PKFE, SG, SGFE, E, S]{
 		Base: &s.BaseShard,
 	}
@@ -161,6 +167,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) MarshalCBOR() ([]byte, error) {
 
 // UnmarshalCBOR deserialises shard.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
+	if s == nil {
+		return ErrIsNil.WithMessage("cannot unmarshal into nil shard")
+	}
 	dto, err := serde.UnmarshalCBOR[*shardDTO[PK, PKFE, SG, SGFE, E, S]](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal shard from CBOR")

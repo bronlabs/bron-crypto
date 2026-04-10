@@ -475,20 +475,23 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 
 	signCtx, err := ctxs[shard.Share().ID()].SubContext(quorum)
 	require.NoError(t, err)
-	cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
-	require.NoError(t, err)
-
 	t.Run("EmptyMessage", func(t *testing.T) {
 		t.Parallel()
-		_, err := cosigner.ProducePartialSignature([]byte{})
+		cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
+		require.NoError(t, err)
+
+		_, err = cosigner.ProducePartialSignature([]byte{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "message cannot be empty")
 	})
 
 	t.Run("WrongRound", func(t *testing.T) {
 		t.Parallel()
+		cosigner, err := signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
+		require.NoError(t, err)
+
 		// First produce a signature to advance the round
-		_, err := cosigner.ProducePartialSignature([]byte("first message"))
+		_, err = cosigner.ProducePartialSignature([]byte("first message"))
 		require.NoError(t, err)
 
 		// Try to produce another signature (should fail as we're now in round 2)
