@@ -98,3 +98,23 @@ func TestNewMislayer_RejectsUnqualifiedRecoveryQuorum(t *testing.T) {
 	require.ErrorIs(t, err, recovery.ErrInvalidArgument)
 	require.Nil(t, mislayer)
 }
+
+func TestNewMislayer_RejectsRecovererQuorumOneShortOfThreshold(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	group := k256.NewCurve()
+	as, err := threshold.NewThresholdAccessStructure(2, sharing.NewOrdinalShareholderSet(4))
+	require.NoError(t, err)
+
+	// Includes the mislayer plus only one recoverer. This used to pass the
+	// old qualification check because the mislayer was counted toward the
+	// threshold, even though Round3 only interpolates over the other parties.
+	quorum := hashset.NewComparable[sharing.ID](2, 3).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	mislayer, err := recovery.NewMislayer(ctxs[3], as, group)
+	require.Error(t, err)
+	require.ErrorIs(t, err, recovery.ErrInvalidArgument)
+	require.Nil(t, mislayer)
+}

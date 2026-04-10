@@ -78,18 +78,18 @@ func (sk *PrivateKey[P, B, S]) Clone() *PrivateKey[P, B, S] {
 
 // ToElliptic converts the private key to Go's standard library ecdsa.PrivateKey format.
 // This enables interoperability with Go's crypto/ecdsa package.
-func (sk *PrivateKey[P, B, S]) ToElliptic() *nativeEcdsa.PrivateKey {
+func (sk *PrivateKey[P, B, S]) ToElliptic() (*nativeEcdsa.PrivateKey, error) {
 	if sk == nil || sk.pk == nil || utils.IsNil(sk.sk) {
-		return nil
+		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
-	nativePk := sk.pk.ToElliptic()
-	if nativePk == nil {
-		return nil
+	nativePk, err := sk.pk.ToElliptic()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot convert public key to native ECDSA format")
 	}
 	nativeSk := &nativeEcdsa.PrivateKey{
 		PublicKey: *nativePk,
 		D:         sk.sk.Cardinal().Big(),
 	}
 
-	return nativeSk
+	return nativeSk, nil
 }

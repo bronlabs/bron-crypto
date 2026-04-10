@@ -15,10 +15,6 @@ type registeredType struct {
 	Value uint64
 }
 
-type unregisteredType struct {
-	Value uint64
-}
-
 type concurrentRegisteredType struct {
 	Value uint64
 }
@@ -43,23 +39,15 @@ func TestUnmarshalCBORRequiresRegisteredTag(t *testing.T) {
 	require.Equal(t, registeredType{Value: 7}, decoded)
 }
 
-func TestMarshalCBORTaggedRejectsRegisteredType(t *testing.T) {
+func TestMarshalCBORMarshalsExplicitCBORTag(t *testing.T) {
 	t.Parallel()
 
-	const registeredTag = 61002
-	const explicitTag = 61003
-	serde.Register[unregisteredType](registeredTag)
+	const tag = 61002
 
-	_, err := serde.MarshalCBORTagged(unregisteredType{Value: 9}, explicitTag)
-	require.Error(t, err)
-}
-
-func TestMarshalCBORTaggedWorksForUnregisteredType(t *testing.T) {
-	t.Parallel()
-
-	const tag = 61004
-
-	data, err := serde.MarshalCBORTagged(struct{ Value uint64 }{Value: 5}, tag)
+	data, err := serde.MarshalCBOR(cbor.Tag{
+		Number:  tag,
+		Content: struct{ Value uint64 }{Value: 5},
+	})
 	require.NoError(t, err)
 
 	var wrapped cbor.Tag
@@ -71,7 +59,7 @@ func TestMarshalCBORTaggedWorksForUnregisteredType(t *testing.T) {
 func TestConcurrentRegisterAndMarshal(t *testing.T) {
 	t.Parallel()
 
-	const tag = 61005
+	const tag = 61003
 	var registerOnce sync.Once
 	var wg sync.WaitGroup
 	errCh := make(chan error, 32)

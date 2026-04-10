@@ -77,8 +77,11 @@ type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 
 // PublicKey returns the threshold public key as a schnorrlike.PublicKey.
 func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
+	if pm == nil {
+		return nil
+	}
 	pm.pkOnce.Do(func() {
-		if pm == nil || pm.VerificationVector() == nil {
+		if pm.VerificationVector() == nil {
 			return
 		}
 		pm.pk, _ = schnorrlike.NewPublicKey(pm.PublicKeyValue())
@@ -108,8 +111,11 @@ func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
 
 // PublicKey returns the threshold public key as a schnorrlike.PublicKey.
 func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
+	if sh == nil {
+		return nil
+	}
 	sh.pkOnce.Do(func() {
-		if sh == nil || sh.VerificationVector() == nil {
+		if sh.VerificationVector() == nil {
 			return
 		}
 		sh.pk, _ = schnorrlike.NewPublicKey(sh.PublicKeyValue())
