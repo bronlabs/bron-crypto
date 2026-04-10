@@ -92,6 +92,15 @@ func TestKnown_Arithmetic(t *testing.T) {
 		diff := a.Sub(b)
 		require.Equal(t, uint64(30), diff.Uint64())
 	})
+
+	t.Run("sub clamps at zero", func(t *testing.T) {
+		t.Parallel()
+		a := cardinal.New(3).(cardinal.Known)
+		b := cardinal.New(5)
+		diff := a.Sub(b)
+		require.True(t, diff.IsZero())
+		require.Equal(t, uint64(0), diff.Uint64())
+	})
 }
 
 func TestKnown_Comparison(t *testing.T) {

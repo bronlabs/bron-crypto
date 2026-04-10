@@ -22,11 +22,12 @@ func TestSafeRunnerRun(t *testing.T) {
 	t.Run("returns underlying result", func(t *testing.T) {
 		t.Parallel()
 
-		r := network.NewSafeRunner[int](stubRunner[int]{
+		r, err := network.NewSafeRunner[int](stubRunner[int]{
 			run: func(*network.Router) (int, error) {
 				return 7, nil
 			},
 		})
+		require.NoError(t, err)
 
 		got, err := r.Run(nil)
 		require.NoError(t, err)
@@ -36,16 +37,25 @@ func TestSafeRunnerRun(t *testing.T) {
 	t.Run("returns error on panic", func(t *testing.T) {
 		t.Parallel()
 
-		r := network.NewSafeRunner[int](stubRunner[int]{
+		r, err := network.NewSafeRunner[int](stubRunner[int]{
 			run: func(*network.Router) (int, error) {
 				panic("boom")
 			},
 		})
+		require.NoError(t, err)
 
 		got, err := r.Run(nil)
 		require.Error(t, err)
 		require.Zero(t, got)
 		require.Contains(t, err.Error(), "runner panicked")
 		require.Contains(t, err.Error(), "boom")
+	})
+
+	t.Run("rejects nil runner", func(t *testing.T) {
+		t.Parallel()
+
+		r, err := network.NewSafeRunner[int](nil)
+		require.Nil(t, r)
+		require.Error(t, err)
 	})
 }

@@ -59,6 +59,20 @@ func Test_InvalidCommitment(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestCommitRejectsNilPRNG(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	scheme := randomCk(t, prng)
+	message := randomMessage(t, prng)
+
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
+
+	_, _, err = committer.Commit(message, nil)
+	require.Error(t, err)
+}
+
 func randomCk(tb testing.TB, prng io.Reader) commitments.Scheme[hash_comm.Key, hash_comm.Witness, hash_comm.Message, hash_comm.Commitment, *hash_comm.Committer, *hash_comm.Verifier] {
 	tb.Helper()
 

@@ -233,6 +233,17 @@ func TestSharedKeyCBOR_InvalidInputs(t *testing.T) {
 	})
 }
 
+func TestSharedKeyEqualDifferentLengths(t *testing.T) {
+	t.Parallel()
+
+	k1, err := ka.NewSharedKey([]byte{1}, "ECSVDP-DHC")
+	require.NoError(t, err)
+	k2, err := ka.NewSharedKey([]byte{1, 2}, "ECSVDP-DHC")
+	require.NoError(t, err)
+
+	require.False(t, k1.Equal(k2))
+}
+
 func TestPrivateKeyCBOR_RoundTrip(t *testing.T) {
 	t.Parallel()
 	// Test with multiple iterations to ensure consistency

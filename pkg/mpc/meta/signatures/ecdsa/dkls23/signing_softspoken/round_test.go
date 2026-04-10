@@ -149,7 +149,8 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 		require.NotNil(t, t, signature)
 		require.NoError(t, err)
 
-		nativePk := pk.ToElliptic()
+		nativePk, err := pk.ToElliptic()
+		require.NoError(t, err)
 		require.NotNil(t, nativePk)
 		nativeR, nativeS := signature.ToElliptic()
 		digest, err := hashing.Hash(suite.HashFunc(), message)

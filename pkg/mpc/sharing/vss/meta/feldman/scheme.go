@@ -169,14 +169,14 @@ func (s *Scheme[E, FE]) Reconstruct(shares ...*kw.Share[FE]) (*kw.Secret[FE], er
 // against the verification vector. If any share fails verification the
 // reconstructed value is discarded and an error is returned.
 func (s *Scheme[E, FE]) ReconstructAndVerify(reference *VerificationVector[E, FE], shares ...*kw.Share[FE]) (*kw.Secret[FE], error) {
-	reconstructed, err := s.Reconstruct(shares...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not reconstruct secret without verification")
-	}
 	for i, share := range shares {
 		if err := s.Verify(share, reference); err != nil {
 			return nil, errs.Wrap(err).WithMessage("verification failed for share %d", i)
 		}
+	}
+	reconstructed, err := s.Reconstruct(shares...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not reconstruct verified secret")
 	}
 	return reconstructed, nil
 }

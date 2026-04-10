@@ -133,8 +133,7 @@ func (m *Round4P2P[P, B, S]) Validate(p *Cosigner[P, B, S], from sharing.ID) err
 		return errs.Wrap(err)
 	}
 	if m.GammaU.IsZero() || !m.GammaU.IsTorsionFree() ||
-		m.GammaV.IsZero() || !m.GammaV.IsTorsionFree() ||
-		m.Psi.IsZero() {
+		m.GammaV.IsZero() || !m.GammaV.IsTorsionFree() {
 
 		return ErrValidation.WithMessage("invalid input")
 	}

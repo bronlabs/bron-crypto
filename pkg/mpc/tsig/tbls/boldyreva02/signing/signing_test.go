@@ -532,11 +532,25 @@ func TestAggregatorCreationErrors(t *testing.T) {
 		require.Contains(t, err.Error(), "curveFamily")
 	})
 
+	t.Run("NilPublicMaterial", func(t *testing.T) {
+		t.Parallel()
+		_, err := signing.NewShortKeyAggregator(curveFamily, nil, bls.Basic)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "publicMaterial")
+	})
+
 	t.Run("UnsupportedRogueKeyAlgorithm", func(t *testing.T) {
 		t.Parallel()
 		_, err := signing.NewShortKeyAggregator(curveFamily, publicMaterial, bls.RogueKeyPreventionAlgorithm(99))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not supported")
+	})
+
+	t.Run("NilPublicMaterialLongKey", func(t *testing.T) {
+		t.Parallel()
+		_, err := signing.NewLongKeyAggregator(curveFamily, nil, bls.Basic)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "publicMaterial")
 	})
 
 }

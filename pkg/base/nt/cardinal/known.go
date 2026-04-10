@@ -123,6 +123,10 @@ func (k Known) Sub(other Cardinal) Cardinal {
 	if !ok {
 		return other
 	}
+	lt, _, _ := k.Nat().Compare(otherKnown.Nat())
+	if lt == ct.True {
+		return Zero()
+	}
 	var diff numct.Nat
 	diff.SubCap(k.Nat(), otherKnown.Nat(), -1)
 	return Known(diff.BytesBE())

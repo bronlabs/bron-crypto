@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // PublicKey represents an ECDSA public key as a point on an elliptic curve.
@@ -71,17 +72,29 @@ func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
 
 // ToElliptic converts the public key to Go's standard library ecdsa.PublicKey format.
 // This enables interoperability with Go's crypto/ecdsa package.
-func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
+func (pk *PublicKey[P, B, S]) ToElliptic() (*nativeEcdsa.PublicKey, error) {
+	if pk == nil || utils.IsNil(pk.pk) {
+		return nil, ErrInvalidArgument.WithMessage("public key is nil")
+	}
+
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())
 	nativeCurve := curve.ToElliptic()
-	nativeX := errs.Must1(pk.Value().AffineX()).Cardinal().Big()
-	nativeY := errs.Must1(pk.Value().AffineY()).Cardinal().Big()
+	affineX, err := pk.Value().AffineX()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot convert public key x-coordinate to affine form")
+	}
+	affineY, err := pk.Value().AffineY()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot convert public key y-coordinate to affine form")
+	}
+	nativeX := affineX.Cardinal().Big()
+	nativeY := affineY.Cardinal().Big()
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
 		X:     nativeX,
 		Y:     nativeY,
 	}
-	return nativePublicKey
+	return nativePublicKey, nil
 }
 
 // MarshalCBOR serialises the public key to CBOR format.

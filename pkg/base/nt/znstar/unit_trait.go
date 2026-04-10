@@ -1,6 +1,8 @@
 package znstar
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -140,7 +142,17 @@ func (u *UnitTrait[A, W, WT]) Square() W {
 }
 
 func (u *UnitTrait[A, W, WT]) TryInv() (W, error) {
-	return u.Inv(), nil
+	var outCt numct.Nat
+	if ok := u.arith.ModInv(&outCt, u.v.Value()); ok == ct.False {
+		return nil, ErrFailed.WithMessage("element is not invertible")
+	}
+	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create unit")
+	}
+	var out WT
+	W(&out).set(v, u.arith, u.n)
+	return W(&out), nil
 }
 
 func (u *UnitTrait[A, W, WT]) Inv() W {
@@ -158,7 +170,7 @@ func (u *UnitTrait[A, W, WT]) Inv() W {
 }
 
 func (u *UnitTrait[A, W, WT]) TryOpInv() (W, error) {
-	return u.Inv(), nil
+	return u.TryInv()
 }
 
 func (u *UnitTrait[A, W, WT]) OpInv() W {
@@ -174,7 +186,18 @@ func (u *UnitTrait[A, W, WT]) IsOne() bool {
 }
 
 func (u *UnitTrait[A, W, WT]) TryDiv(other W) (W, error) {
-	return u.Div(other), nil
+	u.mustBeValid(other)
+	var outCt numct.Nat
+	if ok := u.arith.ModDiv(&outCt, u.v.Value(), other.Value().Value()); ok == ct.False {
+		return nil, ErrFailed.WithMessage("division failed: divisor not invertible")
+	}
+	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create unit")
+	}
+	var out WT
+	W(&out).set(v, u.arith, u.n)
+	return W(&out), nil
 }
 
 func (u *UnitTrait[A, W, WT]) Div(other W) W {

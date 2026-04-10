@@ -275,8 +275,7 @@ func (bn *BigNum) SetBytes(data []byte) (*BigNum, error) {
 	bn.copyChecker.Check()
 
 	if len(data) == 0 {
-		C.BN_clear_free(&bn.nativeBigNum)
-		C.BN_init(&bn.nativeBigNum)
+		C.BN_zero(&bn.nativeBigNum)
 		return bn, nil
 	}
 

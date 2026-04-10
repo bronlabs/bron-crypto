@@ -57,9 +57,17 @@ func (r *Router) SendTo(correlationID string, messages map[sharing.ID][]byte) er
 // buffering unrelated messages for later retrieval.
 func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sharing.ID][]byte, error) {
 	received := make(map[sharing.ID][]byte)
+	expected := map[sharing.ID]struct{}{}
+	for _, from := range froms {
+		expected[from] = struct{}{}
+	}
 	var kept []routerMessage
 	for _, bufferedMsg := range r.receiveBuffer {
 		if bufferedMsg.CorrelationID == correlationID {
+			if _, ok := expected[bufferedMsg.From]; !ok {
+				kept = append(kept, bufferedMsg)
+				continue
+			}
 			received[bufferedMsg.From] = bufferedMsg.Payload
 		} else {
 			kept = append(kept, bufferedMsg)
@@ -78,6 +86,11 @@ func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sha
 		}
 
 		if message.CorrelationID == correlationID {
+			if _, ok := expected[from]; !ok {
+				message.From = from
+				r.receiveBuffer = append(r.receiveBuffer, message)
+				continue
+			}
 			received[from] = message.Payload
 		} else {
 			message.From = from

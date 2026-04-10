@@ -304,3 +304,13 @@ func Test_VanillaSchnorr_VariantProperties(t *testing.T) {
 	// Check hash function
 	require.NotNil(t, variant.HashFunc())
 }
+
+func Test_VanillaSchnorr_NilVariantAccessors(t *testing.T) {
+	t.Parallel()
+
+	var signer *vanilla.Signer[*k256.Point, *k256.Scalar]
+	var verifier *vanilla.Verifier[*k256.Point, *k256.Scalar]
+
+	require.Nil(t, signer.Variant())
+	require.Nil(t, verifier.Variant())
+}

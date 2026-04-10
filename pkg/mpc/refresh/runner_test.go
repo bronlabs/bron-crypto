@@ -38,7 +38,7 @@ func TestRunner_HappyPath(t *testing.T) {
 	dealerOut, err := scheme.Deal(secret, prng)
 	require.NoError(t, err)
 
-	runners := make(map[sharing.ID]network.Runner[*refresh.Output[*k256.Point, *k256.Scalar]])
+	runners := make(map[sharing.ID]network.Runner[*tsig.BaseShard[*k256.Point, *k256.Scalar]])
 	for id, ctx := range ctxs {
 		share, ok := dealerOut.Shares().Get(id)
 		require.True(t, ok)

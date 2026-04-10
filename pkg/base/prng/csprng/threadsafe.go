@@ -6,18 +6,23 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// Provide a thread-safe version for PRNGs.
+var ErrNil = errs.New("nil")
+
+// ThreadSafePrng provides a thread-safe version for PRNGs.
 type ThreadSafePrng struct {
 	prng SeedableCSPRNG
 	mu   sync.Mutex
 }
 
 // NewThreadSafePrng returns a thread-safe version of the provided PRNG.
-func NewThreadSafePrng(prng SeedableCSPRNG) (threadSafePrng SeedableCSPRNG) {
+func NewThreadSafePrng(prng SeedableCSPRNG) (SeedableCSPRNG, error) {
+	if prng == nil {
+		return nil, ErrNil
+	}
 	return &ThreadSafePrng{
 		prng: prng,
 		mu:   sync.Mutex{},
-	}
+	}, nil
 }
 
 // Read pseudo-random bytes, to use like `crand.Read()`.
@@ -31,7 +36,7 @@ func (tsp *ThreadSafePrng) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-// Read pseudo-random bytes. Salts the read with `readSalt` if provided.
+// Generate reads pseudo-random bytes. Salts the read with `readSalt` if provided.
 func (tsp *ThreadSafePrng) Generate(buffer, readSalt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
@@ -51,12 +56,12 @@ func (tsp *ThreadSafePrng) Reseed(seed, salt []byte) error {
 	return nil
 }
 
-// Returns the security strength of the PRNG (in bytes).
+// SecurityStrength returns the security strength of the PRNG (in bytes).
 func (tsp *ThreadSafePrng) SecurityStrength() int {
 	return tsp.prng.SecurityStrength()
 }
 
-// Reset the internal state of the PRNG.
+// Seed resets the internal state of the PRNG.
 func (tsp *ThreadSafePrng) Seed(seed, salt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
@@ -66,7 +71,7 @@ func (tsp *ThreadSafePrng) Seed(seed, salt []byte) error {
 	return nil
 }
 
-// Generate a new PRNG with the provided seed and salt. Does not need locking, as only fixed values are used.
+// New creates a new PRNG with the provided seed and salt.
 func (tsp *ThreadSafePrng) New(seed, salt []byte) (SeedableCSPRNG, error) {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
@@ -74,5 +79,5 @@ func (tsp *ThreadSafePrng) New(seed, salt []byte) (SeedableCSPRNG, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to construct new prng")
 	}
-	return NewThreadSafePrng(prng), nil
+	return NewThreadSafePrng(prng)
 }

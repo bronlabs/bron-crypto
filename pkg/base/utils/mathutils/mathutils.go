@@ -8,6 +8,8 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+var ErrInvalidArgument = errs.New("invalid argument")
+
 // RandomUint64 samples a random uint64 from the provided PRNG.
 func RandomUint64(prng io.Reader) (uint64, error) {
 	var data [8]byte
@@ -21,6 +23,9 @@ func RandomUint64(prng io.Reader) (uint64, error) {
 
 // RandomUint64Range samples a random uint64 in the range [0, bound) from the provided PRNG.
 func RandomUint64Range(prng io.Reader, bound uint64) (uint64, error) {
+	if bound == 0 {
+		return 0, ErrInvalidArgument.WithMessage("bound must be greater than zero")
+	}
 	// Rejection sampling: reject values in [0, threshold) where threshold = 2^64 % bound.
 	// This ensures the remaining values are uniformly distributed across [0, bound).
 	// The worst case is bound=2^63+1, for which the probability of rejection is ~1/2,

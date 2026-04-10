@@ -52,9 +52,12 @@ func XorBytes[T ~[]byte](dst, x, y T) int {
 }
 
 // AndBytes computes the bitwise AND of two byte slices and stores the result in dst.
-// panics if dst is smaller than either x or y.
+// panics if x and y have different lengths or if dst is smaller than x.
 func AndBytes[T ~[]byte](dst, x, y T) int {
-	n := min(len(x), len(y))
+	if len(x) != len(y) {
+		panic("ct: slices have different lengths")
+	}
+	n := len(x)
 	if n == 0 {
 		return 0
 	}
@@ -68,9 +71,12 @@ func AndBytes[T ~[]byte](dst, x, y T) int {
 }
 
 // OrBytes computes the bitwise OR of two byte slices and stores the result in dst.
-// panics if dst is smaller than either x or y.
+// panics if x and y have different lengths or if dst is smaller than x.
 func OrBytes[T ~[]byte](dst, x, y T) int {
-	n := min(len(x), len(y))
+	if len(x) != len(y) {
+		panic("ct: slices have different lengths")
+	}
+	n := len(x)
 	if n == 0 {
 		return 0
 	}

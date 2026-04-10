@@ -136,6 +136,24 @@ func Test_DeterministicHappyPath(t *testing.T) {
 	require.True(t, recoveredPk2.Equal(pk))
 }
 
+func Test_NilEllipticConversions(t *testing.T) {
+	t.Parallel()
+
+	var pk *ecdsa.PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
+	var sk *ecdsa.PrivateKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
+	var sig *ecdsa.Signature[*k256.Scalar]
+
+	_, err := pk.ToElliptic()
+	require.Error(t, err)
+
+	_, err = sk.ToElliptic()
+	require.Error(t, err)
+
+	r, s := sig.ToElliptic()
+	require.Nil(t, r)
+	require.Nil(t, s)
+}
+
 func Test_RFC6979(t *testing.T) {
 	t.Parallel()
 

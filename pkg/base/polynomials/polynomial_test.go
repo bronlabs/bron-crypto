@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 )
@@ -115,6 +116,13 @@ func TestPolynomialRingNew(t *testing.T) {
 		t.Parallel()
 		one := field.One()
 		_, err := polyRing.New(one, nil, one)
+		require.Error(t, err)
+	})
+
+	t.Run("nil ring returns error", func(t *testing.T) {
+		t.Parallel()
+		var nilRing algebra.FiniteRing[*k256.Scalar]
+		_, err := polynomials.NewPolynomialRing(nilRing)
 		require.Error(t, err)
 	})
 }

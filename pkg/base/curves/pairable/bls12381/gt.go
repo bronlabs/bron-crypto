@@ -49,7 +49,7 @@ func (*Gt) Name() string {
 
 // ElementSize returns the element size in bytes.
 func (*Gt) ElementSize() int {
-	return 96
+	return bls12381Impl.GtBytes
 }
 
 // Order returns the group or field order.
@@ -82,12 +82,12 @@ func (g *Gt) OpIdentity() *GtElement {
 
 // FromBytes decodes an element from bytes.
 func (*Gt) FromBytes(inBytes []byte) (*GtElement, error) {
-	if len(inBytes) != 96 {
-		return nil, curves.ErrInvalidLength.WithMessage("input must be 96 bytes long")
+	if len(inBytes) != bls12381Impl.GtBytes {
+		return nil, curves.ErrInvalidLength.WithMessage("input must be %d bytes long", bls12381Impl.GtBytes)
 	}
 
 	var element GtElement
-	if ok := element.V.SetUniformBytes(inBytes); ok == 0 {
+	if ok := element.V.SetBytes(inBytes); ok == 0 {
 		return nil, curves.ErrFailed.WithMessage("failed to set bytes")
 	}
 

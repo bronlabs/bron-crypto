@@ -23,8 +23,11 @@ func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](ctx 
 	if ctx == nil {
 		return nil, ErrInvalidArgument.WithMessage("ctx is nil")
 	}
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+	}
 	if sigmaProtocol == nil {
-		return nil, ErrInvalidArgument.WithMessage("protocol or is nil")
+		return nil, ErrInvalidArgument.WithMessage("protocol is nil")
 	}
 	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurityBits {
 		return nil, ErrInvalidArgument.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
@@ -49,12 +52,11 @@ func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](ctx 
 
 // Round2 runs the verifier's second round and samples a challenge.
 func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
-	v.ctx.Transcript().AppendBytes(commitmentLabel, commitment.Bytes())
-
 	if v.round != 2 {
 		return nil, ErrRound.WithMessage("r != 2 (%d)", v.round)
 	}
 
+	v.ctx.Transcript().AppendBytes(commitmentLabel, commitment.Bytes())
 	challengeBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
 	_, err := io.ReadFull(v.prng, challengeBytes)
 	if err != nil {
@@ -71,16 +73,16 @@ func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
 
 // Verify checks the prover's response.
 func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
-	v.ctx.Transcript().AppendBytes(responseLabel, response.Bytes())
-
 	if v.round != 4 {
 		return ErrRound.WithMessage("r != 4 (%d)", v.round)
 	}
 
+	v.ctx.Transcript().AppendBytes(responseLabel, response.Bytes())
 	err := v.sigmaProtocol.Verify(v.statement, v.commitment, v.challengeBytes, response)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
+	v.round += 2
 	return nil
 }

@@ -61,8 +61,9 @@ func (f *Field) Random(prng io.Reader) (*FieldElement, error) {
 	return f.FromBytes(data[:])
 }
 
-// RandomNonZero samples a uniformly random non-zero field element. It resamples
-// on the negligible chance of drawing zero.
+// RandomNonZero samples a uniformly random non-zero field element. It assumes
+// the provided reader is a working source of randomness and resamples on the
+// negligible chance of drawing zero.
 func (f *Field) RandomNonZero(prng io.Reader) (*FieldElement, error) {
 	e, err := f.Random(prng)
 	if err != nil {
@@ -171,7 +172,7 @@ func (*Field) FromBytes(buf []byte) (*FieldElement, error) {
 	return el, nil
 }
 
-// Select returns x if choice is 1, or y if choice is 0, in constant time.
+// Select returns x if choice is 0, or y if choice is 1, in constant time.
 func (*Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
 	zSlice := ct.CSelectInts(ct.Choice(choice), x[:], y[:])
 	return &FieldElement{
@@ -193,6 +194,9 @@ func (*FieldElement) Structure() algebra.Structure[*FieldElement] {
 
 // Clone returns a deep copy of the field element.
 func (el *FieldElement) Clone() *FieldElement {
+	if el == nil {
+		return nil
+	}
 	var clone FieldElement
 	copy(clone[:], el[:])
 	return &clone
@@ -412,6 +416,9 @@ func (el *FieldElement) Bytes() []byte {
 
 // Equal reports whether el and rhs represent the same field element, in constant time.
 func (el *FieldElement) Equal(rhs *FieldElement) bool {
+	if el == nil || rhs == nil {
+		return el == rhs
+	}
 	return ((el[0] ^ rhs[0]) | (el[1] ^ rhs[1])) == 0
 }
 

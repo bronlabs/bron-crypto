@@ -43,6 +43,9 @@ func (p *Participant[B, BP]) Round2(r1 network.RoundMessages[*Round1P2P[B, BP], 
 		if !ok {
 			return nil, ErrFailed.WithMessage("missing message")
 		}
+		if err := m.Validate(p, id); err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to validate round 1 message")
+		}
 		receivedMessages[id] = m.Payload
 		p.state.messages[id] = m.Payload
 	}
@@ -76,6 +79,9 @@ func (p *Participant[B, BP]) Round3(r2 network.RoundMessages[*Round2P2P[B, BP], 
 			echo, ok := r2.Get(echoID)
 			if !ok {
 				return nil, ErrFailed.WithMessage("missing message")
+			}
+			if err := echo.Validate(p, echoID); err != nil {
+				return nil, errs.Wrap(err).WithMessage("failed to validate round 2 message")
 			}
 			echoMessage := echo.Echo[id]
 			if !bytes.Equal(message, echoMessage) {

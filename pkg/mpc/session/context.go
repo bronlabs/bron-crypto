@@ -209,5 +209,8 @@ func (ctx *Context) Clone() *Context {
 }
 
 func (ctx *Context) Seeds() map[sharing.ID]io.Reader {
-	return maputils.MapValues(ctx.seeds, func(_ sharing.ID, shake *sha3.SHAKE) io.Reader { return shake })
+	return maputils.MapValues(ctx.seeds, func(_ sharing.ID, shake *sha3.SHAKE) io.Reader {
+		clone := *shake
+		return &clone
+	})
 }

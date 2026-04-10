@@ -37,7 +37,7 @@ func (c *Commitment[C, N, PK]) Equal(other *Commitment[C, N, PK]) bool {
 // The same witness will always produce the same re-randomised commitment.
 // Returns an error if the key or witness is nil.
 func (c *Commitment[C, N, PK]) ReRandomiseWithWitness(k *Key[PK], w *Witness[N]) (*Commitment[C, N, PK], error) {
-	if k == nil || w == nil {
+	if c == nil || k == nil || w == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
 	newCiphertext, err := c.v.ReRandomiseWithNonce(k.v, w.v)
@@ -52,7 +52,7 @@ func (c *Commitment[C, N, PK]) ReRandomiseWithWitness(k *Key[PK], w *Witness[N])
 // along with the witness used for re-randomisation.
 // Returns an error if the key or prng is nil.
 func (c *Commitment[C, N, PK]) ReRandomise(k *Key[PK], prng io.Reader) (*Commitment[C, N, PK], *Witness[N], error) {
-	if k == nil || prng == nil {
+	if c == nil || k == nil || prng == nil {
 		return nil, nil, ErrIsNil.WithStackFrame()
 	}
 	newCiphertext, newNonce, err := c.v.ReRandomise(k.v, prng)

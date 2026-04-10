@@ -1,6 +1,7 @@
 package gennaro
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
@@ -22,6 +23,15 @@ func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 	}
 	if m.PedersenVerificationVector.Degree()+1 != int(participant.ac.Threshold()) {
 		return ErrValidation.WithMessage("invalid Pedersen verification vector degree")
+	}
+	coeffs := m.PedersenVerificationVector.Coefficients()
+	if len(coeffs) != int(participant.ac.Threshold()) {
+		return ErrValidation.WithMessage("invalid Pedersen verification vector size")
+	}
+	for i, coeff := range coeffs {
+		if utils.IsNil(coeff) {
+			return ErrValidation.WithMessage("missing Pedersen verification vector coefficient %d", i)
+		}
 	}
 	if len(m.Proof) == 0 {
 		return ErrValidation.WithMessage("missing proof of well-formedness")
@@ -63,6 +73,15 @@ func (m *Round2Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 	}
 	if m.FeldmanVerificationVector.Degree()+1 != int(participant.ac.Threshold()) {
 		return ErrValidation.WithMessage("invalid Feldman verification vector degree")
+	}
+	coeffs := m.FeldmanVerificationVector.Coefficients()
+	if len(coeffs) != int(participant.ac.Threshold()) {
+		return ErrValidation.WithMessage("invalid Feldman verification vector size")
+	}
+	for i, coeff := range coeffs {
+		if utils.IsNil(coeff) {
+			return ErrValidation.WithMessage("missing Feldman verification vector coefficient %d", i)
+		}
 	}
 	if len(m.Proof) == 0 {
 		return ErrValidation.WithMessage("missing proof of well-formedness")

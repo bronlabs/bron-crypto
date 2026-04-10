@@ -1511,6 +1511,20 @@ func TestNewShare(t *testing.T) {
 		require.ErrorIs(t, err, sharing.ErrMembership)
 	})
 
+	t.Run("zero shareholder ID rejected without access structure", func(t *testing.T) {
+		t.Parallel()
+
+		message, err := pedcom.NewMessage(k256.NewScalarField().One())
+		require.NoError(t, err)
+		witness, err := pedcom.NewWitness(k256.NewScalarField().One())
+		require.NoError(t, err)
+
+		share, err := pedersen.NewShare(0, message, witness, nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, sharing.ErrMembership)
+		require.Nil(t, share)
+	})
+
 	t.Run("nil access structure allowed", func(t *testing.T) {
 		t.Parallel()
 		value := field.FromUint64(100)
