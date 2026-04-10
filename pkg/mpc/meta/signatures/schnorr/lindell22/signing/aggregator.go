@@ -109,6 +109,9 @@ func NewCosigningAggregator[
 	pk *lindell22.PublicMaterial[GE, S],
 	scheme SCH,
 ) (*Aggregator[VR, GE, S, M], error) {
+	if cosigner == nil {
+		return nil, ErrNilArgument.WithMessage("cosigner cannot be nil")
+	}
 	agg, err := NewAggregator(pk, scheme)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create aggregator")
@@ -132,6 +135,13 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	quorum := hashset.NewComparable(partialSignatures.Keys()...).Freeze()
 	if !a.pkm.MSP().Accepts(quorum.List()...) {
 		return nil, ErrInvalidMembership.WithMessage("invalid authorization: not enough shares are qualified")
+	}
+	for sender, psig := range partialSignatures.Iter() {
+		if psig == nil {
+			return nil, ErrNilArgument.WithMessage("partial signature from sender %d cannot be nil", sender).WithTag(
+				base.IdentifiableAbortPartyIDTag, sender,
+			)
+		}
 	}
 
 	if a.IsCosigning() {
