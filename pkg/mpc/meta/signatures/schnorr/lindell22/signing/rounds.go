@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -95,43 +96,10 @@ func (c *Cosigner[E, S, M]) Round2(inb network.RoundMessages[*Round1Broadcast[E,
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute zero participant round 2")
 	}
-	additiveLsss, err := feldman.NewScheme(c.group, c.state.zeroAc)
+	c.state.partialPublicKeys, c.state.zeroShift, err = c.computeEffectivePartialPublicKeys(zeroShare, zeroVerificationVector)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create Feldman scheme")
+		return nil, errs.Wrap(err).WithMessage("cannot compute partial public keys")
 	}
-	additiveZeroShare, err := additiveLsss.ConvertShareToAdditive(zeroShare, c.state.zeroAc)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot convert zero share to additive share")
-	}
-	c.state.zeroShift = additiveZeroShare
-	additiveLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(zeroVerificationVector, additiveLsss.MSP())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create Feldman lifted dealer function")
-	}
-
-	partialPublicKeyValues := make(map[sharing.ID]E)
-	publicKeyShares := c.shard.PublicKeyShares()
-	for id := range c.ctx.AllPartiesOrdered() {
-		pkShare, _ := publicKeyShares.Get(id)
-		partialPublicKeyAdditiveShare, err := c.lsss.ConvertLiftedShareToAdditive(pkShare, c.state.zeroAc)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot convert share to additive share")
-		}
-		partialPublicKeyValue := partialPublicKeyAdditiveShare.Value()
-
-		liftedZeroShiftShare, err := additiveLiftedDealerFunc.ShareOf(id)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot compute zero shift share")
-		}
-		shiftShare, err := additiveLsss.ConvertLiftedShareToAdditive(liftedZeroShiftShare, c.state.zeroAc)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot convert zero shift share to additive share")
-		}
-		zeroShiftValue := shiftShare.Value()
-
-		partialPublicKeyValues[id] = partialPublicKeyValue.Op(zeroShiftValue)
-	}
-	c.state.partialPublicKeys = partialPublicKeyValues
 
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionID, S, nic)
 	c.state.ctxFrozenBeforeDlogProof = c.ctx.Clone()
@@ -243,6 +211,47 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 			S: s,
 		},
 	}, nil
+}
+
+func (c *Cosigner[GE, S, M]) computeEffectivePartialPublicKeys(zeroShare *feldman.Share[S], zeroVerificationVector *feldman.VerificationVector[GE, S]) (partialPublicKeyValues map[sharing.ID]GE, additiveZeroShare *additive.Share[S], err error) {
+	additiveLsss, err := feldman.NewScheme(c.group, c.state.zeroAc)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create Feldman scheme")
+	}
+	additiveZeroShare, err = additiveLsss.ConvertShareToAdditive(zeroShare, c.state.zeroAc)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot convert zero share to additive share")
+	}
+	c.state.zeroShift = additiveZeroShare
+	additiveLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(zeroVerificationVector, additiveLsss.MSP())
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create Feldman lifted dealer function")
+	}
+
+	partialPublicKeyValues = make(map[sharing.ID]GE)
+	publicKeyShares := c.shard.PublicKeyShares()
+	for id := range c.ctx.AllPartiesOrdered() {
+		pkShare, _ := publicKeyShares.Get(id)
+		partialPublicKeyAdditiveShare, err := c.lsss.ConvertLiftedShareToAdditive(pkShare, c.state.zeroAc)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot convert share to additive share")
+		}
+		partialPublicKeyValue := partialPublicKeyAdditiveShare.Value()
+
+		liftedZeroShiftShare, err := additiveLiftedDealerFunc.ShareOf(id)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot compute zero shift share")
+		}
+		shiftShare, err := additiveLsss.ConvertLiftedShareToAdditive(liftedZeroShiftShare, c.state.zeroAc)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot convert zero shift share to additive share")
+		}
+		zeroShiftValue := shiftShare.Value()
+
+		partialPublicKeyValues[id] = partialPublicKeyValue.Op(zeroShiftValue)
+	}
+
+	return partialPublicKeyValues, additiveZeroShare, nil
 }
 
 func commitBigR[

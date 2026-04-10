@@ -32,9 +32,9 @@ type Aggregator[
 	psigVerifier schnorrlike.Verifier[VR, GE, S, M]
 	feldmanVSS   *feldman.Scheme[GE, S]
 
-	bigR                      GE
-	correctedBigRs            map[sharing.ID]GE
-	optionalPartialPublicKeys map[sharing.ID]GE
+	bigR              GE
+	correctedBigRs    map[sharing.ID]GE
+	partialPublicKeys map[sharing.ID]GE
 }
 
 // PublicMaterial returns the public key material for signature verification.
@@ -115,7 +115,7 @@ func NewCosigningAggregator[
 	}
 	agg.bigR = cosigner.state.bigR
 	agg.correctedBigRs = cosigner.state.correctedBigRs
-	agg.optionalPartialPublicKeys = cosigner.state.partialPublicKeys
+	agg.partialPublicKeys = cosigner.state.partialPublicKeys
 	return agg, nil
 }
 
@@ -147,7 +147,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 				identityAborts = append(identityAborts, base.ErrAbort.WithMessage("partial signature from sender %d has inconsistent nonce commitment", sender).WithTag(base.IdentifiableAbortPartyIDTag, sender))
 			}
 
-			senderAdditivePKShareValue := a.optionalPartialPublicKeys[sender]
+			senderAdditivePKShareValue := a.partialPublicKeys[sender]
 			senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShareValue)
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
@@ -162,9 +162,14 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		}
 	}
 
-	bigR := iterutils.Reduce(slices.Values(partialSignatures.Values()),
-		a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
-	)
+	var bigR GE
+	if a.IsCosigning() {
+		bigR = a.bigR
+	} else {
+		bigR = iterutils.Reduce(slices.Values(partialSignatures.Values()),
+			a.group.OpIdentity(), func(acc GE, x *lindell22.PartialSignature[GE, S]) GE { return acc.Op(x.Sig.R) },
+		)
+	}
 	s := iterutils.Reduce(slices.Values(partialSignatures.Values()),
 		a.sf.Zero(), func(acc S, x *lindell22.PartialSignature[GE, S]) S { return acc.Add(x.Sig.S) },
 	)
@@ -183,7 +188,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		return nil, errs.Wrap(err).WithMessage("failed to create aggregated signature")
 	}
 	if err := a.verifier.Verify(aggregatedSignature, a.pkm.PublicKey(), message); err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to verify aggregated signature")
+		return nil, errs.Join(err, base.ErrAbort).WithMessage("verification failed")
 	}
 
 	return aggregatedSignature, nil
