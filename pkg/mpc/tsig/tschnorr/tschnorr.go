@@ -155,7 +155,7 @@ func (pm *PublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to create schnorr public key from deserialized public material")
 	}
 	pm.pk = pk
-	pm.pkOnce = sync.Once{}
+	pm.pkOnce.Do(func() {}) // ensure pkOnce is initialized
 	return nil
 }
 
@@ -169,7 +169,7 @@ func (sh *Shard[E, S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to create schnorr public key from deserialized shard")
 	}
 	sh.pk = pk
-	sh.pkOnce = sync.Once{}
+	sh.pkOnce.Do(func() {}) // ensure pkOnce is initialized
 	return nil
 }
 

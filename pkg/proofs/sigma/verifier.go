@@ -83,5 +83,6 @@ func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
+	v.round += 2
 	return nil
 }
