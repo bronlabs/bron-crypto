@@ -152,7 +152,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 			senderAdditivePKShareValue := a.partialPublicKeys[sender]
 			senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShareValue)
 			if err != nil {
-				identityAborts = append(identityAborts, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to create public key for sender %d", sender)) // public key value may have been identity due to adversarial manipulation of HJKY zero sharing.
+				return nil, errs.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
 			}
 			if err := a.psigVerifier.Verify(&psig.Sig, senderAdditivePK, message); err != nil {
 				identityAborts = append(identityAborts, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature"))
