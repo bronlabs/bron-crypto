@@ -433,3 +433,66 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, proverBytes, verifierBytes)
 }
+
+func Test_InvalidArgumentHandling(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	scheme := paillier.NewScheme()
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
+	require.NoError(t, err)
+	sk, pk, err := keyGenerator.Generate(prng)
+	require.NoError(t, err)
+
+	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
+	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	require.NoError(t, err)
+
+	enc, err := scheme.Encrypter()
+	require.NoError(t, err)
+	xBig, err := crand.Int(prng, lBig)
+	require.NoError(t, err)
+	x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
+	require.NoError(t, err)
+	c, r, err := enc.Encrypt(x, pk, prng)
+	require.NoError(t, err)
+
+	statement := &paillierrange.Statement{Pk: pk, C: c, L: l}
+	witness := &paillierrange.Witness{Sk: sk, X: x, R: r}
+
+	t.Run("validate statement rejects nil fields", func(t *testing.T) {
+		t.Parallel()
+		err := protocol.ValidateStatement(paillierrange.NewStatement(nil, nil, nil), paillierrange.NewWitness(nil, nil, nil))
+		require.Error(t, err)
+	})
+
+	t.Run("compute prover response rejects short challenge", func(t *testing.T) {
+		t.Parallel()
+		a, s, err := protocol.ComputeProverCommitment(statement, witness)
+		require.NoError(t, err)
+
+		_, err = protocol.ComputeProverResponse(statement, witness, a, s, []byte{})
+		require.Error(t, err)
+	})
+
+	t.Run("verify rejects short challenge", func(t *testing.T) {
+		t.Parallel()
+		a, s, err := protocol.ComputeProverCommitment(statement, witness)
+		require.NoError(t, err)
+		e := make([]byte, protocol.GetChallengeBytesLength())
+		_, err = io.ReadFull(prng, e)
+		require.NoError(t, err)
+		z, err := protocol.ComputeProverResponse(statement, witness, a, s, e)
+		require.NoError(t, err)
+
+		err = protocol.Verify(statement, a, []byte{}, z)
+		require.Error(t, err)
+	})
+
+	t.Run("simulator rejects short challenge", func(t *testing.T) {
+		t.Parallel()
+		_, _, err := protocol.RunSimulator(statement, []byte{})
+		require.Error(t, err)
+	})
+}

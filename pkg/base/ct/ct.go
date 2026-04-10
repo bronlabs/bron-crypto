@@ -16,7 +16,7 @@ const (
 
 // Not returns the negation of the Choice.
 func (c Choice) Not() Choice {
-	return c ^ One
+	return (c & One) ^ One
 }
 
 // Comparable represents types that can be compared in constant time.

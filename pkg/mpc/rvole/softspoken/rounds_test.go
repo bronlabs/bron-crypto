@@ -77,6 +77,46 @@ func Test_HappyPath(t *testing.T) {
 	})
 }
 
+func TestRound2ValidateAcceptsZeroCoordinates(t *testing.T) {
+	t.Parallel()
+
+	const L = 16
+	prng := pcg.NewRandomised()
+
+	curve := k256.NewCurve()
+	hashFunc := sha256.New
+	suite, err := rvole_softspoken.NewSuite(L, curve, hashFunc)
+	require.NoError(t, err)
+	senderSeeds, receiverSeeds := generateSeeds(t, prng)
+
+	const aliceID = 1
+	const bobID = 2
+	quorum := hashset.NewComparable[sharing.ID](aliceID, bobID).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	alice, err := rvole_softspoken.NewAlice(ctxs[aliceID], suite, receiverSeeds, prng)
+	require.NoError(t, err)
+	bob, err := rvole_softspoken.NewBob(ctxs[bobID], suite, senderSeeds, prng)
+	require.NoError(t, err)
+
+	r1, _, err := bob.Round1()
+	require.NoError(t, err)
+
+	a := make([]*k256.Scalar, L)
+	for i := range a {
+		a[i], err = k256.NewScalarField().Random(prng)
+		require.NoError(t, err)
+	}
+	r2, _, err := alice.Round2(ntu.CBORRoundTrip(t, r1), a)
+	require.NoError(t, err)
+
+	r2.ATilde[0][0] = k256.NewScalarField().Zero()
+	r2.Eta[0] = k256.NewScalarField().Zero()
+
+	err = ntu.CBORRoundTrip(t, r2).Validate(bob, aliceID)
+	require.NoError(t, err)
+}
+
 func generateSeeds(tb testing.TB, prng io.Reader) (senderSeeds *vsot.SenderOutput, receiverSeeds *vsot.ReceiverOutput) {
 	tb.Helper()
 	receiverSeeds = &vsot.ReceiverOutput{

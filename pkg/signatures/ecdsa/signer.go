@@ -52,7 +52,13 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("hashing failed")
 	}
-	nativeSk := s.sk.ToElliptic()
+	nativeSk, err := s.sk.ToElliptic()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot convert secret key to native ECDSA format")
+	}
+	if nativeSk == nil {
+		return nil, ErrInvalidArgument.WithMessage("secret key cannot be converted to native ECDSA format")
+	}
 
 	var nativeR, nativeS *big.Int
 	if s.suite.IsDeterministic() {

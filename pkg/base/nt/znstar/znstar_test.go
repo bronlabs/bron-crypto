@@ -124,6 +124,38 @@ func TestRSAGroup_Operations(t *testing.T) {
 	})
 }
 
+func TestTryAPIsReturnErrorsInsteadOfPanicking(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), rsaGroupLen/2, pcg.NewRandomised())
+	require.NoError(t, err)
+
+	rsaGroup, err := znstar.NewRSAGroup(p, q)
+	require.NoError(t, err)
+	one := rsaGroup.One()
+
+	t.Run("TryInv succeeds", func(t *testing.T) {
+		t.Parallel()
+		inv, err := one.TryInv()
+		require.NoError(t, err)
+		require.True(t, inv.IsOne())
+	})
+
+	t.Run("TryOpInv succeeds", func(t *testing.T) {
+		t.Parallel()
+		inv, err := one.TryOpInv()
+		require.NoError(t, err)
+		require.True(t, inv.IsOne())
+	})
+
+	t.Run("TryDiv succeeds", func(t *testing.T) {
+		t.Parallel()
+		quotient, err := one.TryDiv(one)
+		require.NoError(t, err)
+		require.True(t, quotient.IsOne())
+	})
+}
+
 func TestRSAGroup_ForgetLearnOrder(t *testing.T) {
 	t.Parallel()
 

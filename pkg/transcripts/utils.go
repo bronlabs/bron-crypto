@@ -9,6 +9,9 @@ import (
 
 // Append writes BytesLike values to the transcript under the given label.
 func Append[T base.BytesLike](tape Transcript, label string, xs ...T) {
+	if tape == nil {
+		return
+	}
 	for _, x := range xs {
 		tape.AppendBytes(label, x.Bytes())
 	}
@@ -16,6 +19,12 @@ func Append[T base.BytesLike](tape Transcript, label string, xs ...T) {
 
 // Extract derives a field element from the transcript using the given structure.
 func Extract[T base.BytesLike](tape Transcript, label string, f algebra.FiniteStructure[T]) (T, error) {
+	if tape == nil {
+		return *new(T), errs.New("transcript is nil")
+	}
+	if f == nil {
+		return *new(T), errs.New("finite structure is nil")
+	}
 	buf, err := tape.ExtractBytes(label, uint(f.ElementSize()+(base.StatisticalSecurityBytesCeil)))
 	if err != nil {
 		return *new(T), errs.Wrap(err).WithMessage("could not extract bytes from transcript")

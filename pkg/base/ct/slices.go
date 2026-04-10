@@ -16,7 +16,7 @@ func SliceEachEqual[S ~[]I, I constraints.Integer](s S, e I) Choice {
 // SliceEqual returns 1 if x == y.
 func SliceEqual[S ~[]I, I constraints.Integer](x, y S) Choice {
 	if len(x) != len(y) {
-		panic("ct: slices have different lengths")
+		return Zero
 	}
 
 	v := I(0)

@@ -9,9 +9,7 @@ import (
 // Combinations generates all k-combinations of the input slice s.
 func Combinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
 	if k > uint(len(s)) {
-		return func(yield func(S) bool) {
-			_ = yield(S{})
-		}
+		return func(func(S) bool) {}
 	}
 
 	return func(yield func(S) bool) {

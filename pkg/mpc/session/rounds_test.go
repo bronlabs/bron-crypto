@@ -92,3 +92,11 @@ func Test_HappyPath(t *testing.T) {
 		require.True(t, sum.IsOpIdentity())
 	})
 }
+
+func TestMessageValidationAcceptsZeroValuedPayloads(t *testing.T) {
+	t.Parallel()
+
+	require.NoError(t, (&session.Round1Broadcast{}).Validate(nil, 0))
+	require.NoError(t, (&session.Round2P2P{}).Validate(nil, 0))
+	require.NoError(t, (&session.Round3P2P{}).Validate(nil, 0))
+}

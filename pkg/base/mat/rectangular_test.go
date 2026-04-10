@@ -549,7 +549,8 @@ func TestMatrixColumnScalarMul(t *testing.T) {
 func TestMatrixSwapRowOOB(t *testing.T) {
 	t.Parallel()
 	m := newMatrix(t, [][]uint64{{1, 2}})
-	require.Panics(t, func() { _, _ = m.SwapRow(0, 1) })
+	_, err := m.SwapRow(0, 1)
+	require.ErrorIs(t, err, mat.ErrDimension)
 }
 
 // --- Minor ---
@@ -577,6 +578,21 @@ func TestMatrixMinor(t *testing.T) {
 		_, err := m.Minor(3, 0)
 		require.Error(t, err)
 	})
+
+	t.Run("rejects_1x1_minor", func(t *testing.T) {
+		t.Parallel()
+		_, err := newMatrix(t, [][]uint64{{1}}).Minor(0, 0)
+		require.ErrorIs(t, err, mat.ErrDimension)
+	})
+}
+
+func TestMatrixTrySubDimensionMismatch(t *testing.T) {
+	t.Parallel()
+	a := newMatrix(t, [][]uint64{{1, 2}})
+	b := newMatrix(t, [][]uint64{{1}, {2}})
+
+	_, err := a.TrySub(b)
+	require.ErrorIs(t, err, mat.ErrDimension)
 }
 
 // --- Concatenation ---

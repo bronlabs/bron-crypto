@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 )
@@ -61,9 +62,25 @@ func (r3 *Round3P2P[GE, SE]) Validate(bob *Bob[GE, SE], _ sharing.ID) error {
 		if len(a) != (l + rho) {
 			return ErrValidation.WithMessage("invalid ATilde row length")
 		}
+		for _, v := range a {
+			if utils.IsNil(v) {
+				return ErrValidation.WithMessage("invalid ATilde entry")
+			}
+			if v.Structure().Name() != bob.suite.field.Name() {
+				return ErrValidation.WithMessage("invalid ATilde entry structure")
+			}
+		}
 	}
 	if len(r3.Eta) != rho {
 		return ErrValidation.WithMessage("invalid Eta length")
+	}
+	for _, eta := range r3.Eta {
+		if utils.IsNil(eta) {
+			return ErrValidation.WithMessage("invalid Eta entry")
+		}
+		if eta.Structure().Name() != bob.suite.field.Name() {
+			return ErrValidation.WithMessage("invalid Eta entry structure")
+		}
 	}
 	if len(r3.Mu) != base.CollisionResistanceBytesCeil {
 		return ErrValidation.WithMessage("invalid Mu length")

@@ -421,6 +421,22 @@ func TestHPKE_SymmetricKey(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, key)
 	require.Equal(t, keyBytes, key.Bytes())
+
+	t.Run("Equal returns false on different lengths", func(t *testing.T) {
+		t.Parallel()
+
+		otherBytes := make([]byte, 32)
+		otherBytes[0] = 1
+		other, err := encryption.NewSymmetricKey(otherBytes)
+		require.NoError(t, err)
+		require.False(t, key.Equal(other))
+	})
+}
+
+func TestHPKECiphertextEqualDifferentLengths(t *testing.T) {
+	t.Parallel()
+
+	require.False(t, hpke.Ciphertext{1}.Equal(hpke.Ciphertext{1, 2}))
 }
 
 // TestHPKE_Keygen tests the key generator

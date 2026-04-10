@@ -119,3 +119,44 @@ func Test_HappyPath(t *testing.T) {
 		require.Equal(t, senderBytes, receiverBytes)
 	})
 }
+
+func TestNewSuiteRejectsNilHashFunc(t *testing.T) {
+	t.Parallel()
+
+	_, err := softspoken.NewSuite(4096, 32, nil)
+	require.Error(t, err)
+}
+
+func TestParticipantsRejectEmptySeedMessages(t *testing.T) {
+	t.Parallel()
+
+	const KAPPA = softspoken.Kappa
+	prng := pcg.NewRandomised()
+	quorum := hashset.NewComparable[sharing.ID](1, 2).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+	suite, err := softspoken.NewSuite(4096, 32, sha256.New)
+	require.NoError(t, err)
+
+	senderSeeds := &vsot.SenderOutput{
+		SenderOutput: ot.SenderOutput[[]byte]{
+			Messages: make([][2][][]byte, KAPPA),
+		},
+	}
+	receiverSeeds := &vsot.ReceiverOutput{
+		ReceiverOutput: ot.ReceiverOutput[[]byte]{
+			Choices:  make([]byte, KAPPA/8),
+			Messages: make([][][]byte, KAPPA),
+		},
+	}
+	for i := range KAPPA {
+		senderSeeds.Messages[i][0] = [][]byte{{}}
+		senderSeeds.Messages[i][1] = [][]byte{{}}
+		receiverSeeds.Messages[i] = [][]byte{{}}
+	}
+
+	_, err = softspoken.NewReceiver(ctxs[1], senderSeeds, suite, prng)
+	require.Error(t, err)
+
+	_, err = softspoken.NewSender(ctxs[2], receiverSeeds, suite, prng)
+	require.Error(t, err)
+}

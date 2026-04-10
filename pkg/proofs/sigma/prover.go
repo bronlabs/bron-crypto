@@ -71,12 +71,12 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 // Round3 runs the prover's third round.
 func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 	var zero Z
-	p.ctx.Transcript().AppendBytes(challengeLabel, challengeBytes)
 
 	if p.round != 3 {
 		return zero, ErrRound.WithMessage("r != 3 (%d)", p.round)
 	}
 
+	p.ctx.Transcript().AppendBytes(challengeLabel, challengeBytes)
 	response, err := p.sigmaProtocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, challengeBytes)
 	if err != nil {
 		return zero, errs.Wrap(err).WithMessage("cannot generate response")

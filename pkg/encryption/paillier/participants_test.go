@@ -166,6 +166,13 @@ func TestEncrypter_EncryptManyWithNonces(t *testing.T) {
 	for i := range cts1 {
 		require.True(t, cts1[i].Equal(cts2[i]), "ciphertext %d should match", i)
 	}
+
+	t.Run("mismatched nonce count", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := enc.EncryptManyWithNonces(plaintexts, pk, nonces[:len(nonces)-1])
+		require.Error(t, err)
+	})
 }
 
 // --- SelfEncrypter Tests ---
@@ -282,6 +289,30 @@ func TestSelfEncrypter_SelfEncryptMany(t *testing.T) {
 	}
 }
 
+func TestSelfEncrypter_SelfEncryptManyWithNonces_MismatchedLength(t *testing.T) {
+	t.Parallel()
+
+	scheme := paillier.NewScheme()
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
+	require.NoError(t, err)
+	sk, _, err := kg.Generate(pcg.NewRandomised())
+	require.NoError(t, err)
+
+	se, err := scheme.SelfEncrypter(sk)
+	require.NoError(t, err)
+
+	plaintexts := []*paillier.Plaintext{
+		sk.PublicKey().PlaintextSpace().Zero(),
+		sk.PublicKey().PlaintextSpace().Zero(),
+	}
+	nonces := make([]*paillier.Nonce, 1)
+	nonces[0], err = sk.PublicKey().NonceSpace().Sample(pcg.NewRandomised())
+	require.NoError(t, err)
+
+	_, err = se.SelfEncryptManyWithNonces(plaintexts, nonces)
+	require.Error(t, err)
+}
+
 func TestSelfEncrypter_PrivateKey(t *testing.T) {
 	t.Parallel()
 
@@ -333,6 +364,22 @@ func TestDecrypter_Decrypt(t *testing.T) {
 	decrypted, err := dec.Decrypt(ct)
 	require.NoError(t, err)
 	require.True(t, pt.Equal(decrypted))
+}
+
+func TestDecrypter_DecryptNilCiphertext(t *testing.T) {
+	t.Parallel()
+
+	scheme := paillier.NewScheme()
+	kg, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
+	require.NoError(t, err)
+	sk, _, err := kg.Generate(pcg.NewRandomised())
+	require.NoError(t, err)
+
+	dec, err := scheme.Decrypter(sk)
+	require.NoError(t, err)
+
+	_, err = dec.Decrypt(nil)
+	require.Error(t, err)
 }
 
 func TestDecrypter_NilPrivateKey(t *testing.T) {

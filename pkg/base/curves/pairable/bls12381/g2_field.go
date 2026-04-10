@@ -68,7 +68,8 @@ func (*BaseFieldG2) IsDomain() bool {
 
 // Order returns the group or field order.
 func (*BaseFieldG2) Order() cardinal.Cardinal {
-	return NewG1BaseField().Order().Add(NewG1BaseField().Order())
+	order := NewG1BaseField().Order()
+	return order.Mul(order)
 }
 
 // Characteristic returns the field characteristic.

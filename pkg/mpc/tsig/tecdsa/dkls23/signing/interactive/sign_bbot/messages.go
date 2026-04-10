@@ -126,9 +126,6 @@ func (m *Round3P2P[P, B, S]) Validate(p *Cosigner[P, B, S], from sharing.ID) err
 	if m.GammaV.IsZero() || !m.GammaV.IsTorsionFree() {
 		return ErrValidation.WithMessage("invalid gamma v")
 	}
-	if m.Psi.IsZero() {
-		return ErrValidation.WithMessage("invalid psi")
-	}
 
 	return nil
 }

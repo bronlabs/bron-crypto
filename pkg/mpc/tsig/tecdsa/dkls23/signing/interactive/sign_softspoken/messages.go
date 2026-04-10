@@ -86,11 +86,8 @@ func (m *Round2P2P[P, B, S]) Validate(p *Cosigner[P, B, S], from sharing.ID) err
 	if m.GammaU.IsZero() || !m.GammaU.IsTorsionFree() {
 		return ErrValidation.WithMessage("invalid gamma u")
 	}
-	if m.GammaV.IsZero() || !m.GammaU.IsTorsionFree() {
+	if m.GammaV.IsZero() || !m.GammaV.IsTorsionFree() {
 		return ErrValidation.WithMessage("invalid gamma v")
-	}
-	if m.Psi.IsZero() {
-		return ErrValidation.WithMessage("invalid psi")
 	}
 	bob, ok := p.state.bobMul[from]
 	if !ok {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
@@ -84,4 +85,11 @@ func Test_CeilLog2(t *testing.T) {
 			require.Equal(t, expected, mathutils.CeilLog2(arg))
 		})
 	}
+}
+
+func TestRandomUint64RangeRejectsZeroBound(t *testing.T) {
+	t.Parallel()
+
+	_, err := mathutils.RandomUint64Range(pcg.NewRandomised(), 0)
+	require.Error(t, err)
 }

@@ -7,10 +7,13 @@ type Runner[O any] interface {
 	Run(rt *Router) (O, error)
 }
 
-func NewSafeRunner[O any](r Runner[O]) Runner[O] {
+func NewSafeRunner[O any](r Runner[O]) (Runner[O], error) {
+	if r == nil {
+		return nil, errs.New("runner is nil")
+	}
 	return &safeRunner[O]{
 		r: r,
-	}
+	}, nil
 }
 
 type safeRunner[O any] struct {

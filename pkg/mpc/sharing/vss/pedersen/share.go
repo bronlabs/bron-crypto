@@ -39,6 +39,9 @@ func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Mess
 	if blinding == nil {
 		return nil, sharing.ErrIsNil.WithMessage("blinding cannot be nil")
 	}
+	if id == 0 {
+		return nil, sharing.ErrMembership.WithMessage("share ID 0 is not valid")
+	}
 	if ac != nil && !ac.Shareholders().Contains(id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}

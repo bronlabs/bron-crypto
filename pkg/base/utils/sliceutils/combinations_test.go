@@ -24,7 +24,7 @@ func TestCombinations(t *testing.T) {
 		{
 			n:    1,
 			k:    2,
-			data: [][]uint{{}},
+			data: nil,
 		},
 		{
 			n:    1,

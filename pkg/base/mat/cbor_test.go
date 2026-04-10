@@ -111,6 +111,28 @@ func TestMatrixCBOR(t *testing.T) {
 		err = m.UnmarshalCBOR(data)
 		require.ErrorIs(t, err, mat.ErrFailed)
 	})
+
+	t.Run("rejects_non_positive_dimensions", func(t *testing.T) {
+		t.Parallel()
+		type dto struct {
+			Rows int `cbor:"rows"`
+			Cols int `cbor:"cols"`
+			Data []S `cbor:"data"`
+		}
+		cases := []dto{
+			{Rows: 0, Cols: 1, Data: []S{scalar(1)}},
+			{Rows: 1, Cols: 0, Data: []S{scalar(1)}},
+			{Rows: -1, Cols: -1, Data: []S{scalar(1)}},
+		}
+		for _, tc := range cases {
+			data, err := serde.MarshalCBOR(&tc)
+			require.NoError(t, err)
+
+			var m mat.Matrix[S]
+			err = m.UnmarshalCBOR(data)
+			require.ErrorIs(t, err, mat.ErrDimension)
+		}
+	})
 }
 
 // --- ModuleValuedMatrix CBOR ---
@@ -225,6 +247,28 @@ func TestModuleValuedMatrixCBOR(t *testing.T) {
 		err = m.UnmarshalCBOR(data)
 		require.ErrorIs(t, err, mat.ErrFailed)
 	})
+
+	t.Run("rejects_non_positive_dimensions", func(t *testing.T) {
+		t.Parallel()
+		type dto struct {
+			Rows int `cbor:"rows"`
+			Cols int `cbor:"cols"`
+			Data []P `cbor:"data"`
+		}
+		cases := []dto{
+			{Rows: 0, Cols: 1, Data: []P{point(1)}},
+			{Rows: 1, Cols: 0, Data: []P{point(1)}},
+			{Rows: -1, Cols: -1, Data: []P{point(1)}},
+		}
+		for _, tc := range cases {
+			data, err := serde.MarshalCBOR(&tc)
+			require.NoError(t, err)
+
+			var m mat.ModuleValuedMatrix[P, S]
+			err = m.UnmarshalCBOR(data)
+			require.ErrorIs(t, err, mat.ErrDimension)
+		}
+	})
 }
 
 // --- SquareMatrix CBOR ---
@@ -336,5 +380,25 @@ func TestSquareMatrixCBOR(t *testing.T) {
 		var m mat.SquareMatrix[S]
 		err = m.UnmarshalCBOR(data)
 		require.ErrorIs(t, err, mat.ErrFailed)
+	})
+
+	t.Run("rejects_non_positive_dimensions", func(t *testing.T) {
+		t.Parallel()
+		type dto struct {
+			Size int `cbor:"size"`
+			Data []S `cbor:"data"`
+		}
+		cases := []dto{
+			{Size: 0, Data: []S{scalar(1)}},
+			{Size: -1, Data: []S{scalar(1)}},
+		}
+		for _, tc := range cases {
+			data, err := serde.MarshalCBOR(&tc)
+			require.NoError(t, err)
+
+			var m mat.SquareMatrix[S]
+			err = m.UnmarshalCBOR(data)
+			require.ErrorIs(t, err, mat.ErrDimension)
+		}
 	})
 }

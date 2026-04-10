@@ -4,10 +4,9 @@ Defines interfaces and dispatch logic for monotone access structures used in sec
 
 ## Overview
 
-An access structure specifies which subsets of shareholders are authorized to reconstruct a shared secret. This package provides two interface levels:
+An access structure specifies which subsets of shareholders are authorized to reconstruct a shared secret. This package exposes one top-level interface:
 
-- **Monotone**: base interface (`IsQualified`, `Shareholders`)
-- **Linear**: extends Monotone with `MaximalUnqualifiedSetsIter`, enabling MSP induction
+- **Monotone**: monotone access structures with `IsQualified`, `Shareholders`, and `MaximalUnqualifiedSetsIter`
 
 ## Sub-packages
 
@@ -28,4 +27,4 @@ An access structure specifies which subsets of shareholders are authorized to re
 mspProgram, err := accessstructures.InducedMSP(field, accessStructure)
 ```
 
-For unknown `Linear` implementations, it falls back to CNF conversion via `cnf.ConvertToCNF`.
+For unknown `Monotone` implementations, it falls back to CNF conversion via `cnf.ConvertToCNF`.

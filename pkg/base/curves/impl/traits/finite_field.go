@@ -106,9 +106,9 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) Fp() FP {
 }
 
 // Clone returns a new element with the same value.
-func (*FiniteFieldElementTrait[FP, F, WP, W]) Clone() WP {
+func (fe *FiniteFieldElementTrait[FP, F, WP, W]) Clone() WP {
 	var clone W
-	WP(&clone).Fp()
+	WP(&clone).Fp().Set(&fe.V)
 	return &clone
 }
 
@@ -204,7 +204,7 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) IsOne() bool {
 
 // IsZero reports whether the element is zero.
 func (fe *FiniteFieldElementTrait[FP, F, WP, W]) IsZero() bool {
-	return FP(&fe.V).IsOne() != 0
+	return FP(&fe.V).IsZero() != 0
 }
 
 // Bytes returns the concatenated big-endian component bytes.

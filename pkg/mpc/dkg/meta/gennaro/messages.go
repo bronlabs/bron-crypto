@@ -2,6 +2,7 @@ package gennaro
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/pedersen"
@@ -27,6 +28,15 @@ func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 	}
 	if rows != int(participant.state.lsss.MSP().D()) {
 		return ErrValidation.WithMessage("invalid Pedersen verification vector size")
+	}
+	for i := range rows {
+		entry, err := m.PedersenVerificationVector.Value().Get(i, 0)
+		if err != nil {
+			return ErrValidation.WithMessage("failed to access Pedersen verification vector entry")
+		}
+		if utils.IsNil(entry) {
+			return ErrValidation.WithMessage("Pedersen verification vector contains nil entry at row %d", i)
+		}
 	}
 	if len(m.Proof) == 0 {
 		return ErrValidation.WithMessage("missing okamoto proof")
@@ -72,6 +82,15 @@ func (m *Round2Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 	}
 	if rows != int(participant.state.lsss.MSP().D()) {
 		return ErrValidation.WithMessage("invalid Feldman verification vector size")
+	}
+	for i := range rows {
+		entry, err := m.FeldmanVerificationVector.Value().Get(i, 0)
+		if err != nil {
+			return ErrValidation.WithMessage("failed to access Feldman verification vector entry")
+		}
+		if utils.IsNil(entry) {
+			return ErrValidation.WithMessage("Feldman verification vector contains nil entry at row %d", i)
+		}
 	}
 	if len(m.Proof) == 0 {
 		return ErrValidation.WithMessage("missing batch dlog proof")

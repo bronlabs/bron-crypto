@@ -20,7 +20,7 @@ type refreshRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 	participant *Participant[G, S]
 }
 
-func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, shard *tsig.BaseShard[G, S], prng io.Reader) (network.Runner[*Output[G, S]], error) {
+func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, shard *tsig.BaseShard[G, S], prng io.Reader) (network.Runner[*tsig.BaseShard[G, S]], error) {
 	participant, err := NewParticipant(ctx, shard, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
@@ -32,7 +32,7 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	return runner, nil
 }
 
-func (r *refreshRunner[G, S]) Run(rt *network.Router) (*Output[G, S], error) {
+func (r *refreshRunner[G, S]) Run(rt *network.Router) (*tsig.BaseShard[G, S], error) {
 	r1bOut, r1uOut, err := r.participant.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")

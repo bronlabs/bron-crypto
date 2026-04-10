@@ -54,3 +54,25 @@ func TestUniqueOutputs(t *testing.T) {
 		}
 	}
 }
+
+func TestWrapRejectsNilArguments(t *testing.T) {
+	t.Parallel()
+
+	suite, err := ecdsa.NewDeterministicSuite(p256.NewCurve(), crypto.SHA256)
+	require.NoError(t, err)
+	scheme, err := ecdsa.NewScheme(suite, nil)
+	require.NoError(t, err)
+	keygen, err := scheme.Keygen()
+	require.NoError(t, err)
+	sk, _, err := keygen.Generate(pcg.NewRandomised())
+	require.NoError(t, err)
+	signer, err := scheme.Signer(sk)
+	require.NoError(t, err)
+	var nilSigner *ecdsa.Signer[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]
+
+	_, err = Wrap(nil, signer, []byte("unique-key-id"))
+	require.Error(t, err)
+
+	_, err = Wrap(pcg.NewRandomised(), nilSigner, []byte("unique-key-id"))
+	require.Error(t, err)
+}
