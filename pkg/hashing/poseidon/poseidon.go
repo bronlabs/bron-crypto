@@ -2,15 +2,21 @@ package poseidon
 
 import (
 	"hash"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
-// ErrInvalidDataLength is returned when the input data length is not a multiple of 32 bytes.
-var ErrInvalidDataLength = errs.New("invalid data length")
+var (
+	// ErrNil is returned when the input is nil.
+	ErrNil = errs.New("nil")
+
+	// ErrInvalidDataLength is returned when the input length is not compatible with the rate.
+	ErrInvalidDataLength = errs.New("invalid data length")
+)
 
 var (
 	_ hash.Cloner = (*Poseidon)(nil)
@@ -19,26 +25,23 @@ var (
 // Poseidon implements the Poseidon hash function over the Pallas base field.
 // It provides a sponge-based construction suitable for zero-knowledge proof systems.
 type Poseidon struct {
-	pristine bool
-	state    *state
-	buf      []*pasta.PallasBaseFieldElement
+	dirty bool
+	state *state
 }
 
 // NewKimchi creates a new Poseidon hasher with Kimchi parameters used by Mina Protocol.
 func NewKimchi() *Poseidon {
 	return &Poseidon{
-		pristine: true,
-		state:    newInitialState(poseidonParamsKimchiFp),
-		buf:      nil,
+		dirty: false,
+		state: newInitialState(poseidonParamsKimchiFp),
 	}
 }
 
 // NewLegacy creates a new Poseidon hasher with legacy parameters.
 func NewLegacy() *Poseidon {
 	return &Poseidon{
-		pristine: true,
-		state:    newInitialState(poseidonParamsLegacyFp),
-		buf:      nil,
+		dirty: false,
+		state: newInitialState(poseidonParamsLegacyFp),
 	}
 }
 
@@ -48,64 +51,69 @@ func (p *Poseidon) Rate() int {
 }
 
 // Update absorbs field elements into the sponge state and applies the permutation.
-func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) {
-	if len(xs) == 0 {
-		return
+// Note: The sponge absorbs field elements in rate-sized blocks, the callers must pad to full blocks before passing,
+// and callers who need injective variable-length hashing must perform their own framing, length encoding,
+// or domain separation before absorption.
+func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) error {
+	if len(xs)%p.Rate() != 0 {
+		return ErrInvalidDataLength.WithMessage("input must be multiple of the rate")
+	}
+	if sliceutils.Any(xs, func(x *pasta.PallasBaseFieldElement) bool { return x == nil }) {
+		return ErrNil.WithMessage("input must not contain nil elements")
 	}
 
-	p.pristine = false
-	p.buf = append(p.buf, xs...)
-	for len(p.buf) >= p.Rate() {
+	if len(xs) > 0 {
+		p.dirty = true
+	}
+	for k := range len(xs) / p.Rate() {
 		for i := range p.Rate() {
-			p.state.v[i] = p.state.v[i].Add(p.buf[i])
+			p.state.v[i] = p.state.v[i].Add(xs[k*p.Rate()+i])
 		}
 		p.state.Permute()
-		p.buf = p.buf[p.Rate():]
 	}
+	return nil
 }
 
 // Digest returns the current hash output as the first element of the state.
 func (p *Poseidon) Digest() *pasta.PallasBaseFieldElement {
-	stateClone := p.state.Clone()
-	if p.pristine {
-		stateClone.Permute()
-		return stateClone.v[0]
+	if p.dirty {
+		return p.state.v[0].Clone()
 	}
 
-	if len(p.buf) > 0 {
-		for i, b := range p.buf {
-			stateClone.v[i] = stateClone.v[i].Add(b)
-		}
-		stateClone.Permute()
-	}
-	return stateClone.v[0]
+	clone := p.state.Clone()
+	clone.Permute()
+	return clone.v[0].Clone()
 }
 
 func (p *Poseidon) CloneHasher() *Poseidon {
 	return &Poseidon{
-		pristine: p.pristine,
-		state:    p.state.Clone(),
-		buf:      slices.Clone(p.buf),
+		dirty: p.dirty,
+		state: p.state.Clone(),
 	}
 }
 
 // Write implements io.Writer by converting bytes to field elements and hashing them.
-// The data length must be a multiple of 32 bytes.
+// Note: The sponge absorbs bytes in rate-sized blocks, the callers must pad to full blocks before passing,
+// and callers who need injective variable-length hashing must perform their own framing, length encoding,
+// or domain separation before absorption, hence the data length must be a multiple of (32 * rate) bytes.
 func (p *Poseidon) Write(data []byte) (n int, err error) {
-	if (len(data) % 32) != 0 {
-		return 0, ErrInvalidDataLength.WithMessage("data length must be multiple of 32")
+	if len(data)%(p.Rate()*pastaImpl.FpBytes) != 0 {
+		return 0, ErrInvalidDataLength.WithMessage("data length must be a multiple of the rate")
 	}
 
-	elems := []*pasta.PallasBaseFieldElement{}
-	for i := range (len(data) + 31) / 32 {
-		bytes := data[32*i : 32*(i+1)]
+	var elems []*pasta.PallasBaseFieldElement
+	for i := range len(data) / pastaImpl.FpBytes {
+		bytes := data[pastaImpl.FpBytes*i : pastaImpl.FpBytes*(i+1)]
 		fe, err := pasta.NewPallasBaseField().FromBytes(bytes)
 		if err != nil {
 			return 0, errs.Wrap(err).WithMessage("cannot create Pallas base field element")
 		}
 		elems = append(elems, fe)
 	}
-	p.Update(elems...)
+	if err = p.Update(elems...); err != nil {
+		return len(data), errs.Wrap(err).WithMessage("cannot update hasher")
+	}
+
 	return len(data), nil
 }
 
@@ -117,9 +125,8 @@ func (p *Poseidon) Sum(data []byte) []byte {
 
 // Reset resets the hasher to its initial state.
 func (p *Poseidon) Reset() {
-	p.pristine = true
+	p.dirty = false
 	p.state = newInitialState(p.state.parameters)
-	p.buf = nil
 }
 
 // Size returns the number of bytes in the hash output (32 bytes for a field element).
@@ -128,8 +135,8 @@ func (*Poseidon) Size() int {
 }
 
 // BlockSize returns the hash's underlying block size in bytes.
-func (*Poseidon) BlockSize() int {
-	return 32
+func (p *Poseidon) BlockSize() int {
+	return p.Rate() * pastaImpl.FpBytes
 }
 
 func (p *Poseidon) Clone() (hash.Cloner, error) {
