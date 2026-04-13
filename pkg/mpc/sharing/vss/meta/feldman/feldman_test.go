@@ -2114,6 +2114,220 @@ func TestNewLiftedDealerFunc_ConsistentWithLiftDealerFunc(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// ReconstructInTheExponent
+// ---------------------------------------------------------------------------
+
+// TestReconstructInTheExponent_MatchesScalarReconstruct deals a random secret,
+// lifts the scalar shares to group elements, reconstructs in the exponent, and
+// verifies the result equals [secret]·G.
+func TestReconstructInTheExponent_MatchesScalarReconstruct(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, group, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(12345))
+			_, shares := dealFeldman(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+					for i, id := range qset {
+						ls, err := feldman.LiftShare(shares[id], group.Generator())
+						require.NoError(t, err)
+						liftedShares[i] = ls
+					}
+					liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+					require.NoError(t, err)
+
+					// [secret]·G computed directly
+					expected := group.ScalarBaseOp(secret.Value())
+					require.True(t, expected.Equal(liftedSecret.Value()),
+						"ReconstructInTheExponent must recover [secret]·G")
+				})
+			}
+		})
+	}
+}
+
+// TestReconstructInTheExponent_RandomSecrets verifies with multiple random
+// secrets that the lifted reconstruction always matches [secret]·G.
+func TestReconstructInTheExponent_RandomSecrets(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, group, fx.ac)
+
+			for range 5 {
+				val, err := field.Random(prng)
+				require.NoError(t, err)
+				secret := kw.NewSecret(val)
+				_, shares := dealFeldman(t, scheme, secret)
+
+				qset := fx.qualified[0]
+				liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+				for i, id := range qset {
+					ls, err := feldman.LiftShare(shares[id], group.Generator())
+					require.NoError(t, err)
+					liftedShares[i] = ls
+				}
+				liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+				require.NoError(t, err)
+
+				expected := group.ScalarBaseOp(secret.Value())
+				require.True(t, expected.Equal(liftedSecret.Value()),
+					"lifted reconstruction must match [secret]·G for random secret")
+			}
+		})
+	}
+}
+
+// TestReconstructInTheExponent_ConsistentAcrossQuorums verifies that different
+// qualified sets reconstruct the same lifted secret.
+func TestReconstructInTheExponent_ConsistentAcrossQuorums(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	fx := thresholdFixture(t) // has multiple qualified sets
+	scheme := newFeldmanScheme(t, group, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+	_, shares := dealFeldman(t, scheme, secret)
+
+	var first *feldman.LiftedSecret[*k256.Point, *k256.Scalar]
+	for _, qset := range fx.qualified {
+		liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+		for i, id := range qset {
+			ls, err := feldman.LiftShare(shares[id], group.Generator())
+			require.NoError(t, err)
+			liftedShares[i] = ls
+		}
+		liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+		require.NoError(t, err)
+
+		if first == nil {
+			first = liftedSecret
+		} else {
+			require.True(t, first.Equal(liftedSecret),
+				"all qualified sets must reconstruct the same lifted secret")
+		}
+	}
+}
+
+// TestReconstructInTheExponent_UnqualifiedSetFails verifies that an unqualified
+// set of lifted shares cannot reconstruct.
+func TestReconstructInTheExponent_UnqualifiedSetFails(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, group, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(99))
+			_, shares := dealFeldman(t, scheme, secret)
+
+			for _, uset := range fx.unqualified {
+				t.Run(formatIDs(uset), func(t *testing.T) {
+					t.Parallel()
+					liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(uset))
+					for i, id := range uset {
+						ls, err := feldman.LiftShare(shares[id], group.Generator())
+						require.NoError(t, err)
+						liftedShares[i] = ls
+					}
+					_, err := scheme.ReconstructInTheExponent(liftedShares...)
+					require.Error(t, err, "unqualified set %v must not reconstruct", uset)
+				})
+			}
+		})
+	}
+}
+
+// TestReconstructInTheExponent_ArbitraryBasePoint verifies that reconstruction
+// works with a non-generator base point H = [r]·G, producing [secret]·H.
+func TestReconstructInTheExponent_ArbitraryBasePoint(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, group, fx.ac)
+
+	r, err := field.Random(prng)
+	require.NoError(t, err)
+	H := group.ScalarBaseOp(r) // arbitrary base point
+
+	secret := kw.NewSecret(field.FromUint64(777))
+	_, shares := dealFeldman(t, scheme, secret)
+
+	qset := fx.qualified[0]
+	liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+	for i, id := range qset {
+		ls, err := feldman.LiftShare(shares[id], H)
+		require.NoError(t, err)
+		liftedShares[i] = ls
+	}
+	liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+	require.NoError(t, err)
+
+	// Expected: [secret]·H = [secret·r]·G
+	expected := H.ScalarOp(secret.Value())
+	require.True(t, expected.Equal(liftedSecret.Value()),
+		"reconstruction with arbitrary base point must yield [secret]·H")
+}
+
+// TestReconstructInTheExponent_BLS12381 verifies that reconstruction in the
+// exponent works on a different curve (BLS12-381 G1).
+func TestReconstructInTheExponent_BLS12381(t *testing.T) {
+	t.Parallel()
+
+	group := bls12381.NewG1()
+	field := bls12381.NewScalarField()
+
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+	require.NoError(t, err)
+	scheme := newFeldmanScheme(t, group, ac)
+
+	secret := kw.NewSecret(field.FromUint64(42))
+	_, shares := dealFeldman(t, scheme, secret)
+
+	for _, qset := range [][]sharing.ID{{1, 2}, {1, 3}, {2, 3}, {1, 2, 3}} {
+		t.Run(formatIDs(qset), func(t *testing.T) {
+			t.Parallel()
+			liftedShares := make([]*feldman.LiftedShare[*bls12381.PointG1, *bls12381.Scalar], len(qset))
+			for i, id := range qset {
+				ls, err := feldman.LiftShare(shares[id], group.Generator())
+				require.NoError(t, err)
+				liftedShares[i] = ls
+			}
+			liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+			require.NoError(t, err)
+
+			expected := group.ScalarBaseOp(secret.Value())
+			require.True(t, expected.Equal(liftedSecret.Value()),
+				"BLS12-381 lifted reconstruction must recover [secret]·G")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // type alias to shorten generic constraints in tamper helpers
 // ---------------------------------------------------------------------------
 
