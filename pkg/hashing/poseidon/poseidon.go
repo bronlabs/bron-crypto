@@ -19,12 +19,14 @@ var (
 // Poseidon implements the Poseidon hash function over the Pallas base field.
 // It provides a sponge-based construction suitable for zero-knowledge proof systems.
 type Poseidon struct {
+	dirty bool
 	state *state
 }
 
 // NewKimchi creates a new Poseidon hasher with Kimchi parameters used by Mina Protocol.
 func NewKimchi() *Poseidon {
 	return &Poseidon{
+		dirty: false,
 		state: newInitialState(poseidonParamsKimchiFp),
 	}
 }
@@ -32,6 +34,7 @@ func NewKimchi() *Poseidon {
 // NewLegacy creates a new Poseidon hasher with legacy parameters.
 func NewLegacy() *Poseidon {
 	return &Poseidon{
+		dirty: false,
 		state: newInitialState(poseidonParamsLegacyFp),
 	}
 }
@@ -42,12 +45,15 @@ func (p *Poseidon) Rate() int {
 }
 
 // Update absorbs field elements into the sponge state and applies the permutation.
-// Note: The sponge absorbs field elements in rate-sized blocks, the last partial block must be zero-padded,
+// Note: The sponge absorbs field elements in rate-sized blocks, the callers must pad to full blocks before passing,
 // and callers who need injective variable-length hashing must perform their own framing, length encoding,
 // or domain separation before absorption.
 func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) error {
-	if len(xs) == 0 || len(xs)%p.Rate() != 0 {
-		return ErrInvalidDataLength.WithMessage("input must be a non-zero multiple of the rate")
+	if len(xs)%p.Rate() != 0 {
+		return ErrInvalidDataLength.WithMessage("input must be multiple of the rate")
+	}
+	if len(xs) > 0 {
+		p.dirty = true
 	}
 
 	for k := range len(xs) / p.Rate() {
@@ -61,27 +67,37 @@ func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) error {
 
 // Digest returns the current hash output as the first element of the state.
 func (p *Poseidon) Digest() *pasta.PallasBaseFieldElement {
-	return p.state.v[0].Clone()
+	if p.dirty {
+		return p.state.v[0].Clone()
+	}
+
+	clone := p.state.Clone()
+	for i := range clone.parameters.rate {
+		clone.v[i] = clone.v[i].Add(pasta.NewPallasBaseField().Zero())
+	}
+	clone.Permute()
+	return clone.v[0].Clone()
 }
 
 func (p *Poseidon) CloneHasher() *Poseidon {
 	return &Poseidon{
+		dirty: p.dirty,
 		state: p.state.Clone(),
 	}
 }
 
 // Write implements io.Writer by converting bytes to field elements and hashing them.
-// Note: The sponge absorbs bytes in rate-sized blocks, the last partial block must be zero-padded,
+// Note: The sponge absorbs bytes in rate-sized blocks, the callers must pad to full blocks before passing,
 // and callers who need injective variable-length hashing must perform their own framing, length encoding,
 // or domain separation before absorption, hence the data length must be a multiple of (32 * rate) bytes.
 func (p *Poseidon) Write(data []byte) (n int, err error) {
-	if len(data) == 0 || (len(data)%(p.Rate()*pastaImpl.FpBytes)) != 0 {
+	if len(data)%(p.Rate()*pastaImpl.FpBytes) != 0 {
 		return 0, ErrInvalidDataLength.WithMessage("data length must be a multiple of the rate")
 	}
 
 	var elems []*pasta.PallasBaseFieldElement
-	for i := range (len(data) + 31) / 32 {
-		bytes := data[32*i : 32*(i+1)]
+	for i := range len(data) / pastaImpl.FpBytes {
+		bytes := data[pastaImpl.FpBytes*i : pastaImpl.FpBytes*(i+1)]
 		fe, err := pasta.NewPallasBaseField().FromBytes(bytes)
 		if err != nil {
 			return 0, errs.Wrap(err).WithMessage("cannot create Pallas base field element")
@@ -103,6 +119,7 @@ func (p *Poseidon) Sum(data []byte) []byte {
 
 // Reset resets the hasher to its initial state.
 func (p *Poseidon) Reset() {
+	p.dirty = false
 	p.state = newInitialState(p.state.parameters)
 }
 

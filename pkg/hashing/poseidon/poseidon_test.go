@@ -156,10 +156,13 @@ func TestPoseidonEmptyInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			hasher := tc.hasher()
-			err := hasher.Update(padInput(nil)...)
-			require.NoError(t, err)
 			result := hasher.Digest()
 			expected := parseFieldElement(t, tc.expected)
+			require.True(t, result.Equal(expected))
+
+			err := hasher.Update()
+			require.NoError(t, err)
+			result = hasher.Digest()
 			require.True(t, result.Equal(expected))
 		})
 	}
@@ -208,7 +211,7 @@ func runTestVectors(t *testing.T, content string, hasherFactory func() *poseidon
 
 			// Create hasher and compute hash
 			hasher := hasherFactory()
-			err := hasher.Update(padInput(inputs)...)
+			err := hasher.Update(padInput(inputs, hasher.Rate())...)
 			require.NoError(t, err, "failed to update hasher")
 			actual := hasher.Digest()
 
@@ -223,7 +226,7 @@ func runTestVectors(t *testing.T, content string, hasherFactory func() *poseidon
 func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
 	b.Helper()
 	// Create test inputs of different sizes
-	sizes := []int{1, 2, 3, 4, 5, 10}
+	sizes := []int{2 * 1, 2 * 2, 2 * 3, 2 * 4, 2 * 5, 2 * 10}
 
 	for _, size := range sizes {
 		inputs := make([]*pasta.PallasBaseFieldElement, size)
@@ -235,7 +238,7 @@ func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
 			b.ResetTimer()
 			for range b.N {
 				hasher := hasherFactory()
-				hasher.Update(inputs...)
+				_ = hasher.Update(inputs...)
 				_ = hasher.Digest()
 			}
 		})
@@ -267,9 +270,9 @@ func reverseBytes(b []byte) []byte {
 	return result
 }
 
-func padInput(input []*pasta.PallasBaseFieldElement) []*pasta.PallasBaseFieldElement {
+func padInput(input []*pasta.PallasBaseFieldElement, rate int) []*pasta.PallasBaseFieldElement {
 	// pad with zeros
-	for len(input) == 0 || len(input)%2 != 0 {
+	for len(input)%rate != 0 {
 		input = append(input, pasta.NewPallasBaseField().Zero())
 	}
 	return input

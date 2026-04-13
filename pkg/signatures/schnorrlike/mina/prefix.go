@@ -179,12 +179,12 @@ func hashWithPrefix(prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Sc
 	for (len(prefixElements) % h.Rate()) != 0 {
 		prefixElements = append(prefixElements, pasta.NewPallasBaseField().Zero())
 	}
-	if err := h.Update(pfe, pasta.NewPallasBaseField().Zero()); err != nil {
+	if err := h.Update(prefixElements...); err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not absorb prefix")
 	}
 
 	// hashWithPrefix itself
-	for len(inputs) < h.Rate() || len(inputs)%h.Rate() != 0 {
+	for len(inputs)%h.Rate() != 0 {
 		inputs = append(inputs, pasta.NewPallasBaseField().Zero())
 	}
 	if err := h.Update(inputs...); err != nil {

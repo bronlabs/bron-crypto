@@ -1,7 +1,7 @@
 # poseidon
 
 Poseidon hash function over the Pallas base field, designed for efficient use in zero-knowledge proof systems.
-The sponge absorbs field elements in rate-sized blocks, the last partial block must be zero-padded,
+The sponge absorbs field elements in rate-sized blocks, the callers must pad to full blocks before passing,
 and callers who need injective variable-length hashing must perform their own framing, length encoding,
 or domain separation before absorption.
 
