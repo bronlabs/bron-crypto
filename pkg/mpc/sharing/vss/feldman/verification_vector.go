@@ -73,6 +73,9 @@ func (v *VerificationVector[E, FE]) Equal(other *VerificationVector[E, FE]) bool
 
 // HashCode returns a hash derived from the verification vector entries.
 func (v *VerificationVector[E, FE]) HashCode() base.HashCode {
+	if v == nil {
+		return base.HashCode(0)
+	}
 	return v.value.HashCode()
 }
 

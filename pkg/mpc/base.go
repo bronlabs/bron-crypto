@@ -112,6 +112,9 @@ func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool
 
 // HashCode returns a hash code for use in hash-based collections.
 func (spm *BasePublicMaterial[E, S]) HashCode() base.HashCode {
+	if spm == nil {
+		return base.HashCode(0)
+	}
 	return spm.fv.HashCode().Combine(spm.msp.Matrix().HashCode())
 }
 
