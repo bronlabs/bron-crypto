@@ -196,14 +196,24 @@ func (s *Share[S]) UnmarshalCBOR(data []byte) error {
 	if dto.ID == 0 {
 		return sharing.ErrIsZero.WithMessage("share ID cannot be zero")
 	}
-	if dto.Secret == nil {
-		return sharing.ErrIsNil.WithMessage("secret cannot be nil")
+	if len(dto.Secret) == 0 {
+		return sharing.ErrIsNil.WithMessage("secret cannot be nil or empty")
 	}
-	if dto.Blinding == nil {
-		return sharing.ErrIsNil.WithMessage("blinding cannot be nil")
+	if len(dto.Blinding) == 0 {
+		return sharing.ErrIsNil.WithMessage("blinding cannot be nil or empty")
 	}
 	if len(dto.Secret) != len(dto.Blinding) {
 		return sharing.ErrFailed.WithMessage("secret and blinding must have the same length")
+	}
+	for i, m := range dto.Secret {
+		if m == nil {
+			return sharing.ErrIsNil.WithMessage("secret component %d is nil", i)
+		}
+	}
+	for i, w := range dto.Blinding {
+		if w == nil {
+			return sharing.ErrIsNil.WithMessage("blinding component %d is nil", i)
+		}
 	}
 	s.id = dto.ID
 	s.secret = dto.Secret
@@ -215,11 +225,16 @@ func (s *Share[S]) UnmarshalCBOR(data []byte) error {
 // one per MSP row owned by the shareholder. Each commitment is
 // Com(secret_j, blinding_j) = [secret_j]G + [blinding_j]H.
 func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v []*pedcom.Commitment[E, FE]) (*LiftedShare[E, FE], error) {
-	if v == nil {
-		return nil, sharing.ErrIsNil.WithMessage("commitments cannot be nil")
+	if len(v) == 0 {
+		return nil, sharing.ErrIsNil.WithMessage("commitments cannot be nil or empty")
 	}
 	if id == 0 {
 		return nil, sharing.ErrIsNil.WithMessage("share ID cannot be zero")
+	}
+	for i, ci := range v {
+		if ci == nil {
+			return nil, sharing.ErrIsNil.WithMessage("commitment component %d is nil", i)
+		}
 	}
 	return &LiftedShare[E, FE]{
 		id: id,

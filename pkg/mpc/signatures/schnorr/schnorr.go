@@ -51,13 +51,13 @@ type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 }
 
 // PublicKey returns the aggregate public key as a schnorrlike.PublicKey.
+// Returns nil if the receiver is nil or if the underlying public key value is invalid.
 func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
+	if pm == nil {
+		return nil
+	}
 	pm.pkOnce.Do(func() {
-		var err error
-		pm.pk, err = schnorrlike.NewPublicKey(pm.PublicKeyValue())
-		if err != nil {
-			panic(err)
-		}
+		pm.pk, _ = schnorrlike.NewPublicKey(pm.PublicKeyValue())
 	})
 	return pm.pk
 }
@@ -83,13 +83,13 @@ func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
 }
 
 // PublicKey returns the aggregate public key as a schnorrlike.PublicKey.
+// Returns nil if the receiver is nil or if the underlying public key value is invalid.
 func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
+	if sh == nil {
+		return nil
+	}
 	sh.pkOnce.Do(func() {
-		var err error
-		sh.pk, err = schnorrlike.NewPublicKey(sh.PublicKeyValue())
-		if err != nil {
-			panic(err)
-		}
+		sh.pk, _ = schnorrlike.NewPublicKey(sh.PublicKeyValue())
 	})
 	return sh.pk
 }

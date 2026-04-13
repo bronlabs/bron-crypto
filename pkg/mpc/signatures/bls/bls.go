@@ -1,6 +1,8 @@
 package bls
 
 import (
+	"sync"
+
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -25,6 +27,9 @@ type PublicMaterial[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	mpc.BasePublicMaterial[PK, S]
+
+	pk     *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]
+	pkOnce sync.Once
 }
 
 type publicMaterialDTO[
@@ -35,13 +40,16 @@ type publicMaterialDTO[
 	Base *mpc.BasePublicMaterial[PK, S] `cbor:"base"`
 }
 
-// PublicKey returns the combined BLS public key for the threshold scheme.
-// Returns nil if the receiver is nil.
+// PublicKey returns the combined BLS public key for the scheme.
+// Returns nil if the receiver is nil or if the underlying public key value is invalid.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[PK, PKFE, SG, SGFE, E, S] {
 	if spm == nil {
 		return nil
 	}
-	return errs.Must1(bls.NewPublicKey(spm.PublicKeyValue()))
+	spm.pkOnce.Do(func() {
+		spm.pk, _ = bls.NewPublicKey(spm.PublicKeyValue())
+	})
+	return spm.pk
 }
 
 // Equal returns true if two PublicMaterial instances are equal.
@@ -101,6 +109,9 @@ type Shard[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	mpc.BaseShard[PK, S]
+
+	pk     *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]
+	pkOnce sync.Once
 }
 
 type shardDTO[
@@ -112,11 +123,15 @@ type shardDTO[
 }
 
 // PublicKey returns the BLS public key associated with the shard.
+// Returns nil if the receiver is nil or if the underlying public key value is invalid.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[PK, PKFE, SG, SGFE, E, S] {
 	if s == nil {
 		return nil
 	}
-	return errs.Must1(bls.NewPublicKey(s.PublicKeyValue()))
+	s.pkOnce.Do(func() {
+		s.pk, _ = bls.NewPublicKey(s.PublicKeyValue())
+	})
+	return s.pk
 }
 
 // HashCode returns a hash code for the shard, derived from both the share and public key.
