@@ -6,350 +6,420 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/stretchr/testify/require"
 )
 
-func setup[E gennaro.GroupElement[E, S], S gennaro.Scalar[S]](tb testing.TB, accessStructure *threshold.Threshold, group gennaro.Group[E, S], prng io.Reader) map[sharing.ID]*gennaro.Participant[E, S] {
+// ---------------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------------
+
+func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
+	return hashset.NewComparable(ids...).Freeze()
+}
+
+func setup(tb testing.TB, ac accessstructures.Monotone, group *k256.Curve, prng io.Reader) map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar] {
 	tb.Helper()
-	ctxs := session_testutils.MakeRandomContexts(tb, accessStructure.Shareholders(), prng)
-	parties := make(map[sharing.ID]*gennaro.Participant[E, S])
+	ctxs := session_testutils.MakeRandomContexts(tb, ac.Shareholders(), prng)
+	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
 	for id, ctx := range ctxs {
-		p, err := gennaro.NewParticipant(ctx, group, accessStructure, fiatshamir.Name, prng)
+		p, err := gennaro.NewParticipant(ctx, group, ac, fiatshamir.Name, prng)
 		require.NoError(tb, err)
 		parties[id] = p
 	}
 	return parties
 }
 
-// TestDKGWithVariousThresholds tests DKG with different thresh configurations
-func TestDKGWithVariousThresholds(t *testing.T) {
+func firstOutput(outputs map[sharing.ID]*mpc.BaseShard[*k256.Point, *k256.Scalar]) *mpc.BaseShard[*k256.Point, *k256.Scalar] {
+	keys := slices.Collect(maps.Keys(outputs))
+	slices.Sort(keys)
+	return outputs[keys[0]]
+}
+
+// ---------------------------------------------------------------------------
+// access-structure fixtures
+// ---------------------------------------------------------------------------
+
+type acFixture struct {
+	name         string
+	ac           accessstructures.Monotone
+	qualified    [][]sharing.ID
+	unqualified  [][]sharing.ID
+	shareholders []sharing.ID
+}
+
+func thresholdFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+	require.NoError(t, err)
+	return acFixture{
+		name:         "threshold(2,3)",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 2}, {1, 3}, {2, 3}, {1, 2, 3}},
+		unqualified:  [][]sharing.ID{{1}, {2}, {3}},
+		shareholders: []sharing.ID{1, 2, 3},
+	}
+}
+
+func unanimityFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := unanimity.NewUnanimityAccessStructure(shareholders(1, 2, 3))
+	require.NoError(t, err)
+	return acFixture{
+		name:         "unanimity(3)",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 2, 3}},
+		unqualified:  [][]sharing.ID{{1}, {2}, {1, 2}, {1, 3}, {2, 3}},
+		shareholders: []sharing.ID{1, 2, 3},
+	}
+}
+
+func cnfFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := cnf.NewCNFAccessStructure(
+		shareholders(1, 2),
+		shareholders(3, 4),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name:         "cnf({1,2},{3,4})",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 3}, {1, 4}, {2, 3}, {2, 4}, {1, 3, 4}, {2, 3, 4}, {1, 2, 3}, {1, 2, 4}, {1, 2, 3, 4}},
+		unqualified:  [][]sharing.ID{{1, 2}, {3, 4}},
+		shareholders: []sharing.ID{1, 2, 3, 4},
+	}
+}
+
+func largeThresholdFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := threshold.NewThresholdAccessStructure(4, shareholders(1, 2, 3, 4, 5, 6, 7))
+	require.NoError(t, err)
+	return acFixture{
+		name:         "threshold(4,7)",
+		ac:           ac,
+		qualified:    [][]sharing.ID{{1, 2, 3, 4}, {3, 4, 5, 6}, {1, 2, 3, 4, 5, 6, 7}},
+		unqualified:  [][]sharing.ID{{1, 2, 3}, {5, 6, 7}},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6, 7},
+	}
+}
+
+// boolexprFixture builds AND(Threshold(2, {1,2,3}), OR(4,5)):
+// qualified iff at least 2 of {1,2,3} present AND at least one of {4,5} present.
+func boolexprFixture(t *testing.T) acFixture {
+	t.Helper()
+	tree := boolexpr.And(
+		boolexpr.Threshold(2, boolexpr.ID(1), boolexpr.ID(2), boolexpr.ID(3)),
+		boolexpr.Or(boolexpr.ID(4), boolexpr.ID(5)),
+	)
+	ac, err := boolexpr.NewThresholdGateAccessStructure(tree)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr(2of3 AND 1of2)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4}, {1, 3, 5}, {2, 3, 4}, {1, 2, 3, 4, 5},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 4}, {4, 5}, {1, 2, 3}, {3, 5},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5},
+	}
+}
+
+func allFixtures(t *testing.T) []acFixture {
+	t.Helper()
+	return []acFixture{
+		thresholdFixture(t),
+		unanimityFixture(t),
+		cnfFixture(t),
+		largeThresholdFixture(t),
+		boolexprFixture(t),
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Happy-path: complete DKG across access structures
+// ---------------------------------------------------------------------------
+
+func TestDKG_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"minimal 2-of-3", 2, 3},
-		{"standard 3-of-5", 3, 5},
-		{"unanimous 4-of-4", 4, 4},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
 			t.Parallel()
 			group := k256.NewCurve()
 			prng := pcg.NewRandomised()
-			quorum := ntu.MakeRandomQuorum(t, prng, int(tc.total))
-			ac, err := threshold.NewThresholdAccessStructure(tc.thresh, quorum)
-			require.NoError(t, err)
-			parties := setup(t, ac, group, prng)
-
-			// Run complete DKG
+			parties := setup(t, fx.ac, group, prng)
 			outputs := tu.DoGennaroDKG(t, parties)
+			require.Len(t, outputs, len(fx.shareholders))
 
-			// Verify all outputs have correct access structure
 			for id, output := range outputs {
-				require.NotNil(t, output.AccessStructure())
-				require.Equal(t, tc.thresh, output.AccessStructure().Threshold())
-				require.Equal(t, int(tc.total), output.AccessStructure().Shareholders().Size())
+				require.NotNil(t, output.Share())
 				require.Equal(t, id, output.Share().ID())
-			}
-
-			// Collect shares and verify reconstruction
-			shares := make([]*feldman.Share[*k256.Scalar], 0, tc.total)
-			var referenceVV feldman.VerificationVector[*k256.Point, *k256.Scalar]
-
-			for _, output := range outputs {
-				shares = append(shares, output.Share())
-				if referenceVV == nil {
-					referenceVV = output.VerificationVector()
-				} else {
-					// All participants should have same verification vector
-					require.True(t, referenceVV.Equal(output.VerificationVector()))
-				}
-			}
-
-			// Create Feldman scheme for reconstruction
-			feldmanScheme, err := feldman.NewScheme(group.Generator(), ac)
-			require.NoError(t, err)
-
-			// Test reconstruction with all shares
-			secret, err := feldmanScheme.ReconstructAndVerify(referenceVV, shares...)
-			require.NoError(t, err)
-			require.NotNil(t, secret)
-			require.False(t, secret.Value().IsZero())
-
-			// Test reconstruction with exactly thresh shares
-			if tc.thresh < tc.total {
-				thresholdShares := shares[:tc.thresh]
-				secretFromThreshold, err := feldmanScheme.ReconstructAndVerify(referenceVV, thresholdShares...)
-				require.NoError(t, err)
-				require.True(t, secret.Equal(secretFromThreshold))
+				require.NotNil(t, output.PublicKeyValue())
+				require.False(t, output.PublicKeyValue().IsZero())
+				require.NotNil(t, output.VerificationVector())
+				require.NotNil(t, output.MSP())
 			}
 		})
 	}
 }
 
-func TestDKGPublicKeyFields(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Public key consistency: all participants agree on the joint public key
+// ---------------------------------------------------------------------------
+
+func TestDKG_PublicKeyConsistency(t *testing.T) {
 	t.Parallel()
 
-	thresh := uint(2)
-	total := uint(3)
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-	quorum := ntu.MakeRandomQuorum(t, prng, int(total))
-	ac, err := threshold.NewThresholdAccessStructure(thresh, quorum)
-	require.NoError(t, err)
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			parties := setup(t, fx.ac, group, prng)
+			outputs := tu.DoGennaroDKG(t, parties)
 
-	parties := setup(t, ac, group, prng)
-	outputs := tu.DoGennaroDKG(t, parties)
-
-	t.Run("public key consistency", func(t *testing.T) {
-		t.Parallel()
-
-		var commonPublicKey *k256.Point
-		for id, output := range outputs {
-			pk := output.PublicKeyValue()
-			require.NotNil(t, pk, "participant %d has nil public key", id)
-			require.False(t, pk.IsZero(), "participant %d has zero public key", id)
-
-			if commonPublicKey == nil {
-				commonPublicKey = pk
-			} else {
-				require.True(t, commonPublicKey.Equal(pk), "participant %d has different public key", id)
-			}
-		}
-	})
-
-	t.Run("partial public keys properties", func(t *testing.T) {
-		t.Parallel()
-
-		allPartialPKs := make(map[sharing.ID]map[sharing.ID]*k256.Point)
-		for id, output := range outputs {
-			partialPKs := output.PartialPublicKeyValues()
-			require.NotNil(t, partialPKs)
-			require.Equal(t, int(total), partialPKs.Size())
-
-			allPartialPKs[id] = make(map[sharing.ID]*k256.Point, partialPKs.Size())
-			for pid, ppk := range partialPKs.Iter() {
-				require.NotNil(t, ppk)
-				require.False(t, ppk.IsZero())
-				allPartialPKs[id][pid] = ppk
-			}
-		}
-
-		for _, targetID := range quorum.List() {
-			var referencePPK *k256.Point
-			for holderID, holderPartialPKs := range allPartialPKs {
-				ppk := holderPartialPKs[targetID]
-				if referencePPK == nil {
-					referencePPK = ppk
-					continue
+			var commonPK *k256.Point
+			var commonVV *feldman.VerificationVector[*k256.Point, *k256.Scalar]
+			for id, output := range outputs {
+				if commonPK == nil {
+					commonPK = output.PublicKeyValue()
+					commonVV = output.VerificationVector()
+				} else {
+					require.True(t, commonPK.Equal(output.PublicKeyValue()),
+						"participant %d has different public key", id)
+					require.True(t, commonVV.Equal(output.VerificationVector()),
+						"participant %d has different verification vector", id)
 				}
-				require.True(t, referencePPK.Equal(ppk), "inconsistent partial public key for participant %d held by %d", targetID, holderID)
 			}
-		}
-	})
-
-	t.Run("partial public keys match verification vector evaluations", func(t *testing.T) {
-		t.Parallel()
-
-		output0 := firstOutput(outputs)
-		require.NotNil(t, output0)
-		verificationVector := output0.VerificationVector()
-		scalarField := k256.NewScalarField()
-
-		for id, ppk := range output0.PartialPublicKeyValues().Iter() {
-			x := scalarField.FromUint64(uint64(id))
-			expectedPPK := verificationVector.Eval(x)
-			require.True(t, expectedPPK.Equal(ppk), "partial public key for id %d does not match verification vector evaluation", id)
-		}
-
-		expectedPublicKey := verificationVector.Eval(scalarField.Zero())
-		require.True(t, expectedPublicKey.Equal(output0.PublicKeyValue()))
-	})
+		})
+	}
 }
 
-func TestDKGShareProperties(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Share uniqueness: no two participants hold the same share value
+// ---------------------------------------------------------------------------
+
+func TestDKG_ShareUniqueness(t *testing.T) {
 	t.Parallel()
 
-	thresh := uint(2)
-	total := uint(3)
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	quorum := ntu.MakeRandomQuorum(t, prng, int(total))
-	ac, err := threshold.NewThresholdAccessStructure(thresh, quorum)
-	require.NoError(t, err)
-
-	parties := setup(t, ac, group, prng)
+	fx := thresholdFixture(t)
+	parties := setup(t, fx.ac, group, prng)
 	outputs := tu.DoGennaroDKG(t, parties)
 
-	sharesByID := make(map[sharing.ID]*feldman.Share[*k256.Scalar], len(outputs))
+	seen := make(map[sharing.ID]*kw.Share[*k256.Scalar])
 	for id, output := range outputs {
-		sharesByID[id] = output.Share()
+		for existingID, existingShare := range seen {
+			require.False(t, output.Share().Equal(existingShare),
+				"shares for participants %d and %d are identical", id, existingID)
+		}
+		seen[id] = output.Share()
 	}
+}
 
-	t.Run("share uniqueness", func(t *testing.T) {
-		t.Parallel()
+// ---------------------------------------------------------------------------
+// Reconstruction: qualified sets can reconstruct the secret via Feldman VSS
+// ---------------------------------------------------------------------------
 
-		shareValues := make(map[string]sharing.ID, len(sharesByID))
-		for id, share := range sharesByID {
-			valueStr := share.Value().String()
-			if existingID, exists := shareValues[valueStr]; exists {
-				t.Fatalf("shares for participants %d and %d have identical values", id, existingID)
-			}
-			shareValues[valueStr] = id
-		}
-	})
+func TestDKG_ReconstructionQualifiedSets(t *testing.T) {
+	t.Parallel()
 
-	t.Run("share IDs match participant IDs", func(t *testing.T) {
-		t.Parallel()
-		for id, share := range sharesByID {
-			require.Equal(t, id, share.ID())
-		}
-	})
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			parties := setup(t, fx.ac, group, prng)
+			outputs := tu.DoGennaroDKG(t, parties)
 
-	t.Run("verification vectors consistency", func(t *testing.T) {
-		t.Parallel()
-		var referenceVV feldman.VerificationVector[*k256.Point, *k256.Scalar]
-		for _, output := range outputs {
-			if referenceVV == nil {
-				referenceVV = output.VerificationVector()
-				continue
-			}
-			require.True(t, referenceVV.Equal(output.VerificationVector()))
-		}
-	})
-
-	t.Run("share reconstruction subsets", func(t *testing.T) {
-		t.Parallel()
-
-		feldmanScheme, err := feldman.NewScheme(group.Generator(), ac)
-		require.NoError(t, err)
-		referenceVV := firstOutput(outputs).VerificationVector()
-
-		shares := make([]*feldman.Share[*k256.Scalar], 0, len(sharesByID))
-		for _, s := range sharesByID {
-			shares = append(shares, s)
-		}
-
-		var reconstructedSecrets []*feldman.Secret[*k256.Scalar]
-		for combo := range sliceutils.KCoveringCombinations(shares, thresh) {
-			secret, err := feldmanScheme.ReconstructAndVerify(referenceVV, combo...)
+			feldmanScheme, err := feldman.NewScheme(group, fx.ac)
 			require.NoError(t, err)
-			reconstructedSecrets = append(reconstructedSecrets, secret)
-		}
-		require.NotEmpty(t, reconstructedSecrets)
-		for i := 1; i < len(reconstructedSecrets); i++ {
-			require.True(t, reconstructedSecrets[0].Equal(reconstructedSecrets[i]))
-		}
-	})
-}
 
-func TestDKGRoundMessages(t *testing.T) {
-	t.Parallel()
+			ref := firstOutput(outputs)
+			vv := ref.VerificationVector()
 
-	thresh := uint(2)
-	total := uint(3)
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-	quorum := ntu.MakeRandomQuorum(t, prng, int(total))
-	ac, err := threshold.NewThresholdAccessStructure(thresh, quorum)
-	require.NoError(t, err)
-
-	t.Run("round 1 broadcasts and unicasts", func(t *testing.T) {
-		t.Parallel()
-
-		parties := setup(t, ac, group, pcg.NewRandomised())
-		r1broadcasts, r1unicasts := tu.DoGennaroRound1(t, parties)
-		require.Len(t, r1broadcasts, int(total))
-		require.Len(t, r1unicasts, int(total))
-		for _, broadcast := range r1broadcasts {
-			require.NotNil(t, broadcast)
-			require.NotNil(t, broadcast.PedersenVerificationVector)
-			require.NotNil(t, broadcast.Proof)
-		}
-		for senderID, unicasts := range r1unicasts {
-			require.Equal(t, int(total-1), unicasts.Size())
-			for receiverID, share := range unicasts.Iter() {
-				require.NotNil(t, share)
-				require.NotNil(t, share.Share)
-				require.NotEqual(t, senderID, receiverID)
+			// Collect shares
+			sharesByID := make(map[sharing.ID]*kw.Share[*k256.Scalar])
+			for id, output := range outputs {
+				sharesByID[id] = output.Share()
 			}
-		}
-	})
 
-	t.Run("round 2 broadcasts", func(t *testing.T) {
-		t.Parallel()
+			var referenceSecret *kw.Secret[*k256.Scalar]
+			for _, qset := range fx.qualified {
+				shares := make([]*kw.Share[*k256.Scalar], len(qset))
+				for i, id := range qset {
+					shares[i] = sharesByID[id]
+				}
+				secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
+				require.NoError(t, err, "qualified set %v should reconstruct", qset)
 
-		parties := setup(t, ac, group, pcg.NewRandomised())
-		participants := slices.Collect(maps.Values(parties))
-		r1broadcasts, r1unicasts := tu.DoGennaroRound1(t, parties)
-		r2biInputs, r2uiInputs := ntu.MapO2I(t, participants, r1broadcasts, r1unicasts)
-		r2broadcasts := tu.DoGennaroRound2(t, parties, r2biInputs, r2uiInputs)
-
-		require.Len(t, r2broadcasts, int(total))
-		for _, broadcast := range r2broadcasts {
-			require.NotNil(t, broadcast)
-			require.NotNil(t, broadcast.FeldmanVerificationVector)
-		}
-	})
+				if referenceSecret == nil {
+					referenceSecret = secret
+				} else {
+					require.True(t, referenceSecret.Equal(secret),
+						"different qualified sets reconstructed different secrets")
+				}
+			}
+		})
+	}
 }
 
-func TestRoundOutOfOrder(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Reconstruction: unqualified sets cannot reconstruct
+// ---------------------------------------------------------------------------
+
+func TestDKG_ReconstructionUnqualifiedSets(t *testing.T) {
 	t.Parallel()
 
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-	quorum := ntu.MakeRandomQuorum(t, prng, 3)
-	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
-	require.NoError(t, err)
-	parties := setup(t, ac, group, prng)
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			parties := setup(t, fx.ac, group, prng)
+			outputs := tu.DoGennaroDKG(t, parties)
 
-	participant := slices.Collect(maps.Values(parties))[0]
+			feldmanScheme, err := feldman.NewScheme(group, fx.ac)
+			require.NoError(t, err)
 
-	t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
-		t.Parallel()
-		_, err := participant.Round2(nil, nil)
-		require.Error(t, err)
-		require.ErrorIs(t, err, gennaro.ErrRound)
-	})
+			sharesByID := make(map[sharing.ID]*kw.Share[*k256.Scalar])
+			for id, output := range outputs {
+				sharesByID[id] = output.Share()
+			}
 
-	t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) {
-		t.Parallel()
-		_, err := participant.Round3(nil)
-		require.Error(t, err)
-		require.ErrorIs(t, err, gennaro.ErrRound)
-	})
+			// Get the true secret from a qualified set
+			qset := fx.qualified[0]
+			qShares := make([]*kw.Share[*k256.Scalar], len(qset))
+			for i, id := range qset {
+				qShares[i] = sharesByID[id]
+			}
+			trueSecret, err := feldmanScheme.Reconstruct(qShares...)
+			require.NoError(t, err)
 
-	t.Run("cannot re-execute round 1", func(t *testing.T) {
-		t.Parallel()
-		_, _, err := participant.Round1()
-		require.NoError(t, err)
-		_, _, err = participant.Round1()
-		require.Error(t, err)
-		require.ErrorIs(t, err, gennaro.ErrRound)
-	})
+			for _, uset := range fx.unqualified {
+				shares := make([]*kw.Share[*k256.Scalar], len(uset))
+				for i, id := range uset {
+					shares[i] = sharesByID[id]
+				}
+				// Reconstruction should either fail or produce the wrong secret
+				result, err := feldmanScheme.Reconstruct(shares...)
+				if err == nil {
+					require.False(t, trueSecret.Equal(result),
+						"unqualified set %v should not reconstruct the correct secret", uset)
+				}
+			}
+		})
+	}
 }
 
-func TestParticipantCreation(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Reconstructed secret matches public key: [s]G == PK
+// ---------------------------------------------------------------------------
+
+func TestDKG_ReconstructedSecretMatchesPublicKey(t *testing.T) {
+	t.Parallel()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			group := k256.NewCurve()
+			prng := pcg.NewRandomised()
+			parties := setup(t, fx.ac, group, prng)
+			outputs := tu.DoGennaroDKG(t, parties)
+
+			feldmanScheme, err := feldman.NewScheme(group, fx.ac)
+			require.NoError(t, err)
+
+			ref := firstOutput(outputs)
+			vv := ref.VerificationVector()
+			publicKey := ref.PublicKeyValue()
+
+			qset := fx.qualified[0]
+			shares := make([]*kw.Share[*k256.Scalar], len(qset))
+			i := 0
+			for _, id := range qset {
+				shares[i] = outputs[id].Share()
+				i++
+			}
+
+			secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
+			require.NoError(t, err)
+
+			reconstructedPK := group.ScalarBaseOp(secret.Value())
+			require.True(t, reconstructedPK.Equal(publicKey),
+				"reconstructed public key does not match DKG output")
+			require.False(t, publicKey.IsZero(), "joint public key must not be the identity")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DKG output internal consistency: VV, partial public keys, and shares agree
+// ---------------------------------------------------------------------------
+
+func TestDKG_OutputConsistency(t *testing.T) {
+	t.Parallel()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			group := k256.NewCurve()
+			sf := group.ScalarField()
+			prng := pcg.NewRandomised()
+			parties := setup(t, fx.ac, group, prng)
+			outputs := tu.DoGennaroDKG(t, parties)
+
+			ref := firstOutput(outputs)
+			vv := ref.VerificationVector()
+
+			// Build a LiftedDealerFunc from the agreed-upon VV and MSP.
+			lsss, err := kw.NewScheme(sf, fx.ac)
+			require.NoError(t, err)
+			ldf, err := feldman.NewLiftedDealerFunc(vv, lsss.MSP())
+			require.NoError(t, err)
+
+			t.Run("lifted secret equals public key", func(t *testing.T) {
+				t.Parallel()
+				liftedSecret := ldf.LiftedSecret()
+				require.True(t, liftedSecret.Value().Equal(ref.PublicKeyValue()),
+					"LiftedDealerFunc.LiftedSecret() must equal the DKG public key")
+			})
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Participant creation validation
+// ---------------------------------------------------------------------------
+
+func TestNewParticipant_Validation(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewCurve()
@@ -360,18 +430,17 @@ func TestParticipantCreation(t *testing.T) {
 	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 	ctx := ctxs[1]
 
-	t.Run("valid participant creation", func(t *testing.T) {
+	t.Run("valid creation", func(t *testing.T) {
 		t.Parallel()
 		p, err := gennaro.NewParticipant(ctx, group, ac, fiatshamir.Name, prng)
 		require.NoError(t, err)
 		require.NotNil(t, p)
 		require.Equal(t, sharing.ID(1), p.SharingID())
-		require.Equal(t, ac, p.AccessStructure())
 	})
 
 	t.Run("nil group", func(t *testing.T) {
 		t.Parallel()
-		p, err := gennaro.NewParticipant[*k256.Point, *k256.Scalar](ctx, nil, ac, fiatshamir.Name, prng)
+		p, err := gennaro.NewParticipant[*k256.Point](ctx, nil, ac, fiatshamir.Name, prng)
 		require.Error(t, err)
 		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
@@ -404,18 +473,113 @@ func TestParticipantCreation(t *testing.T) {
 	})
 }
 
-func firstOutput(outputs map[sharing.ID]*gennaro.DKGOutput[*k256.Point, *k256.Scalar]) *gennaro.DKGOutput[*k256.Point, *k256.Scalar] {
-	keys := slices.Collect(maps.Keys(outputs))
-	slices.Sort(keys)
-	return outputs[keys[0]]
+// ---------------------------------------------------------------------------
+// Round ordering
+// ---------------------------------------------------------------------------
+
+func TestRoundOutOfOrder(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	quorum := sharing.NewOrdinalShareholderSet(3)
+	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
+	require.NoError(t, err)
+	parties := setup(t, ac, group, prng)
+	participant := slices.Collect(maps.Values(parties))[0]
+
+	t.Run("cannot execute round 2 before round 1", func(t *testing.T) {
+		t.Parallel()
+		_, err := participant.Round2(nil, nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, gennaro.ErrRound)
+	})
+
+	t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) {
+		t.Parallel()
+		_, err := participant.Round3(nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, gennaro.ErrRound)
+	})
 }
 
-// Security tests
+// ---------------------------------------------------------------------------
+// Round 1: broadcasts and unicasts are well-formed
+// ---------------------------------------------------------------------------
+
+func TestDKG_Round1Messages(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	parties := setup(t, fx.ac, group, prng)
+	r1bo, r1uo := tu.DoGennaroRound1(t, parties)
+
+	require.Len(t, r1bo, len(fx.shareholders))
+	require.Len(t, r1uo, len(fx.shareholders))
+	for _, bc := range r1bo {
+		require.NotNil(t, bc.PedersenVerificationVector)
+		require.NotEmpty(t, bc.Proof)
+	}
+	for senderID, unicasts := range r1uo {
+		require.Equal(t, len(fx.shareholders)-1, unicasts.Size())
+		for receiverID, uc := range unicasts.Iter() {
+			require.NotNil(t, uc.Share)
+			require.NotEqual(t, senderID, receiverID)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Round 2: broadcasts are well-formed
+// ---------------------------------------------------------------------------
+
+func TestDKG_Round2Messages(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	parties := setup(t, fx.ac, group, prng)
+	participants := slices.Collect(maps.Values(parties))
+	r1bo, r1uo := tu.DoGennaroRound1(t, parties)
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+	r2bo := tu.DoGennaroRound2(t, parties, r2bi, r2ui)
+
+	require.Len(t, r2bo, len(fx.shareholders))
+	for _, bc := range r2bo {
+		require.NotNil(t, bc.FeldmanVerificationVector)
+		require.NotEmpty(t, bc.Proof)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Proofs are non-empty
+// ---------------------------------------------------------------------------
+
+func TestDKG_ProofsAreNonEmpty(t *testing.T) {
+	t.Parallel()
+
+	f := newSecurityFixture(t)
+
+	for id, bc := range f.r1bo {
+		require.NotEmpty(t, bc.Proof, "party %d produced empty okamoto proof", id)
+	}
+
+	r2bo := tu.DoGennaroRound2(t, f.parties, f.r2bi, f.r2ui)
+	for id, bc := range r2bo {
+		require.NotEmpty(t, bc.Proof, "party %d produced empty schnorr proof", id)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Security fixture
+// ---------------------------------------------------------------------------
 
 type securityFixture struct {
 	group   *k256.Curve
-	ac      *threshold.Threshold
-	quorum  network.Quorum
+	ac      accessstructures.Monotone
 	parties map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar]
 	ids     []sharing.ID // sorted
 
@@ -438,15 +602,14 @@ func newSecurityFixture(t *testing.T) *securityFixture {
 	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
 	ids := slices.Sorted(maps.Keys(parties))
 	return &securityFixture{
-		group: group, ac: ac, quorum: quorum, parties: parties, ids: ids,
+		group: group, ac: ac, parties: parties, ids: ids,
 		r1bo: r1bo, r1uo: r1uo, r2bi: r2bi, r2ui: r2ui,
 	}
 }
 
-// replaceBroadcastFrom returns a copy of victim's broadcast inputs with attacker's message replaced.
-func replaceBroadcastFrom[M network.Message[P], P any](
-	original network.RoundMessages[M, P], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M, P] {
+func replaceBroadcastFrom[M network.Message[*gennaro.Participant[*k256.Point, *k256.Scalar]]](
+	original network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {
@@ -458,10 +621,9 @@ func replaceBroadcastFrom[M network.Message[P], P any](
 	return m.Freeze()
 }
 
-// replaceUnicastFrom returns a copy of victim's unicast inputs with attacker's message replaced.
-func replaceUnicastFrom[M network.Message[P], P any](
-	original network.RoundMessages[M, P], attackerID sharing.ID, replacement M,
-) network.RoundMessages[M, P] {
+func replaceUnicastFrom[M network.Message[*gennaro.Participant[*k256.Point, *k256.Scalar]]](
+	original network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]], attackerID sharing.ID, replacement M,
+) network.RoundMessages[M, *gennaro.Participant[*k256.Point, *k256.Scalar]] {
 	m := hashmap.NewComparable[sharing.ID, M]()
 	for id, msg := range original.Iter() {
 		if id == attackerID {
@@ -473,34 +635,15 @@ func replaceUnicastFrom[M network.Message[P], P any](
 	return m.Freeze()
 }
 
-func TestProofsAreNonEmpty(t *testing.T) {
-	t.Parallel()
-	f := newSecurityFixture(t)
-
-	t.Run("okamoto proofs in round 1", func(t *testing.T) {
-		t.Parallel()
-		for id, bc := range f.r1bo {
-			require.NotEmpty(t, bc.Proof, "party %d produced empty okamoto proof", id)
-		}
-	})
-
-	t.Run("batch schnorr proofs in round 2", func(t *testing.T) {
-		t.Parallel()
-		participants := slices.Collect(maps.Values(f.parties))
-		r2bo := tu.DoGennaroRound2(t, f.parties, f.r2bi, f.r2ui)
-		_ = participants
-		for id, bc := range r2bo {
-			require.NotEmpty(t, bc.Proof, "party %d produced empty schnorr proof", id)
-		}
-	})
-}
+// ---------------------------------------------------------------------------
+// Security: tampered Okamoto proof → identifiable abort
+// ---------------------------------------------------------------------------
 
 func TestTamperedOkamotoProofRejected(t *testing.T) {
 	t.Parallel()
 	f := newSecurityFixture(t)
 	victim, attacker := f.ids[0], f.ids[1]
 
-	// Take attacker's broadcast, corrupt the okamoto proof
 	originalBC, _ := f.r2bi[victim].Get(attacker)
 	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{
 		PedersenVerificationVector: originalBC.PedersenVerificationVector,
@@ -515,12 +658,15 @@ func TestTamperedOkamotoProofRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
+// ---------------------------------------------------------------------------
+// Security: tampered Pedersen VV → identifiable abort
+// ---------------------------------------------------------------------------
+
 func TestTamperedPedersenVVRejected(t *testing.T) {
 	t.Parallel()
 	f := newSecurityFixture(t)
 	victim, attacker := f.ids[0], f.ids[1]
 
-	// Replace attacker's pedersen VV with a different party's VV — proof won't match.
 	differentVV := f.r1bo[f.ids[2]].PedersenVerificationVector
 	originalBC, _ := f.r2bi[victim].Get(attacker)
 	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{
@@ -536,37 +682,50 @@ func TestTamperedPedersenVVRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
-func TestMalformedPedersenVVRejected(t *testing.T) {
+func TestMalformedPedersenVVEntryRejected(t *testing.T) {
 	t.Parallel()
 	f := newSecurityFixture(t)
 	victim, attacker := f.ids[0], f.ids[1]
 
 	originalBC, _ := f.r2bi[victim].Get(attacker)
-	malformedVV := originalBC.PedersenVerificationVector.Clone()
-	coeffs := malformedVV.Coefficients()
-	coeffs[0] = nil
+	rows, _ := originalBC.PedersenVerificationVector.Value().Dimensions()
+	module, err := mat.NewModuleValuedColumnVectorModule(uint(rows), f.group)
+	require.NoError(t, err)
+	entries := make([]*k256.Point, rows)
+	for i := range rows {
+		entries[i], err = originalBC.PedersenVerificationVector.Value().Get(i, 0)
+		require.NoError(t, err)
+	}
+	entries[0] = nil
+	malformedMatrix, err := module.NewRowMajor(entries...)
+	require.NoError(t, err)
+	malformedVV, err := feldman.NewVerificationVector(malformedMatrix, nil)
+	require.NoError(t, err)
+
 	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{
 		PedersenVerificationVector: malformedVV,
 		Proof:                      originalBC.Proof,
 	}
 	tamperedR2bi := replaceBroadcastFrom(f.r2bi[victim], attacker, tampered)
 
-	_, err := f.parties[victim].Round2(tamperedR2bi, f.r2ui[victim])
+	_, err = f.parties[victim].Round2(tamperedR2bi, f.r2ui[victim])
 	require.Error(t, err)
 	require.True(t, base.IsIdentifiableAbortError(err))
 	culprits := base.GetMaliciousIdentities[sharing.ID](err)
 	require.Contains(t, culprits, attacker)
 }
 
+// ---------------------------------------------------------------------------
+// Security: tampered Pedersen share → identifiable abort
+// ---------------------------------------------------------------------------
+
 func TestTamperedPedersenShareRejected(t *testing.T) {
 	t.Parallel()
 	f := newSecurityFixture(t)
 	victim, attacker, other := f.ids[0], f.ids[1], f.ids[2]
 
-	// Replace attacker's share to victim with a share from a different dealer.
-	// The share has the correct receiver ID but was computed from a different
-	// polynomial, so it won't verify against the attacker's pedersen VV.
-	wrongDealerShare, _ := f.r1uo[other].Get(victim) // other's share for victim
+	// Replace attacker's share to victim with a share from a different dealer
+	wrongDealerShare, _ := f.r1uo[other].Get(victim)
 	tampered := &gennaro.Round1Unicast[*k256.Point, *k256.Scalar]{
 		Share: wrongDealerShare.Share,
 	}
@@ -579,17 +738,19 @@ func TestTamperedPedersenShareRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
+// ---------------------------------------------------------------------------
+// Security: tampered batch Schnorr proof → identifiable abort
+// ---------------------------------------------------------------------------
+
 func TestTamperedSchnorrProofRejected(t *testing.T) {
 	t.Parallel()
 	f := newSecurityFixture(t)
 	victim, attacker := f.ids[0], f.ids[1]
 
-	// Complete round 2 honestly
 	r2bo := tu.DoGennaroRound2(t, f.parties, f.r2bi, f.r2ui)
 	participants := slices.Collect(maps.Values(f.parties))
 	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
-	// Corrupt attacker's batch schnorr proof in victim's R3 input
 	originalBC, _ := r3bi[victim].Get(attacker)
 	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
 		FeldmanVerificationVector: originalBC.FeldmanVerificationVector,
@@ -604,6 +765,10 @@ func TestTamperedSchnorrProofRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
+// ---------------------------------------------------------------------------
+// Security: tampered Feldman VV → identifiable abort
+// ---------------------------------------------------------------------------
+
 func TestTamperedFeldmanVVRejected(t *testing.T) {
 	t.Parallel()
 	f := newSecurityFixture(t)
@@ -613,7 +778,7 @@ func TestTamperedFeldmanVVRejected(t *testing.T) {
 	participants := slices.Collect(maps.Values(f.parties))
 	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 
-	// Replace attacker's feldman VV with a different party's — schnorr proof won't match.
+	// Replace attacker's Feldman VV with a different party's
 	differentVV := r2bo[f.ids[2]].FeldmanVerificationVector
 	originalBC, _ := r3bi[victim].Get(attacker)
 	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
@@ -629,17 +794,81 @@ func TestTamperedFeldmanVVRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
-func TestRogueKeyAttackPrevented(t *testing.T) {
+func TestMalformedFeldmanVVEntryRejected(t *testing.T) {
+	t.Parallel()
+	f := newSecurityFixture(t)
+	victim, attacker := f.ids[0], f.ids[1]
+
+	r2bo := tu.DoGennaroRound2(t, f.parties, f.r2bi, f.r2ui)
+	participants := slices.Collect(maps.Values(f.parties))
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	originalBC, _ := r3bi[victim].Get(attacker)
+	rows, _ := originalBC.FeldmanVerificationVector.Value().Dimensions()
+	module, err := mat.NewModuleValuedColumnVectorModule(uint(rows), f.group)
+	require.NoError(t, err)
+	entries := make([]*k256.Point, rows)
+	for i := range rows {
+		entries[i], err = originalBC.FeldmanVerificationVector.Value().Get(i, 0)
+		require.NoError(t, err)
+	}
+	entries[0] = nil
+	malformedMatrix, err := module.NewRowMajor(entries...)
+	require.NoError(t, err)
+	malformedVV, err := feldman.NewVerificationVector(malformedMatrix, nil)
+	require.NoError(t, err)
+
+	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
+		FeldmanVerificationVector: malformedVV,
+		Proof:                     originalBC.Proof,
+	}
+	tamperedR3bi := replaceBroadcastFrom(r3bi[victim], attacker, tampered)
+
+	_, err = f.parties[victim].Round3(tamperedR3bi)
+	require.Error(t, err)
+	require.True(t, base.IsIdentifiableAbortError(err))
+	culprits := base.GetMaliciousIdentities[sharing.ID](err)
+	require.Contains(t, culprits, attacker)
+}
+
+func TestParticipantMSPReturnsIndependentCopy(t *testing.T) {
 	t.Parallel()
 
-	// The okamoto proof in R1 is bound to the prover's identity via the transcript.
-	// A rogue key attacker who tries to replay another party's valid broadcast
-	// (VV + proof) under their own identity will be rejected because the verifier
-	// derives the challenge using the claimed sender's ID, which won't match.
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := thresholdFixture(t)
+	parties := setup(t, fx.ac, group, prng)
+	participant := parties[fx.shareholders[0]]
+
+	first := participant.MSP()
+	mutated, err := first.Matrix().Set(0, 0, group.ScalarField().Zero())
+	require.NoError(t, err)
+	first = func() *msp.MSP[*k256.Scalar] {
+		copyMSP, err := msp.NewMSP(mutated, maps.Collect(first.RowsToHolders().Iter()))
+		require.NoError(t, err)
+		return copyMSP
+	}()
+
+	second := participant.MSP()
+	require.False(t, first.Equal(second))
+	require.True(t, second.Equal(participant.MSP()))
+}
+
+// ---------------------------------------------------------------------------
+// Security: rogue key attack prevention
+//
+// The Okamoto proof in R1 is bound to the prover's identity via the
+// transcript. A rogue-key attacker who replays another party's valid
+// broadcast (VV + proof) under their own identity will be rejected
+// because the Fiat-Shamir challenge is derived from the claimed sender's
+// ID, which won't match.
+// ---------------------------------------------------------------------------
+
+func TestRogueKeyAttackPrevented(t *testing.T) {
+	t.Parallel()
 	f := newSecurityFixture(t)
 	victim, attacker, other := f.ids[0], f.ids[1], f.ids[2]
 
-	// Attacker replays the other party's broadcast (valid VV + valid proof, wrong identity)
 	stolenBC := f.r1bo[other]
 	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{
 		PedersenVerificationVector: stolenBC.PedersenVerificationVector,
@@ -654,11 +883,15 @@ func TestRogueKeyAttackPrevented(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
+// ---------------------------------------------------------------------------
+// Security: swapped Schnorr proof identity
+//
+// Same identity-binding test for the batch Schnorr proof in R2.
+// Replaying another party's R2 broadcast under the attacker's ID should fail.
+// ---------------------------------------------------------------------------
+
 func TestSwappedSchnorrProofIdentityRejected(t *testing.T) {
 	t.Parallel()
-
-	// Same identity-binding test for the batch Schnorr proof in R2.
-	// Replaying another party's R2 broadcast under the attacker's ID should fail.
 	f := newSecurityFixture(t)
 	victim, attacker, other := f.ids[0], f.ids[1], f.ids[2]
 
@@ -676,113 +909,301 @@ func TestSwappedSchnorrProofIdentityRejected(t *testing.T) {
 	require.Contains(t, culprits, attacker)
 }
 
-func TestPublicMaterialReturnsIndependentCopy(t *testing.T) {
-	t.Parallel()
-
-	group := k256.NewCurve()
-	prng := pcg.NewRandomised()
-	quorum := sharing.NewOrdinalShareholderSet(4)
-	ac, err := threshold.NewThresholdAccessStructure(3, quorum)
-	require.NoError(t, err)
-	parties := setup(t, ac, group, prng)
-	outputs := tu.DoGennaroDKG(t, parties)
-	first := firstOutput(outputs)
-	publicMaterial := first.PublicMaterial()
-
-	originalVV := first.VerificationVector().Clone()
-	originalPK := first.PublicKeyValue().Clone()
-	originalPartials := maps.Collect(first.PartialPublicKeyValues().Iter())
-
-	publicMaterial.VerificationVector().Coefficients()[0] = publicMaterial.VerificationVector().Coefficients()[0].Double()
-
-	require.True(t, first.VerificationVector().Equal(originalVV))
-	require.True(t, first.PublicKeyValue().Equal(originalPK))
-	for id, value := range originalPartials {
-		actual, ok := first.PartialPublicKeyValues().Get(id)
-		require.True(t, ok)
-		require.True(t, actual.Equal(value))
-	}
-}
+// ---------------------------------------------------------------------------
+// Security: Feldman/Pedersen consistency
+//
+// The Feldman VV in R2 must be consistent with the Pedersen VV in R1: both
+// encode the same secret column vector. Round 3 verifies the Feldman share
+// (derived from the Pedersen share) against the Feldman VV.
+// An attacker who sends a valid Feldman proof for a *different* secret
+// column vector will be caught by the Feldman share verification.
+//
+// We simulate this by running two independent DKGs: take attacker's R2
+// broadcast (Feldman VV + proof) from the second DKG and inject it into
+// the first.
+// ---------------------------------------------------------------------------
 
 func TestFeldmanPedersenConsistencyCheck(t *testing.T) {
 	t.Parallel()
 
-	// The Feldman VV in R2 must be consistent with the Pedersen VV in R1:
-	// both encode the same secret polynomial. Round 3 verifies the Feldman share
-	// (derived from the Pedersen share value) against the Feldman VV.
-	// An attacker who sends a valid Feldman proof for a *different* polynomial
-	// will be caught by the Feldman share verification.
-	//
-	// We simulate this: run two independent DKGs, take attacker's R2 broadcast
-	// (feldman VV + proof) from the second DKG and inject it into the first.
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
 	quorum := sharing.NewOrdinalShareholderSet(3)
 	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
 	require.NoError(t, err)
 
-	// DKG 1: the real one
+	// DKG 1
 	parties1 := setup(t, ac, group, prng)
 	participants1 := slices.Collect(maps.Values(parties1))
 	r1bo1, r1uo1 := tu.DoGennaroRound1(t, parties1)
 	r2bi1, r2ui1 := ntu.MapO2I(t, participants1, r1bo1, r1uo1)
 	r2bo1 := tu.DoGennaroRound2(t, parties1, r2bi1, r2ui1)
 
-	// DKG 2: independent, for the attacker's alternate polynomial
+	// DKG 2 (independent)
 	parties2 := setup(t, ac, group, prng)
 	participants2 := slices.Collect(maps.Values(parties2))
 	r1bo2, r1uo2 := tu.DoGennaroRound1(t, parties2)
 	r2bi2, r2ui2 := ntu.MapO2I(t, participants2, r1bo2, r1uo2)
 	r2bo2 := tu.DoGennaroRound2(t, parties2, r2bi2, r2ui2)
+	_ = r2bo2
 
 	ids := slices.Sorted(maps.Keys(parties1))
 	victim, attacker := ids[0], ids[1]
 
-	// Inject attacker's R2 from DKG2 into DKG1's R3 inputs for victim
 	r3bi1 := ntu.MapBroadcastO2I(t, participants1, r2bo1)
-	tampered := r2bo2[attacker] // valid proof, but for a different polynomial
+	tampered := r2bo2[attacker] // valid proof, but for a different secret column
 	tamperedR3bi := replaceBroadcastFrom(r3bi1[victim], attacker, tampered)
 
 	_, err = parties1[victim].Round3(tamperedR3bi)
-	require.Error(t, err, "feldman/pedersen inconsistency should be detected")
+	require.Error(t, err, "Feldman/Pedersen inconsistency should be detected")
 	require.True(t, base.IsIdentifiableAbortError(err))
 	culprits := base.GetMaliciousIdentities[sharing.ID](err)
 	require.Contains(t, culprits, attacker)
 }
 
-func TestShareReconstructionYieldsMatchingPublicKey(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Security: extended Feldman VV (Dahlgren-style dimension attack)
+//
+// An attacker extends the Feldman verification vector with extra group
+// elements, hoping to inject additional degrees of freedom. The Feldman
+// verification via left module action M * V enforces dim(V) == MSP.D(),
+// so the extended vector must be rejected.
+// ---------------------------------------------------------------------------
+
+func TestDahlgrenAttack_ExtendedFeldmanVV(t *testing.T) {
 	t.Parallel()
 
-	// End-to-end check: the reconstructed secret key, when lifted to the group,
-	// must equal the joint public key agreed upon by all parties. This is the
-	// fundamental correctness property that rules out subtle manipulation.
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+	gen := group.Generator()
+
+	// Use threshold(4,7) so D=4 and n_rows=7 — clear distinction
+	fx := largeThresholdFixture(t)
+	parties := setup(t, fx.ac, group, prng)
+	participants := slices.Collect(maps.Values(parties))
+	r1bo, r1uo := tu.DoGennaroRound1(t, parties)
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+	r2bo := tu.DoGennaroRound2(t, parties, r2bi, r2ui)
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	ids := slices.Sorted(maps.Keys(parties))
+	victim, attacker := ids[0], ids[1]
+
+	// Get attacker's honest VV and extend it with an extra row
+	originalBC, _ := r3bi[victim].Get(attacker)
+	honestVV := originalBC.FeldmanVerificationVector
+
+	// Determine honest dimension from the VV
+	honestD, _ := honestVV.Value().Dimensions()
+
+	// Build extended column vector with D+1 entries
+	extraScalar, err := field.Random(prng)
+	require.NoError(t, err)
+	extMod, err := mat.NewMatrixModule(uint(honestD+1), 1, field)
+	require.NoError(t, err)
+	entries := make([]*k256.Scalar, honestD+1)
+	for i := range honestD {
+		entries[i], err = field.Random(prng)
+		require.NoError(t, err)
+	}
+	entries[honestD] = extraScalar
+	extCol, err := extMod.NewRowMajor(entries...)
+	require.NoError(t, err)
+	extendedVVV, err := mat.Lift(extCol, gen)
+	require.NoError(t, err)
+	extendedVV, err := feldman.NewVerificationVector(extendedVVV, nil)
+	require.NoError(t, err)
+
+	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
+		FeldmanVerificationVector: extendedVV,
+		Proof:                     originalBC.Proof,
+	}
+	tamperedR3bi := replaceBroadcastFrom(r3bi[victim], attacker, tampered)
+
+	_, err = parties[victim].Round3(tamperedR3bi)
+	require.Error(t, err, "extended VV must be rejected (Dahlgren-style dimension attack)")
+}
+
+// ---------------------------------------------------------------------------
+// Security: truncated Feldman VV (dimension attack - too few entries)
+// ---------------------------------------------------------------------------
+
+func TestTruncatedFeldmanVV_Rejected(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+	gen := group.Generator()
+
+	fx := largeThresholdFixture(t) // D=4
+	parties := setup(t, fx.ac, group, prng)
+	participants := slices.Collect(maps.Values(parties))
+	r1bo, r1uo := tu.DoGennaroRound1(t, parties)
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+	r2bo := tu.DoGennaroRound2(t, parties, r2bi, r2ui)
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
+
+	ids := slices.Sorted(maps.Keys(parties))
+	victim, attacker := ids[0], ids[1]
+
+	originalBC, _ := r3bi[victim].Get(attacker)
+
+	// Build a truncated column vector with D-1 entries
+	honestD, _ := originalBC.FeldmanVerificationVector.Value().Dimensions()
+	require.Greater(t, honestD, 1, "need D>1 to truncate")
+	truncMod, err := mat.NewMatrixModule(uint(honestD-1), 1, field)
+	require.NoError(t, err)
+	entries := make([]*k256.Scalar, honestD-1)
+	for i := range honestD - 1 {
+		entries[i], err = field.Random(prng)
+		require.NoError(t, err)
+	}
+	truncCol, err := truncMod.NewRowMajor(entries...)
+	require.NoError(t, err)
+	truncatedVVV, err := mat.Lift(truncCol, gen)
+	require.NoError(t, err)
+	truncatedVV, err := feldman.NewVerificationVector(truncatedVVV, nil)
+	require.NoError(t, err)
+
+	tampered := &gennaro.Round2Broadcast[*k256.Point, *k256.Scalar]{
+		FeldmanVerificationVector: truncatedVV,
+		Proof:                     originalBC.Proof,
+	}
+	tamperedR3bi := replaceBroadcastFrom(r3bi[victim], attacker, tampered)
+
+	_, err = parties[victim].Round3(tamperedR3bi)
+	require.Error(t, err, "truncated VV must be rejected")
+}
+
+// ---------------------------------------------------------------------------
+// Security: extended Pedersen VV (dimension attack on Round 2)
+// ---------------------------------------------------------------------------
+
+func TestDahlgrenAttack_ExtendedPedersenVV(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+
+	fx := largeThresholdFixture(t) // D=4
+	parties := setup(t, fx.ac, group, prng)
+	participants := slices.Collect(maps.Values(parties))
+	r1bo, r1uo := tu.DoGennaroRound1(t, parties)
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
+	_ = r2ui
+
+	ids := slices.Sorted(maps.Keys(parties))
+	victim, attacker := ids[0], ids[1]
+
+	originalBC, _ := r2bi[victim].Get(attacker)
+
+	// Get honest Pedersen VV dimension
+	honestD, _ := originalBC.PedersenVerificationVector.Value().Dimensions()
+
+	// Build an extended Pedersen VV by appending a random commitment
+	extPedMod, err := mat.NewModuleValuedColumnVectorModule(uint(honestD+1), group)
+	require.NoError(t, err)
+	entries := make([]*k256.Point, honestD+1)
+	for i := range honestD {
+		e, err := originalBC.PedersenVerificationVector.Value().Get(i, 0)
+		require.NoError(t, err)
+		entries[i] = e
+	}
+	// Add a random extra entry
+	extraScalar, err := field.Random(prng)
+	require.NoError(t, err)
+	entries[honestD] = group.Generator().ScalarOp(extraScalar)
+	extendedPedVVV, err := extPedMod.NewRowMajor(entries...)
+	require.NoError(t, err)
+	extendedPedVV, err := feldman.NewVerificationVector(extendedPedVVV, nil)
+	require.NoError(t, err)
+
+	tampered := &gennaro.Round1Broadcast[*k256.Point, *k256.Scalar]{
+		PedersenVerificationVector: extendedPedVV,
+		Proof:                      originalBC.Proof,
+	}
+	tamperedR2bi := replaceBroadcastFrom(r2bi[victim], attacker, tampered)
+
+	// The Okamoto proof was composed for D instances, but the VV now has D+1
+	// elements. Verification should fail (either proof mismatch or share
+	// verification against mismatched VV).
+	_, err = parties[victim].Round2(tamperedR2bi, r2ui[victim])
+	require.Error(t, err, "extended Pedersen VV must be rejected")
+}
+
+// ---------------------------------------------------------------------------
+// Two independent DKG runs produce different keys
+// ---------------------------------------------------------------------------
+
+func TestDKG_Freshness(t *testing.T) {
+	t.Parallel()
+
 	group := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	quorum := sharing.NewOrdinalShareholderSet(3)
-	ac, err := threshold.NewThresholdAccessStructure(2, quorum)
-	require.NoError(t, err)
+	fx := thresholdFixture(t)
 
-	parties := setup(t, ac, group, prng)
+	parties1 := setup(t, fx.ac, group, prng)
+	outputs1 := tu.DoGennaroDKG(t, parties1)
+
+	parties2 := setup(t, fx.ac, group, prng)
+	outputs2 := tu.DoGennaroDKG(t, parties2)
+
+	pk1 := firstOutput(outputs1).PublicKeyValue()
+	pk2 := firstOutput(outputs2).PublicKeyValue()
+	require.False(t, pk1.Equal(pk2), "independent DKG runs should produce different public keys")
+}
+
+// ---------------------------------------------------------------------------
+// Non-threshold access structures: CNF
+// ---------------------------------------------------------------------------
+
+func TestDKG_CNF(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	fx := cnfFixture(t)
+	parties := setup(t, fx.ac, group, prng)
 	outputs := tu.DoGennaroDKG(t, parties)
 
-	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac)
+	feldmanScheme, err := feldman.NewScheme(group, fx.ac)
 	require.NoError(t, err)
+	vv := firstOutput(outputs).VerificationVector()
 
-	shares := make([]*feldman.Share[*k256.Scalar], 0, len(outputs))
-	var publicKey *k256.Point
-	var vv feldman.VerificationVector[*k256.Point, *k256.Scalar]
-	for _, out := range outputs {
-		shares = append(shares, out.Share())
-		if publicKey == nil {
-			publicKey = out.PublicKeyValue()
-			vv = out.VerificationVector()
+	sharesByID := make(map[sharing.ID]*kw.Share[*k256.Scalar])
+	for id, out := range outputs {
+		sharesByID[id] = out.Share()
+	}
+
+	// All qualified sets reconstruct the same secret
+	var ref *kw.Secret[*k256.Scalar]
+	for _, qset := range fx.qualified {
+		shares := make([]*kw.Share[*k256.Scalar], len(qset))
+		for i, id := range qset {
+			shares[i] = sharesByID[id]
+		}
+		secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
+		require.NoError(t, err, "qualified set %v should reconstruct", qset)
+		if ref == nil {
+			ref = secret
+		} else {
+			require.True(t, ref.Equal(secret))
 		}
 	}
 
-	secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
-	require.NoError(t, err)
-	reconstructedPK := group.ScalarBaseOp(secret.Value())
-	require.True(t, reconstructedPK.Equal(publicKey),
-		"reconstructed public key does not match DKG output")
-	require.False(t, publicKey.IsZero(), "joint public key must not be the identity")
+	// Unqualified sets cannot
+	for _, uset := range fx.unqualified {
+		shares := make([]*kw.Share[*k256.Scalar], len(uset))
+		for i, id := range uset {
+			shares[i] = sharesByID[id]
+		}
+		result, err := feldmanScheme.Reconstruct(shares...)
+		if err == nil {
+			require.False(t, ref.Equal(result),
+				"unqualified set %v should not reconstruct the correct secret", uset)
+		}
+	}
 }

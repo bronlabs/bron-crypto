@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
+	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -19,8 +19,8 @@ import (
 const VariantType schnorrlike.VariantType = "mina"
 
 var (
-	_ schnorrlike.Variant[*GroupElement, *Scalar, *Message]         = (*Variant)(nil)
-	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, *Message] = (*Variant)(nil)
+	_ schnorrlike.Variant[*GroupElement, *Scalar, *Message]           = (*Variant)(nil)
+	_ mpcschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, *Message] = (*Variant)(nil)
 )
 
 // NewDeterministicVariant creates a Mina variant with deterministic nonce derivation.

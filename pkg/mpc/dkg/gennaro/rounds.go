@@ -2,12 +2,15 @@ package gennaro
 
 import (
 	"encoding/binary"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/mat"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
@@ -22,20 +25,18 @@ const (
 	batchSchnorrProverIDLabel = "BRON_CRYPTO_DKG_GENNARO_BATCH_SCHNORR_PROVER_ID-"
 )
 
-// Round1 runs the dealer step and broadcasts the Pedersen verification vector.
 func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUnicasts[*Round1Unicast[E, S], *Participant[E, S]], error) {
 	if p.round != 1 {
 		return nil, nil, ErrRound.WithMessage("expected round 1, got %d", p.round)
 	}
-
 	// Pedersen VSS dealing
 	var err error
-	p.state.localPedersenDealerOutput, p.state.localSecret, p.state.pedersenDealerFunc, err = p.state.pedersenVSS.DealRandomAndRevealDealerFunc(p.prng)
+	p.state.localPedersenDealerOutput, _, p.state.pedersenDealerFunc, err = p.state.pedersenVSS.DealRandomAndRevealDealerFunc(p.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to deal random and reveal dealer function")
 	}
-	secretsPolynomial, blindingPolynomial := p.state.pedersenDealerFunc.Components()[0], p.state.pedersenDealerFunc.Components()[1]
-	pedersenVerificationVector := p.state.localPedersenDealerOutput.VerificationVector()
+	secretsColumnVector, blindingColumnVector := p.state.pedersenDealerFunc.G(), p.state.pedersenDealerFunc.H()
+	pedersenVerificationVector := p.state.localPedersenDealerOutput.VerificationMaterial()
 
 	// My own local share
 	var ok bool
@@ -61,7 +62,7 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto protocol")
 	}
-	batchOkamotoProtocol, err := sigand.Compose(okamotoProtocol, uint(secretsPolynomial.Degree()+1))
+	batchOkamotoProtocol, err := sigand.Compose(okamotoProtocol, p.state.lsss.MSP().D())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to compose okamoto protocol")
 	}
@@ -75,17 +76,18 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto prover")
 	}
-	secretsPolynomialCoeffs := secretsPolynomial.Coefficients()
-	blindingPolynomialCoeffs := blindingPolynomial.Coefficients()
-	witnesses := make([]*okamoto.Witness[S], len(secretsPolynomialCoeffs))
-	statements := make([]*okamoto.Statement[E, S], len(secretsPolynomialCoeffs))
-	for i, ci := range secretsPolynomialCoeffs {
-		bi := blindingPolynomialCoeffs[i]
+	secretsColumnVectorElements := slices.Collect(secretsColumnVector.RandomColumn().Iter())
+	blindingColumnVectorElements := slices.Collect(blindingColumnVector.RandomColumn().Iter())
+	pedersenVerificationVectorElements := slices.Collect(pedersenVerificationVector.Value().Iter())
+	witnesses := make([]*okamoto.Witness[S], len(secretsColumnVectorElements))
+	statements := make([]*okamoto.Statement[E, S], len(secretsColumnVectorElements))
+	for i, ci := range secretsColumnVectorElements {
+		bi := blindingColumnVectorElements[i]
 		witnesses[i], err = okamoto.NewWitness(ci, bi)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto witness for coefficient %d", i)
 		}
-		statements[i] = okamoto.NewStatement(pedersenVerificationVector.Coefficients()[i])
+		statements[i] = okamoto.NewStatement(pedersenVerificationVectorElements[i])
 	}
 	witness := sigand.ComposeWitnesses(witnesses...)
 	statement := sigand.ComposeStatements(statements...)
@@ -101,11 +103,11 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 	}, r1uo.Freeze(), nil
 }
 
-// Round2 shares Pedersen openings privately and proves correctness of Feldman vector.
 func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[E, S], *Participant[E, S]], r2uin network.RoundMessages[*Round1Unicast[E, S], *Participant[E, S]]) (*Round2Broadcast[E, S], error) {
 	if p.round != 2 {
 		return nil, ErrRound.WithMessage("expected round 2, got %d", p.round)
 	}
+
 	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r2bin); errB != nil {
 		return nil, errs.Wrap(errB)
 	}
@@ -113,7 +115,8 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		return nil, errs.Wrap(errU)
 	}
 
-	localSecretsPolynomial := p.state.pedersenDealerFunc.Components()[0]
+	localSecretColumnVector := p.state.pedersenDealerFunc.G()
+
 	var err error
 	p.state.summedShareValue = p.state.localShare.Value()
 	for pid := range p.ctx.OtherPartiesOrdered() {
@@ -125,7 +128,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto protocol")
 		}
-		batchOkamotoProtocol, err := sigand.Compose(okamotoProtocol, uint(localSecretsPolynomial.Degree()+1))
+		batchOkamotoProtocol, err := sigand.Compose(okamotoProtocol, p.state.lsss.MSP().D())
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to compose okamoto protocol")
 		}
@@ -140,7 +143,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto verifier")
 		}
 		if err := verifier.Verify(
-			sigand.ComposeStatements(sliceutils.Map(inB.PedersenVerificationVector.Coefficients(), okamoto.NewStatement)...),
+			sigand.ComposeStatements(slices.Collect(iterutils.Map(inB.PedersenVerificationVector.Value().Iter(), okamoto.NewStatement))...),
 			inB.Proof,
 		); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify okamoto proof of knowledge of opening from party %d", pid)
@@ -153,17 +156,26 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		p.state.receivedShares[pid] = inU.Share
 
 		// Accumulate shares for final key material
-		p.state.summedShareValue = p.state.summedShareValue.Add(inU.Share.Value())
+		if len(p.state.summedShareValue) != len(inU.Share.Value()) {
+			return nil, errs.New("inconsistent share value length").WithTag(base.IdentifiableAbortPartyIDTag, pid)
+		}
+		for i, v := range inU.Share.Value() {
+			p.state.summedShareValue[i] = p.state.summedShareValue[i].Add(v)
+		}
 	}
 
-	// Produce Feldman verification vector for the same polynomial
-	p.state.localFeldmanVerificationVector, err = polynomials.LiftPolynomial(localSecretsPolynomial, p.state.key.G())
+	// Produce Feldman verification vector for the same column vector.
+	liftedRandomColumn, err := mat.Lift(localSecretColumnVector.RandomColumn(), p.state.key.G())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to lift pedersen dealer function to exponent")
 	}
+	p.state.localFeldmanVerificationVector, err = feldman.NewVerificationVector(liftedRandomColumn, p.state.lsss.MSP())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create feldman verification vector from lifted random column")
+	}
 
 	// Produce batch schnorr proof of knowledge of Feldman verification vector's coefficients' dlog.
-	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.state.lsss.MSP().D()), p.state.key.Group(), p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
 	}
@@ -178,8 +190,8 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 	}
 
-	witness := batch_schnorr.NewWitness(localSecretsPolynomial.Coefficients()...)
-	statement := batch_schnorr.NewStatement(p.state.key.G(), p.state.localFeldmanVerificationVector.Coefficients()...)
+	witness := batch_schnorr.NewWitness(slices.Collect(localSecretColumnVector.RandomColumn().Iter())...)
+	statement := batch_schnorr.NewStatement(p.state.key.G(), slices.Collect(p.state.localFeldmanVerificationVector.Value().Iter())...)
 	proof, err := prover.Prove(statement, witness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove batch schnorr statement")
@@ -192,8 +204,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	}, nil
 }
 
-// Round3 verifies all incoming shares and proofs and outputs the joint key material.
-func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S], *Participant[E, S]]) (*DKGOutput[E, S], error) {
+func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E, S], *Participant[E, S]]) (*mpc.BaseShard[E, S], error) {
 	if p.round != 3 {
 		return nil, ErrRound.WithMessage("expected round 3, got %d", p.round)
 	}
@@ -201,7 +212,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		return nil, errs.Wrap(errB)
 	}
 
-	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.state.lsss.MSP().D()), p.state.key.Group(), p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
 	}
@@ -219,28 +230,31 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		verifierCtx.Transcript().AppendBytes(batchSchnorrProverIDLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
 		verifier, err := niBatchSchnorr.NewVerifier(verifierCtx)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr verifier")
+			return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr prover")
 		}
-		statement := batch_schnorr.NewStatement(p.state.key.G(), inB.FeldmanVerificationVector.Coefficients()...)
+		statement := batch_schnorr.NewStatement(p.state.key.G(), slices.Collect(inB.FeldmanVerificationVector.Value().Iter())...)
 		err = verifier.Verify(statement, inB.Proof)
 		if err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman verification vector")
 		}
 
 		// Verify Feldman Share
-		feldmanShare, _ := feldman.NewShare(p.state.receivedShares[pid].ID(), p.state.receivedShares[pid].Value(), nil)
-		if err := p.state.feldmanVSS.Verify(feldmanShare, inB.FeldmanVerificationVector); err != nil {
+		kwShare, err := kw.NewShare(p.state.receivedShares[pid].ID(), p.state.receivedShares[pid].Value()...)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to convert received share to kw share for verification")
+		}
+		if err := p.state.feldmanVSS.Verify(kwShare, inB.FeldmanVerificationVector); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify feldman share from party %d", pid)
 		}
 
 		// Accumulate Feldman verification vectors for final output
 		summedFeldmanVerificationVector = summedFeldmanVerificationVector.Op(inB.FeldmanVerificationVector)
 	}
-	outputShare, err := feldman.NewShare(p.ctx.HolderID(), p.state.summedShareValue, nil)
+	outputShare, err := kw.NewShare(p.ctx.HolderID(), p.state.summedShareValue...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create output feldman share")
 	}
-	out, err := NewDKGOutput(outputShare, summedFeldmanVerificationVector, p.ac)
+	out, err := mpc.NewBaseShard(outputShare, summedFeldmanVerificationVector, p.state.lsss.MSP())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create DKG output")
 	}

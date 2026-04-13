@@ -8,49 +8,59 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
-// NewScheme creates a new Pedersen VSS scheme.
+// Scheme implements Pedersen's verifiable secret sharing over a
+// Karchmer-Wigderson MSP-based LSSS. It supports any linear access structure
+// (threshold, CNF, hierarchical, boolean-expression, etc.) rather than only
+// threshold structures.
 //
-// Parameters:
-//   - key: Pedersen commitment key containing generators g and h
-//   - accessStructure: Threshold access structure defining quorum requirements
-func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure *threshold.Threshold) (*Scheme[E, S], error) {
+// The scheme is computationally binding under the discrete logarithm
+// assumption and perfectly hiding: the verification vector reveals no
+// information about the secret, even to a computationally unbounded adversary.
+// This is achieved by committing to each random column entry with a Pedersen
+// commitment Com(r_g_j, r_h_j) = [r_g_j]G + [r_h_j]H, where G and H are
+// independent generators whose discrete-log relation is unknown.
+type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+	commitmentScheme *pedcom.Scheme[E, S]
+	lsss             *kw.Scheme[S]
+}
+
+// NewScheme creates a new Pedersen VSS scheme over the given Pedersen
+// commitment key and linear access structure. The scalar field is derived
+// from the key's group. The key must consist of two independent generators
+// (G, H) of a prime-order group; the security of the hiding property relies
+// on the discrete-log relation between G and H being unknown.
+func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure accessstructures.Monotone) (*Scheme[E, S], error) {
+	if key == nil {
+		return nil, sharing.ErrIsNil.WithMessage("pedersen commitment key is nil")
+	}
 	if accessStructure == nil {
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
 
-	pedcomScheme, err := pedcom.NewScheme(key)
+	commitmentScheme, err := pedcom.NewScheme(key)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create pedersen scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create Pedersen commitment scheme")
 	}
-	module := algebra.StructureMustBeAs[algebra.Module[E, S]](key.G().Structure())
-	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](module.ScalarStructure())
-	shamirSSS, err := shamir.NewScheme(field, accessStructure)
+
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](key.Group().ScalarStructure())
+
+	lsss, err := kw.NewScheme(field, accessStructure)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create shamir scheme")
+		return nil, errs.Wrap(err).WithMessage("could not create LSSS scheme")
 	}
 	return &Scheme[E, S]{
-		key:              key,
-		commitmentScheme: pedcomScheme,
-		shamirSSS:        shamirSSS,
+		commitmentScheme: commitmentScheme,
+		lsss:             lsss,
 	}, nil
-}
-
-// Scheme implements Pedersen's verifiable secret sharing with information-theoretic hiding.
-type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	key              *pedcom.Key[E, S]
-	commitmentScheme commitments.Scheme[*pedcom.Key[E, S], *pedcom.Witness[S], *pedcom.Message[S], *pedcom.Commitment[E, S], *pedcom.Committer[E, S], *pedcom.Verifier[E, S]]
-	shamirSSS        *shamir.Scheme[S]
 }
 
 // Name returns the canonical name of this scheme.
@@ -58,193 +68,189 @@ func (*Scheme[E, S]) Name() sharing.Name {
 	return Name
 }
 
-// AccessStructure returns the threshold access structure.
-func (s *Scheme[E, S]) AccessStructure() *threshold.Threshold {
-	return s.shamirSSS.AccessStructure()
-}
-
-// CanReconstruct checks if the given shareholder IDs form a qualified set that can reconstruct the secret according to the access structure.
+// CanReconstruct checks whether the given set of shareholder IDs is qualified under the access structure, i.e. whether reconstruction is possible from shares belonging to these shareholders.
 func (s *Scheme[E, S]) CanReconstruct(ids ...sharing.ID) bool {
-	return s.shamirSSS.CanReconstruct(ids...)
+	return s.lsss.MSP().Accepts(ids...)
 }
 
-// Shareholders returns the universe of shareholder IDs defined by the access structure.
+// Shareholders returns the universe of shareholder IDs for this scheme, as defined by the underlying MSP.
 func (s *Scheme[E, S]) Shareholders() ds.Set[sharing.ID] {
-	return s.shamirSSS.Shareholders()
+	return s.lsss.MSP().Shareholders()
 }
 
-func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (*shamir.DealerOutput[S], *shamir.Secret[S], shamir.DealerFunc[S], error) {
-	if prng == nil {
-		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
+// Deal creates shares for the given secret and returns the dealer output
+// containing both the shares and the public verification vector
+// V = [r_g]G + [r_h]H.
+func (s *Scheme[E, S]) Deal(secret *kw.Secret[S], prng io.Reader) (*DealerOutput[E, S], error) {
+	do, _, err := s.DealAndRevealDealerFunc(secret, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not deal and reveal dealer func")
 	}
-	var shamirShares *shamir.DealerOutput[S]
-	var secretPoly shamir.DealerFunc[S]
-	var err error
-	for shamirShares == nil || sliceutils.Any(
-		shamirShares.Shares().Values(), func(share *shamir.Share[S]) bool { return share.Value().IsZero() },
-	) {
-		if secret != nil {
-			shamirShares, secretPoly, err = s.shamirSSS.DealAndRevealDealerFunc(secret, prng)
-		} else {
-			shamirShares, secret, secretPoly, err = s.shamirSSS.DealRandomAndRevealDealerFunc(prng)
-		}
-		if err != nil {
-			return nil, nil, nil, errs.Wrap(err).WithMessage("could not deal shares")
-		}
-	}
-	return shamirShares, secret, secretPoly, nil
+	return do, nil
 }
 
-// DealAndRevealDealerFunc creates shares for the given secret and returns the dealing
-// polynomials. Uses two polynomials: f(x) for the secret and r(x) for blinding.
-// The verification vector contains Pedersen commitments g^{a_j}·h^{b_j}.
-func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], *polynomials.DirectSumOfPolynomials[S], error) {
+// DealAndRevealDealerFunc creates shares for the given secret and additionally
+// returns the DealerFunc containing both the secret and blinding random
+// columns. The verification vector is computed as V = [r_g]G + [r_h]H.
+// The DealerFunc is secret dealer state and must not be published.
+func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *kw.Secret[S], prng io.Reader) (*DealerOutput[E, S], *DealerFunc[S], error) {
 	if secret == nil {
 		return nil, nil, sharing.ErrIsNil.WithMessage("secret is nil")
 	}
-	// Deal secret shares (can be zero)
-	shamirShares, secretPoly, err := s.shamirSSS.DealAndRevealDealerFunc(secret, prng)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not deal secret shares")
+	if prng == nil {
+		return nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
-	// Deal blinding shares (must be non-zero for witness creation)
-	blindingShares, _, blindingPoly, err := s.dealAllNonZeroShares(nil, prng)
+
+	secretShares, secretsDealerFunc, err := s.lsss.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not deal blinding shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal and reveal dealer func using LSSS scheme")
 	}
-	directSumRing, err := polynomials.NewDirectSumOfPolynomialRings(secretPoly.Ring(), 2)
+	blindingShares, _, blindingDealerFunc, err := s.lsss.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not create direct sum of polynomial rings")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal and reveal dealer func for blinding using LSSS scheme")
 	}
-	dealerFunc, err := directSumRing.New(secretPoly, blindingPoly)
+
+	dealerFunc, err := NewDealerFunc(secretsDealerFunc, blindingDealerFunc)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not create direct sum of polynomials")
+		return nil, nil, errs.Wrap(err).WithMessage("could not create Pedersen dealer func")
 	}
-	dealerFuncInTheExponent, err := polynomials.LiftDirectSumOfPolynomialsToExponent(dealerFunc, s.key.G(), s.key.H())
+	liftedDealerFunc, err := LiftDealerFunc(dealerFunc, s.commitmentScheme.Key())
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not lift direct sum of polynomials to exponent")
+		return nil, nil, errs.Wrap(err).WithMessage("could not lift Pedersen dealer func")
 	}
-	verificationVector := dealerFuncInTheExponent.CoDiagonal()
+
 	shares := hashmap.NewComparable[sharing.ID, *Share[S]]()
-	for id, shamirShare := range shamirShares.Shares().Iter() {
-		blindingShare, ok := blindingShares.Shares().Get(id)
-		if !ok {
-			return nil, nil, sharing.ErrMembership.WithMessage("blinding share not found for ID %d", id)
+	for id, secretShare := range secretShares.Shares().Iter() {
+		blindingShare, exists := blindingShares.Shares().Get(id)
+		if !exists {
+			return nil, nil, sharing.ErrFailed.WithMessage("missing blinding share for ID %d", id)
 		}
-		message, _ := pedcom.NewMessage(shamirShare.Value())
-		witness, err := pedcom.NewWitness(blindingShare.Value())
+
+		share, err := NewShare(id, secretShare, blindingShare)
 		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("could not create witness for share %d", id)
+			return nil, nil, errs.Wrap(err).WithMessage("could not create Pedersen share")
 		}
-		share, err := NewShare(id, message, witness, nil)
-		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("could not create share for ID %d", id)
-		}
+
 		shares.Put(id, share)
 	}
 	return &DealerOutput[E, S]{
 		shares: shares.Freeze(),
-		v:      verificationVector,
+		v:      liftedDealerFunc.VerificationVector(),
 	}, dealerFunc, nil
 }
 
-// Deal creates shares for the given secret along with a verification vector.
-func (s *Scheme[E, S]) Deal(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], error) {
-	shares, _, err := s.DealAndRevealDealerFunc(secret, prng)
+// DealRandom generates shares for a uniformly random secret and returns
+// both the dealer output (shares + verification vector) and the secret.
+func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *kw.Secret[S], error) {
+	do, secret, _, err := s.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not deal shares")
+		return nil, nil, errs.Wrap(err).WithMessage("could not deal random shares and reveal dealer func")
 	}
-	return shares, nil
+	return do, secret, nil
 }
 
-// DealRandomAndRevealDealerFunc generates shares for a random secret and returns
-// the dealing polynomials.
-func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *Secret[S], *polynomials.DirectSumOfPolynomials[S], error) {
+// DealRandomAndRevealDealerFunc generates shares for a uniformly random secret
+// and additionally returns the DealerFunc (the secret and blinding random
+// columns and the share vectors). The DealerFunc is secret dealer state and
+// must not be published.
+func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *kw.Secret[S], *DealerFunc[S], error) {
 	if prng == nil {
 		return nil, nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
 	}
-	value, err := s.shamirSSS.Field().Random(prng)
+	secretValue, err := s.lsss.MSP().BaseField().Random(prng)
 	if err != nil {
-		return nil, nil, nil, errs.Wrap(err).WithMessage("could not sample random field element")
+		return nil, nil, nil, errs.Wrap(err).WithMessage("could not sample random secret value from LSSS scheme's MSP base field")
 	}
-	secret := NewSecret(value)
-	shares, poly, err := s.DealAndRevealDealerFunc(secret, prng)
+	secret := kw.NewSecret(secretValue)
+	do, df, err := s.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
-		return nil, nil, nil, errs.Wrap(err).WithMessage("could not create shares")
+		return nil, nil, nil, errs.Wrap(err).WithMessage("could not deal random shares and reveal dealer func")
 	}
-	return shares, secret, poly, nil
+	return do, secret, df, nil
 }
 
-// DealRandom generates shares for a randomly sampled secret.
-func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *Secret[S], error) {
-	if prng == nil {
-		return nil, nil, sharing.ErrIsNil.WithMessage("prng is nil")
+// Reconstruct recovers the secret from a qualified set of shares using the
+// MSP reconstruction vector. Only the secret component of each share is used;
+// blinding factors are discarded.
+func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*kw.Secret[S], error) {
+	secretShares := make([]*kw.Share[S], len(shares))
+	var err error
+	for i, share := range shares {
+		secretShares[i], err = kw.NewShare(share.ID(), sliceutils.Map(share.secret, func(m *pedcom.Message[S]) S { return m.Value() })...)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("could not create Shamir share from Pedersen share: %v", err)
+		}
 	}
-	shares, secret, _, err := s.DealRandomAndRevealDealerFunc(prng)
+	secret, err := s.lsss.Reconstruct(secretShares...)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not deal random shares")
-	}
-	return shares, secret, nil
-}
-
-// Reconstruct recovers the secret from a set of shares using Lagrange interpolation.
-// Only the secret component f(i) of each share is used; blinding factors are discarded.
-func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
-	shamirShares, err := sliceutils.MapOrError(shares, func(sh *Share[S]) (*shamir.Share[S], error) { return shamir.NewShare(sh.ID(), sh.secret.Value(), nil) })
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not convert Pedersen shares to Shamir shares")
-	}
-	secret, err := s.shamirSSS.Reconstruct(shamirShares...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not reconstruct secret from shares")
+		return nil, errs.Wrap(err).WithMessage("could not reconstruct secret using LSSS scheme: %v", err)
 	}
 	return secret, nil
 }
 
-// ReconstructAndVerify recovers the secret and verifies each share against
-// the verification vector before reconstruction.
-func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], shares ...*Share[S]) (*Secret[S], error) {
+// ReconstructAndVerify recovers the secret and verifies every provided share
+// against the verification vector. If any share fails verification the
+// reconstructed value is discarded and an error is returned.
+func (s *Scheme[E, S]) ReconstructAndVerify(reference *VerificationVector[E, S], shares ...*Share[S]) (*kw.Secret[S], error) {
 	for i, share := range shares {
-		if err := s.Verify(share, vector); err != nil {
+		if err := s.Verify(share, reference); err != nil {
 			return nil, errs.Wrap(err).WithMessage("verification failed for share %d", i)
 		}
 	}
 	reconstructed, err := s.Reconstruct(shares...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to reconstruct secret in ReconstructAndVerify")
+		return nil, errs.Wrap(err).WithMessage("could not reconstruct verified secret")
 	}
 	return reconstructed, nil
 }
 
-// Verify checks that a share (s_i, t_i) is consistent with the verification vector.
-// Returns nil if g^{s_i}·h^{t_i} equals the evaluation of the verification vector at the share's ID.
-func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) error {
+// Verify checks that a share is consistent with the public verification
+// vector V. It computes the expected lifted share M_i · V (via the left
+// module action of the shareholder's MSP rows on V) and compares it against
+// the Pedersen commitments Com(secret_j, blinding_j) = [secret_j]G +
+// [blinding_j]H computed from the share's scalar components. Returns nil if
+// and only if the two agree.
+func (s *Scheme[E, S]) Verify(share *Share[S], vector *VerificationVector[E, S]) error {
 	if share == nil {
 		return sharing.ErrIsNil.WithMessage("share is nil")
 	}
 	if vector == nil {
 		return sharing.ErrIsNil.WithMessage("verification vector is nil")
 	}
-	if uint(vector.Degree()+1) != s.AccessStructure().Threshold() {
-		return sharing.ErrVerification.WithMessage("verification vector degree does not match threshold")
-	}
-	commitment, err := pedcom.NewCommitment(vector.Eval(s.shamirSSS.SharingIDToLagrangeNode(share.ID())))
+	liftedDealerFunc, err := NewLiftedDealerFunc(vector, s.lsss.MSP())
 	if err != nil {
-		return errs.Wrap(err).WithMessage("could not create commitment from recomputed value")
+		return errs.Wrap(err).WithMessage("could not create lifted dealer func")
 	}
-	verifier, err := s.commitmentScheme.Verifier()
+
+	liftedShare, err := liftedDealerFunc.ShareOf(share.ID())
 	if err != nil {
-		return errs.Wrap(err).WithMessage("could not create verifier")
+		return errs.Wrap(err).WithMessage("could not get lifted share for share ID %d", share.ID())
 	}
-	if err := verifier.Verify(commitment, share.secret, share.blinding); err != nil {
-		return errs.Wrap(err).WithMessage("could not verify commitment")
+
+	manuallyLiftedShare, err := LiftShare(share, s.commitmentScheme.Key())
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not manually lift share for share ID %d", share.ID())
+	}
+
+	if !liftedShare.Equal(manuallyLiftedShare) {
+		return sharing.ErrVerification.WithMessage("verification failed for share ID %d", share.ID())
 	}
 	return nil
 }
 
-// ConvertShareToAdditive converts this Shamir share to an additive share by multiplying
-// by the appropriate Lagrange coefficient. The resulting additive shares can
-// be summed to reconstruct the secret.
-func (*Scheme[E, S]) ConvertShareToAdditive(s *Share[S], quorum *unanimity.Unanimity) (*additive.Share[S], error) {
-	return s.ToAdditive(quorum)
+// ConvertShareToAdditive converts a Pedersen share into an additive share
+// relative to the given quorum. The quorum must be a qualified set under the
+// access structure. Only the secret component is converted; blinding factors
+// are discarded. The resulting additive shares can be summed to recover the
+// secret.
+func (s *Scheme[E, S]) ConvertShareToAdditive(share *Share[S], quorum *unanimity.Unanimity) (*additive.Share[S], error) {
+	kwShare, err := kw.NewShare(share.ID(), sliceutils.Map(share.secret, func(m *pedcom.Message[S]) S { return m.Value() })...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create Shamir share from Pedersen share")
+	}
+	out, err := s.lsss.ConvertShareToAdditive(kwShare, quorum)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert share to additive share using LSSS scheme")
+	}
+	return out, nil
 }

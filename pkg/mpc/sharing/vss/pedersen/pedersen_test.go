@@ -1,9 +1,8 @@
 package pedersen_test
 
 import (
-	"bytes"
-	"io"
-	mrand "math/rand/v2"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,1952 +12,1617 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
 )
+
+// ---------------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------------
+
+func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
+	return hashset.NewComparable(ids...).Freeze()
+}
+
+func formatIDs(ids []sharing.ID) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = fmt.Sprintf("%d", id)
+	}
+	return "{" + strings.Join(parts, ",") + "}"
+}
+
+func newPedersenKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	tb testing.TB,
+	curve algebra.PrimeGroup[E, S],
+) *pedcom.Key[E, S] {
+	tb.Helper()
+	g := curve.Generator()
+	h, err := curve.Hash([]byte("meta-pedersen-test-h"))
+	require.NoError(tb, err)
+	key, err := pedcom.NewCommitmentKey(g, h)
+	require.NoError(tb, err)
+	return key
+}
 
 func newPedersenScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
 	key *pedcom.Key[E, S],
-	thresh uint,
-	shareholders ds.Set[sharing.ID],
-) (*pedersen.Scheme[E, S], error) {
+	ac accessstructures.Monotone,
+) *pedersen.Scheme[E, S] {
 	tb.Helper()
-
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	if err != nil {
-		return nil, err
-	}
-	return pedersen.NewScheme(key, ac)
+	scheme, err := pedersen.NewScheme(key, ac)
+	require.NoError(tb, err)
+	return scheme
 }
 
-// TestSchemeCreation tests creation of Pedersen schemes with various parameters
-func TestSchemeCreation(t *testing.T) {
+func dealPedersen[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	tb testing.TB,
+	scheme *pedersen.Scheme[E, S],
+	secret *kw.Secret[S],
+) (*pedersen.DealerOutput[E, S], map[sharing.ID]*pedersen.Share[S]) {
+	tb.Helper()
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(tb, err)
+	m := make(map[sharing.ID]*pedersen.Share[S])
+	for id, sh := range out.Shares().Iter() {
+		m[id] = sh
+	}
+	return out, m
+}
+
+func pickShares[S algebra.PrimeFieldElement[S]](m map[sharing.ID]*pedersen.Share[S], ids ...sharing.ID) []*pedersen.Share[S] {
+	out := make([]*pedersen.Share[S], len(ids))
+	for i, id := range ids {
+		out[i] = m[id]
+	}
+	return out
+}
+
+func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
+	t.Helper()
+	q, err := unanimity.NewUnanimityAccessStructure(shareholders(ids...))
+	require.NoError(t, err)
+	return q
+}
+
+// ---------------------------------------------------------------------------
+// access structure fixtures
+// ---------------------------------------------------------------------------
+
+type acFixture struct {
+	name         string
+	ac           accessstructures.Monotone
+	qualified    [][]sharing.ID
+	unqualified  [][]sharing.ID
+	shareholders []sharing.ID
+}
+
+func thresholdFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+	require.NoError(t, err)
+	return acFixture{
+		name: "threshold(2,3)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2},
+			{1, 3},
+			{2, 3},
+			{1, 2, 3},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{2},
+			{3},
+		},
+		shareholders: []sharing.ID{1, 2, 3},
+	}
+}
+
+func unanimityFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := unanimity.NewUnanimityAccessStructure(shareholders(1, 2, 3))
+	require.NoError(t, err)
+	return acFixture{
+		name: "unanimity(3)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 3},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{2},
+			{1, 2},
+			{1, 3},
+			{2, 3},
+		},
+		shareholders: []sharing.ID{1, 2, 3},
+	}
+}
+
+func cnfFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := cnf.NewCNFAccessStructure(
+		shareholders(1, 2),
+		shareholders(3, 4),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "cnf({1,2},{3,4})",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 3},
+			{1, 4},
+			{2, 3},
+			{2, 4},
+			{1, 2, 3},
+			{1, 3, 4},
+			{1, 2, 3, 4},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{2},
+			{3},
+			{4},
+			{1, 2},
+			{3, 4},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4},
+	}
+}
+
+func cnfThreeClauseFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := cnf.NewCNFAccessStructure(
+		shareholders(1, 2),
+		shareholders(3, 4),
+		shareholders(5),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "cnf({1,2},{3,4},{5})",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 3},
+			{3, 5},
+			{1, 3, 4},
+			{1, 2, 3, 4, 5},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 2},
+			{3, 4},
+			{5},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5},
+	}
+}
+
+func largeThresholdFixture(t *testing.T) acFixture {
+	t.Helper()
+	ids := make([]sharing.ID, 7)
+	for i := range ids {
+		ids[i] = sharing.ID(i + 1)
+	}
+	ac, err := threshold.NewThresholdAccessStructure(4, shareholders(ids...))
+	require.NoError(t, err)
+	return acFixture{
+		name: "threshold(4,7)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 3, 4},
+			{2, 4, 5, 7},
+			{1, 2, 3, 4, 5, 6, 7},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 2, 3},
+			{5, 6, 7},
+			{1},
+		},
+		shareholders: ids,
+	}
+}
+
+func hierarchicalTwoLevelFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(2, 1, 2, 3),
+		hierarchical.WithLevel(4, 4, 5, 6),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "hierarchical(2,4)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},
+			{1, 2, 3, 4},
+			{2, 3, 5, 6},
+			{1, 2, 3, 4, 5, 6},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 4, 5},
+			{4, 5, 6},
+			{1, 2, 3},
+			{3, 4, 5, 6},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6},
+	}
+}
+
+func hierarchicalThreeLevelFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(1, 1, 2),
+		hierarchical.WithLevel(2, 3, 4),
+		hierarchical.WithLevel(4, 5, 6),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "hierarchical(1,2,4)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 3, 5, 6},
+			{2, 4, 5, 6},
+			{1, 2, 3, 4},
+			{1, 2, 3, 4, 5, 6},
+		},
+		unqualified: [][]sharing.ID{
+			{3, 5, 6},
+			{1, 5, 6},
+			{5, 6},
+			{1, 3, 5},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6},
+	}
+}
+
+func boolexprThreeBranchFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Threshold(2,
+			boolexpr.Threshold(2,
+				boolexpr.ID(1),
+				boolexpr.ID(2),
+				boolexpr.ID(3),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(4),
+				boolexpr.ID(5),
+				boolexpr.ID(6),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(7),
+				boolexpr.ID(8),
+				boolexpr.ID(9),
+			),
+		),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr(2-of-3 branches)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},
+			{1, 3, 7, 8},
+			{4, 5, 7, 9},
+			{1, 2, 4, 5, 7, 8},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{1, 2},
+			{1, 2, 3, 4},
+			{4, 7, 8},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	}
+}
+
+func boolexprAndOrFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Or(
+			boolexpr.And(boolexpr.ID(1), boolexpr.ID(2)),
+			boolexpr.And(boolexpr.ID(3), boolexpr.ID(4)),
+		),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr((1∧2)∨(3∧4))",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2},
+			{3, 4},
+			{1, 2, 3},
+			{1, 2, 3, 4},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{3},
+			{1, 3},
+			{2, 4},
+			{1, 4},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4},
+	}
+}
+
+func allFixtures(t *testing.T) []acFixture {
+	t.Helper()
+	return []acFixture{
+		thresholdFixture(t),
+		unanimityFixture(t),
+		cnfFixture(t),
+		cnfThreeClauseFixture(t),
+		largeThresholdFixture(t),
+		hierarchicalTwoLevelFixture(t),
+		hierarchicalThreeLevelFixture(t),
+		boolexprThreeBranchFixture(t),
+		boolexprAndOrFixture(t),
+	}
+}
+
+// ---------------------------------------------------------------------------
+// NewScheme – construction
+// ---------------------------------------------------------------------------
+
+func TestNewScheme(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("test-h-scheme-creation"))
-	require.NoError(t, err)
+	key := newPedersenKey(t, curve)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(t, err)
-
-	t.Run("valid scheme creation", func(t *testing.T) {
+	t.Run("valid with each access structure", func(t *testing.T) {
 		t.Parallel()
-		testCases := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"5-of-10", 5, 10},
-			{"thresh equals total", 5, 5},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
+		for _, fx := range allFixtures(t) {
+			t.Run(fx.name, func(t *testing.T) {
 				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(tc.total)
-				scheme, err := newPedersenScheme(t, key, tc.thresh, shareholders)
+				scheme, err := pedersen.NewScheme(key, fx.ac)
 				require.NoError(t, err)
 				require.NotNil(t, scheme)
-				require.Equal(t, tc.thresh, scheme.AccessStructure().Threshold())
-				require.Equal(t, int(tc.total), scheme.AccessStructure().Shareholders().Size())
+				require.Equal(t, pedersen.Name, scheme.Name())
+				require.Equal(t, len(fx.shareholders), scheme.Shareholders().Size())
 			})
 		}
-	})
-
-	t.Run("invalid thresh", func(t *testing.T) {
-		t.Parallel()
-		// Threshold of 0
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		_, err := newPedersenScheme(t, key, 0, shareholders)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrValue)
-
-		// Threshold of 1
-		_, err = newPedersenScheme(t, key, 1, shareholders)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrValue)
-
-		// Threshold greater than total
-		_, err = newPedersenScheme(t, key, 6, shareholders)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrValue)
-	})
-
-	t.Run("invalid total", func(t *testing.T) {
-		t.Parallel()
-		// Total of 0
-		shareholders := sharing.NewOrdinalShareholderSet(0)
-		_, err := newPedersenScheme(t, key, 2, shareholders)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrValue)
-
-		// Total of 1
-		shareholders = sharing.NewOrdinalShareholderSet(1)
-		_, err = newPedersenScheme(t, key, 2, shareholders)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrValue)
 	})
 
 	t.Run("nil key", func(t *testing.T) {
 		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		_, err := newPedersenScheme[*k256.Point](t, nil, 2, shareholders)
+		ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+		require.NoError(t, err)
+		_, err = pedersen.NewScheme[*k256.Point, *k256.Scalar](nil, ac)
 		require.Error(t, err)
-		require.ErrorIs(t, err, pedcom.ErrInvalidArgument)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
+	})
+
+	t.Run("nil access structure", func(t *testing.T) {
+		t.Parallel()
+		_, err := pedersen.NewScheme[*k256.Point, *k256.Scalar](key, nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
 	})
 }
 
-func TestSanity(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Deal + Reconstruct – qualified sets recover the secret
+// ---------------------------------------------------------------------------
+
+func TestDealAndReconstruct_QualifiedSets(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("pedersen-test-h"))
-	require.NoError(t, err)
+	key := newPedersenKey(t, curve)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(t, err, "could not create key")
-
-	thresh := uint(2)
-	total := uint(5)
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	scheme, err := newPedersenScheme(t, key, thresh, shareholders)
-	require.NoError(t, err, "could not create scheme")
-
-	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(t, err, "could not create shares")
-	require.Equal(t, total, uint(shares.Shares().Size()), "number of shares should match total")
-
-	// Test verification
-	reference := shares.VerificationVector()
-	for _, share := range shares.Shares().Values() {
-		err := scheme.Verify(share, reference)
-		require.NoError(t, err, "share verification should pass")
-	}
-
-	reconstructedSecret, err := scheme.Reconstruct(shares.Shares().Values()...)
-	require.NoError(t, err, "could not reconstruct secret")
-	require.True(t, secret.Equal(reconstructedSecret), "reconstructed secret should match original secret")
-
-	// Test ReconstructAndVerify
-	reconstructedSecret2, err := scheme.ReconstructAndVerify(reference, shares.Shares().Values()...)
-	require.NoError(t, err, "could not reconstruct and verify secret")
-	require.True(t, secret.Equal(reconstructedSecret2), "reconstructed secret should match original secret")
-}
-
-// dealCases tests the Deal function with various inputs
-func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
-	t.Helper()
-
-	// Create test secrets
-	zeroSecret := pedersen.NewSecret(field.Zero())
-	oneSecret := pedersen.NewSecret(field.One())
-	fortyTwoSecret := pedersen.NewSecret(field.FromUint64(42))
-	randomSecret := pedersen.NewSecret(field.FromUint64(12345))
-
-	// Get scheme parameters
-	thresh := scheme.AccessStructure().Threshold()
-	total := uint(scheme.AccessStructure().Shareholders().Size())
-
-	tests := []struct {
-		name         string
-		secret       *pedersen.Secret[S]
-		prng         io.Reader
-		expectError  bool
-		errorIs      error
-		verifyShares bool
-	}{
-		{
-			name:         "valid secret with constant 42",
-			secret:       fortyTwoSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:         "valid secret with value 1",
-			secret:       oneSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:         "valid secret with value 0",
-			secret:       zeroSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:         "valid secret with random value",
-			secret:       randomSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:        "nil secret",
-			secret:      nil,
-			prng:        pcg.NewRandomised(),
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-		},
-		{
-			name:        "nil prng",
-			secret:      fortyTwoSecret,
-			prng:        nil,
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-		},
-		{
-			name:        "both nil",
-			secret:      nil,
-			prng:        nil,
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
 			t.Parallel()
-			shares, err := scheme.Deal(tc.secret, tc.prng)
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+			_, shares := dealPedersen(t, scheme, secret)
 
-			if tc.expectError {
-				require.Error(t, err)
-				if tc.errorIs != nil {
-					require.ErrorIs(t, err, tc.errorIs)
-				}
-				require.Nil(t, shares)
-				return
-			}
-
-			require.NoError(t, err)
-			require.NotNil(t, shares)
-			require.Equal(t, int(total), shares.Shares().Size(), "should generate shares for all shareholders")
-
-			if tc.verifyShares {
-				// Verify each share
-				reference := shares.VerificationVector()
-				require.NotNil(t, reference, "verification vector should not be nil")
-
-				for id, share := range shares.Shares().Iter() {
-					require.NotNil(t, share)
-					require.Equal(t, id, share.ID())
-					// When secret is zero, shares can be zero (identity)
-					if !tc.secret.Value().IsZero() {
-						// For non-zero secrets, we still expect non-zero shares in most cases
-						// but it's mathematically possible to have zero shares even with non-zero secret
-					}
-					// Blinding factors must always be non-zero for witness creation
-					require.False(t, share.Blinding().Value().IsOpIdentity(), "blinding factor should not be identity")
-				}
-
-				// Verify shares are different (except potentially for zero secret)
-				if !tc.secret.Value().IsZero() {
-					shareValues := make(map[string]bool)
-					for _, share := range shares.Shares().Values() {
-						val := share.Value().String()
-						require.False(t, shareValues[val], "shares should have different values")
-						shareValues[val] = true
-					}
-				}
-
-				// Verify reconstruction works
-				reconstructed, err := scheme.Reconstruct(shares.Shares().Values()...)
-				require.NoError(t, err)
-				require.True(t, tc.secret.Equal(reconstructed), "reconstructed secret should match original")
-
-				// Verify thresh property: any t shares can reconstruct
-				shareSlice := shares.Shares().Values()
-				if len(shareSlice) >= int(thresh) {
-					subsetShares := shareSlice[:thresh]
-					reconstructed, err = scheme.Reconstruct(subsetShares...)
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					reconstructed, err := scheme.Reconstruct(pickShares(shares, qset...)...)
 					require.NoError(t, err)
-					require.True(t, tc.secret.Equal(reconstructed), "subset reconstruction should match original")
-				}
-
-				// Verify that t-1 shares cannot reconstruct
-				if int(thresh) > 1 && len(shareSlice) >= int(thresh) {
-					insufficientShares := shareSlice[:thresh-1]
-					_, err = scheme.Reconstruct(insufficientShares...)
-					require.Error(t, err)
-					require.ErrorIs(t, err, sharing.ErrFailed)
-				}
-
-				// Verify each share
-				for _, share := range shares.Shares().Values() {
-					err := scheme.Verify(share, reference)
-					require.NoError(t, err, "share verification should pass")
-				}
+					require.True(t, secret.Equal(reconstructed),
+						"qualified set %v must reconstruct the secret", qset)
+				})
 			}
 		})
 	}
 }
 
-// dealRandomCases tests the DealRandom function
-func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S]) {
-	t.Helper()
+// ---------------------------------------------------------------------------
+// Reconstruct – unqualified sets are rejected
+// ---------------------------------------------------------------------------
 
-	thresh := scheme.AccessStructure().Threshold()
-	total := uint(scheme.AccessStructure().Shareholders().Size())
-
-	tests := []struct {
-		name             string
-		prng             io.Reader
-		expectError      bool
-		errorIs          error
-		verifyUniqueness bool
-		iterations       int
-	}{
-		{
-			name:             "valid random generation",
-			prng:             pcg.NewRandomised(),
-			expectError:      false,
-			verifyUniqueness: true,
-			iterations:       1,
-		},
-		{
-			name:             "multiple random generations",
-			prng:             pcg.NewRandomised(),
-			expectError:      false,
-			verifyUniqueness: true,
-			iterations:       5,
-		},
-		{
-			name:        "nil prng",
-			prng:        nil,
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-			iterations:  1,
-		},
-		{
-			name:        "deterministic prng produces same secret",
-			prng:        pcg.New(mrand.Uint64(), mrand.Uint64()),
-			expectError: false,
-			iterations:  1,
-		},
-		{
-			name:        "short deterministic prng",
-			prng:        bytes.NewReader([]byte{1}),
-			expectError: true,
-			// Error comes from curves package (ErrRandomSample), not pedersen
-			iterations: 1,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			secrets := make([]*pedersen.Secret[S], 0, tc.iterations)
-
-			for i := range tc.iterations {
-				// Reset reader if using deterministic prng
-				if reader, ok := tc.prng.(*bytes.Reader); ok && i > 0 {
-					reader.Seek(0, 0)
-				}
-
-				shares, secret, err := scheme.DealRandom(tc.prng)
-
-				if tc.expectError {
-					require.Error(t, err)
-					if tc.errorIs != nil {
-						require.ErrorIs(t, err, tc.errorIs)
-					}
-					require.Nil(t, shares)
-					require.Nil(t, secret)
-					return
-				}
-
-				require.NoError(t, err)
-				require.NotNil(t, shares)
-				require.NotNil(t, secret)
-				require.Equal(t, int(total), shares.Shares().Size())
-				require.False(t, secret.Value().IsOpIdentity(), "random secret should not be identity")
-
-				secrets = append(secrets, secret)
-
-				// Verify all shares have the same verification vector
-				reference := shares.VerificationVector()
-				for _, share := range shares.Shares().Values() {
-					require.NotNil(t, reference)
-					// Verify blinding factors are not zero
-					require.False(t, share.Blinding().Value().IsOpIdentity(), "blinding factor should not be identity")
-				}
-
-				// Verify reconstruction
-				reconstructed, err := scheme.Reconstruct(shares.Shares().Values()...)
-				require.NoError(t, err)
-				require.True(t, secret.Equal(reconstructed))
-
-				// Verify thresh property
-				if shares.Shares().Size() >= int(thresh) {
-					shareSlice := shares.Shares().Values()
-					subsetShares := shareSlice[:thresh]
-					reconstructed, err = scheme.Reconstruct(subsetShares...)
-					require.NoError(t, err)
-					require.True(t, secret.Equal(reconstructed))
-				}
-			}
-
-			// Verify uniqueness across iterations if required
-			if tc.verifyUniqueness && tc.iterations > 1 {
-				secretValues := make(map[string]int)
-				for i, secret := range secrets {
-					val := secret.Value().String()
-					secretValues[val]++
-					if secretValues[val] > 1 {
-						t.Logf("Duplicate secret value found at iteration %d", i)
-					}
-				}
-				// With cryptographic randomness, duplicates should be extremely rare
-				duplicates := 0
-				for _, count := range secretValues {
-					if count > 1 {
-						duplicates++
-					}
-				}
-				require.Equal(t, 0, duplicates, "random secrets should be unique")
-			}
-		})
-	}
-}
-
-func TestDeal(t *testing.T) {
+func TestReconstruct_UnqualifiedSets(t *testing.T) {
 	t.Parallel()
 
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-k256"))
-		require.NoError(t, err)
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
 
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(654321))
+			_, shares := dealPedersen(t, scheme, secret)
 
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-			errors bool
-		}{
-			{"2-of-3", 2, 3, false},
-			{"3-of-5", 3, 5, false},
-			{"5-of-10", 5, 10, false},
-			{"1-of-5", 1, 5, true},
-			{"thresh equals total", 5, 5, false},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
-				if config.errors {
-					require.Error(t, err, "should return error for invalid configuration")
-					return
-				}
-				require.NoError(t, err)
-				dealCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-bls12381"))
-		require.NoError(t, err)
-
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-4", 2, 4},
-			{"4-of-7", 4, 7},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
-				require.NoError(t, err)
-				dealCases(t, scheme, field)
-			})
-		}
-	})
+			for _, uset := range fx.unqualified {
+				t.Run(formatIDs(uset), func(t *testing.T) {
+					t.Parallel()
+					_, err := scheme.Reconstruct(pickShares(shares, uset...)...)
+					require.Error(t, err)
+				})
+			}
+		})
+	}
 }
+
+// ---------------------------------------------------------------------------
+// Verification: every honest share passes Verify
+// ---------------------------------------------------------------------------
+
+func TestVerify_HonestShares(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(9999))
+			out, _ := dealPedersen(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			for _, id := range fx.shareholders {
+				t.Run(fmt.Sprintf("id=%d", id), func(t *testing.T) {
+					t.Parallel()
+					sh, ok := out.Shares().Get(id)
+					require.True(t, ok)
+					err := scheme.Verify(sh, ref)
+					require.NoError(t, err, "honest share for ID %d must verify", id)
+				})
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Verification: tampered secret component is detected
+// ---------------------------------------------------------------------------
+
+func TestVerify_TamperedSecret(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(1234))
+			out, _ := dealPedersen(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			id := fx.shareholders[0]
+			honest, ok := out.Shares().Get(id)
+			require.True(t, ok)
+
+			// Tamper with the secret component only, keep blinding intact
+			tamperedSecretVals := make([]FE, len(honest.Value()))
+			for i, v := range honest.Value() {
+				tamperedSecretVals[i] = v.Add(field.One())
+			}
+			tamperedSecret, err := kw.NewShare(id, tamperedSecretVals...)
+			require.NoError(t, err)
+
+			blindingVals := make([]FE, len(honest.Blinding()))
+			for i, w := range honest.Blinding() {
+				blindingVals[i] = w.Value()
+			}
+			blindingShare, err := kw.NewShare(id, blindingVals...)
+			require.NoError(t, err)
+
+			tampered, err := pedersen.NewShare(id, tamperedSecret, blindingShare)
+			require.NoError(t, err)
+
+			err = scheme.Verify(tampered, ref)
+			require.Error(t, err)
+			require.ErrorIs(t, err, sharing.ErrVerification)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Verification: tampered blinding component is detected
+// ---------------------------------------------------------------------------
+
+func TestVerify_TamperedBlinding(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(5678))
+			out, _ := dealPedersen(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			id := fx.shareholders[0]
+			honest, ok := out.Shares().Get(id)
+			require.True(t, ok)
+
+			// Keep secret intact, tamper with blinding
+			secretVals := honest.Value()
+			secretShare, err := kw.NewShare(id, secretVals...)
+			require.NoError(t, err)
+
+			tamperedBlindingVals := make([]FE, len(honest.Blinding()))
+			for i, w := range honest.Blinding() {
+				tamperedBlindingVals[i] = w.Value().Add(field.One())
+			}
+			tamperedBlinding, err := kw.NewShare(id, tamperedBlindingVals...)
+			require.NoError(t, err)
+
+			tampered, err := pedersen.NewShare(id, secretShare, tamperedBlinding)
+			require.NoError(t, err)
+
+			err = scheme.Verify(tampered, ref)
+			require.Error(t, err)
+			require.ErrorIs(t, err, sharing.ErrVerification)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Verification: wrong verification vector is detected
+// ---------------------------------------------------------------------------
+
+func TestVerify_WrongVerificationVector(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			s1 := kw.NewSecret(field.FromUint64(100))
+			s2 := kw.NewSecret(field.FromUint64(200))
+
+			out1, _ := dealPedersen(t, scheme, s1)
+			out2, _ := dealPedersen(t, scheme, s2)
+
+			id := fx.shareholders[0]
+			sh, ok := out1.Shares().Get(id)
+			require.True(t, ok)
+			err := scheme.Verify(sh, out2.VerificationMaterial())
+			require.Error(t, err, "share from one dealing must not verify against a different verification vector")
+			require.ErrorIs(t, err, sharing.ErrVerification)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ReconstructAndVerify – happy path
+// ---------------------------------------------------------------------------
+
+func TestReconstructAndVerify_QualifiedSets(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(77777))
+			out, shares := dealPedersen(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					reconstructed, err := scheme.ReconstructAndVerify(ref, pickShares(shares, qset...)...)
+					require.NoError(t, err)
+					require.True(t, secret.Equal(reconstructed))
+				})
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ReconstructAndVerify – rejects tampered share
+// ---------------------------------------------------------------------------
+
+func TestReconstructAndVerify_RejectsTamperedShare(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+	out, shares := dealPedersen(t, scheme, secret)
+	ref := out.VerificationMaterial()
+
+	qset := fx.qualified[0]
+	picked := pickShares(shares, qset...)
+	honest := picked[0]
+
+	// Tamper with secret component
+	tamperedSecretVals := make([]FE, len(honest.Value()))
+	for i, v := range honest.Value() {
+		tamperedSecretVals[i] = v.Add(field.One())
+	}
+	tamperedSecret, err := kw.NewShare(honest.ID(), tamperedSecretVals...)
+	require.NoError(t, err)
+
+	blindingVals := make([]FE, len(honest.Blinding()))
+	for i, w := range honest.Blinding() {
+		blindingVals[i] = w.Value()
+	}
+	blindingShare, err := kw.NewShare(honest.ID(), blindingVals...)
+	require.NoError(t, err)
+
+	tampered, err := pedersen.NewShare(honest.ID(), tamperedSecret, blindingShare)
+	require.NoError(t, err)
+	picked[0] = tampered
+
+	_, err = scheme.ReconstructAndVerify(ref, picked...)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrVerification)
+}
+
+// ---------------------------------------------------------------------------
+// Verify nil share
+// ---------------------------------------------------------------------------
+
+func TestVerify_NilShare(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+
+	out, _ := dealPedersen(t, scheme, kw.NewSecret(field.One()))
+	err := scheme.Verify(nil, out.VerificationMaterial())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+// ---------------------------------------------------------------------------
+// Verify nil verification vector
+// ---------------------------------------------------------------------------
+
+func TestVerify_NilVerificationVector(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+
+	out, _ := dealPedersen(t, scheme, kw.NewSecret(field.One()))
+	sh, ok := out.Shares().Get(fx.shareholders[0])
+	require.True(t, ok)
+	err := scheme.Verify(sh, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+// ---------------------------------------------------------------------------
+// DealRandom: returns valid output and reconstructs
+// ---------------------------------------------------------------------------
 
 func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-k256-random"))
-		require.NoError(t, err)
+	curve := k256.NewCurve()
+	key := newPedersenKey(t, curve)
 
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
 
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"thresh equals total", 4, 4},
-		}
+			out, secret, err := scheme.DealRandom(pcg.NewRandomised())
+			require.NoError(t, err)
+			require.NotNil(t, out)
+			require.NotNil(t, secret)
+			require.Equal(t, len(fx.shareholders), out.Shares().Size())
 
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
-				require.NoError(t, err)
-				dealRandomCases(t, scheme)
-			})
-		}
-	})
+			// Verify every share
+			ref := out.VerificationMaterial()
+			for _, sh := range out.Shares().Values() {
+				require.NoError(t, scheme.Verify(sh, ref))
+			}
 
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-bls12381-random"))
-		require.NoError(t, err)
-
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		shareholders := sharing.NewOrdinalShareholderSet(6)
-		scheme, err := newPedersenScheme(t, key, 3, shareholders)
-		require.NoError(t, err)
-		dealRandomCases(t, scheme)
-	})
-}
-
-// verificationCases tests verification functionality
-func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
-	t.Helper()
-
-	// Create valid shares
-	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Get reference verification vector
-	reference := shares.VerificationVector()
-
-	t.Run("valid shares pass verification", func(t *testing.T) {
-		t.Parallel()
-		for _, share := range shares.Shares().Values() {
-			err := scheme.Verify(share, reference)
-			require.NoError(t, err, "valid share should pass verification")
-		}
-	})
-
-	t.Run("ReconstructAndVerify with valid shares", func(t *testing.T) {
-		t.Parallel()
-		reconstructed, err := scheme.ReconstructAndVerify(reference, shares.Shares().Values()...)
-		require.NoError(t, err)
-		require.True(t, secret.Equal(reconstructed))
-
-		// Try with subset of shares
-		thresh := scheme.AccessStructure().Threshold()
-		if shares.Shares().Size() >= int(thresh) {
-			subsetShares := shares.Shares().Values()[:thresh]
-			reconstructed, err = scheme.ReconstructAndVerify(reference, subsetShares...)
+			// Reconstruct using a qualified set
+			m := make(map[sharing.ID]*pedersen.Share[*k256.Scalar])
+			for id, sh := range out.Shares().Iter() {
+				m[id] = sh
+			}
+			reconstructed, err := scheme.Reconstruct(pickShares(m, fx.qualified[0]...)...)
 			require.NoError(t, err)
 			require.True(t, secret.Equal(reconstructed))
-		}
-	})
-
-	t.Run("tampered share value fails verification", func(t *testing.T) {
-		t.Parallel()
-		// Get a share and modify its value
-		originalShare := shares.Shares().Values()[0]
-		tamperedValue := field.FromUint64(999)
-
-		// Create new message and witness for tampered share
-		message, err := pedcom.NewMessage(tamperedValue)
-		require.NoError(t, err)
-		witness := originalShare.Blinding()
-		tamperedShare, err := pedersen.NewShare(
-			originalShare.ID(),
-			message,
-			witness,
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-
-		err = scheme.Verify(tamperedShare, reference)
-		require.Error(t, err)
-		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
-	})
-
-	t.Run("tampered blinding factor fails verification", func(t *testing.T) {
-		t.Parallel()
-		// Get a share and modify its blinding factor
-		originalShare := shares.Shares().Values()[0]
-		tamperedBlinding := field.FromUint64(888)
-
-		// Create new message and witness for tampered share
-		message := originalShare.Secret()
-		witness, err := pedcom.NewWitness(tamperedBlinding)
-		require.NoError(t, err)
-
-		tamperedShare, err := pedersen.NewShare(
-			originalShare.ID(),
-			message,
-			witness,
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-
-		err = scheme.Verify(tamperedShare, reference)
-		require.Error(t, err)
-		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
-	})
-
-	t.Run("ReconstructAndVerify fails with tampered share", func(t *testing.T) {
-		t.Parallel()
-		// Create a tampered share with slightly modified value
-		originalShare := shares.Shares().Values()[0]
-		originalValue := originalShare.Value()
-
-		// Add a small value to tamper with the share
-		tamperedValue := originalValue.Add(field.One())
-		message, err := pedcom.NewMessage(tamperedValue)
-		require.NoError(t, err)
-		witness := originalShare.Blinding()
-		tamperedShare, err := pedersen.NewShare(
-			originalShare.ID(),
-			message,
-			witness,
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-
-		// Use only thresh shares to ensure reconstruction works
-		thresh := scheme.AccessStructure().Threshold()
-		tamperedShares := make([]*pedersen.Share[S], 0)
-		tamperedShares = append(tamperedShares, tamperedShare)
-
-		// Add remaining shares up to thresh
-		for i := 1; i < int(thresh); i++ {
-			tamperedShares = append(tamperedShares, shares.Shares().Values()[i])
-		}
-
-		_, err = scheme.ReconstructAndVerify(reference, tamperedShares...)
-		require.Error(t, err)
-	})
-
-	t.Run("different verification vectors", func(t *testing.T) {
-		t.Parallel()
-		// Create shares with different secret to get different verification vector
-		secret2 := pedersen.NewSecret(field.FromUint64(100))
-		shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		differentReference := shares2.VerificationVector()
-		require.False(t, reference.Equal(differentReference), "different secrets should have different verification vectors")
-
-		// Verify share against wrong verification vector should fail
-		share := shares.Shares().Values()[0]
-		err = scheme.Verify(share, differentReference)
-		require.Error(t, err)
-		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
-	})
-
-	t.Run("nil verification vector", func(t *testing.T) {
-		t.Parallel()
-		share := shares.Shares().Values()[0]
-		err := scheme.Verify(share, nil)
-		require.Error(t, err)
-	})
-
-	t.Run("nil blinding witness", func(t *testing.T) {
-		t.Parallel()
-		originalShare := shares.Shares().Values()[0]
-		_, err := pedersen.NewShare(
-			originalShare.ID(),
-			originalShare.Secret(),
-			nil,
-			scheme.AccessStructure(),
-		)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrIsNil)
-	})
-
-	t.Run("nil secret message", func(t *testing.T) {
-		t.Parallel()
-		originalShare := shares.Shares().Values()[0]
-		_, err := pedersen.NewShare(
-			originalShare.ID(),
-			nil,
-			originalShare.Blinding(),
-			scheme.AccessStructure(),
-		)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrIsNil)
-	})
-}
-
-// TestVerification tests verification functionality
-func TestVerification(t *testing.T) {
-	t.Parallel()
-
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-verification-k256"))
-		require.NoError(t, err)
-
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"thresh equals total", 4, 4},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
-				require.NoError(t, err)
-				verificationCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-verification-bls12381"))
-		require.NoError(t, err)
-
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := newPedersenScheme(t, key, 2, shareholders)
-		require.NoError(t, err)
-		verificationCases(t, scheme, field)
-	})
-}
-
-// homomorphicOpsCases tests homomorphic operations on shares
-func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
-	t.Helper()
-
-	// Create two secrets and their shares
-	secret1 := pedersen.NewSecret(field.FromUint64(10))
-	secret2 := pedersen.NewSecret(field.FromUint64(20))
-
-	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
-	require.NoError(t, err)
-	shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Test cases for Add operation
-	addTests := []struct {
-		name              string
-		share1            *pedersen.Share[S]
-		share2            *pedersen.Share[S]
-		expectedSecret    S
-		verifyReconstruct bool
-	}{
-		{
-			name: "add shares from same holder",
-			share1: func() *pedersen.Share[S] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			share2: func() *pedersen.Share[S] {
-				s, _ := shares2.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			expectedSecret:    field.FromUint64(30), // 10 + 20
-			verifyReconstruct: true,
-		},
-	}
-
-	for _, tc := range addTests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			// Perform addition
-			sumShare := tc.share1.Add(tc.share2)
-
-			require.NotNil(t, sumShare)
-			require.Equal(t, tc.share1.ID(), sumShare.ID())
-			require.False(t, sumShare.Value().IsOpIdentity())
-			require.False(t, sumShare.Blinding().Value().IsOpIdentity())
-
-			// Test Op method (should be same as Add)
-			sumShareOp := tc.share1.Op(tc.share2)
-			require.True(t, sumShare.Value().Equal(sumShareOp.Value()))
-			require.True(t, sumShare.Blinding().Value().Equal(sumShareOp.Blinding().Value()))
-
-			if tc.verifyReconstruct {
-				// Collect all sum shares for reconstruction
-				allSumShares := make([]*pedersen.Share[S], 0)
-				for _, id := range shares1.Shares().Keys() {
-					s1, exists := shares1.Shares().Get(id)
-					require.True(t, exists)
-					s2, exists := shares2.Shares().Get(id)
-					require.True(t, exists)
-
-					allSumShares = append(allSumShares, s1.Add(s2))
-				}
-
-				// Reconstruct and verify
-				reconstructed, err := scheme.Reconstruct(allSumShares...)
-				require.NoError(t, err)
-				require.True(t, tc.expectedSecret.Equal(reconstructed.Value()))
-			}
 		})
 	}
-
-	// Test cases for ScalarMul operation
-	scalarMulTests := []struct {
-		name              string
-		share             *pedersen.Share[S]
-		scalar            S
-		expectedSecret    S
-		verifyReconstruct bool
-	}{
-		{
-			name: "multiply by 2",
-			share: func() *pedersen.Share[S] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.FromUint64(2),
-			expectedSecret:    field.FromUint64(20), // 10 * 2
-			verifyReconstruct: true,
-		},
-		{
-			name: "multiply by 0",
-			share: func() *pedersen.Share[S] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.Zero(),
-			expectedSecret:    field.Zero(), // 10 * 0
-			verifyReconstruct: false,        // Cannot verify - zero witness not allowed in Pedersen
-		},
-		{
-			name: "multiply by 1",
-			share: func() *pedersen.Share[S] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.One(),
-			expectedSecret:    field.FromUint64(10), // 10 * 1
-			verifyReconstruct: true,
-		},
-		{
-			name: "multiply by large scalar",
-			share: func() *pedersen.Share[S] {
-				s, _ := shares2.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.FromUint64(100),
-			expectedSecret:    field.FromUint64(2000), // 20 * 100
-			verifyReconstruct: true,
-		},
-	}
-
-	for _, tc := range scalarMulTests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			// Special case: multiplying by zero should panic
-			if tc.scalar.IsZero() {
-				require.Panics(t, func() {
-					tc.share.ScalarMul(tc.scalar)
-				}, "multiplying by zero should panic")
-				return
-			}
-
-			// Perform scalar multiplication
-			scaledShare := tc.share.ScalarMul(tc.scalar)
-
-			require.NotNil(t, scaledShare)
-			require.Equal(t, tc.share.ID(), scaledShare.ID())
-
-			// Test ScalarOp method (should be same as ScalarMul)
-			scaledShareOp := tc.share.ScalarOp(tc.scalar)
-			require.True(t, scaledShare.Value().Equal(scaledShareOp.Value()))
-			require.True(t, scaledShare.Blinding().Value().Equal(scaledShareOp.Blinding().Value()))
-
-			if tc.verifyReconstruct {
-				// Collect all scaled shares for reconstruction
-				allScaledShares := make([]*pedersen.Share[S], 0)
-				shareMap := shares1
-				if tc.share.ID() == sharing.ID(1) {
-					s, _ := shares2.Shares().Get(sharing.ID(1))
-					if s.Value().Equal(tc.share.Value()) {
-						shareMap = shares2
-					}
-				}
-
-				for _, id := range shareMap.Shares().Keys() {
-					s, exists := shareMap.Shares().Get(id)
-					require.True(t, exists)
-					allScaledShares = append(allScaledShares, s.ScalarMul(tc.scalar))
-				}
-
-				// Reconstruct and verify
-				reconstructed, err := scheme.Reconstruct(allScaledShares...)
-				require.NoError(t, err)
-				require.True(t, tc.expectedSecret.Equal(reconstructed.Value()), reconstructed.Value().String())
-			}
-		})
-	}
-
-	// Test combined operations
-	t.Run("combined add and scalar multiply", func(t *testing.T) {
-		t.Parallel()
-		// Compute (s1 * 3) + (s2 * 2)
-		scalar1 := field.FromUint64(3)
-		scalar2 := field.FromUint64(2)
-
-		combinedShares := make([]*pedersen.Share[S], 0)
-		for _, id := range shares1.Shares().Keys() {
-			s1, exists := shares1.Shares().Get(id)
-			require.True(t, exists)
-			s2, exists := shares2.Shares().Get(id)
-			require.True(t, exists)
-
-			// (s1 * 3) + (s2 * 2)
-			combined := s1.ScalarMul(scalar1).Add(s2.ScalarMul(scalar2))
-			combinedShares = append(combinedShares, combined)
-		}
-
-		// Expected: (10 * 3) + (20 * 2) = 30 + 40 = 70
-		expectedSecret := field.FromUint64(70)
-
-		reconstructed, err := scheme.Reconstruct(combinedShares...)
-		require.NoError(t, err)
-		require.True(t, expectedSecret.Equal(reconstructed.Value()))
-	})
-
-	// Test Share methods
-	t.Run("share methods", func(t *testing.T) {
-		t.Parallel()
-		share, _ := shares1.Shares().Get(sharing.ID(1))
-
-		// Test creating new share with different value
-		newValue := field.FromUint64(999)
-		newBlinding := field.FromUint64(777)
-
-		message, err := pedcom.NewMessage(newValue)
-		require.NoError(t, err)
-		witness, err := pedcom.NewWitness(newBlinding)
-		require.NoError(t, err)
-
-		newShare, err := pedersen.NewShare(share.ID(), message, witness, scheme.AccessStructure())
-		require.NoError(t, err)
-		require.True(t, newValue.Equal(newShare.Value()))
-		require.True(t, newBlinding.Equal(newShare.Blinding().Value()))
-
-		// Test Equal method
-		share2, _ := shares1.Shares().Get(sharing.ID(2))
-		require.False(t, share.Equal(share2))
-
-		// Create a copy of the share
-		shareCopy, err := pedersen.NewShare(
-			share.ID(),
-			share.Secret(),
-			share.Blinding(),
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-		require.True(t, share.Equal(shareCopy))
-		require.False(t, share.Equal(nil))
-
-		// Test HashCode
-		hash1 := share.HashCode()
-		hash2 := share2.HashCode()
-		require.NotEqual(t, hash1, hash2)
-
-		hashCopy := shareCopy.HashCode()
-		require.Equal(t, hash1, hashCopy)
-	})
 }
 
-func TestHomomorphicOperations(t *testing.T) {
+// ---------------------------------------------------------------------------
+// DealRandom produces distinct secrets on consecutive calls
+// ---------------------------------------------------------------------------
+
+func TestDealRandom_Freshness(t *testing.T) {
 	t.Parallel()
 
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-homomorphic-k256"))
-		require.NoError(t, err)
+	curve := k256.NewCurve()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+	prng := pcg.NewRandomised()
 
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"thresh equals total", 4, 4},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
-				require.NoError(t, err)
-				homomorphicOpsCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-homomorphic-bls12381"))
-		require.NoError(t, err)
-
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := newPedersenScheme(t, key, 2, shareholders)
-		require.NoError(t, err)
-		homomorphicOpsCases(t, scheme, field)
-	})
-}
-
-// toAdditiveCases tests the ToAdditive conversion method
-func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
-	t.Helper()
-
-	// Create test secrets and their shares
-	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
+	_, s1, err := scheme.DealRandom(prng)
 	require.NoError(t, err)
-
-	// Get all shareholder IDs for creating qualified sets
-	allIds := shares.Shares().Keys()
-	thresh := scheme.AccessStructure().Threshold()
-
-	t.Run("valid conversion with full qualified set", func(t *testing.T) {
-		t.Parallel()
-		// Create a qualified set with all shareholders
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-		require.NoError(t, err)
-
-		// Convert each share to additive
-		additiveShares := make([]*additive.Share[S], 0)
-		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(qualifiedSet)
-			require.NoError(t, err)
-			require.NotNil(t, additiveShare)
-			require.Equal(t, share.ID(), additiveShare.ID())
-			// Additive shares can be zero due to Lagrange coefficient calculations
-
-			additiveShares = append(additiveShares, additiveShare)
-		}
-
-		// Verify reconstruction with additive shares
-		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
-		require.NoError(t, err)
-
-		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
-		require.NoError(t, err)
-		require.True(t, secret.Value().Equal(reconstructed.Value()))
-	})
-
-	t.Run("valid conversion with thresh qualified set", func(t *testing.T) {
-		t.Parallel()
-		// Create a qualified set with exactly thresh shareholders
-		thresholdIds := allIds[:thresh]
-		qualifiedIds := hashset.NewComparable[sharing.ID]()
-
-		for _, id := range thresholdIds {
-			qualifiedIds.Add(id)
-		}
-
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
-		require.NoError(t, err)
-
-		// Convert shares in the qualified set
-		additiveShares := make([]*additive.Share[S], 0)
-		for _, id := range thresholdIds {
-			share, exists := shares.Shares().Get(id)
-			require.True(t, exists)
-
-			additiveShare, err := share.ToAdditive(qualifiedSet)
-			require.NoError(t, err)
-			require.NotNil(t, additiveShare)
-			additiveShares = append(additiveShares, additiveShare)
-		}
-
-		// Verify reconstruction
-		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
-		require.NoError(t, err)
-
-		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
-		require.NoError(t, err)
-		require.True(t, secret.Value().Equal(reconstructed.Value()))
-	})
-
-	t.Run("error when share not in qualified set", func(t *testing.T) {
-		t.Parallel()
-		// Create a qualified set that doesn't include share ID 1
-		qualifiedIds := hashset.NewComparable[sharing.ID]()
-
-		// Add all IDs except the first one
-		for i := 1; i < len(allIds); i++ {
-			qualifiedIds.Add(allIds[i])
-		}
-
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
-		require.NoError(t, err)
-
-		// Try to convert share with ID 1 (not in qualified set)
-		share, exists := shares.Shares().Get(allIds[0])
-		require.True(t, exists)
-
-		additiveShare, err := share.ToAdditive(qualifiedSet)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrMembership)
-		require.Nil(t, additiveShare)
-	})
-
-	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
-		t.Parallel()
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-		require.NoError(t, err)
-
-		share, exists := shares.Shares().Get(allIds[0])
-		require.True(t, exists)
-
-		// Convert multiple times
-		additiveShare1, err := share.ToAdditive(qualifiedSet)
-		require.NoError(t, err)
-
-		additiveShare2, err := share.ToAdditive(qualifiedSet)
-		require.NoError(t, err)
-
-		// Results should be identical
-		require.True(t, additiveShare1.Value().Equal(additiveShare2.Value()))
-		require.Equal(t, additiveShare1.ID(), additiveShare2.ID())
-	})
-
-	t.Run("lagrange coefficients verification", func(t *testing.T) {
-		t.Parallel()
-		// Test that the Lagrange coefficients sum to 1
-		lambdas, err := shamir.LagrangeCoefficients(field, allIds...)
-		require.NoError(t, err)
-
-		sum := field.Zero()
-		for _, lambda := range lambdas.Values() {
-			sum = sum.Add(lambda)
-		}
-		require.True(t, sum.Equal(field.One()), "Lagrange coefficients should sum to 1")
-	})
+	_, s2, err := scheme.DealRandom(prng)
+	require.NoError(t, err)
+	require.False(t, s1.Equal(s2), "consecutive DealRandom must produce different secrets")
 }
 
-// TestToAdditive tests the ToAdditive conversion method
-func TestToAdditive(t *testing.T) {
-	t.Parallel()
+// ---------------------------------------------------------------------------
+// DealAndRevealDealerFunc: dealer func secret matches the dealt secret
+// ---------------------------------------------------------------------------
 
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-toadditive-k256"))
-		require.NoError(t, err)
-
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"5-of-10", 5, 10},
-			{"thresh equals total", 4, 4},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
-				require.NoError(t, err)
-				toAdditiveCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		g := curve.Generator()
-		h, err := curve.Hash([]byte("test-h-toadditive-bls12381"))
-		require.NoError(t, err)
-
-		key, err := pedcom.NewCommitmentKey(g, h)
-		require.NoError(t, err)
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-4", 2, 4},
-			{"4-of-7", 4, 7},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newPedersenScheme(t, key, config.thresh, shareholders)
-				require.NoError(t, err)
-				toAdditiveCases(t, scheme, field)
-			})
-		}
-	})
-}
-
-// TestDealAndRevealDealerFunc tests the DealAndRevealDealerFunc method
 func TestDealAndRevealDealerFunc(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("test-h-dealer-func"))
-	require.NoError(t, err)
+	key := newPedersenKey(t, curve)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(t, err)
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(55))
 
-	t.Run("valid dealer function", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := newPedersenScheme(t, key, 2, shareholders)
-		require.NoError(t, err)
-
-		secret := pedersen.NewSecret(field.FromUint64(42))
-		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
-		require.NoError(t, err)
-		require.NotNil(t, shares)
-		require.NotNil(t, dealerFunc)
-		require.Equal(t, 5, shares.Shares().Size())
-
-		// Verify polynomial degrees
-		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = thresh - 1
-		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = thresh - 1
-
-		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := dealerFunc.Components()[0].ConstantTerm()
-		require.True(t, secret.Value().Equal(secretCoeff))
-	})
-
-	t.Run("nil prng", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := newPedersenScheme(t, key, 2, shareholders)
-		require.NoError(t, err)
-
-		secret := pedersen.NewSecret(field.FromUint64(42))
-		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, nil)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrIsNil)
-		require.Nil(t, shares)
-		require.Nil(t, dealerFunc)
-	})
-
-	t.Run("nil secret", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := newPedersenScheme(t, key, 2, shareholders)
-		require.NoError(t, err)
-
-		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, pcg.NewRandomised())
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrIsNil)
-		require.Nil(t, shares)
-		require.Nil(t, dealerFunc)
-	})
-
-	t.Run("verify shares from dealer function", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(7)
-		scheme, err := newPedersenScheme(t, key, 3, shareholders)
-		require.NoError(t, err)
-
-		secret := pedersen.NewSecret(field.FromUint64(100))
-		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		// Verify each share matches the dealer function evaluation
-		for id, share := range shares.Shares().Iter() {
-			x := shamir.SharingIDToLagrangeNode(field, id)
-
-			// Evaluate dealer function components at x
-			secretValue := dealerFunc.Components()[0].Eval(x)
-			blindingValue := dealerFunc.Components()[1].Eval(x)
-
-			// Check that share values match
-			require.True(t, secretValue.Equal(share.Value()))
-			require.True(t, blindingValue.Equal(share.Blinding().Value()))
-		}
-	})
+			out, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+			require.NotNil(t, out)
+			require.NotNil(t, df)
+			require.True(t, secret.Equal(df.Secret()),
+				"dealer func secret must match the dealt secret")
+		})
+	}
 }
 
-// TestDealRandomAndRevealDealerFunc tests the DealRandomAndRevealDealerFunc method
-func TestDealRandomAndRevealDealerFunc(t *testing.T) {
+// ---------------------------------------------------------------------------
+// DealerFunc produces shares consistent with dealing output
+// ---------------------------------------------------------------------------
+
+func TestDealerFunc_SharesConsistent(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("test-h-dealer-func-random"))
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(31337))
+
+			out, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			for _, id := range fx.shareholders {
+				outShare, ok := out.Shares().Get(id)
+				require.True(t, ok)
+
+				dfShare, err := df.ShareOf(id)
+				require.NoError(t, err)
+
+				require.True(t, outShare.Equal(dfShare),
+					"dealer output share and dealer func share must match for ID %d", id)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Pedersen core equation: Com(λ_i) == M_i · V
+// For each shareholder, the Pedersen commitment of the share components
+// must equal the left module action of the shareholder's MSP rows on V.
+// ---------------------------------------------------------------------------
+
+func TestPedersenCoreEquation(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(31337))
+
+			out, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+			vv := out.VerificationMaterial()
+
+			for _, id := range fx.shareholders {
+				sh, ok := out.Shares().Get(id)
+				require.True(t, ok)
+
+				// Manually lift the share via Pedersen commitments
+				manuallyLifted, err := pedersen.LiftShare[*k256.Point](sh, key)
+				require.NoError(t, err)
+
+				// Compute lifted share from verification vector via M_i · V
+				ldf, err := pedersen.NewLiftedDealerFunc(vv, df.G().MSP())
+				require.NoError(t, err)
+				expectedLifted, err := ldf.ShareOf(id)
+				require.NoError(t, err)
+
+				require.True(t, expectedLifted.Equal(manuallyLifted),
+					"Pedersen equation failed for ID %d: M_i · V ≠ Com(λ_i)", id)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Round-trip with random secrets
+// ---------------------------------------------------------------------------
+
+func TestRoundTrip_RandomSecrets(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	prng := pcg.NewRandomised()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+
+			for range 5 {
+				val, err := field.Random(prng)
+				require.NoError(t, err)
+				secret := kw.NewSecret(val)
+				out, shares := dealPedersen(t, scheme, secret)
+				ref := out.VerificationMaterial()
+
+				for _, qset := range fx.qualified {
+					reconstructed, err := scheme.ReconstructAndVerify(ref, pickShares(shares, qset...)...)
+					require.NoError(t, err)
+					require.True(t, secret.Equal(reconstructed))
+				}
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Zero secret: share + verify + reconstruct
+// ---------------------------------------------------------------------------
+
+func TestZeroSecret(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.Zero())
+			out, shares := dealPedersen(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			for _, sh := range out.Shares().Values() {
+				require.NoError(t, scheme.Verify(sh, ref))
+			}
+
+			for _, qset := range fx.qualified {
+				reconstructed, err := scheme.Reconstruct(pickShares(shares, qset...)...)
+				require.NoError(t, err)
+				require.True(t, secret.Equal(reconstructed),
+					"zero secret must reconstruct to zero")
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Homomorphic addition: shares of a + shares of b reconstruct to a+b
+// ---------------------------------------------------------------------------
+
+func TestHomomorphicAddition(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(500))
+			s2 := kw.NewSecret(field.FromUint64(300))
+
+			_, shares1 := dealPedersen(t, scheme, s1)
+			_, shares2 := dealPedersen(t, scheme, s2)
+
+			combined := make(map[sharing.ID]*pedersen.Share[*k256.Scalar], len(shares1))
+			for id, sh1 := range shares1 {
+				combined[id] = sh1.Add(shares2[id])
+			}
+
+			for _, qset := range fx.qualified {
+				reconstructed, err := scheme.Reconstruct(pickShares(combined, qset...)...)
+				require.NoError(t, err)
+				expected := s1.Value().Add(s2.Value())
+				require.True(t, expected.Equal(reconstructed.Value()),
+					"share addition should reconstruct to secret addition for set %v", qset)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Homomorphic addition preserves verification:
+// V1 + V2 verifies combined shares
+// ---------------------------------------------------------------------------
+
+func TestHomomorphicAddition_VerificationVectorSum(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(111))
+			s2 := kw.NewSecret(field.FromUint64(222))
+
+			out1, shares1 := dealPedersen(t, scheme, s1)
+			out2, shares2 := dealPedersen(t, scheme, s2)
+
+			// V_combined = V1 + V2
+			combinedVV := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+
+			// Combined shares
+			combined := make(map[sharing.ID]*pedersen.Share[*k256.Scalar], len(shares1))
+			for id, sh1 := range shares1 {
+				combined[id] = sh1.Add(shares2[id])
+			}
+
+			// Each combined share must verify against V_combined
+			for _, id := range fx.shareholders {
+				err := scheme.Verify(combined[id], combinedVV)
+				require.NoError(t, err,
+					"combined share must verify against sum of verification vectors for ID %d", id)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Homomorphic scalar multiplication
+// ---------------------------------------------------------------------------
+
+func TestHomomorphicScalarMul(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+
+			s := kw.NewSecret(field.FromUint64(42))
+			scalar := field.FromUint64(7)
+
+			_, shares := dealPedersen(t, scheme, s)
+
+			scaled := make(map[sharing.ID]*pedersen.Share[*k256.Scalar], len(shares))
+			for id, sh := range shares {
+				scaled[id] = sh.ScalarMul(scalar)
+			}
+
+			for _, qset := range fx.qualified {
+				reconstructed, err := scheme.Reconstruct(pickShares(scaled, qset...)...)
+				require.NoError(t, err)
+				expected := s.Value().Mul(scalar)
+				require.True(t, expected.Equal(reconstructed.Value()),
+					"scalar multiplication should be homomorphic for set %v", qset)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Privacy: individual shares from two different secrets are distinct
+// ---------------------------------------------------------------------------
+
+func TestPrivacy_SingleShareRevealsNothing(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(100))
+			s2 := kw.NewSecret(field.FromUint64(200))
+
+			_, shares1 := dealPedersen(t, scheme, s1)
+			_, shares2 := dealPedersen(t, scheme, s2)
+
+			for _, id := range fx.shareholders {
+				require.False(t, shares1[id].Equal(shares2[id]),
+					"shares for ID %d should be randomised independently", id)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Pedersen hiding: same secret with different randomness yields different
+// verification vectors (unlike Feldman where V reveals [s]G)
+// ---------------------------------------------------------------------------
+
+func TestPedersenHiding_SameSecretDifferentVV(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+
+	secret := kw.NewSecret(field.FromUint64(42))
+	out1, _ := dealPedersen(t, scheme, secret)
+	out2, _ := dealPedersen(t, scheme, secret)
+
+	require.False(t, out1.VerificationMaterial().Equal(out2.VerificationMaterial()),
+		"same secret dealt twice must produce different verification vectors (hiding)")
+}
+
+// ---------------------------------------------------------------------------
+// Determinism: same PRNG seed → identical outputs
+// ---------------------------------------------------------------------------
+
+func TestDeterminism(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+
+	out1, err := scheme.Deal(secret, pcg.New(11111, 22222))
+	require.NoError(t, err)
+	out2, err := scheme.Deal(secret, pcg.New(11111, 22222))
 	require.NoError(t, err)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
+	for _, id := range fx.shareholders {
+		sh1, ok := out1.Shares().Get(id)
+		require.True(t, ok)
+		sh2, ok := out2.Shares().Get(id)
+		require.True(t, ok)
+		require.True(t, sh1.Equal(sh2), "same seed must produce same shares for ID %d", id)
+	}
+
+	require.True(t, out1.VerificationMaterial().Equal(out2.VerificationMaterial()),
+		"same seed must produce same verification vector")
+}
+
+// ---------------------------------------------------------------------------
+// Verification vector for different dealings are distinct
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_DistinctPerDealing(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+
+	out1, _ := dealPedersen(t, scheme, kw.NewSecret(field.FromUint64(1)))
+	out2, _ := dealPedersen(t, scheme, kw.NewSecret(field.FromUint64(1)))
+
+	require.False(t, out1.VerificationMaterial().Equal(out2.VerificationMaterial()),
+		"distinct dealings should produce distinct verification vectors")
+}
+
+// ---------------------------------------------------------------------------
+// ConvertShareToAdditive: sum of additive shares recovers the secret
+// ---------------------------------------------------------------------------
+
+func TestConvertShareToAdditive(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+			_, shares := dealPedersen(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					sum := field.Zero()
+					for _, id := range qset {
+						addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						sum = sum.Add(addShare.Value())
+					}
+					require.True(t, secret.Value().Equal(sum),
+						"sum of additive shares must equal the secret")
+				})
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ConvertShareToAdditive via additive.Scheme.Reconstruct
+// ---------------------------------------------------------------------------
+
+func TestConvertShareToAdditive_ViaAdditiveReconstruct(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(77))
+			_, shares := dealPedersen(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					additiveScheme, err := additive.NewScheme[*k256.Scalar](field, quorum)
+					require.NoError(t, err)
+
+					additiveShares := make([]*additive.Share[*k256.Scalar], len(qset))
+					for i, id := range qset {
+						addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						additiveShares[i] = addShare
+					}
+
+					reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
+					require.NoError(t, err)
+					require.True(t, secret.Value().Equal(reconstructed.Value()))
+				})
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Share CBOR round-trip
+// ---------------------------------------------------------------------------
+
+func TestShare_CBOR(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(777))
+	out, _ := dealPedersen(t, scheme, secret)
+
+	for _, id := range fx.shareholders {
+		t.Run(fmt.Sprintf("id=%d", id), func(t *testing.T) {
+			t.Parallel()
+			sh, ok := out.Shares().Get(id)
+			require.True(t, ok)
+
+			data, err := sh.MarshalCBOR()
+			require.NoError(t, err)
+
+			var decoded pedersen.Share[*k256.Scalar]
+			err = decoded.UnmarshalCBOR(data)
+			require.NoError(t, err)
+			require.True(t, sh.Equal(&decoded))
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LiftedShare CBOR round-trip
+// ---------------------------------------------------------------------------
+
+func TestLiftedShare_CBOR(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(777))
+	out, _ := dealPedersen(t, scheme, secret)
+
+	for _, id := range fx.shareholders {
+		t.Run(fmt.Sprintf("id=%d", id), func(t *testing.T) {
+			t.Parallel()
+			sh, ok := out.Shares().Get(id)
+			require.True(t, ok)
+
+			lifted, err := pedersen.LiftShare[*k256.Point](sh, key)
+			require.NoError(t, err)
+
+			data, err := lifted.MarshalCBOR()
+			require.NoError(t, err)
+
+			var decoded pedersen.LiftedShare[*k256.Point, *k256.Scalar]
+			err = decoded.UnmarshalCBOR(data)
+			require.NoError(t, err)
+			require.True(t, lifted.Equal(&decoded))
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// BLS12-381 G1: field-agnostic verification
+// ---------------------------------------------------------------------------
+
+func TestBLS12381_G1(t *testing.T) {
+	t.Parallel()
+
+	g1 := bls12381.NewG1()
+	field := bls12381.NewScalarField()
+	key := newPedersenKey(t, g1)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme, err := pedersen.NewScheme(key, fx.ac)
+			require.NoError(t, err)
+
+			secret := kw.NewSecret(field.FromUint64(999999))
+			out, err := scheme.Deal(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+			ref := out.VerificationMaterial()
+
+			m := make(map[sharing.ID]*pedersen.Share[*bls12381.Scalar])
+			for id, sh := range out.Shares().Iter() {
+				m[id] = sh
+			}
+
+			for _, qset := range fx.qualified {
+				for _, id := range qset {
+					require.NoError(t, scheme.Verify(m[id], ref))
+				}
+				reconstructed, err := scheme.Reconstruct(pickShares(m, qset...)...)
+				require.NoError(t, err)
+				require.True(t, secret.Equal(reconstructed))
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// BLS12-381 G2: verify on the second curve group too
+// ---------------------------------------------------------------------------
+
+func TestBLS12381_G2(t *testing.T) {
+	t.Parallel()
+
+	g2 := bls12381.NewG2()
+	field := bls12381.NewScalarField()
+	key := newPedersenKey(t, g2)
+
+	fx := thresholdFixture(t)
+	scheme, err := pedersen.NewScheme(key, fx.ac)
 	require.NoError(t, err)
 
-	t.Run("valid random dealer function", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := newPedersenScheme(t, key, 2, shareholders)
-		require.NoError(t, err)
+	secret := kw.NewSecret(field.FromUint64(54321))
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(t, err)
+	ref := out.VerificationMaterial()
 
-		shares, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(pcg.NewRandomised())
-		require.NoError(t, err)
-		require.NotNil(t, shares)
-		require.NotNil(t, secret)
-		require.NotNil(t, dealerFunc)
-		require.Equal(t, 5, shares.Shares().Size())
+	m := make(map[sharing.ID]*pedersen.Share[*bls12381.Scalar])
+	for id, sh := range out.Shares().Iter() {
+		m[id] = sh
+	}
 
-		// Verify polynomial degrees
-		require.Equal(t, 1, dealerFunc.Components()[0].Degree()) // secret polynomial degree = thresh - 1
-		require.Equal(t, 1, dealerFunc.Components()[1].Degree()) // blinding polynomial degree = thresh - 1
-
-		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := dealerFunc.Components()[0].ConstantTerm()
-		require.True(t, secret.Value().Equal(secretCoeff))
-
-		// Verify reconstruction
-		reconstructed, err := scheme.Reconstruct(shares.Shares().Values()...)
+	for _, qset := range fx.qualified {
+		for _, id := range qset {
+			require.NoError(t, scheme.Verify(m[id], ref))
+		}
+		reconstructed, err := scheme.Reconstruct(pickShares(m, qset...)...)
 		require.NoError(t, err)
 		require.True(t, secret.Equal(reconstructed))
-	})
-
-	t.Run("nil prng", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(5)
-		scheme, err := newPedersenScheme(t, key, 2, shareholders)
-		require.NoError(t, err)
-
-		shares, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(nil)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrIsNil)
-		require.Nil(t, shares)
-		require.Nil(t, secret)
-		require.Nil(t, dealerFunc)
-	})
+	}
 }
 
-// TestNewShare tests the NewShare constructor with various edge cases
-func TestNewShare(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Dahlgren attack prevention: an adversary extends the verification vector
+// with extra group elements, hoping to inject additional degrees of freedom.
+// The left module action M * V enforces dim(V) == MSP.D(), so the extended
+// vector must be rejected.
+// ---------------------------------------------------------------------------
+
+func TestDahlgrenAttack_ExtendedVerificationVector(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("test-h-newshare"))
+	key := newPedersenKey(t, curve)
+
+	fx := largeThresholdFixture(t) // threshold(4,7) → D=4
+	scheme := newPedersenScheme(t, key, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+	prng := pcg.NewRandomised()
+
+	out, df, err := scheme.DealAndRevealDealerFunc(secret, prng)
 	require.NoError(t, err)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
+	// Reconstruct the random columns from the dealer func
+	gRC := df.G().RandomColumn()
+	hRC := df.H().RandomColumn()
+	d, _ := gRC.Dimensions()
+
+	// Build extended columns: honest D entries + one extra random entry
+	extraG, err := field.Random(prng)
+	require.NoError(t, err)
+	extraH, err := field.Random(prng)
 	require.NoError(t, err)
 
-	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := newPedersenScheme(t, key, 2, shareholders)
+	extMod, err := mat.NewMatrixModule(uint(d+1), 1, field)
 	require.NoError(t, err)
 
-	t.Run("valid share creation", func(t *testing.T) {
-		t.Parallel()
-		value := field.FromUint64(100)
-		blinding := field.FromUint64(200)
-
-		message, err := pedcom.NewMessage(value)
+	gEntries := make([]*k256.Scalar, d+1)
+	hEntries := make([]*k256.Scalar, d+1)
+	for i := range d {
+		gEntries[i], err = gRC.Get(i, 0)
 		require.NoError(t, err)
-		witness, err := pedcom.NewWitness(blinding)
+		hEntries[i], err = hRC.Get(i, 0)
 		require.NoError(t, err)
+	}
+	gEntries[d] = extraG
+	hEntries[d] = extraH
 
-		share, err := pedersen.NewShare(
-			sharing.ID(1),
-			message,
-			witness,
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-		require.NotNil(t, share)
-		require.Equal(t, sharing.ID(1), share.ID())
-		require.True(t, value.Equal(share.Value()))
-		require.True(t, blinding.Equal(share.Blinding().Value()))
-	})
+	extGCol, err := extMod.NewRowMajor(gEntries...)
+	require.NoError(t, err)
+	extHCol, err := extMod.NewRowMajor(hEntries...)
+	require.NoError(t, err)
 
-	t.Run("nil secret message", func(t *testing.T) {
-		t.Parallel()
-		blinding := field.FromUint64(200)
-		witness, err := pedcom.NewWitness(blinding)
-		require.NoError(t, err)
+	// Lift with respective generators: V_ext = [r_g_ext]G + [r_h_ext]H
+	liftedG, err := mat.Lift(extGCol, key.G())
+	require.NoError(t, err)
+	liftedH, err := mat.Lift(extHCol, key.H())
+	require.NoError(t, err)
+	extendedVV := liftedG.Op(liftedH)
 
-		_, err = pedersen.NewShare(
-			sharing.ID(1),
-			nil,
-			witness,
-			scheme.AccessStructure(),
-		)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrIsNil)
-	})
+	vv, err := feldman.NewVerificationVector(extendedVV, nil)
+	require.NoError(t, err)
 
-	t.Run("nil blinding witness", func(t *testing.T) {
-		t.Parallel()
-		value := field.FromUint64(100)
-		message, err := pedcom.NewMessage(value)
-		require.NoError(t, err)
-
-		_, err = pedersen.NewShare(
-			sharing.ID(1),
-			message,
-			nil,
-			scheme.AccessStructure(),
-		)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrIsNil)
-	})
-
-	t.Run("invalid shareholder ID", func(t *testing.T) {
-		t.Parallel()
-		value := field.FromUint64(100)
-		blinding := field.FromUint64(200)
-
-		message, err := pedcom.NewMessage(value)
-		require.NoError(t, err)
-		witness, err := pedcom.NewWitness(blinding)
-		require.NoError(t, err)
-
-		// ID not in access structure
-		_, err = pedersen.NewShare(
-			sharing.ID(10), // Not in [1,5]
-			message,
-			witness,
-			scheme.AccessStructure(),
-		)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrMembership)
-	})
-
-	t.Run("zero shareholder ID rejected without access structure", func(t *testing.T) {
-		t.Parallel()
-
-		message, err := pedcom.NewMessage(k256.NewScalarField().One())
-		require.NoError(t, err)
-		witness, err := pedcom.NewWitness(k256.NewScalarField().One())
-		require.NoError(t, err)
-
-		share, err := pedersen.NewShare(0, message, witness, nil)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrMembership)
-		require.Nil(t, share)
-	})
-
-	t.Run("nil access structure allowed", func(t *testing.T) {
-		t.Parallel()
-		value := field.FromUint64(100)
-		blinding := field.FromUint64(200)
-
-		message, err := pedcom.NewMessage(value)
-		require.NoError(t, err)
-		witness, err := pedcom.NewWitness(blinding)
-		require.NoError(t, err)
-
-		// Should succeed with nil access structure (no validation)
-		share, err := pedersen.NewShare(
-			sharing.ID(999),
-			message,
-			witness,
-			nil,
-		)
-		require.NoError(t, err)
-		require.NotNil(t, share)
-		require.Equal(t, sharing.ID(999), share.ID())
-	})
-
-	t.Run("share methods", func(t *testing.T) {
-		t.Parallel()
-		value1 := field.FromUint64(100)
-		blinding1 := field.FromUint64(200)
-		value2 := field.FromUint64(300)
-		blinding2 := field.FromUint64(400)
-
-		message1, err := pedcom.NewMessage(value1)
-		require.NoError(t, err)
-		witness1, err := pedcom.NewWitness(blinding1)
-		require.NoError(t, err)
-
-		message2, err := pedcom.NewMessage(value2)
-		require.NoError(t, err)
-		witness2, err := pedcom.NewWitness(blinding2)
-		require.NoError(t, err)
-
-		share1, err := pedersen.NewShare(
-			sharing.ID(1),
-			message1,
-			witness1,
-			nil,
-		)
-		require.NoError(t, err)
-
-		share2, err := pedersen.NewShare(
-			sharing.ID(2),
-			message2,
-			witness2,
-			nil,
-		)
-		require.NoError(t, err)
-
-		// Test getters
-		require.Equal(t, sharing.ID(1), share1.ID())
-		require.True(t, value1.Equal(share1.Value()))
-		require.True(t, blinding1.Equal(share1.Blinding().Value()))
-
-		// Test Equal
-		require.False(t, share1.Equal(share2))
-		require.False(t, share1.Equal(nil))
-
-		// Create identical share
-		share1Copy, err := pedersen.NewShare(
-			sharing.ID(1),
-			message1,
-			witness1,
-			nil,
-		)
-		require.NoError(t, err)
-		require.True(t, share1.Equal(share1Copy))
-
-		// Test HashCode
-		require.Equal(t, share1.HashCode(), share1Copy.HashCode())
-		require.NotEqual(t, share1.HashCode(), share2.HashCode())
-	})
+	// Verify must fail: extended V has dimension D+1 but M has D columns
+	sh, ok := out.Shares().Get(fx.shareholders[0])
+	require.True(t, ok)
+	err = scheme.Verify(sh, vv)
+	require.Error(t, err, "extended verification vector must be rejected (Dahlgren attack)")
 }
 
-// TestPedersenCommitmentProperties tests specific properties of Pedersen commitments
-func TestPedersenCommitmentProperties(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Arbitrary (non-sequential) shareholder IDs
+// ---------------------------------------------------------------------------
+
+func TestArbitraryIDs(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("test-h-properties"))
+	key := newPedersenKey(t, curve)
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(10, 100, 1000))
 	require.NoError(t, err)
+	scheme := newPedersenScheme(t, key, ac)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(t, err)
+	secret := kw.NewSecret(field.FromUint64(54321))
+	out, shares := dealPedersen(t, scheme, secret)
+	ref := out.VerificationMaterial()
 
-	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := newPedersenScheme(t, key, 2, shareholders)
-	require.NoError(t, err)
-
-	t.Run("blinding factor provides perfect hiding", func(t *testing.T) {
-		t.Parallel()
-		// Same secret, different blinding factors should produce different commitments
-		secret := pedersen.NewSecret(field.FromUint64(42))
-
-		shares1, _, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		shares2, _, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		// Check that shares have different blinding factors
-		for _, id := range shares1.Shares().Keys() {
-			share1, exists := shares1.Shares().Get(id)
-			require.True(t, exists, "share should exist in first set")
-			share2, exists := shares2.Shares().Get(id)
-			require.True(t, exists, "share should exist in second set")
-
-			require.False(t, share1.Blinding().Value().Equal(share2.Blinding().Value()), "different randomness should produce different blinding factors")
+	for _, qset := range [][]sharing.ID{{10, 100}, {10, 1000}, {100, 1000}, {10, 100, 1000}} {
+		for _, id := range qset {
+			require.NoError(t, scheme.Verify(shares[id], ref))
 		}
-
-		// Verification vectors should be different
-		ref1 := shares1.VerificationVector()
-		ref2 := shares2.VerificationVector()
-		require.False(t, ref1.Equal(ref2), "different blinding factors should produce different verification vectors")
-	})
-
-	t.Run("commitment binding property", func(t *testing.T) {
-		t.Parallel()
-		// Once committed, changing the value should fail verification
-		shares, _, err := scheme.DealAndRevealDealerFunc(pedersen.NewSecret(field.FromUint64(42)), pcg.NewRandomised())
+		reconstructed, err := scheme.Reconstruct(pickShares(shares, qset...)...)
 		require.NoError(t, err)
-
-		reference := shares.VerificationVector()
-		share, _ := shares.Shares().Get(sharing.ID(1))
-
-		// Try to create a different share with same blinding but different value
-		tamperedValue := field.FromUint64(100)
-		message, err := pedcom.NewMessage(tamperedValue)
-		require.NoError(t, err)
-		tamperedShare, err := pedersen.NewShare(
-			share.ID(),
-			message,
-			share.Blinding(),
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-
-		// Verification should fail
-		err = scheme.Verify(tamperedShare, reference)
-		require.Error(t, err)
-		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
-	})
-
-	t.Run("homomorphic commitment property", func(t *testing.T) {
-		t.Parallel()
-		// Pedersen commitments are homomorphic: Com(m1) * Com(m2) = Com(m1 + m2)
-		secret1 := pedersen.NewSecret(field.FromUint64(10))
-		secret2 := pedersen.NewSecret(field.FromUint64(20))
-
-		shares1, _, err := scheme.DealAndRevealDealerFunc(secret1, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		shares2, _, err := scheme.DealAndRevealDealerFunc(secret2, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		// Add shares
-		combinedShares := make([]*pedersen.Share[*k256.Scalar], 0)
-		for _, id := range shares1.Shares().Keys() {
-			s1, _ := shares1.Shares().Get(id)
-			s2, _ := shares2.Shares().Get(id)
-			combined := s1.Add(s2)
-			combinedShares = append(combinedShares, combined)
-		}
-
-		// Reconstruct combined secret
-		reconstructed, err := scheme.Reconstruct(combinedShares...)
-		require.NoError(t, err)
-		require.True(t, field.FromUint64(30).Equal(reconstructed.Value()), "homomorphic property should hold")
-	})
+		require.True(t, secret.Equal(reconstructed))
+	}
 }
 
-// Benchmark functions
+// ---------------------------------------------------------------------------
+// Multi-row shareholders (non-ideal MSP): verification still works
+// CNF access structures produce non-ideal MSPs where shareholders own
+// multiple MSP rows.
+// ---------------------------------------------------------------------------
 
-func BenchmarkDeal(b *testing.B) {
+func TestVerify_MultiRowShareholders(t *testing.T) {
+	t.Parallel()
+
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("bench-h"))
-	require.NoError(b, err)
+	key := newPedersenKey(t, curve)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(b, err)
+	fx := cnfThreeClauseFixture(t) // non-ideal MSP
+	scheme := newPedersenScheme(t, key, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(31337))
+	out, shares := dealPedersen(t, scheme, secret)
+	ref := out.VerificationMaterial()
 
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-		{"20-of-50", 20, 50},
+	// Confirm multi-row shares
+	for _, id := range fx.shareholders {
+		require.Greater(t, len(shares[id].Value()), 1,
+			"shareholder %d should own more than one MSP row", id)
 	}
 
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
-			require.NoError(b, err)
+	// Verification must still pass
+	for _, id := range fx.shareholders {
+		require.NoError(t, scheme.Verify(shares[id], ref),
+			"multi-row share verification failed for ID %d", id)
+	}
 
-			secret := pedersen.NewSecret(field.FromUint64(42))
+	// Reconstruct + verify
+	for _, qset := range fx.qualified {
+		reconstructed, err := scheme.ReconstructAndVerify(ref, pickShares(shares, qset...)...)
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	}
+}
 
-			b.ResetTimer()
-			for range b.N {
-				_, err := scheme.Deal(secret, pcg.NewRandomised())
-				if err != nil {
-					b.Fatal(err)
-				}
+// ---------------------------------------------------------------------------
+// Blinding independence: reconstruction only depends on the secret component,
+// not on blinding. Two dealings with the same secret (different randomness)
+// yield different shares but the same reconstructed value.
+// ---------------------------------------------------------------------------
+
+func TestBlindingIndependence(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	key := newPedersenKey(t, curve)
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newPedersenScheme(t, key, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+
+			_, shares1 := dealPedersen(t, scheme, secret)
+			_, shares2 := dealPedersen(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				r1, err := scheme.Reconstruct(pickShares(shares1, qset...)...)
+				require.NoError(t, err)
+				r2, err := scheme.Reconstruct(pickShares(shares2, qset...)...)
+				require.NoError(t, err)
+				require.True(t, r1.Equal(r2),
+					"reconstruction must yield same secret regardless of blinding")
+			}
+
+			// But the shares themselves must differ (different blinding)
+			for _, id := range fx.shareholders {
+				require.False(t, shares1[id].Equal(shares2[id]),
+					"shares with different blinding should not be equal for ID %d", id)
 			}
 		})
 	}
 }
 
-func BenchmarkDealRandom(b *testing.B) {
+// ---------------------------------------------------------------------------
+// Deal error cases
+// ---------------------------------------------------------------------------
+
+func TestDeal_NilSecret(t *testing.T) {
+	t.Parallel()
+
 	curve := k256.NewCurve()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("bench-h-random"))
-	require.NoError(b, err)
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(b, err)
-
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-	}
-
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
-			require.NoError(b, err)
-
-			b.ResetTimer()
-			for range b.N {
-				_, _, err := scheme.DealRandom(pcg.NewRandomised())
-				if err != nil {
-					b.Fatal(err)
-				}
-			}
-		})
-	}
+	_, err := scheme.Deal(nil, pcg.NewRandomised())
+	require.Error(t, err)
 }
 
-func BenchmarkReconstruct(b *testing.B) {
+func TestDeal_NilPRNG(t *testing.T) {
+	t.Parallel()
+
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("bench-h-reconstruct"))
-	require.NoError(b, err)
+	key := newPedersenKey(t, curve)
+	fx := thresholdFixture(t)
+	scheme := newPedersenScheme(t, key, fx.ac)
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(b, err)
-
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-	}
-
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
-			require.NoError(b, err)
-
-			secret := pedersen.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, pcg.NewRandomised())
-			require.NoError(b, err)
-
-			shareSlice := shares.Shares().Values()[:config.thresh]
-
-			b.ResetTimer()
-			for range b.N {
-				_, err := scheme.Reconstruct(shareSlice...)
-				if err != nil {
-					b.Fatal(err)
-				}
-			}
-		})
-	}
+	_, err := scheme.Deal(kw.NewSecret(field.One()), nil)
+	require.Error(t, err)
 }
 
-func BenchmarkVerification(b *testing.B) {
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("bench-h-verification"))
-	require.NoError(b, err)
+// ---------------------------------------------------------------------------
+// type alias to shorten generic constraints
+// ---------------------------------------------------------------------------
 
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(b, err)
-
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-	}
-
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
-			require.NoError(b, err)
-
-			secret := pedersen.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, pcg.NewRandomised())
-			require.NoError(b, err)
-
-			share := shares.Shares().Values()[0]
-			reference := shares.VerificationVector()
-
-			b.ResetTimer()
-			for range b.N {
-				err := scheme.Verify(share, reference)
-				if err != nil {
-					b.Fatal(err)
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkHomomorphicOps(b *testing.B) {
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("bench-h-homomorphic"))
-	require.NoError(b, err)
-
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(b, err)
-
-	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := newPedersenScheme(b, key, 3, shareholders)
-	require.NoError(b, err)
-
-	// Create shares
-	secret := pedersen.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(b, err)
-
-	share1, _ := shares.Shares().Get(sharing.ID(1))
-	share2, _ := shares.Shares().Get(sharing.ID(1))
-	scalar := field.FromUint64(7)
-
-	b.Run("Add", func(b *testing.B) {
-		for range b.N {
-			_ = share1.Add(share2)
-		}
-	})
-
-	b.Run("ScalarMul", func(b *testing.B) {
-		for range b.N {
-			_ = share1.ScalarMul(scalar)
-		}
-	})
-
-	b.Run("Combined", func(b *testing.B) {
-		for range b.N {
-			_ = share1.ScalarMul(scalar).Add(share2)
-		}
-	})
-}
-
-func BenchmarkToAdditive(b *testing.B) {
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	g := curve.Generator()
-	h, err := curve.Hash([]byte("bench-h-toadditive"))
-	require.NoError(b, err)
-
-	key, err := pedcom.NewCommitmentKey(g, h)
-	require.NoError(b, err)
-
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-	}
-
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareholders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newPedersenScheme(b, key, config.thresh, shareholders)
-			require.NoError(b, err)
-
-			secret := pedersen.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, pcg.NewRandomised())
-			require.NoError(b, err)
-
-			qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-			require.NoError(b, err)
-
-			share, exists := shares.Shares().Get(sharing.ID(1))
-			require.True(b, exists)
-
-			b.ResetTimer()
-			for range b.N {
-				_, err := share.ToAdditive(qualifiedSet)
-				if err != nil {
-					b.Fatal(err)
-				}
-			}
-		})
-	}
-}
+type FE = *k256.Scalar

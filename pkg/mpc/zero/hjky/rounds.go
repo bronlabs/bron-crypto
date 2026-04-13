@@ -1,14 +1,12 @@
 package hjky
 
 import (
-	"maps"
-	"slices"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -19,11 +17,11 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 		return nil, nil, ErrRound.WithMessage("expected round 1")
 	}
 
-	dealerOut, err := p.scheme.Deal(feldman.NewSecret(p.field.Zero()), p.prng)
+	dealerOut, err := p.scheme.Deal(kw.NewSecret(p.field.Zero()), p.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not deal shares")
 	}
-	p.state.verificationVectors = make(map[sharing.ID]feldman.VerificationVector[G, S])
+	p.state.verificationVectors = make(map[sharing.ID]*feldman.VerificationVector[G, S])
 	p.state.verificationVectors[p.ctx.HolderID()] = dealerOut.VerificationMaterial()
 
 	var ok bool
@@ -51,11 +49,10 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 }
 
 // Round2 verifies all zero-shares and aggregates them into a single zero-share and verification vector.
-func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (share *feldman.Share[S], verification feldman.VerificationVector[G, S], err error) {
+func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (share *feldman.Share[S], verification *feldman.VerificationVector[G, S], err error) {
 	if p.round != 2 {
 		return nil, nil, ErrRound.WithMessage("expected round 2")
 	}
-
 	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r1b); errB != nil {
 		return nil, nil, errs.Wrap(errB)
 	}
@@ -78,7 +75,8 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		if err := p.scheme.Verify(u.ZeroShare, b.VerificationVector); err != nil {
 			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("share verification failed: %v", err)
 		}
-		if !b.VerificationVector.Coefficients()[0].Equal(p.group.OpIdentity()) {
+		pk, _ := b.VerificationVector.Value().Get(0, 0)
+		if !pk.Equal(p.group.OpIdentity()) {
 			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("verification vector does not commit to zero")
 		}
 		share = share.Add(u.ZeroShare)
@@ -92,9 +90,9 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 }
 
 func (p *Participant[G, S]) writeVerificationVectorToTranscript() {
-	for _, id := range slices.Sorted(maps.Keys(p.state.verificationVectors)) {
-		v := p.state.verificationVectors[id]
-		for _, c := range v.Coefficients() {
+	for id := range p.ctx.AllPartiesOrdered() {
+		v := p.state.verificationVectors[id].Value()
+		for c := range v.Iter() {
 			p.ctx.Transcript().AppendBytes(coefficientLabel, c.Bytes())
 		}
 	}

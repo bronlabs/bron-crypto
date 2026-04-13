@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/stretchr/testify/require"
 )
 

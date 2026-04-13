@@ -1,178 +1,124 @@
 package feldman
 
 import (
-	"slices"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
-// Share is a Feldman VSS share, which is identical to a Shamir share.
-// The share value is f(i) where f is the dealing polynomial and i is the shareholder ID.
-type Share[FE algebra.PrimeFieldElement[FE]] = shamir.Share[FE]
+// Share is a scalar share produced by the underlying KW linear secret sharing
+// scheme. It is a type alias for kw.Share.
+type Share[FE algebra.PrimeFieldElement[FE]] = kw.Share[FE]
 
-// NewShare creates a new Feldman share with the given ID and value.
-// If an access structure is provided, validates that the ID is a valid shareholder.
-func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *threshold.Threshold) (*Share[FE], error) {
-	s, err := shamir.NewShare(id, v, ac)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create Feldman share")
+// LiftShare maps a scalar share into a prime-order group by computing
+// [v_i] * basePoint for each component. The resulting LiftedShare can be
+// compared against the output of LiftedDealerFunc.ShareOf for Feldman-style
+// verification.
+func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](s *Share[FE], basePoint E) (*LiftedShare[E, FE], error) {
+	if s == nil {
+		return nil, sharing.ErrIsNil.WithMessage("share cannot be nil")
 	}
-	return s, nil
+	if utils.IsNil(basePoint) {
+		return nil, sharing.ErrIsNil.WithMessage("basePoint cannot be nil")
+	}
+	liftedValues := make([]E, len(s.Value()))
+	for i, v := range s.Value() {
+		liftedValues[i] = basePoint.ScalarOp(v)
+	}
+	out, err := NewLiftedShare(s.ID(), liftedValues...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create lifted share")
+	}
+	return out, nil
 }
 
-// LiftedShare represents a share lifted to the exponent: g^{f(i)} where f(i) is
-// the underlying Shamir share value. This is used when shares need to be verified
-// or combined in the group rather than the field.
-type LiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
-	id sharing.ID
-	v  E
-}
-
-type liftedShareDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
-	ID sharing.ID `cbor:"sharingID"`
-	V  E          `cbor:"value"`
-}
-
-// NewLiftedShare creates a new lifted share with the given ID and group element value.
-func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v E) (*LiftedShare[E, FE], error) {
-	if utils.IsNil(v) {
+// NewLiftedShare creates a lifted share for the given holder ID with the
+// provided group-element values — one per MSP row owned by that shareholder.
+func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v ...E) (*LiftedShare[E, FE], error) {
+	if v == nil {
 		return nil, sharing.ErrIsNil.WithMessage("value is nil")
 	}
-
+	if id == 0 {
+		return nil, sharing.ErrIsZero.WithMessage("id cannot be zero")
+	}
 	return &LiftedShare[E, FE]{
 		id: id,
 		v:  v,
 	}, nil
 }
 
-// ID returns the shareholder identifier for this lifted share.
+// LiftedShare is the group-element counterpart of Share. It holds a vector
+// of group elements — one per MSP row — representing [lambda_i] * G for some
+// base point G. Two lifted shares are equal iff they have the same ID and
+// identical group-element vectors.
+type LiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
+	id sharing.ID
+	v  []E
+}
+
+type liftedShareDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
+	ID sharing.ID `cbor:"id"`
+	V  []E        `cbor:"value"`
+}
+
+// ID returns the shareholder identifier.
 func (s *LiftedShare[E, FE]) ID() sharing.ID {
 	return s.id
 }
 
-// Value returns the group element value g^{f(i)} of this lifted share.
-func (s *LiftedShare[E, FE]) Value() E {
+// Value returns the lifted share's group-element vector.
+func (s *LiftedShare[E, FE]) Value() []E {
 	return s.v
 }
 
-// ToAdditive converts this lifted share to an additive share by exponentiating
-// with the appropriate Lagrange coefficient. For shareholder i in qualified set S,
-// the result is g^{λ_i · f(i)} where λ_i is the Lagrange coefficient.
-// The resulting additive shares can be multiplied together to reconstruct g^s.
-func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *unanimity.Unanimity) (*additive.Share[E], error) {
-	if qualifiedSet == nil {
-		return nil, sharing.ErrIsNil.WithMessage("qualified set is nil")
+// Equal reports whether two lifted shares have the same ID and group-element
+// vector.
+func (s *LiftedShare[E, FE]) Equal(other *LiftedShare[E, FE]) bool {
+	if s == nil || other == nil {
+		return s == other
 	}
-	if !qualifiedSet.Shareholders().Contains(s.id) {
-		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
+	if s.id != other.id {
+		return false
 	}
-	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](s.v.Structure())
-	sf := algebra.StructureMustBeAs[algebra.PrimeField[FE]](group.ScalarStructure())
-	lambdas, err := shamir.LagrangeCoefficients(sf, qualifiedSet.Shareholders().List()...)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not compute Lagrange coefficients")
+	if len(s.v) != len(other.v) {
+		return false
 	}
-	lambdaI, exists := lambdas.Get(s.id)
-	if !exists {
-		return nil, sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
+	for i := range s.v {
+		if !s.v[i].Equal(other.v[i]) {
+			return false
+		}
 	}
-	converted := s.v.ScalarOp(lambdaI)
-	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to convert Feldman share to additive")
-	}
-	return additiveShare, nil
+	return true
 }
 
-// MarshalCBOR serialises the lifted share.
+// MarshalCBOR serialises the lifted share to CBOR.
 func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
-	dto := &liftedShareDTO[E, FE]{
+	dto := liftedShareDTO[E, FE]{
 		ID: s.id,
 		V:  s.v,
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal Feldman LiftedShare")
+		return nil, errs.Wrap(err).WithMessage("failed to marshal lifted share")
 	}
 	return data, nil
 }
 
-// UnmarshalCBOR deserializes the lifted share.
+// UnmarshalCBOR deserialises a lifted share from CBOR, validating the result.
 func (s *LiftedShare[E, FE]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*liftedShareDTO[E, FE]](data)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to unmarshal Feldman LiftedShare")
+		return errs.Wrap(err).WithMessage("failed to unmarshal lifted share")
 	}
-	s2, err := NewLiftedShare(dto.ID, dto.V)
+	ss, err := NewLiftedShare(dto.ID, dto.V...)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create Feldman LiftedShare from deserialized data")
+		return errs.Wrap(err).WithMessage("invalid lifted share data")
 	}
-	*s = *s2
+	s.id = ss.id
+	s.v = ss.v
 	return nil
-}
-
-// SharesInExponent is a collection of lifted shares that can be used to
-// reconstruct the secret in the exponent (i.e., g^s) without revealing s.
-type SharesInExponent[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] []*LiftedShare[E, FE]
-
-// ReconstructAsAdditive reconstructs g^s from a set of lifted shares using
-// Lagrange interpolation in the exponent. Each share g^{f(i)} is raised to
-// its Lagrange coefficient λ_i, and the results are multiplied together:
-// g^s = ∏_i (g^{f(i)})^{λ_i} = g^{∑_i λ_i·f(i)} = g^{f(0)} = g^s.
-func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
-	if len(s) == 0 {
-		return *new(E), sharing.ErrArgument.WithMessage("no shares provided for reconstruction")
-	}
-
-	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](s[0].v.Structure())
-	sf := algebra.StructureMustBeAs[algebra.PrimeField[FE]](group.ScalarStructure())
-	qualifiedSet, err := unanimity.NewUnanimityAccessStructure(
-		hashset.NewComparable(
-			slices.Collect(
-				iterutils.Map(
-					slices.Values(s),
-					func(share *LiftedShare[E, FE]) sharing.ID { return share.ID() },
-				),
-			)...,
-		).Freeze(),
-	)
-	if err != nil {
-		return *new(E), errs.Wrap(err).WithMessage("could not create qualified set from shares")
-	}
-	lambdas, err := shamir.LagrangeCoefficients(sf, qualifiedSet.Shareholders().List()...)
-	if err != nil {
-		return *new(E), errs.Wrap(err).WithMessage("could not compute Lagrange coefficients")
-	}
-	converted := make([]*additive.Share[E], 0, len(s))
-	for _, share := range s {
-		lambdaI, exists := lambdas.Get(share.ID())
-		if !exists {
-			return *new(E), sharing.ErrMembership.WithMessage("share ID %d is not a valid shareholder", share.ID())
-		}
-		si, err := additive.NewShare(share.ID(), share.v.ScalarOp(lambdaI), nil)
-		if err != nil {
-			return *new(E), errs.Wrap(err).WithMessage("could not create additive share from share in exponent")
-		}
-		converted = append(converted, si)
-	}
-	additiveScheme, err := additive.NewScheme(group, qualifiedSet)
-	if err != nil {
-		return *new(E), errs.Wrap(err).WithMessage("could not create additive scheme")
-	}
-	reconstructed, err := additiveScheme.Reconstruct(converted...)
-	if err != nil {
-		return *new(E), errs.Wrap(err).WithMessage("could not reconstruct additive share")
-	}
-	return reconstructed.Value(), nil
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 )
 
 // BasePublicMaterial holds the public artefacts common to all MPC protocols

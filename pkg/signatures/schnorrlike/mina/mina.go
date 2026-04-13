@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
+	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
@@ -46,8 +46,8 @@ var (
 	// PrivateKeySize is the size of a Mina private key (32 bytes).
 	PrivateKeySize = sf.ElementSize()
 
-	_ schnorrlike.Scheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier]         = (*Scheme)(nil)
-	_ tschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
+	_ schnorrlike.Scheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier]           = (*Scheme)(nil)
+	_ mpcschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
 )
 
 // NewPublicKey creates a Mina public key from a Pallas curve point.

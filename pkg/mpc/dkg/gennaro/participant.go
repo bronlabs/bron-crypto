@@ -4,50 +4,19 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/errs-go/errs"
-
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-)
-
-type (
-	ScalarField[S Scalar[S]]               = algebra.PrimeField[S]
-	Scalar[S algebra.PrimeFieldElement[S]] = algebra.PrimeFieldElement[S]
-
-	// Group is an alias for the prime-order group used throughout the protocol.
-	Group[E GroupElement[E, S], S Scalar[S]]                     = algebra.PrimeGroup[E, S]
-	GroupElement[E algebra.PrimeGroupElement[E, S], S Scalar[S]] = algebra.PrimeGroupElement[E, S]
-
-	// DKGOutput contains both public material and the participant's private share.
-	DKGOutput[
-		E GroupElement[E, S], S Scalar[S],
-	] struct {
-		DKGPublicOutput[E, S]
-
-		share *feldman.Share[S]
-	}
-
-	// DKGPublicOutput collects the public artefacts from the Gennaro DKG execution.
-	DKGPublicOutput[
-		E GroupElement[E, S], S Scalar[S],
-	] struct {
-		publicKeyValue         E
-		partialPublicKeyValues ds.Map[sharing.ID, E]
-		fv                     feldman.VerificationVector[E, S]
-		accessStructure        *threshold.Threshold
-	}
+	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -55,16 +24,28 @@ const (
 	secondPedersenGeneratorLabel = "second generator of pedersen key"
 )
 
-// Participant orchestrates the Gennaro DKG protocol for one party.
-type Participant[E GroupElement[E, S], S Scalar[S]] struct {
+type Participant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	ctx            *session.Context
-	group          Group[E, S]
-	scalarField    ScalarField[S]
+	group          algebra.PrimeGroup[E, S]
+	scalarField    algebra.PrimeField[S]
 	prng           io.Reader
-	ac             *threshold.Threshold
 	niCompilerName compiler.Name
 	state          *State[E, S]
 	round          network.Round
+}
+
+type State[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+	key         *pedcom.Key[E, S]
+	lsss        *kw.Scheme[S]
+	pedersenVSS *pedersen.Scheme[E, S]
+	feldmanVSS  *feldman.Scheme[E, S]
+
+	localPedersenDealerOutput      *pedersen.DealerOutput[E, S]
+	pedersenDealerFunc             *pedersen.DealerFunc[S]
+	localFeldmanVerificationVector *feldman.VerificationVector[E, S]
+	localShare                     *pedersen.Share[S]
+	receivedShares                 map[sharing.ID]*pedersen.Share[S]
+	summedShareValue               []S
 }
 
 // SharingID returns the participant's identifier within the sharing scheme.
@@ -72,30 +53,14 @@ func (p *Participant[E, S]) SharingID() sharing.ID {
 	return p.ctx.HolderID()
 }
 
-// AccessStructure returns the access structure enforced by the DKG.
-func (p *Participant[E, S]) AccessStructure() *threshold.Threshold {
-	return p.ac
+func (p *Participant[E, S]) MSP() *msp.MSP[S] {
+	return p.state.lsss.MSP().Clone()
 }
 
-type State[E GroupElement[E, S], S Scalar[S]] struct {
-	key         *pedcom.Key[E, S]
-	pedersenVSS *pedersen.Scheme[E, S]
-	feldmanVSS  *feldman.Scheme[E, S]
-
-	localPedersenDealerOutput      *pedersen.DealerOutput[E, S]
-	pedersenDealerFunc             *polynomials.DirectSumOfPolynomials[S]
-	localFeldmanVerificationVector feldman.VerificationVector[E, S]
-	localSecret                    *pedersen.Secret[S]
-	localShare                     *pedersen.Share[S]
-	receivedShares                 map[sharing.ID]*pedersen.Share[S]
-	summedShareValue               S
-}
-
-// NewParticipant constructs a participant for the Gennaro DKG protocol.
-func NewParticipant[E GroupElement[E, S], S Scalar[S]](
+func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	ctx *session.Context,
-	group Group[E, S],
-	ac *threshold.Threshold,
+	group algebra.PrimeGroup[E, S],
+	ac accessstructures.Monotone,
 	niCompilerName compiler.Name,
 	prng io.Reader,
 ) (*Participant[E, S], error) {
@@ -114,10 +79,9 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
-	if !ac.Shareholders().Contains(ctx.HolderID()) {
-		return nil, ErrInvalidArgument.WithMessage("myID is not a shareholder in the access structure")
-	}
-	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, ctx.SessionID(), group.Name())
+	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, ctx.SessionID(), group.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
 	h, err := ts.Extract(ctx.Transcript(), secondPedersenGeneratorLabel, group)
@@ -132,120 +96,28 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen VSS scheme")
 	}
-	feldmanVSS, err := feldman.NewScheme(key.G(), ac)
+	feldmanVSS, err := feldman.NewScheme(group, ac)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create feldman VSS scheme")
 	}
-	scalarField, err := algebra.StructureAs[ScalarField[S]](group.ScalarStructure())
+	lsss, err := kw.NewScheme(sf, ac)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to assert scalar field structure")
+		return nil, errs.Wrap(err).WithMessage("failed to create LSSS scheme for Gennaro DKG")
 	}
+
 	return &Participant[E, S]{
 		ctx:            ctx,
 		group:          group,
-		scalarField:    scalarField,
+		scalarField:    sf,
 		prng:           prng,
-		ac:             ac,
 		niCompilerName: niCompilerName,
-		//nolint:exhaustruct // initially partially empty state
-		state: &State[E, S]{
+		state: &State[E, S]{ //nolint:exhaustruct // readability.
 			key:            key,
 			pedersenVSS:    pedersenVSS,
 			feldmanVSS:     feldmanVSS,
+			lsss:           lsss,
 			receivedShares: make(map[sharing.ID]*pedersen.Share[S]),
 		},
 		round: 1,
 	}, nil
-}
-
-// NewDKGOutput builds an output wrapper from a verified Feldman share and verification vector.
-func NewDKGOutput[E GroupElement[E, S], S Scalar[S]](
-	share *feldman.Share[S],
-	vector feldman.VerificationVector[E, S],
-	accessStructure *threshold.Threshold,
-) (*DKGOutput[E, S], error) {
-	if share == nil {
-		return nil, ErrInvalidArgument.WithMessage("share is nil")
-	}
-	if vector == nil {
-		return nil, ErrInvalidArgument.WithMessage("verification vector is nil")
-	}
-	if accessStructure == nil {
-		return nil, ErrInvalidArgument.WithMessage("accessStructure is nil")
-	}
-	sf, ok := share.Value().Structure().(ScalarField[S])
-	if !ok {
-		return nil, ErrInvalidArgument.WithMessage("share value structure is not a scalar field")
-	}
-	publicKeyValue := vector.Eval(sf.Zero())
-	partialPublicKeys := hashmap.NewComparable[sharing.ID, E]()
-	for id := range accessStructure.Shareholders().Iter() {
-		partialPublicKeys.Put(
-			id,
-			vector.Eval(shamir.SharingIDToLagrangeNode(sf, id)),
-		)
-	}
-	return &DKGOutput[E, S]{
-		share: share,
-		DKGPublicOutput: DKGPublicOutput[E, S]{
-			publicKeyValue:         publicKeyValue,
-			partialPublicKeyValues: partialPublicKeys.Freeze(),
-			fv:                     vector,
-			accessStructure:        accessStructure,
-		},
-	}, nil
-}
-
-// Share returns the private Feldman share produced by the DKG.
-func (o *DKGOutput[E, S]) Share() *feldman.Share[S] {
-	if o == nil {
-		return nil
-	}
-	return o.share
-}
-
-// PublicMaterial returns a copy of the public output material.
-func (o *DKGOutput[E, S]) PublicMaterial() *DKGPublicOutput[E, S] {
-	if o == nil {
-		return nil
-	}
-	partialPublicKeys := hashmap.NewComparable[sharing.ID, E]()
-	for id, value := range o.partialPublicKeyValues.Iter() {
-		partialPublicKeys.Put(id, value.Clone())
-	}
-	return &DKGPublicOutput[E, S]{
-		publicKeyValue:         o.publicKeyValue.Clone(),
-		partialPublicKeyValues: partialPublicKeys.Freeze(),
-		fv:                     o.fv.Clone(),
-		accessStructure:        o.accessStructure.Clone(),
-	}
-}
-
-// PublicKeyValue returns the joint public key value derived from the verification vector.
-func (o *DKGPublicOutput[E, S]) PublicKeyValue() E {
-	return o.publicKeyValue
-}
-
-// PartialPublicKeyValues returns the map of per-party public key contributions.
-func (o *DKGPublicOutput[E, S]) PartialPublicKeyValues() ds.Map[sharing.ID, E] {
-	if o == nil {
-		return nil
-	}
-	return o.partialPublicKeyValues
-}
-
-// AccessStructure returns the access structure associated with the DKG output.
-func (o *DKGPublicOutput[E, S]) AccessStructure() *threshold.Threshold {
-	if o == nil {
-		return nil
-	}
-	return o.accessStructure
-}
-
-// VerificationVector returns the Feldman verification vector committed during the protocol.
-func (o *DKGPublicOutput[E, S]) VerificationVector() feldman.VerificationVector[E, S] {
-	if o == nil {
-		return nil
-	}
-	return o.fv
 }
