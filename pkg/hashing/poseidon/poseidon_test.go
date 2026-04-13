@@ -30,7 +30,6 @@ func TestPoseidonLegacy(t *testing.T) {
 
 func TestPoseidonKimchi(t *testing.T) {
 	t.Parallel()
-	t.Skip("fails for now - known issue with round constants count")
 	runTestVectors(t, kimchiVectors, poseidon.NewKimchi)
 }
 
@@ -144,12 +143,11 @@ func TestPoseidonEmptyInput(t *testing.T) {
 			hasher:   poseidon.NewLegacy,
 			expected: "1b3251b6912d82edc78bbb0a5c88f0c6fde1781bc3e654123fa6862a4c63e617",
 		},
-		// Kimchi test commented out due to known issue with round constants count
-		// {
-		// 	name:     "Kimchi empty input",
-		// 	hasher:   poseidon.NewKimchi,
-		// 	expected: "a8eb9ee0f30046308abbfa5d20af73c81bbdabc25b459785024d045228bead2f",
-		// },
+		{
+			name:     "Kimchi empty input",
+			hasher:   poseidon.NewKimchi,
+			expected: "a8eb9ee0f30046308abbfa5d20af73c81bbdabc25b459785024d045228bead2f",
+		},
 	}
 
 	for _, tc := range testCases {

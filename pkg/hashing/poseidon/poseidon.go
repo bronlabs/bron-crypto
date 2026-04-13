@@ -7,10 +7,16 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
-// ErrInvalidDataLength is returned when the input data length is not a multiple of 32 bytes.
-var ErrInvalidDataLength = errs.New("invalid data length")
+var (
+	// ErrNil is returned when the input is nil.
+	ErrNil = errs.New("nil")
+
+	// ErrInvalidDataLength is returned when the input data length is not a multiple of 32 bytes.
+	ErrInvalidDataLength = errs.New("invalid data length")
+)
 
 var (
 	_ hash.Cloner = (*Poseidon)(nil)
@@ -52,10 +58,13 @@ func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) error {
 	if len(xs)%p.Rate() != 0 {
 		return ErrInvalidDataLength.WithMessage("input must be multiple of the rate")
 	}
+	if sliceutils.Any(xs, func(x *pasta.PallasBaseFieldElement) bool { return x == nil }) {
+		return ErrNil.WithMessage("input must not contain nil elements")
+	}
+
 	if len(xs) > 0 {
 		p.dirty = true
 	}
-
 	for k := range len(xs) / p.Rate() {
 		for i := range p.Rate() {
 			p.state.v[i] = p.state.v[i].Add(xs[k*p.Rate()+i])

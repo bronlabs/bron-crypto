@@ -57,10 +57,10 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 		return nilN, ErrIsNil.WithMessage("nil prng")
 	}
 	if set == nil {
-		return *new(N), ErrIsNil.WithMessage("nil structure")
+		return nilN, ErrIsNil.WithMessage("nil structure")
 	}
 	if bits < 3 {
-		return *new(N), ErrInvalidSize.WithMessage("safe prime size must be at least 3-bits")
+		return nilN, ErrInvalidSize.WithMessage("safe prime size must be at least 3-bits")
 	}
 
 	var p *big.Int
@@ -69,7 +69,7 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 	for {
 		p, err = crand.Prime(prng, int(bits)-1)
 		if err != nil {
-			return *new(N), errs.Wrap(err).WithMessage("reading from crand")
+			return nilN, errs.Wrap(err).WithMessage("reading from crand")
 		}
 		p.Add(p.Lsh(p, 1), big.NewInt(1))
 
@@ -79,12 +79,13 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 	}
 	n, err := set.FromBig(p)
 	if err != nil {
-		return *new(N), errs.Wrap(err).WithMessage("cannot convert prime to structure")
+		return nilN, errs.Wrap(err).WithMessage("cannot convert prime to structure")
 	}
 	return n, nil
 }
 
 // GenerateSafePrimePair generates two distinct safe primes of the specified bit length using the provided PrimeSamplable set.
+// Note: The caller must pass a thread-safe PRNG.
 func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (p, q N, err error) {
 	var nilN N
 
