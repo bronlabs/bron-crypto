@@ -5,7 +5,7 @@
 // dealer learns the secret key in plaintext, defeating the purpose of a
 // distributed key generation protocol. Production deployments must use a real
 // DKG (e.g. [github.com/bronlabs/bron-crypto/pkg/mpc/dkg/canetti] or
-// [github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro] for the meta variants).
+// [github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro]).
 //
 // See README.md for details.
 package trusteddealer

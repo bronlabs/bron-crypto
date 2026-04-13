@@ -77,7 +77,7 @@ func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Equal(other *PartialSign
 }
 
 type (
-	// Shard is an alias for tbls.Shard, representing a party's secret share
+	// Shard is an alias for bls.Shard, representing a party's secret share
 	// in the Boldyreva BLS signature scheme.
 	Shard[
 		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
@@ -85,7 +85,7 @@ type (
 		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 	] = mpcbls.Shard[PK, PKFE, SG, SGFE, E, S]
 
-	// PublicMaterial is an alias for tbls.PublicMaterial, containing the public
+	// PublicMaterial is an alias for bls.PublicMaterial, containing the public
 	// cryptographic material for the Boldyreva BLS scheme.
 	PublicMaterial[
 		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],

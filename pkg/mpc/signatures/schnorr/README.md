@@ -1,4 +1,4 @@
-# tschnorr
+# schnorr
 
 MPC Schnorr signature implementation supporting arbitrary monotone access structures and multiple MPC-friendly Schnorr variants.
 

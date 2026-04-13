@@ -46,7 +46,7 @@ func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
 	return hashset.NewComparable(ids...).Freeze()
 }
 
-// doDKG runs the meta Gennaro DKG and converts output to Lindell22 shards.
+// doDKG runs the Gennaro DKG and converts output to Lindell22 shards.
 func doDKG(
 	t *testing.T,
 	group *k256.Curve,
@@ -429,8 +429,8 @@ func TestSigning_PublicKeysConsistentAcrossShards(t *testing.T) {
 }
 
 // TestSigning_RunnerEndToEnd exercises the full runner-based flow (DKG → sign →
-// aggregate → verify) for each access structure, matching the meta DKG runner
-// test pattern.
+// aggregate → verify) for each access structure, matching the DKG runner test
+// pattern.
 func TestSigning_RunnerEndToEnd(t *testing.T) {
 	t.Parallel()
 

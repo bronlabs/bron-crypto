@@ -25,7 +25,7 @@ while generalising the sharing layer beyond threshold access structures.
 
 ## Implementation Notes
 
-- The protocol uses `sharing/vss/meta/feldman`, so the resulting shard is tied
+- The protocol uses `sharing/vss/feldman`, so the resulting shard is tied
   to the MSP induced by the provided access structure.
 - `rho` length and the batch Schnorr challenge length both scale with the MSP
   dimension `D`, matching the batched proof soundness requirements.

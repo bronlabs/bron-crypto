@@ -10,13 +10,13 @@ This library provides implementations of state-of-the-art cryptographic protocol
 
 ## Focus
 
-The primary focus of this library is MPC (Multi-Party Computation), specifically threshold signing. We support the following protocols:
+The primary focus of this library is MPC (Multi-Party Computation), specifically MPC signing over arbitrary monotone access structures (threshold, unanimity, CNF, hierarchical conjunctive, boolean-expression, …). We support the following protocols:
 
-- **Threshold Schnorr**: [Lindell22](./pkg/mpc/tsig/tschnorr/lindell22/) ([Reference](https://eprint.iacr.org/2022/374))
-- **Threshold ECDSA**: [DKLs23](./pkg/mpc/tsig/tecdsa/dkls23/) ([Reference](https://eprint.iacr.org/2023/765)) and [Lindell17](./pkg/mpc/tsig/tecdsa/lindell17/) ([Reference](https://eprint.iacr.org/2017/552)). We provide three variants of DKLs23: [one](./pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign_softspoken/) using OT extensions (compatible with the paper), [one](./pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign_bbot/) without OT extensions, and [one](./pkg/mpc/tsig/tecdsa/dkls23/signing/interactive/sign/) that generates base OT during signing.
-- **Threshold BLS**: [Boldyreva02](./pkg/mpc/tsig/tbls/boldyreva02/) ([Reference](https://link.springer.com/chapter/10.1007/3-540-36288-6_3))
+- **MPC Schnorr**: [Lindell22](./pkg/mpc/signatures/schnorr/lindell22/) ([Reference](https://eprint.iacr.org/2022/374))
+- **MPC ECDSA**: [DKLs23](./pkg/mpc/signatures/ecdsa/dkls23/) ([Reference](https://eprint.iacr.org/2023/765)). We provide two variants of DKLs23: [one](./pkg/mpc/signatures/ecdsa/dkls23/signing_softspoken/) using OT extensions, and [one](./pkg/mpc/signatures/ecdsa/dkls23/signing_bbot/) without OT extensions.
+- **MPC BLS**: [Boldyreva02](./pkg/mpc/signatures/bls/boldyreva02/) ([Reference](https://link.springer.com/chapter/10.1007/3-540-36288-6_3))
 
-The design of threshold signing protocols are stateless. Orchestrating them is not in scope of this library; this includes implementation of the networking layer as well. For example, to establish the broadcast channel one typically has to do [Echo-Broadcast](./pkg/network/echo/) yet this is implemented as a separate package.
+The design of MPC signing protocols are stateless. Orchestrating them is not in scope of this library; this includes implementation of the networking layer as well. For example, to establish the broadcast channel one typically has to do [Echo-Broadcast](./pkg/network/echo/) yet this is implemented as a separate package.
 
 ## Security Notice
 
@@ -24,7 +24,7 @@ This library is not designed to be fully side-channel resistant. We build higher
 
 **Important**: This library is intended for use by experienced cryptographers and developers who understand the security implications of the protocols involved. If you are not familiar with the underlying cryptographic primitives, please consult with a cryptography expert before using this library in production.
 
-**Audit**: The threshold signing packages of this library and all their direct and indirect dependencies have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory.
+**Audit**: The MPC signing packages of this library and all their direct and indirect dependencies have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory.
 
 For the full Security Notice, including how to submit bugs, see [SECURITY.md](./SECURITY.md)
 

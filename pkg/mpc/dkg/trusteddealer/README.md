@@ -9,7 +9,7 @@ Centralised dealer that generates shares for an arbitrary monotone access struct
 For real distributed key generation, use:
 
 - [`pkg/mpc/dkg/canetti`](../canetti) — a four-round DKG protocol.
-- [`pkg/mpc/dkg/gennaro`](../gennaro) and [`pkg/mpc/dkg/meta/gennaro`](../meta/gennaro) — Gennaro-style DKG.
+- [`pkg/mpc/dkg/gennaro`](../gennaro) — Gennaro-style DKG.
 
 ## Overview
 
