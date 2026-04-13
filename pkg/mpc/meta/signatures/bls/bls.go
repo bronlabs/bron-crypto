@@ -191,19 +191,20 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
 // In the short key variant, public keys are in G1 (shorter) and signatures are in G2 (longer).
 // This provides smaller public keys at the cost of larger signatures.
 //
+// The short/long variant is inferred from the type parameters: the public key
+// group's base field FE1 must be a prime field for the short variant.
+//
 // Parameters:
 //   - share: The party's Feldman share of the secret key
 //   - vector: The Feldman verification vector
-//   - accessStructure: The threshold access structure
+//   - mspMatrix: The MSP matrix induced from the access structure
 //
-// Returns an error if any parameter is nil, if the public key is not a short variant,
-// or if partial public key computation fails.
+// Returns an error if any parameter is nil or if base shard construction fails.
 func NewShortKeyShard[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.PrimeFieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
-
 	share *feldman.Share[S],
 	vector *feldman.VerificationVector[P1, S],
 	mspMatrix *msp.MSP[S],
@@ -232,13 +233,15 @@ func NewShortKeyShard[
 // In the long key variant, public keys are in G2 (longer) and signatures are in G1 (shorter).
 // This provides smaller signatures at the cost of larger public keys.
 //
+// The short/long variant is inferred from the type parameters: the signature
+// group's base field FE1 must be a prime field for the long variant.
+//
 // Parameters:
 //   - share: The party's Feldman share of the secret key
 //   - vector: The Feldman verification vector
-//   - accessStructure: The threshold access structure
+//   - mspMatrix: The MSP matrix induced from the access structure
 //
-// Returns an error if any parameter is nil, if the public key is not a long variant,
-// or if partial public key computation fails.
+// Returns an error if any parameter is nil or if base shard construction fails.
 func NewLongKeyShard[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.PrimeFieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
