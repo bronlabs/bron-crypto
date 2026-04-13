@@ -164,7 +164,7 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *PublicMaterial[PK
 		return nil
 	}
 
-	return &PublicMaterial[PK, PKFE, SG, SGFE, E, S]{
+	return &PublicMaterial[PK, PKFE, SG, SGFE, E, S]{ //nolint:exhaustruct // BasePublicMaterial is lazily initialised.
 		BasePublicMaterial: s.BasePublicMaterial,
 	}
 }
@@ -240,7 +240,7 @@ func NewShortKeyShard[
 		return nil, errs.Wrap(err).WithMessage("failed to create base shard")
 	}
 
-	return &Shard[P1, FE1, P2, FE2, E, S]{
+	return &Shard[P1, FE1, P2, FE2, E, S]{ //nolint:exhaustruct // BaseShard is lazily initialised.
 		BaseShard: *baseShard,
 	}, nil
 }
@@ -282,7 +282,7 @@ func NewLongKeyShard[
 		return nil, errs.Wrap(err).WithMessage("failed to create base shard")
 	}
 
-	return &Shard[P2, FE2, P1, FE1, E, S]{
+	return &Shard[P2, FE2, P1, FE1, E, S]{ //nolint:exhaustruct // BaseShard is lazily initialised.
 		BaseShard: *baseShard,
 	}, nil
 }
