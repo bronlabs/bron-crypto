@@ -3,9 +3,9 @@ package bls_test
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	tsig "github.com/bronlabs/bron-crypto/pkg/mpc/signatures"
 	tbls "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 

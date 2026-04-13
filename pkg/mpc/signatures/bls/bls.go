@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
-	mpcsig "github.com/bronlabs/bron-crypto/pkg/mpc/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
+	mpcsig "github.com/bronlabs/bron-crypto/pkg/mpc/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 

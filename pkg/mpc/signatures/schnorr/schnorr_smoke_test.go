@@ -2,9 +2,9 @@ package schnorr_test
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	tsig "github.com/bronlabs/bron-crypto/pkg/mpc/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 

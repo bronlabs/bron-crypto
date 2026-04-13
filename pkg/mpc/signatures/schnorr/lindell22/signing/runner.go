@@ -6,9 +6,9 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr/lindell22"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"

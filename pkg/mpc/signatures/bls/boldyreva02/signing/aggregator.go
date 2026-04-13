@@ -9,10 +9,10 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 

@@ -13,9 +13,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr/lindell22"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
