@@ -24,34 +24,52 @@ import (
 type ShortKeyShard = boldyreva02.Shard[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 type LongKeyShard = boldyreva02.Shard[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]
 
-// DoBoldyrevaDKG runs the complete DKG process for Boldyreva02 BLS
-// It uses Gennaro DKG under the hood and converts the output to BLS shards.
-func DoBoldyrevaDKG[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+// DoBoldyrevaDKGShort runs the complete DKG process for Boldyreva02 BLS in the
+// short key variant (public keys in G1, signatures in G2). It uses Gennaro DKG
+// under the hood and converts the output to short key BLS shards.
+func DoBoldyrevaDKGShort[
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.PrimeFieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
-	tb testing.TB, participants map[sharing.ID]*gennaro.Participant[PK, S], shortKey bool,
+	tb testing.TB, participants map[sharing.ID]*gennaro.Participant[PK, S],
 ) (
 	shards map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S],
 ) {
 	tb.Helper()
-	var err error
 
-	// Run Gennaro DKG
 	dkgOutputs := gentu.DoGennaroDKG(tb, participants)
 
-	// Convert DKG outputs to BLS shards
 	shards = make(map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S])
 	for id, output := range dkgOutputs {
-		var shard *tbls.Shard[PK, PKFE, SG, SGFE, E, S]
-		if shortKey {
-			shard, err = keygen.NewShortKeyShard(output)
-		} else {
-			shard, err = keygen.NewLongKeyShard(output)
-		}
+		shard, err := keygen.NewShortKeyShard(output)
 		require.NoError(tb, err)
+		shards[id] = shard
+	}
 
+	return shards
+}
+
+// DoBoldyrevaDKGLong runs the complete DKG process for Boldyreva02 BLS in the
+// long key variant (public keys in G2, signatures in G1). It uses Gennaro DKG
+// under the hood and converts the output to long key BLS shards.
+func DoBoldyrevaDKGLong[
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.PrimeFieldElement[SGFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](
+	tb testing.TB, participants map[sharing.ID]*gennaro.Participant[PK, S],
+) (
+	shards map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S],
+) {
+	tb.Helper()
+
+	dkgOutputs := gentu.DoGennaroDKG(tb, participants)
+
+	shards = make(map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S])
+	for id, output := range dkgOutputs {
+		shard, err := keygen.NewLongKeyShard(output)
+		require.NoError(tb, err)
 		shards[id] = shard
 	}
 

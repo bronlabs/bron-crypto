@@ -59,7 +59,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 	}
 
 	// Run DKG using testutils
-	shards := tu.DoBoldyrevaDKG(t, parties, true) // true for short key
+	shards := tu.DoBoldyrevaDKGShort(t, parties)
 	require.Len(t, shards, total)
 
 	// Verify all shards have the same public key
@@ -186,7 +186,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 			require.NoError(t, err)
 			parties[id] = p
 		}
-		shards := tu.DoBoldyrevaDKG(t, parties, true)
+		shards := tu.DoBoldyrevaDKGShort(t, parties)
 
 		// Select a quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
@@ -233,7 +233,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 			require.NoError(t, err)
 			parties[id] = p
 		}
-		shards := tu.DoBoldyrevaDKG(t, parties, false)
+		shards := tu.DoBoldyrevaDKGLong(t, parties)
 
 		// Select a quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
@@ -307,7 +307,7 @@ func TestPartialSignatureVerification(t *testing.T) {
 	}
 
 	// Run DKG for long key
-	shards := tu.DoBoldyrevaDKG(t, parties, false) // false for long key
+	shards := tu.DoBoldyrevaDKGLong(t, parties)
 
 	// Create cosigners for all participants
 	cosigners := make([]*signing.Cosigner[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar], 0, total)
@@ -392,7 +392,7 @@ func TestCosignerCreationErrors(t *testing.T) {
 		require.NoError(t, err)
 		parties[id] = p
 	}
-	shards := tu.DoBoldyrevaDKG(t, parties, true)
+	shards := tu.DoBoldyrevaDKGShort(t, parties)
 	shard := shards[sharing.ID(1)]
 
 	quorumSet := hashset.NewComparable[sharing.ID]()
@@ -464,7 +464,7 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 		require.NoError(t, err)
 		parties[id] = p
 	}
-	shards := tu.DoBoldyrevaDKG(t, parties, true)
+	shards := tu.DoBoldyrevaDKGShort(t, parties)
 
 	shard := shards[sharing.ID(1)]
 
@@ -524,7 +524,7 @@ func TestAggregatorCreationErrors(t *testing.T) {
 		require.NoError(t, err)
 		parties[id] = p
 	}
-	shards := tu.DoBoldyrevaDKG(t, parties, true)
+	shards := tu.DoBoldyrevaDKGShort(t, parties)
 
 	shard, ok := shards[sharing.ID(1)]
 	require.True(t, ok)
@@ -569,7 +569,7 @@ func TestAggregationErrors(t *testing.T) {
 		require.NoError(t, err)
 		parties[id] = p
 	}
-	shards := tu.DoBoldyrevaDKG(t, parties, true)
+	shards := tu.DoBoldyrevaDKGShort(t, parties)
 
 	// Create cosigners and aggregator
 	quorumSet := hashset.NewComparable[sharing.ID]()
@@ -662,7 +662,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 				require.NoError(t, err)
 				parties[id] = p
 			}
-			shards := tu.DoBoldyrevaDKG(t, parties, true)
+			shards := tu.DoBoldyrevaDKGShort(t, parties)
 
 			// Create quorum
 			quorumSet := hashset.NewComparable[sharing.ID]()
@@ -723,7 +723,7 @@ func TestCosignerGetters(t *testing.T) {
 		require.NoError(t, err)
 		parties[id] = p
 	}
-	shards := tu.DoBoldyrevaDKG(t, parties, true)
+	shards := tu.DoBoldyrevaDKGShort(t, parties)
 
 	shard := shards[sharing.ID(1)]
 
@@ -807,7 +807,7 @@ func blsSetup(t *testing.T, thresh, total uint) (
 		require.NoError(t, err)
 		parties[id] = p
 	}
-	shards := tu.DoBoldyrevaDKG(t, parties, true)
+	shards := tu.DoBoldyrevaDKGShort(t, parties)
 
 	quorumSet := hashset.NewComparable[sharing.ID]()
 	for i := range thresh {

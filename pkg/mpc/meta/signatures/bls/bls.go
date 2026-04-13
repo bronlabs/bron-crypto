@@ -80,6 +80,9 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) 
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal public material from CBOR")
 	}
+	if dto == nil {
+		return ErrIsNil.WithMessage("unmarshalled public material DTO is nil")
+	}
 	if dto.Base == nil {
 		return ErrIsNil.WithMessage("missing required field in public material")
 	}
@@ -174,10 +177,12 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal shard from CBOR")
 	}
+	if dto == nil {
+		return ErrIsNil.WithMessage("unmarshalled shard DTO is nil")
+	}
 	if dto.Base == nil {
 		return ErrIsNil.WithMessage("missing required field in shard")
 	}
-
 	s.BaseShard = *dto.Base
 	return nil
 }
@@ -186,39 +191,32 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) error {
 // In the short key variant, public keys are in G1 (shorter) and signatures are in G2 (longer).
 // This provides smaller public keys at the cost of larger signatures.
 //
+// The short/long variant is inferred from the type parameters: the public key
+// group's base field FE1 must be a prime field for the short variant.
+//
 // Parameters:
 //   - share: The party's Feldman share of the secret key
-//   - publicKey: The combined BLS public key (must be a short key variant)
 //   - vector: The Feldman verification vector
-//   - accessStructure: The threshold access structure
+//   - mspMatrix: The MSP matrix induced from the access structure
 //
-// Returns an error if any parameter is nil, if the public key is not a short variant,
-// or if partial public key computation fails.
+// Returns an error if any parameter is nil or if base shard construction fails.
 func NewShortKeyShard[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.PrimeFieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
-
 	share *feldman.Share[S],
-	publicKey *bls.PublicKey[P1, FE1, P2, FE2, E, S],
 	vector *feldman.VerificationVector[P1, S],
 	mspMatrix *msp.MSP[S],
 ) (*Shard[P1, FE1, P2, FE2, E, S], error) {
 	if share == nil {
 		return nil, ErrIsNil.WithMessage("share")
 	}
-	if publicKey == nil {
-		return nil, ErrIsNil.WithMessage("publicKey")
-	}
 	if mspMatrix == nil {
 		return nil, ErrIsNil.WithMessage("mspMatrix")
 	}
 	if vector == nil {
 		return nil, ErrIsNil.WithMessage("verification vector")
-	}
-	if !publicKey.IsShort() {
-		return nil, ErrInvalidArgument.WithMessage("public key is not a short key variant")
 	}
 
 	baseShard, err := mpc.NewBaseShard(share, vector, mspMatrix)
@@ -235,38 +233,32 @@ func NewShortKeyShard[
 // In the long key variant, public keys are in G2 (longer) and signatures are in G1 (shorter).
 // This provides smaller signatures at the cost of larger public keys.
 //
+// The short/long variant is inferred from the type parameters: the signature
+// group's base field FE1 must be a prime field for the long variant.
+//
 // Parameters:
 //   - share: The party's Feldman share of the secret key
-//   - publicKey: The combined BLS public key (must be a long key variant)
 //   - vector: The Feldman verification vector
-//   - accessStructure: The threshold access structure
+//   - mspMatrix: The MSP matrix induced from the access structure
 //
-// Returns an error if any parameter is nil, if the public key is not a long variant,
-// or if partial public key computation fails.
+// Returns an error if any parameter is nil or if base shard construction fails.
 func NewLongKeyShard[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.PrimeFieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
 	share *feldman.Share[S],
-	publicKey *bls.PublicKey[P2, FE2, P1, FE1, E, S],
 	vector *feldman.VerificationVector[P2, S],
 	mspMatrix *msp.MSP[S],
 ) (*Shard[P2, FE2, P1, FE1, E, S], error) {
 	if share == nil {
 		return nil, ErrIsNil.WithMessage("share")
 	}
-	if publicKey == nil {
-		return nil, ErrIsNil.WithMessage("publicKey")
-	}
 	if mspMatrix == nil {
 		return nil, ErrIsNil.WithMessage("mspMatrix")
 	}
 	if vector == nil {
 		return nil, ErrIsNil.WithMessage("verification vector")
-	}
-	if publicKey.IsShort() {
-		return nil, ErrInvalidArgument.WithMessage("public key is not a long key variant")
 	}
 
 	baseShard, err := mpc.NewBaseShard(share, vector, mspMatrix)
