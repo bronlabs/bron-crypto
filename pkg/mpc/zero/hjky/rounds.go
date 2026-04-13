@@ -80,7 +80,10 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("verification vector does not commit to zero")
 		}
 		share = share.Add(u.ZeroShare)
-		verificationVector = verificationVector.Op(b.VerificationVector)
+		verificationVector, err = verificationVector.Op(b.VerificationVector)
+		if err != nil {
+			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to accumulate verification vector: %v", err)
+		}
 		p.state.verificationVectors[id] = b.VerificationVector
 	}
 	p.writeVerificationVectorToTranscript()

@@ -46,18 +46,21 @@ func (v *VerificationVector[E, FE]) Value() *mat.ModuleValuedMatrix[E, FE] {
 }
 
 // Op performs component-wise group addition of two verification vectors, i.e. the group operation on the underlying module-valued matrices.
-func (v *VerificationVector[E, FE]) Op(other *VerificationVector[E, FE]) *VerificationVector[E, FE] {
+func (v *VerificationVector[E, FE]) Op(other *VerificationVector[E, FE]) (*VerificationVector[E, FE], error) {
+	if v == nil || other == nil {
+		return nil, sharing.ErrIsNil.WithMessage("verification vector is nil")
+	}
 	otherRows, otherColumns := other.value.Dimensions()
 	thisRows, thisColumns := v.value.Dimensions()
 	if otherColumns != thisColumns {
-		panic("verification vectors must have the same number of columns to be added")
+		return nil, sharing.ErrValue.WithMessage("verification vectors must have the same number of columns to be added")
 	}
 	if otherRows != thisRows {
-		panic("verification vectors must have the same number of rows to be added")
+		return nil, sharing.ErrValue.WithMessage("verification vectors must have the same number of rows to be added")
 	}
 	return &VerificationVector[E, FE]{
 		value: v.value.Op(other.value),
-	}
+	}, nil
 }
 
 // Equal reports whether two verification vectors have identical entries.

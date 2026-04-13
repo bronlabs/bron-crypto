@@ -133,7 +133,10 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 			p.state.shareVerificationVector = b.ShareVerificationVector
 		} else {
 			p.state.share = p.state.share.Add(u.SubShare)
-			p.state.subShareVerificationVector = p.state.subShareVerificationVector.Op(b.SubShareVerificationVector)
+			p.state.subShareVerificationVector, err = p.state.subShareVerificationVector.Op(b.SubShareVerificationVector)
+			if err != nil {
+				return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to accumulate subshare verification vector")
+			}
 			if !p.state.shareVerificationVector.Equal(b.ShareVerificationVector) {
 				return nil, base.ErrAbort.WithMessage("share verification vectors do not match")
 			}

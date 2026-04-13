@@ -248,7 +248,10 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		}
 
 		// Accumulate Feldman verification vectors for final output
-		summedFeldmanVerificationVector = summedFeldmanVerificationVector.Op(inB.FeldmanVerificationVector)
+		summedFeldmanVerificationVector, err = summedFeldmanVerificationVector.Op(inB.FeldmanVerificationVector)
+		if err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to accumulate feldman verification vector from party %d", pid)
+		}
 	}
 	outputShare, err := kw.NewShare(p.ctx.HolderID(), p.state.summedShareValue...)
 	if err != nil {

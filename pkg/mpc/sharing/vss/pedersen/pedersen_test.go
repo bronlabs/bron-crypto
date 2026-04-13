@@ -1038,7 +1038,8 @@ func TestHomomorphicAddition_VerificationVectorSum(t *testing.T) {
 			out2, shares2 := dealPedersen(t, scheme, s2)
 
 			// V_combined = V1 + V2
-			combinedVV := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			combinedVV, err := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			require.NoError(t, err)
 
 			// Combined shares
 			combined := make(map[sharing.ID]*pedersen.Share[*k256.Scalar], len(shares1))

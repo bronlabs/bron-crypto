@@ -1246,7 +1246,8 @@ func TestVerificationVector_Op_HomomorphicProperty(t *testing.T) {
 			require.NoError(t, err)
 
 			// Op the two verification vectors
-			combined := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			combined, err := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			require.NoError(t, err)
 
 			// The first entry of the combined VV should equal
 			// [s1]G + [s2]G = [s1+s2]G
@@ -1301,7 +1302,8 @@ func TestVerificationVector_Op_VerifyCombinedShares(t *testing.T) {
 			out1, shares1 := dealFeldman(t, scheme, s1)
 			out2, shares2 := dealFeldman(t, scheme, s2)
 
-			combinedVV := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			combinedVV, err := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			require.NoError(t, err)
 
 			// Adding shares component-wise should verify against the Op'd VV
 			for _, id := range fx.shareholders {
@@ -1331,8 +1333,14 @@ func TestVerificationVector_Op_Associative(t *testing.T) {
 	vv3 := out3.VerificationMaterial()
 
 	// (vv1 + vv2) + vv3 == vv1 + (vv2 + vv3)
-	left := vv1.Op(vv2).Op(vv3)
-	right := vv1.Op(vv2.Op(vv3))
+	vv12, err := vv1.Op(vv2)
+	require.NoError(t, err)
+	left, err := vv12.Op(vv3)
+	require.NoError(t, err)
+	vv23, err := vv2.Op(vv3)
+	require.NoError(t, err)
+	right, err := vv1.Op(vv23)
+	require.NoError(t, err)
 	require.True(t, left.Equal(right), "Op must be associative")
 }
 
@@ -1350,7 +1358,11 @@ func TestVerificationVector_Op_Commutative(t *testing.T) {
 	vv1 := out1.VerificationMaterial()
 	vv2 := out2.VerificationMaterial()
 
-	require.True(t, vv1.Op(vv2).Equal(vv2.Op(vv1)), "Op must be commutative")
+	left, err := vv1.Op(vv2)
+	require.NoError(t, err)
+	right, err := vv2.Op(vv1)
+	require.NoError(t, err)
+	require.True(t, left.Equal(right), "Op must be commutative")
 }
 
 // ---------------------------------------------------------------------------

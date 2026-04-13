@@ -137,7 +137,10 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 
 		// step 2.i
 		subtle.XORBytes(p.state.rho, p.state.rho, b.Message.Rho)
-		p.state.verificationVector = p.state.verificationVector.Op(b.Message.X)
+		p.state.verificationVector, err = p.state.verificationVector.Op(b.Message.X)
+		if err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to accumulate verification vector")
+		}
 
 		share = share.Op(u.Share)
 		p.state.msg[id] = b.Message

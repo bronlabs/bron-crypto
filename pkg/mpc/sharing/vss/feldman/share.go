@@ -39,11 +39,16 @@ func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 // NewLiftedShare creates a lifted share for the given holder ID with the
 // provided group-element values — one per MSP row owned by that shareholder.
 func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v ...E) (*LiftedShare[E, FE], error) {
-	if v == nil {
-		return nil, sharing.ErrIsNil.WithMessage("value is nil")
+	if len(v) == 0 {
+		return nil, sharing.ErrIsNil.WithMessage("value is nil or empty")
 	}
 	if id == 0 {
 		return nil, sharing.ErrIsZero.WithMessage("id cannot be zero")
+	}
+	for i, vi := range v {
+		if utils.IsNil(vi) {
+			return nil, sharing.ErrIsNil.WithMessage("value component %d is nil", i)
+		}
 	}
 	return &LiftedShare[E, FE]{
 		id: id,

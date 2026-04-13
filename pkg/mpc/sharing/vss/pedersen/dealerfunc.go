@@ -84,7 +84,11 @@ func LiftDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to lift h dealer func")
 	}
-	out, err := feldman.NewLiftedDealerFunc(g.VerificationVector().Op(h.VerificationVector()), g.MSP())
+	sumVV, err := g.VerificationVector().Op(h.VerificationVector())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to combine g and h verification vectors")
+	}
+	out, err := feldman.NewLiftedDealerFunc(sumVV, g.MSP())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create lifted kw dealer func for Pedersen VSS")
 	}
