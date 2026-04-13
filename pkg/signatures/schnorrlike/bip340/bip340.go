@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
+	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
@@ -47,8 +47,8 @@ var (
 	_ schnorrlike.Signer[*Variant, *GroupElement, *Scalar, Message]                                       = (*Signer)(nil)
 	_ schnorrlike.Verifier[*Variant, *GroupElement, *Scalar, Message]
 
-	_ tschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
-	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message]                                             = (*Variant)(nil)
+	_ mpcschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
+	_ mpcschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message]                                             = (*Variant)(nil)
 )
 
 // NewPublicKey creates a BIP-340 public key from a secp256k1 curve point.

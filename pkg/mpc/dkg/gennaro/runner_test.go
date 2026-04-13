@@ -2,22 +2,20 @@ package gennaro_test
 
 import (
 	"bytes"
-	"fmt"
 	"maps"
 	"slices"
-	"strconv"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
+	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -25,34 +23,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHappyPath(t *testing.T) {
+func TestRunnerHappyPath(t *testing.T) {
 	t.Parallel()
 
-	const iters = 1
-	testAccessStructures := []struct{ thresh, total int }{
-		{2, 3},
-		{3, 5},
-		{6, 6},
-	}
 	testNiCompilers := []compiler.Name{
 		fiatshamir.Name,
 	}
 
-	for _, as := range testAccessStructures {
-		t.Run(fmt.Sprintf("%d/%d", as.thresh, as.total), func(t *testing.T) {
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
 			t.Parallel()
 
 			for _, niCompiler := range testNiCompilers {
 				t.Run(string(niCompiler), func(t *testing.T) {
 					t.Parallel()
-
-					t.Run("k256", func(t *testing.T) {
+					t.Run("p256", func(t *testing.T) {
 						t.Parallel()
-						testHappyPathRunner(t, iters, k256.NewCurve(), as.thresh, as.total, niCompiler)
+						testRunnerHappyPath(t, p256.NewCurve(), fx.ac, niCompiler)
 					})
-					t.Run("curve25519", func(t *testing.T) {
+					t.Run("BLS12381G2", func(t *testing.T) {
 						t.Parallel()
-						testHappyPathRunner(t, iters, curve25519.NewPrimeSubGroup(), as.thresh, as.total, niCompiler)
+						testRunnerHappyPath(t, bls12381.NewG2(), fx.ac, niCompiler)
 					})
 				})
 			}
@@ -60,79 +51,97 @@ func TestHappyPath(t *testing.T) {
 	}
 }
 
-func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, iters int, group algebra.PrimeGroup[G, S], thresh, total int, niCompiler compiler.Name) {
+func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, group algebra.PrimeGroup[G, S], ac accessstructures.Monotone, niCompiler compiler.Name) {
 	t.Helper()
 
-	for i := range iters {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			prng := pcg.NewRandomised()
-			quorum := ntu.MakeRandomQuorum(t, prng, total)
-			ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
-			accessStructure, err := threshold.NewThresholdAccessStructure(uint(thresh), quorum)
+	prng := pcg.NewRandomised()
+	quorum := ac.Shareholders()
+	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
+
+	runners := tu.MakeGennaroDKGRunners(t, ctxs, ac, niCompiler, group)
+	dkgOutputs := ntu.TestExecuteRunners(t, runners)
+
+	t.Run("public materials are consistent", func(t *testing.T) {
+		t.Parallel()
+
+		var commonPublicMaterial *mpc.BasePublicMaterial[G, S]
+		for id := range quorum.Iter() {
+			publicMaterial := dkgOutputs[id].BasePublicMaterial
+			require.NotNil(t, publicMaterial)
+
+			if commonPublicMaterial == nil {
+				commonPublicMaterial = &publicMaterial
+			} else {
+				require.True(t, commonPublicMaterial.VerificationVector().Equal(publicMaterial.VerificationVector()))
+				require.True(t, commonPublicMaterial.PublicKeyValue().Equal(publicMaterial.PublicKeyValue()))
+				require.True(t, commonPublicMaterial.MSP().Shareholders().Equal(publicMaterial.MSP().Shareholders()))
+			}
+		}
+	})
+
+	t.Run("secret shares are consistent", func(t *testing.T) {
+		t.Parallel()
+
+		publicKeyValue := dkgOutputs[quorum.List()[0]].PublicKeyValue()
+		feldmanScheme, err := feldman.NewScheme(group, ac)
+		require.NoError(t, err)
+
+		vv := dkgOutputs[quorum.List()[0]].VerificationVector()
+		shares := slices.Collect(iterutils.Map(maps.Values(dkgOutputs), func(output *mpc.BaseShard[G, S]) *kw.Share[S] { return output.Share() }))
+
+		// Reconstruct from all shares and verify against public key.
+		secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
+		require.NoError(t, err)
+		reconstructedPublicKeyValue := group.ScalarBaseOp(secret.Value())
+		require.True(t, reconstructedPublicKeyValue.Equal(publicKeyValue))
+	})
+
+	t.Run("output consistency", func(t *testing.T) {
+		t.Parallel()
+
+		ref := dkgOutputs[quorum.List()[0]]
+		vv := ref.VerificationVector()
+		sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+		lsss, err := kw.NewScheme(sf, ac)
+		require.NoError(t, err)
+		ldf, err := feldman.NewLiftedDealerFunc(vv, lsss.MSP())
+		require.NoError(t, err)
+
+		// Lifted secret from VV must equal the public key.
+		require.True(t, ldf.LiftedSecret().Value().Equal(ref.PublicKeyValue()))
+
+		for id := range quorum.Iter() {
+			output := dkgOutputs[id]
+
+			// Partial public key must match VV-derived lifted share.
+			expectedPPK, err := ldf.ShareOf(id)
 			require.NoError(t, err)
+			actualPPK, ok := ref.PublicKeyShares().Get(id)
+			require.True(t, ok)
+			require.True(t, expectedPPK.Equal(actualPPK),
+				"partial public key for %d doesn't match VV-derived lifted share", id)
 
-			runners := tu.MakeGennaroDKGRunners(t, ctxs, accessStructure, niCompiler, group)
-			dkgOutputs := ntu.TestExecuteRunners(t, runners)
+			// Partial public key must match the manually lifted scalar share.
+			lifted, err := feldman.LiftShare(output.Share(), group.Generator())
+			require.NoError(t, err)
+			require.True(t, lifted.Equal(actualPPK),
+				"LiftShare(share) for %d doesn't match partial public key", id)
+		}
+	})
 
-			t.Run("public materials are consistent", func(t *testing.T) {
-				t.Parallel()
+	t.Run("transcripts are consistent", func(t *testing.T) {
+		t.Parallel()
 
-				var commonPublicMaterial *gennaro.DKGPublicOutput[G, S]
-				for id := range quorum.Iter() {
-					publicMaterial := dkgOutputs[id].PublicMaterial()
-					require.NotNil(t, publicMaterial)
+		tapeSamples := [][]byte{}
+		for id := range quorum.Iter() {
+			tape := ctxs[id].Transcript()
+			tapeSample, err := tape.ExtractBytes("test", 32)
+			require.NoError(t, err)
+			tapeSamples = append(tapeSamples, tapeSample)
+		}
 
-					if commonPublicMaterial == nil {
-						commonPublicMaterial = publicMaterial
-					} else {
-						require.True(t, commonPublicMaterial.AccessStructure().Equal(publicMaterial.AccessStructure()))
-						require.True(t, commonPublicMaterial.VerificationVector().Equal(publicMaterial.VerificationVector()))
-						require.True(t, commonPublicMaterial.PublicKeyValue().Equal(publicMaterial.PublicKeyValue()))
-						for id2 := range quorum.Iter() {
-							l, ok := commonPublicMaterial.PartialPublicKeyValues().Get(id2)
-							require.True(t, ok)
-							r, ok := commonPublicMaterial.PartialPublicKeyValues().Get(id2)
-							require.True(t, ok)
-							require.True(t, l.Equal(r))
-						}
-					}
-				}
-			})
-
-			t.Run("secret shares are consistent", func(t *testing.T) {
-				t.Parallel()
-
-				publicKeyValue := dkgOutputs[quorum.List()[0]].PublicKeyValue()
-				ac, err := threshold.NewThresholdAccessStructure(uint(thresh), quorum)
-				require.NoError(t, err)
-				dealer, err := feldman.NewScheme(group.Generator(), ac)
-				require.NoError(t, err)
-
-				shares := slices.Collect(iterutils.Map(maps.Values(dkgOutputs), func(output *gennaro.DKGOutput[G, S]) *feldman.Share[S] { return output.Share() }))
-				for sharesSubset := range sliceutils.KCoveringCombinations(shares, uint(thresh)) {
-					reconstructedSecretKey, err := dealer.Reconstruct(sharesSubset...)
-					require.NoError(t, err)
-					reconstructedPublicKeyValue := group.ScalarBaseOp(reconstructedSecretKey.Value())
-
-					require.True(t, reconstructedPublicKeyValue.Equal(publicKeyValue))
-				}
-			})
-
-			t.Run("transcripts are consistent", func(t *testing.T) {
-				t.Parallel()
-
-				tapeSamples := [][]byte{}
-				for id := range quorum.Iter() {
-					tape := ctxs[id].Transcript()
-					tapeSample, err := tape.ExtractBytes("test", 32)
-					require.NoError(t, err)
-					tapeSamples = append(tapeSamples, tapeSample)
-				}
-
-				for s := 1; s < len(tapeSamples); s++ {
-					require.True(t, bytes.Equal(tapeSamples[s-1], tapeSamples[s]))
-				}
-			})
-		})
-	}
+		for s := 1; s < len(tapeSamples); s++ {
+			require.True(t, bytes.Equal(tapeSamples[s-1], tapeSamples[s]))
+		}
+	})
 }

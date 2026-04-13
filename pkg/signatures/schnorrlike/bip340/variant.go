@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
+	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -19,8 +19,8 @@ import (
 const VariantType schnorrlike.VariantType = "bip340"
 
 var (
-	_ schnorrlike.Variant[*GroupElement, *Scalar, Message]         = (*Variant)(nil)
-	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message] = (*Variant)(nil)
+	_ schnorrlike.Variant[*GroupElement, *Scalar, Message]           = (*Variant)(nil)
+	_ mpcschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message] = (*Variant)(nil)
 )
 
 // Variant implements BIP-340 specific signing behaviour.
@@ -193,7 +193,7 @@ func (v *Variant) Clone() *Variant {
 // BIP-340 requires R and P to have even y-coordinates, which requires
 // special handling in distributed signing protocols.
 
-var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
+var _ mpcschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
 
 // CorrectAdditiveSecretShareParity adjusts a secret share for BIP-340's even-y requirement.
 //

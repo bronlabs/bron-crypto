@@ -1,6 +1,7 @@
 package gennaro
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
@@ -9,9 +10,9 @@ import (
 )
 
 // Round1Broadcast carries the dealer’s Pedersen VSS verification vector.
-type Round1Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
-	PedersenVerificationVector pedersenVSS.VerificationVector[E, S] `cbor:"verificationVector"`
-	Proof                      compiler.NIZKPoKProof                `cbor:"proof"`
+type Round1Broadcast[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+	PedersenVerificationVector *pedersenVSS.VerificationVector[E, S] `cbor:"verificationVector"`
+	Proof                      compiler.NIZKPoKProof                 `cbor:"proof"`
 }
 
 func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
@@ -21,27 +22,31 @@ func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 	if m.PedersenVerificationVector == nil {
 		return ErrValidation.WithMessage("missing Pedersen verification vector")
 	}
-	if m.PedersenVerificationVector.Degree()+1 != int(participant.ac.Threshold()) {
-		return ErrValidation.WithMessage("invalid Pedersen verification vector degree")
+	rows, cols := m.PedersenVerificationVector.Value().Dimensions()
+	if cols != 1 {
+		return ErrValidation.WithMessage("pedersen verification vector is not a column vector")
 	}
-	coeffs := m.PedersenVerificationVector.Coefficients()
-	if len(coeffs) != int(participant.ac.Threshold()) {
+	if rows != int(participant.state.lsss.MSP().D()) {
 		return ErrValidation.WithMessage("invalid Pedersen verification vector size")
 	}
-	for i, coeff := range coeffs {
-		if utils.IsNil(coeff) {
-			return ErrValidation.WithMessage("missing Pedersen verification vector coefficient %d", i)
+	for i := range rows {
+		entry, err := m.PedersenVerificationVector.Value().Get(i, 0)
+		if err != nil {
+			return ErrValidation.WithMessage("failed to access Pedersen verification vector entry")
+		}
+		if utils.IsNil(entry) {
+			return ErrValidation.WithMessage("Pedersen verification vector contains nil entry at row %d", i)
 		}
 	}
 	if len(m.Proof) == 0 {
-		return ErrValidation.WithMessage("missing proof of well-formedness")
+		return ErrValidation.WithMessage("missing okamoto proof")
 	}
 
 	return nil
 }
 
 // Round1Unicast carries the dealer’s Pedersen share to a specific party.
-type Round1Unicast[E GroupElement[E, S], S Scalar[S]] struct {
+type Round1Unicast[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	Share *pedersenVSS.Share[S] `cbor:"share"`
 }
 
@@ -59,9 +64,9 @@ func (m *Round1Unicast[E, S]) Validate(participant *Participant[E, S], _ sharing
 }
 
 // Round2Broadcast carries the Feldman VSS verification vector and proof of well-formedness.
-type Round2Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
-	FeldmanVerificationVector feldman.VerificationVector[E, S] `cbor:"verificationVector"`
-	Proof                     compiler.NIZKPoKProof            `cbor:"proof"`
+type Round2Broadcast[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+	FeldmanVerificationVector *feldman.VerificationVector[E, S] `cbor:"verificationVector"`
+	Proof                     compiler.NIZKPoKProof             `cbor:"proof"`
 }
 
 func (m *Round2Broadcast[E, S]) Validate(participant *Participant[E, S], _ sharing.ID) error {
@@ -71,20 +76,24 @@ func (m *Round2Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 	if m.FeldmanVerificationVector == nil {
 		return ErrValidation.WithMessage("missing Feldman verification vector")
 	}
-	if m.FeldmanVerificationVector.Degree()+1 != int(participant.ac.Threshold()) {
-		return ErrValidation.WithMessage("invalid Feldman verification vector degree")
+	rows, cols := m.FeldmanVerificationVector.Value().Dimensions()
+	if cols != 1 {
+		return ErrValidation.WithMessage("feldman verification vector is not a column vector")
 	}
-	coeffs := m.FeldmanVerificationVector.Coefficients()
-	if len(coeffs) != int(participant.ac.Threshold()) {
+	if rows != int(participant.state.lsss.MSP().D()) {
 		return ErrValidation.WithMessage("invalid Feldman verification vector size")
 	}
-	for i, coeff := range coeffs {
-		if utils.IsNil(coeff) {
-			return ErrValidation.WithMessage("missing Feldman verification vector coefficient %d", i)
+	for i := range rows {
+		entry, err := m.FeldmanVerificationVector.Value().Get(i, 0)
+		if err != nil {
+			return ErrValidation.WithMessage("failed to access Feldman verification vector entry")
+		}
+		if utils.IsNil(entry) {
+			return ErrValidation.WithMessage("Feldman verification vector contains nil entry at row %d", i)
 		}
 	}
 	if len(m.Proof) == 0 {
-		return ErrValidation.WithMessage("missing proof of well-formedness")
+		return ErrValidation.WithMessage("missing batch dlog proof")
 	}
 	return nil
 }

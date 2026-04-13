@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/meta/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 )
 
 // BasePublicMaterial holds the public artefacts common to all MPC protocols
@@ -20,6 +20,9 @@ import (
 type BasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	msp *msp.MSP[S]
 	fv  *feldman.VerificationVector[E, S]
+
+	pkValue  E
+	pkShares ds.Map[sharing.ID, *feldman.LiftedShare[E, S]]
 }
 
 type basePublicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
@@ -43,9 +46,24 @@ func NewBasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFie
 	if rows != int(mspMatrix.D()) {
 		return nil, ErrInvalidArgument.WithMessage("verification vector size does not match MSP size")
 	}
+
+	df, err := feldman.NewLiftedDealerFunc(fv, mspMatrix)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create lifted dealer function for public material")
+	}
+	pkShares := hashmap.NewComparable[sharing.ID, *feldman.LiftedShare[E, S]]()
+	for shareholder := range mspMatrix.Shareholders().Iter() {
+		share, err := df.ShareOf(shareholder)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to derive public key share for shareholder %d", shareholder)
+		}
+		pkShares.Put(shareholder, share)
+	}
 	return &BasePublicMaterial[E, S]{
-		msp: mspMatrix,
-		fv:  fv,
+		msp:      mspMatrix,
+		fv:       fv,
+		pkValue:  df.LiftedSecret().Value(),
+		pkShares: pkShares.Freeze(),
 	}, nil
 }
 
@@ -54,26 +72,23 @@ func (spm *BasePublicMaterial[E, S]) MSP() *msp.MSP[S] {
 	return spm.msp
 }
 
-// PublicKeyValue derives and returns the aggregate public key group element
-// from the verification vector and MSP.
+// PublicKeyValue returns the aggregate public key group element, eagerly
+// derived during construction. Returns the zero value of E if the receiver is
+// nil.
 func (spm *BasePublicMaterial[E, S]) PublicKeyValue() E {
-	return errs.Must1(feldman.NewLiftedDealerFunc(spm.fv, spm.msp)).LiftedSecret().Value()
+	if spm == nil {
+		return *new(E)
+	}
+	return spm.pkValue
 }
 
-// PublicKeyShares derives and returns the per-party public key shares (lifted
-// shares) from the verification vector and MSP.
+// PublicKeyShares returns the per-party public key shares (lifted shares),
+// eagerly derived during construction. Returns nil if the receiver is nil.
 func (spm *BasePublicMaterial[E, S]) PublicKeyShares() ds.Map[sharing.ID, *feldman.LiftedShare[E, S]] {
-	df := errs.Must1(feldman.NewLiftedDealerFunc(spm.fv, spm.msp))
-
-	pkShares := hashmap.NewComparable[sharing.ID, *feldman.LiftedShare[E, S]]()
-	for shareholder := range spm.msp.Shareholders().Iter() {
-		share, err := df.ShareOf(shareholder)
-		if err != nil {
-			panic(errs.Wrap(err).WithMessage("failed to derive public key share for shareholder %d", shareholder))
-		}
-		pkShares.Put(shareholder, share)
+	if spm == nil {
+		return nil
 	}
-	return pkShares.Freeze()
+	return spm.pkShares
 }
 
 // VerificationVector returns the Feldman verification vector V = [r]G.
@@ -97,6 +112,9 @@ func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool
 
 // HashCode returns a hash code for use in hash-based collections.
 func (spm *BasePublicMaterial[E, S]) HashCode() base.HashCode {
+	if spm == nil {
+		return base.HashCode(0)
+	}
 	return spm.fv.HashCode().Combine(spm.msp.Matrix().HashCode())
 }
 

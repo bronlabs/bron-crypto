@@ -1,4 +1,9 @@
-// Package gennaro provides distributed key generation for threshold signatures following the Gennaro et al. construction. Each party acts as a dealer for a Pedersen VSS, proves well-formedness with batch Schnorr proofs, and aggregates Feldman verification vectors into the joint public key. The protocol implements Gennaro et al., “Secure Distributed Key Generation for Discrete-Log Based Cryptosystems”.
+// Package gennaro implements Gennaro-style distributed key generation over
+// arbitrary monotone access structures via MSP-based Feldman/Pedersen sharing.
 //
-// See README.md for details.
+// Each party deals a Pedersen sharing, parties verify and accept contributions,
+// then convert the joint Pedersen sharing into a final Feldman shard tied to
+// the MSP induced from the supplied access structure.
+//
+// See README.md for protocol details and usage guidance.
 package gennaro

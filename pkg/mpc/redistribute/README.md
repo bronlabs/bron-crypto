@@ -9,6 +9,11 @@ This package follows the subshare-based verifiable redistribution approach from
 by Wong and Wing, adapted to the repository’s Feldman-style verification and
 MSP-based sharing types.
 
+Note that the following protocols are special cases of this protocol:
+
+1. **Refresh** If `prevShareholders` is exactly equal the shareholders of the `nextAccessStructure`'s shareholder set (provided that `nextAccessStructure` is equal to the current access structure), then the resulting protocol is a refresh protocol.
+2. **Recovery Followed By Refresh** If `nextAccessStructure` is equal to the current access structure, but some shareholders are missing from `prevShareholders`, then the resulting protocol is a recovery+refresh protocol.
+
 ## Protocol Overview
 
 1. **Qualified Previous Shareholders**: A qualified subset of holders under the previous access structure.
@@ -16,7 +21,7 @@ MSP-based sharing types.
 2. **Subshare Redistribution**: In `Round1`, every previous shareholder converts its old share into an additive share
    over the previous shareholder set, blinds it with a zero share, then redistributes that value as a fresh verified sharing
    under the next access structure.
-3. **Verification & Aggregation**: Each next shareholder verifies every received subshare against 
+3. **Verification & Aggregation**: Each next shareholder verifies every received subshare against
    the previous shareholder’s broadcast verification material, sums the verified subshares, and combines the verification vectors.
 4. **Consistency Check**: The resulting verification vector must preserve the original secret commitment,
    ensuring the redistributed shard represents the same underlying secret under the new access structure.
@@ -32,7 +37,7 @@ MSP-based sharing types.
 
 ## Usage
 
-1. Build a `session.Context` whose quorum contains every participant in the protocol,.
+1. Build a `session.Context` whose quorum contains every participant in the protocol.
 2. For each party, call `NewParticipant(ctx, prevShareholders, prevShard, nextAccessStructure, prng)`.
 3. Previous shareholders call `Round1` and send the resulting `Round1Broadcast` plus per-recipient `Round1P2P` messages.
 4. Next shareholders collect the round-1 messages and call `Round2` to obtain a `BaseShard` for the redistributed secret.

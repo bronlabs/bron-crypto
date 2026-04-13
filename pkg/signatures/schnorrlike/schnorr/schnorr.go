@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/tsig/tschnorr"
+	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
@@ -368,7 +368,7 @@ func (*Variant[GE, S]) CorrectAdditiveSecretShareParity(publicKey *schnorrlike.P
 
 func _[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]]() {
 	var (
-		_ schnorrlike.Variant[GE, S, Message]         = (*Variant[GE, S])(nil)
-		_ tschnorr.MPCFriendlyVariant[GE, S, Message] = (*Variant[GE, S])(nil)
+		_ schnorrlike.Variant[GE, S, Message]           = (*Variant[GE, S])(nil)
+		_ mpcschnorr.MPCFriendlyVariant[GE, S, Message] = (*Variant[GE, S])(nil)
 	)
 }

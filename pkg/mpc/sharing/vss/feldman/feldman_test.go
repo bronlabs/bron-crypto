@@ -1,10 +1,7 @@
 package feldman_test
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	mrand "math/rand/v2"
 	"strings"
 	"testing"
 
@@ -15,1659 +12,2335 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/cnf"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/hierarchical"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 )
 
-func newFeldmanScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](
-	basePoint E,
-	thresh uint,
-	shareholders ds.Set[sharing.ID],
-) (*feldman.Scheme[E, FE], error) {
-	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
-	if err != nil {
-		return nil, err
-	}
-	return feldman.NewScheme(basePoint, ac)
+// ---------------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------------
+
+func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
+	return hashset.NewComparable(ids...).Freeze()
 }
 
-func TestSanity(t *testing.T) {
+func formatIDs(ids []sharing.ID) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = fmt.Sprintf("%d", id)
+	}
+	return "{" + strings.Join(parts, ",") + "}"
+}
+
+func newFeldmanScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](
+	tb testing.TB,
+	group algebra.PrimeGroup[E, FE],
+	ac accessstructures.Monotone,
+) *feldman.Scheme[E, FE] {
+	tb.Helper()
+	scheme, err := feldman.NewScheme(group, ac)
+	require.NoError(tb, err)
+	return scheme
+}
+
+func dealFeldman[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](
+	tb testing.TB,
+	scheme *feldman.Scheme[E, FE],
+	secret *kw.Secret[FE],
+) (*feldman.DealerOutput[E, FE], map[sharing.ID]*kw.Share[FE]) {
+	tb.Helper()
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(tb, err)
+	m := make(map[sharing.ID]*kw.Share[FE])
+	for id, sh := range out.Shares().Iter() {
+		m[id] = sh
+	}
+	return out, m
+}
+
+func pickShares[FE algebra.PrimeFieldElement[FE]](m map[sharing.ID]*kw.Share[FE], ids ...sharing.ID) []*kw.Share[FE] {
+	out := make([]*kw.Share[FE], len(ids))
+	for i, id := range ids {
+		out[i] = m[id]
+	}
+	return out
+}
+
+func newUnanimity(t *testing.T, ids ...sharing.ID) *unanimity.Unanimity {
+	t.Helper()
+	q, err := unanimity.NewUnanimityAccessStructure(shareholders(ids...))
+	require.NoError(t, err)
+	return q
+}
+
+// ---------------------------------------------------------------------------
+// access structure fixtures
+// ---------------------------------------------------------------------------
+
+type acFixture struct {
+	name         string
+	ac           accessstructures.Monotone
+	qualified    [][]sharing.ID
+	unqualified  [][]sharing.ID
+	shareholders []sharing.ID
+}
+
+func thresholdFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+	require.NoError(t, err)
+	return acFixture{
+		name: "threshold(2,3)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2},
+			{1, 3},
+			{2, 3},
+			{1, 2, 3},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{2},
+			{3},
+		},
+		shareholders: []sharing.ID{1, 2, 3},
+	}
+}
+
+func unanimityFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := unanimity.NewUnanimityAccessStructure(shareholders(1, 2, 3))
+	require.NoError(t, err)
+	return acFixture{
+		name: "unanimity(3)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 3},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{2},
+			{1, 2},
+			{1, 3},
+			{2, 3},
+		},
+		shareholders: []sharing.ID{1, 2, 3},
+	}
+}
+
+func cnfFixture(t *testing.T) acFixture {
+	t.Helper()
+	// Maximal unqualified: {1,2} and {3,4}
+	ac, err := cnf.NewCNFAccessStructure(
+		shareholders(1, 2),
+		shareholders(3, 4),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "cnf({1,2},{3,4})",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 3},
+			{1, 4},
+			{2, 3},
+			{2, 4},
+			{1, 2, 3},
+			{1, 3, 4},
+			{1, 2, 3, 4},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{2},
+			{3},
+			{4},
+			{1, 2},
+			{3, 4},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4},
+	}
+}
+
+func cnfThreeClauseFixture(t *testing.T) acFixture {
+	t.Helper()
+	// Maximal unqualified: {1,2}, {3,4}, {5}
+	ac, err := cnf.NewCNFAccessStructure(
+		shareholders(1, 2),
+		shareholders(3, 4),
+		shareholders(5),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "cnf({1,2},{3,4},{5})",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 3},
+			{3, 5},
+			{1, 3, 4},
+			{1, 2, 3, 4, 5},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 2},
+			{3, 4},
+			{5},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5},
+	}
+}
+
+func largeThresholdFixture(t *testing.T) acFixture {
+	t.Helper()
+	ids := make([]sharing.ID, 7)
+	for i := range ids {
+		ids[i] = sharing.ID(i + 1)
+	}
+	ac, err := threshold.NewThresholdAccessStructure(4, shareholders(ids...))
+	require.NoError(t, err)
+	return acFixture{
+		name: "threshold(4,7)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 3, 4},
+			{2, 4, 5, 7},
+			{1, 2, 3, 4, 5, 6, 7},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 2, 3},
+			{5, 6, 7},
+			{1},
+		},
+		shareholders: ids,
+	}
+}
+
+func hierarchicalTwoLevelFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(2, 1, 2, 3),
+		hierarchical.WithLevel(4, 4, 5, 6),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "hierarchical(2,4)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},
+			{1, 2, 3, 4},
+			{2, 3, 5, 6},
+			{1, 2, 3, 4, 5, 6},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 4, 5},
+			{4, 5, 6},
+			{1, 2, 3},
+			{3, 4, 5, 6},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6},
+	}
+}
+
+func hierarchicalThreeLevelFixture(t *testing.T) acFixture {
+	t.Helper()
+	ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+		hierarchical.WithLevel(1, 1, 2),
+		hierarchical.WithLevel(2, 3, 4),
+		hierarchical.WithLevel(4, 5, 6),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "hierarchical(1,2,4)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 3, 5, 6},
+			{2, 4, 5, 6},
+			{1, 2, 3, 4},
+			{1, 2, 3, 4, 5, 6},
+		},
+		unqualified: [][]sharing.ID{
+			{3, 5, 6},
+			{1, 5, 6},
+			{5, 6},
+			{1, 3, 5},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6},
+	}
+}
+
+func boolexprThreeBranchFixture(t *testing.T) acFixture {
+	t.Helper()
+	// 2-of-3 threshold gate over three 2-of-3 threshold gates
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Threshold(2,
+			boolexpr.Threshold(2,
+				boolexpr.ID(1),
+				boolexpr.ID(2),
+				boolexpr.ID(3),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(4),
+				boolexpr.ID(5),
+				boolexpr.ID(6),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(7),
+				boolexpr.ID(8),
+				boolexpr.ID(9),
+			),
+		),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr(2-of-3 branches)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},
+			{1, 3, 7, 8},
+			{4, 5, 7, 9},
+			{1, 2, 4, 5, 7, 8},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{1, 2},
+			{1, 2, 3, 4},
+			{4, 7, 8},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	}
+}
+
+func boolexprNestedFixture(t *testing.T) acFixture {
+	t.Helper()
+	// Deeper nesting: 2-of-3 top gate, with an AND gate containing an
+	// embedded 3-of-4 threshold.
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Threshold(2,
+			boolexpr.Threshold(2,
+				boolexpr.ID(1),
+				boolexpr.ID(2),
+				boolexpr.ID(3),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(4),
+				boolexpr.ID(5),
+				boolexpr.ID(6),
+			),
+			boolexpr.Threshold(2,
+				boolexpr.ID(7),
+				boolexpr.ID(8),
+				boolexpr.Threshold(3,
+					boolexpr.ID(9),
+					boolexpr.ID(10),
+					boolexpr.ID(11),
+					boolexpr.ID(12),
+				),
+			),
+		),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr(nested-example-c)",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2, 4, 5},
+			{1, 2, 7, 8},
+			{4, 5, 7, 9, 10, 11},
+			{1, 2, 8, 9, 10, 11},
+		},
+		unqualified: [][]sharing.ID{
+			{1, 2, 3, 4},
+			{7, 9, 10, 11},
+			{1, 4, 7, 8},
+			{8, 9, 10},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+	}
+}
+
+func boolexprAndOrFixture(t *testing.T) acFixture {
+	t.Helper()
+	// (1 AND 2) OR (3 AND 4)   (using threshold gates: AND=t/t, OR=1/t)
+	ac, err := boolexpr.NewThresholdGateAccessStructure(
+		boolexpr.Or(
+			boolexpr.And(boolexpr.ID(1), boolexpr.ID(2)),
+			boolexpr.And(boolexpr.ID(3), boolexpr.ID(4)),
+		),
+	)
+	require.NoError(t, err)
+	return acFixture{
+		name: "boolexpr((1∧2)∨(3∧4))",
+		ac:   ac,
+		qualified: [][]sharing.ID{
+			{1, 2},
+			{3, 4},
+			{1, 2, 3},
+			{1, 2, 3, 4},
+		},
+		unqualified: [][]sharing.ID{
+			{1},
+			{3},
+			{1, 3},
+			{2, 4},
+			{1, 4},
+		},
+		shareholders: []sharing.ID{1, 2, 3, 4},
+	}
+}
+
+func allFixtures(t *testing.T) []acFixture {
+	t.Helper()
+	return []acFixture{
+		thresholdFixture(t),
+		unanimityFixture(t),
+		cnfFixture(t),
+		cnfThreeClauseFixture(t),
+		largeThresholdFixture(t),
+		hierarchicalTwoLevelFixture(t),
+		hierarchicalThreeLevelFixture(t),
+		boolexprThreeBranchFixture(t),
+		boolexprNestedFixture(t),
+		boolexprAndOrFixture(t),
+	}
+}
+
+// ---------------------------------------------------------------------------
+// NewScheme – construction
+// ---------------------------------------------------------------------------
+
+func TestNewScheme(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+
+	t.Run("valid with each access structure", func(t *testing.T) {
+		t.Parallel()
+		for _, fx := range allFixtures(t) {
+			t.Run(fx.name, func(t *testing.T) {
+				t.Parallel()
+				scheme, err := feldman.NewScheme(curve, fx.ac)
+				require.NoError(t, err)
+				require.NotNil(t, scheme)
+				require.Equal(t, feldman.Name, scheme.Name())
+				require.Equal(t, len(fx.shareholders), scheme.Shareholders().Size())
+			})
+		}
+	})
+
+	t.Run("nil group", func(t *testing.T) {
+		t.Parallel()
+		ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+		require.NoError(t, err)
+		_, err = feldman.NewScheme[*k256.Point, *k256.Scalar](nil, ac)
+		require.Error(t, err)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
+	})
+
+	t.Run("nil access structure", func(t *testing.T) {
+		t.Parallel()
+		_, err := feldman.NewScheme[*k256.Point, *k256.Scalar](curve, nil)
+		require.Error(t, err)
+		require.ErrorIs(t, err, sharing.ErrIsNil)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Deal + Reconstruct – qualified sets recover the secret
+// ---------------------------------------------------------------------------
+
+func TestDealAndReconstruct_QualifiedSets(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	basePoint := curve.Generator()
-	thresh := uint(2)
-	total := uint(5)
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	scheme, err := newFeldmanScheme(basePoint, thresh, shareholders)
-	require.NoError(t, err, "could not create scheme")
 
-	secret := feldman.NewSecret(field.FromUint64(42))
-	require.NoError(t, err)
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(t, err, "could not create shares")
-	require.Equal(t, total, uint(shares.Shares().Size()), "number of shares should match total")
-
-	// Test verification
-	reference := shares.VerificationMaterial()
-	for _, share := range shares.Shares().Values() {
-		err := scheme.Verify(share, reference)
-		require.NoError(t, err, "share verification should pass")
-		require.True(t, shares.VerificationMaterial().Equal(reference), "all shares should have same verification vector")
-	}
-
-	reconstructedSecret, err := scheme.Reconstruct(shares.Shares().Values()...)
-	require.NoError(t, err, "could not reconstruct secret")
-	require.True(t, secret.Equal(reconstructedSecret), "reconstructed secret should match original secret")
-
-	// Test ReconstructAndVerify
-	reconstructedSecret2, err := scheme.ReconstructAndVerify(reference, shares.Shares().Values()...)
-	require.NoError(t, err, "could not reconstruct and verify secret")
-	require.True(t, secret.Equal(reconstructedSecret2), "reconstructed secret should match original secret")
-}
-
-// dealCases tests the Deal function with various inputs
-func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *feldman.Scheme[E, FE], field algebra.PrimeField[FE]) {
-	t.Helper()
-
-	// Create test secrets
-	zeroSecret := feldman.NewSecret(field.Zero())
-	oneSecret := feldman.NewSecret(field.One())
-	fortyTwoSecret := feldman.NewSecret(field.FromUint64(42))
-	randomSecret := feldman.NewSecret(field.FromUint64(12345))
-
-	// Get scheme parameters
-	thresh := scheme.AccessStructure().Threshold()
-	total := uint(scheme.AccessStructure().Shareholders().Size())
-
-	tests := []struct {
-		name         string
-		secret       *feldman.Secret[FE]
-		prng         io.Reader
-		expectError  bool
-		errorIs      error
-		verifyShares bool
-	}{
-		{
-			name:         "valid secret with constant 42",
-			secret:       fortyTwoSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:         "valid secret with value 1",
-			secret:       oneSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:         "valid secret with value 0",
-			secret:       zeroSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:         "valid secret with random value",
-			secret:       randomSecret,
-			prng:         pcg.NewRandomised(),
-			expectError:  false,
-			verifyShares: true,
-		},
-		{
-			name:        "nil secret",
-			secret:      nil,
-			prng:        pcg.NewRandomised(),
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-		},
-		{
-			name:        "nil prng",
-			secret:      fortyTwoSecret,
-			prng:        nil,
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-		},
-		{
-			name:        "both nil",
-			secret:      nil,
-			prng:        nil,
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
 			t.Parallel()
-			shares, err := scheme.Deal(tc.secret, tc.prng)
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+			_, shares := dealFeldman(t, scheme, secret)
 
-			if tc.expectError {
-				require.Error(t, err)
-				if tc.errorIs != nil {
-					require.ErrorIs(t, err, tc.errorIs)
-				}
-				require.Nil(t, shares)
-				return
-			}
-
-			require.NoError(t, err)
-			require.NotNil(t, shares)
-			require.Equal(t, int(total), shares.Shares().Size(), "should generate shares for all shareholders")
-
-			if tc.verifyShares {
-				// Verify each share
-				var reference feldman.VerificationVector[E, FE]
-				for id, share := range shares.Shares().Iter() {
-					require.NotNil(t, share)
-					require.Equal(t, id, share.ID())
-					// When secret is zero, shares can be zero (identity)
-					if !tc.secret.Value().IsZero() {
-						require.False(t, share.Value().IsOpIdentity(), "share value should not be identity for non-zero secret")
-					}
-					require.NotNil(t, shares.VerificationMaterial(), "verification vector should not be nil")
-
-					if reference == nil {
-						reference = shares.VerificationMaterial()
-					} else {
-						require.True(t, shares.VerificationMaterial().Equal(reference), "all shares should have same verification vector")
-					}
-				}
-
-				// Verify shares are different (except potentially for zero secret)
-				if !tc.secret.Value().IsZero() {
-					shareValues := make(map[string]bool)
-					for _, share := range shares.Shares().Values() {
-						val := share.Value().String()
-						require.False(t, shareValues[val], "shares should have different values")
-						shareValues[val] = true
-					}
-				}
-
-				// Verify reconstruction works
-				reconstructed, err := scheme.Reconstruct(shares.Shares().Values()...)
-				require.NoError(t, err)
-				require.True(t, tc.secret.Equal(reconstructed), "reconstructed secret should match original")
-
-				// Verify thresh property: any t shares can reconstruct
-				shareSlice := shares.Shares().Values()
-				if len(shareSlice) >= int(thresh) {
-					subsetShares := shareSlice[:thresh]
-					reconstructed, err = scheme.Reconstruct(subsetShares...)
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					reconstructed, err := scheme.Reconstruct(pickShares(shares, qset...)...)
 					require.NoError(t, err)
-					require.True(t, tc.secret.Equal(reconstructed), "subset reconstruction should match original")
-				}
-
-				// Verify that t-1 shares cannot reconstruct
-				if int(thresh) > 1 && len(shareSlice) >= int(thresh) {
-					insufficientShares := shareSlice[:thresh-1]
-					_, err = scheme.Reconstruct(insufficientShares...)
-					require.Error(t, err)
-					require.ErrorIs(t, err, sharing.ErrFailed)
-				}
-
-				// Verify each share
-				for _, share := range shares.Shares().Values() {
-					err := scheme.Verify(share, reference)
-					require.NoError(t, err, "share verification should pass")
-				}
+					require.True(t, secret.Equal(reconstructed),
+						"qualified set %v must reconstruct the secret", qset)
+				})
 			}
 		})
 	}
 }
 
-// dealRandomCases tests the DealRandom function
-func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *feldman.Scheme[E, FE]) {
-	t.Helper()
+// ---------------------------------------------------------------------------
+// Reconstruct – unqualified sets are rejected
+// ---------------------------------------------------------------------------
 
-	thresh := scheme.AccessStructure().Threshold()
-	total := uint(scheme.AccessStructure().Shareholders().Size())
-
-	tests := []struct {
-		name             string
-		prng             io.Reader
-		expectError      bool
-		errorIs          error
-		verifyUniqueness bool
-		iterations       int
-	}{
-		{
-			name:             "valid random generation",
-			prng:             pcg.NewRandomised(),
-			expectError:      false,
-			verifyUniqueness: true,
-			iterations:       1,
-		},
-		{
-			name:             "multiple random generations",
-			prng:             pcg.NewRandomised(),
-			expectError:      false,
-			verifyUniqueness: true,
-			iterations:       5,
-		},
-		{
-			name:        "nil prng",
-			prng:        nil,
-			expectError: true,
-			errorIs:     sharing.ErrIsNil,
-			iterations:  1,
-		},
-		{
-			name:        "deterministic prng produces same secret",
-			prng:        pcg.New(mrand.Uint64(), mrand.Uint64()),
-			expectError: false,
-			iterations:  1,
-		},
-		{
-			name:        "short deterministic prng",
-			prng:        bytes.NewReader([]byte{1}),
-			expectError: true,
-			// Error comes from curves package (ErrRandomSample), not feldman
-			iterations: 1,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			secrets := make([]*feldman.Secret[FE], 0, tc.iterations)
-
-			for i := range tc.iterations {
-				// Reset reader if using deterministic prng
-				if reader, ok := tc.prng.(*bytes.Reader); ok && i > 0 {
-					reader.Seek(0, 0)
-				}
-
-				shares, secret, err := scheme.DealRandom(tc.prng)
-
-				if tc.expectError {
-					require.Error(t, err)
-					if tc.errorIs != nil {
-						require.ErrorIs(t, err, tc.errorIs)
-					}
-					require.Nil(t, shares)
-					require.Nil(t, secret)
-					return
-				}
-
-				require.NoError(t, err)
-				require.NotNil(t, shares)
-				require.NotNil(t, secret)
-				require.Equal(t, int(total), shares.Shares().Size())
-				require.False(t, secret.Value().IsOpIdentity(), "random secret should not be identity")
-
-				secrets = append(secrets, secret)
-
-				// Verify all shares have the same verification vector
-				var reference feldman.VerificationVector[E, FE]
-				for range shares.Shares().Values() {
-					if reference == nil {
-						reference = shares.VerificationMaterial()
-					} else {
-						require.True(t, shares.VerificationMaterial().Equal(reference), "all shares should have same verification vector")
-					}
-				}
-
-				// Verify reconstruction
-				reconstructed, err := scheme.Reconstruct(shares.Shares().Values()...)
-				require.NoError(t, err)
-				require.True(t, secret.Equal(reconstructed))
-
-				// Verify thresh property
-				if shares.Shares().Size() >= int(thresh) {
-					shareSlice := shares.Shares().Values()
-					subsetShares := shareSlice[:thresh]
-					reconstructed, err = scheme.Reconstruct(subsetShares...)
-					require.NoError(t, err)
-					require.True(t, secret.Equal(reconstructed))
-				}
-			}
-
-			// Verify uniqueness across iterations if required
-			if tc.verifyUniqueness && tc.iterations > 1 {
-				secretValues := make(map[string]int)
-				for i, secret := range secrets {
-					val := secret.Value().String()
-					secretValues[val]++
-					if secretValues[val] > 1 {
-						t.Logf("Duplicate secret value found at iteration %d", i)
-					}
-				}
-				// With cryptographic randomness, duplicates should be extremely rare
-				duplicates := 0
-				for _, count := range secretValues {
-					if count > 1 {
-						duplicates++
-					}
-				}
-				require.Equal(t, 0, duplicates, "random secrets should be unique")
-			}
-		})
-	}
-}
-
-func TestDeal(t *testing.T) {
+func TestReconstruct_UnqualifiedSets(t *testing.T) {
 	t.Parallel()
 
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		basePoint := curve.Generator()
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
 
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-			errors bool
-		}{
-			{"2-of-3", 2, 3, false},
-			{"3-of-5", 3, 5, false},
-			{"5-of-10", 5, 10, false},
-			{"1-of-5", 1, 5, true},
-			{"thresh equals total", 5, 5, false},
-		}
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(654321))
+			_, shares := dealFeldman(t, scheme, secret)
 
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
-				if config.errors {
-					require.Error(t, err, "should return error for invalid configuration")
-					return
-				}
-				require.NoError(t, err)
-				dealCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		basePoint := curve.Generator()
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-4", 2, 4},
-			{"4-of-7", 4, 7},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
-				require.NoError(t, err)
-				dealCases(t, scheme, field)
-			})
-		}
-	})
+			for _, uset := range fx.unqualified {
+				t.Run(formatIDs(uset), func(t *testing.T) {
+					t.Parallel()
+					_, err := scheme.Reconstruct(pickShares(shares, uset...)...)
+					require.Error(t, err)
+				})
+			}
+		})
+	}
 }
+
+// ---------------------------------------------------------------------------
+// Verification: every share passes Verify against the verification vector
+// ---------------------------------------------------------------------------
+
+func TestVerify_HonestShares(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(9999))
+			out, _ := dealFeldman(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			for _, id := range fx.shareholders {
+				t.Run(fmt.Sprintf("id=%d", id), func(t *testing.T) {
+					t.Parallel()
+					sh, ok := out.Shares().Get(id)
+					require.True(t, ok)
+					err := scheme.Verify(sh, ref)
+					require.NoError(t, err, "honest share for ID %d must verify", id)
+				})
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Verification: tampered share is detected
+// ---------------------------------------------------------------------------
+
+func TestVerify_TamperedShare(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(1234))
+			out, _ := dealFeldman(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			// Pick the first shareholder and tamper with their share
+			id := fx.shareholders[0]
+			honest, ok := out.Shares().Get(id)
+			require.True(t, ok)
+
+			// Create a tampered share by adding one to each component
+			tamperedValues := make([]FE, len(honest.Value()))
+			for i, v := range honest.Value() {
+				tamperedValues[i] = v.Add(field.One())
+			}
+			tampered, err := kw.NewShare(id, tamperedValues...)
+			require.NoError(t, err)
+
+			err = scheme.Verify(tampered, ref)
+			require.Error(t, err)
+			require.ErrorIs(t, err, sharing.ErrVerification)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Verification: wrong verification vector is detected
+// ---------------------------------------------------------------------------
+
+func TestVerify_WrongVerificationVector(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			s1 := kw.NewSecret(field.FromUint64(100))
+			s2 := kw.NewSecret(field.FromUint64(200))
+
+			out1, _ := dealFeldman(t, scheme, s1)
+			out2, _ := dealFeldman(t, scheme, s2)
+
+			// Verify shares from dealing 1 against the verification vector from dealing 2
+			id := fx.shareholders[0]
+			sh, ok := out1.Shares().Get(id)
+			require.True(t, ok)
+			err := scheme.Verify(sh, out2.VerificationMaterial())
+			require.Error(t, err, "share from one dealing must not verify against a different verification vector")
+			require.ErrorIs(t, err, sharing.ErrVerification)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ReconstructAndVerify – happy path
+// ---------------------------------------------------------------------------
+
+func TestReconstructAndVerify_QualifiedSets(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(77777))
+			out, shares := dealFeldman(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					reconstructed, err := scheme.ReconstructAndVerify(ref, pickShares(shares, qset...)...)
+					require.NoError(t, err)
+					require.True(t, secret.Equal(reconstructed))
+				})
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ReconstructAndVerify – rejects tampered share
+// ---------------------------------------------------------------------------
+
+func TestReconstructAndVerify_RejectsTamperedShare(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+	out, shares := dealFeldman(t, scheme, secret)
+	ref := out.VerificationMaterial()
+
+	// Tamper with one share in a qualified set
+	qset := fx.qualified[0]
+	pickedShares := pickShares(shares, qset...)
+	honest := pickedShares[0]
+	tamperedValues := make([]FE, len(honest.Value()))
+	for i, v := range honest.Value() {
+		tamperedValues[i] = v.Add(field.One())
+	}
+	tampered, err := kw.NewShare(honest.ID(), tamperedValues...)
+	require.NoError(t, err)
+	pickedShares[0] = tampered
+
+	_, err = scheme.ReconstructAndVerify(ref, pickedShares...)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrVerification)
+}
+
+// ---------------------------------------------------------------------------
+// Verify nil share
+// ---------------------------------------------------------------------------
+
+func TestVerify_NilShare(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	out, _ := dealFeldman(t, scheme, kw.NewSecret(field.One()))
+	err := scheme.Verify(nil, out.VerificationMaterial())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+// ---------------------------------------------------------------------------
+// DealRandom: returns valid output and reconstructs
+// ---------------------------------------------------------------------------
 
 func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		basePoint := curve.Generator()
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"thresh equals total", 4, 4},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
-				require.NoError(t, err)
-				dealRandomCases(t, scheme)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		basePoint := curve.Generator()
-
-		shareholders := sharing.NewOrdinalShareholderSet(6)
-		scheme, err := newFeldmanScheme(basePoint, 3, shareholders)
-		require.NoError(t, err)
-		dealRandomCases(t, scheme)
-	})
-}
-
-// BenchmarkDeal benchmarks the Deal function
-func BenchmarkDeal(b *testing.B) {
 	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	basePoint := curve.Generator()
 
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-		{"20-of-50", 20, 50},
-	}
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
 
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
-			require.NoError(b, err)
+			out, secret, err := scheme.DealRandom(pcg.NewRandomised())
+			require.NoError(t, err)
+			require.NotNil(t, out)
+			require.NotNil(t, secret)
+			require.Equal(t, len(fx.shareholders), out.Shares().Size())
 
-			secret := feldman.NewSecret(field.FromUint64(42))
-
-			b.ResetTimer()
-			for range b.N {
-				_, err := scheme.Deal(secret, pcg.NewRandomised())
-				if err != nil {
-					b.Fatal(err)
-				}
+			// Verify every share
+			ref := out.VerificationMaterial()
+			for _, sh := range out.Shares().Values() {
+				require.NoError(t, scheme.Verify(sh, ref))
 			}
-		})
-	}
-}
 
-// BenchmarkDealRandom benchmarks the DealRandom function
-func BenchmarkDealRandom(b *testing.B) {
-	curve := k256.NewCurve()
-	basePoint := curve.Generator()
-
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-	}
-
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
-			require.NoError(b, err)
-
-			b.ResetTimer()
-			for range b.N {
-				_, _, err := scheme.DealRandom(pcg.NewRandomised())
-				if err != nil {
-					b.Fatal(err)
-				}
+			// Reconstruct using a qualified set
+			m := make(map[sharing.ID]*kw.Share[*k256.Scalar])
+			for id, sh := range out.Shares().Iter() {
+				m[id] = sh
 			}
-		})
-	}
-}
-
-// TestDealDeterministic tests Deal with deterministic randomness for reproducibility
-func TestDealDeterministic(t *testing.T) {
-	t.Parallel()
-
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	basePoint := curve.Generator()
-	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
-	require.NoError(t, err)
-
-	secret := feldman.NewSecret(field.FromUint64(42))
-
-	// Use same seed for deterministic randomness
-	seed := []byte("deterministic seed for testing purposes only!!!!")
-	prng1 := bytes.NewReader(append(seed, make([]byte, 1024)...))
-	prng2 := bytes.NewReader(append(seed, make([]byte, 1024)...))
-
-	shares1, err := scheme.Deal(secret, prng1)
-	require.NoError(t, err)
-
-	shares2, err := scheme.Deal(secret, prng2)
-	require.NoError(t, err)
-
-	// Verify that shares are identical when using same randomness
-	for id, share1 := range shares1.Shares().Iter() {
-		share2, exists := shares2.Shares().Get(id)
-		require.True(t, exists)
-		require.True(t, share1.Value().Equal(share2.Value()),
-			"shares with same randomness should be identical")
-		require.True(t, shares1.VerificationMaterial().Equal(shares2.VerificationMaterial()),
-			"verification vectors with same randomness should be identical")
-	}
-}
-
-// TestDealRandomDistribution tests the statistical distribution of random secrets
-func TestDealRandomDistribution(t *testing.T) {
-	t.Parallel()
-	if testing.Short() {
-		t.Skip("skipping statistical test in short mode")
-	}
-
-	curve := k256.NewCurve()
-	basePoint := curve.Generator()
-	shareholders := sharing.NewOrdinalShareholderSet(3)
-	scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
-	require.NoError(t, err)
-
-	iterations := 1000
-	secrets := make(map[string]int)
-
-	for range iterations {
-		_, secret, err := scheme.DealRandom(pcg.NewRandomised())
-		require.NoError(t, err)
-
-		// Use first few bytes of secret as key for distribution analysis
-		key := fmt.Sprintf("%x", secret.Value().String()[:8])
-		secrets[key]++
-	}
-
-	// Basic check: we should have many different values
-	uniqueCount := len(secrets)
-	t.Logf("Generated %d unique secret prefixes out of %d iterations", uniqueCount, iterations)
-
-	// With good randomness, we expect most values to be unique
-	minExpectedUnique := iterations * 90 / 100 // 90% unique
-	require.Greater(t, uniqueCount, minExpectedUnique,
-		"random generation should produce diverse values")
-}
-
-// verificationCases tests verification functionality
-func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *feldman.Scheme[E, FE], field algebra.PrimeField[FE]) {
-	t.Helper()
-
-	// Create valid shares
-	secret := feldman.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Get reference verification vector
-	reference := shares.VerificationMaterial()
-
-	t.Run("valid shares pass verification", func(t *testing.T) {
-		t.Parallel()
-		for _, share := range shares.Shares().Values() {
-			err := scheme.Verify(share, reference)
-			require.NoError(t, err, "valid share should pass verification")
-		}
-	})
-
-	t.Run("ReconstructAndVerify with valid shares", func(t *testing.T) {
-		t.Parallel()
-		reconstructed, err := scheme.ReconstructAndVerify(reference, shares.Shares().Values()...)
-		require.NoError(t, err)
-		require.True(t, secret.Equal(reconstructed))
-
-		// Try with subset of shares
-		thresh := scheme.AccessStructure().Threshold()
-		if shares.Shares().Size() >= int(thresh) {
-			subsetShares := shares.Shares().Values()[:thresh]
-			reconstructed, err = scheme.ReconstructAndVerify(reference, subsetShares...)
+			reconstructed, err := scheme.Reconstruct(pickShares(m, fx.qualified[0]...)...)
 			require.NoError(t, err)
 			require.True(t, secret.Equal(reconstructed))
-		}
-	})
-
-	t.Run("tampered share fails verification", func(t *testing.T) {
-		t.Parallel()
-		// Get a share and modify its value
-		originalShare := shares.Shares().Values()[0]
-		tamperedValue := field.FromUint64(999)
-		tamperedShare, err := feldman.NewShare(
-			originalShare.ID(),
-			tamperedValue,
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-
-		err = scheme.Verify(tamperedShare, reference)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrVerification)
-	})
-
-	t.Run("ReconstructAndVerify fails with tampered share", func(t *testing.T) {
-		t.Parallel()
-		// Create a tampered share with slightly modified value
-		originalShare := shares.Shares().Values()[0]
-		originalValue := originalShare.Value()
-
-		// Add a small value to tamper with the share
-		tamperedValue := originalValue.Add(field.One())
-		tamperedShare, err := feldman.NewShare(
-			originalShare.ID(),
-			tamperedValue,
-			scheme.AccessStructure(),
-		)
-		require.NoError(t, err)
-
-		// Use only thresh shares to ensure reconstruction works
-		thresh := scheme.AccessStructure().Threshold()
-		tamperedShares := make([]*feldman.Share[FE], 0)
-		tamperedShares = append(tamperedShares, tamperedShare)
-
-		// Add remaining shares up to thresh
-		for i := 1; i < int(thresh); i++ {
-			tamperedShares = append(tamperedShares, shares.Shares().Values()[i])
-		}
-
-		_, err = scheme.ReconstructAndVerify(reference, tamperedShares...)
-		require.Error(t, err)
-		// The error could be either verification or reconstruction failure
-		require.True(t,
-			strings.Contains(err.Error(), "verification") ||
-				strings.Contains(err.Error(), "reconstruct"),
-			"Expected verification or reconstruction error, got: %s", err.Error())
-	})
-
-	// Note: Testing nil verification vector is not straightforward due to generic type constraints
-	// The feldman.NewShare function requires explicit type parameters which makes this test complex
-
-	t.Run("different verification vectors", func(t *testing.T) {
-		t.Parallel()
-		// Create shares with different secret to get different verification vector
-		secret2 := feldman.NewSecret(field.FromUint64(100))
-		shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		differentReference := shares2.VerificationMaterial()
-		require.False(t, reference.Equal(differentReference), "different secrets should have different verification vectors")
-
-		// Try to verify a share from shares2 against the original reference
-		// This should fail because the verification vectors are different
-		mismatchedShare := shares2.Shares().Values()[0]
-
-		err = scheme.Verify(mismatchedShare, reference)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrVerification)
-	})
+		})
+	}
 }
 
-// TestVerification tests verification functionality
-func TestVerification(t *testing.T) {
+// ---------------------------------------------------------------------------
+// DealRandom produces distinct secrets on consecutive calls
+// ---------------------------------------------------------------------------
+
+func TestDealRandom_Freshness(t *testing.T) {
 	t.Parallel()
 
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		basePoint := curve.Generator()
+	curve := k256.NewCurve()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	prng := pcg.NewRandomised()
 
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"thresh equals total", 4, 4},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
-				require.NoError(t, err)
-				verificationCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		basePoint := curve.Generator()
-
-		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
-		require.NoError(t, err)
-		verificationCases(t, scheme, field)
-	})
+	_, s1, err := scheme.DealRandom(prng)
+	require.NoError(t, err)
+	_, s2, err := scheme.DealRandom(prng)
+	require.NoError(t, err)
+	require.False(t, s1.Equal(s2), "consecutive DealRandom must produce different secrets")
 }
 
-// homomorphicOpsCases tests homomorphic operations on shares
-func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *feldman.Scheme[E, FE], field algebra.PrimeField[FE]) {
-	t.Helper()
+// ---------------------------------------------------------------------------
+// DealAndRevealDealerFunc: dealer func secret matches the dealt secret
+// ---------------------------------------------------------------------------
 
-	// Create two secrets and their shares
-	secret1 := feldman.NewSecret(field.FromUint64(10))
-	secret2 := feldman.NewSecret(field.FromUint64(20))
+func TestDealAndRevealDealerFunc(t *testing.T) {
+	t.Parallel()
 
-	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
-	require.NoError(t, err)
-	shares2, err := scheme.Deal(secret2, pcg.NewRandomised())
-	require.NoError(t, err)
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
 
-	// Test cases for Add operation
-	addTests := []struct {
-		name              string
-		share1            *feldman.Share[FE]
-		share2            *feldman.Share[FE]
-		expectedSecret    FE
-		verifyReconstruct bool
-	}{
-		{
-			name: "add shares from same holder",
-			share1: func() *feldman.Share[FE] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			share2: func() *feldman.Share[FE] {
-				s, _ := shares2.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			expectedSecret:    field.FromUint64(30), // 10 + 20
-			verifyReconstruct: true,
-		},
-	}
-
-	for _, tc := range addTests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
 			t.Parallel()
-			// Perform addition
-			sumShare := tc.share1.Add(tc.share2)
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(55))
 
-			require.NotNil(t, sumShare)
-			require.Equal(t, tc.share1.ID(), sumShare.ID())
-			require.False(t, sumShare.Value().IsOpIdentity())
+			out, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+			require.NotNil(t, out)
+			require.NotNil(t, df)
+			require.True(t, secret.Equal(df.Secret()),
+				"dealer func secret must match the dealt secret")
+		})
+	}
+}
 
-			// Test Op method (should be same as Add)
-			sumShareOp := tc.share1.Op(tc.share2)
-			require.True(t, sumShare.Value().Equal(sumShareOp.Value()))
-			require.True(t, shares1.VerificationMaterial().Op(shares2.VerificationMaterial()).Equal(shares1.VerificationMaterial().Op(shares2.VerificationMaterial())))
+// ---------------------------------------------------------------------------
+// Verification vector correctness: V = Lift(randomColumn, G)
+// ---------------------------------------------------------------------------
 
-			// Verify verification vector is combined correctly
-			expectedVV := shares1.VerificationMaterial().Op(shares2.VerificationMaterial())
-			require.True(t, shares1.VerificationMaterial().Op(shares2.VerificationMaterial()).Equal(expectedVV))
+func TestVerificationVector_IsLiftOfRandomColumn(t *testing.T) {
+	t.Parallel()
 
-			if tc.verifyReconstruct {
-				// Collect all sum shares for reconstruction
-				allSumShares := make([]*feldman.Share[FE], 0)
-				for _, id := range shares1.Shares().Keys() {
-					s1, exists := shares1.Shares().Get(id)
-					require.True(t, exists)
-					s2, exists := shares2.Shares().Get(id)
-					require.True(t, exists)
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
 
-					allSumShares = append(allSumShares, s1.Add(s2))
-				}
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
 
-				// Reconstruct and verify
-				reconstructed, err := scheme.Reconstruct(allSumShares...)
+			out, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			expectedMat, err := mat.Lift(df.RandomColumn(), curve.Generator())
+			require.NoError(t, err)
+			expectedVV, err := feldman.NewVerificationVector(expectedMat, df.MSP())
+			require.NoError(t, err)
+			require.True(t, out.VerificationMaterial().Equal(expectedVV),
+				"verification vector must equal Lift(randomColumn, G)")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Feldman core check: Verify(share, V) ⟺ [share]G == M_i * V
+// For each shareholder, lifting the scalar share to the group must equal
+// the result of the left module action of the shareholder's MSP rows on V.
+// ---------------------------------------------------------------------------
+
+func TestFeldmanCoreEquation(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(31337))
+
+			out, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+			vv := out.VerificationMaterial()
+
+			// Construct the verifier's LiftedDealerFunc from the public V and the MSP
+			ldf, err := feldman.NewLiftedDealerFunc(vv, df.MSP())
+			require.NoError(t, err)
+
+			for _, id := range fx.shareholders {
+				// Public: expected lifted share from V
+				expectedLifted, err := ldf.ShareOf(id)
 				require.NoError(t, err)
-				require.True(t, tc.expectedSecret.Equal(reconstructed.Value()))
 
-				// Note: ReconstructAndVerify won't work with combined shares from different polynomials
-				// as they have different verification vectors that don't combine properly
+				// Private: manually lift the scalar share
+				scalarShare, ok := out.Shares().Get(id)
+				require.True(t, ok)
+				manuallyLifted, err := feldman.LiftShare(scalarShare, gen)
+				require.NoError(t, err)
+
+				require.True(t, expectedLifted.Equal(manuallyLifted),
+					"Feldman equation failed for ID %d: M_i * V ≠ [λ_i]G", id)
 			}
 		})
 	}
+}
 
-	// Test cases for ScalarMul operation
-	scalarMulTests := []struct {
-		name              string
-		share             *feldman.Share[FE]
-		scalar            FE
-		expectedSecret    FE
-		verifyReconstruct bool
-	}{
-		{
-			name: "multiply by 2",
-			share: func() *feldman.Share[FE] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.FromUint64(2),
-			expectedSecret:    field.FromUint64(20), // 10 * 2
-			verifyReconstruct: true,
-		},
-		{
-			name: "multiply by 0",
-			share: func() *feldman.Share[FE] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.Zero(),
-			expectedSecret:    field.Zero(), // 10 * 0
-			verifyReconstruct: false,        // identity shares not allowed
-		},
-		{
-			name: "multiply by 1",
-			share: func() *feldman.Share[FE] {
-				s, _ := shares1.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.One(),
-			expectedSecret:    field.FromUint64(10), // 10 * 1
-			verifyReconstruct: true,
-		},
-		{
-			name: "multiply by large scalar",
-			share: func() *feldman.Share[FE] {
-				s, _ := shares2.Shares().Get(sharing.ID(1))
-				return s
-			}(),
-			scalar:            field.FromUint64(100),
-			expectedSecret:    field.FromUint64(2000), // 20 * 100
-			verifyReconstruct: true,
-		},
+// ---------------------------------------------------------------------------
+// Round-trip with random secrets
+// ---------------------------------------------------------------------------
+
+func TestRoundTrip_RandomSecrets(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			for range 5 {
+				val, err := field.Random(prng)
+				require.NoError(t, err)
+				secret := kw.NewSecret(val)
+				out, shares := dealFeldman(t, scheme, secret)
+				ref := out.VerificationMaterial()
+
+				for _, qset := range fx.qualified {
+					reconstructed, err := scheme.ReconstructAndVerify(ref, pickShares(shares, qset...)...)
+					require.NoError(t, err)
+					require.True(t, secret.Equal(reconstructed))
+				}
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Zero secret: share + verify + reconstruct
+// ---------------------------------------------------------------------------
+
+func TestZeroSecret(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.Zero())
+			out, shares := dealFeldman(t, scheme, secret)
+			ref := out.VerificationMaterial()
+
+			// Verify every share
+			for _, sh := range out.Shares().Values() {
+				require.NoError(t, scheme.Verify(sh, ref))
+			}
+
+			// Reconstruct
+			for _, qset := range fx.qualified {
+				reconstructed, err := scheme.Reconstruct(pickShares(shares, qset...)...)
+				require.NoError(t, err)
+				require.True(t, secret.Equal(reconstructed),
+					"zero secret must reconstruct to zero")
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Homomorphic addition: shares of a + shares of b reconstruct to a+b
+// ---------------------------------------------------------------------------
+
+func TestHomomorphicAddition(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(500))
+			s2 := kw.NewSecret(field.FromUint64(300))
+
+			_, shares1 := dealFeldman(t, scheme, s1)
+			_, shares2 := dealFeldman(t, scheme, s2)
+
+			combined := make(map[sharing.ID]*kw.Share[*k256.Scalar], len(shares1))
+			for id, sh1 := range shares1 {
+				combined[id] = sh1.Add(shares2[id])
+			}
+
+			for _, qset := range fx.qualified {
+				reconstructed, err := scheme.Reconstruct(pickShares(combined, qset...)...)
+				require.NoError(t, err)
+				expected := s1.Value().Add(s2.Value())
+				require.True(t, expected.Equal(reconstructed.Value()),
+					"share addition should reconstruct to secret addition for set %v", qset)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Homomorphic scalar multiplication
+// ---------------------------------------------------------------------------
+
+func TestHomomorphicScalarMul(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			s := kw.NewSecret(field.FromUint64(42))
+			scalar := field.FromUint64(7)
+
+			_, shares := dealFeldman(t, scheme, s)
+
+			scaled := make(map[sharing.ID]*kw.Share[*k256.Scalar], len(shares))
+			for id, sh := range shares {
+				scaled[id] = sh.ScalarMul(scalar)
+			}
+
+			for _, qset := range fx.qualified {
+				reconstructed, err := scheme.Reconstruct(pickShares(scaled, qset...)...)
+				require.NoError(t, err)
+				expected := s.Value().Mul(scalar)
+				require.True(t, expected.Equal(reconstructed.Value()),
+					"scalar multiplication should be homomorphic for set %v", qset)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Privacy: individual shares from two different secrets are distinct
+// (basic smoke-test for randomness independence)
+// ---------------------------------------------------------------------------
+
+func TestPrivacy_SingleShareRevealsNothing(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(100))
+			s2 := kw.NewSecret(field.FromUint64(200))
+
+			_, shares1 := dealFeldman(t, scheme, s1)
+			_, shares2 := dealFeldman(t, scheme, s2)
+
+			for _, id := range fx.shareholders {
+				require.False(t, shares1[id].Equal(shares2[id]),
+					"shares for ID %d should be randomised independently", id)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Determinism: same PRNG seed → identical outputs
+// ---------------------------------------------------------------------------
+
+func TestDeterminism(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+
+	out1, err := scheme.Deal(secret, pcg.New(11111, 22222))
+	require.NoError(t, err)
+	out2, err := scheme.Deal(secret, pcg.New(11111, 22222))
+	require.NoError(t, err)
+
+	for _, id := range fx.shareholders {
+		sh1, ok := out1.Shares().Get(id)
+		require.True(t, ok)
+		sh2, ok := out2.Shares().Get(id)
+		require.True(t, ok)
+		require.True(t, sh1.Equal(sh2), "same seed must produce same shares for ID %d", id)
 	}
 
-	for _, tc := range scalarMulTests {
-		t.Run(tc.name, func(t *testing.T) {
+	require.True(t, out1.VerificationMaterial().Equal(out2.VerificationMaterial()),
+		"same seed must produce same verification vector")
+}
+
+// ---------------------------------------------------------------------------
+// Verification vector for different dealings are distinct
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_DistinctPerDealing(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	out1, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(1)))
+	out2, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(1)))
+
+	// Different randomness ⟹ different verification vectors
+	require.False(t, out1.VerificationMaterial().Equal(out2.VerificationMaterial()),
+		"distinct dealings should produce distinct verification vectors")
+}
+
+// ---------------------------------------------------------------------------
+// NewVerificationVector – construction
+// ---------------------------------------------------------------------------
+
+func TestNewVerificationVector_Valid(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	lifted, err := mat.Lift(df.RandomColumn(), curve.Generator())
+	require.NoError(t, err)
+
+	vv, err := feldman.NewVerificationVector(lifted, df.MSP())
+	require.NoError(t, err)
+	require.NotNil(t, vv)
+	require.True(t, lifted.Equal(vv.Value()))
+}
+
+func TestNewVerificationVector_NilValue(t *testing.T) {
+	t.Parallel()
+
+	_, err := feldman.NewVerificationVector[*k256.Point](nil, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestNewVerificationVector_NotColumnVector(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	curve := k256.NewCurve()
+
+	// Create a row vector (1 x 2) instead of column
+	rowMod, err := mat.NewMatrixModule(1, 2, field)
+	require.NoError(t, err)
+	row, err := rowMod.NewRowMajor(field.One(), field.Zero())
+	require.NoError(t, err)
+	rowLifted, err := mat.Lift(row, curve.Generator())
+	require.NoError(t, err)
+
+	_, err = feldman.NewVerificationVector(rowLifted, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrValue)
+}
+
+func TestNewVerificationVector_DimensionMismatch(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	// Build a column vector with wrong number of rows (D + 1)
+	d, _ := df.RandomColumn().Dimensions()
+	wrongMod, err := mat.NewMatrixModule(uint(d+1), 1, field)
+	require.NoError(t, err)
+	entries := make([]*k256.Scalar, d+1)
+	for i := range d + 1 {
+		entries[i] = field.FromUint64(uint64(i + 1))
+	}
+	wrongCol, err := wrongMod.NewRowMajor(entries...)
+	require.NoError(t, err)
+	wrongLifted, err := mat.Lift(wrongCol, curve.Generator())
+	require.NoError(t, err)
+
+	_, err = feldman.NewVerificationVector(wrongLifted, df.MSP())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrValue)
+}
+
+func TestNewVerificationVector_NilMSPSkipsDimensionCheck(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	// Any column vector should be accepted when MSP is nil
+	colMod, err := mat.NewMatrixModule(3, 1, field)
+	require.NoError(t, err)
+	col, err := colMod.NewRowMajor(field.One(), field.One(), field.One())
+	require.NoError(t, err)
+	lifted, err := mat.Lift(col, curve.Generator())
+	require.NoError(t, err)
+
+	vv, err := feldman.NewVerificationVector(lifted, nil)
+	require.NoError(t, err)
+	require.NotNil(t, vv)
+}
+
+// ---------------------------------------------------------------------------
+// VerificationVector – Equal, HashCode
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_Equal(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+
+	out1, _ := dealFeldman(t, scheme, secret)
+	out2, _ := dealFeldman(t, scheme, secret)
+
+	vv1 := out1.VerificationMaterial()
+
+	t.Run("equal to self", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, vv1.Equal(vv1))
+	})
+
+	t.Run("not equal to different", func(t *testing.T) {
+		t.Parallel()
+		vv2 := out2.VerificationMaterial()
+		require.False(t, vv1.Equal(vv2))
+	})
+
+	t.Run("not equal to nil", func(t *testing.T) {
+		t.Parallel()
+		require.False(t, vv1.Equal(nil))
+	})
+
+	t.Run("nil equals nil", func(t *testing.T) {
+		t.Parallel()
+		var a, b *feldman.VerificationVector[*k256.Point, *k256.Scalar]
+		require.True(t, a.Equal(b))
+	})
+}
+
+func TestVerificationVector_HashCode(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+
+	out1, _ := dealFeldman(t, scheme, secret)
+	out2, _ := dealFeldman(t, scheme, secret)
+
+	require.NotEqual(t, out1.VerificationMaterial().HashCode(), out2.VerificationMaterial().HashCode())
+}
+
+// ---------------------------------------------------------------------------
+// VerificationVector – Op (component-wise group addition)
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_Op_HomomorphicProperty(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
 			t.Parallel()
-			// Perform scalar multiplication
-			scaledShare := tc.share.ScalarMul(tc.scalar)
+			scheme := newFeldmanScheme(t, curve, fx.ac)
 
-			require.NotNil(t, scaledShare)
-			require.Equal(t, tc.share.ID(), scaledShare.ID())
+			s1 := kw.NewSecret(field.FromUint64(100))
+			s2 := kw.NewSecret(field.FromUint64(200))
 
-			// Test ScalarOp method (should be same as ScalarMul)
-			scaledShareOp := tc.share.ScalarOp(tc.scalar)
-			require.True(t, scaledShare.Value().Equal(scaledShareOp.Value()))
-			require.True(t, shares1.VerificationMaterial().ScalarOp(tc.scalar).Equal(shares1.VerificationMaterial().ScalarOp(tc.scalar)))
+			out1, df1, err := scheme.DealAndRevealDealerFunc(s1, pcg.NewRandomised())
+			require.NoError(t, err)
+			out2, df2, err := scheme.DealAndRevealDealerFunc(s2, pcg.NewRandomised())
+			require.NoError(t, err)
 
-			// Verify verification vector is scaled correctly
-			expectedVV := shares1.VerificationMaterial().ScalarOp(tc.scalar)
-			require.True(t, shares1.VerificationMaterial().ScalarOp(tc.scalar).Equal(expectedVV))
+			// Op the two verification vectors
+			combined, err := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			require.NoError(t, err)
 
-			if tc.verifyReconstruct {
-				// Collect all scaled shares for reconstruction
-				allScaledShares := make([]*feldman.Share[FE], 0)
-				shareMap := shares1
-				if tc.share.ID() == sharing.ID(1) {
-					s, _ := shares2.Shares().Get(sharing.ID(1))
-					if s.Value().Equal(tc.share.Value()) {
-						shareMap = shares2
+			// The first entry of the combined VV should equal
+			// [s1]G + [s2]G = [s1+s2]G
+			expectedSecret := gen.ScalarOp(s1.Value().Add(s2.Value()))
+			combinedFirst, err := combined.Value().Get(0, 0)
+			require.NoError(t, err)
+			require.True(t, expectedSecret.Equal(combinedFirst),
+				"first entry of Op'd VV must equal [s1+s2]G")
+
+			// Each entry should equal the component-wise sum of the
+			// individual verification vectors' entries.
+			r1 := df1.RandomColumn()
+			r2 := df2.RandomColumn()
+			d, _ := r1.Dimensions()
+			for i := range d {
+				v1, err := out1.VerificationMaterial().Value().Get(i, 0)
+				require.NoError(t, err)
+				v2, err := out2.VerificationMaterial().Value().Get(i, 0)
+				require.NoError(t, err)
+				vc, err := combined.Value().Get(i, 0)
+				require.NoError(t, err)
+
+				// Manual: [r1_i]G + [r2_i]G
+				r1i, err := r1.Get(i, 0)
+				require.NoError(t, err)
+				r2i, err := r2.Get(i, 0)
+				require.NoError(t, err)
+				expected := gen.ScalarOp(r1i.Add(r2i))
+				require.True(t, expected.Equal(vc),
+					"combined VV[%d] must equal [r1_%d + r2_%d]G", i, i, i)
+				require.True(t, v1.Op(v2).Equal(vc),
+					"combined VV[%d] must equal VV1[%d] + VV2[%d]", i, i, i)
+			}
+		})
+	}
+}
+
+func TestVerificationVector_Op_VerifyCombinedShares(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			s1 := kw.NewSecret(field.FromUint64(500))
+			s2 := kw.NewSecret(field.FromUint64(300))
+
+			out1, shares1 := dealFeldman(t, scheme, s1)
+			out2, shares2 := dealFeldman(t, scheme, s2)
+
+			combinedVV, err := out1.VerificationMaterial().Op(out2.VerificationMaterial())
+			require.NoError(t, err)
+
+			// Adding shares component-wise should verify against the Op'd VV
+			for _, id := range fx.shareholders {
+				combined := shares1[id].Add(shares2[id])
+				err := scheme.Verify(combined, combinedVV)
+				require.NoError(t, err,
+					"combined share for ID %d must verify against Op'd VV", id)
+			}
+		})
+	}
+}
+
+func TestVerificationVector_Op_Associative(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	out1, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(1)))
+	out2, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(2)))
+	out3, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(3)))
+
+	vv1 := out1.VerificationMaterial()
+	vv2 := out2.VerificationMaterial()
+	vv3 := out3.VerificationMaterial()
+
+	// (vv1 + vv2) + vv3 == vv1 + (vv2 + vv3)
+	vv12, err := vv1.Op(vv2)
+	require.NoError(t, err)
+	left, err := vv12.Op(vv3)
+	require.NoError(t, err)
+	vv23, err := vv2.Op(vv3)
+	require.NoError(t, err)
+	right, err := vv1.Op(vv23)
+	require.NoError(t, err)
+	require.True(t, left.Equal(right), "Op must be associative")
+}
+
+func TestVerificationVector_Op_Commutative(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	out1, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(42)))
+	out2, _ := dealFeldman(t, scheme, kw.NewSecret(field.FromUint64(77)))
+
+	vv1 := out1.VerificationMaterial()
+	vv2 := out2.VerificationMaterial()
+
+	left, err := vv1.Op(vv2)
+	require.NoError(t, err)
+	right, err := vv2.Op(vv1)
+	require.NoError(t, err)
+	require.True(t, left.Equal(right), "Op must be commutative")
+}
+
+// ---------------------------------------------------------------------------
+// VerificationVector – CBOR round-trip
+// ---------------------------------------------------------------------------
+
+func TestVerificationVector_CBOR(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(999))
+
+	out, _ := dealFeldman(t, scheme, secret)
+	vv := out.VerificationMaterial()
+
+	data, err := vv.MarshalCBOR()
+	require.NoError(t, err)
+
+	var decoded feldman.VerificationVector[*k256.Point, *k256.Scalar]
+	err = decoded.UnmarshalCBOR(data)
+	require.NoError(t, err)
+	require.True(t, vv.Equal(&decoded))
+}
+
+func TestVerificationVector_CBOR_InvalidData(t *testing.T) {
+	t.Parallel()
+
+	var decoded feldman.VerificationVector[*k256.Point, *k256.Scalar]
+	err := decoded.UnmarshalCBOR([]byte{0xff, 0x00, 0x01})
+	require.Error(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// ConvertShareToAdditive: sum of additive shares recovers the secret
+// ---------------------------------------------------------------------------
+
+func TestConvertShareToAdditive(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+			_, shares := dealFeldman(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					sum := field.Zero()
+					for _, id := range qset {
+						addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						sum = sum.Add(addShare.Value())
 					}
-				}
-
-				for _, id := range shareMap.Shares().Keys() {
-					s, exists := shareMap.Shares().Get(id)
-					require.True(t, exists)
-					allScaledShares = append(allScaledShares, s.ScalarMul(tc.scalar))
-				}
-
-				// Reconstruct and verify
-				reconstructed, err := scheme.Reconstruct(allScaledShares...)
-				require.NoError(t, err)
-				require.True(t, tc.expectedSecret.Equal(reconstructed.Value()))
-			}
-		})
-	}
-
-	// Test combined operations
-	t.Run("combined add and scalar multiply", func(t *testing.T) {
-		t.Parallel()
-		// Compute (s1 * 3) + (s2 * 2)
-		scalar1 := field.FromUint64(3)
-		scalar2 := field.FromUint64(2)
-
-		combinedShares := make([]*feldman.Share[FE], 0)
-		for _, id := range shares1.Shares().Keys() {
-			s1, exists := shares1.Shares().Get(id)
-			require.True(t, exists)
-			s2, exists := shares2.Shares().Get(id)
-			require.True(t, exists)
-
-			// (s1 * 3) + (s2 * 2)
-			combined := s1.ScalarMul(scalar1).Add(s2.ScalarMul(scalar2))
-			combinedShares = append(combinedShares, combined)
-		}
-
-		// Expected: (10 * 3) + (20 * 2) = 30 + 40 = 70
-		expectedSecret := field.FromUint64(70)
-
-		reconstructed, err := scheme.Reconstruct(combinedShares...)
-		require.NoError(t, err)
-		require.True(t, expectedSecret.Equal(reconstructed.Value()))
-	})
-
-	// Test Share methods
-	t.Run("share methods", func(t *testing.T) {
-		t.Parallel()
-		share, _ := shares1.Shares().Get(sharing.ID(1))
-
-		// Test creating new share with different value
-		newValue := field.FromUint64(999)
-		newShare, err := feldman.NewShare(share.ID(), newValue, scheme.AccessStructure())
-		require.NoError(t, err)
-		require.True(t, newValue.Equal(newShare.Value()))
-
-		// Test Equal method
-		share2, _ := shares1.Shares().Get(sharing.ID(2))
-		require.False(t, share.Equal(share2))
-
-		shareCopy := share.Clone()
-		require.True(t, share.Equal(shareCopy))
-		require.False(t, share.Equal(nil))
-
-		// Test HashCode
-		hash1 := share.HashCode()
-		hash2 := share2.HashCode()
-		require.NotEqual(t, hash1, hash2)
-
-		hashCopy := shareCopy.HashCode()
-		require.Equal(t, hash1, hashCopy)
-	})
-}
-
-func TestHomomorphicOperations(t *testing.T) {
-	t.Parallel()
-
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		basePoint := curve.Generator()
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"thresh equals total", 4, 4},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
-				require.NoError(t, err)
-				homomorphicOpsCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		basePoint := curve.Generator()
-
-		shareholders := sharing.NewOrdinalShareholderSet(4)
-		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
-		require.NoError(t, err)
-		homomorphicOpsCases(t, scheme, field)
-	})
-}
-
-// BenchmarkHomomorphicOps benchmarks homomorphic operations
-func BenchmarkHomomorphicOps(b *testing.B) {
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	basePoint := curve.Generator()
-	shareholders := sharing.NewOrdinalShareholderSet(5)
-	scheme, err := newFeldmanScheme(basePoint, 3, shareholders)
-	require.NoError(b, err)
-
-	// Create shares
-	secret := feldman.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(b, err)
-
-	share1, _ := shares.Shares().Get(sharing.ID(1))
-	share2, _ := shares.Shares().Get(sharing.ID(1))
-	scalar := field.FromUint64(7)
-
-	b.Run("Add", func(b *testing.B) {
-		for range b.N {
-			_ = share1.Add(share2)
-		}
-	})
-
-	b.Run("ScalarMul", func(b *testing.B) {
-		for range b.N {
-			_ = share1.ScalarMul(scalar)
-		}
-	})
-
-	b.Run("Combined", func(b *testing.B) {
-		for range b.N {
-			_ = share1.ScalarMul(scalar).Add(share2)
-		}
-	})
-}
-
-// toAdditiveCases tests the ToAdditive conversion method
-func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *feldman.Scheme[E, FE], field algebra.PrimeField[FE]) {
-	t.Helper()
-
-	// Create test secrets and their shares
-	secret := feldman.NewSecret(field.FromUint64(42))
-	shares, err := scheme.Deal(secret, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Get all shareholder IDs for creating qualified sets
-	allIds := shares.Shares().Keys()
-	thresh := scheme.AccessStructure().Threshold()
-
-	t.Run("valid conversion with full qualified set", func(t *testing.T) {
-		t.Parallel()
-		// Create a qualified set with all shareholders
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-		require.NoError(t, err)
-
-		// Convert each share to additive
-		additiveShares := make([]*additive.Share[FE], 0)
-		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(qualifiedSet)
-			require.NoError(t, err)
-			require.NotNil(t, additiveShare)
-			require.Equal(t, share.ID(), additiveShare.ID())
-			// Additive shares can be zero depending on Lagrange coefficients
-
-			additiveShares = append(additiveShares, additiveShare)
-		}
-
-		// Verify reconstruction with additive shares
-		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
-		require.NoError(t, err)
-
-		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
-		require.NoError(t, err)
-		require.True(t, secret.Value().Equal(reconstructed.Value()))
-	})
-
-	t.Run("valid conversion with thresh qualified set", func(t *testing.T) {
-		t.Parallel()
-		// Create a qualified set with exactly thresh shareholders
-		thresholdIds := allIds[:thresh]
-		qualifiedIds := hashset.NewComparable[sharing.ID]()
-
-		for _, id := range thresholdIds {
-			qualifiedIds.Add(id)
-		}
-
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
-		require.NoError(t, err)
-
-		// Convert shares in the qualified set
-		additiveShares := make([]*additive.Share[FE], 0)
-		for _, id := range thresholdIds {
-			share, exists := shares.Shares().Get(id)
-			require.True(t, exists)
-
-			additiveShare, err := share.ToAdditive(qualifiedSet)
-			require.NoError(t, err)
-			require.NotNil(t, additiveShare)
-			additiveShares = append(additiveShares, additiveShare)
-		}
-
-		// Verify reconstruction
-		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
-		require.NoError(t, err)
-
-		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
-		require.NoError(t, err)
-		require.True(t, secret.Value().Equal(reconstructed.Value()))
-	})
-
-	t.Run("error when share not in qualified set", func(t *testing.T) {
-		t.Parallel()
-		// Create a qualified set that doesn't include share ID 1
-		qualifiedIds := hashset.NewComparable[sharing.ID]()
-
-		// Add all IDs except the first one
-		for i := 1; i < len(allIds); i++ {
-			qualifiedIds.Add(allIds[i])
-		}
-
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(qualifiedIds.Freeze())
-		require.NoError(t, err)
-
-		// Try to convert share with ID 1 (not in qualified set)
-		share, exists := shares.Shares().Get(allIds[0])
-		require.True(t, exists)
-
-		additiveShare, err := share.ToAdditive(qualifiedSet)
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrMembership)
-		require.Nil(t, additiveShare)
-	})
-
-	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
-		t.Parallel()
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-		require.NoError(t, err)
-
-		share, exists := shares.Shares().Get(allIds[0])
-		require.True(t, exists)
-
-		// Convert multiple times
-		additiveShare1, err := share.ToAdditive(qualifiedSet)
-		require.NoError(t, err)
-
-		additiveShare2, err := share.ToAdditive(qualifiedSet)
-		require.NoError(t, err)
-
-		// Results should be identical
-		require.True(t, additiveShare1.Value().Equal(additiveShare2.Value()))
-		require.Equal(t, additiveShare1.ID(), additiveShare2.ID())
-	})
-
-	t.Run("lagrange coefficients verification", func(t *testing.T) {
-		t.Parallel()
-		// Test that the Lagrange coefficients sum to 1
-		lambdas, err := shamir.LagrangeCoefficients(field, allIds...)
-		require.NoError(t, err)
-
-		sum := field.Zero()
-		for _, lambda := range lambdas.Values() {
-			sum = sum.Add(lambda)
-		}
-		require.True(t, sum.Equal(field.One()), "Lagrange coefficients should sum to 1")
-	})
-}
-
-// TestToAdditive tests the ToAdditive conversion method
-func TestToAdditive(t *testing.T) {
-	t.Parallel()
-
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		curve := k256.NewCurve()
-		field := k256.NewScalarField()
-		basePoint := curve.Generator()
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-3", 2, 3},
-			{"3-of-5", 3, 5},
-			{"5-of-10", 5, 10},
-			{"thresh equals total", 4, 4},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
-				require.NoError(t, err)
-				toAdditiveCases(t, scheme, field)
-			})
-		}
-	})
-
-	t.Run("bls12381", func(t *testing.T) {
-		t.Parallel()
-		curve := bls12381.NewG1()
-		field := bls12381.NewScalarField()
-		basePoint := curve.Generator()
-
-		testConfigs := []struct {
-			name   string
-			thresh uint
-			total  uint
-		}{
-			{"2-of-4", 2, 4},
-			{"4-of-7", 4, 7},
-		}
-
-		for _, config := range testConfigs {
-			t.Run(config.name, func(t *testing.T) {
-				t.Parallel()
-				shareholders := sharing.NewOrdinalShareholderSet(config.total)
-				scheme, err := newFeldmanScheme(basePoint, config.thresh, shareholders)
-				require.NoError(t, err)
-				toAdditiveCases(t, scheme, field)
-			})
-		}
-	})
-}
-
-// TestToAdditiveEdgeCases tests edge cases for ToAdditive
-func TestToAdditiveEdgeCases(t *testing.T) {
-	t.Parallel()
-
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	basePoint := curve.Generator()
-
-	t.Run("zero secret conversion", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(3)
-		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
-		require.NoError(t, err)
-
-		// Deal shares for zero secret
-		zeroSecret := feldman.NewSecret(field.Zero())
-		shares, err := scheme.Deal(zeroSecret, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-		require.NoError(t, err)
-
-		// Convert all shares
-		additiveShares := make([]*additive.Share[*k256.Scalar], 0)
-		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(qualifiedSet)
-			require.NoError(t, err)
-			additiveShares = append(additiveShares, additiveShare)
-		}
-
-		// Verify reconstruction
-		additiveScheme, err := additive.NewScheme(field, qualifiedSet)
-		require.NoError(t, err)
-
-		reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
-		require.NoError(t, err)
-		require.True(t, field.Zero().Equal(reconstructed.Value()))
-	})
-
-	t.Run("single shareholder qualified set", func(t *testing.T) {
-		t.Parallel()
-		// This should fail as minimal qualified set needs at least 2 shareholders
-		singleID := hashset.NewComparable[sharing.ID]()
-		singleID.Add(sharing.ID(1))
-
-		_, err := unanimity.NewUnanimityAccessStructure(singleID.Freeze())
-		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrValue)
-	})
-
-	t.Run("share with modified value", func(t *testing.T) {
-		t.Parallel()
-		shareholders := sharing.NewOrdinalShareholderSet(3)
-		scheme, err := newFeldmanScheme(basePoint, 2, shareholders)
-		require.NoError(t, err)
-
-		secret := feldman.NewSecret(field.FromUint64(100))
-		shares, err := scheme.Deal(secret, pcg.NewRandomised())
-		require.NoError(t, err)
-
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-		require.NoError(t, err)
-
-		// Get a share and modify its value
-		share, exists := shares.Shares().Get(sharing.ID(1))
-		require.True(t, exists)
-
-		originalValue := share.Value()
-		newValue := field.FromUint64(999)
-		share, err = feldman.NewShare(share.ID(), newValue, scheme.AccessStructure())
-		require.NoError(t, err)
-
-		// Convert with modified value
-		additiveShare, err := share.ToAdditive(qualifiedSet)
-		require.NoError(t, err)
-
-		// The additive share should use the modified value
-		lambdas, err := shamir.LagrangeCoefficients(field, shares.Shares().Keys()...)
-		require.NoError(t, err)
-		lambda, exists := lambdas.Get(sharing.ID(1))
-		require.True(t, exists)
-		expectedValue := lambda.Mul(newValue)
-		require.True(t, expectedValue.Equal(additiveShare.Value()))
-
-		// Restore original value for other tests
-		share, err = feldman.NewShare(share.ID(), originalValue, scheme.AccessStructure())
-		require.NoError(t, err)
-	})
-}
-
-// BenchmarkToAdditive benchmarks the ToAdditive conversion
-func BenchmarkToAdditive(b *testing.B) {
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-	basePoint := curve.Generator()
-
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
-	}
-
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
-			require.NoError(b, err)
-
-			secret := feldman.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, pcg.NewRandomised())
-			require.NoError(b, err)
-
-			qualifiedSet, err := unanimity.NewUnanimityAccessStructure(scheme.AccessStructure().Shareholders())
-			require.NoError(b, err)
-
-			share, exists := shares.Shares().Get(sharing.ID(1))
-			require.True(b, exists)
-
-			b.ResetTimer()
-			for range b.N {
-				_, err := share.ToAdditive(qualifiedSet)
-				if err != nil {
-					b.Fatal(err)
-				}
+					require.True(t, secret.Value().Equal(sum),
+						"sum of additive shares must equal the secret")
+				})
 			}
 		})
 	}
 }
 
-func TestLiftedShareAndReconstruction(t *testing.T) {
+// ---------------------------------------------------------------------------
+// ConvertShareToAdditive via additive.Scheme.Reconstruct
+// ---------------------------------------------------------------------------
+
+func TestConvertShareToAdditive_ViaAdditiveReconstruct(t *testing.T) {
 	t.Parallel()
 
-	// Setup
 	curve := k256.NewCurve()
-	prng := pcg.NewRandomised()
-	thresh := uint(3)
-	total := uint(5)
+	field := k256.NewScalarField()
 
-	// Create shareholders and access structure
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	_, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(77))
+			_, shares := dealFeldman(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					additiveScheme, err := additive.NewScheme[*k256.Scalar](field, quorum)
+					require.NoError(t, err)
+
+					additiveShares := make([]*additive.Share[*k256.Scalar], len(qset))
+					for i, id := range qset {
+						addShare, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						additiveShares[i] = addShare
+					}
+
+					reconstructed, err := additiveScheme.Reconstruct(additiveShares...)
+					require.NoError(t, err)
+					require.True(t, secret.Value().Equal(reconstructed.Value()))
+				})
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ConvertLiftedShareToAdditive: sum of additive lifted shares recovers PK
+// ---------------------------------------------------------------------------
+
+func TestConvertLiftedShareToAdditive(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+			out, _ := dealFeldman(t, scheme, secret)
+
+			expectedPK := curve.ScalarBaseOp(secret.Value())
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					sum := curve.OpIdentity()
+					for _, id := range qset {
+						sh, ok := out.Shares().Get(id)
+						require.True(t, ok)
+
+						lifted, err := feldman.LiftShare(sh, gen)
+						require.NoError(t, err)
+
+						addShare, err := scheme.ConvertLiftedShareToAdditive(lifted, quorum)
+						require.NoError(t, err)
+						sum = sum.Op(addShare.Value())
+					}
+					require.True(t, expectedPK.Equal(sum),
+						"product of additive lifted shares must equal [secret]G")
+				})
+			}
+		})
+	}
+}
+
+// TestConvertLiftedShareToAdditive_ConsistentWithScalar verifies that the
+// lifted conversion is the homomorphic image of the scalar conversion:
+// [ConvertShareToAdditive(share)]G == ConvertLiftedShareToAdditive([share]G).
+func TestConvertLiftedShareToAdditive_ConsistentWithScalar(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(99))
+			out, shares := dealFeldman(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					quorum := newUnanimity(t, qset...)
+
+					for _, id := range qset {
+						// Scalar path: convert scalar share → additive scalar → lift.
+						scalarAdd, err := scheme.ConvertShareToAdditive(shares[id], quorum)
+						require.NoError(t, err)
+						liftedFromScalar := gen.ScalarOp(scalarAdd.Value())
+
+						// Group path: lift share → convert lifted → get value.
+						sh, ok := out.Shares().Get(id)
+						require.True(t, ok)
+						lifted, err := feldman.LiftShare(sh, gen)
+						require.NoError(t, err)
+						groupAdd, err := scheme.ConvertLiftedShareToAdditive(lifted, quorum)
+						require.NoError(t, err)
+
+						require.True(t, liftedFromScalar.Equal(groupAdd.Value()),
+							"scalar and group additive paths disagree for shareholder %d", id)
+					}
+				})
+			}
+		})
+	}
+}
+
+// TestConvertLiftedShareToAdditive_NilInputs verifies error handling.
+func TestConvertLiftedShareToAdditive_NilInputs(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(1))
+	out, _ := dealFeldman(t, scheme, secret)
+	gen := curve.Generator()
+
+	sh, ok := out.Shares().Get(fx.shareholders[0])
+	require.True(t, ok)
+	lifted, err := feldman.LiftShare(sh, gen)
 	require.NoError(t, err)
 
-	// Create Feldman scheme
-	basePoint := curve.PrimeSubGroupGenerator()
-	scheme, err := newFeldmanScheme(basePoint, thresh, shareholders)
-	require.NoError(t, err)
+	quorum := newUnanimity(t, fx.qualified[0]...)
 
-	// Deal shares
-	shares, secret, err := scheme.DealRandom(prng)
-	require.NoError(t, err)
-
-	t.Run("lift shares and reconstruct", func(t *testing.T) {
+	t.Run("nil share", func(t *testing.T) {
 		t.Parallel()
-		// Lift all shares to the exponent
-		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, total)
-		for id, share := range shares.Shares().Iter() {
-			// Compute share in exponent: g^s_i
-			shareInExponent := basePoint.ScalarOp(share.Value())
-			lifted, err := feldman.NewLiftedShare(id, shareInExponent)
-			require.NoError(t, err)
-			liftedShares = append(liftedShares, lifted)
-		}
-
-		// Reconstruct from all shares
-		reconstructed, err := liftedShares.ReconstructAsAdditive()
-		require.NoError(t, err)
-
-		// Verify: reconstructed should equal g^s where s is the secret
-		expected := basePoint.ScalarOp(secret.Value())
-		require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
-	})
-
-	t.Run("reconstruct from thresh shares", func(t *testing.T) {
-		t.Parallel()
-		// Select thresh shares (IDs 1, 2, 3)
-		selectedIDs := []sharing.ID{1, 2, 3}
-		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, thresh)
-
-		for _, id := range selectedIDs {
-			share, exists := shares.Shares().Get(id)
-			require.True(t, exists)
-
-			// Compute share in exponent
-			shareInExponent := basePoint.ScalarOp(share.Value())
-			lifted, err := feldman.NewLiftedShare(id, shareInExponent)
-			require.NoError(t, err)
-			liftedShares = append(liftedShares, lifted)
-		}
-
-		// Reconstruct from thresh shares
-		reconstructed, err := liftedShares.ReconstructAsAdditive()
-		require.NoError(t, err)
-
-		// Verify
-		expected := basePoint.ScalarOp(secret.Value())
-		require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
-	})
-
-	t.Run("different thresh sets yield same result", func(t *testing.T) {
-		t.Parallel()
-		// First set: IDs 1, 2, 3
-		set1IDs := []sharing.ID{1, 2, 3}
-		liftedSet1 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, thresh)
-
-		for _, id := range set1IDs {
-			share, exists := shares.Shares().Get(id)
-			require.True(t, exists, "share %d not found", id)
-			shareInExponent := basePoint.ScalarOp(share.Value())
-			lifted, err := feldman.NewLiftedShare(id, shareInExponent)
-			require.NoError(t, err)
-			liftedSet1 = append(liftedSet1, lifted)
-		}
-
-		reconstructed1, err := liftedSet1.ReconstructAsAdditive()
-		require.NoError(t, err)
-
-		// Second set: IDs 1, 3, 4
-		set2IDs := []sharing.ID{1, 3, 4}
-		liftedSet2 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, thresh)
-
-		for _, id := range set2IDs {
-			share, exists := shares.Shares().Get(id)
-			require.True(t, exists, "share %d not found", id)
-			shareInExponent := basePoint.ScalarOp(share.Value())
-			lifted, err := feldman.NewLiftedShare(id, shareInExponent)
-			require.NoError(t, err)
-			liftedSet2 = append(liftedSet2, lifted)
-		}
-
-		reconstructed2, err := liftedSet2.ReconstructAsAdditive()
-		require.NoError(t, err)
-
-		// Both should equal the same value
-		require.True(t, reconstructed1.Equal(reconstructed2), "different thresh sets yielded different results")
-	})
-
-	t.Run("share lift method", func(t *testing.T) {
-		t.Parallel()
-		// Skip this test due to an issue with the Lift() method implementation
-		// The verification vector's Structure() returns a polynomial module, not a prime group
-		t.Skip("Skipping due to Lift() method implementation issue")
-
-		// Test the Lift() method on Share
-		_, exists := shares.Shares().Get(sharing.ID(1))
-		require.True(t, exists)
-
-		// Use the Lift() method
-		// lifted := share1.Lift()
-		// require.NotNil(t, lifted)
-		// require.Equal(t, sharing.ID(0), lifted.ID())
-
-		// Verify the lifted value equals g^s_1
-		// expected := basePoint.ScalarOp(share1.Value())
-		// require.True(t, lifted.Value().Equal(expected))
-	})
-
-	t.Run("insufficient shares error", func(t *testing.T) {
-		t.Parallel()
-		// Try with only 2 shares (below thresh)
-		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, 2)
-
-		for i := range 2 {
-			share, _ := shares.Shares().Get(sharing.ID(i + 1))
-			shareInExponent := basePoint.ScalarOp(share.Value())
-			lifted, _ := feldman.NewLiftedShare(sharing.ID(i+1), shareInExponent)
-			liftedShares = append(liftedShares, lifted)
-		}
-
-		// This should still work since ReconstructAsAdditive doesn't check thresh
-		// It just uses whatever shares are provided
-		_, err := liftedShares.ReconstructAsAdditive()
-		require.NoError(t, err)
-		// But the result won't be correct unless we have thresh shares
-	})
-
-	t.Run("empty shares error", func(t *testing.T) {
-		t.Parallel()
-		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0)
-		_, err := liftedShares.ReconstructAsAdditive()
+		_, err := scheme.ConvertLiftedShareToAdditive(nil, quorum)
 		require.Error(t, err)
-		require.ErrorIs(t, err, sharing.ErrArgument)
 	})
 
-	t.Run("ToAdditive conversion", func(t *testing.T) {
+	t.Run("nil quorum", func(t *testing.T) {
 		t.Parallel()
-		// Create a qualified set
-		selectedIDs := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
-		qualifiedSet, err := unanimity.NewUnanimityAccessStructure(selectedIDs)
-		require.NoError(t, err)
+		_, err := scheme.ConvertLiftedShareToAdditive(lifted, nil)
+		require.Error(t, err)
+	})
 
-		// Get a share and lift it
-		share1, _ := shares.Shares().Get(sharing.ID(1))
-		shareInExponent := basePoint.ScalarOp(share1.Value())
-		lifted, err := feldman.NewLiftedShare(sharing.ID(1), shareInExponent)
-		require.NoError(t, err)
-
-		// Convert to additive share
-		additiveShare, err := lifted.ToAdditive(qualifiedSet)
-		require.NoError(t, err)
-		require.NotNil(t, additiveShare)
-		require.Equal(t, sharing.ID(1), additiveShare.ID())
-
-		// The value should be λ_1 * g^s_1 where λ_1 is the Lagrange coefficient
-		// We can't easily verify the exact value without computing Lagrange coefficients
-		// but we can check it's not zero
-		require.False(t, additiveShare.Value().IsZero())
+	t.Run("share not in quorum", func(t *testing.T) {
+		t.Parallel()
+		// Create a quorum that does not contain the share's ID.
+		otherIDs := fx.qualified[0]
+		var excluded []sharing.ID
+		for _, id := range otherIDs {
+			if id != lifted.ID() {
+				excluded = append(excluded, id)
+			}
+		}
+		if len(excluded) >= 2 {
+			wrongQuorum := newUnanimity(t, excluded...)
+			_, err := scheme.ConvertLiftedShareToAdditive(lifted, wrongQuorum)
+			require.Error(t, err)
+		}
 	})
 }
 
-// TestLiftedShareCorrectnessWithManualCalculation verifies the mathematical correctness
-func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
+// ---------------------------------------------------------------------------
+// LiftedShare CBOR round-trip
+// ---------------------------------------------------------------------------
+
+func TestLiftedShare_CBOR(t *testing.T) {
 	t.Parallel()
 
-	// Setup
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
+	gen := curve.Generator()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(777))
+	out, _ := dealFeldman(t, scheme, secret)
+
+	for _, id := range fx.shareholders {
+		t.Run(fmt.Sprintf("id=%d", id), func(t *testing.T) {
+			t.Parallel()
+			sh, ok := out.Shares().Get(id)
+			require.True(t, ok)
+
+			lifted, err := feldman.LiftShare(sh, gen)
+			require.NoError(t, err)
+
+			// Marshal the Feldman-level lifted share
+			fls, err := feldman.NewLiftedShare[*k256.Point, *k256.Scalar](id, lifted.Value()...)
+			require.NoError(t, err)
+
+			data, err := fls.MarshalCBOR()
+			require.NoError(t, err)
+
+			var decoded feldman.LiftedShare[*k256.Point, *k256.Scalar]
+			err = decoded.UnmarshalCBOR(data)
+			require.NoError(t, err)
+			require.Equal(t, fls.ID(), decoded.ID())
+			require.Len(t, decoded.Value(), len(fls.Value()))
+			for i := range fls.Value() {
+				require.True(t, fls.Value()[i].Equal(decoded.Value()[i]))
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// BLS12-381 G1: field-agnostic verification
+// ---------------------------------------------------------------------------
+
+func TestBLS12381_G1(t *testing.T) {
+	t.Parallel()
+
+	g1 := bls12381.NewG1()
+	field := bls12381.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme, err := feldman.NewScheme(g1, fx.ac)
+			require.NoError(t, err)
+
+			secret := kw.NewSecret(field.FromUint64(999999))
+			out, err := scheme.Deal(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+			ref := out.VerificationMaterial()
+
+			m := make(map[sharing.ID]*kw.Share[*bls12381.Scalar])
+			for id, sh := range out.Shares().Iter() {
+				m[id] = sh
+			}
+
+			// Verify + reconstruct for every qualified set
+			for _, qset := range fx.qualified {
+				for _, id := range qset {
+					require.NoError(t, scheme.Verify(m[id], ref))
+				}
+				reconstructed, err := scheme.Reconstruct(pickShares(m, qset...)...)
+				require.NoError(t, err)
+				require.True(t, secret.Equal(reconstructed))
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// BLS12-381 G2: verify on the second curve group too
+// ---------------------------------------------------------------------------
+
+func TestBLS12381_G2(t *testing.T) {
+	t.Parallel()
+
+	g2 := bls12381.NewG2()
+	field := bls12381.NewScalarField()
+
+	fx := thresholdFixture(t)
+	scheme, err := feldman.NewScheme(g2, fx.ac)
+	require.NoError(t, err)
+
+	secret := kw.NewSecret(field.FromUint64(54321))
+	out, err := scheme.Deal(secret, pcg.NewRandomised())
+	require.NoError(t, err)
+	ref := out.VerificationMaterial()
+
+	m := make(map[sharing.ID]*kw.Share[*bls12381.Scalar])
+	for id, sh := range out.Shares().Iter() {
+		m[id] = sh
+	}
+
+	for _, qset := range fx.qualified {
+		for _, id := range qset {
+			require.NoError(t, scheme.Verify(m[id], ref))
+		}
+		reconstructed, err := scheme.Reconstruct(pickShares(m, qset...)...)
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Dahlgren attack prevention: an adversary extends the verification vector
+// with extra group elements, hoping to inject additional degrees of freedom
+// that let a corrupted share pass verification. The left module action M * V
+// enforces dim(V) == MSP.D(), so the extended vector must be rejected.
+//
+// See https://blog.trailofbits.com/2024/02/20/breaking-the-shared-key-in-threshold-signature-schemes/
+// ---------------------------------------------------------------------------
+
+func TestDahlgrenAttack_ExtendedVerificationVector(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	fx := largeThresholdFixture(t) // threshold(4,7) → D=4
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
 	prng := pcg.NewRandomised()
 
-	// Create a simple 2-of-3 scheme
-	thresh := uint(2)
-	total := uint(3)
-	shareholders := sharing.NewOrdinalShareholderSet(total)
-	_, err := threshold.NewThresholdAccessStructure(thresh, shareholders)
+	out, df, err := scheme.DealAndRevealDealerFunc(secret, prng)
 	require.NoError(t, err)
 
-	// Create Feldman scheme
-	basePoint := curve.PrimeSubGroupGenerator()
-	scheme, err := newFeldmanScheme(basePoint, thresh, shareholders)
+	// Build an extended verification vector: the honest D entries plus one
+	// extra random group element (D+1 rows × 1 col).
+	r := df.RandomColumn()
+	d, _ := r.Dimensions()
+	extraScalar, err := field.Random(prng)
 	require.NoError(t, err)
-
-	// Create a known secret
-	secretValue := field.FromUint64(42)
-	secret := feldman.NewSecret(secretValue)
-
-	// Deal shares with known secret
-	shares, err := scheme.Deal(secret, prng)
+	extMod, err := mat.NewMatrixModule(uint(d+1), 1, field)
 	require.NoError(t, err)
-
-	// Verify the polynomial evaluation
-	// For a polynomial f(x) = a0 + a1*x where a0 = secret
-	// We have f(1), f(2), f(3) as our shares
-
-	// Lift shares for participants 0 and 2
-	selectedIDs := []sharing.ID{1, 3}
-	liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, len(selectedIDs))
-
-	for _, id := range selectedIDs {
-		share, exists := shares.Shares().Get(id)
-		require.True(t, exists)
-
-		// Compute g^{f(id)}
-		shareInExponent := basePoint.ScalarOp(share.Value())
-		lifted, err := feldman.NewLiftedShare(id, shareInExponent)
+	entries := make([]FE, d+1)
+	for i := range d {
+		entries[i], err = r.Get(i, 0)
 		require.NoError(t, err)
-		liftedShares = append(liftedShares, lifted)
 	}
-
-	// Reconstruct
-	reconstructed, err := liftedShares.ReconstructAsAdditive()
+	entries[d] = extraScalar
+	extCol, err := extMod.NewRowMajor(entries...)
+	require.NoError(t, err)
+	extendedVV, err := mat.Lift(extCol, gen)
 	require.NoError(t, err)
 
-	// Verify: reconstructed should equal g^secret
-	expected := basePoint.ScalarOp(secretValue)
-	require.True(t, reconstructed.Equal(expected), "reconstructed value doesn't match expected")
+	// Wrap without MSP so the constructor doesn't reject; Verify will reject
+	// via the dimension check in the left module action.
+	extendedRef, err := feldman.NewVerificationVector[*k256.Point](extendedVV, nil)
+	require.NoError(t, err)
 
-	// Also verify using Lagrange coefficients manually
-	// For points (1, f(1)) and (3, f(3)), we need to find f(0)
-	// λ_1 = 3/(3-1) = 3/2
-	// λ_3 = 1/(1-3) = 1/(-2) = -1/2
-	// f(0) = λ_1 * f(1) + λ_3 * f(3)
-
-	// In the group: g^{f(0)} = g^{λ_1 * f(1)} * g^{λ_3 * f(3)}
-	//                        = (g^{f(1)})^{λ_1} * (g^{f(3)})^{λ_3}
+	// Verify must fail: the extended V has dimension D+1, but M has D columns.
+	sh, ok := out.Shares().Get(fx.shareholders[0])
+	require.True(t, ok)
+	err = scheme.Verify(sh, extendedRef)
+	require.Error(t, err, "extended verification vector must be rejected (Dahlgren attack)")
 }
 
-// BenchmarkVerification benchmarks the verification function
-func BenchmarkVerification(b *testing.B) {
+// ---------------------------------------------------------------------------
+// Arbitrary (non-sequential) shareholder IDs
+// ---------------------------------------------------------------------------
+
+func TestArbitraryIDs(t *testing.T) {
+	t.Parallel()
+
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	basePoint := curve.Generator()
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(10, 100, 1000))
+	require.NoError(t, err)
+	scheme := newFeldmanScheme(t, curve, ac)
 
-	benchConfigs := []struct {
-		name   string
-		thresh uint
-		total  uint
-	}{
-		{"2-of-3", 2, 3},
-		{"3-of-5", 3, 5},
-		{"5-of-10", 5, 10},
-		{"10-of-20", 10, 20},
+	secret := kw.NewSecret(field.FromUint64(54321))
+	out, shares := dealFeldman(t, scheme, secret)
+	ref := out.VerificationMaterial()
+
+	for _, qset := range [][]sharing.ID{{10, 100}, {10, 1000}, {100, 1000}, {10, 100, 1000}} {
+		for _, id := range qset {
+			require.NoError(t, scheme.Verify(shares[id], ref))
+		}
+		reconstructed, err := scheme.Reconstruct(pickShares(shares, qset...)...)
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DealRandomAndRevealDealerFunc: lifted secret matches [s]G
+// ---------------------------------------------------------------------------
+
+func TestDealRandomAndRevealDealerFunc_LiftedSecret(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+
+			out, secret, df, err := scheme.DealRandomAndRevealDealerFunc(pcg.NewRandomised())
+			require.NoError(t, err)
+			require.NotNil(t, out)
+
+			// The lifted secret (first element of V for standard target) should
+			// equal [secret]G.
+			ldf, err := feldman.NewLiftedDealerFunc(out.VerificationMaterial(), df.MSP())
+			require.NoError(t, err)
+			liftedSecret := ldf.LiftedSecret()
+			expected := gen.ScalarOp(secret.Value())
+			require.True(t, expected.Equal(liftedSecret.Value()),
+				"V[0] must equal [secret]G")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Multi-row shareholders (non-ideal MSP): verification still works
+// CNF access structures produce non-ideal MSPs where shareholders own
+// multiple MSP rows.
+// ---------------------------------------------------------------------------
+
+func TestVerify_MultiRowShareholders(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	fx := cnfThreeClauseFixture(t) // non-ideal MSP
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(31337))
+	out, shares := dealFeldman(t, scheme, secret)
+	ref := out.VerificationMaterial()
+
+	// Confirm multi-row shares
+	for _, id := range fx.shareholders {
+		require.Greater(t, len(shares[id].Value()), 1,
+			"shareholder %d should own more than one MSP row", id)
 	}
 
-	for _, config := range benchConfigs {
-		b.Run(config.name, func(b *testing.B) {
-			shareHolders := sharing.NewOrdinalShareholderSet(config.total)
-			scheme, err := newFeldmanScheme(basePoint, config.thresh, shareHolders)
-			require.NoError(b, err)
+	// Verification must still pass
+	for _, id := range fx.shareholders {
+		require.NoError(t, scheme.Verify(shares[id], ref),
+			"multi-row share verification failed for ID %d", id)
+	}
 
-			secret := feldman.NewSecret(field.FromUint64(42))
-			shares, err := scheme.Deal(secret, pcg.NewRandomised())
-			require.NoError(b, err)
+	// Reconstruct + verify
+	for _, qset := range fx.qualified {
+		reconstructed, err := scheme.ReconstructAndVerify(ref, pickShares(shares, qset...)...)
+		require.NoError(t, err)
+		require.True(t, secret.Equal(reconstructed))
+	}
+}
 
-			share := shares.Shares().Values()[0]
-			reference := shares.VerificationMaterial()
+// ---------------------------------------------------------------------------
+// Deal error cases
+// ---------------------------------------------------------------------------
 
-			b.ResetTimer()
-			for range b.N {
-				err := scheme.Verify(share, reference)
-				if err != nil {
-					b.Fatal(err)
-				}
+func TestDeal_NilSecret(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, err := scheme.Deal(nil, pcg.NewRandomised())
+	require.Error(t, err)
+}
+
+func TestDeal_NilPRNG(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, err := scheme.Deal(kw.NewSecret(field.One()), nil)
+	require.Error(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// LiftDealerFunc – construction and error cases
+// ---------------------------------------------------------------------------
+
+func TestLiftDealerFunc_NilDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	_, err := feldman.LiftDealerFunc(nil, curve.Generator())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestLiftDealerFunc_NilBasePoint(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	_, err = feldman.LiftDealerFunc[*k256.Point](df, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestLiftDealerFunc_LiftedSecretMatchesScalarMul(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+
+			_, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			ldf, err := feldman.LiftDealerFunc(df, gen)
+			require.NoError(t, err)
+
+			// LiftedSecret should equal gen * secret
+			expected := gen.ScalarOp(secret.Value())
+			require.True(t, expected.Equal(ldf.LiftedSecret().Value()),
+				"lifted secret should be basePoint * secret")
+		})
+	}
+}
+
+func TestLiftDealerFunc_LiftedShareMatchesManualLift(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(77))
+
+			_, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			ldf, err := feldman.LiftDealerFunc(df, gen)
+			require.NoError(t, err)
+
+			for _, id := range fx.shareholders {
+				liftedShare, err := ldf.ShareOf(id)
+				require.NoError(t, err)
+
+				// Manually lift the scalar share
+				scalarShare, err := df.ShareOf(id)
+				require.NoError(t, err)
+				manualLift, err := feldman.LiftShare(scalarShare, gen)
+				require.NoError(t, err)
+
+				require.True(t, liftedShare.Equal(manualLift),
+					"LiftDealerFunc.ShareOf(%d) must match LiftShare of scalar share", id)
 			}
 		})
 	}
 }
+
+func TestLiftDealerFunc_ShareOfNonExistentID(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	ldf, err := feldman.LiftDealerFunc(df, curve.Generator())
+	require.NoError(t, err)
+
+	_, err = ldf.ShareOf(999)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrMembership)
+}
+
+func TestLiftDealerFunc_Accessors(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.FromUint64(3)), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	ldf, err := feldman.LiftDealerFunc(df, curve.Generator())
+	require.NoError(t, err)
+
+	require.NotNil(t, ldf.VerificationVector())
+	require.NotNil(t, ldf.MSP())
+	require.NotNil(t, ldf.Lambda())
+}
+
+// ---------------------------------------------------------------------------
+// NewLiftedDealerFunc – construction and error cases
+// ---------------------------------------------------------------------------
+
+func TestNewLiftedDealerFunc_NilVerificationVector(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	_, err = feldman.NewLiftedDealerFunc[*k256.Point](nil, df.MSP())
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestNewLiftedDealerFunc_NilMSP(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, curve, fx.ac)
+
+	_, df, err := scheme.DealAndRevealDealerFunc(kw.NewSecret(field.One()), pcg.NewRandomised())
+	require.NoError(t, err)
+
+	vvv, err := mat.Lift(df.RandomColumn(), curve.Generator())
+	require.NoError(t, err)
+
+	vv, err := feldman.NewVerificationVector(vvv, nil)
+	require.NoError(t, err)
+
+	_, err = feldman.NewLiftedDealerFunc(vv, nil)
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrIsNil)
+}
+
+func TestNewLiftedDealerFunc_ConsistentWithLiftDealerFunc(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	gen := curve.Generator()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, curve, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(42))
+
+			_, df, err := scheme.DealAndRevealDealerFunc(secret, pcg.NewRandomised())
+			require.NoError(t, err)
+
+			// Method 1: LiftDealerFunc
+			ldf1, err := feldman.LiftDealerFunc(df, gen)
+			require.NoError(t, err)
+
+			// Method 2: NewLiftedDealerFunc from verification vector
+			vvv, err := mat.Lift(df.RandomColumn(), gen)
+			require.NoError(t, err)
+			vv, err := feldman.NewVerificationVector(vvv, df.MSP())
+			require.NoError(t, err)
+			ldf2, err := feldman.NewLiftedDealerFunc(vv, df.MSP())
+			require.NoError(t, err)
+
+			// Both should produce the same lifted secret
+			require.True(t, ldf1.LiftedSecret().Equal(ldf2.LiftedSecret()),
+				"LiftDealerFunc and NewLiftedDealerFunc must produce the same lifted secret")
+
+			// Both should produce the same lifted shares
+			for _, id := range fx.shareholders {
+				sh1, err := ldf1.ShareOf(id)
+				require.NoError(t, err)
+				sh2, err := ldf2.ShareOf(id)
+				require.NoError(t, err)
+				require.True(t, sh1.Equal(sh2),
+					"lifted shares for ID %d must match between LiftDealerFunc and NewLiftedDealerFunc", id)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ReconstructInTheExponent
+// ---------------------------------------------------------------------------
+
+// TestReconstructInTheExponent_MatchesScalarReconstruct deals a random secret,
+// lifts the scalar shares to group elements, reconstructs in the exponent, and
+// verifies the result equals [secret]·G.
+func TestReconstructInTheExponent_MatchesScalarReconstruct(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, group, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(12345))
+			_, shares := dealFeldman(t, scheme, secret)
+
+			for _, qset := range fx.qualified {
+				t.Run(formatIDs(qset), func(t *testing.T) {
+					t.Parallel()
+					liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+					for i, id := range qset {
+						ls, err := feldman.LiftShare(shares[id], group.Generator())
+						require.NoError(t, err)
+						liftedShares[i] = ls
+					}
+					liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+					require.NoError(t, err)
+
+					// [secret]·G computed directly
+					expected := group.ScalarBaseOp(secret.Value())
+					require.True(t, expected.Equal(liftedSecret.Value()),
+						"ReconstructInTheExponent must recover [secret]·G")
+				})
+			}
+		})
+	}
+}
+
+// TestReconstructInTheExponent_RandomSecrets verifies with multiple random
+// secrets that the lifted reconstruction always matches [secret]·G.
+func TestReconstructInTheExponent_RandomSecrets(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, group, fx.ac)
+
+			for range 5 {
+				val, err := field.Random(prng)
+				require.NoError(t, err)
+				secret := kw.NewSecret(val)
+				_, shares := dealFeldman(t, scheme, secret)
+
+				qset := fx.qualified[0]
+				liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+				for i, id := range qset {
+					ls, err := feldman.LiftShare(shares[id], group.Generator())
+					require.NoError(t, err)
+					liftedShares[i] = ls
+				}
+				liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+				require.NoError(t, err)
+
+				expected := group.ScalarBaseOp(secret.Value())
+				require.True(t, expected.Equal(liftedSecret.Value()),
+					"lifted reconstruction must match [secret]·G for random secret")
+			}
+		})
+	}
+}
+
+// TestReconstructInTheExponent_ConsistentAcrossQuorums verifies that different
+// qualified sets reconstruct the same lifted secret.
+func TestReconstructInTheExponent_ConsistentAcrossQuorums(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	fx := thresholdFixture(t) // has multiple qualified sets
+	scheme := newFeldmanScheme(t, group, fx.ac)
+	secret := kw.NewSecret(field.FromUint64(42))
+	_, shares := dealFeldman(t, scheme, secret)
+
+	var first *feldman.LiftedSecret[*k256.Point, *k256.Scalar]
+	for _, qset := range fx.qualified {
+		liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+		for i, id := range qset {
+			ls, err := feldman.LiftShare(shares[id], group.Generator())
+			require.NoError(t, err)
+			liftedShares[i] = ls
+		}
+		liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+		require.NoError(t, err)
+
+		if first == nil {
+			first = liftedSecret
+		} else {
+			require.True(t, first.Equal(liftedSecret),
+				"all qualified sets must reconstruct the same lifted secret")
+		}
+	}
+}
+
+// TestReconstructInTheExponent_UnqualifiedSetFails verifies that an unqualified
+// set of lifted shares cannot reconstruct.
+func TestReconstructInTheExponent_UnqualifiedSetFails(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+
+	for _, fx := range allFixtures(t) {
+		t.Run(fx.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := newFeldmanScheme(t, group, fx.ac)
+			secret := kw.NewSecret(field.FromUint64(99))
+			_, shares := dealFeldman(t, scheme, secret)
+
+			for _, uset := range fx.unqualified {
+				t.Run(formatIDs(uset), func(t *testing.T) {
+					t.Parallel()
+					liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(uset))
+					for i, id := range uset {
+						ls, err := feldman.LiftShare(shares[id], group.Generator())
+						require.NoError(t, err)
+						liftedShares[i] = ls
+					}
+					_, err := scheme.ReconstructInTheExponent(liftedShares...)
+					require.Error(t, err, "unqualified set %v must not reconstruct", uset)
+				})
+			}
+		})
+	}
+}
+
+// TestReconstructInTheExponent_ArbitraryBasePoint verifies that reconstruction
+// works with a non-generator base point H = [r]·G, producing [secret]·H.
+func TestReconstructInTheExponent_ArbitraryBasePoint(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	field := k256.NewScalarField()
+	prng := pcg.NewRandomised()
+
+	fx := thresholdFixture(t)
+	scheme := newFeldmanScheme(t, group, fx.ac)
+
+	r, err := field.Random(prng)
+	require.NoError(t, err)
+	H := group.ScalarBaseOp(r) // arbitrary base point
+
+	secret := kw.NewSecret(field.FromUint64(777))
+	_, shares := dealFeldman(t, scheme, secret)
+
+	qset := fx.qualified[0]
+	liftedShares := make([]*feldman.LiftedShare[*k256.Point, *k256.Scalar], len(qset))
+	for i, id := range qset {
+		ls, err := feldman.LiftShare(shares[id], H)
+		require.NoError(t, err)
+		liftedShares[i] = ls
+	}
+	liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+	require.NoError(t, err)
+
+	// Expected: [secret]·H = [secret·r]·G
+	expected := H.ScalarOp(secret.Value())
+	require.True(t, expected.Equal(liftedSecret.Value()),
+		"reconstruction with arbitrary base point must yield [secret]·H")
+}
+
+// TestReconstructInTheExponent_BLS12381 verifies that reconstruction in the
+// exponent works on a different curve (BLS12-381 G1).
+func TestReconstructInTheExponent_BLS12381(t *testing.T) {
+	t.Parallel()
+
+	group := bls12381.NewG1()
+	field := bls12381.NewScalarField()
+
+	ac, err := threshold.NewThresholdAccessStructure(2, shareholders(1, 2, 3))
+	require.NoError(t, err)
+	scheme := newFeldmanScheme(t, group, ac)
+
+	secret := kw.NewSecret(field.FromUint64(42))
+	_, shares := dealFeldman(t, scheme, secret)
+
+	for _, qset := range [][]sharing.ID{{1, 2}, {1, 3}, {2, 3}, {1, 2, 3}} {
+		t.Run(formatIDs(qset), func(t *testing.T) {
+			t.Parallel()
+			liftedShares := make([]*feldman.LiftedShare[*bls12381.PointG1, *bls12381.Scalar], len(qset))
+			for i, id := range qset {
+				ls, err := feldman.LiftShare(shares[id], group.Generator())
+				require.NoError(t, err)
+				liftedShares[i] = ls
+			}
+			liftedSecret, err := scheme.ReconstructInTheExponent(liftedShares...)
+			require.NoError(t, err)
+
+			expected := group.ScalarBaseOp(secret.Value())
+			require.True(t, expected.Equal(liftedSecret.Value()),
+				"BLS12-381 lifted reconstruction must recover [secret]·G")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// type alias to shorten generic constraints in tamper helpers
+// ---------------------------------------------------------------------------
+
+type FE = *k256.Scalar
