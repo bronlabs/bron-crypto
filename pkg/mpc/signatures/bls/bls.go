@@ -14,11 +14,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 
-// PublicMaterial contains the public cryptographic material for a threshold BLS signature scheme.
-// It holds the combined public key, the access structure defining the threshold parameters,
-// the Feldman verification vector, and the partial public keys for each party.
-// The type parameters support pairing-friendly curves where PK is the public key group
-// and SG is the signature group.
+// PublicMaterial contains the public cryptographic material for an MPC BLS signature scheme
+// over an arbitrary monotone access structure. It holds the combined public key, the MSP matrix
+// induced from the access structure, the Feldman verification vector, and the partial public keys
+// for each party. The type parameters support pairing-friendly curves where PK is the public key
+// group and SG is the signature group.
 type PublicMaterial[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -91,9 +91,10 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) UnmarshalCBOR(data []byte) 
 	return nil
 }
 
-// Shard represents a party's secret share in a threshold BLS signature scheme.
-// It embeds PublicMaterial and additionally contains the party's private Feldman share,
-// which is used to produce partial signatures. Shards should be kept secret by their owners.
+// Shard represents a party's secret share in an MPC BLS signature scheme over an arbitrary
+// monotone access structure. It embeds PublicMaterial and additionally contains the party's
+// private Feldman share, which is used to produce partial signatures. Shards should be kept
+// secret by their owners.
 type Shard[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],

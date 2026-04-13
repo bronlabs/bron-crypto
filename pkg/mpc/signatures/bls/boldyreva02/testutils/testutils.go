@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	gentu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	tbls "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls"
+	mpcbls "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls/boldyreva02/keygen"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/bls/boldyreva02/signing"
@@ -34,13 +34,13 @@ func DoBoldyrevaDKGShort[
 ](
 	tb testing.TB, participants map[sharing.ID]*gennaro.Participant[PK, S],
 ) (
-	shards map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S],
+	shards map[sharing.ID]*mpcbls.Shard[PK, PKFE, SG, SGFE, E, S],
 ) {
 	tb.Helper()
 
 	dkgOutputs := gentu.DoGennaroDKG(tb, participants)
 
-	shards = make(map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S])
+	shards = make(map[sharing.ID]*mpcbls.Shard[PK, PKFE, SG, SGFE, E, S])
 	for id, output := range dkgOutputs {
 		shard, err := keygen.NewShortKeyShard(output)
 		require.NoError(tb, err)
@@ -60,13 +60,13 @@ func DoBoldyrevaDKGLong[
 ](
 	tb testing.TB, participants map[sharing.ID]*gennaro.Participant[PK, S],
 ) (
-	shards map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S],
+	shards map[sharing.ID]*mpcbls.Shard[PK, PKFE, SG, SGFE, E, S],
 ) {
 	tb.Helper()
 
 	dkgOutputs := gentu.DoGennaroDKG(tb, participants)
 
-	shards = make(map[sharing.ID]*tbls.Shard[PK, PKFE, SG, SGFE, E, S])
+	shards = make(map[sharing.ID]*mpcbls.Shard[PK, PKFE, SG, SGFE, E, S])
 	for id, output := range dkgOutputs {
 		shard, err := keygen.NewLongKeyShard(output)
 		require.NoError(tb, err)
