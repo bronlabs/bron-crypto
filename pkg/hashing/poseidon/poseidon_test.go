@@ -224,7 +224,8 @@ func runTestVectors(t *testing.T, content string, hasherFactory func() *poseidon
 func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
 	b.Helper()
 	// Create test inputs of different sizes
-	sizes := []int{2 * 1, 2 * 2, 2 * 3, 2 * 4, 2 * 5, 2 * 10}
+	rate := hasherFactory().Rate()
+	sizes := []int{rate * 1, rate * 2, rate * 3, rate * 4, rate * 5, rate * 10}
 
 	for _, size := range sizes {
 		inputs := make([]*pasta.PallasBaseFieldElement, size)

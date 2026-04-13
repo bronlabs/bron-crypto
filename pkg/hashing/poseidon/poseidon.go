@@ -14,7 +14,7 @@ var (
 	// ErrNil is returned when the input is nil.
 	ErrNil = errs.New("nil")
 
-	// ErrInvalidDataLength is returned when the input data length is not a multiple of 32 bytes.
+	// ErrInvalidDataLength is returned when the input length is not compatible with the rate.
 	ErrInvalidDataLength = errs.New("invalid data length")
 )
 
@@ -81,9 +81,6 @@ func (p *Poseidon) Digest() *pasta.PallasBaseFieldElement {
 	}
 
 	clone := p.state.Clone()
-	for i := range clone.parameters.rate {
-		clone.v[i] = clone.v[i].Add(pasta.NewPallasBaseField().Zero())
-	}
 	clone.Permute()
 	return clone.v[0].Clone()
 }
