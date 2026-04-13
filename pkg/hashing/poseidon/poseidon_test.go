@@ -42,16 +42,16 @@ func TestPoseidonHashInterface(t *testing.T) {
 
 	// Test size methods
 	require.Equal(t, 32, h.Size())
-	require.Equal(t, 32, h.BlockSize())
+	require.Equal(t, 64, h.BlockSize())
 
 	// Test Write method with valid data
-	data := make([]byte, 32)
+	data := make([]byte, 64)
 	n, err := h.Write(data)
 	require.NoError(t, err)
-	require.Equal(t, 32, n)
+	require.Equal(t, 64, n)
 
 	// Test Write method with invalid data length
-	invalidData := make([]byte, 31)
+	invalidData := make([]byte, 65)
 	_, err = h.Write(invalidData)
 	require.Error(t, err)
 
@@ -70,14 +70,18 @@ func TestPoseidonHashInterface(t *testing.T) {
 		require.NoError(t, err)
 		x2, err := pasta.NewPallasBaseField().Random(prng)
 		require.NoError(t, err)
+		x3, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
+		x4, err := pasta.NewPallasBaseField().Random(prng)
+		require.NoError(t, err)
 
 		h1 := hashing.HashFuncTypeErase(poseidon.NewLegacy)()
-		h1.Write(slices.Concat(x1.Bytes(), x2.Bytes()))
+		h1.Write(slices.Concat(x1.Bytes(), x2.Bytes(), x3.Bytes(), x4.Bytes()))
 		d1 := h1.Sum(nil)
 
 		h2 := hashing.HashFuncTypeErase(poseidon.NewLegacy)()
-		h2.Write(x1.Bytes())
-		h2.Write(x2.Bytes())
+		h2.Write(slices.Concat(x1.Bytes(), x2.Bytes()))
+		h2.Write(slices.Concat(x3.Bytes(), x4.Bytes()))
 		d2 := h2.Sum(nil)
 
 		require.Equal(t, d1, d2)
@@ -93,7 +97,8 @@ func TestPoseidonHashInterface(t *testing.T) {
 		require.NoError(t, err)
 
 		p := poseidon.NewLegacy()
-		p.Update(x1, x2)
+		err = p.Update(x1, x2)
+		require.NoError(t, err)
 		d1 := p.Digest()
 		p.Sum([]byte("qwertyuiqwertyuiqwertyuiqwertyui"))
 		d2 := p.Digest()
@@ -112,7 +117,8 @@ func TestPoseidonHashInterface(t *testing.T) {
 
 		prefix := []byte("qwertyuiqwertyuiqwertyuiqwertyui")
 		p := poseidon.NewLegacy()
-		p.Update(x1, x2)
+		err = p.Update(x1, x2)
+		require.NoError(t, err)
 		d := p.Sum([]byte("qwertyuiqwertyuiqwertyuiqwertyui"))
 
 		require.Equal(t, d[:32], prefix)
@@ -150,6 +156,8 @@ func TestPoseidonEmptyInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			hasher := tc.hasher()
+			err := hasher.Update(padInput(nil)...)
+			require.NoError(t, err)
 			result := hasher.Digest()
 			expected := parseFieldElement(t, tc.expected)
 			require.True(t, result.Equal(expected))
@@ -200,7 +208,8 @@ func runTestVectors(t *testing.T, content string, hasherFactory func() *poseidon
 
 			// Create hasher and compute hash
 			hasher := hasherFactory()
-			hasher.Update(inputs...)
+			err := hasher.Update(padInput(inputs)...)
+			require.NoError(t, err, "failed to update hasher")
 			actual := hasher.Digest()
 
 			// Verify result
@@ -256,4 +265,12 @@ func reverseBytes(b []byte) []byte {
 		result[i] = b[len(b)-1-i]
 	}
 	return result
+}
+
+func padInput(input []*pasta.PallasBaseFieldElement) []*pasta.PallasBaseFieldElement {
+	// pad with zeros
+	for len(input) == 0 || len(input)%2 != 0 {
+		input = append(input, pasta.NewPallasBaseField().Zero())
+	}
+	return input
 }

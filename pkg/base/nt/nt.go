@@ -14,7 +14,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 var (
@@ -52,18 +51,23 @@ func MillerRabinChecks(bits uint) int {
 }
 
 // GenerateSafePrime generates a safe prime of the specified bit length using the provided PrimeSamplable set.
-func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint) (N, error) {
-	if bits < 3 {
-		return *new(N), ErrInvalidSize.WithMessage("safe prime size must be at least 3-bits")
+func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (N, error) {
+	var nilN N
+	if prng == nil {
+		return nilN, ErrIsNil.WithMessage("nil prng")
 	}
 	if set == nil {
 		return *new(N), ErrIsNil.WithMessage("nil structure")
 	}
+	if bits < 3 {
+		return *new(N), ErrInvalidSize.WithMessage("safe prime size must be at least 3-bits")
+	}
+
 	var p *big.Int
 	var err error
 	checks := MillerRabinChecks(bits)
 	for {
-		p, err = crand.Prime(pcg.NewRandomised(), int(bits)-1)
+		p, err = crand.Prime(prng, int(bits)-1)
 		if err != nil {
 			return *new(N), errs.Wrap(err).WithMessage("reading from crand")
 		}
@@ -81,13 +85,15 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 }
 
 // GenerateSafePrimePair generates two distinct safe primes of the specified bit length using the provided PrimeSamplable set.
-func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint) (p, q N, err error) {
+func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (p, q N, err error) {
+	var nilN N
+
 	for {
 		var pCandidate, qCandidate N
 		g := errgroup.Group{}
 		g.Go(func() error {
 			var err error
-			pCandidate, err = GenerateSafePrime(set, bits)
+			pCandidate, err = GenerateSafePrime(set, bits, prng)
 			if err != nil {
 				return err
 			}
@@ -95,14 +101,14 @@ func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits
 		})
 		g.Go(func() error {
 			var err error
-			qCandidate, err = GenerateSafePrime(set, bits)
+			qCandidate, err = GenerateSafePrime(set, bits, prng)
 			if err != nil {
 				return err
 			}
 			return nil
 		})
 		if err := g.Wait(); err != nil {
-			return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot generate same primes")
+			return nilN, nilN, errs.Wrap(err).WithMessage("cannot generate same primes")
 		}
 		if !pCandidate.Equal(qCandidate) {
 			return pCandidate, qCandidate, nil

@@ -44,7 +44,7 @@ func TestMillerRabinChecks(t *testing.T) {
 func TestGenerateSafePrime(t *testing.T) {
 	t.Parallel()
 	bitSize := uint(128) // this is to keep the test reliably fast
-	prime, err := GenerateSafePrime(num.N(), bitSize)
+	prime, err := GenerateSafePrime(num.N(), bitSize, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
 	pMinus1, err := prime.TrySub(num.N().One())
@@ -57,7 +57,7 @@ func TestGenerateSafePrime(t *testing.T) {
 func TestGenerateSafePrimePair(t *testing.T) {
 	t.Parallel()
 	bitSize := uint(128) // this is to keep the test reliably fast
-	p, q, err := GenerateSafePrimePair(num.N(), bitSize)
+	p, q, err := GenerateSafePrimePair(num.N(), bitSize, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, p.Equal(q))
 
