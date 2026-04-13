@@ -175,15 +175,21 @@ func hashWithPrefix(prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Sc
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not convert prefix to base field element")
 	}
-	prefixElements := make([]*pasta.PallasBaseFieldElement, h.Rate())
-	prefixElements[0] = pfe
-	for i := 1; i < h.Rate(); i++ {
-		prefixElements[i] = pasta.NewPallasBaseField().Zero()
+	prefixElements := []*pasta.PallasBaseFieldElement{pfe}
+	for (len(prefixElements) % h.Rate()) != 0 {
+		prefixElements = append(prefixElements, pasta.NewPallasBaseField().Zero())
 	}
-	h.Update(pfe, pasta.NewPallasBaseField().Zero())
+	if err := h.Update(prefixElements...); err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not absorb prefix")
+	}
 
 	// hashWithPrefix itself
-	h.Update(inputs...)
+	for len(inputs)%h.Rate() != 0 {
+		inputs = append(inputs, pasta.NewPallasBaseField().Zero())
+	}
+	if err := h.Update(inputs...); err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not absorb inputs")
+	}
 
 	digest := h.Digest()
 	s, err := sf.FromBytes(digest.Bytes())
