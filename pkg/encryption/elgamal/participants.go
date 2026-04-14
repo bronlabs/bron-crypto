@@ -9,13 +9,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
+// KeyGeneratorOption configures a KeyGenerator.
 type KeyGeneratorOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*KeyGenerator[E, S]) error
 
+// KeyGenerator produces ElGamal key pairs (a, h = g^a) where a is sampled
+// uniformly from Z/nZ \ {0}.
 type KeyGenerator[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
 	g  UnderlyingGroup[E, S]
 	zn algebra.ZModLike[S]
 }
 
+// Generate samples a fresh key pair using randomness from prng.
+// HAC 8.25: select random a ∈ [1, n−1], compute h = g^a.
 func (kg *KeyGenerator[E, S]) Generate(prng io.Reader) (*PrivateKey[E, S], *PublicKey[E, S], error) {
 	// SUMMARY: each entity creates a public key and a corresponding private key.
 	// Each entity A should do the following:
@@ -45,14 +50,18 @@ func (kg *KeyGenerator[E, S]) Generate(prng io.Reader) (*PrivateKey[E, S], *Publ
 	return sk, pk, nil
 }
 
+// EncrypterOption configures an Encrypter.
 type EncrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Encrypter[E, S]) error
 
+// Encrypter encrypts plaintexts under a receiver's public key.
 type Encrypter[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	g       UnderlyingGroup[E, S]
-	zn      algebra.ZModLike[S]
-	ctSpace *CiphertextSpace[E, S]
+	g  UnderlyingGroup[E, S]
+	zn algebra.ZModLike[S]
 }
 
+// Encrypt produces c = (g^r, m · h^r) using a fresh random nonce r.
+// The returned nonce should be discarded unless needed for proofs
+// or re-randomisation.
 func (B *Encrypter[E, S]) Encrypt(plaintext *Plaintext[E, S], receiver *PublicKey[E, S], prng io.Reader) (*Ciphertext[E, S], *Nonce[S], error) {
 	// SUMMARY: B encrypts a message m for A, which A decrypts.
 	// 8.26.1: Encryption. B should do the following:
@@ -79,6 +88,10 @@ func (B *Encrypter[E, S]) Encrypt(plaintext *Plaintext[E, S], receiver *PublicKe
 	return ciphertext, nonce, nil
 }
 
+// EncryptWithNonce produces c = (g^r, m · h^r) using the given nonce r.
+// This is deterministic: the same (m, h, r) triple always yields the same
+// ciphertext. Callers must never reuse a nonce across different messages
+// under the same key — doing so leaks the plaintext ratio m₁ · m₂⁻¹.
 func (B *Encrypter[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], receiver *PublicKey[E, S], nonce *Nonce[S]) (*Ciphertext[E, S], error) {
 	// SUMMARY: B encrypts a message m for A, which A decrypts.
 	// 8.26.1: Encryption. B should do the following:
@@ -91,22 +104,25 @@ func (B *Encrypter[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], receiver 
 	alpha := B.g.Generator()
 	// 8.26.1.d: Compute γ = α^k and δ = m · (α^a)^k.
 	gamma := alpha.ScalarOp(nonce.Value())
-	delta := receiver.v.ScalarOp(nonce.Value())
-	delta.Op(plaintext.Value())
+	delta := receiver.v.ScalarOp(nonce.Value()).Op(plaintext.Value())
 	// 8.26.1.e: Send the ciphertext c = (γ,δ) to A.
-	c, err := B.ctSpace.New(gamma, delta)
+	c, err := NewCiphertext(gamma, delta)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create ciphertext space")
+		return nil, errs.Wrap(err).WithMessage("failed to create ciphertext")
 	}
 	return c, nil
 }
 
+// DecrypterOption configures a Decrypter.
 type DecrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Decrypter[E, S]) error
 
+// Decrypter recovers plaintexts using the holder's private key.
 type Decrypter[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
 	sk *PrivateKey[E, S]
 }
 
+// Decrypt recovers the plaintext m from c = (γ, δ) by computing m = δ · γ^{−a}.
+// HAC 8.26.2.
 func (A *Decrypter[E, S]) Decrypt(ciphertext *Ciphertext[E, S]) (*Plaintext[E, S], error) {
 	// SUMMARY: B encrypts a message m for A, which A decrypts
 	// 8.26.2: Decryption. A should do the following:

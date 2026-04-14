@@ -2,8 +2,8 @@ package elgamal
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -141,14 +141,14 @@ func (n *Nonce[S]) UnmarshalCBOR(data []byte) error {
 }
 
 type ciphertextDTO[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	V *constructions.FiniteDirectSumModuleElement[E, S] `cbor:"v"`
+	V [2]E `cbor:"v"`
 }
 
 func (c *Ciphertext[E, S]) MarshalCBOR() ([]byte, error) {
 	if c == nil {
 		return nil, ErrIsNil.WithMessage("ciphertext")
 	}
-	dto := ciphertextDTO[E, S]{V: c.v}
+	dto := ciphertextDTO[E, S]{V: [2]E{c.v.Components()[0], c.v.Components()[1]}}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to marshal ciphertext to cbor")
@@ -164,10 +164,10 @@ func (c *Ciphertext[E, S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ciphertext from cbor")
 	}
-	if dto.V == nil {
-		return ErrIsNil.WithMessage("deserialized ciphertext value")
+	if utils.IsNil(dto.V[0]) || utils.IsNil(dto.V[1]) {
+		return ErrValue.WithMessage("ciphertext components cannot both be the identity element")
 	}
-	newC, err := NewCiphertext(dto.V.Components()[0], dto.V.Components()[1])
+	newC, err := NewCiphertext(dto.V[0], dto.V[1])
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to create ciphertext from deserialized value")
 	}
