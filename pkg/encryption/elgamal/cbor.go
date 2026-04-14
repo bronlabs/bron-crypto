@@ -65,7 +65,10 @@ func (sk *PrivateKey[E, S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal private key from cbor")
 	}
-	newSk, err := NewPrivateKey(sk.pk.Group(), dto.V)
+	if dto.PK == nil {
+		return ErrIsNil.WithMessage("deserialized public key")
+	}
+	newSk, err := NewPrivateKey(dto.PK.Group(), dto.V)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to create private key from deserialized value")
 	}
@@ -166,7 +169,10 @@ func (c *Ciphertext[E, S]) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ciphertext from cbor")
 	}
 	if utils.IsNil(dto.V[0]) || utils.IsNil(dto.V[1]) {
-		return ErrValue.WithMessage("ciphertext components cannot both be the identity element")
+		return ErrIsNil.WithMessage("ciphertext component")
+	}
+	if dto.V[0].IsOpIdentity() || !dto.V[0].IsTorsionFree() || dto.V[1].IsOpIdentity() || !dto.V[1].IsTorsionFree() {
+		return ErrSubGroupMembership.WithMessage("ciphertext component is not torsion free")
 	}
 	newC, err := NewCiphertext(dto.V[0], dto.V[1])
 	if err != nil {

@@ -483,9 +483,7 @@ func TestPrivateKeyCBORRoundTrip(t *testing.T) {
 	data, err := cbor.Marshal(sk)
 	require.NoError(t, err)
 
-	// PrivateKey.UnmarshalCBOR needs the group from pk, so we initialise
-	// with a key that carries the group reference.
-	got := sk.Clone()
+	got := new(elgamal.PrivateKey[*k256.Point, *k256.Scalar])
 	err = cbor.Unmarshal(data, got)
 	require.NoError(t, err)
 	require.True(t, got.Equal(sk))

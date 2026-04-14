@@ -198,6 +198,9 @@ func (c *Ciphertext[E, S]) Value() *constructions.FiniteDirectSumModuleElement[E
 // encrypts m, the result encrypts m · m'. This does not change c₁ and
 // therefore does not hide the shift from an observer who sees both
 // ciphertexts; use ReRandomise afterwards if unlinkability is needed.
+//
+// The public key parameter is unused by ElGamal's shift but is required
+// by the ShiftTypeCiphertext interface.
 func (c *Ciphertext[E, S]) Shift(_ *PublicKey[E, S], message *Plaintext[E, S]) (*Ciphertext[E, S], error) {
 	if c == nil {
 		return nil, ErrIsNil.WithMessage("ciphertext")
