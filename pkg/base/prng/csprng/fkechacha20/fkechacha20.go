@@ -48,7 +48,7 @@ func (c *Prng) Read(buffer []byte) (n int, err error) {
 
 // Reseed refreshes the PRNG with the provided seed material. For ChachaPRNG, it is equivalent to `ResetState`.
 func (c *Prng) Reseed(seed, salt []byte) (err error) {
-	if len(seed) != chacha20.KeySize || len(salt) != chacha20.NonceSizeX {
+	if len(seed) != chacha20.KeySize || len(salt) > chacha20.NonceSizeX {
 		return ErrInvalidArgument.WithMessage("invalid chacha seed or salt length (%d, %d)", len(seed), len(salt))
 	}
 

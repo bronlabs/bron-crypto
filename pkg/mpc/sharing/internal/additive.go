@@ -51,9 +51,6 @@ func (s *AdditiveShare[E]) Op(other *AdditiveShare[E]) *AdditiveShare[E] {
 // Add returns a new share that is the component-wise sum of two shares.
 // Both shares must have the same ID.
 func (s *AdditiveShare[E]) Add(other *AdditiveShare[E]) *AdditiveShare[E] {
-	if s.id != other.id {
-		panic("cannot add shares with different IDs")
-	}
 	return &AdditiveShare[E]{
 		id: s.id,
 		v:  s.v.Op(other.v),
