@@ -1,7 +1,6 @@
 package signatures
 
 import (
-	"bytes"
 	"crypto/sha512"
 	"encoding/binary"
 	"io"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -68,7 +68,8 @@ func bip32(publicKey *k256.Point, chainCode []byte, i uint32) (*k256.Scalar, []b
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create scalar from bytes")
 	}
 	// make sure it wasn't reduced
-	if !bytes.Equal(digest[:32], shift.Bytes()) {
+	_, isEq, _ := ct.CompareBytes(digest[:32], shift.Bytes())
+	if isEq != ct.True {
 		return nil, nil, ErrInvalidDerivation.WithStackFrame()
 	}
 	return shift, childChainCode, nil

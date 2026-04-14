@@ -1,10 +1,9 @@
 package echo
 
 import (
-	"bytes"
-
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -84,7 +83,8 @@ func (p *Participant[B, BP]) Round3(r2 network.RoundMessages[*Round2P2P[B, BP], 
 				return nil, errs.Wrap(err).WithMessage("failed to validate round 2 message")
 			}
 			echoMessage := echo.Echo[id]
-			if !bytes.Equal(message, echoMessage) {
+			_, isEq, _ := ct.CompareBytes(message, echoMessage)
+			if isEq != ct.True {
 				return nil, ErrFailed.WithMessage("mismatched echo")
 			}
 		}

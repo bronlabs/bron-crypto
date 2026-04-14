@@ -1,12 +1,12 @@
 package rvole_softspoken
 
 import (
-	"bytes"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 // Round1 executes protocol round 1.
@@ -209,7 +209,8 @@ func (bob *Bob[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (d []S, err error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot get mu")
 	}
-	if !bytes.Equal(r2.Mu, mu) {
+	_, isEq, _ := ct.CompareBytes(r2.Mu, mu)
+	if isEq != ct.True {
 		return nil, base.ErrAbort.WithMessage("consistency check failed")
 	}
 

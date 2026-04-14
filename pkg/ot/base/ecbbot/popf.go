@@ -1,13 +1,13 @@
 package ecbbot
 
 import (
-	"bytes"
 	"io"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
@@ -18,7 +18,8 @@ type Popf[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]
 }
 
 func NewPopf[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](group algebra.PrimeGroup[GE, SE], tag0, tag1 []byte) (*Popf[GE, SE], error) {
-	if len(tag0) == 0 || len(tag1) == 0 || bytes.Equal(tag0, tag1) {
+	_, isEq, _ := ct.CompareBytes(tag0, tag1)
+	if len(tag0) == 0 || len(tag1) == 0 || isEq == ct.True {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 

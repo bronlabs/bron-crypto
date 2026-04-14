@@ -1,12 +1,12 @@
 package rvole_bbot
 
 import (
-	"bytes"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 // Round1 executes protocol round 1.
@@ -204,7 +204,8 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[G, S]) (d []S, err error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot get mu")
 	}
-	if !bytes.Equal(r3Out.Mu, mu) {
+	_, isEq, _ := ct.CompareBytes(r3Out.Mu, mu)
+	if isEq != ct.True {
 		return nil, base.ErrAbort.WithMessage("consistency check failed")
 	}
 
