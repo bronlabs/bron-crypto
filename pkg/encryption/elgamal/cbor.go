@@ -160,6 +160,13 @@ func (c *Ciphertext[E, S]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises a ciphertext from CBOR, validating the result.
+//
+// Note that unmarshaling would fail if the first component is identity,
+// even though ciphertext objects may have identity as their first component
+// as a consequence of homomorphic operations. This is because the first component
+// should never be identity for a valid ciphertext produced by encryption, and if
+// it is identity after deserialization, it indicates that the data was corrupted or tampered with.
 func (c *Ciphertext[E, S]) UnmarshalCBOR(data []byte) error {
 	if c == nil {
 		return ErrIsNil.WithMessage("ciphertext")
