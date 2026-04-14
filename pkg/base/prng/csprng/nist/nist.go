@@ -27,6 +27,7 @@ const (
 	maxNumberOfBytesRequest        = 1 << 10  // 2^19 bits    //  `max_number_of_bits_per_request`
 	maxLength               uint64 = 1 << 32  // 2^35 bits    //  `max_length`, `max_additional_input_length`,
 	// .                                               //   `max_personalization_string_length`.
+	maxReseedAttempts              = 1        // A single reseed should suffice; repeated failure signals a broken state.
 )
 
 // PrngNist corresponds to an instantiated PRNG based on a block cipher from NIST SP-800-90A rev. 1.
@@ -176,6 +177,7 @@ func (prg *PrngNist) Generate(buffer, additionalInput []byte) error {
 	// 5. If prediction_resistance_request is set... --> implicit.
 	// 6. Clear the reseed_required_flag.
 	var reseedRequired bool
+	var reseedAttempts int
 dataGeneration:
 	// 8. (status, pseudorandom_bits, new_working_state) = Generate_algorithm(
 	// working_state, requested_number_of_bits, additional_input).
@@ -193,6 +195,10 @@ dataGeneration:
 	}
 	// 7. If reseed_required_flag is set, then reseed.
 	if reseedRequired {
+		reseedAttempts++
+		if reseedAttempts > maxReseedAttempts {
+			return ErrReseedExhausted.WithMessage("generate failed after %d reseed attempts", maxReseedAttempts)
+		}
 		// 7.1. status = Reseed_function(state_handle, ..., additional_input).
 		if err := prg.Reseed(nil, additionalInput); err != nil {
 			// 7.2. IF (status != SUCCESS), then return (status, Nil).
