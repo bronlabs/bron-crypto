@@ -45,6 +45,7 @@ func (m *Round2P2P[G, S]) Validate(p *Sender[G, S], _ sharing.ID) error {
 			}
 			if phi[0][l].IsOpIdentity() || !phi[0][l].IsTorsionFree() ||
 				phi[1][l].IsOpIdentity() || !phi[1][l].IsTorsionFree() {
+
 				return ot.ErrValidation.WithMessage("invalid message")
 			}
 		}

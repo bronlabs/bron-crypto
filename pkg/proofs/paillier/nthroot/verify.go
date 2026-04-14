@@ -1,8 +1,9 @@
 package nthroot
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
 // Verify wraps the embedded Maurer09 verification to surface errs-style errors.

@@ -27,7 +27,7 @@ const (
 	maxNumberOfBytesRequest        = 1 << 10  // 2^19 bits    //  `max_number_of_bits_per_request`
 	maxLength               uint64 = 1 << 32  // 2^35 bits    //  `max_length`, `max_additional_input_length`,
 	// .                                               //   `max_personalization_string_length`.
-	maxReseedAttempts              = 1        // A single reseed should suffice; repeated failure signals a broken state.
+	maxReseedAttempts = 1 // A single reseed should suffice; repeated failure signals a broken state.
 )
 
 // PrngNist corresponds to an instantiated PRNG based on a block cipher from NIST SP-800-90A rev. 1.
