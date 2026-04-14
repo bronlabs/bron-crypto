@@ -1,4 +1,4 @@
-// Package elgamal implements the Generalized ElGamal cryptosystem over any
+// Package elgamal implements the Generalised ElGamal cryptosystem over any
 // finite abelian cyclic group, following section 8.4 of the Handbook of Applied
 // Cryptography (Menezes, van Oorschot, Vanstone).
 //

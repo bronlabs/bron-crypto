@@ -44,6 +44,7 @@ func runSuite[
 		algebra.Operand[N]
 	},
 ](t *testing.T, s suite[PK, M, C, N]) {
+	t.Helper()
 	t.Run("basic commit and verify", func(t *testing.T) {
 		t.Parallel()
 		msg := s.sampleMessage(t)
@@ -316,26 +317,26 @@ func runSuite[
 
 // ─── Paillier ────────────────────────────────────────────────────────
 
-func setupPaillier(t testing.TB) suite[
+func setupPaillier(tb testing.TB) suite[
 	*paillier.PublicKey, *paillier.Plaintext,
 	*paillier.Ciphertext, *paillier.Nonce,
 ] {
-	t.Helper()
+	tb.Helper()
 	paillierScheme := paillier.NewScheme()
 	kg, err := paillierScheme.Keygen()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	_, pk, err := kg.Generate(pcg.NewRandomised())
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	key, err := indcpacom.NewKey(pk)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	scheme, err := indcpacom.NewScheme(paillierScheme, key)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	committer, err := scheme.Committer()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	return suite[*paillier.PublicKey, *paillier.Plaintext, *paillier.Ciphertext, *paillier.Nonce]{
 		committer: committer,
@@ -378,26 +379,26 @@ type (
 	egNonce  = *elgamal.Nonce[egScalar]
 )
 
-func setupElGamal(t testing.TB) suite[egPK, egPT, egCT, egNonce] {
-	t.Helper()
+func setupElGamal(tb testing.TB) suite[egPK, egPT, egCT, egNonce] {
+	tb.Helper()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	egScheme, err := elgamal.NewScheme(curve, field)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	kg, err := egScheme.Keygen()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	_, pk, err := kg.Generate(pcg.NewRandomised())
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	key, err := indcpacom.NewKey(pk)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	scheme, err := indcpacom.NewScheme(egScheme, key)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	committer, err := scheme.Committer()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	return suite[egPK, egPT, egCT, egNonce]{
 		committer: committer,

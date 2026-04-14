@@ -91,7 +91,7 @@ func (s *Scheme[E, S]) Encrypter(opts ...EncrypterOption[E, S]) (*Encrypter[E, S
 }
 
 // Decrypter returns a Decrypter bound to the given private key.
-func (s *Scheme[E, S]) Decrypter(sk *PrivateKey[E, S], opts ...DecrypterOption[E, S]) (*Decrypter[E, S], error) {
+func (*Scheme[E, S]) Decrypter(sk *PrivateKey[E, S], opts ...DecrypterOption[E, S]) (*Decrypter[E, S], error) {
 	out := &Decrypter[E, S]{sk}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {

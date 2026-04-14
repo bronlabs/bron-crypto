@@ -117,7 +117,7 @@ func (sk *PrivateKey[E, S]) Clone() *PrivateKey[E, S] {
 }
 
 // NewPlaintext wraps a group element as an ElGamal plaintext.
-// In generalized ElGamal the message space is the group G itself;
+// In generalised ElGamal the message space is the group G itself;
 // encoding application-level data into group elements is the caller's
 // responsibility.
 func NewPlaintext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](v E) (*Plaintext[E, S], error) {

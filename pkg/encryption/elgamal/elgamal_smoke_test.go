@@ -1,11 +1,12 @@
 package elgamal_test
 
 import (
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
-	"github.com/fxamacker/cbor/v2"
 )
 
 func _[E elgamal.UnderlyingGroupElement[E, S], S algebra.UintLike[S]]() {

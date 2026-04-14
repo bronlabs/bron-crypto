@@ -1,7 +1,7 @@
 package elgamal_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -87,7 +87,7 @@ func TestEncryptDecryptMultipleMessages(t *testing.T) {
 	dec, err := scheme.Decrypter(sk)
 	require.NoError(t, err)
 
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		pt := randomPlaintext(t)
 		ct, _ := encrypt(t, enc, pt, pk)
 		got, err := dec.Decrypt(ct)
@@ -556,9 +556,9 @@ func TestEncryptRejectsNils(t *testing.T) {
 	_, pk := keygen(t, kg)
 	m := randomPlaintext(t)
 
-	_, _, err := enc.Encrypt(nil, pk, rand.Reader)
+	_, _, err := enc.Encrypt(nil, pk, crand.Reader)
 	require.Error(t, err)
-	_, _, err = enc.Encrypt(m, nil, rand.Reader)
+	_, _, err = enc.Encrypt(m, nil, crand.Reader)
 	require.Error(t, err)
 	_, _, err = enc.Encrypt(m, pk, nil)
 	require.Error(t, err)
