@@ -38,7 +38,7 @@ func (fe *FpFieldElement) MarshalCBOR() ([]byte, error) {
 func (fe *FpFieldElement) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*fpFieldElementDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal base field element")
 	}
 
 	bfe, err := newFpField().FromBytes(dto.FieldBytes)
@@ -63,7 +63,7 @@ func (fe *FqFieldElement) MarshalCBOR() ([]byte, error) {
 func (fe *FqFieldElement) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*fqFieldElementDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal scalar")
 	}
 
 	s, err := newFqField().FromBytes(dto.FieldBytes)
@@ -88,7 +88,7 @@ func (p *PallasPoint) MarshalCBOR() ([]byte, error) {
 func (p *PallasPoint) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pallasPointDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal point")
 	}
 
 	pp, err := NewPallasCurve().FromCompressed(dto.AffineCompressedBytes)
@@ -113,7 +113,7 @@ func (p *VestaPoint) MarshalCBOR() ([]byte, error) {
 func (p *VestaPoint) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*vestaPointDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal point")
 	}
 
 	pp, err := NewVestaCurve().FromCompressed(dto.AffineCompressedBytes)

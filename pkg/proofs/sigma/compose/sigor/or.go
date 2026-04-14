@@ -127,7 +127,7 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 		return nil, ErrIsNil.WithMessage("p or prng is nil")
 	}
 	if count < 2 {
-		return nil, ErrInvalidArgument.WithMessage("count must be positive and greater than 2")
+		return nil, ErrInvalidArgument.WithMessage("count must be >= 2")
 	}
 	return &protocol[X, W, A, S, Z]{
 		sigma: p,

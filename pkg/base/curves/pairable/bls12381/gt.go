@@ -11,6 +11,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -150,14 +151,20 @@ func (ge *GtElement) IsOne() bool {
 // Inv sets the receiver to the inverse of a, if it exists.
 func (ge *GtElement) Inv() *GtElement {
 	var inv GtElement
-	_ = inv.V.Inv(&ge.V.Fp12)
+	ok := inv.V.Inv(&ge.V.Fp12)
+	if ok == ct.False {
+		panic("this should never happen, element should have an inverse")
+	}
 	return &inv
 }
 
 // Div sets the receiver to lhs / rhs, if rhs is nonzero.
 func (ge *GtElement) Div(e *GtElement) *GtElement {
 	var quotient GtElement
-	_ = quotient.V.Div(&ge.V.Fp12, &e.V.Fp12)
+	ok := quotient.V.Div(&ge.V.Fp12, &e.V.Fp12)
+	if ok == ct.False {
+		panic("this should never happen, divisor should be nonzero")
+	}
 	return &quotient
 }
 

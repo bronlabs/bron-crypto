@@ -143,6 +143,9 @@ func newCosigner[
 	if ctx.HolderID() != shard.Share().ID() {
 		return nil, ErrInvalidArgument.WithMessage("shard does not belong to the holder")
 	}
+	if !ctx.Quorum().Contains(shard.Share().ID()) {
+		return nil, ErrInvalidArgument.WithMessage("quorum doesn't cannot contain participant %d", shard.Share().ID())
+	}
 	if !shard.MSP().Accepts(ctx.Quorum().List()...) {
 		return nil, ErrInvalidArgument.WithMessage("quorum is not authorized in the access structure")
 	}

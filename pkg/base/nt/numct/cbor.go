@@ -34,7 +34,7 @@ func (n *Nat) MarshalCBOR() ([]byte, error) {
 func (n *Nat) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*natDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal Nat")
 	}
 	if ok := n.SetBytes(dto.NatBytes); ok == ct.False {
 		return ErrDeserialisation.WithMessage("invalid Nat bytes")
@@ -60,7 +60,7 @@ func (i *Int) MarshalCBOR() ([]byte, error) {
 func (i *Int) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*intDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal Int")
 	}
 	if ok := i.SetBytes(dto.IntBytes); ok == ct.False {
 		return ErrDeserialisation.WithMessage("invalid Int bytes")
@@ -84,7 +84,7 @@ func (m *Modulus) MarshalCBOR() ([]byte, error) {
 func (m *Modulus) UnmarshalCBOR(data []byte) error {
 	serial, err := serde.UnmarshalCBOR[*modulusDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal ModulusBasic")
 	}
 	if serial.N == nil {
 		return ErrDeserialisation.WithMessage("modulus data is nil")

@@ -82,7 +82,7 @@ type partialSignatureDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B]
 
 // NewPartialSignature returns a new partial signature.
 func NewPartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](r P, u, w S) (*PartialSignature[P, B, S], error) {
-	if utils.IsNil(r) || utils.IsNil(u) || utils.IsNil(w) || r.IsOpIdentity() || u.IsZero() {
+	if utils.IsNil(r) || utils.IsNil(u) || utils.IsNil(w) || r.IsOpIdentity() || w.IsZero() || u.IsZero() {
 		return nil, ErrFailed.WithMessage("invalid arguments")
 	}
 

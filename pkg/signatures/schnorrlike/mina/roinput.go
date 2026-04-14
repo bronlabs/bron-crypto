@@ -33,7 +33,10 @@ type ROInput struct {
 
 // MarshalJSON serialises the ROInput to JSON as an array of hex-encoded field elements.
 func (r *ROInput) MarshalJSON() ([]byte, error) {
-	packed := r.PackToFields()
+	packed, err := r.PackToFields()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot pack fields")
+	}
 	fields := make([]string, len(packed))
 	for i, p := range packed {
 		fields[i] = hex.EncodeToString(p.Bytes())
@@ -97,7 +100,7 @@ func (r *ROInput) AddBits(bits ...bool) {
 // PackToFields converts the ROInput to field elements for Poseidon hashing.
 // Field elements are included directly, while accumulated bits are packed
 // into 254-bit chunks (the maximum that fits in a Pallas field element).
-func (r *ROInput) PackToFields() []*pasta.PallasBaseFieldElement {
+func (r *ROInput) PackToFields() ([]*pasta.PallasBaseFieldElement, error) {
 	const maxChunkSize = 254
 	fields := make([]*pasta.PallasBaseFieldElement, 0, len(r.fields)+((r.bits.Length()+maxChunkSize-1)/maxChunkSize))
 	for _, f := range r.fields {
@@ -115,11 +118,14 @@ func (r *ROInput) PackToFields() []*pasta.PallasBaseFieldElement {
 			idx++
 		}
 		slices.Reverse(chunk[:])
-		field, _ := pasta.NewPallasBaseField().FromBytes(chunk[:])
+		field, err := pasta.NewPallasBaseField().FromBytes(chunk[:])
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to convert bytes to field element")
+		}
 		fields = append(fields, field)
 	}
 
-	return fields
+	return fields, nil
 }
 
 // Fields returns a copy of the field elements stored in the ROInput.

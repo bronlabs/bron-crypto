@@ -55,7 +55,7 @@ func (x *Statement[G, S]) Bytes() []byte {
 	for _, xi := range x.Xs {
 		xBytes := xi.Bytes()
 		d = binary.LittleEndian.AppendUint64(d, uint64(len(xBytes)))
-		d = append(d, xi.Bytes()...)
+		d = append(d, xBytes...)
 	}
 
 	return d

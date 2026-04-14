@@ -96,7 +96,7 @@ func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits
 			var err error
 			pCandidate, err = GenerateSafePrime(set, bits, prng)
 			if err != nil {
-				return err
+				return errs.Wrap(err).WithMessage("cannot generate safe prime")
 			}
 			return nil
 		})
@@ -104,7 +104,7 @@ func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits
 			var err error
 			qCandidate, err = GenerateSafePrime(set, bits, prng)
 			if err != nil {
-				return err
+				return errs.Wrap(err).WithMessage("cannot generate safe prime")
 			}
 			return nil
 		})
