@@ -287,11 +287,8 @@ func (c *Ciphertext[E, S]) Equal(x *Ciphertext[E, S]) bool {
 // Op returns the component-wise group product of two ciphertexts.
 // This is the homomorphic operation: Dec(c₁ ⊕ c₂) = Dec(c₁) · Dec(c₂).
 func (c *Ciphertext[E, S]) Op(other *Ciphertext[E, S]) *Ciphertext[E, S] {
-	if c == nil {
+	if c == nil || other == nil {
 		return nil
-	}
-	if other == nil {
-		return c
 	}
 	return &Ciphertext[E, S]{v: c.v.Op(other.v)}
 }

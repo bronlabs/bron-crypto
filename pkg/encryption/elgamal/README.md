@@ -46,8 +46,7 @@ The scheme is group-homomorphic over G:
 
 ```go
 curve := k256.NewCurve()
-field := k256.NewScalarField()
-scheme, _ := elgamal.NewScheme(curve, field)
+scheme, _ := elgamal.NewScheme(curve)
 kg, _ := scheme.Keygen()
 sk, pk, _ := kg.Generate(rand.Reader)
 ```

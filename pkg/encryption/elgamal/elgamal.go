@@ -28,8 +28,8 @@ type FiniteCyclicGroupElement[E interface {
 	algebra.CyclicGroupElement[E]
 }
 
-// NewScheme creates an ElGamal scheme over group g with scalar ring zn.
-// The scalar ring must be Z/nZ where n is the order of the group.
+// NewScheme creates an ElGamal scheme over group g, deriving the scalar
+// ring Z/nZ from the group's scalar structure.
 func NewScheme[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](g FiniteCyclicGroup[E, S]) (*Scheme[E, S], error) {
 	if g == nil {
 		return nil, ErrIsNil.WithMessage("g")
