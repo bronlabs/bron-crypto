@@ -158,6 +158,8 @@ func TestHomomorphicCiphertextOp(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("E(m1 + m2; r1 + r2) = E(m1; r1) + E(m2, r2)", func(t *testing.T) {
+		t.Parallel()
+
 		m1 := randomPlaintext(t)
 		m2 := randomPlaintext(t)
 		m12 := m1.Op(m2)
@@ -179,6 +181,8 @@ func TestHomomorphicCiphertextOp(t *testing.T) {
 	})
 
 	t.Run("Dec(Enc(m1) ⊕ Enc(m2)) == m1 · m2", func(t *testing.T) {
+		t.Parallel()
+
 		m1 := randomPlaintext(t)
 		m2 := randomPlaintext(t)
 
