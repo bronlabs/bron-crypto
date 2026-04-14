@@ -681,3 +681,187 @@ func TestScalarOpByTwoEqualsDoubling(t *testing.T) {
 	require.True(t, gotScalar.Equal(gotOp),
 		"ScalarOp(2) must yield same plaintext as ct.Op(ct)")
 }
+
+// ScalarOp with scalar=0 collapses the ciphertext to the identity pair
+// (g^0, (m·h^r)^0) = (O, O). The decrypted plaintext is also identity.
+func TestScalarOpByZero(t *testing.T) {
+	t.Parallel()
+	scheme, enc, kg := setup(t)
+	sk, pk := keygen(t, kg)
+	dec, err := scheme.Decrypter(sk)
+	require.NoError(t, err)
+
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	zero := field.OpIdentity()
+
+	m := randomPlaintext(t)
+	ct, _ := encrypt(t, enc, m, pk)
+
+	scaled := ct.ScalarOp(zero)
+
+	// Both components must be the identity element.
+	c1 := scaled.Value().Components()[0]
+	c2 := scaled.Value().Components()[1]
+	require.True(t, c1.IsOpIdentity(), "c1 must be identity after ScalarOp(0)")
+	require.True(t, c2.IsOpIdentity(), "c2 must be identity after ScalarOp(0)")
+
+	// Decryption: δ · γ^{-a} = O · O^{-a} = O · O = O.
+	got, err := dec.Decrypt(scaled)
+	require.NoError(t, err)
+	require.True(t, got.Value().IsOpIdentity(),
+		"ScalarOp(0) must decrypt to identity regardless of original plaintext")
+
+	// The result equals Enc(identity, identity) built via the group identity.
+	identity := curve.OpIdentity()
+	expected, err := elgamal.NewCiphertext(identity, identity)
+	require.NoError(t, err)
+	require.True(t, scaled.Equal(expected))
+}
+
+// Enc(m, r)^k must equal Enc(m^k, r·k): scalar-operating a ciphertext
+// is equivalent to encrypting the scalar-operated plaintext with the
+// scalar-operated nonce.
+func TestScalarOpEncryptEquivalence(t *testing.T) {
+	t.Parallel()
+	_, enc, kg := setup(t)
+	_, pk := keygen(t, kg)
+
+	field := k256.NewScalarField()
+	k := field.FromUint64(5)
+
+	nonceVal := field.FromUint64(3)
+	nonce, err := elgamal.NewNonce(nonceVal)
+	require.NoError(t, err)
+
+	// r*k = 3*5 = 15
+	scaledNonceVal := field.FromUint64(15)
+	scaledNonce, err := elgamal.NewNonce(scaledNonceVal)
+	require.NoError(t, err)
+
+	m := randomPlaintext(t)
+
+	// Encrypt then ScalarOp: (g^r, m·h^r)^k = (g^(rk), m^k·h^(rk))
+	ct, err := enc.EncryptWithNonce(m, pk, nonce)
+	require.NoError(t, err)
+	ctScaled := ct.ScalarOp(k)
+
+	// ScalarOp plaintext and nonce, then encrypt: Enc(m^k, rk)
+	mk, err := elgamal.NewPlaintext(m.Value().ScalarOp(k))
+	require.NoError(t, err)
+	ctExpected, err := enc.EncryptWithNonce(mk, pk, scaledNonce)
+	require.NoError(t, err)
+
+	require.True(t, ctScaled.Equal(ctExpected),
+		"Enc(m,r)^k must equal Enc(m^k, r*k)")
+}
+
+// ─── Nonce operations ───────────────────────────────────────────────
+
+// Nonce.Op composes nonces additively: encrypting with r₁ then
+// re-randomising with r₂ must equal encrypting with r₁ + r₂.
+func TestNonceOp(t *testing.T) {
+	t.Parallel()
+	_, enc, kg := setup(t)
+	_, pk := keygen(t, kg)
+
+	field := k256.NewScalarField()
+	r1, err := elgamal.NewNonce(field.FromUint64(7))
+	require.NoError(t, err)
+	r2, err := elgamal.NewNonce(field.FromUint64(11))
+	require.NoError(t, err)
+
+	m := randomPlaintext(t)
+
+	// Encrypt with r1, then re-randomise with r2.
+	ct, err := enc.EncryptWithNonce(m, pk, r1)
+	require.NoError(t, err)
+	ct2, err := ct.ReRandomiseWithNonce(pk, r2)
+	require.NoError(t, err)
+
+	// Encrypt directly with r1 + r2.
+	combined := r1.Op(r2)
+	require.NotNil(t, combined)
+	ctDirect, err := enc.EncryptWithNonce(m, pk, combined)
+	require.NoError(t, err)
+
+	require.True(t, ct2.Equal(ctDirect),
+		"Enc(m,r1) re-randomised by r2 must equal Enc(m, r1+r2)")
+}
+
+func TestNonceEqual(t *testing.T) {
+	t.Parallel()
+	field := k256.NewScalarField()
+
+	n1, err := elgamal.NewNonce(field.FromUint64(42))
+	require.NoError(t, err)
+	n2, err := elgamal.NewNonce(field.FromUint64(42))
+	require.NoError(t, err)
+	n3, err := elgamal.NewNonce(field.FromUint64(99))
+	require.NoError(t, err)
+
+	require.True(t, n1.Equal(n2), "equal nonce values")
+	require.False(t, n1.Equal(n3), "different nonce values")
+	require.False(t, n1.Equal(nil), "non-nil vs nil")
+
+	var nilNonce *elgamal.Nonce[*k256.Scalar]
+	require.True(t, nilNonce.Equal(nil), "nil vs nil")
+}
+
+// ─── Accessor coverage ──────────────────────────────────────────────
+
+func TestSchemeAccessors(t *testing.T) {
+	t.Parallel()
+	scheme, _, _ := setup(t)
+
+	require.NotNil(t, scheme.Group())
+	require.NotNil(t, scheme.ScalarRing())
+	require.Equal(t, elgamal.Name, scheme.Name())
+
+	var nilScheme *elgamal.Scheme[*k256.Point, *k256.Scalar]
+	require.Nil(t, nilScheme.Group())
+	require.Nil(t, nilScheme.ScalarRing())
+}
+
+func TestPublicKeyGroupAndHashCode(t *testing.T) {
+	t.Parallel()
+	_, _, kg := setup(t)
+	_, pk := keygen(t, kg)
+
+	require.NotNil(t, pk.Group())
+
+	clone := pk.Clone()
+	require.Equal(t, pk.HashCode(), clone.HashCode(),
+		"equal public keys must have equal hash codes")
+
+	var nilPK *elgamal.PublicKey[*k256.Point, *k256.Scalar]
+	require.Nil(t, nilPK.Group())
+}
+
+func TestCiphertextScalarRing(t *testing.T) {
+	t.Parallel()
+	_, enc, kg := setup(t)
+	_, pk := keygen(t, kg)
+
+	m := randomPlaintext(t)
+	ct, _ := encrypt(t, enc, m, pk)
+	require.NotNil(t, ct.ScalarRing())
+
+	var nilCT *elgamal.Ciphertext[*k256.Point, *k256.Scalar]
+	require.Nil(t, nilCT.ScalarRing())
+}
+
+func TestNewCiphertextDirect(t *testing.T) {
+	t.Parallel()
+	curve := k256.NewCurve()
+
+	p1, err := curve.Random(pcg.NewRandomised())
+	require.NoError(t, err)
+	p2, err := curve.Random(pcg.NewRandomised())
+	require.NoError(t, err)
+
+	ct, err := elgamal.NewCiphertext(p1, p2)
+	require.NoError(t, err)
+	require.True(t, ct.Value().Components()[0].Equal(p1))
+	require.True(t, ct.Value().Components()[1].Equal(p2))
+}
