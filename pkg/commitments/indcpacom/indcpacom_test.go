@@ -383,7 +383,7 @@ func setupElGamal(tb testing.TB) suite[egPK, egPT, egCT, egNonce] {
 	tb.Helper()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	egScheme, err := elgamal.NewScheme(curve, field)
+	egScheme, err := elgamal.NewScheme(curve)
 	require.NoError(tb, err)
 	kg, err := egScheme.Keygen()
 	require.NoError(tb, err)
