@@ -95,6 +95,9 @@ func (B *Encrypter[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], receiver 
 	if B == nil || plaintext == nil || receiver == nil || nonce == nil {
 		return nil, ErrIsNil.WithMessage("encrypter/plaintext/receiver/nonce")
 	}
+	if nonce.v.IsZero() {
+		return nil, ErrValue.WithMessage("nonce value must be non-zero")
+	}
 	alpha := B.g.Generator()
 	// 8.26.1.d: Compute γ = α^k and δ = m · (α^a)^k.
 	gamma := alpha.ScalarOp(nonce.Value())

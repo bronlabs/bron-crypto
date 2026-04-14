@@ -174,10 +174,9 @@ func (c *Ciphertext[E, S]) UnmarshalCBOR(data []byte) error {
 	if !dto.V[0].IsTorsionFree() || !dto.V[1].IsTorsionFree() {
 		return ErrSubGroupMembership.WithMessage("ciphertext component is not torsion free")
 	}
-	// The second component can be identity if the message happens to be -h^r. The first one can only be identity,
-	// if ciphertext ScalarOp'd with zero, which would turn both components to identity.
-	if dto.V[0].IsOpIdentity() && !dto.V[1].IsOpIdentity() {
-		return ErrSubGroupMembership.WithMessage("invalid ciphertext: first component is identity but second is not")
+	// The second component can be identity if the message happens to be -h^r. The first one can never be identity for nonzero nonce.
+	if dto.V[0].IsOpIdentity() {
+		return ErrSubGroupMembership.WithMessage("invalid ciphertext: first component is identity")
 	}
 	newC, err := NewCiphertext(dto.V[0], dto.V[1])
 	if err != nil {

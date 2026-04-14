@@ -290,19 +290,24 @@ func (c *Ciphertext[E, S]) Op(other *Ciphertext[E, S]) *Ciphertext[E, S] {
 	if c == nil || other == nil {
 		return nil
 	}
-	return &Ciphertext[E, S]{v: c.v.Op(other.v)}
+	out := &Ciphertext[E, S]{v: c.v.Op(other.v)}
+	if out.v.Components()[0].IsOpIdentity() {
+		panic("invalid ciphertext: first component is identity after homomorphic operation, which should only happen if both inputs are identity")
+	}
+	return out
 }
 
 // ScalarOp raises both ciphertext components to the given scalar:
 // (c₁, c₂)^k = (c₁^k, c₂^k). If c encrypts m, the result encrypts m^k.
 func (c *Ciphertext[E, S]) ScalarOp(scalar algebra.Numeric) *Ciphertext[E, S] {
-	if c == nil {
+	if c == nil || scalar == nil {
 		return nil
 	}
-	if scalar == nil {
-		return c
+	out := &Ciphertext[E, S]{v: algebrautils.ScalarMul(c.v, scalar)}
+	if out.v.Components()[0].IsOpIdentity() {
+		panic("invalid ciphertext: first component is identity after scalar operation, which should only happen if input is identity or scalar is zero")
 	}
-	return &Ciphertext[E, S]{v: algebrautils.ScalarMul(c.v, scalar)}
+	return out
 }
 
 // OpInv returns the component-wise group inverse of the ciphertext: (c₁, c₂)⁻¹ = (c₁⁻¹, c₂⁻¹). If c encrypts m, the result encrypts m⁻¹.

@@ -71,6 +71,9 @@ func (s *Scheme[E, S]) ScalarRing() algebra.ZModLike[S] {
 
 // Keygen returns a KeyGenerator that produces (sk, pk) pairs.
 func (s *Scheme[E, S]) Keygen(opts ...KeyGeneratorOption[E, S]) (*KeyGenerator[E, S], error) {
+	if s == nil {
+		return nil, ErrIsNil.WithMessage("scheme")
+	}
 	kg := &KeyGenerator[E, S]{s.g, s.zn}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
@@ -82,6 +85,9 @@ func (s *Scheme[E, S]) Keygen(opts ...KeyGeneratorOption[E, S]) (*KeyGenerator[E
 
 // Encrypter returns an Encrypter bound to this scheme's group and scalar ring.
 func (s *Scheme[E, S]) Encrypter(opts ...EncrypterOption[E, S]) (*Encrypter[E, S], error) {
+	if s == nil {
+		return nil, ErrIsNil.WithMessage("scheme")
+	}
 	enc := &Encrypter[E, S]{s.g, s.zn}
 	for _, opt := range opts {
 		if err := opt(enc); err != nil {
