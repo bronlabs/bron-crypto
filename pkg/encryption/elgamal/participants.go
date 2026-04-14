@@ -10,12 +10,12 @@ import (
 )
 
 // KeyGeneratorOption configures a KeyGenerator.
-type KeyGeneratorOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*KeyGenerator[E, S]) error
+type KeyGeneratorOption[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] = func(*KeyGenerator[E, S]) error
 
 // KeyGenerator produces ElGamal key pairs (a, h = g^a) where a is sampled
 // uniformly from Z/nZ \ {0}.
-type KeyGenerator[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	g  UnderlyingGroup[E, S]
+type KeyGenerator[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
+	g  FiniteCyclicGroup[E, S]
 	zn algebra.ZModLike[S]
 }
 
@@ -45,11 +45,11 @@ func (kg *KeyGenerator[E, S]) Generate(prng io.Reader) (*PrivateKey[E, S], *Publ
 }
 
 // EncrypterOption configures an Encrypter.
-type EncrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Encrypter[E, S]) error
+type EncrypterOption[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] = func(*Encrypter[E, S]) error
 
 // Encrypter encrypts plaintexts under a receiver's public key.
-type Encrypter[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	g  UnderlyingGroup[E, S]
+type Encrypter[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
+	g  FiniteCyclicGroup[E, S]
 	zn algebra.ZModLike[S]
 }
 
@@ -108,10 +108,10 @@ func (B *Encrypter[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], receiver 
 }
 
 // DecrypterOption configures a Decrypter.
-type DecrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Decrypter[E, S]) error
+type DecrypterOption[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] = func(*Decrypter[E, S]) error
 
 // Decrypter recovers plaintexts using the holder's private key.
-type Decrypter[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type Decrypter[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	sk *PrivateKey[E, S]
 }
 

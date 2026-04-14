@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 )
 
-func _[E elgamal.UnderlyingGroupElement[E, S], S algebra.UintLike[S]]() {
+func _[E elgamal.FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]]() {
 	var (
 		_ encryption.PrivateKey[*elgamal.PrivateKey[E, S]]                                                            = (*elgamal.PrivateKey[E, S])(nil)
 		_ encryption.PublicKey[*elgamal.PublicKey[E, S]]                                                              = (*elgamal.PublicKey[E, S])(nil)

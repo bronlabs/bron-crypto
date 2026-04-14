@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
-type publicKeyDTO[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type publicKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	V E `cbor:"v"`
 }
 
@@ -40,7 +40,7 @@ func (pk *PublicKey[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-type privateKeyDTO[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type privateKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	V  S                `cbor:"v"`
 	PK *PublicKey[E, S] `cbor:"pk"`
 }
@@ -80,7 +80,7 @@ func (sk *PrivateKey[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-type plaintextDTO[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type plaintextDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	V E `cbor:"v"`
 }
 
@@ -144,7 +144,7 @@ func (n *Nonce[S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-type ciphertextDTO[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type ciphertextDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	V [2]E `cbor:"v"`
 }
 

@@ -64,6 +64,17 @@ func randomPlaintext(t *testing.T) *elgamal.Plaintext[*k256.Point, *k256.Scalar]
 	return pt
 }
 
+func randomNonce(t *testing.T) *elgamal.Nonce[*k256.Scalar] {
+	t.Helper()
+	curve := k256.NewCurve()
+	field := curve.ScalarField()
+	nv, err := field.Random(pcg.NewRandomised())
+	require.NoError(t, err)
+	nonce, err := elgamal.NewNonce(nv)
+	require.NoError(t, err)
+	return nonce
+}
+
 // ─── Basic correctness ───────────────────────────────────────────────
 
 func TestEncryptDecryptRoundTrip(t *testing.T) {
@@ -138,8 +149,7 @@ func TestDecryptWithWrongKey(t *testing.T) {
 
 // ─── Homomorphic properties ──────────────────────────────────────────
 
-// ElGamal is multiplicatively homomorphic over the group:
-// Dec(Enc(m1) ⊕ Enc(m2)) == m1 · m2
+// ElGamal is homomorphic over the group operation.
 func TestHomomorphicCiphertextOp(t *testing.T) {
 	t.Parallel()
 	scheme, enc, kg := setup(t)
@@ -147,20 +157,44 @@ func TestHomomorphicCiphertextOp(t *testing.T) {
 	dec, err := scheme.Decrypter(sk)
 	require.NoError(t, err)
 
-	m1 := randomPlaintext(t)
-	m2 := randomPlaintext(t)
+	t.Run("E(m1 + m2; r1 + r2) = E(m1; r1) + E(m2, r2)", func(t *testing.T) {
+		m1 := randomPlaintext(t)
+		m2 := randomPlaintext(t)
+		m12 := m1.Op(m2)
 
-	ct1, _ := encrypt(t, enc, m1, pk)
-	ct2, _ := encrypt(t, enc, m2, pk)
+		r1 := randomNonce(t)
+		r2 := randomNonce(t)
+		r12 := r1.Op(r2)
 
-	ctSum := ct1.Op(ct2)
+		ct1, err := enc.EncryptWithNonce(m1, pk, r1)
+		require.NoError(t, err)
+		ct2, err := enc.EncryptWithNonce(m2, pk, r2)
+		require.NoError(t, err)
+		ct12, err := enc.EncryptWithNonce(m12, pk, r12)
+		require.NoError(t, err)
 
-	got, err := dec.Decrypt(ctSum)
-	require.NoError(t, err)
+		expected := ct1.Op(ct2)
+		require.True(t, ct12.Equal(expected),
+			"E(m1 + m2; r1 + r2) should equal E(m1; r1) + E(m2, r2) (homomorphic property with nonces)")
+	})
 
-	want := m1.Op(m2)
-	require.True(t, got.Equal(want),
-		"Dec(Enc(m1) op Enc(m2)) should equal m1 op m2 (homomorphic property)")
+	t.Run("Dec(Enc(m1) ⊕ Enc(m2)) == m1 · m2", func(t *testing.T) {
+		m1 := randomPlaintext(t)
+		m2 := randomPlaintext(t)
+
+		ct1, _ := encrypt(t, enc, m1, pk)
+		ct2, _ := encrypt(t, enc, m2, pk)
+
+		ctSum := ct1.Op(ct2)
+
+		got, err := dec.Decrypt(ctSum)
+		require.NoError(t, err)
+
+		want := m1.Op(m2)
+		require.True(t, got.Equal(want),
+			"Dec(Enc(m1) op Enc(m2)) should equal m1 op m2 (homomorphic property)")
+	})
+
 }
 
 // ScalarOp on a ciphertext should act as scalar exponentiation on the plaintext:
@@ -806,6 +840,183 @@ func TestNonceEqual(t *testing.T) {
 
 	var nilNonce *elgamal.Nonce[*k256.Scalar]
 	require.True(t, nilNonce.Equal(nil), "nil vs nil")
+}
+
+// ─── Plaintext inverse and scalar ───────────────────────────────────
+
+// m · m⁻¹ = identity.
+func TestPlaintextOpInv(t *testing.T) {
+	t.Parallel()
+	scheme, enc, kg := setup(t)
+	sk, pk := keygen(t, kg)
+	dec, err := scheme.Decrypter(sk)
+	require.NoError(t, err)
+
+	m := randomPlaintext(t)
+	mInv := m.OpInv()
+	require.NotNil(t, mInv)
+
+	product := m.Op(mInv)
+	require.True(t, product.Value().IsOpIdentity(),
+		"m op m^{-1} must be identity")
+
+	// Verify through encryption: Dec(Enc(m) op Enc(m⁻¹)) == identity.
+	ct1, _ := encrypt(t, enc, m, pk)
+	ct2, _ := encrypt(t, enc, mInv, pk)
+	got, err := dec.Decrypt(ct1.Op(ct2))
+	require.NoError(t, err)
+	require.True(t, got.Value().IsOpIdentity(),
+		"Dec(Enc(m) op Enc(m^{-1})) must be identity")
+}
+
+func TestPlaintextOpInvNil(t *testing.T) {
+	t.Parallel()
+	var nilPT *elgamal.Plaintext[*k256.Point, *k256.Scalar]
+	require.Nil(t, nilPT.OpInv())
+}
+
+// Plaintext.ScalarOp(k) must equal the group element m^k.
+func TestPlaintextScalarOp(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	k := field.FromUint64(7)
+
+	m := randomPlaintext(t)
+	mk := m.ScalarOp(k)
+	require.NotNil(t, mk)
+
+	// Must match the raw group-level scalar op.
+	expected, err := elgamal.NewPlaintext(m.Value().ScalarOp(k))
+	require.NoError(t, err)
+	require.True(t, mk.Equal(expected),
+		"Plaintext.ScalarOp(k) must equal NewPlaintext(m.Value().ScalarOp(k))")
+}
+
+func TestPlaintextScalarOpNil(t *testing.T) {
+	t.Parallel()
+	m := randomPlaintext(t)
+	require.Nil(t, m.ScalarOp(nil), "ScalarOp(nil) must return nil")
+
+	var nilPT *elgamal.Plaintext[*k256.Point, *k256.Scalar]
+	field := k256.NewScalarField()
+	require.Nil(t, nilPT.ScalarOp(field.FromUint64(3)), "nil.ScalarOp(k) must return nil")
+}
+
+// ─── Ciphertext inverse ─────────────────────────────────────────────
+
+// Dec(ct op ct⁻¹) == identity: the ciphertext inverse cancels the plaintext.
+func TestCiphertextOpInv(t *testing.T) {
+	t.Parallel()
+	scheme, enc, kg := setup(t)
+	sk, pk := keygen(t, kg)
+	dec, err := scheme.Decrypter(sk)
+	require.NoError(t, err)
+
+	m := randomPlaintext(t)
+	ct, _ := encrypt(t, enc, m, pk)
+
+	ctInv := ct.OpInv()
+	require.NotNil(t, ctInv)
+
+	combined := ct.Op(ctInv)
+	got, err := dec.Decrypt(combined)
+	require.NoError(t, err)
+	require.True(t, got.Value().IsOpIdentity(),
+		"Dec(ct op ct^{-1}) must be identity")
+}
+
+// Dec(ct⁻¹) == m⁻¹: inverting a ciphertext inverts the plaintext.
+func TestCiphertextOpInvDecryptsToPlaintextInverse(t *testing.T) {
+	t.Parallel()
+	scheme, enc, kg := setup(t)
+	sk, pk := keygen(t, kg)
+	dec, err := scheme.Decrypter(sk)
+	require.NoError(t, err)
+
+	m := randomPlaintext(t)
+	ct, _ := encrypt(t, enc, m, pk)
+
+	got, err := dec.Decrypt(ct.OpInv())
+	require.NoError(t, err)
+
+	require.True(t, got.Equal(m.OpInv()),
+		"Dec(ct^{-1}) must equal m^{-1}")
+}
+
+func TestCiphertextOpInvNil(t *testing.T) {
+	t.Parallel()
+	var nilCT *elgamal.Ciphertext[*k256.Point, *k256.Scalar]
+	require.Nil(t, nilCT.OpInv())
+}
+
+// ─── Nonce inverse and scalar ───────────────────────────────────────
+
+// r + (-r) = 0 in Z/nZ.
+func TestNonceOpInv(t *testing.T) {
+	t.Parallel()
+	field := k256.NewScalarField()
+	r, err := elgamal.NewNonce(field.FromUint64(42))
+	require.NoError(t, err)
+
+	rInv := r.OpInv()
+	require.NotNil(t, rInv)
+
+	// The sum of the underlying scalars must be the additive identity (zero).
+	sum := r.Value().Op(rInv.Value())
+	require.True(t, sum.IsOpIdentity(),
+		"r + (-r) must be zero in Z/nZ")
+}
+
+func TestNonceOpInvNil(t *testing.T) {
+	t.Parallel()
+	var nilN *elgamal.Nonce[*k256.Scalar]
+	require.Nil(t, nilN.OpInv())
+}
+
+// Nonce.ScalarOp(k) gives the nonce r·k. Encrypting m with nonce r
+// then ScalarOp(k) on the ciphertext must equal encrypting m^k with
+// nonce r.ScalarOp(k).
+func TestNonceScalarOp(t *testing.T) {
+	t.Parallel()
+	_, enc, kg := setup(t)
+	_, pk := keygen(t, kg)
+
+	field := k256.NewScalarField()
+	k := field.FromUint64(5)
+
+	nonceVal := field.FromUint64(3)
+	nonce, err := elgamal.NewNonce(nonceVal)
+	require.NoError(t, err)
+
+	m := randomPlaintext(t)
+
+	// Encrypt then ScalarOp on ciphertext.
+	ct, err := enc.EncryptWithNonce(m, pk, nonce)
+	require.NoError(t, err)
+	ctScaled := ct.ScalarOp(k)
+
+	// ScalarOp plaintext and nonce, then encrypt.
+	mk := m.ScalarOp(k)
+	rk := nonce.ScalarOp(k)
+	require.NotNil(t, rk)
+	ctExpected, err := enc.EncryptWithNonce(mk, pk, rk)
+	require.NoError(t, err)
+
+	require.True(t, ctScaled.Equal(ctExpected),
+		"Enc(m,r)^k must equal Enc(m.ScalarOp(k), r.ScalarOp(k))")
+}
+
+func TestNonceScalarOpNil(t *testing.T) {
+	t.Parallel()
+	field := k256.NewScalarField()
+	r, err := elgamal.NewNonce(field.FromUint64(7))
+	require.NoError(t, err)
+
+	require.Nil(t, r.ScalarOp(nil), "ScalarOp(nil) must return nil")
+
+	var nilN *elgamal.Nonce[*k256.Scalar]
+	require.Nil(t, nilN.ScalarOp(field.FromUint64(3)), "nil.ScalarOp(k) must return nil")
 }
 
 // ─── Accessor coverage ──────────────────────────────────────────────

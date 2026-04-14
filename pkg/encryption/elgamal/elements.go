@@ -16,7 +16,7 @@ import (
 // It rejects the identity element (which would make all ciphertexts trivially
 // decryptable) and elements with torsion (which would place the key outside the
 // prime-order subgroup, enabling small-subgroup attacks).
-func NewPublicKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](v E) (*PublicKey[E, S], error) {
+func NewPublicKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](v E) (*PublicKey[E, S], error) {
 	if utils.IsNil(v) {
 		return nil, ErrIsNil.WithMessage("public key value")
 	}
@@ -30,7 +30,7 @@ func NewPublicKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](v E) (*
 }
 
 // PublicKey is a group element h = g^a where a is the corresponding private key scalar.
-type PublicKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type PublicKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	v E
 }
 
@@ -55,11 +55,11 @@ func (pk *PublicKey[E, S]) Clone() *PublicKey[E, S] {
 }
 
 // Group returns the algebraic group that this key belongs to.
-func (pk *PublicKey[E, S]) Group() UnderlyingGroup[E, S] {
+func (pk *PublicKey[E, S]) Group() FiniteCyclicGroup[E, S] {
 	if pk == nil {
 		return nil
 	}
-	return algebra.StructureMustBeAs[UnderlyingGroup[E, S]](pk.v.Structure())
+	return algebra.StructureMustBeAs[FiniteCyclicGroup[E, S]](pk.v.Structure())
 }
 
 // HashCode returns a non-cryptographic hash for use in hash maps.
@@ -73,7 +73,7 @@ func (pk *PublicKey[E, S]) HashCode() base.HashCode {
 // NewPrivateKey constructs a private key from scalar a ∈ Z/nZ and computes
 // the corresponding public key h = g^a. It rejects a = 0 (the identity scalar),
 // which would yield the degenerate public key h = identity.
-func NewPrivateKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](group UnderlyingGroup[E, S], v S) (*PrivateKey[E, S], error) {
+func NewPrivateKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](group FiniteCyclicGroup[E, S], v S) (*PrivateKey[E, S], error) {
 	if utils.IsNil(v) {
 		return nil, ErrIsNil.WithMessage("private key value")
 	}
@@ -91,7 +91,7 @@ func NewPrivateKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](group 
 }
 
 // PrivateKey is a scalar a ∈ Z/nZ together with the precomputed public key h = g^a.
-type PrivateKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type PrivateKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	v  S
 	pk PublicKey[E, S]
 }
@@ -126,7 +126,7 @@ func (sk *PrivateKey[E, S]) Clone() *PrivateKey[E, S] {
 // In generalised ElGamal the message space is the group G itself;
 // encoding application-level data into group elements is the caller's
 // responsibility.
-func NewPlaintext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](v E) (*Plaintext[E, S], error) {
+func NewPlaintext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](v E) (*Plaintext[E, S], error) {
 	if utils.IsNil(v) {
 		return nil, ErrIsNil.WithMessage("plaintext value")
 	}
@@ -134,7 +134,7 @@ func NewPlaintext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](v E) (*
 }
 
 // Plaintext is a group element m ∈ G to be encrypted.
-type Plaintext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type Plaintext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	v E
 }
 
@@ -159,15 +159,31 @@ func (p *Plaintext[E, S]) Op(other *Plaintext[E, S]) *Plaintext[E, S] {
 	return &Plaintext[E, S]{p.v.Op(other.v)}
 }
 
+// OpInv returns the group inverse of the plaintext: m⁻¹.
+func (p *Plaintext[E, S]) OpInv() *Plaintext[E, S] {
+	if p == nil {
+		return nil
+	}
+	return &Plaintext[E, S]{p.v.OpInv()}
+}
+
+// ScalarOp returns the plaintext raised to the given scalar: m^k.
+func (p *Plaintext[E, S]) ScalarOp(scalar algebra.Numeric) *Plaintext[E, S] {
+	if p == nil || scalar == nil {
+		return nil
+	}
+	return &Plaintext[E, S]{algebrautils.ScalarMul(p.v, scalar)}
+}
+
 // NewCiphertext constructs a ciphertext from its two components (c₁, c₂).
 // A valid encryption satisfies c₁ = g^r and c₂ = m · h^r for some nonce r,
 // but this constructor does not enforce that relationship — it is the caller's
 // responsibility to provide well-formed components.
-func NewCiphertext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](c1, c2 E) (*Ciphertext[E, S], error) {
+func NewCiphertext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](c1, c2 E) (*Ciphertext[E, S], error) {
 	if utils.IsNil(c1) || utils.IsNil(c2) {
 		return nil, ErrIsNil.WithMessage("ciphertext components")
 	}
-	g := algebra.StructureMustBeAs[UnderlyingGroup[E, S]](c1.Structure())
+	g := algebra.StructureMustBeAs[FiniteCyclicGroup[E, S]](c1.Structure())
 	ctSpace, err := constructions.NewFiniteDirectSumModule(g, 2)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create ciphertext space")
@@ -181,7 +197,7 @@ func NewCiphertext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](c1, c2
 
 // Ciphertext is a pair (c₁, c₂) = (g^r, m · h^r) in G × G,
 // represented as an element of the direct-sum module G².
-type Ciphertext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+type Ciphertext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	v *constructions.FiniteDirectSumModuleElement[E, S]
 }
 
@@ -190,7 +206,7 @@ func (c *Ciphertext[E, S]) ScalarRing() algebra.ZModLike[S] {
 	if c == nil {
 		return nil
 	}
-	g := algebra.StructureMustBeAs[UnderlyingGroup[E, S]](c.v.Components()[0].Structure())
+	g := algebra.StructureMustBeAs[FiniteCyclicGroup[E, S]](c.v.Components()[0].Structure())
 	return algebra.StructureMustBeAs[algebra.ZModLike[S]](g.ScalarStructure())
 }
 
@@ -292,6 +308,14 @@ func (c *Ciphertext[E, S]) ScalarOp(scalar algebra.Numeric) *Ciphertext[E, S] {
 	return &Ciphertext[E, S]{v: algebrautils.ScalarMul(c.v, scalar)}
 }
 
+// OpInv returns the component-wise group inverse of the ciphertext: (c₁, c₂)⁻¹ = (c₁⁻¹, c₂⁻¹). If c encrypts m, the result encrypts m⁻¹.
+func (c *Ciphertext[E, S]) OpInv() *Ciphertext[E, S] {
+	if c == nil {
+		return nil
+	}
+	return &Ciphertext[E, S]{v: c.v.OpInv()}
+}
+
 // NewNonce constructs an encryption nonce from a scalar r ∈ Z/nZ.
 // It rejects r = 0, which would produce the degenerate ciphertext (identity, m)
 // and leak the plaintext directly.
@@ -332,4 +356,20 @@ func (n *Nonce[S]) Equal(x *Nonce[S]) bool {
 		return n == x
 	}
 	return n.v.Equal(x.v)
+}
+
+// OpInv returns the additive inverse of the nonce in Z/nZ. This is the nonce that corresponds to the homomorphic inverse of a ciphertext.
+func (n *Nonce[S]) OpInv() *Nonce[S] {
+	if n == nil {
+		return nil
+	}
+	return &Nonce[S]{v: n.v.OpInv()}
+}
+
+// ScalarOp returns the product of the nonce with a scalar: r · k. This is the nonce that corresponds to raising a ciphertext to a scalar.
+func (n *Nonce[S]) ScalarOp(scalar algebra.Numeric) *Nonce[S] {
+	if n == nil || scalar == nil {
+		return nil
+	}
+	return &Nonce[S]{v: algebrautils.ScalarMul(n.v, scalar)}
 }

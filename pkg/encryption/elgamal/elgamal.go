@@ -10,17 +10,17 @@ import (
 // Name is the canonical identifier for this encryption scheme.
 const Name encryption.Name = "elgamal"
 
-// UnderlyingGroup constrains the group G in which ElGamal operates.
+// FiniteCyclicGroup constrains the group G in which ElGamal operates.
 // G must be a finite abelian cyclic group whose DDH problem is hard.
 // Typical instantiations: prime-order elliptic curve groups (k256, p256, ed25519 prime subgroup).
-type UnderlyingGroup[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] interface {
+type FiniteCyclicGroup[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] interface {
 	algebra.AbelianGroup[E, S]
 	algebra.CyclicGroup[E]
 	algebra.FiniteGroup[E]
 }
 
-// UnderlyingGroupElement constrains elements of the group G.
-type UnderlyingGroupElement[E interface {
+// FiniteCyclicGroupElement constrains elements of the group G.
+type FiniteCyclicGroupElement[E interface {
 	algebra.AbelianGroupElement[E, S]
 	algebra.CyclicGroupElement[E]
 }, S algebra.UintLike[S]] interface {
@@ -30,7 +30,7 @@ type UnderlyingGroupElement[E interface {
 
 // NewScheme creates an ElGamal scheme over group g with scalar ring zn.
 // The scalar ring must be Z/nZ where n is the order of the group.
-func NewScheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](g UnderlyingGroup[E, S]) (*Scheme[E, S], error) {
+func NewScheme[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](g FiniteCyclicGroup[E, S]) (*Scheme[E, S], error) {
 	if g == nil {
 		return nil, ErrIsNil.WithMessage("g")
 	}
@@ -43,8 +43,8 @@ func NewScheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](g Underlyi
 
 // Scheme holds the algebraic parameters for an ElGamal instantiation and
 // serves as a factory for KeyGenerator, Encrypter, and Decrypter.
-type Scheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	g  UnderlyingGroup[E, S]
+type Scheme[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
+	g  FiniteCyclicGroup[E, S]
 	zn algebra.ZModLike[S]
 }
 
@@ -54,7 +54,7 @@ func (*Scheme[E, S]) Name() encryption.Name {
 }
 
 // Group returns the underlying cyclic group G.
-func (s *Scheme[E, S]) Group() UnderlyingGroup[E, S] {
+func (s *Scheme[E, S]) Group() FiniteCyclicGroup[E, S] {
 	if s == nil {
 		return nil
 	}
