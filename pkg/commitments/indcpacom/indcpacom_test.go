@@ -1,538 +1,434 @@
 package indcpacom_test
 
 import (
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
+	"github.com/bronlabs/bron-crypto/pkg/encryption"
+	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
-func TestBasicCommitmentAndVerification(t *testing.T) {
-	t.Parallel()
+// ─── Generic test suite ──────────────────────────────────────────────
 
-	scheme, pk := setupScheme(t)
-
-	// Create a message
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	// Commit to the message
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-	require.NotNil(t, commitment)
-	require.NotNil(t, witness)
-
-	// Verify the commitment
-	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
-	err = verifier.Verify(commitment, message, witness)
-	require.NoError(t, err, "commitment should verify")
+type suite[
+	PK encryption.PublicKey[PK],
+	M encryption.Plaintext,
+	C encryption.ReRandomisableCiphertext[C, N, PK],
+	N interface {
+		encryption.Nonce
+		algebra.Operand[N]
+	},
+] struct {
+	committer     *indcpacom.Committer[N, M, C, PK]
+	verifier      *indcpacom.Verifier[N, M, C, PK]
+	key           *indcpacom.Key[PK]
+	sampleMessage func(testing.TB) *indcpacom.Message[M]
+	sampleWitness func(testing.TB) *indcpacom.Witness[N]
+	name          string
+	encName       string
 }
 
-func TestCommitWithWitness(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-
-	// Create a message
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	// Sample a nonce and create a witness directly
-	nonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
-	require.NoError(t, err)
-	witness, err := indcpacom.NewWitness(nonce)
-	require.NoError(t, err)
-
-	// Commit with the witness
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment1, err := committer.CommitWithWitness(message, witness)
-	require.NoError(t, err)
-
-	// Commit with the same witness should produce the same commitment
-	commitment2, err := committer.CommitWithWitness(message, witness)
-	require.NoError(t, err)
-	require.True(t, commitment1.Equal(commitment2), "deterministic commitment should match")
-
-	// Verify both commitments
-	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
-	err = verifier.Verify(commitment1, message, witness)
-	require.NoError(t, err)
-	err = verifier.Verify(commitment2, message, witness)
-	require.NoError(t, err)
-}
-
-func TestVerificationFailsWithWrongMessage(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-
-	// Create two different messages
-	plaintext1 := sampleMessage(t, pk)
-	plaintext2 := sampleMessage(t, pk)
-	message1, err := indcpacom.NewMessage(plaintext1)
-	require.NoError(t, err)
-	message2, err := indcpacom.NewMessage(plaintext2)
-	require.NoError(t, err)
-
-	// Commit to the first message
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment, witness, err := committer.Commit(message1, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Verification should fail with wrong message
-	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
-	err = verifier.Verify(commitment, message2, witness)
-	require.Error(t, err, "verification should fail with wrong message")
-}
-
-func TestVerificationFailsWithWrongWitness(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-
-	// Create a message
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	// Commit to the message twice with different witnesses
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment1, witness1, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-	_, witness2, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Verification should fail with wrong witness
-	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
-	err = verifier.Verify(commitment1, message, witness2)
-	require.Error(t, err, "verification should fail with wrong witness")
-
-	// But verification should succeed with correct witness
-	err = verifier.Verify(commitment1, message, witness1)
-	require.NoError(t, err)
-}
-
-func TestReRandomization(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-	key, err := indcpacom.NewKey(pk)
-	require.NoError(t, err)
-
-	// Create a message and commit
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment1, witness1, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Re-randomise the commitment
-	commitment2, rerandWitness, err := commitment1.ReRandomise(key, pcg.NewRandomised())
-	require.NoError(t, err)
-	require.NotNil(t, commitment2)
-	require.NotNil(t, rerandWitness)
-
-	// Re-randomised commitment should be different
-	require.False(t, commitment1.Equal(commitment2), "re-randomised commitment should be different")
-
-	// The original commitment should still verify with original witness
-	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
-	err = verifier.Verify(commitment1, message, witness1)
-	require.NoError(t, err)
-
-	// The re-randomised commitment should verify with combined witness
-	combinedWitness := witness1.Op(rerandWitness)
-	err = verifier.Verify(commitment2, message, combinedWitness)
-	require.NoError(t, err, "re-randomised commitment should verify with combined witness")
-}
-
-func TestReRandomizationWithWitness(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-	key, err := indcpacom.NewKey(pk)
-	require.NoError(t, err)
-
-	// Create a message and commit
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment1, _, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Sample a specific nonce for re-randomization and create witness directly
-	rerandNonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
-	require.NoError(t, err)
-	rerandWitness, err := indcpacom.NewWitness(rerandNonce)
-	require.NoError(t, err)
-
-	// Re-randomise with specific witness twice - should produce same result
-	commitment2, err := commitment1.ReRandomiseWithWitness(key, rerandWitness)
-	require.NoError(t, err)
-
-	commitment3, err := commitment1.ReRandomiseWithWitness(key, rerandWitness)
-	require.NoError(t, err)
-
-	// Same witness should produce same re-randomised commitment
-	require.True(t, commitment2.Equal(commitment3), "deterministic re-randomization should match")
-}
-
-func TestMultipleReRandomizations(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-	key, err := indcpacom.NewKey(pk)
-	require.NoError(t, err)
-
-	// Create a message and commit
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment0, witness0, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Re-randomise multiple times, tracking witnesses
-	commitment1, rerandWitness1, err := commitment0.ReRandomise(key, pcg.NewRandomised())
-	require.NoError(t, err)
-	commitment2, rerandWitness2, err := commitment1.ReRandomise(key, pcg.NewRandomised())
-	require.NoError(t, err)
-	commitment3, rerandWitness3, err := commitment2.ReRandomise(key, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// All commitments should be different
-	require.False(t, commitment0.Equal(commitment1))
-	require.False(t, commitment1.Equal(commitment2))
-	require.False(t, commitment2.Equal(commitment3))
-	require.False(t, commitment0.Equal(commitment3))
-
-	// Verify each commitment with cumulative combined witness
-	verifier, err := scheme.Verifier()
-	require.NoError(t, err)
-
-	// commitment0 verifies with witness0
-	err = verifier.Verify(commitment0, message, witness0)
-	require.NoError(t, err)
-
-	// commitment1 verifies with witness0.Op(rerandWitness1)
-	witness1 := witness0.Op(rerandWitness1)
-	err = verifier.Verify(commitment1, message, witness1)
-	require.NoError(t, err)
-
-	// commitment2 verifies with witness1.Op(rerandWitness2)
-	witness2 := witness1.Op(rerandWitness2)
-	err = verifier.Verify(commitment2, message, witness2)
-	require.NoError(t, err)
-
-	// commitment3 verifies with witness2.Op(rerandWitness3)
-	witness3 := witness2.Op(rerandWitness3)
-	err = verifier.Verify(commitment3, message, witness3)
-	require.NoError(t, err)
-}
-
-func TestNilInputErrors(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-
-	t.Run("commit with nil message", func(t *testing.T) {
+func runSuite[
+	PK encryption.PublicKey[PK],
+	M encryption.Plaintext,
+	C encryption.ReRandomisableCiphertext[C, N, PK],
+	N interface {
+		encryption.Nonce
+		algebra.Operand[N]
+	},
+](t *testing.T, s suite[PK, M, C, N]) {
+	t.Run("basic commit and verify", func(t *testing.T) {
 		t.Parallel()
-		_, _, err := committer.Commit(nil, pcg.NewRandomised())
-		require.Error(t, err)
-	})
-
-	t.Run("commit with nil prng", func(t *testing.T) {
-		t.Parallel()
-		_, _, err := committer.Commit(message, nil)
-		require.Error(t, err)
-	})
-
-	t.Run("commit with witness nil message", func(t *testing.T) {
-		t.Parallel()
-		_, witness, err := committer.Commit(message, pcg.NewRandomised())
+		msg := s.sampleMessage(t)
+		commitment, witness, err := s.committer.Commit(msg, pcg.NewRandomised())
 		require.NoError(t, err)
-		_, err = committer.CommitWithWitness(nil, witness)
-		require.Error(t, err)
+		require.NotNil(t, commitment)
+		require.NotNil(t, witness)
+
+		err = s.verifier.Verify(commitment, msg, witness)
+		require.NoError(t, err)
 	})
 
-	t.Run("commit with witness nil witness", func(t *testing.T) {
+	t.Run("commit with witness", func(t *testing.T) {
 		t.Parallel()
-		_, err := committer.CommitWithWitness(message, nil)
-		require.Error(t, err)
+		msg := s.sampleMessage(t)
+		witness := s.sampleWitness(t)
+
+		c1, err := s.committer.CommitWithWitness(msg, witness)
+		require.NoError(t, err)
+		c2, err := s.committer.CommitWithWitness(msg, witness)
+		require.NoError(t, err)
+		require.True(t, c1.Equal(c2), "deterministic commitment should match")
+
+		err = s.verifier.Verify(c1, msg, witness)
+		require.NoError(t, err)
+		err = s.verifier.Verify(c2, msg, witness)
+		require.NoError(t, err)
 	})
 
-	t.Run("new message with nil", func(t *testing.T) {
+	t.Run("wrong message fails", func(t *testing.T) {
 		t.Parallel()
-		_, err := indcpacom.NewMessage[*paillier.Plaintext](nil)
-		require.Error(t, err)
+		msg1 := s.sampleMessage(t)
+		msg2 := s.sampleMessage(t)
+
+		commitment, witness, err := s.committer.Commit(msg1, pcg.NewRandomised())
+		require.NoError(t, err)
+
+		err = s.verifier.Verify(commitment, msg2, witness)
+		require.Error(t, err, "verification should fail with wrong message")
 	})
 
-	t.Run("new key with nil", func(t *testing.T) {
+	t.Run("wrong witness fails", func(t *testing.T) {
 		t.Parallel()
-		_, err := indcpacom.NewKey[*paillier.PublicKey](nil)
-		require.Error(t, err)
+		msg := s.sampleMessage(t)
+
+		c1, w1, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+		_, w2, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+
+		err = s.verifier.Verify(c1, msg, w2)
+		require.Error(t, err, "verification should fail with wrong witness")
+
+		err = s.verifier.Verify(c1, msg, w1)
+		require.NoError(t, err)
 	})
 
-	t.Run("new witness with nil", func(t *testing.T) {
+	t.Run("re-randomisation", func(t *testing.T) {
 		t.Parallel()
-		_, err := indcpacom.NewWitness[*paillier.Nonce](nil)
-		require.Error(t, err)
+		msg := s.sampleMessage(t)
+
+		c1, w1, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+
+		c2, rw, err := c1.ReRandomise(s.key, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, c2)
+		require.NotNil(t, rw)
+		require.False(t, c1.Equal(c2), "re-randomised commitment should be different")
+
+		err = s.verifier.Verify(c1, msg, w1)
+		require.NoError(t, err)
+
+		combined := w1.Op(rw)
+		err = s.verifier.Verify(c2, msg, combined)
+		require.NoError(t, err, "re-randomised commitment should verify with combined witness")
+	})
+
+	t.Run("re-randomisation with witness", func(t *testing.T) {
+		t.Parallel()
+		msg := s.sampleMessage(t)
+		rw := s.sampleWitness(t)
+
+		c1, _, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+
+		c2, err := c1.ReRandomiseWithWitness(s.key, rw)
+		require.NoError(t, err)
+		c3, err := c1.ReRandomiseWithWitness(s.key, rw)
+		require.NoError(t, err)
+		require.True(t, c2.Equal(c3), "deterministic re-randomisation should match")
+	})
+
+	t.Run("multiple re-randomisations", func(t *testing.T) {
+		t.Parallel()
+		msg := s.sampleMessage(t)
+
+		c0, w0, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+
+		c1, rw1, err := c0.ReRandomise(s.key, pcg.NewRandomised())
+		require.NoError(t, err)
+		c2, rw2, err := c1.ReRandomise(s.key, pcg.NewRandomised())
+		require.NoError(t, err)
+		c3, rw3, err := c2.ReRandomise(s.key, pcg.NewRandomised())
+		require.NoError(t, err)
+
+		require.False(t, c0.Equal(c1))
+		require.False(t, c1.Equal(c2))
+		require.False(t, c2.Equal(c3))
+		require.False(t, c0.Equal(c3))
+
+		err = s.verifier.Verify(c0, msg, w0)
+		require.NoError(t, err)
+
+		w1 := w0.Op(rw1)
+		err = s.verifier.Verify(c1, msg, w1)
+		require.NoError(t, err)
+
+		w2 := w1.Op(rw2)
+		err = s.verifier.Verify(c2, msg, w2)
+		require.NoError(t, err)
+
+		w3 := w2.Op(rw3)
+		err = s.verifier.Verify(c3, msg, w3)
+		require.NoError(t, err)
+	})
+
+	t.Run("scheme name", func(t *testing.T) {
+		t.Parallel()
+		require.Contains(t, s.name, "IND-CPA-Com")
+		require.Contains(t, s.name, s.encName)
+	})
+
+	t.Run("commitment equality", func(t *testing.T) {
+		t.Parallel()
+		msg := s.sampleMessage(t)
+
+		c1, w1, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.True(t, c1.Equal(c1))
+
+		c2, err := s.committer.CommitWithWitness(msg, w1)
+		require.NoError(t, err)
+		require.True(t, c1.Equal(c2))
+
+		c3, _, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.False(t, c1.Equal(c3))
+	})
+
+	t.Run("value accessors", func(t *testing.T) {
+		t.Parallel()
+		msg := s.sampleMessage(t)
+		require.NotNil(t, msg.Value())
+		require.NotNil(t, s.key.Value())
+
+		c, _, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, c.Value())
+
+		w := s.sampleWitness(t)
+		require.NotNil(t, w.Value())
+	})
+
+	t.Run("witness op", func(t *testing.T) {
+		t.Parallel()
+		msg := s.sampleMessage(t)
+		w1 := s.sampleWitness(t)
+		w2 := s.sampleWitness(t)
+
+		// Commit with w1, re-randomise with w2. The combined witness w1 ⊕ w2
+		// must verify the re-randomised commitment.
+		c1, err := s.committer.CommitWithWitness(msg, w1)
+		require.NoError(t, err)
+		c2, err := c1.ReRandomiseWithWitness(s.key, w2)
+		require.NoError(t, err)
+
+		combined := w1.Op(w2)
+		require.NotNil(t, combined)
+		err = s.verifier.Verify(c2, msg, combined)
+		require.NoError(t, err)
+	})
+
+	t.Run("nil inputs", func(t *testing.T) {
+		t.Parallel()
+		msg := s.sampleMessage(t)
+		w := s.sampleWitness(t)
+
+		t.Run("commit nil message", func(t *testing.T) {
+			t.Parallel()
+			_, _, err := s.committer.Commit(nil, pcg.NewRandomised())
+			require.Error(t, err)
+		})
+		t.Run("commit nil prng", func(t *testing.T) {
+			t.Parallel()
+			_, _, err := s.committer.Commit(msg, nil)
+			require.Error(t, err)
+		})
+		t.Run("commit with witness nil message", func(t *testing.T) {
+			t.Parallel()
+			_, err := s.committer.CommitWithWitness(nil, w)
+			require.Error(t, err)
+		})
+		t.Run("commit with witness nil witness", func(t *testing.T) {
+			t.Parallel()
+			_, err := s.committer.CommitWithWitness(msg, nil)
+			require.Error(t, err)
+		})
+		t.Run("new message nil", func(t *testing.T) {
+			t.Parallel()
+			var zeroM M
+			_, err := indcpacom.NewMessage(zeroM)
+			require.Error(t, err)
+		})
+		t.Run("new key nil", func(t *testing.T) {
+			t.Parallel()
+			var zeroPK PK
+			_, err := indcpacom.NewKey(zeroPK)
+			require.Error(t, err)
+		})
+		t.Run("new witness nil", func(t *testing.T) {
+			t.Parallel()
+			var zeroN N
+			_, err := indcpacom.NewWitness(zeroN)
+			require.Error(t, err)
+		})
+	})
+
+	t.Run("re-randomise nil inputs", func(t *testing.T) {
+		t.Parallel()
+		msg := s.sampleMessage(t)
+		commitment, witness, err := s.committer.Commit(msg, pcg.NewRandomised())
+		require.NoError(t, err)
+
+		t.Run("nil key", func(t *testing.T) {
+			t.Parallel()
+			_, _, err := commitment.ReRandomise(nil, pcg.NewRandomised())
+			require.Error(t, err)
+		})
+		t.Run("nil prng", func(t *testing.T) {
+			t.Parallel()
+			_, _, err := commitment.ReRandomise(s.key, nil)
+			require.Error(t, err)
+		})
+		t.Run("nil key with witness", func(t *testing.T) {
+			t.Parallel()
+			_, err := commitment.ReRandomiseWithWitness(nil, witness)
+			require.Error(t, err)
+		})
+		t.Run("nil witness", func(t *testing.T) {
+			t.Parallel()
+			_, err := commitment.ReRandomiseWithWitness(s.key, nil)
+			require.Error(t, err)
+		})
+		t.Run("nil receiver", func(t *testing.T) {
+			t.Parallel()
+			var nilC *indcpacom.Commitment[C, N, PK]
+			_, _, err := nilC.ReRandomise(s.key, pcg.NewRandomised())
+			require.Error(t, err)
+		})
+		t.Run("nil receiver with witness", func(t *testing.T) {
+			t.Parallel()
+			var nilC *indcpacom.Commitment[C, N, PK]
+			_, err := nilC.ReRandomiseWithWitness(s.key, witness)
+			require.Error(t, err)
+		})
 	})
 }
 
-func TestReRandomizeNilInputErrors(t *testing.T) {
-	t.Parallel()
+// ─── Paillier ────────────────────────────────────────────────────────
 
-	scheme, pk := setupScheme(t)
-	key, err := indcpacom.NewKey(pk)
-	require.NoError(t, err)
-
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-	commitment, witness, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	t.Run("re-randomise with nil key", func(t *testing.T) {
-		t.Parallel()
-		_, _, err := commitment.ReRandomise(nil, pcg.NewRandomised())
-		require.Error(t, err)
-	})
-
-	t.Run("re-randomise with nil prng", func(t *testing.T) {
-		t.Parallel()
-		_, _, err := commitment.ReRandomise(key, nil)
-		require.Error(t, err)
-	})
-
-	t.Run("re-randomise with witness nil key", func(t *testing.T) {
-		t.Parallel()
-		_, err := commitment.ReRandomiseWithWitness(nil, witness)
-		require.Error(t, err)
-	})
-
-	t.Run("re-randomise with witness nil witness", func(t *testing.T) {
-		t.Parallel()
-		_, err := commitment.ReRandomiseWithWitness(key, nil)
-		require.Error(t, err)
-	})
-
-	t.Run("re-randomise with nil receiver", func(t *testing.T) {
-		t.Parallel()
-		var nilCommitment *indcpacom.Commitment[*paillier.Ciphertext, *paillier.Nonce, *paillier.PublicKey]
-		_, _, err := nilCommitment.ReRandomise(key, pcg.NewRandomised())
-		require.Error(t, err)
-	})
-
-	t.Run("re-randomise with witness nil receiver", func(t *testing.T) {
-		t.Parallel()
-		var nilCommitment *indcpacom.Commitment[*paillier.Ciphertext, *paillier.Nonce, *paillier.PublicKey]
-		_, err := nilCommitment.ReRandomiseWithWitness(key, witness)
-		require.Error(t, err)
-	})
-}
-
-func TestSchemeName(t *testing.T) {
-	t.Parallel()
-
-	scheme, _ := setupScheme(t)
-	name := scheme.Name()
-	require.Contains(t, string(name), "IND-CPA-Com")
-	require.Contains(t, string(name), "paillier")
-}
-
-func TestCommitmentEquality(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-
-	// Get a commitment and its witness
-	commitment1, witness1, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Same commitment should be equal to itself
-	require.True(t, commitment1.Equal(commitment1))
-
-	// Commitment created with same witness should be equal
-	commitment2, err := committer.CommitWithWitness(message, witness1)
-	require.NoError(t, err)
-	require.True(t, commitment1.Equal(commitment2))
-
-	// Different commitment should not be equal
-	commitment3, _, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-	require.False(t, commitment1.Equal(commitment3))
-}
-
-func TestCommitmentValue(t *testing.T) {
-	t.Parallel()
-
-	scheme, pk := setupScheme(t)
-
-	plaintext := sampleMessage(t, pk)
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
-
-	commitment, _, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	// Value() should return the underlying ciphertext
-	value := commitment.Value()
-	require.NotNil(t, value)
-}
-
-func TestKeyValue(t *testing.T) {
-	t.Parallel()
-
-	_, pk := setupScheme(t)
-	key, err := indcpacom.NewKey(pk)
-	require.NoError(t, err)
-
-	// Value() should return the underlying public key
-	value := key.Value()
-	require.NotNil(t, value)
-	require.Equal(t, pk, value)
-}
-
-func TestMessageValue(t *testing.T) {
-	t.Parallel()
-
-	_, pk := setupScheme(t)
-	plaintext := sampleMessage(t, pk)
-
-	message, err := indcpacom.NewMessage(plaintext)
-	require.NoError(t, err)
-
-	// Value() should return the underlying plaintext
-	value := message.Value()
-	require.NotNil(t, value)
-	require.True(t, plaintext.Equal(value))
-}
-
-func TestWitnessValue(t *testing.T) {
-	t.Parallel()
-
-	_, pk := setupScheme(t)
-
-	// Sample a nonce and create a witness
-	nonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
-	require.NoError(t, err)
-	witness, err := indcpacom.NewWitness(nonce)
-	require.NoError(t, err)
-
-	// Value() should return the underlying nonce
-	value := witness.Value()
-	require.NotNil(t, value)
-	require.Equal(t, nonce, value)
-}
-
-func TestWitnessOp(t *testing.T) {
-	t.Parallel()
-
-	_, pk := setupScheme(t)
-
-	// Sample two nonces and create witnesses
-	nonce1, err := pk.NonceSpace().Sample(pcg.NewRandomised())
-	require.NoError(t, err)
-	witness1, err := indcpacom.NewWitness(nonce1)
-	require.NoError(t, err)
-
-	nonce2, err := pk.NonceSpace().Sample(pcg.NewRandomised())
-	require.NoError(t, err)
-	witness2, err := indcpacom.NewWitness(nonce2)
-	require.NoError(t, err)
-
-	// Combine witnesses
-	combined := witness1.Op(witness2)
-	require.NotNil(t, combined)
-
-	// Combined witness should have the combined nonce value
-	expectedNonce := nonce1.Op(nonce2)
-	require.True(t, expectedNonce.Equal(combined.Value()))
-}
-
-// Helper functions
-
-func setupScheme(tb testing.TB) (
-	*indcpacom.Scheme[
-		*paillier.PrivateKey, *paillier.PublicKey, *paillier.Plaintext,
-		*paillier.Ciphertext, *paillier.Nonce,
-		*paillier.KeyGenerator, *paillier.Encrypter, *paillier.Decrypter,
-	],
-	*paillier.PublicKey,
-) {
-	tb.Helper()
-
+func setupPaillier(t testing.TB) suite[
+	*paillier.PublicKey, *paillier.Plaintext,
+	*paillier.Ciphertext, *paillier.Nonce,
+] {
+	t.Helper()
 	paillierScheme := paillier.NewScheme()
-	_, pk := sampleKeys(tb, pcg.NewRandomised())
+	kg, err := paillierScheme.Keygen()
+	require.NoError(t, err)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
+	require.NoError(t, err)
 
 	key, err := indcpacom.NewKey(pk)
-	require.NoError(tb, err)
-
+	require.NoError(t, err)
 	scheme, err := indcpacom.NewScheme(paillierScheme, key)
-	require.NoError(tb, err)
+	require.NoError(t, err)
 
-	return scheme, pk
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
+	verifier, err := scheme.Verifier()
+	require.NoError(t, err)
+
+	return suite[*paillier.PublicKey, *paillier.Plaintext, *paillier.Ciphertext, *paillier.Nonce]{
+		committer: committer,
+		verifier:  verifier,
+		key:       key,
+		name:      string(scheme.Name()),
+		encName:   "paillier",
+		sampleMessage: func(tb testing.TB) *indcpacom.Message[*paillier.Plaintext] {
+			tb.Helper()
+			pt, err := pk.PlaintextSpace().Sample(nil, nil, pcg.NewRandomised())
+			require.NoError(tb, err)
+			msg, err := indcpacom.NewMessage(pt)
+			require.NoError(tb, err)
+			return msg
+		},
+		sampleWitness: func(tb testing.TB) *indcpacom.Witness[*paillier.Nonce] {
+			tb.Helper()
+			nonce, err := pk.NonceSpace().Sample(pcg.NewRandomised())
+			require.NoError(tb, err)
+			w, err := indcpacom.NewWitness(nonce)
+			require.NoError(tb, err)
+			return w
+		},
+	}
 }
 
-func sampleKeys(tb testing.TB, prng io.Reader) (*paillier.PrivateKey, *paillier.PublicKey) {
-	tb.Helper()
-	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen()
-	require.NoError(tb, err)
-	sk, pk, err := kg.Generate(prng)
-	require.NoError(tb, err)
-	return sk, pk
+func TestPaillier(t *testing.T) {
+	t.Parallel()
+	runSuite(t, setupPaillier(t))
 }
 
-func sampleMessage(tb testing.TB, pk *paillier.PublicKey) *paillier.Plaintext {
-	tb.Helper()
-	pts := pk.PlaintextSpace()
-	pt, err := pts.Sample(nil, nil, pcg.NewRandomised())
-	require.NoError(tb, err)
-	return pt
+// ─── ElGamal ─────────────────────────────────────────────────────────
+
+type (
+	egPoint  = *k256.Point
+	egScalar = *k256.Scalar
+	egPK     = *elgamal.PublicKey[egPoint, egScalar]
+	egPT     = *elgamal.Plaintext[egPoint, egScalar]
+	egCT     = *elgamal.Ciphertext[egPoint, egScalar]
+	egNonce  = *elgamal.Nonce[egScalar]
+)
+
+func setupElGamal(t testing.TB) suite[egPK, egPT, egCT, egNonce] {
+	t.Helper()
+	curve := k256.NewCurve()
+	field := k256.NewScalarField()
+	egScheme, err := elgamal.NewScheme(curve, field)
+	require.NoError(t, err)
+	kg, err := egScheme.Keygen()
+	require.NoError(t, err)
+	_, pk, err := kg.Generate(pcg.NewRandomised())
+	require.NoError(t, err)
+
+	key, err := indcpacom.NewKey(pk)
+	require.NoError(t, err)
+	scheme, err := indcpacom.NewScheme(egScheme, key)
+	require.NoError(t, err)
+
+	committer, err := scheme.Committer()
+	require.NoError(t, err)
+	verifier, err := scheme.Verifier()
+	require.NoError(t, err)
+
+	return suite[egPK, egPT, egCT, egNonce]{
+		committer: committer,
+		verifier:  verifier,
+		key:       key,
+		name:      string(scheme.Name()),
+		encName:   "elgamal",
+		sampleMessage: func(tb testing.TB) *indcpacom.Message[egPT] {
+			tb.Helper()
+			p, err := curve.Random(pcg.NewRandomised())
+			require.NoError(tb, err)
+			pt, err := elgamal.NewPlaintext(p)
+			require.NoError(tb, err)
+			msg, err := indcpacom.NewMessage(pt)
+			require.NoError(tb, err)
+			return msg
+		},
+		sampleWitness: func(tb testing.TB) *indcpacom.Witness[egNonce] {
+			tb.Helper()
+			nv, err := algebrautils.RandomNonIdentity(field, pcg.NewRandomised())
+			require.NoError(tb, err)
+			nonce, err := elgamal.NewNonce(nv)
+			require.NoError(tb, err)
+			w, err := indcpacom.NewWitness(nonce)
+			require.NoError(tb, err)
+			return w
+		},
+	}
+}
+
+func TestElGamal(t *testing.T) {
+	t.Parallel()
+	runSuite(t, setupElGamal(t))
 }
