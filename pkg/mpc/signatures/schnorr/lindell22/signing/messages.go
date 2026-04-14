@@ -53,6 +53,9 @@ func (m *Round2Broadcast[GE, S, M]) Validate(_ *Cosigner[GE, S, M], _ sharing.ID
 	if m.BigR.Value().IsOpIdentity() {
 		return ErrValidation.WithMessage("BigR cannot be the identity element in Round2Broadcast message")
 	}
+	if !m.BigR.Value().IsTorsionFree() {
+		return ErrValidation.WithMessage("BigR must be torsion-free in Round2Broadcast message")
+	}
 	if m.BigROpening == (lindell22.Opening{}) {
 		return ErrValidation.WithMessage("missing BigR opening in Round2Broadcast message")
 	}
