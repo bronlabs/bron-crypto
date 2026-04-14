@@ -39,14 +39,8 @@ func (kg *KeyGenerator[E, S]) Generate(prng io.Reader) (*PrivateKey[E, S], *Publ
 	pkv := alpha.ScalarOp(a)
 	// 8.25.3: A’s public key is (α, αa), together with a description of how to multiply elements in
 	// G; A’s private key is a.
-	pk, err := NewPublicKey(pkv)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("failed to create public key from private key value")
-	}
-	sk, err := NewPrivateKey(kg.g, a)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("failed to create private key")
-	}
+	pk := &PublicKey[E, S]{v: pkv}
+	sk := &PrivateKey[E, S]{v: a, pk: *pk}
 	return sk, pk, nil
 }
 

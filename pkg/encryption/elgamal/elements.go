@@ -41,6 +41,9 @@ func (pk *PublicKey[E, S]) Value() E {
 
 // Equal reports whether two public keys represent the same group element.
 func (pk *PublicKey[E, S]) Equal(x *PublicKey[E, S]) bool {
+	if pk == nil || x == nil {
+		return pk == x
+	}
 	return pk.v.Equal(x.v)
 }
 
@@ -105,6 +108,9 @@ func (sk *PrivateKey[E, S]) Public() *PublicKey[E, S] {
 
 // Equal reports whether two private keys have the same scalar and public key.
 func (sk *PrivateKey[E, S]) Equal(x *PrivateKey[E, S]) bool {
+	if sk == nil || x == nil {
+		return sk == x
+	}
 	return sk.v.Equal(x.v) && sk.pk.Equal(&x.pk)
 }
 

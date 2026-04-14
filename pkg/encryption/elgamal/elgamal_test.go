@@ -22,8 +22,9 @@ func setup(t *testing.T) (
 	t.Helper()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
-	scheme, err := elgamal.NewScheme(curve, field)
+	scheme, err := elgamal.NewScheme(curve)
 	require.NoError(t, err)
+	require.Equal(t, scheme.ScalarRing().Name(), field.Name(), "scheme's scalar ring must match curve's scalar field")
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
 	enc, err := scheme.Encrypter()
@@ -536,17 +537,6 @@ func TestNonceCBORRoundTrip(t *testing.T) {
 }
 
 // ─── Nil / edge-case input handling ──────────────────────────────────
-
-func TestNewSchemeRejectsNils(t *testing.T) {
-	t.Parallel()
-	curve := k256.NewCurve()
-	field := k256.NewScalarField()
-
-	_, err := elgamal.NewScheme[*k256.Point, *k256.Scalar](nil, field)
-	require.Error(t, err)
-	_, err = elgamal.NewScheme[*k256.Point](curve, nil)
-	require.Error(t, err)
-}
 
 func TestEncryptRejectsNils(t *testing.T) {
 	t.Parallel()

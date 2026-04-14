@@ -30,12 +30,13 @@ type UnderlyingGroupElement[E interface {
 
 // NewScheme creates an ElGamal scheme over group g with scalar ring zn.
 // The scalar ring must be Z/nZ where n is the order of the group.
-func NewScheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](g UnderlyingGroup[E, S], zn algebra.ZModLike[S]) (*Scheme[E, S], error) {
+func NewScheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](g UnderlyingGroup[E, S]) (*Scheme[E, S], error) {
 	if g == nil {
 		return nil, ErrIsNil.WithMessage("g")
 	}
-	if zn == nil {
-		return nil, ErrIsNil.WithMessage("zn")
+	zn, err := algebra.StructureAs[algebra.ZModLike[S]](g.ScalarStructure())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to get scalar ring from group structure")
 	}
 	return &Scheme[E, S]{g, zn}, nil
 }
