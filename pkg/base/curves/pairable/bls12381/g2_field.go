@@ -130,7 +130,7 @@ func (fe *BaseFieldElementG2) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaler.
 func (fe *BaseFieldElementG2) UnmarshalBinary(data []byte) error {
-	if len(data) < 2*bls12381Impl.FpBytes {
+	if len(data) != 2*bls12381Impl.FpBytes {
 		return curves.ErrInvalidLength.WithMessage("invalid data, Length is %d", len(data))
 	}
 	if ok := fe.V.U1.SetBytes(data[:bls12381Impl.FpBytes]); ok == 0 {

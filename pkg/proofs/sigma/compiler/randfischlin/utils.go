@@ -1,11 +1,11 @@
 package randfischlin
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -36,8 +36,7 @@ outer:
 		}
 
 		for _, e := range existing {
-			_, isEq, _ := ct.CompareBytes(e, ei)
-			if isEq == ct.True {
+			if bytes.Equal(e, ei) {
 				continue outer
 			}
 		}
