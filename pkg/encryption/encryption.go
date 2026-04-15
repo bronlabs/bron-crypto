@@ -98,7 +98,7 @@ type ReRandomisableCiphertext[C Ciphertext[C], N interface {
 	ReRandomiseWithNonce(PK, N) (C, error)
 }
 
-type HomomorphicCiphertext[C Ciphertext[C], CV algebra.MonoidElement[CV], S algebra.NatLike[S]] interface {
+type HomomorphicCiphertext[C Ciphertext[C], CV algebra.MonoidElement[CV], S algebra.Numeric] interface {
 	Ciphertext[C]
 	algebra.HomomorphicLike[C, CV]
 	algebra.Actable[C, S]
@@ -109,7 +109,7 @@ type ShiftTypeCiphertext[
 	M Plaintext, PK PublicKey[PK], N interface {
 		Nonce
 		algebra.Operand[N]
-	}, S algebra.NatLike[S],
+	}, S algebra.Numeric,
 ] interface {
 	HomomorphicCiphertext[C, CV, S]
 	ReRandomisableCiphertext[C, N, PK]
@@ -129,7 +129,7 @@ type HomomorphicScheme[
 		Nonce
 		algebra.HomomorphicLike[N, NV]
 	}, NV algebra.SemiGroupElement[NV],
-	KG KeyGenerator[SK, PK], ENC Encrypter[PK, M, C, N], DEC Decrypter[M, C], S algebra.NatLike[S],
+	KG KeyGenerator[SK, PK], ENC Encrypter[PK, M, C, N], DEC Decrypter[M, C], S algebra.Numeric,
 ] Scheme[SK, PK, M, C, N, KG, ENC, DEC]
 
 type GroupHomomorphicScheme[
@@ -140,5 +140,5 @@ type GroupHomomorphicScheme[
 		Nonce
 		algebra.HomomorphicLike[N, NV]
 	}, NV algebra.GroupElement[NV],
-	KG KeyGenerator[SK, PK], ENC LinearlyRandomisedEncrypter[PK, M, C, N], DEC Decrypter[M, C], S algebra.NatLike[S],
+	KG KeyGenerator[SK, PK], ENC LinearlyRandomisedEncrypter[PK, M, C, N], DEC Decrypter[M, C], S algebra.Numeric,
 ] HomomorphicScheme[SK, PK, M, MV, C, CV, N, NV, KG, ENC, DEC, S]
