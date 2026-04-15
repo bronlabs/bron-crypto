@@ -22,3 +22,6 @@ enabling share refresh without changing the underlying secret.
 1. Create a participant with `NewParticipant(ctx, accessStructure, group, prng)` — the holder ID is taken from the session context.
 2. Run `Round1` to produce `Round1Broadcast` and unicasts of zero-shares.
 3. Exchange messages, then run `Round2` to get the aggregated zero-share and verification vector.
+
+## Reference
+- [https://link.springer.com/chapter/10.1007/3-540-44750-4_27](Proactive Secret Sharing Or: How to Cope With Perpetual Leakage)
