@@ -8,6 +8,7 @@ Interfaces and utilities for commitment schemes plus concrete hash-based and Ped
 - Generic helpers allow swapping in different schemes while keeping a consistent API.
 - Subpackages:
   - `hash`: simple HMAC-based commitments over random nonces.
+  - `indcpacom`: IND-CPA commitment scheme constructed from encryption.
   - `pedersen`: homomorphic Pedersen commitments over prime-order groups.
 
 ## Key Concepts

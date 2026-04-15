@@ -19,8 +19,8 @@ import "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 nizk, err := compiler.Compile(fiatshamir.Name, sigmaProtocol, prng)
 
 // Create prover and verifier
-prover, _ := nizk.NewProver(sessionId, transcript)
-verifier, _ := nizk.NewVerifier(sessionId, transcript)
+prover, _ := nizk.NewProver(ctx)
+verifier, _ := nizk.NewVerifier(ctx)
 
 // Generate and verify proof
 proof, _ := prover.Prove(statement, witness)
@@ -32,4 +32,4 @@ err = verifier.Verify(statement, proof)
 - `fiatshamir/` - Fiat-Shamir transform
 - `fischlin/` - Fischlin transform with dynamic parameters
 - `randfischlin/` - Randomised Fischlin with fixed parameters
-- `zk/` - Interactive 4-round ZK protocol from any sigma protocol
+- `zk/` - Interactive 5-round ZK protocol from any sigma protocol

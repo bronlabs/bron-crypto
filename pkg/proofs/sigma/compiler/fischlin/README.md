@@ -12,7 +12,7 @@ Compiles interactive sigma protocols into UC-secure non-interactive proofs.
 
 ```go
 nizk, _ := fischlin.NewCompiler(sigmaProtocol, prng)
-prover, _ := nizk.NewProver(sessionId, transcript)
+prover, _ := nizk.NewProver(ctx)
 proof, _ := prover.Prove(statement, witness)
 ```
 

@@ -1,3 +1,3 @@
-# dkls23/signing/interactive/sign_bbot
+# dkls23/signing_bbot
 
 This package implements interactive DKLS23 signing using BBOT multiplication.

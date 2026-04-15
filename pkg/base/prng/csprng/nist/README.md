@@ -12,13 +12,14 @@ Note that this implementation set lower bounds than the standard for:
 - The maximum number of requests between reseeds (`reseed_interval`). As for `max_number_of_bits_per_request`, the same analyses[3], [4], [5] recommend to reseed more frequently than every 2^{48} requests. This implementation enforces reseeding after 2^{12} calls.
 
 ## Initialisation
-To create a new PRNG instance, use the `NewAesPRNG(entropySource, entropyInput, nonce, personalization)` function. It takes four arguments:
+To create a new PRNG instance, use the `NewNistPRNG(keySize, entropySource, entropyInput, nonce, personalization)` function. It takes five arguments:
+- `keySize` is the AES key size in bytes, must be one of {16, 24, 32} for AES128, AES192, or AES256.
 - `entropySource` is the source of entropy used to seed the PRNG. It will be used to sample the initial seed in the absence of `entropyInput`, and to reseed the PRNG with fresh seeds when necessary. Defaults to `crypto/rand.Reader`.
 - `entropyInput` is the **secret** initial seed of the PRNG, must be at least `keySize` Bytes (16B for AES128 or 32B for AES256) of true randomness. If `nil`, the PRNG will be seeded with fresh entropy from `entropySource`.
 - `nonce` is a **public** random value used only once to seed the PRNG, must be at least `keySize/2` Bytes (8B for AES128 or 16B for AES256) or repeat with that same probability. If `nil`, the nonce is sampled from `entropySource`.
 - `personalization (optional)` is an optional string used to "salt" the initial state. It has no length constraints and it need not be random.
 ```go
-NewAesPRNG
+NewNistPRNG
 ```
 ## Usage
 The package provides a unified interface, `PRNG`, implementing three methods:
@@ -31,7 +32,7 @@ The package provides a unified interface, `PRNG`, implementing three methods:
 3. `Read()` to generate random bytes (following the `io.Reader` interface).
 
 ## Testing
-This package was validated using the official [NIST CAVP test vectors][6] as part of the [Deterministic Random Bit Generators Validation System (DRBGVS)][7]. The test vectors are included verbatim (directly extracted from the provided [.zip file][8]) in the `drbgtestvectors` folder, and a test suite is provided in `prng_test.go` with utilities in the `nist_validation_utils.go`.
+This package was validated using the official [NIST CAVP test vectors][6] as part of the [Deterministic Random Bit Generators Validation System (DRBGVS)][7]. The test vectors are included verbatim (directly extracted from the provided [.zip file][8]) in the `testutils/drbgtestvectors` folder, and a test suite is provided in `nist_test.go` with utilities in `testutils/nist_validation_utils.go`.
 
 ## References
 [1]: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-90Ar1.pdf (NIST Special Publication 800-90A (Revision 1) Recommendation for Random Number Generation Using Deterministic Random Bit Generators)

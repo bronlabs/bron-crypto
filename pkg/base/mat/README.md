@@ -77,7 +77,7 @@ mvMod, _ := mat.NewModuleValuedMatrixModule(2, 2, curve)
 mv, _ := mvMod.New([][]E{{p1, p2}, {p3, p4}})
 
 // Lift a scalar matrix into module-valued via a base point.
-lifted, _ := mat.LiftMatrix(scalarMatrix, basePoint)
+lifted, _ := mat.Lift(scalarMatrix, basePoint)
 
 // Group operations (element-wise point addition).
 sum := mv.Op(other)

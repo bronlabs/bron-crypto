@@ -10,7 +10,7 @@ ac, err := unanimity.NewUnanimityAccessStructure(shareholders)
 
 ## MSP Induction
 
-`InducedByUnanimity` converts the unanimity structure to CNF form (n singleton clauses, one per shareholder) and builds the MSP from that representation.
+`InducedMSP` constructs the ideal monotone span programme for additive sharing.
 
 ## Reference
 

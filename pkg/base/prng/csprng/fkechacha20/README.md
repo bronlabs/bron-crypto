@@ -10,7 +10,7 @@ as the output of the PRNG.
 - _SecurityStrength_: The ChaCha20 stream cipher is a secure symmetric encryption algorithm with 256-bit keys.
 - _SeedSize_: The key size is always 32 bytes. Nonces can have 12 or 24 bytes. Higher nonces are trimmed.
 - _AutomaticReseeding_: Yes, we reseed the key with the PRNG itself.
-- _KeyDerivationFunction_: Only for the initial key if small nonce is provided, using `HChacha20`.
+- _KeyDerivationFunction_: Only for the initial key if small nonce is provided, using `HChaCha20`.
 
 
 ## Fast-key erasure and long-sequence optimisation
