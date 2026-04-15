@@ -17,6 +17,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
+const (
+	sessionDomainSeparator = "BRON_CRYPTO_SESSION-SESSION"
+	seedDomainSeparator    = "BRON_CRYPTO_SESSION-SEED"
+)
+
 // Participant runs the session seed setup protocol.
 type Participant struct {
 	id           sharing.ID
@@ -106,7 +111,9 @@ func (p *Participant) Round2(inB network.RoundMessages[*Round1Broadcast, *Partic
 		p.commitmentKeys[id] = b.Ck
 	}
 
-	commonData := [][]byte{}
+	// bind session data
+	commonData := [][]byte{[]byte(sessionDomainSeparator)}
+	commonData = append(commonData, binary.LittleEndian.AppendUint64(nil, uint64(len(p.sortedQuorum))))
 	for _, id := range p.sortedQuorum {
 		ck, ok := p.commitmentKeys[id]
 		if !ok {
@@ -220,15 +227,24 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 		}
 		err := verifier.Verify(commitment, u.Contribution[:], u.ContributionWitness)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("invalid commitment from %d", id)
+			return nil, errs.Wrap(err).
+				WithTag(base.IdentifiableAbortPartyIDTag, id).
+				WithMessage("invalid commitment from %d", id)
 		}
 		seed := new(bytes.Buffer)
+		_, err = seed.WriteString(seedDomainSeparator)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to write seed domain separator")
+		}
+		_, err = seed.Write(p.commonSeed)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to write common seed")
+		}
 		myContribution, ok := p.contributions[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing contribution for %d", id)
 		}
 		theirContribution := u.Contribution
-
 		if p.id < id {
 			_, err := seed.Write(myContribution[:])
 			if err != nil {
