@@ -15,6 +15,9 @@ func (m *Round1Broadcast) Validate(*Participant, sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round1Broadcast message")
 	}
+	if m.Ck == (hash_comm.Key{}) {
+		return ErrValidation.WithMessage("missing commitment key in Round1Broadcast message")
+	}
 	return nil
 }
 
@@ -26,6 +29,9 @@ type Round2P2P struct {
 func (m *Round2P2P) Validate(*Participant, sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round2P2P message")
+	}
+	if m.Commitment == (hash_comm.Commitment{}) {
+		return ErrValidation.WithMessage("missing commitment in Round2P2P message")
 	}
 	return nil
 }
@@ -39,6 +45,12 @@ type Round3P2P struct {
 func (m *Round3P2P) Validate(*Participant, sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round3P2P message")
+	}
+	if m.Contribution == ([base.CollisionResistanceBytesCeil]byte{}) {
+		return ErrValidation.WithMessage("missing contribution in Round3P2P message")
+	}
+	if m.ContributionWitness == (hash_comm.Witness{}) {
+		return ErrValidation.WithMessage("missing contribution witness in Round3P2P message")
 	}
 	return nil
 }

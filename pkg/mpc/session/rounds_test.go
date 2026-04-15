@@ -93,10 +93,10 @@ func Test_HappyPath(t *testing.T) {
 	})
 }
 
-func TestMessageValidationAcceptsZeroValuedPayloads(t *testing.T) {
+func TestMessageValidationDoesntAcceptsZeroValuedPayloads(t *testing.T) {
 	t.Parallel()
 
-	require.NoError(t, (&session.Round1Broadcast{}).Validate(nil, 0))
-	require.NoError(t, (&session.Round2P2P{}).Validate(nil, 0))
-	require.NoError(t, (&session.Round3P2P{}).Validate(nil, 0))
+	require.Error(t, (&session.Round1Broadcast{}).Validate(nil, 0))
+	require.Error(t, (&session.Round2P2P{}).Validate(nil, 0))
+	require.Error(t, (&session.Round3P2P{}).Validate(nil, 0))
 }
