@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
+	redistribute "github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -51,7 +51,7 @@ func testRunnerHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFi
 			shard = shards[id]
 		}
 
-		runner, err := redistribute.NewRunner(ctx, recoverers, shard, as, pcg.NewRandomised())
+		runner, err := redistribute.NewRunner(ctx, 2, recoverers, shard, as, pcg.NewRandomised())
 		require.NoError(tb, err)
 		runners[id] = runner
 	}

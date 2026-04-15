@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
+	redistribute "github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -56,7 +56,7 @@ func TestRound2RejectsInvalidSubShareVerificationVectorDimensions(t *testing.T) 
 	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 	participants := make(map[sharing.ID]*redistribute.Participant[*k256.Point, *k256.Scalar])
 	for id := range quorum.Iter() {
-		p, err := redistribute.NewParticipant(ctxs[id], oldShareholders, oldShards[id], newAS, pcg.NewRandomised())
+		p, err := redistribute.NewParticipant(ctxs[id], 1, oldShareholders, oldShards[id], newAS, pcg.NewRandomised())
 		require.NoError(t, err)
 		participants[id] = p
 	}
@@ -68,7 +68,14 @@ func TestRound2RejectsInvalidSubShareVerificationVectorDimensions(t *testing.T) 
 		require.NoError(t, err)
 	}
 
-	rows, _ := r1bo[1].SubShareVerificationVector.Value().Dimensions()
+	r2bi, r2ui := ntu.MapO2I(t, slices.Collect(maps.Values(participants)), r1bo, r1uo)
+	r2bo := make(map[sharing.ID]*redistribute.Round2Broadcast[*k256.Point, *k256.Scalar])
+	for id, p := range participants {
+		r2bo[id], _, err = p.Round2(r2bi[id], r2ui[id])
+		require.NoError(t, err)
+	}
+
+	rows, _ := r2bo[1].NextVerificationVectorContribution.Value().Dimensions()
 	wrongModule, err := mat.NewModuleValuedColumnVectorModule(uint(rows+1), group)
 	require.NoError(t, err)
 	wrongEntries := make([]*k256.Point, rows+1)
@@ -79,14 +86,15 @@ func TestRound2RejectsInvalidSubShareVerificationVectorDimensions(t *testing.T) 
 	require.NoError(t, err)
 	wrongVV, err := feldman.NewVerificationVector(wrongVVV, nil)
 	require.NoError(t, err)
-	r1bo[1] = &redistribute.Round1Broadcast[*k256.Point, *k256.Scalar]{
-		ShareVerificationVector:    r1bo[1].ShareVerificationVector,
-		SubShareVerificationVector: wrongVV,
+
+	corrupted := &redistribute.Round2Broadcast[*k256.Point, *k256.Scalar]{
+		PrevMSP:                            r2bo[1].PrevMSP,
+		PrevVerificationVector:             r2bo[1].PrevVerificationVector,
+		ZeroVerificationVector:             r2bo[1].ZeroVerificationVector,
+		NextVerificationVectorContribution: wrongVV,
 	}
 
-	r2bi, r2ui := ntu.MapO2I(t, slices.Collect(maps.Values(participants)), r1bo, r1uo)
-
-	_, err = participants[4].Round2(r2bi[4], r2ui[4])
+	err = corrupted.Validate(participants[4], 1)
 	require.Error(t, err)
 }
 
@@ -120,7 +128,7 @@ func testHappyPathAddTTP[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	ctxs := session_testutils.MakeRandomContexts(tb, newShareholders, prng)
 	participants := make(map[sharing.ID]*redistribute.Participant[G, S])
 	for id := range newAS.Shareholders().Iter() {
-		p, err := redistribute.NewParticipant(ctxs[id], oldShareholders, oldShards[id], newAS, pcg.NewRandomised())
+		p, err := redistribute.NewParticipant(ctxs[id], BRON, oldShareholders, oldShards[id], newAS, pcg.NewRandomised())
 		require.NoError(tb, err)
 		participants[id] = p
 	}
@@ -133,9 +141,17 @@ func testHappyPathAddTTP[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	}
 
 	r2bi, r2ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r1bo, r1uo)
+	r2bo := make(map[sharing.ID]*redistribute.Round2Broadcast[G, S])
+	r2uo := make(map[sharing.ID]network.RoundMessages[*redistribute.Round2P2P[G, S], *redistribute.Participant[G, S]])
+	for id, p := range participants {
+		r2bo[id], r2uo[id], err = p.Round2(r2bi[id], r2ui[id])
+		require.NoError(tb, err)
+	}
+
+	r3bi, r3ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r2bo, r2uo)
 	newShards := make(map[sharing.ID]*mpc.BaseShard[G, S])
 	for id, p := range participants {
-		newShards[id], err = p.Round2(r2bi[id], r2ui[id])
+		newShards[id], err = p.Round3(r3bi[id], r3ui[id])
 		require.NoError(tb, err)
 	}
 
@@ -197,7 +213,7 @@ func testHappyPathDisjoint[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
 	participants := make(map[sharing.ID]*redistribute.Participant[G, S])
 	for id := range quorum.Iter() {
-		p, err := redistribute.NewParticipant(ctxs[id], oldShareholders, oldShards[id], newAS, pcg.NewRandomised())
+		p, err := redistribute.NewParticipant(ctxs[id], 1, oldShareholders, oldShards[id], newAS, pcg.NewRandomised())
 		require.NoError(tb, err)
 		participants[id] = p
 	}
@@ -210,9 +226,17 @@ func testHappyPathDisjoint[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	}
 
 	r2bi, r2ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r1bo, r1uo)
+	r2bo := make(map[sharing.ID]*redistribute.Round2Broadcast[G, S])
+	r2uo := make(map[sharing.ID]network.RoundMessages[*redistribute.Round2P2P[G, S], *redistribute.Participant[G, S]])
+	for id, p := range participants {
+		r2bo[id], r2uo[id], err = p.Round2(r2bi[id], r2ui[id])
+		require.NoError(tb, err)
+	}
+
+	r3bi, r3ui := ntu.MapO2I(tb, slices.Collect(maps.Values(participants)), r2bo, r2uo)
 	newShards := make(map[sharing.ID]*mpc.BaseShard[G, S])
 	for id, p := range participants {
-		newShards[id], err = p.Round2(r2bi[id], r2ui[id])
+		newShards[id], err = p.Round3(r3bi[id], r3ui[id])
 		require.NoError(tb, err)
 	}
 

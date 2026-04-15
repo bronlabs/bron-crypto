@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Deal samples a Feldman sharing of secret for accessStructure and returns the
+// resulting base shards indexed by shareholder identifier.
 func Deal[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, accessStructure accessstructures.Monotone, group algebra.PrimeGroup[G, S], secret S) map[sharing.ID]*mpc.BaseShard[G, S] {
 	tb.Helper()
 
