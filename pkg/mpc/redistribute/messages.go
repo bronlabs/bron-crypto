@@ -11,6 +11,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 )
 
+// Round1Broadcast carries the public HJKY round-1 broadcast that previous
+// shareholders send to all parties.
 type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// ZeroR1 is the sender's broadcast from round 1 of the HJKY zero-sharing
 	// subprotocol run among the previous shareholders.
@@ -32,6 +34,8 @@ func (m *Round1Broadcast[G, S]) Validate(p *Participant[G, S], fromID sharing.ID
 	return nil
 }
 
+// Round1P2P carries one previous shareholder's private HJKY round-1 message
+// for another previous shareholder.
 type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// ZeroR1 is the sender's private round-1 HJKY zero-sharing message for the
 	// recipient.
@@ -53,6 +57,9 @@ func (m *Round1P2P[G, S]) Validate(p *Participant[G, S], fromID sharing.ID) erro
 	return nil
 }
 
+// Round2Broadcast carries the public metadata and verification material that
+// previous shareholders publish before next shareholders aggregate fresh
+// shares.
 type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// PrevMSP is the MSP underlying the previous sharing that the trusted dealer
 	// claims was used for the existing shard.
@@ -120,6 +127,8 @@ func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], from sharing.ID) 
 	return nil
 }
 
+// Round2P2P carries one previous shareholder's private contribution to a next
+// shareholder's redistributed share.
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// NextShareContribution is the sender's private contribution to the
 	// recipient's fresh share under the next access structure.
