@@ -177,13 +177,13 @@ func (d *DirectPowerSemiGroupElement[E, W, WT]) Bytes() []byte {
 }
 
 func (d *DirectPowerSemiGroupElement[E, W, WT]) set(arity int, components ...E) error {
+	if len(components) != arity {
+		return ErrInvalidArgument.WithMessage("incorrect component count: expected %d, got %d", arity, len(components))
+	}
 	for i, c := range components {
 		if utils.IsNil(c) {
 			return ErrInvalidArgument.WithMessage("component %d cannot be nil", i)
 		}
-	}
-	if len(components) != arity {
-		return ErrInvalidArgument.WithMessage("incorrect component count: expected %d, got %d", arity, len(components))
 	}
 	d.components = components
 	d.arity = arity
