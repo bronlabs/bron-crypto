@@ -39,6 +39,16 @@ func (m *Round2P2P[G, S]) Validate(p *Sender[G, S], _ sharing.ID) error {
 		if len(phi[0]) != p.suite.L() || len(phi[1]) != p.suite.L() {
 			return ot.ErrValidation.WithMessage("invalid message")
 		}
+		for l := range p.suite.L() {
+			if utils.IsNil(phi[0][l]) || utils.IsNil(phi[1][l]) {
+				return ot.ErrValidation.WithMessage("invalid message")
+			}
+			if phi[0][l].IsOpIdentity() || !phi[0][l].IsTorsionFree() ||
+				phi[1][l].IsOpIdentity() || !phi[1][l].IsTorsionFree() {
+
+				return ot.ErrValidation.WithMessage("invalid message")
+			}
+		}
 	}
 
 	return nil

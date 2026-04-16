@@ -6,6 +6,8 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -19,10 +21,17 @@ type Delivery interface {
 	Receive() (from sharing.ID, message []byte, err error)
 }
 
+// maxReceiveBufferSize caps the number of out-of-order messages the router
+// will buffer for later retrieval. It bounds memory usage when peers (or a
+// compromised transport) inject messages with unexpected correlation IDs or
+// sender identities.
+const maxReceiveBufferSize = 10000
+
 // Router orchestrates correlation-aware sending and receiving over a Delivery.
 type Router struct {
 	receiveBuffer []routerMessage
 	delivery      Delivery
+	quorumSet     ds.Set[sharing.ID]
 }
 
 // NewRouter wraps a Delivery with buffering and correlation-aware routing.
@@ -30,6 +39,7 @@ func NewRouter(delivery Delivery) *Router {
 	return &Router{
 		receiveBuffer: nil,
 		delivery:      delivery,
+		quorumSet:     hashset.NewComparable(delivery.Quorum()...).Freeze(),
 	}
 }
 
@@ -80,6 +90,11 @@ func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sha
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to receive message")
 		}
+		// Drop messages from senders outside the session quorum. A compromised
+		// transport layer could otherwise spoof messages from arbitrary IDs.
+		if !r.quorumSet.Contains(from) {
+			continue
+		}
 		message, err := serde.UnmarshalCBOR[routerMessage](serializedMessage)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to decode message")
@@ -87,12 +102,18 @@ func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sha
 
 		if message.CorrelationID == correlationID {
 			if _, ok := expected[from]; !ok {
+				if len(r.receiveBuffer) >= maxReceiveBufferSize {
+					return nil, ErrReceiveBufferFull.WithMessage("receive buffer exceeded %d messages", maxReceiveBufferSize)
+				}
 				message.From = from
 				r.receiveBuffer = append(r.receiveBuffer, message)
 				continue
 			}
 			received[from] = message.Payload
 		} else {
+			if len(r.receiveBuffer) >= maxReceiveBufferSize {
+				return nil, ErrReceiveBufferFull.WithMessage("receive buffer exceeded %d messages", maxReceiveBufferSize)
+			}
 			message.From = from
 			r.receiveBuffer = append(r.receiveBuffer, message)
 		}

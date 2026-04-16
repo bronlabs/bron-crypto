@@ -19,7 +19,7 @@ var (
 )
 
 func Deal[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], accessStructure accessstructures.Monotone, prng io.Reader) (ds.Map[sharing.ID, *mpc.BaseShard[G, S]], error) {
-	if group == nil || accessStructure == nil {
+	if group == nil || accessStructure == nil || prng == nil {
 		return nil, ErrIsNil.WithMessage("argument")
 	}
 

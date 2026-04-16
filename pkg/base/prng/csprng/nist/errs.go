@@ -7,4 +7,5 @@ var (
 	ErrInvalidKey      = errs.New("invalid key")
 	ErrInvalidEntropy  = errs.New("invalid entropy")
 	ErrInvalidNonce    = errs.New("invalid nonce")
+	ErrReseedExhausted = errs.New("reseed attempts exhausted")
 )

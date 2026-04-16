@@ -5,20 +5,19 @@ This package generalizes a common interface for 1-out-of-2 Oblivious Transfer pr
 There are two main types of OT protocols:
 - **Base OT**: A protocol that implements an OT functionality (described below) from scratch by relying 
   on public-key cryptography for each OT. We implement:
-    - `bbot` "Batching Base OTs", a 3-round protocol from [MRR21](https://eprint.iacr.org/2021/682) providing endemic security.
+    - `ecbbot` "EC Batching Base OTs", a 3-round protocol from [MRR21](https://eprint.iacr.org/2021/682) providing endemic security.
     - `vsot` "Verifiable Secret Sharing OT", a 6-round protocol from [DKLs18 (protocol 7)](https://eprint.iacr.org/2018/499.pdf) providing 
       malicious security.
 - **OT Extension**: A protocol that implements an OT functionality (described below) by using a small number
   of Base OTs as seeds to generate a large number of OTs.
     - `softspoken` "SoftspokenOT", a 3-round protocol from [SoftSpokenOT](https://eprint.iacr.org/2022/192) providing malicious security,
-      requiring a Base OT with endemic security (e.g., `bbot`).
+      requiring a Base OT with endemic security (e.g., `ecbbot`).
 
 We implement all OT protocols to run ξ (Xi) instances of the protocol in parallel, where the batch size ξ must be
 a multiple of the computational security parameter κ (=128 bits). 
 
-We implement all the above as Random OT (ROT/ROTe) protocols, and we provide functions to convert them
-to standard OT (`Sender.Encrypt` & `Receiver.Decrypt`)
-and Correlated OT (`Sender.CreateCorrelation` & `Receiver.ApplyCorrelation`) protocols based on [MR19](https://eprint.iacr.org/2019/706).
+We implement all the above as Random OT (ROT/ROTe) protocols, and provide derivations to convert them
+to standard OT and Correlated OT protocols based on [MR19](https://eprint.iacr.org/2019/706).
 
 ## Functionalities (flavors) of Oblivious Transfer: ROT, OT, COT
 ### Random OT (ROT)
@@ -68,7 +67,7 @@ to `Encrypt` two messages $(m_0, m_1)$ fixed by the sender with one-time pad $(m
 and send both to the receiver, who can `Decrypt` one with the message he chose in the ROT 
 $m_x = (m_0 ⊕ r_x) * (1-x) + (m_1 ⊕ r_x) * x$.
 
-### Standard OT
+### Correlated OT
 
 Similarly, we can build a Correlated 1|2 Oblivious Transfer (COT) based on a 1|2 ROT,
 to establish a correlation $z_A + z_B = a \cdot x$ between the sender and the receiver,

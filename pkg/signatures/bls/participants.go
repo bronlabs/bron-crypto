@@ -81,14 +81,15 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (
 //
 // The prng should be a cryptographically secure random source (e.g., crypto/rand.Reader).
 func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) Generate(prng io.Reader) (*PrivateKey[PK, FE, Sig, SigFE, E, S], *PublicKey[PK, FE, Sig, SigFE, E, S], error) {
-	if kg.seed == nil {
+	seed := kg.seed
+	if seed == nil {
 		sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](kg.group.ScalarStructure())
-		kg.seed = make([]byte, sf.ElementSize())
-		if _, err := io.ReadFull(prng, kg.seed); err != nil {
+		seed = make([]byte, sf.ElementSize())
+		if _, err := io.ReadFull(prng, seed); err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("could not read from PRNG")
 		}
 	}
-	return kg.GenerateWithSeed(kg.seed)
+	return kg.GenerateWithSeed(seed)
 }
 
 // SignerOption is a functional option for configuring a Signer.
@@ -465,6 +466,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 		return ErrInvalidArgument.WithMessage("signature is the identity element")
 	}
 
+	processedMessages := slices.Clone(messages)
 	var err error
 	if v.dst == "" {
 		v.dst, err = v.cipherSuite.GetDst(v.rogueKeyAlg, v.variant)
@@ -506,7 +508,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 			if err != nil {
 				return errs.Wrap(err).WithMessage("could not augment message")
 			}
-			messages[i] = augmentedMessage
+			processedMessages[i] = augmentedMessage
 		}
 	default:
 		return ErrNotSupported.WithMessage("rogue key prevention scheme %d is not supported", v.rogueKeyAlg)
@@ -516,13 +518,13 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 	//
 	// All public keys passed as arguments to this algorithm MUST have a corresponding proof of possession, and the result of evaluating PopVerify on each public key and its proof MUST be VALID. The caller is responsible for ensuring that this precondition is met. If it is violated, this scheme provides no security against aggregate signature forgery.
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-fastaggregateverify
-	canRunFastAggregateVerify := (sliceutils.CountUnique(sliceutils.Map(messages, hex.EncodeToString)) == 1) && v.rogueKeyAlg == POP
+	canRunFastAggregateVerify := (sliceutils.CountUnique(sliceutils.Map(processedMessages, hex.EncodeToString)) == 1) && v.rogueKeyAlg == POP
 	if canRunFastAggregateVerify {
 		aggregatedPublicKey, err := AggregateAll[PK](publicKeys)
 		if err != nil {
 			return errs.Wrap(err).WithMessage("could not aggregate public keys")
 		}
-		if err := coreVerify(aggregatedPublicKey.Value(), messages[0], signature.Value(), v.dst, v.signatureSubGroup); err != nil {
+		if err := coreVerify(aggregatedPublicKey.Value(), processedMessages[0], signature.Value(), v.dst, v.signatureSubGroup); err != nil {
 			return ErrVerificationFailed.WithMessage("could not verify fast aggregate signature")
 		}
 		return nil
@@ -530,7 +532,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 		unwrappedPublicKeys := slices.Collect(iterutils.Map(slices.Values(publicKeys), func(pk *PublicKey[PK, PKFE, SG, SGFE, E, S]) PK {
 			return pk.Value()
 		}))
-		if err := coreAggregateVerify(unwrappedPublicKeys, messages, signature.Value(), v.dst, v.signatureSubGroup); err != nil {
+		if err := coreAggregateVerify(unwrappedPublicKeys, processedMessages, signature.Value(), v.dst, v.signatureSubGroup); err != nil {
 			return ErrVerificationFailed.WithMessage("could not verify aggregate signature")
 		}
 		return nil

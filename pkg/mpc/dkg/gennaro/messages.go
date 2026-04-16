@@ -37,6 +37,9 @@ func (m *Round1Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 		if utils.IsNil(entry) {
 			return ErrValidation.WithMessage("Pedersen verification vector contains nil entry at row %d", i)
 		}
+		if !entry.IsTorsionFree() {
+			return ErrValidation.WithMessage("verification vector entry at row %d is not torsion-free", i)
+		}
 	}
 	if len(m.Proof) == 0 {
 		return ErrValidation.WithMessage("missing okamoto proof")
@@ -90,6 +93,9 @@ func (m *Round2Broadcast[E, S]) Validate(participant *Participant[E, S], _ shari
 		}
 		if utils.IsNil(entry) {
 			return ErrValidation.WithMessage("Feldman verification vector contains nil entry at row %d", i)
+		}
+		if !entry.IsTorsionFree() {
+			return ErrValidation.WithMessage("verification vector entry at row %d is not torsion-free", i)
 		}
 	}
 	if len(m.Proof) == 0 {

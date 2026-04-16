@@ -3,6 +3,7 @@ package encryption
 import (
 	"crypto/cipher"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -104,7 +105,7 @@ type SymmetricKey struct {
 }
 
 func (k *SymmetricKey) Bytes() []byte {
-	return k.v
+	return slices.Clone(k.v)
 }
 
 func (k *SymmetricKey) Equal(other *SymmetricKey) bool {
@@ -115,9 +116,7 @@ func (k *SymmetricKey) Equal(other *SymmetricKey) bool {
 }
 
 func (k *SymmetricKey) Clone() *SymmetricKey {
-	v := make([]byte, len(k.v))
-	copy(v, k.v)
-	return &SymmetricKey{v: v}
+	return &SymmetricKey{v: slices.Clone(k.v)}
 }
 
 var (

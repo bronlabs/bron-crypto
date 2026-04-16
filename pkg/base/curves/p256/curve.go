@@ -116,7 +116,7 @@ func (c *Curve) FromCompressed(input []byte) (*Point, error) {
 	}
 	ok = result.V.ToAffine(&x, &y)
 	if ok != 1 {
-		panic("this should never happen")
+		return nil, curves.ErrFailed.WithMessage("failed to convert point to affine")
 	}
 
 	ySign := result.V.Y.Bytes()[0] & 0b1
@@ -188,7 +188,7 @@ func (*Curve) FromAffineX(x *BaseFieldElement, b bool) (*Point, error) {
 	}
 	y, err := p.AffineY()
 	if err != nil {
-		panic(err) // should never happen
+		return nil, errs.Wrap(err).WithMessage("failed to get affine y-coordinate")
 	}
 	if y.IsOdd() != b {
 		return p.Neg(), nil
@@ -364,7 +364,7 @@ func (p *Point) AffineX() (*BaseFieldElement, error) {
 
 	var x, y BaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		panic("this should never happen - failed to convert point to affine")
+		return nil, curves.ErrFailed.WithMessage("failed to convert point to affine")
 	}
 
 	return &x, nil
@@ -378,7 +378,7 @@ func (p *Point) AffineY() (*BaseFieldElement, error) {
 
 	var x, y BaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		panic("this should never happen - failed to convert point to affine")
+		return nil, curves.ErrFailed.WithMessage("failed to convert point to affine")
 	}
 
 	return &y, nil

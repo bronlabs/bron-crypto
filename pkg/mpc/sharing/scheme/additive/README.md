@@ -10,7 +10,7 @@ Implements n-of-n additive secret sharing over arbitrary groups.
 ## Usage
 
 ```go
-ac, _ := sharing.NewUnanimityAccessStructure(shareholders)
+ac, _ := unanimity.NewUnanimityAccessStructure(shareholders)
 scheme, _ := additive.NewScheme(group, ac)
 
 // Deal shares

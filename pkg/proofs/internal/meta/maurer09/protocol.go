@@ -169,12 +169,18 @@ func (p *Protocol[I, P]) ComputeProverCommitment(_ *Statement[I], _ *Witness[P])
 
 // ComputeProverResponse computes the Maurer09 response.
 func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness[P], _ *Commitment[I], state *State[P], challengeBytes sigma.ChallengeBytes) (*Response[P], error) {
+	if witness == nil || state == nil {
+		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+	}
 	z := state.S.Op(p.preImageScalarMul(witness.W, challengeBytes))
 	return &Response[P]{Z: z}, nil
 }
 
 // Verify checks a Maurer09 proof response.
 func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[I], challengeBytes sigma.ChallengeBytes, response *Response[P]) error {
+	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
+		return ErrInvalidArgument.WithMessage("invalid arguments")
+	}
 	if !p.oneWayHomomorphism(response.Z).Equal(commitment.A.Op(p.imageScalarMul(statement.X, challengeBytes))) {
 		return ErrVerificationFailed.WithMessage("invalid response")
 	}
@@ -184,6 +190,9 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 
 // RunSimulator simulates a Maurer09 transcript for a given challenge.
 func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes sigma.ChallengeBytes) (*Commitment[I], *Response[P], error) {
+	if statement == nil || challengeBytes == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("invalid arguments")
+	}
 	z, err := p.preImageGroup.Random(p.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample element group")
@@ -195,6 +204,9 @@ func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes si
 
 // Extract derives the witness from two valid transcripts.
 func (p *Protocol[I, P]) Extract(x *Statement[I], a *Commitment[I], ei []sigma.ChallengeBytes, zi []*Response[P]) (*Witness[P], error) {
+	if x == nil || a == nil || ei == nil || zi == nil {
+		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+	}
 	if uint(len(ei)) != specialSoundness || uint(len(zi)) != specialSoundness {
 		return nil, ErrInvalidArgument.WithMessage("invalid number of challenge bytes")
 	}
@@ -228,6 +240,9 @@ func (*Protocol[I, P]) SpecialSoundness() uint {
 
 // ValidateStatement checks statement/witness consistency.
 func (p *Protocol[I, P]) ValidateStatement(statement *Statement[I], witness *Witness[P]) error {
+	if statement == nil || witness == nil {
+		return ErrInvalidArgument.WithMessage("invalid arguments")
+	}
 	if !p.oneWayHomomorphism(witness.W).Equal(statement.X) {
 		return ErrValidationFails.WithMessage("invalid statement")
 	}
@@ -280,6 +295,9 @@ func (p *Protocol[I, P]) preImageScalarMulI(base P, e *big.Int) P {
 }
 
 func defaultScalarMul[G algebra.GroupElement[G]](base G, eBytes []byte) G {
-	e, _ := num.N().FromBytes(eBytes)
+	e, err := num.N().FromBytes(eBytes)
+	if err != nil {
+		panic(errs.Wrap(err).WithMessage("cannot convert bytes to scalar"))
+	}
 	return algebrautils.ScalarMul(base, e)
 }

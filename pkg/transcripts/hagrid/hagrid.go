@@ -54,6 +54,9 @@ func (t *transcript) AppendBytes(label string, messages ...[]byte) {
 
 // ExtractBytes derives outLen bytes from the transcript under the given label.
 func (t *transcript) ExtractBytes(label string, outLen uint) ([]byte, error) {
+	if outLen == 0 {
+		return nil, ErrLength.WithStackFrame()
+	}
 	_, _ = t.h.Write([]byte{byte(extractTag)})
 	_, _ = t.h.Write(binary.BigEndian.AppendUint64(nil, uint64(len(label))))
 	_, _ = t.h.Write([]byte(label))
@@ -83,3 +86,5 @@ func cloneShake(h *sha3.SHAKE) *sha3.SHAKE {
 	clone := *h
 	return &clone
 }
+
+var ErrLength = errs.New("invalid length")

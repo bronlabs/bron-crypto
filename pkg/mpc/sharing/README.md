@@ -6,11 +6,10 @@
 
 The package includes monotone access structures that decide whether a set of shareholder IDs can reconstruct a secret:
 
-- `ThresholdAccessStructure`: classic `(t, n)` threshold policy.
-- `UnanimityAccessStructure`: `n-of-n` policy.
-- `CNFAccessStructure`: policy encoded by maximal unqualified sets.
-- `DNFAccessStructure`: policy encoded by minimal qualified sets.
-- `HierarchicalConjunctiveThresholdAccessStructure`: multi-level policy with cumulative thresholds.
+- `threshold.Threshold`: classic `(t, n)` threshold policy.
+- `unanimity.Unanimity`: `n-of-n` policy.
+- `cnf.CNF`: policy encoded by maximal unqualified sets.
+- `hierarchical.HierarchicalConjunctiveThreshold`: multi-level policy with cumulative thresholds.
 
 ### Hierarchical Conjunctive Threshold Policy
 
@@ -19,10 +18,10 @@ A hierarchical policy is defined as ordered levels. Each level introduces a disj
 Example policy:
 
 ```go
-h, err := sharing.NewHierarchicalConjunctiveThresholdAccessStructure(
-    sharing.WithLevel(1, 2),
-    sharing.WithLevel(3, 4, 5),
-    sharing.WithLevel(5, 6, 7),
+h, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+    hierarchical.WithLevel(1, 1, 2),
+    hierarchical.WithLevel(3, 3, 4, 5),
+    hierarchical.WithLevel(5, 6, 7),
 )
 ```
 
@@ -41,8 +40,9 @@ This implementation follows a hierarchical threshold-sharing model based on:
 Concrete schemes live in subpackages:
 
 - `scheme/shamir`
-- `scheme/feldman`
-- `scheme/pedersen`
 - `scheme/additive`
 - `scheme/isn`
+- `scheme/kw`
 - `scheme/tassa`
+- `vss/feldman`
+- `vss/pedersen`

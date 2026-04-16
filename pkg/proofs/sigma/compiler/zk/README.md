@@ -15,8 +15,8 @@ Interactive 5-round protocol that compiles sigma protocols into zero-knowledge p
 ## Usage
 
 ```go
-prover, _ := zk.NewProver(sessionId, transcript, sigmaProtocol, statement, witness)
-verifier, _ := zk.NewVerifier(sessionId, transcript, sigmaProtocol, statement, prng)
+prover, _ := zk.NewProver(ctx, sigmaProtocol, statement, witness)
+verifier, _ := zk.NewVerifier(ctx, sigmaProtocol, statement, prng)
 
 commitment, _ := verifier.Round1()
 proverComm, _ := prover.Round2(commitment)

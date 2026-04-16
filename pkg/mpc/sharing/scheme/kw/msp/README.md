@@ -15,11 +15,8 @@ A set of shareholders is **qualified** if and only if the target vector lies in 
 ## Usage
 
 ```go
-// Standard MSP with target e_0 = (1,0,...,0)
-mspProgram, err := msp.NewStandardMSP(matrix, rowsToHolders)
-
-// Custom target vector
-mspProgram, err := msp.NewMSP(matrix, rowsToHolders, targetVector)
+// Construct an MSP with the standard target e_0 = (1,0,...,0)
+mspProgram, err := msp.NewMSP(matrix, rowsToHolders)
 
 // Test qualification
 qualified := mspProgram.Accepts(id1, id2, id3)

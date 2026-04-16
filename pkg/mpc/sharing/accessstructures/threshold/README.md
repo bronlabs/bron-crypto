@@ -10,7 +10,7 @@ ac, err := threshold.NewThresholdAccessStructure(3, shareholders) // 3-of-n
 
 ## MSP Induction
 
-`InducedMSPByThreshold` builds an ideal MSP via a Vandermonde matrix, where each shareholder's evaluation point is their ID. The resulting MSP has exactly one row per shareholder.
+`InducedMSP` builds an ideal MSP via a Vandermonde matrix, where each shareholder's evaluation point is their ID. The resulting MSP has exactly one row per shareholder.
 
 ## Reference
 

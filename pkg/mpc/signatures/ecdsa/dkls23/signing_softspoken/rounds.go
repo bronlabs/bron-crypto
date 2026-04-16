@@ -29,6 +29,9 @@ import (
 
 // Round1 executes protocol round 1.
 func (c *Cosigner[P, B, S]) Round1() (network.OutgoingUnicasts[*Round1P2P[P, B, S], *Cosigner[P, B, S]], error) {
+	if c.state.round != 1 {
+		return nil, dkls23.ErrValidationFailed.WithMessage("invalid round")
+	}
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
 	for id := range c.ctx.OtherPartiesOrdered() {
 		uOut := new(Round1P2P[P, B, S])

@@ -13,7 +13,7 @@ Composes sigma protocols to prove knowledge of a witness for at least one of n s
 // n-way OR composition (same protocol type)
 orProtocol, _ := sigor.Compose(schnorrProtocol, 3, prng)
 statement := sigor.ComposeStatements(x0, x1, x2)
-witness := sigor.ComposeWitnesses(w0, w1, w2) // only one needs to be valid
+witness := sigor.NewWitness(w0) // only one needs to be valid
 
 // Binary OR composition (different protocol types)
 orProtocol := sigor.CartesianCompose(protocol0, protocol1, prng)

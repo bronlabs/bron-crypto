@@ -12,13 +12,13 @@ A CNF access structure is defined by its maximal unqualified sets {T_1, ..., T_l
 // Direct construction from maximal unqualified sets
 ac, err := cnf.NewCNFAccessStructure(unqualifiedSet1, unqualifiedSet2)
 
-// Convert any Linear access structure to CNF
-cnfAC, err := cnf.ConvertToCNF(linearAccessStructure)
+// Convert any Monotone access structure to CNF
+cnfAC, err := cnf.ConvertToCNF(monotoneAccessStructure)
 ```
 
 ## MSP Induction
 
-`InducedMSPByCNF` builds an MSP where each clause yields one block of rows (one per clause member). The number of columns equals the number of maximal unqualified sets.
+`InducedMSP` builds an MSP where each clause yields one block of rows (one per clause member). The number of columns equals the number of maximal unqualified sets.
 
 ## Reference
 

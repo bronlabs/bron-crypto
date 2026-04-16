@@ -55,7 +55,7 @@ func (ka *TaggedKeyAgreement[GE, SE]) Msg2(b SE, _ GE) (GE, error) {
 func (ka *TaggedKeyAgreement[GE, SE]) Key1(a SE, mr GE, tag []byte) (SE, error) {
 	var nilSE SE
 
-	if a.IsZero() || !mr.IsTorsionFree() {
+	if a.IsZero() || mr.IsOpIdentity() || !mr.IsTorsionFree() {
 		return nilSE, ot.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 	raw := mr.ScalarOp(a)

@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
@@ -32,8 +33,21 @@ func (m *Round1Broadcast[G, S]) Validate(p *Participant[G, S], _ sharing.ID) err
 		return ErrValidation.WithMessage("invalid sub-share verification vector")
 	}
 	if p.prevShard != nil {
-		if r, _ := m.ShareVerificationVector.Value().Dimensions(); r != int(p.prevShard.MSP().D()) {
+		r, _ := m.ShareVerificationVector.Value().Dimensions()
+		if r != int(p.prevShard.MSP().D()) {
 			return ErrValidation.WithMessage("invalid share verification vector dimensions")
+		}
+		for i := range r {
+			entry, err := m.ShareVerificationVector.Value().Get(i, 0)
+			if err != nil {
+				return ErrValidation.WithMessage("failed to access share verification vector entry")
+			}
+			if utils.IsNil(entry) {
+				return ErrValidation.WithMessage("share verification vector contains nil entry at row %d", i)
+			}
+			if !entry.IsTorsionFree() {
+				return ErrValidation.WithMessage("share verification vector entry at row %d is not torsion-free", i)
+			}
 		}
 	}
 	basePoint, err := m.SubShareVerificationVector.Value().Get(0, 0)
@@ -49,10 +63,22 @@ func (m *Round1Broadcast[G, S]) Validate(p *Participant[G, S], _ sharing.ID) err
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot induce MSP for next access structure")
 	}
-	if r, _ := m.SubShareVerificationVector.Value().Dimensions(); r != int(nextMSP.D()) {
+	r, _ := m.SubShareVerificationVector.Value().Dimensions()
+	if r != int(nextMSP.D()) {
 		return ErrValidation.WithMessage("invalid sub-share verification vector dimensions")
 	}
-
+	for i := range r {
+		entry, err := m.SubShareVerificationVector.Value().Get(i, 0)
+		if err != nil {
+			return ErrValidation.WithMessage("failed to access share verification vector entry")
+		}
+		if utils.IsNil(entry) {
+			return ErrValidation.WithMessage("share verification vector contains nil entry at row %d", i)
+		}
+		if !entry.IsTorsionFree() {
+			return ErrValidation.WithMessage("share verification vector entry at row %d is not torsion-free", i)
+		}
+	}
 	return nil
 }
 

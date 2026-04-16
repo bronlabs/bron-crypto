@@ -2,6 +2,7 @@ package hjky
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 )
@@ -19,6 +20,18 @@ func (m *Round1Broadcast[G, S]) Validate(participant *Participant[G, S], _ shari
 	r, c := m.VerificationVector.Value().Dimensions()
 	if r != int(participant.scheme.MSP().D()) || c != 1 {
 		return ErrValidationFailed.WithMessage("invalid Feldman verification vector")
+	}
+	for i := range r {
+		entry, err := m.VerificationVector.Value().Get(i, 0)
+		if err != nil {
+			return ErrValidationFailed.WithMessage("failed to access VV entry at row %d", i)
+		}
+		if utils.IsNil(entry) {
+			return ErrValidationFailed.WithMessage("VV entry at row %d is nil", i)
+		}
+		if !entry.IsTorsionFree() {
+			return ErrValidationFailed.WithMessage("VV entry at row %d is not torsion-free", i)
+		}
 	}
 	return nil
 }

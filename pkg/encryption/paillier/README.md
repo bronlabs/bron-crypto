@@ -47,7 +47,7 @@ import "github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 scheme := paillier.NewScheme()
 
 // Generate with 2048-bit primes (4096-bit modulus)
-kg, _ := scheme.Keygen(paillier.WithEachPrimeBitLen(2048))
+kg, _ := scheme.Keygen(paillier.WithKeyLen(4096))
 sk, pk, _ := kg.Generate(rand.Reader)
 ```
 

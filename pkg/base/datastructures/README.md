@@ -26,15 +26,13 @@ This package defines interfaces for common data structures with support for:
 - `MutableSet[E]` - Mutable set with union, intersection, difference operations
 - `ConcurrentSet[E]` - Thread-safe set with atomic operations
 
-### Tables
-- `Table[E]` - Mutable 2D table with row/column operations
-- `ImmutableTable[E]` - Immutable 2D table
-
 ## Subpackages
 
 - `hashmap` - Hash-based map implementations
 - `hashset` - Hash-based set implementations
 - `bimap` - Bidirectional map implementations
+- `bitset` - Efficient bitset implementations for small unsigned integer sets
+- `bitvec` - Bit vector implementations
 
 ## Key Types
 

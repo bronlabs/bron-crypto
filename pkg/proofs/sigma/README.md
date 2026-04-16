@@ -8,7 +8,7 @@ in round-based setup where:
 * Round 3: $P$ computes response $z$ and sends to $V$,
 * $V$ performs verification.
 
-Additionally, the `RunHonestVerifierZkSimulator` method is defined.
+Additionally, the `RunSimulator` method is defined.
 In the context of Honest-Verifier Zero-Knowledge Proofs of Knowledge, the simulator is an algorithm
 that is able to fake a commitment and a convincing proof without knowledge of the witness.
 In order to fake it, the simulator does things in reverse order (a.k.a. "rewinds"): first create a proof/response,

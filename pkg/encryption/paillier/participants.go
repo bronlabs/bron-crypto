@@ -94,7 +94,10 @@ func (e *Encrypter) EncryptMany(plaintexts []*Plaintext, receiver *PublicKey, pr
 		eg.Go(func() error {
 			var err error
 			nonces[i], err = receiver.NonceSpace().Sample(prng)
-			return err
+			if err != nil {
+				return errs.Wrap(err).WithMessage("could not sample nonce")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -119,7 +122,10 @@ func (e *Encrypter) EncryptManyWithNonces(plaintexts []*Plaintext, receiver *Pub
 		eg.Go(func() error {
 			var err error
 			cts[i], err = e.EncryptWithNonce(p, receiver, nonces[i])
-			return err
+			if err != nil {
+				return errs.Wrap(err).WithMessage("could not encrypt with nonce")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -184,7 +190,10 @@ func (se *SelfEncrypter) SelfEncryptMany(plaintexts []*Plaintext, prng io.Reader
 		eg.Go(func() error {
 			var err error
 			nonces[i], err = se.pk.NonceSpace().Sample(prng)
-			return err
+			if err != nil {
+				return errs.Wrap(err).WithMessage("could not sample nonce")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -209,7 +218,10 @@ func (se *SelfEncrypter) SelfEncryptManyWithNonces(plaintexts []*Plaintext, nonc
 		eg.Go(func() error {
 			var err error
 			cts[i], err = se.SelfEncryptWithNonce(p, nonces[i])
-			return err
+			if err != nil {
+				return errs.Wrap(err).WithMessage("could not encrypt with nonce")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {

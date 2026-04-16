@@ -10,7 +10,7 @@ Implements Shamir's (t,n) threshold secret sharing scheme.
 ## Usage
 
 ```go
-ac, _ := sharing.NewThresholdAccessStructure(threshold, shareholders)
+ac, _ := threshold.NewThresholdAccessStructure(threshold, shareholders)
 scheme, _ := shamir.NewScheme(field, ac)
 
 // Deal shares
