@@ -31,6 +31,9 @@ func (bob *Bob[P, B, S]) Round1() (r1 *Round1P2P[P, B, S], b S, err error) {
 	if receiverOutput.InferredL() != bob.suite.l+bob.rho {
 		return nil, nilS, ErrValidation.WithMessage("OT receiver output l mismatch: got %d, expected %d", receiverOutput.InferredL(), bob.suite.l+bob.rho)
 	}
+	if receiverOutput.InferredMessageBytesLen() == 0 {
+		return nil, nilS, ErrValidation.WithMessage("OT receiver output has inconsistent or empty message byte lengths")
+	}
 	bob.beta = receiverOutput.Choices
 	bob.gamma = make([][]S, len(receiverOutput.Messages))
 	for xi, messages := range receiverOutput.Messages {
@@ -77,6 +80,9 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P[P, B, S], a []S) (*Round2P2P[P
 	}
 	if senderOutput.InferredL() != alice.suite.l+alice.rho {
 		return nil, nil, ErrValidation.WithMessage("OT sender output l mismatch: got %d, expected %d", senderOutput.InferredL(), alice.suite.l+alice.rho)
+	}
+	if senderOutput.InferredMessageBytesLen() == 0 {
+		return nil, nil, ErrValidation.WithMessage("OT sender output has inconsistent or empty message byte lengths")
 	}
 	alice.alpha = make([][2][]S, len(senderOutput.Messages))
 	for xi, messages := range senderOutput.Messages {

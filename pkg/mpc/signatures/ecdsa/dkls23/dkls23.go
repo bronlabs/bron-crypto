@@ -22,7 +22,10 @@ type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 // PublicKey returns the public key.
 func (sh *Shard[P, B, S]) PublicKey() *sigecdsa.PublicKey[P, B, S] {
 	pkValue := sh.PublicKeyValue()
-	pk, _ := sigecdsa.NewPublicKey(pkValue)
+	pk, err := sigecdsa.NewPublicKey(pkValue)
+	if err != nil {
+		panic(err) // this should never happen.
+	}
 	return pk
 }
 
