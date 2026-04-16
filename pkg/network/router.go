@@ -80,7 +80,7 @@ func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sha
 				kept = append(kept, bufferedMsg)
 				continue
 			}
-			// If parties send two different messages with the same correlation ID, that's a byzantine behavior.
+			// If parties send two different messages with the same correlation ID, that's a byzantine behaviour.
 			alreadyReceived, exists := received[bufferedMsg.From]
 			if exists && !bytes.Equal(alreadyReceived, bufferedMsg.Payload) {
 				return nil, ErrDuplicateMessage.WithTag(base.IdentifiableAbortPartyIDTag, bufferedMsg.From).WithMessage("conflicting messages received from sender %d", bufferedMsg.From)
@@ -117,7 +117,7 @@ func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sha
 				continue
 			}
 
-			// If parties send two different messages with the same correlation ID, that's a byzantine behavior.
+			// If parties send two different messages with the same correlation ID, that's a byzantine behaviour.
 			alreadyReceived, exists := received[from]
 			if exists && !bytes.Equal(alreadyReceived, message.Payload) {
 				return nil, ErrDuplicateMessage.WithTag(base.IdentifiableAbortPartyIDTag, from).WithMessage("conflicting messages received from sender %d", from)

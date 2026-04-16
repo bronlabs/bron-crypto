@@ -17,7 +17,7 @@ func expectedDataLen(rows, cols int) (int, bool) {
 		return 0, false
 	}
 	hi, lo := bits.Mul(uint(rows), uint(cols))
-	if hi != 0 || lo > uint(^uint(0)>>1) {
+	if hi != 0 || lo > (^uint(0)>>1) {
 		return 0, false
 	}
 	return int(lo), true

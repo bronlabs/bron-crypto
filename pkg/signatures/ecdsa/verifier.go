@@ -18,7 +18,7 @@ type Verifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	mustBeNonMalleable bool
 }
 
-// VerifyNonMalleably configures the verifier to reject non-normalized signatures, which are vulnerable to malleability attacks.
+// VerifyNonMalleably configures the verifier to reject non-normalised signatures, which are vulnerable to malleability attacks.
 func VerifyNonMalleably[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](vf *Verifier[P, B, S]) error {
 	if vf == nil {
 		return ErrInvalidArgument.WithMessage("verifier is nil")
@@ -36,7 +36,8 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	}
 
 	v := &Verifier[P, B, S]{
-		suite: suite,
+		suite:              suite,
+		mustBeNonMalleable: false,
 	}
 	return v, nil
 }
@@ -59,7 +60,7 @@ func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []
 		return ErrInvalidArgument.WithMessage("signature & public key cannot be nil")
 	}
 	if v.mustBeNonMalleable && !s.IsNormalized() {
-		return ErrVerificationFailed.WithMessage("signature is not in normalized form")
+		return ErrVerificationFailed.WithMessage("signature is not in normalised form")
 	}
 
 	if s.v != nil {
