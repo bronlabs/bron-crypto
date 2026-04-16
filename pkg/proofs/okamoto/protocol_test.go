@@ -135,7 +135,8 @@ func Test_VerificationFailsWithWrongWitness(t *testing.T) {
 	w2, err := sf.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
-	statement := okamoto.NewStatement(g1.ScalarMul(w1).Add(g2.ScalarMul(w2)))
+	statement, err := okamoto.NewStatement(g1.ScalarMul(w1).Add(g2.ScalarMul(w2)))
+	require.NoError(t, err)
 
 	// Create wrong witness
 	wrongW1, err := sf.Random(pcg.NewRandomised())
@@ -181,7 +182,8 @@ func Test_ValidateStatement(t *testing.T) {
 
 	witness, err := okamoto.NewWitness(w1, w2)
 	require.NoError(t, err)
-	statement := okamoto.NewStatement(g1.ScalarMul(w1).Add(g2.ScalarMul(w2)))
+	statement, err := okamoto.NewStatement(g1.ScalarMul(w1).Add(g2.ScalarMul(w2)))
+	require.NoError(t, err)
 
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
@@ -265,7 +267,8 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	witness, err := okamoto.NewWitness(witnessScalars...)
 	require.NoError(tb, err)
-	statement := okamoto.NewStatement(algebrautils.Sum(statementParts[0], statementParts[1:]...))
+	statement, err := okamoto.NewStatement(algebrautils.Sum(statementParts[0], statementParts[1:]...))
+	require.NoError(tb, err)
 
 	// round 1
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
@@ -303,7 +306,8 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	// Random statement (simulator does not need a valid witness)
 	x, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
-	statement := okamoto.NewStatement(x)
+	statement, err := okamoto.NewStatement(x)
+	require.NoError(tb, err)
 
 	// simulate
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
@@ -348,7 +352,8 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	witness, err := okamoto.NewWitness(witnessScalars...)
 	require.NoError(tb, err)
-	statement := okamoto.NewStatement(statementParts[0].Add(statementParts[1]))
+	statement, err := okamoto.NewStatement(statementParts[0].Add(statementParts[1]))
+	require.NoError(tb, err)
 
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
 	require.NoError(tb, err)
@@ -417,7 +422,8 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	t.Run("valid opening", func(t *testing.T) {
 		t.Parallel()
 		// The Okamoto statement is the commitment point itself.
-		okaStatement := okamoto.NewStatement(commitment.Value())
+		okaStatement, err := okamoto.NewStatement(commitment.Value())
+		require.NoError(t, err)
 
 		// Verify that phi(witness) == statement.
 		err = protocol.ValidateStatement(okaStatement, okaWitness)
@@ -446,7 +452,8 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 		randomPoint, err := curve.Random(pcg.NewRandomised())
 		require.NoError(t, err)
 		// The Okamoto statement is the commitment point itself.
-		invalidStatement := okamoto.NewStatement(randomPoint)
+		invalidStatement, err := okamoto.NewStatement(randomPoint)
+		require.NoError(t, err)
 
 		// Verify that phi(witness) == statement.
 		err = protocol.ValidateStatement(invalidStatement, okaWitness)
