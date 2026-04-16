@@ -16,6 +16,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
+// Round1 starts the HJKY zero-sharing subprotocol among previous shareholders
+// and returns the resulting public broadcast plus per-recipient private
+// round-1 messages.
+//
+// Parties that are not previous shareholders return an empty broadcast and no
+// unicasts.
 func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S], *Participant[G, S]], error) {
 	if p.state.round != 1 {
 		return nil, nil, ErrValidation.WithMessage("invalid round")
@@ -48,6 +54,13 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 	return r1b, r1u.Freeze(), nil
 }
 
+// Round2 completes the HJKY zero-sharing subprotocol for previous
+// shareholders, converts each previous shard into an additive contribution,
+// re-shares that contribution under the next access structure, and returns the
+// resulting public metadata plus per-recipient private share contributions.
+//
+// Parties that are not previous shareholders return an empty broadcast and no
+// unicasts.
 func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S], *Participant[G, S]], r1u network.RoundMessages[*Round1P2P[G, S], *Participant[G, S]]) (*Round2Broadcast[G, S], network.OutgoingUnicasts[*Round2P2P[G, S], *Participant[G, S]], error) {
 	if p.state.round != 2 {
 		return nil, nil, ErrValidation.WithMessage("invalid round")
@@ -137,6 +150,10 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 	return r2b, r2u.Freeze(), nil
 }
 
+// Round3 verifies and aggregates all round-2 contributions addressed to the
+// local next shareholder and returns the resulting redistributed shard.
+//
+// Parties that are not next shareholders return nil.
 func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S], *Participant[G, S]], r2u network.RoundMessages[*Round2P2P[G, S], *Participant[G, S]]) (*mpc.BaseShard[G, S], error) {
 	if p.state.round != 3 {
 		return nil, ErrValidation.WithMessage("invalid round")
