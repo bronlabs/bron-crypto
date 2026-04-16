@@ -163,7 +163,7 @@ func convert[F algebra.PrimeFieldElement[F]](field algebra.PrimeField[F], as *Th
 		return nil, nil, errs.Wrap(err).WithMessage("failed to get the first d columns")
 	}
 
-	resultRho := make([]internal.ID, len(l))
+	resultRho := make([]internal.ID, m)
 	for i, li := range l {
 		if li.kind != attribute {
 			return nil, nil, internal.ErrFailed.WithMessage("internal error")
