@@ -86,6 +86,9 @@ func (s *Share[E]) Equal(other *Share[E]) bool {
 // additive homomorphism. Combines entries from both maps, treating missing
 // keys as the group identity element.
 func (s *Share[E]) Op(other *Share[E]) *Share[E] {
+	if s.id != other.id {
+		panic("cannot add shares with different IDs")
+	}
 	result := make(map[bitset.ImmutableBitSet[sharing.ID]]E)
 
 	// Combine all clauses from both shares

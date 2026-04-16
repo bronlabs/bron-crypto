@@ -31,7 +31,7 @@ func (fe *BaseFieldElement) MarshalCBOR() ([]byte, error) {
 func (fe *BaseFieldElement) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*baseFieldDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal base field element")
 	}
 
 	bfe, err := NewBaseField().FromBytes(dto.BaseFieldBytes)
@@ -56,7 +56,7 @@ func (fe *Scalar) MarshalCBOR() ([]byte, error) {
 func (fe *Scalar) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*scalarDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal scalar")
 	}
 
 	s, err := NewScalarField().FromBytes(dto.ScalarBytes)
@@ -81,7 +81,7 @@ func (p *Point) MarshalCBOR() ([]byte, error) {
 func (p *Point) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pointDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal point")
 	}
 
 	pp, err := NewCurve().FromCompressed(dto.AffineCompressedBytes)

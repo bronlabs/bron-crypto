@@ -49,7 +49,10 @@ type Protocol[A znstar.ArithmeticPaillier] struct {
 // NewProtocol constructs a Paillier nth-root protocol instance.
 func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], prng io.Reader) (*Protocol[A], error) {
 	oneWayHomomorphism := func(x *znstar.PaillierGroupElement[A]) *znstar.PaillierGroupElement[A] {
-		y, _ := group.NthResidue(x.ForgetOrder())
+		y, err := group.NthResidue(x.ForgetOrder())
+		if err != nil {
+			panic(errs.Wrap(err).WithMessage("cannot compute nth residue"))
+		}
 		return y
 	}
 	anc := &anchor[A]{
@@ -59,7 +62,10 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 	challengeByteLen := (challengeBitLen + 7) / 8
 	soundnessError := uint(challengeBitLen)
 	scalarMul := func(unit *znstar.PaillierGroupElement[A], eBytes []byte) *znstar.PaillierGroupElement[A] {
-		e, _ := num.N().FromBytes(eBytes)
+		e, err := num.N().FromBytes(eBytes)
+		if err != nil {
+			panic(errs.Wrap(err).WithMessage("cannot convert bytes to scalar"))
+		}
 		return unit.Exp(e)
 	}
 

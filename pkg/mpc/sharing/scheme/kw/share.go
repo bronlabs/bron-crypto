@@ -77,6 +77,9 @@ func (s *Share[FE]) Add(other *Share[FE]) *Share[FE] {
 	if s.id != other.id {
 		panic("cannot operate on shares with different IDs")
 	}
+	if len(s.v) != len(other.v) {
+		panic("cannot operate on shares with different value vector lengths")
+	}
 	out := make([]FE, len(s.v))
 	for i := range s.v {
 		out[i] = s.v[i].Add(other.v[i])

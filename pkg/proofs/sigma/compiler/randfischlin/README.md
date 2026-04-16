@@ -19,7 +19,7 @@ A variant of Fischlin's transform using fixed parameters and random challenge sa
 
 ```go
 nizk, _ := randfischlin.NewCompiler(sigmaProtocol, prng)
-prover, _ := nizk.NewProver(sessionId, transcript)
+prover, _ := nizk.NewProver(ctx)
 proof, _ := prover.Prove(statement, witness)
 ```
 

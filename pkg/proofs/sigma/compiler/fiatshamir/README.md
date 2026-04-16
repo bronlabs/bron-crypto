@@ -10,7 +10,7 @@ Compiles interactive sigma protocols into non-interactive proofs using hash-base
 
 ```go
 nizk, _ := fiatshamir.NewCompiler(sigmaProtocol)
-prover, _ := nizk.NewProver(sessionId, transcript)
+prover, _ := nizk.NewProver(ctx)
 proof, _ := prover.Prove(statement, witness)
 ```
 

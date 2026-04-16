@@ -15,7 +15,8 @@ func Test_BitsToPackedFields(t *testing.T) {
 	t.Parallel()
 	input := new(mina.ROInput).Init()
 	input.AddString("someveryverylongmessagecmrewiugriuhtrlugchmtrlugchslrifudjtrfunhvgudysrthvgnkyudrtgcvdnkurytcnhgkdtuyrnhgkryutcghksrecyuhgkstruhgmsrtucghslrutcghslrtuhgkdsfuhgcmsruthcvgslrtuhgmlrtuichslrmutsrthdl")
-	fields := input.PackToFields()
+	fields, err := input.PackToFields()
+	require.NoError(t, err)
 
 	require.Len(t, fields, 7)
 	require.Equal(t, "6739959678053839808442019806815009096953251624254956745969670397973851731662", fields[0].Cardinal().Big().Text(10))
@@ -247,7 +248,8 @@ func TestROInputPackToFields(t *testing.T) {
 	t.Run("empty input", func(t *testing.T) {
 		t.Parallel()
 		input := new(mina.ROInput).Init()
-		packed := input.PackToFields()
+		packed, err := input.PackToFields()
+		require.NoError(t, err)
 		assert.Empty(t, packed)
 	})
 
@@ -257,7 +259,8 @@ func TestROInputPackToFields(t *testing.T) {
 		field := pasta.NewPallasBaseField().One()
 		input.AddFields(field)
 
-		packed := input.PackToFields()
+		packed, err := input.PackToFields()
+		require.NoError(t, err)
 		assert.Len(t, packed, 1)
 		assert.True(t, packed[0].Equal(field))
 	})
@@ -270,7 +273,8 @@ func TestROInputPackToFields(t *testing.T) {
 			input.AddBits(true)
 		}
 
-		packed := input.PackToFields()
+		packed, err := input.PackToFields()
+		require.NoError(t, err)
 		assert.Len(t, packed, 1)
 	})
 
@@ -282,7 +286,8 @@ func TestROInputPackToFields(t *testing.T) {
 			input.AddBits(true)
 		}
 
-		packed := input.PackToFields()
+		packed, err := input.PackToFields()
+		require.NoError(t, err)
 		assert.Len(t, packed, 2)
 	})
 
@@ -293,7 +298,8 @@ func TestROInputPackToFields(t *testing.T) {
 		input.AddFields(field)
 		input.AddBits(true, false, true)
 
-		packed := input.PackToFields()
+		packed, err := input.PackToFields()
+		require.NoError(t, err)
 		assert.Len(t, packed, 2) // 1 field + 1 packed bits field
 	})
 }
@@ -370,7 +376,8 @@ func TestROInputIntegration(t *testing.T) {
 		assert.NotEmpty(t, input.Bits())
 
 		// Pack to fields for hashing
-		packed := input.PackToFields()
+		packed, err := input.PackToFields()
+		require.NoError(t, err)
 		assert.NotEmpty(t, packed)
 	})
 }

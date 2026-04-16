@@ -258,7 +258,11 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	}
 	input.AddFields(pkx, pky, ncx)
 	prefix := SignaturePrefix(v.nid)
-	e, err := hashWithPrefix(prefix, input.PackToFields()...)
+	packed, err := input.PackToFields()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot pack fields")
+	}
+	e, err := hashWithPrefix(prefix, packed...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute challenge")
 	}

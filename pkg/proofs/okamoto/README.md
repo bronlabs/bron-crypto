@@ -14,7 +14,7 @@ $$\varphi(x_1, \ldots, x_m) = \prod_{i=1}^{m} h_i^{x_i}.$$
 
 Given a statement $z$ and witness $(x_1, \ldots, x_m)$:
 
-- **Commitment**: the prover samples $s_1, \ldots, s_m \stackrel{\$}{\leftarrow} \mathbb{Z}_q$ and sends $a = \prod h_i^{s_i}$.
+- **Commitment**: the prover samples $s_1, \ldots, s_m \stackrel{R}{\leftarrow} \mathbb{Z}_q$ uniformly at random and sends $a = \prod h_i^{s_i}$.
 - **Challenge**: the verifier sends a random $e$.
 - **Response**: the prover sends $z_i = s_i + e \cdot x_i$ for each $i$.
 - **Verification**: check that $\prod h_i^{z_i} = a \cdot z^e$.

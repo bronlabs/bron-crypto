@@ -35,7 +35,7 @@ func (fe *BaseFieldElementG1) MarshalCBOR() ([]byte, error) {
 func (fe *BaseFieldElementG1) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*baseFieldElementG1DTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal base field element")
 	}
 	e, err := NewG1BaseField().FromBytes(dto.FieldBytes)
 	if err != nil {
@@ -59,7 +59,7 @@ func (fe *BaseFieldElementG2) MarshalCBOR() ([]byte, error) {
 func (fe *BaseFieldElementG2) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*baseFieldElementG2DTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal base field element")
 	}
 	e, err := NewG2BaseField().FromBytes(dto.FieldBytes)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *Scalar) MarshalCBOR() ([]byte, error) {
 func (s *Scalar) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*scalarDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal scalar")
 	}
 	e, err := NewScalarField().FromBytes(dto.FieldBytes)
 	if err != nil {
@@ -107,11 +107,11 @@ func (p *PointG1) MarshalCBOR() ([]byte, error) {
 func (p *PointG1) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pointG1DTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal point")
 	}
 	e, err := NewG1().FromCompressed(dto.AffineCompressedBytes)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot deserialize scalar")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&e.V)
 	return nil
@@ -131,11 +131,11 @@ func (p *PointG2) MarshalCBOR() ([]byte, error) {
 func (p *PointG2) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pointG2DTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal point")
 	}
 	e, err := NewG2().FromCompressed(dto.AffineCompressedBytes)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot deserialize scalar")
+		return errs.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&e.V)
 	return nil

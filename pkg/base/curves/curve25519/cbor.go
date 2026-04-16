@@ -30,7 +30,7 @@ func (p *Point) MarshalCBOR() ([]byte, error) {
 func (p *Point) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pointDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal point")
 	}
 
 	pp, err := NewCurve().FromUncompressed(dto.AffineUnompressedBytes)
@@ -51,7 +51,7 @@ func (p *PrimeSubGroupPoint) MarshalCBOR() ([]byte, error) {
 func (p *PrimeSubGroupPoint) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pointDTO](data)
 	if err != nil {
-		return err
+		return errs.Wrap(err).WithMessage("failed to unmarshal point")
 	}
 
 	pp, err := NewPrimeSubGroup().FromUncompressed(dto.AffineUnompressedBytes)

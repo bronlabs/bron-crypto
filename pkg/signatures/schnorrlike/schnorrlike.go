@@ -238,6 +238,9 @@ func NewSignature[GE GroupElement[GE, S], S Scalar[S]](e S, r GE, s S) (*Signatu
 	if utils.IsNil(s) {
 		return nil, ErrInvalidArgument.WithMessage("s is nil")
 	}
+	if s.IsZero() {
+		return nil, ErrInvalidArgument.WithMessage("s is zero")
+	}
 	if utils.IsNil(r) && utils.IsNil(e) {
 		return nil, ErrInvalidArgument.WithMessage("r and e can't both be nil")
 	}

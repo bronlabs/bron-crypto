@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Access policy: `sharing.HierarchicalConjunctiveThresholdAccessStructure`
+- Access policy: `hierarchical.HierarchicalConjunctiveThreshold`
 - Secret/share domain: prime field elements
 - Dealer function: random polynomial with level-dependent derivatives used for share generation
 - Reconstruction: solves a linear system derived from the qualified quorum
@@ -12,10 +12,10 @@
 ## Usage
 
 ```go
-ac, err := sharing.NewHierarchicalConjunctiveThresholdAccessStructure(
-    sharing.WithLevel(1, 1, 2),
-    sharing.WithLevel(3, 3, 4, 5),
-    sharing.WithLevel(5, 6, 7),
+ac, err := hierarchical.NewHierarchicalConjunctiveThresholdAccessStructure(
+    hierarchical.WithLevel(1, 1, 2),
+    hierarchical.WithLevel(3, 3, 4, 5),
+    hierarchical.WithLevel(5, 6, 7),
 )
 if err != nil {
     panic(err)

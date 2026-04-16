@@ -51,6 +51,9 @@ func (a *ThresholdGateAccessStructure) UnmarshalCBOR(data []byte) error {
 			return internal.ErrSerialisation.WithMessage("shareholder in threshold gate tree not found in shareholders map")
 		}
 	}
+	if err := checkTree(dto.Root); err != nil {
+		return errs.Wrap(err).WithMessage("invalid threshold gate tree")
+	}
 	a.root = dto.Root
 	a.shareholders = dto.Shareholders
 	return nil

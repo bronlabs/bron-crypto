@@ -14,7 +14,7 @@ The induced MSP has one row per leaf and can be used directly with the KW MSP-ba
 ## Usage
 
 ```go
-ac := boolexpr.NewThresholdGateAccessStructure(
+ac, _ := boolexpr.NewThresholdGateAccessStructure(
     boolexpr.Threshold(2,
         boolexpr.And(
             boolexpr.ID(1),

@@ -117,7 +117,7 @@ func (pg *PaillierGroup[X]) MarshalCBOR() ([]byte, error) {
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	default:
-		panic("unknown arithmetic type for PaillierGroup")
+		return nil, errs.Wrap(ErrFailed).WithMessage("unknown arithmetic type for PaillierGroup")
 	}
 }
 
@@ -147,7 +147,7 @@ func (pg *PaillierGroup[X]) UnmarshalCBOR(data []byte) error {
 		*pg = *any(reconstructed).(*PaillierGroup[X]) //nolint:errcheck // false positive
 		return nil
 	default:
-		panic("unknown arithmetic type in UnmarshalCBOR")
+		return errs.Wrap(ErrFailed).WithMessage("unknown arithmetic type for PaillierGroup in UnmarshalCBOR")
 	}
 }
 
@@ -170,7 +170,7 @@ func (u *PaillierGroupElement[X]) MarshalCBOR() ([]byte, error) {
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	default:
-		panic("unknown arithmetic type for PaillierGroupElement")
+		return nil, errs.Wrap(ErrFailed).WithMessage("unknown arithmetic type for PaillierGroupElement")
 	}
 }
 
@@ -261,7 +261,7 @@ func (rg *RSAGroup[X]) MarshalCBOR() ([]byte, error) {
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	default:
-		panic("unknown arithmetic type for RSAGroup")
+		return nil, errs.Wrap(ErrFailed).WithMessage("unknown arithmetic type for RSAGroup")
 	}
 }
 
@@ -291,7 +291,7 @@ func (rg *RSAGroup[X]) UnmarshalCBOR(data []byte) error {
 		*rg = *any(reconstructed).(*RSAGroup[X]) //nolint:errcheck // false positive
 		return nil
 	default:
-		panic("unknown arithmetic type in UnmarshalCBOR")
+		return errs.Wrap(ErrFailed).WithMessage("unknown arithmetic type in UnmarshalCBOR")
 	}
 }
 
@@ -313,7 +313,7 @@ func (u *RSAGroupElement[X]) MarshalCBOR() ([]byte, error) {
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	default:
-		panic("unknown arithmetic type for RSAGroupElement")
+		return nil, errs.Wrap(ErrFailed).WithMessage("unknown arithmetic type for RSAGroupElement")
 	}
 }
 

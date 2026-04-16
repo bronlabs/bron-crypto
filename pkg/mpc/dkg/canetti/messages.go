@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
@@ -81,6 +82,18 @@ func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], senderID sharing.
 	r, c := m.Message.X.Value().Dimensions()
 	if r != int(p.sharingScheme.MSP().D()) || c != 1 {
 		return ErrValidationFailed.WithMessage("invalid x dimensions")
+	}
+	for i := range r {
+		entry, err := m.Message.X.Value().Get(i, 0)
+		if err != nil {
+			return ErrValidationFailed.WithMessage("failed to access verification vector entry")
+		}
+		if utils.IsNil(entry) {
+			return ErrValidationFailed.WithMessage("verification vector contains nil entry at row %d", i)
+		}
+		if !entry.IsTorsionFree() {
+			return ErrValidationFailed.WithMessage("verification vector entry at row %d is not torsion-free", i)
+		}
 	}
 
 	return nil

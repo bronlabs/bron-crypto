@@ -78,7 +78,7 @@ func (*Curve) ElementSize() int {
 
 // WideElementSize returns the wide element size in bytes.
 func (*Curve) WideElementSize() int {
-	return int(^uint(0) >> 1)
+	return 2 * compressedPointBytes
 }
 
 // FromWideBytes decodes an element from wide bytes.

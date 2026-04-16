@@ -97,6 +97,9 @@ func (m *Round3Broadcast[P, B, S]) Validate(_ *Cosigner[P, B, S], _ sharing.ID) 
 	if m == nil || utils.IsNil(m.Pk) {
 		return dkls23.ErrNil.WithMessage("missing fields in Round3Broadcast message")
 	}
+	if m.Pk.IsZero() || !m.Pk.IsTorsionFree() {
+		return dkls23.ErrValidationFailed.WithMessage("invalid Pk")
+	}
 
 	return nil
 }

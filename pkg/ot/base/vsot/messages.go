@@ -16,7 +16,7 @@ type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 
 // Validate performs basic sanity checks on the message.
 func (r1 *Round1P2P[P, B, S]) Validate(receiver *Receiver[P, B, S], _ sharing.ID) error {
-	if r1 == nil || r1.BigB.IsOpIdentity() {
+	if r1 == nil || r1.BigB.IsOpIdentity() || !r1.BigB.IsTorsionFree() || len(r1.Proof) == 0 {
 		return ot.ErrValidation.WithMessage("invalid message")
 	}
 
@@ -35,7 +35,7 @@ func (r2 *Round2P2P[P, B, S]) Validate(sender *Sender[P, B, S], _ sharing.ID) er
 		return ot.ErrValidation.WithMessage("invalid message")
 	}
 	for _, a := range r2.BigA {
-		if a.IsOpIdentity() {
+		if a.IsOpIdentity() || !a.IsTorsionFree() {
 			return ot.ErrValidation.WithMessage("invalid message")
 		}
 	}
