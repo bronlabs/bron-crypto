@@ -34,21 +34,23 @@ Note that the following protocols are special cases of this protocol:
   while `nextAccessStructure` defines the redistributed shard.
 - Verification is two-layered, matching the paper’s main idea: next shareholders validate both the old-share commitment
   and the newly distributed subshares.
-- `trustedAnchorID` can be used to support identifiable aborts. Whenever previous shareholders provide metadata that must agree
-  globally, the protocol compares all such values against the message from this trusted previous shareholder and attributes
-  inconsistencies to the offending sender. If no trusted anchor is configured, the protocol still performs non-identifiable
-  consistency checks before returning a shard.
 - The session quorum must equal the union of the previous shareholders and shareholders of the next access structure.
 - `Participant` exposes `Round1`, `Round2`, and `Round3`; use a `network.Router` or equivalent transport to exchange broadcasts and unicasts.
+
+## Identifiable Abort
+
+- Previous shareholders do not need an external trust anchor for old-metadata checks, because they already hold their own previous shard and can use it as the reference.
+- Next-only shareholders can optionally configure `trustedAnchorID` to support identifiable aborts for old-metadata inconsistencies.
+- When a trusted anchor is configured, metadata that must agree globally is compared against that anchor’s round-2 message, and inconsistencies are attributed to the offending sender.
+- If no trusted anchor is configured, the protocol still performs aggregate consistency checks before returning a shard, but some metadata failures degrade to non-identifiable aborts.
 
 ## Usage
 
 1. Build a `session.Context` whose quorum contains every participant in the protocol.
-2. Optionally choose a `trustedAnchorID` from `prevShareholders`. This party acts as the trust anchor for identifiable-abort checks on
-   shared verification metadata. If you omit it, the protocol still checks aggregate consistency but some metadata failures become
-   non-identifiable aborts.
+2. If a party is not in `prevShareholders`, it may optionally choose a `trustedAnchorID` from `prevShareholders` to support identifiable-abort checks on shared verification metadata.
+   Previous shareholders can use their own previous shard as the reference and do not need to configure a trusted anchor.
 3. For each party, call `NewParticipant(ctx, prevShareholders, prevShard, nextAccessStructure, prng, opts...)`.
-   If you want identifiable-abort support for metadata inconsistencies, pass `redistribute.WithTrustedAnchorID(trustedAnchorID)`.
+   If you want identifiable-abort support for metadata inconsistencies for next-only parties, pass `redistribute.WithTrustedAnchorID(trustedAnchorID)`.
 4. Previous shareholders call `Round1` and send the resulting `Round1Broadcast` plus per-recipient `Round1P2P` HJKY messages.
 5. Previous shareholders collect the round-1 messages and call `Round2` to produce a `Round2Broadcast` and per-recipient `Round2P2P` redistribution messages.
 6. Next shareholders collect the round-2 messages and call `Round3` to verify, aggregate, and obtain a `BaseShard` for the redistributed secret.
