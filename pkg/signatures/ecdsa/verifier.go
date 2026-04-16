@@ -14,11 +14,22 @@ import (
 // It uses the cryptographic parameters from the suite to ensure consistent
 // hash function usage between signing and verification.
 type Verifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	suite *Suite[P, B, S]
+	suite              *Suite[P, B, S]
+	mustBeNonMalleable bool
+}
+
+// VerifyNonMalleably configures the verifier to reject non-normalized signatures, which are vulnerable to malleability attacks.
+func VerifyNonMalleably[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](vf *Verifier[P, B, S]) error {
+	if vf == nil {
+		return ErrInvalidArgument.WithMessage("verifier is nil")
+	}
+	vf.mustBeNonMalleable = true
+	return nil
 }
 
 // NewVerifier creates a verifier with the given cryptographic suite.
 // The suite defines the curve and hash function used for verification.
+// Note that the output verifier does not enforce non-malleability by default; apply the VerifyNonMalleably option to enable that check.
 func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S]) (*Verifier[P, B, S], error) {
 	if suite == nil {
 		return nil, ErrInvalidArgument.WithMessage("suite is nil")
@@ -46,6 +57,9 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []byte) error {
 	if s == nil || pk == nil {
 		return ErrInvalidArgument.WithMessage("signature & public key cannot be nil")
+	}
+	if v.mustBeNonMalleable && !s.IsNormalized() {
+		return ErrVerificationFailed.WithMessage("signature is not in normalized form")
 	}
 
 	if s.v != nil {

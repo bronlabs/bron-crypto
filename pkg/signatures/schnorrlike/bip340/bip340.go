@@ -344,8 +344,11 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
 	// For partial signature verification, use the pre-computed challenge from the signature
 	// (which was computed from aggregate R), rather than recomputing from individual R_i.
+	// In the standard verification path, always recompute e from (R, P, m) — trusting a
+	// wire-supplied signature.E would admit a universal forgery (pick any s, e and set
+	// R := s·G - e·P).
 	var e *Scalar
-	if signature.E != nil {
+	if v.challengePublicKey != nil && signature.E != nil {
 		e = signature.E
 	} else {
 		var err error

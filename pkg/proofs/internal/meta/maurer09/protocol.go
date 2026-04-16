@@ -95,14 +95,14 @@ func (c *Response[P]) Value() P {
 type MaurerOption[I algebra.GroupElement[I], P algebra.GroupElement[P]] func(protocol *Protocol[I, P])
 
 // WithImageScalarMul overrides the scalar multiplication in the image group.
-func WithImageScalarMul[I algebra.GroupElement[I], P algebra.GroupElement[P]](scalarMul func(I, []byte) I) MaurerOption[I, P] {
+func WithImageScalarMul[I algebra.GroupElement[I], P algebra.GroupElement[P]](scalarMul func(I, []byte) (I, error)) MaurerOption[I, P] {
 	return func(protocol *Protocol[I, P]) {
 		protocol.imageScalarMul = scalarMul
 	}
 }
 
 // WithPreImageScalarMul overrides the scalar multiplication in the pre-image group.
-func WithPreImageScalarMul[I algebra.GroupElement[I], P algebra.GroupElement[P]](scalarMul func(P, []byte) P) MaurerOption[I, P] {
+func WithPreImageScalarMul[I algebra.GroupElement[I], P algebra.GroupElement[P]](scalarMul func(P, []byte) (P, error)) MaurerOption[I, P] {
 	return func(protocol *Protocol[I, P]) {
 		protocol.preImageScalarMul = scalarMul
 	}
@@ -117,8 +117,8 @@ type Protocol[I algebra.GroupElement[I], P algebra.GroupElement[P]] struct {
 	name               sigma.Name
 	oneWayHomomorphism sigma.OneWayHomomorphism[I, P]
 	anchor             sigma.Anchor[I, P]
-	imageScalarMul     func(I, []byte) I
-	preImageScalarMul  func(P, []byte) P
+	imageScalarMul     func(I, []byte) (I, error)
+	preImageScalarMul  func(P, []byte) (P, error)
 	prng               io.Reader
 }
 
@@ -172,7 +172,11 @@ func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness
 	if witness == nil || state == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}
-	z := state.S.Op(p.preImageScalarMul(witness.W, challengeBytes))
+	cw, err := p.preImageScalarMul(witness.W, challengeBytes)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute pre-image scalar multiplication")
+	}
+	z := state.S.Op(cw)
 	return &Response[P]{Z: z}, nil
 }
 
@@ -181,7 +185,11 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
 		return ErrInvalidArgument.WithMessage("invalid arguments")
 	}
-	if !p.oneWayHomomorphism(response.Z).Equal(commitment.A.Op(p.imageScalarMul(statement.X, challengeBytes))) {
+	cx, err := p.imageScalarMul(statement.X, challengeBytes)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to compute image scalar multiplication")
+	}
+	if !p.oneWayHomomorphism(response.Z).Equal(commitment.A.Op(cx)) {
 		return ErrVerificationFailed.WithMessage("invalid response")
 	}
 
@@ -197,7 +205,11 @@ func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes si
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample element group")
 	}
-	a := p.oneWayHomomorphism(z).Op(p.imageScalarMul(statement.X.OpInv(), challengeBytes))
+	cXInv, err := p.imageScalarMul(statement.X.OpInv(), challengeBytes)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to compute image scalar multiplication")
+	}
+	a := p.oneWayHomomorphism(z).Op(cXInv)
 
 	return &Commitment[I]{A: a}, &Response[P]{Z: z}, nil
 }
@@ -229,7 +241,15 @@ func (p *Protocol[I, P]) Extract(x *Statement[I], a *Commitment[I], ei []sigma.C
 		return nil, ErrFailed.WithMessage("BUG: this should never happen")
 	}
 
-	w := p.preImageScalarMulI(u, &alpha).Op(p.preImageScalarMulI(zi[1].Z.OpInv().Op(zi[0].Z), &beta))
+	uAlpha, err := p.preImageScalarMulI(u, &alpha)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute pre-image scalar multiplication")
+	}
+	v, err := p.preImageScalarMulI(zi[1].Z.OpInv().Op(zi[0].Z), &beta)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute pre-image scalar multiplication")
+	}
+	w := uAlpha.Op(v)
 	return &Witness[P]{W: w}, nil
 }
 
@@ -285,7 +305,7 @@ func (p *Protocol[I, P]) Anchor() sigma.Anchor[I, P] {
 	return p.anchor
 }
 
-func (p *Protocol[I, P]) preImageScalarMulI(base P, e *big.Int) P {
+func (p *Protocol[I, P]) preImageScalarMulI(base P, e *big.Int) (P, error) {
 	absE := e.Bytes()
 	if e.Sign() < 0 {
 		return p.preImageScalarMul(base.OpInv(), absE)
@@ -294,10 +314,10 @@ func (p *Protocol[I, P]) preImageScalarMulI(base P, e *big.Int) P {
 	}
 }
 
-func defaultScalarMul[G algebra.GroupElement[G]](base G, eBytes []byte) G {
+func defaultScalarMul[G algebra.GroupElement[G]](base G, eBytes []byte) (G, error) {
 	e, err := num.N().FromBytes(eBytes)
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("cannot convert bytes to scalar"))
+		return *new(G), errs.Wrap(err).WithMessage("cannot convert bytes to scalar")
 	}
-	return algebrautils.ScalarMul(base, e)
+	return algebrautils.ScalarMul(base, e), nil
 }

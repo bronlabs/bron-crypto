@@ -31,6 +31,27 @@ type AdditivelyDerivablePublicKey[
 	base.Transparent[PKV]
 }
 
+// DeriveChildKeys derives a non-hardened child key shift and chain code from a parent
+// public key and chain code at index i. Hardened indices (i >= 2^31) are rejected since
+// hardened derivation requires the private key.
+//
+// The construction used depends on the curve of publicKey:
+//
+//   - secp256k1 (k256): standards-compliant BIP32 per bitcoin.org/bip-0032, using
+//     HMAC-SHA512 over (compressed pk || ser32(i)) keyed by the chain code. Returns
+//     ErrInvalidDerivation when IL == 0 or IL >= n, as required by BIP32 §5. Interops
+//     with wallets that follow BIP32.
+//
+//   - any other curve: a non-standard BIP32-like construction (see bip32Like) that uses a
+//     blake2b XOF keyed by the chain code over (pk.Bytes() || ser32(i)), produces a
+//     wide-reduced scalar shift, and rejects only IL == 0. This path does NOT implement
+//     BIP32 and is NOT interoperable with any external derivation spec. It is dispatched
+//     purely on curve Name() inequality with k256, so callers MUST NOT assume BIP32
+//     compatibility for ed25519, ristretto, BLS, or any other curve — nor that derivations
+//     remain stable across curves with the same name as k256 but a different underlying type.
+//
+// Callers who need BIP32 semantics on non-k256 curves should use a dedicated derivation
+// scheme (e.g. SLIP-0010 for ed25519) instead of this function.
 func DeriveChildKeys[
 	PK AdditivelyDerivablePublicKey[PK, PKV, SH],
 	PKV interface {
@@ -67,9 +88,10 @@ func bip32(publicKey *k256.Point, chainCode []byte, i uint32) (*k256.Scalar, []b
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create scalar from bytes")
 	}
-	// make sure it wasn't reduced
+	// BIP32 §5: the derivation fails if IL == 0 or IL ≥ n; the round-trip byte compare
+	// detects the ≥ n case, IsZero covers the all-zero case.
 	_, isEq, _ := ct.CompareBytes(digest[:32], shift.Bytes())
-	if isEq != ct.True {
+	if isEq != ct.True || shift.IsZero() {
 		return nil, nil, ErrInvalidDerivation.WithStackFrame()
 	}
 	return shift, childChainCode, nil
@@ -110,6 +132,9 @@ func bip32Like[
 	shift, err = sf.FromWideBytes(digest[:scalarWideLen])
 	if err != nil {
 		return *new(SH), nil, errs.Wrap(err).WithMessage("cannot create scalar from bytes")
+	}
+	if shift.IsZero() {
+		return *new(SH), nil, ErrInvalidDerivation.WithStackFrame()
 	}
 
 	return shift, childChainCode, nil

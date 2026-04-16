@@ -55,10 +55,16 @@ func (s *Scheme[P, B, S]) Signer(sk *PrivateKey[P, B, S], _ ...signatures.Signer
 }
 
 // Verifier creates a verifier for validating ECDSA signatures.
-func (s *Scheme[P, B, S]) Verifier(_ ...signatures.VerifierOption[*Verifier[P, B, S], *PublicKey[P, B, S], []byte, *Signature[S]]) (*Verifier[P, B, S], error) {
+// Note that verifier by default accepts malleable signatures (i.e., those with s in the upper half of the field). To enforce non-malleability, apply the VerifyNonMalleably option.
+func (s *Scheme[P, B, S]) Verifier(opts ...signatures.VerifierOption[*Verifier[P, B, S], *PublicKey[P, B, S], []byte, *Signature[S]]) (*Verifier[P, B, S], error) {
 	vr, err := NewVerifier(s.suite)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
+	}
+	for _, opt := range opts {
+		if err := opt(vr); err != nil {
+			return nil, errs.Wrap(err).WithMessage("applying verifier option failed")
+		}
 	}
 	return vr, nil
 }

@@ -1,11 +1,13 @@
 package network
 
 import (
+	"bytes"
 	"maps"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -78,6 +80,11 @@ func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sha
 				kept = append(kept, bufferedMsg)
 				continue
 			}
+			// If parties send two different messages with the same correlation ID, that's a byzantine behavior.
+			alreadyReceived, exists := received[bufferedMsg.From]
+			if exists && !bytes.Equal(alreadyReceived, bufferedMsg.Payload) {
+				return nil, ErrDuplicateMessage.WithTag(base.IdentifiableAbortPartyIDTag, bufferedMsg.From).WithMessage("conflicting messages received from sender %d", bufferedMsg.From)
+			}
 			received[bufferedMsg.From] = bufferedMsg.Payload
 		} else {
 			kept = append(kept, bufferedMsg)
@@ -108,6 +115,12 @@ func (r *Router) ReceiveFrom(correlationID string, froms ...sharing.ID) (map[sha
 				message.From = from
 				r.receiveBuffer = append(r.receiveBuffer, message)
 				continue
+			}
+
+			// If parties send two different messages with the same correlation ID, that's a byzantine behavior.
+			alreadyReceived, exists := received[from]
+			if exists && !bytes.Equal(alreadyReceived, message.Payload) {
+				return nil, ErrDuplicateMessage.WithTag(base.IdentifiableAbortPartyIDTag, from).WithMessage("conflicting messages received from sender %d", from)
 			}
 			received[from] = message.Payload
 		} else {

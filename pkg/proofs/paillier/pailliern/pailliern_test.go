@@ -2,6 +2,7 @@ package pailliern_test
 
 import (
 	crand "crypto/rand"
+	"crypto/sha3"
 	"fmt"
 	"math/big"
 	"slices"
@@ -49,8 +50,7 @@ func Test_HappyPath(t *testing.T) {
 
 	scheme := paillier.NewScheme()
 
-	sid, err := network.NewSID([]byte(fmt.Sprintf("%s_%d", sessionID, 0)))
-	require.NoError(t, err)
+	sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("%s-%s", label, sessionID))))
 
 	pInt, err := crand.Prime(prng, keyLen/2)
 	require.NoError(t, err)

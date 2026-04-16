@@ -28,17 +28,23 @@ type (
 )
 
 // NewStatement builds a new nth-root statement.
-func NewStatement[X znstar.ArithmeticPaillier](x *znstar.PaillierGroupElement[X]) *Statement[X] {
+func NewStatement[X znstar.ArithmeticPaillier](x *znstar.PaillierGroupElement[X]) (*Statement[X], error) {
+	if x == nil {
+		return nil, ErrInvalidArgument.WithMessage("statement element must not be nil")
+	}
 	return &Statement[X]{
 		X: x,
-	}
+	}, nil
 }
 
 // NewWitness builds a new nth-root witness.
-func NewWitness[X znstar.ArithmeticPaillier](w *znstar.PaillierGroupElement[X]) *Witness[X] {
+func NewWitness[X znstar.ArithmeticPaillier](w *znstar.PaillierGroupElement[X]) (*Witness[X], error) {
+	if w == nil {
+		return nil, ErrInvalidArgument.WithMessage("witness element must not be nil")
+	}
 	return &Witness[X]{
 		W: w,
-	}
+	}, nil
 }
 
 // Protocol implements the Paillier nth-root sigma protocol.
@@ -48,6 +54,9 @@ type Protocol[A znstar.ArithmeticPaillier] struct {
 
 // NewProtocol constructs a Paillier nth-root protocol instance.
 func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], prng io.Reader) (*Protocol[A], error) {
+	if group == nil || prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("group or prng must not be nil")
+	}
 	oneWayHomomorphism := func(x *znstar.PaillierGroupElement[A]) *znstar.PaillierGroupElement[A] {
 		y, err := group.NthResidue(x.ForgetOrder())
 		if err != nil {
@@ -61,12 +70,12 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 	challengeBitLen := 128
 	challengeByteLen := (challengeBitLen + 7) / 8
 	soundnessError := uint(challengeBitLen)
-	scalarMul := func(unit *znstar.PaillierGroupElement[A], eBytes []byte) *znstar.PaillierGroupElement[A] {
+	scalarMul := func(unit *znstar.PaillierGroupElement[A], eBytes []byte) (*znstar.PaillierGroupElement[A], error) {
 		e, err := num.N().FromBytes(eBytes)
 		if err != nil {
-			panic(errs.Wrap(err).WithMessage("cannot convert bytes to scalar"))
+			return nil, errs.Wrap(err).WithMessage("cannot convert bytes to scalar")
 		}
-		return unit.Exp(e)
+		return unit.Exp(e), nil
 	}
 
 	proto, err := maurer09.NewProtocol(

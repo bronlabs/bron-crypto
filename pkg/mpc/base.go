@@ -143,6 +143,8 @@ func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 	}
 	spm.msp = out.msp
 	spm.fv = out.fv
+	spm.pkValue = out.pkValue
+	spm.pkShares = out.pkShares
 	return nil
 }
 

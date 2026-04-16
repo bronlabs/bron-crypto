@@ -729,7 +729,6 @@ func TestScalarOpByZero(t *testing.T) {
 	dec, err := scheme.Decrypter(sk)
 	require.NoError(t, err)
 
-	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	zero := field.OpIdentity()
 
@@ -749,12 +748,6 @@ func TestScalarOpByZero(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, got.Value().IsOpIdentity(),
 		"ScalarOp(0) must decrypt to identity regardless of original plaintext")
-
-	// The result equals Enc(identity, identity) built via the group identity.
-	identity := curve.OpIdentity()
-	expected, err := elgamal.NewCiphertext(identity, identity)
-	require.NoError(t, err)
-	require.True(t, scaled.Equal(expected))
 }
 
 // Enc(m, r)^k must equal Enc(m^k, r·k): scalar-operating a ciphertext

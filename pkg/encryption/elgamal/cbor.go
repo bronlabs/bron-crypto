@@ -5,7 +5,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 type publicKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
@@ -174,16 +173,6 @@ func (c *Ciphertext[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[ciphertextDTO[E, S]](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal ciphertext from cbor")
-	}
-	if utils.IsNil(dto.V[0]) || utils.IsNil(dto.V[1]) {
-		return ErrIsNil.WithMessage("ciphertext component")
-	}
-	if !dto.V[0].IsTorsionFree() || !dto.V[1].IsTorsionFree() {
-		return ErrSubGroupMembership.WithMessage("ciphertext component is not torsion free")
-	}
-	// The second component can be identity if the message happens to be -h^r. The first one can never be identity for nonzero nonce.
-	if dto.V[0].IsOpIdentity() {
-		return ErrSubGroupMembership.WithMessage("invalid ciphertext: first component is identity")
 	}
 	newC, err := NewCiphertext(dto.V[0], dto.V[1])
 	if err != nil {

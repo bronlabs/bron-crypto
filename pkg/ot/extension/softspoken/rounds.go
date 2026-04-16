@@ -252,7 +252,6 @@ func (*Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, ch
 		if err != nil {
 			return errs.Wrap(err).WithMessage("cannot create field element")
 		}
-		copy(challengeResponse.T[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
 		for k := range m {
 			tHatK, err := bf128.NewField().FromBytes(extOptions[0][i][k*SigmaBytes : (k+1)*SigmaBytes])
 			if err != nil {
