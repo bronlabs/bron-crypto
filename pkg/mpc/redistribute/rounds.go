@@ -153,60 +153,7 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		return nil, errs.Wrap(err).WithMessage("invalid p2p input")
 	}
 
-	var trustedMSP *msp.MSP[S]
-	var trustedVerificationVector *feldman.VerificationVector[G, S]
-	var trustedZeroVerificationVector *feldman.VerificationVector[G, S]
-	if p.trustedDealerID == p.ctx.HolderID() {
-		trustedMSP = p.prevShard.MSP()
-		trustedVerificationVector = p.prevShard.VerificationVector()
-		trustedZeroVerificationVector = p.state.zeroVerificationVector
-	} else {
-		b, ok := r2b.Get(p.trustedDealerID)
-		if !ok {
-			return nil, ErrFailed.WithMessage("missing message")
-		}
-		trustedMSP = b.PrevMSP
-		trustedVerificationVector = b.PrevVerificationVector
-		trustedZeroVerificationVector = b.ZeroVerificationVector
-	}
-	for id := range p.otherPrevShareholders() {
-		b, ok := r2b.Get(id)
-		if !ok {
-			return nil, ErrFailed.WithMessage("missing message")
-		}
-		if !b.PrevMSP.Equal(trustedMSP) || !b.PrevVerificationVector.Equal(trustedVerificationVector) || !b.ZeroVerificationVector.Equal(trustedZeroVerificationVector) {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("inconsistent verification vectors")
-		}
-	}
-
-	pk, err := trustedVerificationVector.Value().Get(0, 0)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot get public key")
-	}
-	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](pk.Structure())
-
-	prevScheme, err := p.mspSharingScheme(group, trustedMSP)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create KW sharing scheme")
-	}
-	prevLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(trustedVerificationVector, trustedMSP)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create lifted dealer function")
-	}
-
-	zeroScheme, err := p.acSharingScheme(group, p.prevUnanimity)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create feldman sharing scheme")
-	}
-	zeroLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(trustedZeroVerificationVector, zeroScheme.MSP())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create lifted dealer function")
-	}
-
-	nextScheme, err := p.acSharingScheme(group, p.nextAccessStructures)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
-	}
+	var err error
 	for id := range p.otherPrevShareholders() {
 		b, ok := r2b.Get(id)
 		if !ok {
@@ -215,35 +162,6 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		u, ok := r2u.Get(id)
 		if !ok {
 			return nil, ErrFailed.WithMessage("missing message")
-		}
-
-		prevLiftedShare, err := prevLiftedDealerFunc.ShareOf(id)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot compute previous share")
-		}
-		prevLiftedAdditiveShare, err := prevScheme.ConvertLiftedShareToAdditive(prevLiftedShare, p.prevUnanimity)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot convert previous share to additive")
-		}
-		zeroLiftedShare, err := zeroLiftedDealerFunc.ShareOf(id)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot compute zero share")
-		}
-		liftedShift, err := zeroScheme.ConvertLiftedShareToAdditive(zeroLiftedShare, p.prevUnanimity)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot compute shift")
-		}
-
-		expectedPartialPk := prevLiftedAdditiveShare.Add(liftedShift).Value()
-		actualPartialPk, err := b.NextVerificationVectorContribution.Value().Get(0, 0)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot get partial public key")
-		}
-		if !actualPartialPk.Equal(expectedPartialPk) {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid verification vector contribution")
-		}
-		if err := nextScheme.Verify(u.NextShareContribution, b.NextVerificationVectorContribution); err != nil {
-			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
 		}
 
 		if p.state.share == nil {
@@ -260,28 +178,130 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 			}
 		}
 	}
-
-	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](p.state.share.Value()[0].Structure())
-	mspMatrix, err := accessstructures.InducedMSP(field, p.nextAccessStructures)
+	newPk, err := p.state.shareVerificationVector.Value().Get(0, 0)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot get MSP")
+		return nil, errs.Wrap(err).WithMessage("cannot get public key")
+	}
+	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](newPk.Structure())
+	nextScheme, err := p.acSharingScheme(group, p.nextAccessStructures)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
+	}
+	for id := range p.otherPrevShareholders() {
+		b, ok := r2b.Get(id)
+		if !ok {
+			return nil, ErrFailed.WithMessage("missing message")
+		}
+		u, ok := r2u.Get(id)
+		if !ok {
+			return nil, ErrFailed.WithMessage("missing message")
+		}
+		if err := nextScheme.Verify(u.NextShareContribution, b.NextVerificationVectorContribution); err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
+		}
+	}
+
+	// make identifiable verification if possible
+	var trustedMSP *msp.MSP[S]
+	var trustedVerificationVector *feldman.VerificationVector[G, S]
+	var trustedZeroVerificationVector *feldman.VerificationVector[G, S]
+	if p.isPrevShareholder(p.ctx.HolderID()) {
+		trustedMSP = p.prevShard.MSP()
+		trustedVerificationVector = p.prevShard.VerificationVector()
+		trustedZeroVerificationVector = p.state.zeroVerificationVector
+	} else if p.trustedAnchorID != 0 {
+		b, ok := r2b.Get(p.trustedAnchorID)
+		if !ok {
+			return nil, ErrFailed.WithMessage("missing message")
+		}
+		trustedMSP = b.PrevMSP
+		trustedVerificationVector = b.PrevVerificationVector
+		trustedZeroVerificationVector = b.ZeroVerificationVector
+	}
+	if trustedMSP != nil {
+		prevScheme, err := p.mspSharingScheme(group, trustedMSP)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create KW sharing scheme")
+		}
+		prevLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(trustedVerificationVector, trustedMSP)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create lifted dealer function")
+		}
+
+		zeroScheme, err := p.acSharingScheme(group, p.prevUnanimity)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create feldman sharing scheme")
+		}
+		zeroLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(trustedZeroVerificationVector, zeroScheme.MSP())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create lifted dealer function")
+		}
+
+		// check consistency of verification vectors
+		for id := range p.otherPrevShareholders() {
+			b, ok := r2b.Get(id)
+			if !ok {
+				return nil, ErrFailed.WithMessage("missing message")
+			}
+
+			if !b.PrevMSP.Equal(trustedMSP) || !b.PrevVerificationVector.Equal(trustedVerificationVector) || !b.ZeroVerificationVector.Equal(trustedZeroVerificationVector) {
+				return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("inconsistent verification vectors")
+			}
+
+			prevLiftedShare, err := prevLiftedDealerFunc.ShareOf(id)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("cannot compute previous share")
+			}
+			prevLiftedAdditiveShare, err := prevScheme.ConvertLiftedShareToAdditive(prevLiftedShare, p.prevUnanimity)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("cannot convert previous share to additive")
+			}
+			zeroLiftedShare, err := zeroLiftedDealerFunc.ShareOf(id)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("cannot compute zero share")
+			}
+			liftedShift, err := zeroScheme.ConvertLiftedShareToAdditive(zeroLiftedShare, p.prevUnanimity)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("cannot compute shift")
+			}
+
+			expectedPartialPk := prevLiftedAdditiveShare.Add(liftedShift).Value()
+			actualPartialPk, err := b.NextVerificationVectorContribution.Value().Get(0, 0)
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("cannot get partial public key")
+			}
+			if !actualPartialPk.Equal(expectedPartialPk) {
+				return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid verification vector contribution")
+			}
+		}
 	}
 
 	// This below should never fail if all per-sender checks above are correct.
-	// Keep the aggregate check anyway as a final sanity check before returning
-	// a shard to the caller.
-	finalPk, err := p.state.shareVerificationVector.Value().Get(0, 0)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot get final public key")
-	}
-	if !finalPk.Equal(pk) {
-		return nil, base.ErrAbort.WithMessage("inconsistent aggregated verification vector")
+	// Keep the aggregate check anyway (if anchor not provided) and as a final
+	// sanity check before returning a shard to the caller.
+	for id := range p.otherPrevShareholders() {
+		b, ok := r2b.Get(id)
+		if !ok {
+			return nil, ErrFailed.WithMessage("missing message")
+		}
+		oldPk, err := b.PrevVerificationVector.Value().Get(0, 0)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot get previous public key")
+		}
+		if !oldPk.Equal(newPk) {
+			return nil, base.ErrAbort.WithMessage("inconsistent previous verification vector")
+		}
 	}
 	if err := nextScheme.Verify(p.state.share, p.state.shareVerificationVector); err != nil {
 		return nil, base.ErrAbort.WithMessage("inconsistent aggregated share")
 	}
 
-	nextBaseShard, err := mpc.NewBaseShard(p.state.share, p.state.shareVerificationVector, mspMatrix)
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+	nextMspMatrix, err := accessstructures.InducedMSP(field, p.nextAccessStructures)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot get MSP")
+	}
+	nextBaseShard, err := mpc.NewBaseShard(p.state.share, p.state.shareVerificationVector, nextMspMatrix)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create base shard")
 	}

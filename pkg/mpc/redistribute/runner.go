@@ -29,8 +29,8 @@ type runner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] s
 
 // NewRunner constructs a network runner that executes the redistribution
 // protocol.
-func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, trustedDealerID sharing.ID, recoverers ds.Set[sharing.ID], prevShard *mpc.BaseShard[G, S], nextAccessStructure accessstructures.Monotone, prng io.Reader) (network.Runner[*mpc.BaseShard[G, S]], error) {
-	participant, err := NewParticipant(ctx, trustedDealerID, recoverers, prevShard, nextAccessStructure, prng)
+func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, recoverers ds.Set[sharing.ID], prevShard *mpc.BaseShard[G, S], nextAccessStructure accessstructures.Monotone, prng io.Reader, opts ...Option) (network.Runner[*mpc.BaseShard[G, S]], error) {
+	participant, err := NewParticipant(ctx, recoverers, prevShard, nextAccessStructure, prng, opts...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create participant")
 	}

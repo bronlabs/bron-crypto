@@ -14,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/redistribute/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
@@ -34,14 +33,11 @@ func testHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 	tb.Helper()
 
 	prng := pcg.NewRandomised()
-	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
-	secretValue, err := field.Random(prng)
-	require.NoError(tb, err)
 
 	shareholders := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
 	as, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(tb, err)
-	shards := testutils.Deal(tb, as, group, secretValue)
+	shards, secret := dealShards(tb, as, group)
 
 	recoverers := hashset.NewComparable[sharing.ID](2, 3).Freeze()
 	ctxs := session_testutils.MakeRandomContexts(tb, shareholders, prng)
@@ -51,7 +47,7 @@ func testHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 		if recoverers.Contains(id) {
 			shard = shards[id]
 		}
-		p, err := redistribute.NewParticipant(ctxs[id], 2, recoverers, shard, as, pcg.NewRandomised())
+		p, err := redistribute.NewParticipant(ctxs[id], recoverers, shard, as, pcg.NewRandomised(), redistribute.WithTrustedAnchorID(2))
 		require.NoError(tb, err)
 		participants[id] = p
 	}
@@ -93,6 +89,6 @@ func testHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 		shares := sliceutils.Map(ids, func(id sharing.ID) *kw.Share[S] { return newShards[id].Share() })
 		newSecret, err := scheme.Reconstruct(shares...)
 		require.NoError(tb, err)
-		require.True(tb, newSecret.Value().Equal(secretValue))
+		require.True(tb, newSecret.Value().Equal(secret.Value()))
 	}
 }

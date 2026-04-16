@@ -4,8 +4,9 @@
 //
 // Previous shareholders first run an interactive zero-sharing subprotocol, then
 // publish and distribute contributions that let next shareholders assemble fresh
-// shares of the same secret. Inconsistencies in the old metadata are checked
-// against a designated trusted dealer to support identifiable aborts.
+// shares of the same secret. If a trusted anchor is configured, inconsistencies
+// in the old metadata are checked against it to support identifiable aborts;
+// otherwise those metadata inconsistencies degrade to non-identifiable aborts.
 //
 // The protocol follows the verifiable redistribution approach of Wong and Wing,
 // adapted to the HJKY zero-sharing, Feldman-style verification, and MSP-based

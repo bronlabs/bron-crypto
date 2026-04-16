@@ -24,7 +24,7 @@ import (
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	ctx                  *session.Context
 	zeroParticipant      *hjky.Participant[G, S]
-	trustedDealerID      sharing.ID
+	trustedAnchorID      sharing.ID
 	prevShareholders     ds.Set[sharing.ID]
 	prevUnanimity        *unanimity.Unanimity
 	prevShard            *mpc.BaseShard[G, S]
@@ -43,21 +43,18 @@ type state[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 
 // NewParticipant constructs a redistribution participant.
 //
-// The caller supplies the current session context, a trusted dealer identifier,
-// the qualified previous-shareholder set from the previous access structure,
+// The caller supplies the current session context, the qualified
+// previous-shareholder set from the previous access structure,
 // the caller's previous shard, and the next access structure to redistribute
-// into. The trusted dealer must be one of the previous shareholders; whenever
-// inconsistencies in the old metadata are detected, they are checked against
-// that party to support identifiable aborts.
+// into. If configured through options, the trusted anchor must be one of the previous
+// shareholders; whenever inconsistencies in the old metadata are detected, they
+// are checked against that party to support identifiable aborts.
 //
 // The session quorum must equal the union of the previous shareholders and the
 // next access structure's shareholders.
-func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, trustedDealerID sharing.ID, prevShareholders ds.Set[sharing.ID], prevShard *mpc.BaseShard[G, S], nextAccessStructure accessstructures.Monotone, prng io.Reader) (*Participant[G, S], error) {
+func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](ctx *session.Context, prevShareholders ds.Set[sharing.ID], prevShard *mpc.BaseShard[G, S], nextAccessStructure accessstructures.Monotone, prng io.Reader, opts ...Option) (*Participant[G, S], error) {
 	if ctx == nil || prevShareholders == nil || nextAccessStructure == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments (nil)")
-	}
-	if !prevShareholders.Contains(trustedDealerID) {
-		return nil, ErrInvalidArgument.WithMessage("invalid arguments (trusted dealer not in shareholders)")
 	}
 	if prevShareholders.Contains(ctx.HolderID()) {
 		if prevShard == nil {
@@ -89,7 +86,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	p := &Participant[G, S]{
 		ctx:                  ctx,
 		zeroParticipant:      nil,
-		trustedDealerID:      trustedDealerID,
+		trustedAnchorID:      0,
 		prevShareholders:     prevShareholders,
 		prevUnanimity:        prevUnanimity,
 		prevShard:            prevShard,
@@ -99,6 +96,11 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 		state: state[G, S]{
 			round: 1,
 		},
+	}
+	for _, opt := range opts {
+		if err := opt(p); err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot apply option")
+		}
 	}
 
 	if prevShareholders.Contains(ctx.HolderID()) {

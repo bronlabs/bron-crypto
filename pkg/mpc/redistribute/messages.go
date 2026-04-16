@@ -61,7 +61,7 @@ func (m *Round1P2P[G, S]) Validate(p *Participant[G, S], fromID sharing.ID) erro
 // previous shareholders publish before next shareholders aggregate fresh
 // shares.
 type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	// PrevMSP is the MSP underlying the previous sharing that the trusted dealer
+	// PrevMSP is the MSP underlying the previous sharing that the trusted anchor
 	// claims was used for the existing shard.
 	PrevMSP *msp.MSP[S]
 	// PrevVerificationVector authenticates the sender's existing share under the
