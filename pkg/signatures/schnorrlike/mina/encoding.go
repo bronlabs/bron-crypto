@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 // Base58Check version prefixes for Mina key and signature encoding.
@@ -96,6 +97,11 @@ func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to parse x coordinate")
 	}
+	// The underlying SetBytes silently reduces an out-of-range x modulo the
+	// base field prime, so we enforce canonical encoding by round-tripping.
+	if _, isEq, _ := ct.CompareBytes(xBytesBE, x.Bytes()); isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("x is not canonical")
+	}
 
 	// Reconstruct point from x and y-parity
 	pkv, err := group.FromAffineX(x, yParity == 1)
@@ -166,6 +172,11 @@ func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 	skv, err := sf.FromBytes(scalarBytesBE)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
+	}
+	// The underlying SetBytes silently reduces an out-of-range scalar modulo
+	// the scalar field order, so we enforce canonical encoding by round-tripping.
+	if _, isEq, _ := ct.CompareBytes(scalarBytesBE, skv.Bytes()); isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("scalar is not canonical")
 	}
 	privateKey, err := NewPrivateKey(skv)
 	if err != nil {

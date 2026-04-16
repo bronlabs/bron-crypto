@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -225,6 +226,13 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	s, err := k256.NewScalarField().FromBytes(input[32:])
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid signature")
+	}
+	// BIP-340 §4.2: fail if s ≥ n. The underlying SetBytes silently reduces
+	// out-of-range inputs modulo n, so we enforce canonical encoding by
+	// round-tripping and rejecting on mismatch.
+	_, isEq, _ := ct.CompareBytes(input[32:], s.Bytes())
+	if isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("s is not canonical")
 	}
 	return &Signature{
 		E: nil,
@@ -543,6 +551,13 @@ func decodePoint(data []byte) (*k256.Point, error) {
 	p, err := curve.FromCompressed(slices.Concat([]byte{0x02}, data))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot decode point")
+	}
+	// BIP-340 §4.2 (lift_x): fail if x ≥ p. The curve decoder's SetBytes
+	// silently reduces out-of-range x modulo the base-field prime, so we
+	// enforce canonical encoding by round-tripping the compressed bytes.
+	_, isEq, _ := ct.CompareBytes(data, p.ToCompressed()[1:])
+	if isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("x is not canonical")
 	}
 
 	return p, nil
