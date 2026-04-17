@@ -48,9 +48,13 @@ func (r *runner) Run(rt *network.Router) (*Context, error) {
 	}
 
 	// round 2
-	r2uo, err := r.party.Round2(r2bi)
+	r2bo, r2uo, err := r.party.Round2(r2bi)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
+	}
+	r3bi, err := exchange.BroadcastExchange(rt, r2CorrelationID, quorum, r2bo)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
 	r3ui, err := exchange.UnicastExchange(rt, r2CorrelationID, r2uo)
 	if err != nil {
@@ -58,7 +62,7 @@ func (r *runner) Run(rt *network.Router) (*Context, error) {
 	}
 
 	// round 3
-	r3uo, err := r.party.Round3(r3ui)
+	r3uo, err := r.party.Round3(r3bi, r3ui)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
