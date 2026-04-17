@@ -138,6 +138,9 @@ func (ctx *Context) Transcript() transcripts.Transcript {
 
 // SubContext derives a new context for a subset quorum that includes this participant.
 func (ctx *Context) SubContext(subQuorum network.Quorum) (*Context, error) {
+	if subQuorum == nil || subQuorum.Size() < 2 {
+		return nil, ErrInvalidArgument.WithMessage("new quorum must be at least 2")
+	}
 	if !subQuorum.IsSubSet(hashset.NewComparable(ctx.sortedQuorum...).Freeze()) || !subQuorum.Contains(ctx.holderID) {
 		return nil, ErrInvalidArgument.WithMessage("new quorum is not a subset of the current quorum")
 	}
@@ -199,8 +202,7 @@ func (ctx *Context) Clone() *Context {
 	newTape := ctx.tape.Clone()
 	newSeeds := make(map[sharing.ID]*sha3.SHAKE)
 	for id, shake := range ctx.seeds {
-		clone := *shake
-		newSeeds[id] = &clone
+		newSeeds[id] = new(*shake)
 	}
 
 	return &Context{
@@ -214,7 +216,6 @@ func (ctx *Context) Clone() *Context {
 
 func (ctx *Context) Seeds() map[sharing.ID]io.Reader {
 	return maputils.MapValues(ctx.seeds, func(_ sharing.ID, shake *sha3.SHAKE) io.Reader {
-		clone := *shake
-		return &clone
+		return new(*shake)
 	})
 }

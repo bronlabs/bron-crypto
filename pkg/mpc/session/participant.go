@@ -22,6 +22,7 @@ const (
 	seedDomainSeparator    = "BRON_CRYPTO_SESSION-SEED"
 )
 
+// It's ok to hardcode it for hash commitment, as there's no trapdoor key possible.
 var commonCommitmentKey = hash_comm.Key{
 	'B', 'R', 'O', 'N', '_', 'C', 'R', 'Y', 'P', 'T', 'O', '_', 'N', 'O', 'T', 'H',
 	'I', 'N', 'G', '_', 'U', 'P', '_', 'M', 'Y', '_', 'S', 'L', 'E', 'E', 'V', 'E',
@@ -268,7 +269,7 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 		return nil, errs.Wrap(err).WithMessage("failed to create verifier")
 	}
 
-	// collect all source of entropy
+	// collect all sources of entropy
 	commonSeed := []byte(sessionDomainSeparator)
 	commonSeed = binary.LittleEndian.AppendUint64(commonSeed, uint64(len(p.sortedQuorum)))
 	for _, id := range p.sortedQuorum {

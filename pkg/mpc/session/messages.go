@@ -35,10 +35,10 @@ func (m *Round2Broadcast) Validate(*Participant, sharing.ID) error {
 		return ErrValidation.WithMessage("missing fields in Round2Broadcast message")
 	}
 	if m.CommonContribution == ([base.CollisionResistanceBytesCeil]byte{}) {
-		return ErrValidation.WithMessage("missing common seed in Round2Broadcast message")
+		return ErrValidation.WithMessage("missing common contribution in Round2Broadcast message")
 	}
 	if m.CommonContributionWitness == (hash_comm.Witness{}) {
-		return ErrValidation.WithMessage("missing common seed witness in Round2Broadcast message")
+		return ErrValidation.WithMessage("missing common contribution witness in Round2Broadcast message")
 	}
 
 	return nil
