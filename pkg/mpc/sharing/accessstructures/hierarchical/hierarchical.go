@@ -13,12 +13,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/birkhoff"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/internal"
+	sharingInternal "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
 // ID uniquely identifies a shareholder.
-type ID = internal.ID
+type ID = sharingInternal.ID
 
 // WithLevel constructs a hierarchical threshold level.
 //
@@ -113,8 +114,17 @@ func (h *HierarchicalConjunctiveThreshold) Shareholders() ds.Set[ID] {
 }
 
 // MaximalUnqualifiedSetsIter streams all maximal unqualified sets.
-func (*HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
-	panic("not implemented")
+//
+// This implementation is brute-force and should only be used for small access
+// structures. It also requires every shareholder ID in the access structure to
+// lie in the range [1, 64]; otherwise it panics.
+func (h *HierarchicalConjunctiveThreshold) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
+	maxUnqualifiedSetsIter, err := internal.BruteForceMaximalUnqualifiedSets(h.Shareholders(), h.IsQualified)
+	if err != nil {
+		panic(err)
+	}
+
+	return maxUnqualifiedSetsIter
 }
 
 func (h *HierarchicalConjunctiveThreshold) Rank(id ID) (int, error) {

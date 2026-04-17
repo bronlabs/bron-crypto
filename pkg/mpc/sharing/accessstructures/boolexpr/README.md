@@ -35,6 +35,10 @@ ac, _ := boolexpr.NewThresholdGateAccessStructure(
 qualified := ac.IsQualified(1, 2, 5, 6)
 ```
 
+`MaximalUnqualifiedSetsIter` is also available. Its current implementation is
+brute-force and intended only for small access structures, and it requires
+shareholder IDs to lie in the range `1..64`.
+
 ## MSP Induction
 
 `InducedMSP` converts a threshold-gate tree into a monotone span programme following Algorithm 1 of [[1]][1]:

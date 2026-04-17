@@ -9,4 +9,5 @@ var (
 	ErrType          = errs.New("type error")
 	ErrFailed        = errs.New("failed")
 	ErrSerialisation = errs.New("serialisation error")
+	ErrOverflow      = errs.New("overflow")
 )
