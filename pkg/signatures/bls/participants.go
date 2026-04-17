@@ -215,12 +215,14 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 	switch s.rogueKeyAlg {
 	case Basic:
 	case MessageAugmentation:
+		augmented := make([]Message, len(messages))
 		for i, message := range messages {
-			messages[i], err = AugmentMessage(message, s.privateKey.PublicKey().Value())
+			augmented[i], err = AugmentMessage(message, s.privateKey.PublicKey().Value())
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("could not augment message")
 			}
 		}
+		messages = augmented
 	case POP:
 		popv, err := popProve(s.privateKey.Value(), s.privateKey.PublicKey().Value(), s.signatureSubGroup, s.cipherSuite.GetPopDst(s.variant))
 		if err != nil {
@@ -264,12 +266,14 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 	switch s.rogueKeyAlg {
 	case Basic:
 	case MessageAugmentation:
+		augmented := make([]Message, len(messages))
 		for i, message := range messages {
-			messages[i], err = AugmentMessage(message, s.privateKey.PublicKey().Value())
+			augmented[i], err = AugmentMessage(message, s.privateKey.PublicKey().Value())
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("could not augment message")
 			}
 		}
+		messages = augmented
 	case POP:
 		popv, err := popProve(s.privateKey.Value(), s.privateKey.PublicKey().Value(), s.signatureSubGroup, s.cipherSuite.GetPopDst(s.variant))
 		if err != nil {

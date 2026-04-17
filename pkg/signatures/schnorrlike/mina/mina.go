@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
@@ -300,6 +301,11 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to parse R.x")
 	}
+	// The underlying SetBytes silently reduces an out-of-range x modulo the
+	// base field prime, so we enforce canonical encoding by round-tripping.
+	if _, isEq, _ := ct.CompareBytes(rxBytesBE, rx.Bytes()); isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("R.x is not canonical")
+	}
 
 	// Reconstruct R from x-coordinate
 	// Mina signatures always have R with even y-coordinate (parity=0)
@@ -317,6 +323,11 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 	s, err := sf.FromBytes(sBytesBE)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
+	}
+	// The underlying SetBytes silently reduces an out-of-range s modulo the
+	// scalar field order, so we enforce canonical encoding by round-tripping.
+	if _, isEq, _ := ct.CompareBytes(sBytesBE, s.Bytes()); isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("s is not canonical")
 	}
 
 	return &Signature{

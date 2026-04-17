@@ -102,7 +102,7 @@ func (m *ModulusBasic) modDivOdd(out, x, y *Nat) ct.Bool {
 
 	// inv = y^{-1} mod m
 	var yInv Nat
-	m.ModInv(&yInv, &yr)
+	ok &= m.ModInv(&yInv, &yr)
 
 	// out = x * inv mod m
 	var prod Nat

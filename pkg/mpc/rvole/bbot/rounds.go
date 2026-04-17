@@ -45,6 +45,12 @@ func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b 
 	if err != nil {
 		return nil, nilSE, errs.Wrap(err).WithMessage("cannot run round 2 of receiver")
 	}
+	if receiverOutput.InferredXi() != bob.xi {
+		return nil, nilSE, ErrValidation.WithMessage("OT receiver output xi mismatch: got %d, expected %d", receiverOutput.InferredXi(), bob.xi)
+	}
+	if receiverOutput.InferredL() != bob.suite.l+bob.rho {
+		return nil, nilSE, ErrValidation.WithMessage("OT receiver output l mismatch: got %d, expected %d", receiverOutput.InferredL(), bob.suite.l+bob.rho)
+	}
 	bob.beta = receiverOutput.Choices
 	bob.gamma = receiverOutput.Messages
 
@@ -76,6 +82,12 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 	senderOutput, err := alice.sender.Round3(r2Out.OtR2)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot send round 3 of receiver")
+	}
+	if senderOutput.InferredXi() != alice.xi {
+		return nil, nil, ErrValidation.WithMessage("OT sender output xi mismatch: got %d, expected %d", senderOutput.InferredXi(), alice.xi)
+	}
+	if senderOutput.InferredL() != alice.suite.l+alice.rho {
+		return nil, nil, ErrValidation.WithMessage("OT sender output l mismatch: got %d, expected %d", senderOutput.InferredL(), alice.suite.l+alice.rho)
 	}
 	alice.alpha = senderOutput.Messages
 
@@ -206,7 +218,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[G, S]) (d []S, err error) {
 	}
 	_, isEq, _ := ct.CompareBytes(r3Out.Mu, mu)
 	if isEq != ct.True {
-		return nil, base.ErrAbort.WithMessage("consistency check failed")
+		return nil, base.ErrAbort.WithMessage("consistency check failed") // the call site will treat this as identifiable. In the context of RVOLE, the culprit it trivially Alice.
 	}
 
 	d = make([]S, bob.suite.l)

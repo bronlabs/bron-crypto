@@ -38,6 +38,9 @@ func NewShare[E algebra.GroupElement[E]](id sharing.ID, v map[bitset.ImmutableBi
 	if v == nil {
 		return nil, sharing.ErrArgument.WithMessage("share value map cannot be nil")
 	}
+	if len(v) == 0 {
+		return nil, sharing.ErrArgument.WithMessage("share value map cannot be empty")
+	}
 	for clause, value := range v {
 		if utils.IsNil(value) {
 			return nil, sharing.ErrArgument.WithMessage("share value map cannot contain nil values (clause %v)", clause)
@@ -144,8 +147,8 @@ func (s *Share[E]) ToAdditive(to *unanimity.Unanimity) (*additive.Share[E], erro
 	if !to.Shareholders().Contains(s.id) {
 		return nil, sharing.ErrMembership.WithMessage("share ID %d is not in access structure", s.id)
 	}
-
-	shareValue := s.group().OpIdentity()
+	group := algebra.StructureMustBeAs[algebra.Group[E]](slices.Collect(maps.Values(s.v))[0].Structure())
+	shareValue := group.OpIdentity()
 	for maxUnqualifiedSet, additiveShare := range s.v {
 		p, err := pivot(maxUnqualifiedSet, to)
 		if err != nil {
@@ -209,11 +212,6 @@ func (s *Share[E]) UnmarshalCBOR(data []byte) error {
 	s.id = ss.id
 	s.v = ss.v
 	return nil
-}
-
-func (s *Share[E]) group() algebra.Group[E] {
-	v := algebra.StructureMustBeAs[algebra.Group[E]](slices.Collect(maps.Values(s.v))[0].Structure())
-	return v
 }
 
 func pivot(unqualifiedSet bitset.ImmutableBitSet[sharing.ID], target *unanimity.Unanimity) (sharing.ID, error) {

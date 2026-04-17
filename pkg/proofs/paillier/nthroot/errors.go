@@ -7,4 +7,6 @@ var (
 	ErrFailed = errs.New("failed")
 	// ErrVerificationFailed signals a failed proof verification.
 	ErrVerificationFailed = errs.New("verification failed")
+	// ErrInvalidArgument indicates that an invalid argument was provided to a function.
+	ErrInvalidArgument = errs.New("invalid argument")
 )

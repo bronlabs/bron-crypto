@@ -25,6 +25,15 @@ func (bob *Bob[P, B, S]) Round1() (r1 *Round1P2P[P, B, S], b S, err error) {
 	if err != nil {
 		return nil, nilS, errs.Wrap(err).WithMessage("cannot run round 2 of receiver")
 	}
+	if receiverOutput.InferredXi() != bob.xi {
+		return nil, nilS, ErrValidation.WithMessage("OT receiver output xi mismatch: got %d, expected %d", receiverOutput.InferredXi(), bob.xi)
+	}
+	if receiverOutput.InferredL() != bob.suite.l+bob.rho {
+		return nil, nilS, ErrValidation.WithMessage("OT receiver output l mismatch: got %d, expected %d", receiverOutput.InferredL(), bob.suite.l+bob.rho)
+	}
+	if receiverOutput.InferredMessageBytesLen() == 0 {
+		return nil, nilS, ErrValidation.WithMessage("OT receiver output has inconsistent or empty message byte lengths")
+	}
 	bob.beta = receiverOutput.Choices
 	bob.gamma = make([][]S, len(receiverOutput.Messages))
 	for xi, messages := range receiverOutput.Messages {
@@ -65,6 +74,15 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P[P, B, S], a []S) (*Round2P2P[P
 	senderOutput, err := alice.sender.Round2(r1.OtR1)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run round 2 of receiver")
+	}
+	if senderOutput.InferredXi() != alice.xi {
+		return nil, nil, ErrValidation.WithMessage("OT sender output xi mismatch: got %d, expected %d", senderOutput.InferredXi(), alice.xi)
+	}
+	if senderOutput.InferredL() != alice.suite.l+alice.rho {
+		return nil, nil, ErrValidation.WithMessage("OT sender output l mismatch: got %d, expected %d", senderOutput.InferredL(), alice.suite.l+alice.rho)
+	}
+	if senderOutput.InferredMessageBytesLen() == 0 {
+		return nil, nil, ErrValidation.WithMessage("OT sender output has inconsistent or empty message byte lengths")
 	}
 	alice.alpha = make([][2][]S, len(senderOutput.Messages))
 	for xi, messages := range senderOutput.Messages {
@@ -211,7 +229,7 @@ func (bob *Bob[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (d []S, err error) {
 	}
 	_, isEq, _ := ct.CompareBytes(r2.Mu, mu)
 	if isEq != ct.True {
-		return nil, base.ErrAbort.WithMessage("consistency check failed")
+		return nil, base.ErrAbort.WithMessage("consistency check failed") // the call site will treat this as identifiable. In the context of RVOLE, the culprit it trivially Alice.
 	}
 
 	d = make([]S, bob.suite.l)

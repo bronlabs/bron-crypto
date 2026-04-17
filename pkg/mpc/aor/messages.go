@@ -27,9 +27,12 @@ type Round2Broadcast struct {
 	Witness hash_comm.Witness `cbor:"witness"`
 }
 
-func (m *Round2Broadcast) Validate(*Participant, sharing.ID) error {
+func (m *Round2Broadcast) Validate(p *Participant, _ sharing.ID) error {
 	if m == nil {
 		return ErrValidation.WithMessage("missing fields in Round2Broadcast message")
+	}
+	if len(m.Message) != p.size {
+		return ErrValidation.WithMessage("invalid message length in Round2Broadcast message. got :%d, need :%d", len(m.Message), p.size)
 	}
 	if ct.SliceIsZero(m.Message) == ct.True {
 		return ErrValidation.WithMessage("missing message in Round2Broadcast message")

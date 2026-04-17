@@ -96,8 +96,8 @@ func (n *Node) UnmarshalCBOR(data []byte) error {
 	if dto == nil {
 		return internal.ErrSerialisation.WithMessage("nil Node data")
 	}
-	if dto.Kind == gate && (dto.Threshold < 1 || len(dto.Children) == 0) {
-		return internal.ErrSerialisation.WithMessage("invalid gate node: threshold must be positive and children must not be empty")
+	if dto.Kind == gate && (dto.Threshold < 1 || len(dto.Children) == 0 || dto.Threshold > len(dto.Children)) {
+		return internal.ErrSerialisation.WithMessage("invalid gate node: threshold must be positive and at most the number of children")
 	}
 	if dto.Kind == attribute && dto.Attr == 0 {
 		return internal.ErrSerialisation.WithMessage("invalid attribute node: attr must be non-zero")

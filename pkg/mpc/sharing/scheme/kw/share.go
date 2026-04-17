@@ -28,7 +28,7 @@ type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
 // NewShare creates a share for the given holder ID with the provided values.
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v ...FE) (*Share[FE], error) {
 	if id == 0 || len(v) == 0 || sliceutils.Any(v, utils.IsNil) {
-		return nil, sharing.ErrIsNil.WithMessage("id or value is nil")
+		return nil, sharing.ErrArgument.WithMessage("invalid share parameters: ID cannot be zero, value vector cannot be nil or empty")
 	}
 	return &Share[FE]{
 		id: id,
