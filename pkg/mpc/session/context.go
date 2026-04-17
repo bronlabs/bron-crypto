@@ -42,12 +42,15 @@ func NewContext(id sharing.ID, quorum network.Quorum, commonSeed []byte, pairwis
 	if id < 1 || quorum == nil || pairwiseSeeds == nil || quorum.Size() < 2 || !quorum.Contains(id) {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}
+	if len(commonSeed) < base.CollisionResistanceBytesCeil {
+		return nil, ErrInvalidArgument.WithMessage("not enough entropy in common seed")
+	}
 	for i := range quorum.Iter() {
 		if i == id {
 			continue
 		}
-		if _, ok := pairwiseSeeds[i]; !ok {
-			return nil, ErrInvalidArgument.WithMessage("missing pairwise seed for %d", i)
+		if s, ok := pairwiseSeeds[i]; !ok || len(s) < base.CollisionResistanceBytesCeil {
+			return nil, ErrInvalidArgument.WithMessage("missing or not enough entropy for pairwise seed")
 		}
 	}
 
@@ -196,7 +199,8 @@ func (ctx *Context) Clone() *Context {
 	newTape := ctx.tape.Clone()
 	newSeeds := make(map[sharing.ID]*sha3.SHAKE)
 	for id, shake := range ctx.seeds {
-		newSeeds[id] = new(*shake)
+		clone := *shake
+		newSeeds[id] = &clone
 	}
 
 	return &Context{
