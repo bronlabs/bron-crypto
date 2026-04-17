@@ -14,12 +14,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/internal"
-	sharingIternal "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
+	sharingInternal "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 )
 
 // ID uniquely identifies a shareholder.
-type ID = sharingIternal.ID
+type ID = sharingInternal.ID
 
 // WithLevel constructs a hierarchical threshold level.
 //

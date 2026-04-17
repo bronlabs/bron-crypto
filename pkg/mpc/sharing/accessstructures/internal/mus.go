@@ -5,21 +5,15 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/bronlabs/errs-go/errs"
-
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bitset"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	sharingInternal "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
-const maxShareholders = 64
-
-var (
-	ErrInvalidArgument = errs.New("invalid argument")
-	ErrOverflow        = errs.New("overflow")
-)
+const maxShareholderID = 64
 
 // BruteForceMaximalUnqualifiedSets returns an iterator over all maximal
 // unqualified subsets of shareholders by exhaustive search.
@@ -38,12 +32,15 @@ var (
 // It returns ErrInvalidArgument for nil/empty inputs and ErrOverflow when any
 // shareholder ID exceeds 64.
 func BruteForceMaximalUnqualifiedSets(shareholders ds.Set[sharing.ID], isQualified func(ids ...sharing.ID) bool) (iter.Seq[ds.Set[sharing.ID]], error) {
-	if shareholders == nil || isQualified == nil || shareholders.Size() < 1 {
-		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+	if shareholders == nil || isQualified == nil {
+		return nil, sharingInternal.ErrIsNil.WithMessage("invalid arguments")
+	}
+	if shareholders.Size() == 0 {
+		return nil, sharingInternal.ErrValue.WithMessage("shareholders is empty")
 	}
 	sortedShareholders := slices.Sorted(shareholders.Iter())
-	if sortedShareholders[len(sortedShareholders)-1] > maxShareholders {
-		return nil, ErrOverflow.WithMessage("too many shareholders")
+	if sortedShareholders[len(sortedShareholders)-1] > maxShareholderID {
+		return nil, sharingInternal.ErrOverflow.WithMessage("shareholder ID exceeds 64")
 	}
 
 	muss := make(map[bitset.BitSet[sharing.ID]]struct{})
