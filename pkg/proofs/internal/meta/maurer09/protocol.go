@@ -162,7 +162,10 @@ func (p *Protocol[I, P]) ComputeProverCommitment(_ *Statement[I], _ *Witness[P])
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample element group")
 	}
-	a := p.oneWayHomomorphism(s)
+	a, err := p.oneWayHomomorphism(s)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to compute homomorphism")
+	}
 
 	return &Commitment[I]{A: a}, &State[P]{S: s}, nil
 }
@@ -189,7 +192,11 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to compute image scalar multiplication")
 	}
-	if !p.oneWayHomomorphism(response.Z).Equal(commitment.A.Op(cx)) {
+	phiZ, err := p.oneWayHomomorphism(response.Z)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to compute homomorphism")
+	}
+	if !phiZ.Equal(commitment.A.Op(cx)) {
 		return ErrVerificationFailed.WithMessage("invalid response")
 	}
 
@@ -209,7 +216,11 @@ func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes si
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to compute image scalar multiplication")
 	}
-	a := p.oneWayHomomorphism(z).Op(cXInv)
+	a, err := p.oneWayHomomorphism(z)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to compute homomorphism")
+	}
+	a = a.Op(cXInv)
 
 	return &Commitment[I]{A: a}, &Response[P]{Z: z}, nil
 }
@@ -263,7 +274,11 @@ func (p *Protocol[I, P]) ValidateStatement(statement *Statement[I], witness *Wit
 	if statement == nil || witness == nil {
 		return ErrInvalidArgument.WithMessage("invalid arguments")
 	}
-	if !p.oneWayHomomorphism(witness.W).Equal(statement.X) {
+	phiW, err := p.oneWayHomomorphism(witness.W)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to compute homomorphism")
+	}
+	if !phiW.Equal(statement.X) {
 		return ErrValidationFails.WithMessage("invalid statement")
 	}
 

@@ -146,7 +146,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		return nil, errs.Wrap(err).WithMessage("cannot create generator row 3")
 	}
 
-	homomorphism := func(w *constructions.FiniteDirectPowerRingElement[S]) *constructions.FiniteDirectPowerGroupElement[G] {
+	homomorphism := func(w *constructions.FiniteDirectPowerRingElement[S]) (*constructions.FiniteDirectPowerGroupElement[G], error) {
 		// (x, y) * s ==> scalar multiply
 		// (x, y) * (s1, s2) == (s1 x , s2 y) ==> scalar diagonal
 		x1 := row1.ScalarDiagonal(w).CoDiagonal()
@@ -154,9 +154,9 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		x3 := row3.ScalarDiagonal(w).CoDiagonal()
 		result, err := powerGroup.New(x1, x2, x3)
 		if err != nil {
-			panic(errs.Wrap(err).WithMessage("cannot create homomorphism output"))
+			return nil, errs.Wrap(err).WithMessage("cannot create homomorphism output")
 		}
-		return result
+		return result, nil
 	}
 
 	challengeByteLen := base.ComputationalSecurityBytesCeil

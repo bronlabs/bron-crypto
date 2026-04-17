@@ -105,8 +105,11 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create direct sum module element for generators")
 	}
-	homomorphism := func(s *constructions.FiniteDirectPowerRingElement[S]) G {
-		return generatorsVector.ScalarDiagonal(s).CoDiagonal()
+	homomorphism := func(s *constructions.FiniteDirectPowerRingElement[S]) (G, error) {
+		if s == nil {
+			return *new(G), ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
+		}
+		return generatorsVector.ScalarDiagonal(s).CoDiagonal(), nil
 	}
 
 	l, err := num.N().FromBytes(group.Order().Bytes())

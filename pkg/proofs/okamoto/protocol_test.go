@@ -447,7 +447,8 @@ func testAnchor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 	for range 8 {
 		x, err := curve.Random(pcg.NewRandomised())
 		require.NoError(tb, err)
-		lhs := phi(anchor.PreImage(x))
+		lhs, err := phi(anchor.PreImage(x))
+		require.NoError(tb, err)
 		rhs := algebrautils.ScalarMul(x, anchor.L())
 		require.True(tb, lhs.Equal(rhs))
 	}

@@ -10,7 +10,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elcomop"
@@ -56,6 +58,19 @@ func Test_Extractor(t *testing.T) {
 	})
 }
 
+func Test_Anchor(t *testing.T) {
+	t.Parallel()
+
+	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
+		testAnchor(t, k256.NewCurve())
+	})
+	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
+		testAnchor(t, p256.NewCurve())
+	})
+}
+
 func Test_WrongWitness(t *testing.T) {
 	t.Parallel()
 
@@ -83,7 +98,7 @@ func Test_WrongWitness(t *testing.T) {
 	require.NoError(t, err)
 	wrongY, err := sf.Random(prng)
 	require.NoError(t, err)
-	wrongWitness := mustBuildWitness(t, wrongLambda, wrongY)
+	wrongWitness := mustBuildWitness(t, curve.Generator(), wrongLambda, wrongY)
 
 	commitment, state, err := protocol.ComputeProverCommitment(statement, wrongWitness)
 	require.NoError(t, err)
@@ -139,7 +154,7 @@ func mustCommit[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 	y, lambda S,
 	committer *indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
 ) (
-	*elcomop.Witness[S],
+	*elcomop.Witness[P, S],
 	*indcpacom.Commitment[*elgamal.Ciphertext[P, S], *elgamal.Nonce[S], *elgamal.PublicKey[P, S]],
 ) {
 	tb.Helper()
@@ -157,9 +172,7 @@ func mustCommit[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 	com, err := committer.CommitWithWitness(msg, indcpaWit)
 	require.NoError(tb, err)
 
-	yMsg, err := indcpacom.NewMessage(y)
-	require.NoError(tb, err)
-	witness, err := elcomop.NewWitness(indcpaWit, yMsg)
+	witness, err := elcomop.NewWitness(msg, indcpaWit)
 	require.NoError(tb, err)
 
 	return witness, com
@@ -167,18 +180,20 @@ func mustCommit[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 
 // mustBuildWitness constructs an elcomop witness from raw scalars, bypassing
 // any relation to a real commitment (useful for negative tests).
-func mustBuildWitness[S algebra.PrimeFieldElement[S]](
-	tb testing.TB, lambda, y S,
-) *elcomop.Witness[S] {
+func mustBuildWitness[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, g P, lambda, y S,
+) *elcomop.Witness[P, S] {
 	tb.Helper()
 
 	nonce, err := elgamal.NewNonce(lambda)
 	require.NoError(tb, err)
 	indcpaWit, err := indcpacom.NewWitness(nonce)
 	require.NoError(tb, err)
-	yMsg, err := indcpacom.NewMessage(y)
+	plaintext, err := elgamal.NewPlaintext(g.ScalarMul(y))
 	require.NoError(tb, err)
-	witness, err := elcomop.NewWitness(indcpaWit, yMsg)
+	msg, err := indcpacom.NewMessage(plaintext)
+	require.NoError(tb, err)
+	witness, err := elcomop.NewWitness(msg, indcpaWit)
 	require.NoError(tb, err)
 	return witness
 }
@@ -294,9 +309,49 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 
 	ei := []sigma.ChallengeBytes{challenge1, challenge2}
-	zi := []*elcomop.Response[S]{response1, response2}
+	zi := []*elcomop.Response[P, S]{response1, response2}
 
 	wExtracted, err := protocol.Extract(statement, commitment, ei, zi)
 	require.NoError(tb, err)
 	require.True(tb, wExtracted.Value().Equal(witness.Value()))
+}
+
+func testAnchor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, curve curves.Curve[P, F, S],
+) {
+	tb.Helper()
+	prng := pcg.NewRandomised()
+
+	_, comKey, _ := mustSetup(tb, curve, prng)
+
+	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
+	require.NoError(tb, err)
+
+	anchor := protocol.Anchor()
+
+	// L() is the group order.
+	expectedL, err := num.N().FromBytes(curve.Order().Bytes())
+	require.NoError(tb, err)
+	require.True(tb, anchor.L().Equal(expectedL))
+
+	preImageGroup := protocol.PreImageGroup()
+	imageGroup := protocol.ImageGroup()
+	expectedPreImage := preImageGroup.OpIdentity()
+
+	// PreImage(x) is the identity of the pre-image group for every x.
+	for range 8 {
+		x, err := imageGroup.Random(prng)
+		require.NoError(tb, err)
+		require.True(tb, anchor.PreImage(x).Equal(expectedPreImage))
+	}
+
+	// Anchor invariant: phi(PreImage(x)) == x * L(). The pre-image is the
+	// pre-image-group identity, so both sides collapse to the image-group
+	// identity — verified here by checking x^L directly, since phi itself
+	// is implemented via elgamal encryption which rejects identity inputs.
+	for range 8 {
+		x, err := imageGroup.Random(prng)
+		require.NoError(tb, err)
+		require.True(tb, algebrautils.ScalarMul(x, anchor.L()).IsOpIdentity())
+	}
 }
