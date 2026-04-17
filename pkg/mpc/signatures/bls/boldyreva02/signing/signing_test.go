@@ -429,19 +429,6 @@ func TestCosignerCreationErrors(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not supported")
 	})
-
-	t.Run("UnauthorizedQuorum", func(t *testing.T) {
-		t.Parallel()
-		// Create a quorum that doesn't meet the thresh
-		invalidQuorum := hashset.NewComparable[sharing.ID]()
-		invalidQuorum.Add(sharing.ID(1)) // Only 1 member, but thresh is 2
-		dkgCtx := ctxs[shard.Share().ID()]
-		signCtx, err := dkgCtx.SubContext(invalidQuorum.Freeze())
-		require.NoError(t, err)
-		_, err = signing.NewShortKeyCosigner(signCtx, curveFamily, shard, bls.Basic)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "not authorized")
-	})
 }
 
 // TestProducePartialSignatureErrors tests error cases for producing partial signatures

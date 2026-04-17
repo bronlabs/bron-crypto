@@ -36,18 +36,20 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	r2bi := ntu.MapBroadcastO2I(t, participants, r1bo)
+	r2bo := make(map[sharing.ID]*session.Round2Broadcast)
 	r2uo := make(map[sharing.ID]network.RoundMessages[*session.Round2P2P, *session.Participant])
 	for _, p := range participants {
 		var err error
-		r2uo[p.SharingID()], err = p.Round2(r2bi[p.SharingID()])
+		r2bo[p.SharingID()], r2uo[p.SharingID()], err = p.Round2(r2bi[p.SharingID()])
 		require.NoError(t, err)
 	}
 
+	r3bi := ntu.MapBroadcastO2I(t, participants, r2bo)
 	r3ui := ntu.MapUnicastO2I(t, participants, r2uo)
 	r3uo := make(map[sharing.ID]network.RoundMessages[*session.Round3P2P, *session.Participant])
 	for _, p := range participants {
 		var err error
-		r3uo[p.SharingID()], err = p.Round3(r3ui[p.SharingID()])
+		r3uo[p.SharingID()], err = p.Round3(r3bi[p.SharingID()], r3ui[p.SharingID()])
 		require.NoError(t, err)
 	}
 
@@ -93,10 +95,11 @@ func Test_HappyPath(t *testing.T) {
 	})
 }
 
-func TestMessageValidationDoesntAcceptsZeroValuedPayloads(t *testing.T) {
+func TestMessageValidationDoesNotAcceptZeroValuedPayloads(t *testing.T) {
 	t.Parallel()
 
 	require.Error(t, (&session.Round1Broadcast{}).Validate(nil, 0))
+	require.Error(t, (&session.Round2Broadcast{}).Validate(nil, 0))
 	require.Error(t, (&session.Round2P2P{}).Validate(nil, 0))
 	require.Error(t, (&session.Round3P2P{}).Validate(nil, 0))
 }
