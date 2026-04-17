@@ -44,6 +44,19 @@ Note that the following protocols are special cases of this protocol:
 - When a trusted anchor is configured, metadata that must agree globally is compared against that anchor’s round-2 message, and inconsistencies are attributed to the offending sender.
 - If no trusted anchor is configured, the protocol still performs aggregate consistency checks before returning a shard, but some metadata failures degrade to non-identifiable aborts.
 
+### Trust Model for the Anchor
+
+Configuring `trustedAnchorID` is an explicit, caller-chosen trust extension: the
+anchor's broadcast is treated as the ground truth for old-metadata checks, and
+the next-only shareholder has no independent way to recompute the old MSP or
+previous verification vector. Concretely, if the anchor is dishonest it can
+make a given next-only shareholder accept a fabricated reference, and collude
+with all other previous shareholders to feed the same reference consistently.
+This is not a soundness gap in the redistribution — it is the designed cost of
+allowing a party without a previous share to attribute blame. Callers who are
+unwilling to extend that trust to a single prior shareholder should leave the
+anchor unset and accept non-identifiable aborts for old-metadata failures.
+
 ## Usage
 
 1. Build a `session.Context` whose quorum contains every participant in the protocol.

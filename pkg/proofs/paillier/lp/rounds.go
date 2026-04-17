@@ -1,14 +1,11 @@
 package lp
 
 import (
-	"slices"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
@@ -33,16 +30,24 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, errs.Wrap(err).WithMessage("encryption failed")
 	}
 
-	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroot.Statement[*modular.SimpleModulus] {
-		return nthroot.NewStatement(x.Value())
-	}))...)
+	xv := make([]*nthroot.Statement[*modular.SimpleModulus], verifier.k)
+	for i, c := range ciphertexts {
+		xv[i], err = nthroot.NewStatement(c.Value())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create statement for ciphertext")
+		}
+	}
+	verifier.state.x = sigand.ComposeStatements(xv...)
 	witnesses := make([]*nthroot.Witness[*modular.SimpleModulus], len(nonces))
 	for i, y := range nonces {
 		embeddedNonce, err := verifier.paillierPublicKey.Group().EmbedRSA(y.Value())
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot embed nonce as RSA element")
 		}
-		witnesses[i] = nthroot.NewWitness(embeddedNonce)
+		witnesses[i], err = nthroot.NewWitness(embeddedNonce)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create witness for nonce")
+		}
 	}
 	verifier.state.y = sigand.ComposeWitnesses(witnesses...)
 	verifier.state.rootsProver, err = sigma.NewProver(verifier.ctx, verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)

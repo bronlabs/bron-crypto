@@ -10,7 +10,8 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/internal"
+	sharingInternal "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 )
 
 // GateKind distinguishes between internal threshold gates and attribute leaves in the threshold-gate tree.
@@ -25,7 +26,7 @@ type Node struct {
 	kind GateKind
 
 	// for attribute gates
-	attr internal.ID
+	attr sharingInternal.ID
 
 	// for gate nodes
 	threshold int
@@ -36,7 +37,7 @@ type Node struct {
 //
 // Attribute leaves are the terminal nodes of a threshold-gate access tree and
 // correspond to the rows of the induced MSP.
-func ID(id internal.ID) *Node {
+func ID(id sharingInternal.ID) *Node {
 	//nolint:exhaustruct // only attribute properties set
 	return &Node{
 		kind: attribute,
@@ -78,7 +79,7 @@ func Or(nodes ...*Node) *Node {
 // coalition is qualified when it satisfies the root gate.
 type ThresholdGateAccessStructure struct {
 	root         *Node
-	shareholders map[internal.ID]bool
+	shareholders map[sharingInternal.ID]bool
 }
 
 // NewThresholdGateAccessStructure constructs an access structure from a
@@ -90,7 +91,7 @@ func NewThresholdGateAccessStructure(thresholdGateTreeRoot *Node) (*ThresholdGat
 		return nil, errs.Wrap(err).WithMessage("invalid threshold-gate tree")
 	}
 
-	shareholders := make(map[internal.ID]bool)
+	shareholders := make(map[sharingInternal.ID]bool)
 	allShareholders(thresholdGateTreeRoot, shareholders)
 	as := &ThresholdGateAccessStructure{
 		root:         thresholdGateTreeRoot,
@@ -100,8 +101,8 @@ func NewThresholdGateAccessStructure(thresholdGateTreeRoot *Node) (*ThresholdGat
 }
 
 // IsQualified reports whether the given shareholder IDs satisfy the threshold gates.
-func (a *ThresholdGateAccessStructure) IsQualified(ids ...internal.ID) bool {
-	shareholders := map[internal.ID]bool{}
+func (a *ThresholdGateAccessStructure) IsQualified(ids ...sharingInternal.ID) bool {
+	shareholders := map[sharingInternal.ID]bool{}
 	for _, id := range ids {
 		shareholders[id] = true
 	}
@@ -110,14 +111,22 @@ func (a *ThresholdGateAccessStructure) IsQualified(ids ...internal.ID) bool {
 
 // Shareholders returns the set of all shareholder IDs that occur as attribute
 // leaves in the tree.
-func (a *ThresholdGateAccessStructure) Shareholders() ds.Set[internal.ID] {
+func (a *ThresholdGateAccessStructure) Shareholders() ds.Set[sharingInternal.ID] {
 	return hashset.NewComparable(slices.Collect(maps.Keys(a.shareholders))...).Freeze()
 }
 
 // MaximalUnqualifiedSetsIter streams maximal unqualified sets of the access structure.
-func (*ThresholdGateAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[internal.ID]] {
-	// TODO implement me
-	panic("implement me")
+//
+// This implementation is brute-force and should only be used for small access
+// structures. It also requires every shareholder ID in the access structure to
+// lie in the range [1, 64]; otherwise it panics.
+func (a *ThresholdGateAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[sharingInternal.ID]] {
+	maxUnqualifiedSetsIter, err := internal.BruteForceMaximalUnqualifiedSets(a.Shareholders(), a.IsQualified)
+	if err != nil {
+		panic(err)
+	}
+
+	return maxUnqualifiedSetsIter
 }
 
 // CountLeaves returns the number of attribute leaves in the threshold-gate
@@ -130,28 +139,28 @@ func (a *ThresholdGateAccessStructure) CountLeaves() int {
 
 func checkTree(node *Node) error {
 	if node == nil {
-		return internal.ErrIsNil.WithMessage("node is nil")
+		return sharingInternal.ErrIsNil.WithMessage("node is nil")
 	}
 	if node.kind == attribute {
 		if node.attr == 0 {
-			return internal.ErrValue.WithMessage("sharing ID cannot be 0")
+			return sharingInternal.ErrValue.WithMessage("sharing ID cannot be 0")
 		}
 		return nil
 	}
 	if node.kind == gate {
 		if node.threshold <= 0 {
-			return internal.ErrValue.WithMessage("threshold must be positive")
+			return sharingInternal.ErrValue.WithMessage("threshold must be positive")
 		}
 		if node.threshold > len(node.children) {
-			return internal.ErrValue.WithMessage("threshold must be less than or equal to the number of children")
+			return sharingInternal.ErrValue.WithMessage("threshold must be less than or equal to the number of children")
 		}
 		attrChildren := sliceutils.Filter(node.children, func(child *Node) bool { return child.kind == attribute })
-		uniqueAttrChildren := make(map[internal.ID]bool)
+		uniqueAttrChildren := make(map[sharingInternal.ID]bool)
 		for _, child := range attrChildren {
 			uniqueAttrChildren[child.attr] = true
 		}
 		if len(uniqueAttrChildren) != len(attrChildren) {
-			return internal.ErrValue.WithMessage("threshold-gate tree must not contain duplicate attribute nodes")
+			return sharingInternal.ErrValue.WithMessage("threshold-gate tree must not contain duplicate attribute nodes")
 		}
 
 		for _, child := range node.children {
@@ -162,10 +171,10 @@ func checkTree(node *Node) error {
 		return nil
 	}
 
-	return internal.ErrValue.WithMessage("unknown node kind")
+	return sharingInternal.ErrValue.WithMessage("unknown node kind")
 }
 
-func allShareholders(node *Node, shareholders map[internal.ID]bool) {
+func allShareholders(node *Node, shareholders map[sharingInternal.ID]bool) {
 	if node == nil || (node.kind != gate && node.kind != attribute) {
 		return
 	}
@@ -179,7 +188,7 @@ func allShareholders(node *Node, shareholders map[internal.ID]bool) {
 	}
 }
 
-func treeEval(node *Node, ids map[internal.ID]bool) bool {
+func treeEval(node *Node, ids map[sharingInternal.ID]bool) bool {
 	if node == nil || (node.kind != gate && node.kind != attribute) {
 		return false
 	}

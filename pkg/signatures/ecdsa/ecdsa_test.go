@@ -252,3 +252,61 @@ func Test_RFC6979(t *testing.T) {
 		require.Equal(t, v.s, strings.ToUpper(hex.EncodeToString(signature.S().Bytes())))
 	}
 }
+
+func Test_VerifyNonMalleably(t *testing.T) {
+	t.Parallel()
+	prng := pcg.NewRandomised()
+	curve := k256.NewCurve()
+	suite, err := ecdsa.NewSuite(curve, sha256.New)
+	require.NoError(t, err)
+
+	var message [64]byte
+	_, err = io.ReadFull(prng, message[:])
+	require.NoError(t, err)
+
+	skValue, err := k256.NewScalarField().Random(prng)
+	require.NoError(t, err)
+	pkValue := k256.NewCurve().ScalarBaseMul(skValue)
+	pk, err := ecdsa.NewPublicKey(pkValue)
+	require.NoError(t, err)
+	sk, err := ecdsa.NewPrivateKey(skValue, pk)
+	require.NoError(t, err)
+
+	scheme, err := ecdsa.NewScheme(suite, prng)
+	require.NoError(t, err)
+	signer, err := scheme.Signer(sk)
+	require.NoError(t, err)
+
+	signature, err := signer.Sign(message[:])
+	require.NoError(t, err)
+
+	// Build the two canonical forms of the same signature:
+	// low-s  := Normalise(signature)
+	// high-s := (r, n-s, v^1) relative to low-s; this is the classic BIP-62 malleation.
+	lowS := signature.Clone()
+	lowS.Normalise()
+	require.True(t, lowS.IsNormalized())
+
+	var flippedV *int
+	if lowS.V() != nil {
+		fv := *lowS.V() ^ 1
+		flippedV = &fv
+	}
+	highS, err := ecdsa.NewSignature(lowS.R(), lowS.S().Neg(), flippedV)
+	require.NoError(t, err)
+	require.False(t, highS.IsNormalized())
+	require.False(t, lowS.Equal(highS))
+
+	defaultVerifier, err := scheme.Verifier()
+	require.NoError(t, err)
+	require.NoError(t, defaultVerifier.Verify(lowS, pk, message[:]), "default verifier must accept low-s")
+	require.NoError(t, defaultVerifier.Verify(highS, pk, message[:]), "default verifier accepts high-s (malleability baseline)")
+
+	nonMalleableVerifier, err := scheme.Verifier(ecdsa.VerifyNonMalleably[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	require.NoError(t, err)
+	require.NoError(t, nonMalleableVerifier.Verify(lowS, pk, message[:]), "non-malleable verifier must accept low-s")
+
+	err = nonMalleableVerifier.Verify(highS, pk, message[:])
+	require.Error(t, err, "non-malleable verifier must reject high-s")
+	require.ErrorIs(t, err, ecdsa.ErrVerificationFailed)
+}

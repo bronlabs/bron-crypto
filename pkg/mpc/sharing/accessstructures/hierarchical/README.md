@@ -22,7 +22,9 @@ MSP induction is implemented via `InducedMSP`, which constructs a monotone span 
 from the Birkhoff-Vandermonde matrix. This enables hierarchical access structures to be
 used with the KW MSP-based secret sharing scheme.
 
-Maximal unqualified set enumeration is not yet implemented.
+Maximal unqualified set enumeration is implemented via `MaximalUnqualifiedSetsIter`.
+The current implementation is brute-force and intended only for small access structures.
+It also requires shareholder IDs to lie in the range `1..64`.
 
 ## Reference
 

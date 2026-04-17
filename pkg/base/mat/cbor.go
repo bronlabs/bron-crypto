@@ -1,12 +1,27 @@
 package mat
 
 import (
+	"math/bits"
+
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
+
+// expectedDataLen returns rows*cols as an int, or ok=false if the product
+// overflows int.
+func expectedDataLen(rows, cols int) (int, bool) {
+	if rows <= 0 || cols <= 0 {
+		return 0, false
+	}
+	hi, lo := bits.Mul(uint(rows), uint(cols))
+	if hi != 0 || lo > (^uint(0)>>1) {
+		return 0, false
+	}
+	return int(lo), true
+}
 
 type matrixDTO[S algebra.RingElement[S]] struct {
 	Rows int `cbor:"rows"`
@@ -34,19 +49,20 @@ func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal matrix")
 	}
-	if len(dto.Data) == 0 {
-		return ErrFailed.WithMessage("empty data")
+	if dto.Rows <= 0 || dto.Cols <= 0 {
+		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
+	}
+	expected, ok := expectedDataLen(dto.Rows, dto.Cols)
+	if !ok {
+		return ErrDimension.WithMessage("matrix dimensions overflow: %dx%d", dto.Rows, dto.Cols)
+	}
+	if len(dto.Data) != expected {
+		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), expected)
 	}
 	for _, v := range dto.Data {
 		if utils.IsNil(v) {
 			return ErrFailed.WithMessage("data contains nil element")
 		}
-	}
-	if dto.Rows <= 0 || dto.Cols <= 0 {
-		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
-	}
-	if len(dto.Data) != dto.Rows*dto.Cols {
-		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
 	}
 	m.init(dto.Rows, dto.Cols)
 	copy(m.data(), dto.Data)
@@ -85,8 +101,12 @@ func (m *ModuleValuedMatrix[E, S]) UnmarshalCBOR(data []byte) error {
 	if dto.Rows <= 0 || dto.Cols <= 0 {
 		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
 	}
-	if len(dto.Data) != dto.Rows*dto.Cols {
-		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Rows*dto.Cols)
+	expected, ok := expectedDataLen(dto.Rows, dto.Cols)
+	if !ok {
+		return ErrDimension.WithMessage("matrix dimensions overflow: %dx%d", dto.Rows, dto.Cols)
+	}
+	if len(dto.Data) != expected {
+		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), expected)
 	}
 	for _, v := range dto.Data {
 		if utils.IsNil(v) {
@@ -128,8 +148,12 @@ func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 	if dto.Size <= 0 {
 		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Size, dto.Size)
 	}
-	if len(dto.Data) != dto.Size*dto.Size {
-		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), dto.Size*dto.Size)
+	expected, ok := expectedDataLen(dto.Size, dto.Size)
+	if !ok {
+		return ErrDimension.WithMessage("matrix dimensions overflow: %dx%d", dto.Size, dto.Size)
+	}
+	if len(dto.Data) != expected {
+		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), expected)
 	}
 	for _, v := range dto.Data {
 		if utils.IsNil(v) {

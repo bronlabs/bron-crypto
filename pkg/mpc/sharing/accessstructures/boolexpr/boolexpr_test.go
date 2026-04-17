@@ -1,17 +1,22 @@
 package boolexpr_test
 
 import (
+	"fmt"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
+	sharinginternal "github.com/bronlabs/bron-crypto/pkg/mpc/sharing/internal"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
 
@@ -174,4 +179,204 @@ func TestConvertExampleC(t *testing.T) {
 			require.True(t, secretValue.Equal(sum))
 		}
 	})
+}
+
+func TestThresholdGateAccessStructureMaximalUnqualifiedSetsIter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		root *boolexpr.Node
+	}{
+		{
+			name: "5-shareholders",
+			root: boolexpr.Threshold(2,
+				boolexpr.And(
+					boolexpr.ID(1),
+					boolexpr.ID(2),
+				),
+				boolexpr.ID(3),
+				boolexpr.Threshold(2,
+					boolexpr.ID(4),
+					boolexpr.ID(5),
+				),
+			),
+		},
+		{
+			name: "10-shareholders",
+			root: boolexpr.Threshold(2,
+				boolexpr.Threshold(2,
+					boolexpr.ID(1),
+					boolexpr.ID(2),
+					boolexpr.ID(3),
+				),
+				boolexpr.Threshold(2,
+					boolexpr.ID(4),
+					boolexpr.ID(5),
+					boolexpr.ID(6),
+				),
+				boolexpr.Threshold(2,
+					boolexpr.ID(7),
+					boolexpr.ID(8),
+					boolexpr.ID(9),
+					boolexpr.ID(10),
+				),
+			),
+		},
+		{
+			name: "15-shareholders",
+			root: boolexpr.Threshold(2,
+				boolexpr.Threshold(3,
+					boolexpr.ID(1),
+					boolexpr.ID(2),
+					boolexpr.ID(3),
+					boolexpr.ID(4),
+					boolexpr.ID(5),
+				),
+				boolexpr.Threshold(3,
+					boolexpr.ID(6),
+					boolexpr.ID(7),
+					boolexpr.ID(8),
+					boolexpr.ID(9),
+					boolexpr.ID(10),
+				),
+				boolexpr.Threshold(4,
+					boolexpr.ID(11),
+					boolexpr.ID(12),
+					boolexpr.ID(13),
+					boolexpr.ID(14),
+					boolexpr.ID(15),
+				),
+			),
+		},
+		{
+			name: "20-shareholders-deep",
+			root: boolexpr.Threshold(2,
+				boolexpr.And(
+					boolexpr.Or(
+						boolexpr.ID(1),
+						boolexpr.ID(2),
+					),
+					boolexpr.Threshold(2,
+						boolexpr.ID(3),
+						boolexpr.ID(4),
+						boolexpr.ID(5),
+					),
+				),
+				boolexpr.Threshold(2,
+					boolexpr.And(
+						boolexpr.ID(6),
+						boolexpr.Or(
+							boolexpr.ID(7),
+							boolexpr.ID(8),
+							boolexpr.ID(9),
+						),
+					),
+					boolexpr.Threshold(2,
+						boolexpr.ID(10),
+						boolexpr.ID(11),
+						boolexpr.ID(12),
+					),
+					boolexpr.And(
+						boolexpr.ID(13),
+						boolexpr.ID(14),
+					),
+				),
+				boolexpr.Threshold(2,
+					boolexpr.Threshold(2,
+						boolexpr.ID(15),
+						boolexpr.ID(16),
+						boolexpr.ID(17),
+					),
+					boolexpr.And(
+						boolexpr.ID(18),
+						boolexpr.Or(
+							boolexpr.ID(19),
+							boolexpr.ID(20),
+						),
+					),
+				),
+			),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			as, err := boolexpr.NewThresholdGateAccessStructure(tc.root)
+			require.NoError(t, err)
+
+			maxUnqualifiedSets := slices.Collect(as.MaximalUnqualifiedSetsIter())
+			require.Equal(t, referenceBoolexprMaximalUnqualifiedSets(as), canonicalBoolexprSetMap(maxUnqualifiedSets))
+
+			shareholders := as.Shareholders()
+			for _, subset := range maxUnqualifiedSets {
+				require.True(t, subset.IsSubSet(shareholders))
+				require.False(t, as.IsQualified(subset.List()...))
+
+				for id := range shareholders.Iter() {
+					if subset.Contains(id) {
+						continue
+					}
+
+					extended := subset.Unfreeze()
+					extended.Add(id)
+					require.True(t, as.IsQualified(extended.List()...))
+				}
+			}
+		})
+	}
+}
+
+func referenceBoolexprMaximalUnqualifiedSets(as *boolexpr.ThresholdGateAccessStructure) map[string]struct{} {
+	shareholders := as.Shareholders().List()
+	slices.Sort(shareholders)
+
+	out := make(map[string]struct{})
+	for size := 0; size <= len(shareholders); size++ {
+		for combo := range sliceutils.Combinations(shareholders, uint(size)) {
+			subset := hashset.NewComparable(combo...).Freeze()
+			if as.IsQualified(combo...) {
+				continue
+			}
+
+			maximal := true
+			for _, id := range shareholders {
+				if subset.Contains(id) {
+					continue
+				}
+
+				extended := subset.Unfreeze()
+				extended.Add(id)
+				if !as.IsQualified(extended.List()...) {
+					maximal = false
+					break
+				}
+			}
+			if maximal {
+				out[canonicalBoolexprIDs(subset)] = struct{}{}
+			}
+		}
+	}
+
+	return out
+}
+
+func canonicalBoolexprSetMap(sets []ds.Set[sharinginternal.ID]) map[string]struct{} {
+	out := make(map[string]struct{}, len(sets))
+	for _, subset := range sets {
+		out[canonicalBoolexprIDs(subset)] = struct{}{}
+	}
+	return out
+}
+
+func canonicalBoolexprIDs(s ds.Set[sharinginternal.ID]) string {
+	ids := s.List()
+	slices.Sort(ids)
+	parts := make([]string, 0, len(ids))
+	for _, id := range ids {
+		parts = append(parts, fmt.Sprint(id))
+	}
+	return strings.Join(parts, ",")
 }

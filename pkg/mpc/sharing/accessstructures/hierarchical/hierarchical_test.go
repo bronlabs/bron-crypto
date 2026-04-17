@@ -2,12 +2,17 @@
 package hierarchical
 
 import (
+	"fmt"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 func TestNewHierarchicalConjunctiveThresholdAccessStructure(t *testing.T) {
@@ -171,4 +176,125 @@ func TestHierarchicalConjunctiveThresholdLevelsReturnsSliceCopy(t *testing.T) {
 
 	require.Equal(t, 1, h.Levels()[0].Threshold())
 	require.True(t, h.Levels()[0].Shareholders().Equal(hashset.NewComparable[ID](1, 2).Freeze()))
+}
+
+func TestHierarchicalConjunctiveThresholdMaximalUnqualifiedSetsIter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		levels []*ThresholdLevel
+	}{
+		{
+			name: "two-level(1,2)",
+			levels: []*ThresholdLevel{
+				WithLevel(1, 1, 2),
+				WithLevel(2, 3, 4),
+			},
+		},
+		{
+			name: "three-level(1,2,4)",
+			levels: []*ThresholdLevel{
+				WithLevel(1, 1, 2),
+				WithLevel(2, 3, 4),
+				WithLevel(4, 5, 6),
+			},
+		},
+		{
+			name: "three-level(2,4,5)",
+			levels: []*ThresholdLevel{
+				WithLevel(2, 1, 2, 3),
+				WithLevel(4, 4, 5),
+				WithLevel(5, 6),
+			},
+		},
+		{
+			name: "four-level(2,4,7)",
+			levels: []*ThresholdLevel{
+				WithLevel(2, 1, 2, 3),
+				WithLevel(4, 4, 5, 6, 7),
+				WithLevel(7, 8, 9, 10, 11, 12),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			h, err := NewHierarchicalConjunctiveThresholdAccessStructure(tc.levels...)
+			require.NoError(t, err)
+
+			maxUnqualifiedSets := slices.Collect(h.MaximalUnqualifiedSetsIter())
+			require.Equal(t, referenceMaximalUnqualifiedSets(h), canonicalSetMap(maxUnqualifiedSets))
+
+			shareholders := h.Shareholders()
+			for _, subset := range maxUnqualifiedSets {
+				require.True(t, subset.IsSubSet(shareholders))
+				require.False(t, h.IsQualified(subset.List()...))
+
+				for id := range shareholders.Iter() {
+					if subset.Contains(id) {
+						continue
+					}
+
+					extended := subset.Unfreeze()
+					extended.Add(id)
+					require.True(t, h.IsQualified(extended.List()...))
+				}
+			}
+		})
+	}
+}
+
+func referenceMaximalUnqualifiedSets(h *HierarchicalConjunctiveThreshold) map[string]struct{} {
+	shareholders := h.Shareholders().List()
+	slices.Sort(shareholders)
+
+	out := make(map[string]struct{})
+	for size := 0; size <= len(shareholders); size++ {
+		for combo := range sliceutils.Combinations(shareholders, uint(size)) {
+			subset := hashset.NewComparable(combo...).Freeze()
+			if h.IsQualified(combo...) {
+				continue
+			}
+
+			maximal := true
+			for _, id := range shareholders {
+				if subset.Contains(id) {
+					continue
+				}
+
+				extended := subset.Unfreeze()
+				extended.Add(id)
+				if !h.IsQualified(extended.List()...) {
+					maximal = false
+					break
+				}
+			}
+			if maximal {
+				out[canonicalIDs(subset)] = struct{}{}
+			}
+		}
+	}
+
+	return out
+}
+
+func canonicalSetMap(sets []ds.Set[ID]) map[string]struct{} {
+	out := make(map[string]struct{}, len(sets))
+	for _, subset := range sets {
+		out[canonicalIDs(subset)] = struct{}{}
+	}
+	return out
+}
+
+func canonicalIDs(s ds.Set[ID]) string {
+	ids := s.List()
+	slices.Sort(ids)
+	parts := make([]string, 0, len(ids))
+	for _, id := range ids {
+		parts = append(parts, fmt.Sprint(id))
+	}
+	return strings.Join(parts, ",")
 }

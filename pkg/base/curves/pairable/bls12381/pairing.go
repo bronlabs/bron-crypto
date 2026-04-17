@@ -28,8 +28,8 @@ type OptimalAtePPE struct {
 
 // Add sets the receiver to lhs + rhs.
 func (p *OptimalAtePPE) Add(g1 *PointG1, g2 *PointG2) error {
-	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() {
-		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity")
+	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() || !g1.IsTorsionFree() || !g2.IsTorsionFree() {
+		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity or not torsion-free")
 	}
 	p.engine.AddPair(&g1.V, &g2.V)
 	return nil
@@ -37,8 +37,8 @@ func (p *OptimalAtePPE) Add(g1 *PointG1, g2 *PointG2) error {
 
 // AddAndInvG1 adds a pair with G1 inverted.
 func (p *OptimalAtePPE) AddAndInvG1(g1 *PointG1, g2 *PointG2) error {
-	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() {
-		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity")
+	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() || !g1.IsTorsionFree() || !g2.IsTorsionFree() {
+		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity or not torsion-free")
 	}
 	p.engine.AddPairInvG1(&g1.V, &g2.V)
 	return nil
@@ -46,8 +46,8 @@ func (p *OptimalAtePPE) AddAndInvG1(g1 *PointG1, g2 *PointG2) error {
 
 // AddAndInvG2 adds a pair with G2 inverted.
 func (p *OptimalAtePPE) AddAndInvG2(g1 *PointG1, g2 *PointG2) error {
-	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() {
-		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity")
+	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() || !g1.IsTorsionFree() || !g2.IsTorsionFree() {
+		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity or not torsion-free")
 	}
 	p.engine.AddPairInvG2(&g1.V, &g2.V)
 	return nil

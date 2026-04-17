@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -226,6 +227,13 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid signature")
 	}
+	// BIP-340 §4.2: fail if s ≥ n. The underlying SetBytes silently reduces
+	// out-of-range inputs modulo n, so we enforce canonical encoding by
+	// round-tripping and rejecting on mismatch.
+	_, isEq, _ := ct.CompareBytes(input[32:], s.Bytes())
+	if isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("s is not canonical")
+	}
 	return &Signature{
 		E: nil,
 		R: r,
@@ -344,8 +352,11 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
 	// For partial signature verification, use the pre-computed challenge from the signature
 	// (which was computed from aggregate R), rather than recomputing from individual R_i.
+	// In the standard verification path, always recompute e from (R, P, m) — trusting a
+	// wire-supplied signature.E would admit a universal forgery (pick any s, e and set
+	// R := s·G - e·P).
 	var e *Scalar
-	if signature.E != nil {
+	if v.challengePublicKey != nil && signature.E != nil {
 		e = signature.E
 	} else {
 		var err error
@@ -540,6 +551,13 @@ func decodePoint(data []byte) (*k256.Point, error) {
 	p, err := curve.FromCompressed(slices.Concat([]byte{0x02}, data))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot decode point")
+	}
+	// BIP-340 §4.2 (lift_x): fail if x ≥ p. The curve decoder's SetBytes
+	// silently reduces out-of-range x modulo the base-field prime, so we
+	// enforce canonical encoding by round-tripping the compressed bytes.
+	_, isEq, _ := ct.CompareBytes(data, p.ToCompressed()[1:])
+	if isEq != ct.True {
+		return nil, ErrSerialization.WithMessage("x is not canonical")
 	}
 
 	return p, nil

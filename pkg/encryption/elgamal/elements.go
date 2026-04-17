@@ -183,6 +183,13 @@ func NewCiphertext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](c1, 
 	if utils.IsNil(c1) || utils.IsNil(c2) {
 		return nil, ErrIsNil.WithMessage("ciphertext components")
 	}
+	if !c1.IsTorsionFree() || !c2.IsTorsionFree() {
+		return nil, ErrSubGroupMembership.WithMessage("ciphertext component is not torsion free")
+	}
+	// The second component can be identity if the message happens to be -h^r. The first one can never be identity for nonzero nonce.
+	if c1.IsOpIdentity() {
+		return nil, ErrSubGroupMembership.WithMessage("invalid ciphertext: first component is identity")
+	}
 	g := algebra.StructureMustBeAs[FiniteCyclicGroup[E, S]](c1.Structure())
 	ctSpace, err := constructions.NewFiniteDirectPowerModule(g, 2)
 	if err != nil {

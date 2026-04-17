@@ -98,7 +98,7 @@ func (v *VerificationVector[E, FE]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal verification vector")
 	}
-	vv, err := NewVerificationVector(dto.V, nil)
+	vv, err := NewVerificationVector(dto.V, nil) // pass nil to skip MSP length check, as MSP may not be available during deserialization
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to create verification vector from deserialized value")
 	}

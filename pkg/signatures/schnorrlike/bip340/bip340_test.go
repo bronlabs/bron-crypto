@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"slices"
 	"testing"
 
@@ -411,4 +412,38 @@ func decodePoint(data []byte) (*k256.Point, error) {
 	}
 
 	return p, nil
+}
+
+// Test_NewSignatureFromBytesRejectsOutOfRangeS constructs bytes encoding
+// s = n (out-of-range by exactly 1) and checks the decoder rejects them.
+// Before the fix, FromBytes silently reduced to s = 0.
+func Test_NewSignatureFromBytesRejectsOutOfRangeS(t *testing.T) {
+	t.Parallel()
+
+	// Use BIP340 test vector 1 as the source of a valid R component.
+	sigHex := "E907831F80848D1069A5371B402410364BDF1C5F8307B0084C55F1CE2DCA821525F66A4A85EA8B71E482A74F382D2CE5EBEEE8FDB2172F477DF4900D310536C0"
+	sigBytes, _ := hex.DecodeString(sigHex)
+
+	// k256 scalar field order n.
+	n, _ := new(big.Int).SetString(
+		"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
+	nBytes := n.FillBytes(make([]byte, 32))
+	malformed := slices.Concat(sigBytes[:32], nBytes)
+
+	_, err := bip340.NewSignatureFromBytes(malformed)
+	require.Error(t, err, "NewSignatureFromBytes must reject s = n (out of range)")
+}
+
+// Test_NewPublicKeyFromBytesRejectsOutOfRangeX constructs bytes encoding
+// x = p+1 and checks the decoder rejects them.
+func Test_NewPublicKeyFromBytesRejectsOutOfRangeX(t *testing.T) {
+	t.Parallel()
+
+	p, _ := new(big.Int).SetString(
+		"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
+	pPlus1 := new(big.Int).Add(p, big.NewInt(1))
+	pPlus1Bytes := pPlus1.FillBytes(make([]byte, 32))
+
+	_, err := bip340.NewPublicKeyFromBytes(pPlus1Bytes)
+	require.Error(t, err, "NewPublicKeyFromBytes must reject x = p+1 (out of range)")
 }

@@ -392,6 +392,12 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 	if publicKey.Value().IsOpIdentity() {
 		return ErrInvalidArgument.WithMessage("publicKey is identity")
 	}
+	if sigma == nil || utils.IsNil(sigma.R) || utils.IsNil(sigma.S) {
+		return ErrInvalidArgument.WithMessage("signature is nil or incomplete")
+	}
+	if sigma.S.IsZero() || sigma.R.IsOpIdentity() || !sigma.R.IsTorsionFree() {
+		return ErrVerificationFailed.WithMessage("signature components out of range")
+	}
 	// For partial signature verification (when ChallengePublicKey is set), use the pre-computed
 	// challenge from sigma.E (which was computed from aggregate R), rather than recomputing
 	// from individual R_i. For normal verification, always recompute e from the message to
