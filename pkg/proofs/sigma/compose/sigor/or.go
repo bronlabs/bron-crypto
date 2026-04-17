@@ -109,6 +109,7 @@ func ComposeStatements[X sigma.Statement](statements ...X) (Statement[X], error)
 }
 
 type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+	name  sigma.Name
 	sigma sigma.Protocol[X, W, A, S, Z]
 	count int
 	prng  io.Reader
@@ -129,6 +130,26 @@ type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](
 	p sigma.Protocol[X, W, A, S, Z], count uint, prng io.Reader,
 ) (*Protocol[X, W, A, S, Z], error) {
+	if p == nil {
+		return nil, ErrIsNil.WithMessage("p is nil")
+	}
+	if count < 2 {
+		return nil, ErrInvalidArgument.WithMessage("count must be >= 2")
+	}
+	out, err := ComposeNamed(sigma.Name(fmt.Sprintf("SigmaOR(%s)^%d", p.Name(), count)), p, count, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compose protocols")
+	}
+	return out, nil
+}
+
+// ComposeNamed is the same as Compose but uses the provided name as the
+// composed protocol's Name instead of deriving one from the underlying
+// protocol. Use this when the composition is the implementation of a
+// named higher-level protocol and should be identified accordingly.
+func ComposeNamed[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](
+	name sigma.Name, p sigma.Protocol[X, W, A, S, Z], count uint, prng io.Reader,
+) (*Protocol[X, W, A, S, Z], error) {
 	if p == nil || prng == nil {
 		return nil, ErrIsNil.WithMessage("p or prng is nil")
 	}
@@ -136,6 +157,7 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 		return nil, ErrInvalidArgument.WithMessage("count must be >= 2")
 	}
 	return &Protocol[X, W, A, S, Z]{
+		name:  name,
 		sigma: p,
 		count: int(count),
 		prng:  prng,
@@ -405,7 +427,7 @@ func (p *Protocol[X, W, A, S, Z]) getB(statement Statement[X], witness Witness[W
 
 // Name returns a human-readable name for the composed protocol.
 func (p *Protocol[X, W, A, S, Z]) Name() sigma.Name {
-	return sigma.Name(fmt.Sprintf("SigmaOR(%s)^%d", p.sigma.Name(), p.count))
+	return p.name
 }
 
 // Sentinel errors for the sigor package.

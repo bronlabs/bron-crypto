@@ -95,7 +95,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Schnorr protocol")
 	}
-	protocol, err := sigand.CartesianCompose(elcomopProtocol, schnorrProtocol)
+	protocol, err := sigand.CartesianComposeNamed(Name, elcomopProtocol, schnorrProtocol)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compose protocols")
 	}

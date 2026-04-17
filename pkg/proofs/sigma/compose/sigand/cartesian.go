@@ -130,6 +130,7 @@ func CartesianComposeWitnesses[W0, W1 sigma.Witness](witness0 W0, witness1 W1) (
 }
 
 type ProtocolCartesian[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response] struct {
+	name                 sigma.Name
 	sigma0               sigma.Protocol[X0, W0, A0, S0, Z0]
 	sigma1               sigma.Protocol[X1, W1, A1, S1, Z1]
 	challengeBytesLength int
@@ -148,9 +149,25 @@ func CartesianCompose[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma
 	if sigma0 == nil || sigma1 == nil {
 		return nil, ErrIsNil.WithMessage("protocols cannot be nil")
 	}
+	out, err := CartesianComposeNamed(sigma.Name(fmt.Sprintf("(%s)_AND_(%s)", sigma0.Name(), sigma1.Name())), sigma0, sigma1)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compose protocols")
+	}
+	return out, nil
+}
+
+// CartesianComposeNamed is the same as CartesianCompose but uses the provided
+// name as the composed protocol's Name instead of deriving one from the
+// underlying protocols. Use this when the composition is the implementation of
+// a named higher-level protocol and should be identified accordingly.
+func CartesianComposeNamed[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response](name sigma.Name, sigma0 sigma.Protocol[X0, W0, A0, S0, Z0], sigma1 sigma.Protocol[X1, W1, A1, S1, Z1]) (*ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1], error) {
+	if sigma0 == nil || sigma1 == nil {
+		return nil, ErrIsNil.WithMessage("protocols cannot be nil")
+	}
 	challengeBytesLength := max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
 
 	return &ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
+		name:                 name,
 		sigma0:               sigma0,
 		sigma1:               sigma1,
 		challengeBytesLength: challengeBytesLength,
@@ -255,5 +272,5 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStat
 
 // Name returns a human-readable name for the composed protocol.
 func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
-	return sigma.Name(fmt.Sprintf("(%s)_AND_(%s)", p.sigma0.Name(), p.sigma1.Name()))
+	return p.name
 }
