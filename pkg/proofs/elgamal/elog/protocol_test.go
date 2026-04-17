@@ -210,7 +210,7 @@ func Test_Name(t *testing.T) {
 	protocol, err := elog.NewProtocol(curve, comKey, h, prng)
 	require.NoError(t, err)
 
-	require.Equal(t, protocol.Name(), elog.Name)
+	require.Equal(t, elog.Name, protocol.Name())
 }
 
 func Test_ChallengeLengthAndSoundness(t *testing.T) {
