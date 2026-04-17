@@ -5,7 +5,7 @@
 //
 //	L = g^lambda,  M = g^y * X^lambda,  Y = h^y.
 //
-// It is realized as the AND-composition of two Maurer sigma protocols:
+// It is realised as the AND-composition of two Maurer sigma protocols:
 // elcomop (opening of the ElGamal commitment (L, M) to plaintext g^y under
 // nonce lambda) and Schnorr (discrete log of Y with respect to base h). The
 // two sub-witnesses are bound together by the consistency check M' = g^y

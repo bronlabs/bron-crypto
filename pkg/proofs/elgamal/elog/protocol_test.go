@@ -2,7 +2,6 @@ package elog_test
 
 import (
 	"io"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -212,9 +211,9 @@ func Test_Name(t *testing.T) {
 	require.NoError(t, err)
 
 	name := string(protocol.Name())
-	require.True(t, strings.Contains(name, string(elcomop.Name)))
-	require.True(t, strings.Contains(name, string(schnorrpok.Name)))
-	require.True(t, strings.Contains(name, "AND"))
+	require.Contains(t, name, string(elcomop.Name))
+	require.Contains(t, name, string(schnorrpok.Name))
+	require.Contains(t, name, "AND")
 }
 
 func Test_ChallengeLengthAndSoundness(t *testing.T) {
@@ -227,7 +226,7 @@ func Test_ChallengeLengthAndSoundness(t *testing.T) {
 	protocol, err := elog.NewProtocol(curve, comKey, h, prng)
 	require.NoError(t, err)
 
-	require.Greater(t, protocol.GetChallengeBytesLength(), 0)
+	require.Positive(t, protocol.GetChallengeBytesLength())
 	require.GreaterOrEqual(t, protocol.SoundnessError(), uint(1))
 	require.GreaterOrEqual(t, protocol.SpecialSoundness(), uint(2))
 }

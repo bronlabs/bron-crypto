@@ -5,13 +5,14 @@ import (
 	"io"
 	"slices"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 type DirectProduct[E1 algebra.SemiGroupElement[E1], E2 algebra.SemiGroupElement[E2]] interface {
@@ -41,15 +42,15 @@ type directProductSemiGroupDTO[S1 algebra.SemiGroup[E1], S2 algebra.SemiGroup[E2
 	S2 S2 `cbor:"s2"`
 }
 
-func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) Components() (S1, S2) {
+func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) Components() (first S1, second S2) {
 	return d.s1, d.s2
 }
 
-func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) Arity() cardinal.Cardinal {
+func (*DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) Arity() cardinal.Cardinal {
 	return cardinal.New(2)
 }
 
-func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) set(s1 S1, s2 S2) error {
+func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) set(s1 S1, s2 S2) error { //nolint:unused // needed for trait interface compliance.
 	if utils.IsNil(s1) || utils.IsNil(s2) {
 		return ErrInvalidArgument.WithMessage("components cannot be nil")
 	}
@@ -87,7 +88,7 @@ func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) FromBytes(input []byte) 
 	return W(&out), nil
 }
 
-func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) New(e1 E1, e2 E2) (W, error) {
+func (*DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) New(e1 E1, e2 E2) (W, error) {
 	var out WT
 	if err := W(&out).set(e1, e2); err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to set components")
@@ -141,11 +142,11 @@ type directProductSemiGroupElementDTO[E1 algebra.SemiGroupElement[E1], E2 algebr
 	E2 E2 `cbor:"e2"`
 }
 
-func (d *DirectProductSemiGroupElement[E1, E2, W, WT]) Arity() cardinal.Cardinal {
+func (*DirectProductSemiGroupElement[E1, E2, W, WT]) Arity() cardinal.Cardinal {
 	return cardinal.New(2)
 }
 
-func (d *DirectProductSemiGroupElement[E1, E2, W, WT]) Components() (E1, E2) {
+func (d *DirectProductSemiGroupElement[E1, E2, W, WT]) Components() (first E1, second E2) {
 	return d.e1, d.e2
 }
 
