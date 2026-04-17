@@ -278,11 +278,16 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 			return nil, ErrInvalidArgument.WithMessage("missing commitment key for %d", id)
 		}
 		commonSeed = append(commonSeed, ck[:]...)
-		c, ok := p.commonContributions[id]
+		c, ok := p.commonContributionCommitments[id]
+		if !ok {
+			return nil, ErrInvalidArgument.WithMessage("missing common commitment for %d", id)
+		}
+		commonSeed = append(commonSeed, c[:]...)
+		m, ok := p.commonContributions[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing common contribution for %d", id)
 		}
-		commonSeed = append(commonSeed, c[:]...)
+		commonSeed = append(commonSeed, m[:]...)
 		w, ok := p.commonContributionWitnesses[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing common contribution witness for %d", id)
