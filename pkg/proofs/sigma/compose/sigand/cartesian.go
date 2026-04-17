@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -106,23 +107,29 @@ func (z *ResponseCartesian[Z0, Z1]) Bytes() []byte {
 var _ sigma.Response = (*ResponseCartesian[sigma.Response, sigma.Response])(nil)
 
 // CartesianComposeStatements creates a binary AND-composed statement from two statements.
-func CartesianComposeStatements[X0, X1 sigma.Statement](statement0 X0, statement1 X1) *StatementCartesian[X0, X1] {
+func CartesianComposeStatements[X0, X1 sigma.Statement](statement0 X0, statement1 X1) (*StatementCartesian[X0, X1], error) {
+	if utils.IsNil(statement0) || utils.IsNil(statement1) {
+		return nil, ErrInvalidArgument.WithMessage("statements cannot be nil")
+	}
 	return &StatementCartesian[X0, X1]{
 		X0: statement0,
 		X1: statement1,
-	}
+	}, nil
 }
 
 // CartesianComposeWitnesses creates a binary AND-composed witness from two witnesses.
 // Both witnesses must be valid for their corresponding statements.
-func CartesianComposeWitnesses[W0, W1 sigma.Witness](witness0 W0, witness1 W1) *WitnessCartesian[W0, W1] {
+func CartesianComposeWitnesses[W0, W1 sigma.Witness](witness0 W0, witness1 W1) (*WitnessCartesian[W0, W1], error) {
+	if utils.IsNil(witness0) || utils.IsNil(witness1) {
+		return nil, ErrInvalidArgument.WithMessage("witnesses cannot be nil")
+	}
 	return &WitnessCartesian[W0, W1]{
 		W0: witness0,
 		W1: witness1,
-	}
+	}, nil
 }
 
-type protocolCartesian[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response] struct {
+type ProtocolCartesian[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response] struct {
 	sigma0               sigma.Protocol[X0, W0, A0, S0, Z0]
 	sigma1               sigma.Protocol[X1, W1, A1, S1, Z1]
 	challengeBytesLength int
@@ -137,20 +144,23 @@ type protocolCartesian[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigm
 // Parameters:
 //   - sigma0: The sigma protocol for the first statement
 //   - sigma1: The sigma protocol for the second statement
-func CartesianCompose[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response](sigma0 sigma.Protocol[X0, W0, A0, S0, Z0], sigma1 sigma.Protocol[X1, W1, A1, S1, Z1]) sigma.Protocol[*StatementCartesian[X0, X1], *WitnessCartesian[W0, W1], *CommitmentCartesian[A0, A1], *StateCartesian[S0, S1], *ResponseCartesian[Z0, Z1]] {
+func CartesianCompose[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response](sigma0 sigma.Protocol[X0, W0, A0, S0, Z0], sigma1 sigma.Protocol[X1, W1, A1, S1, Z1]) (*ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1], error) {
+	if sigma0 == nil || sigma1 == nil {
+		return nil, ErrIsNil.WithMessage("protocols cannot be nil")
+	}
 	challengeBytesLength := max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
 
-	return &protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
+	return &ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
 		sigma0:               sigma0,
 		sigma1:               sigma1,
 		challengeBytesLength: challengeBytesLength,
-	}
+	}, nil
 }
 
 // ComputeProverCommitment generates the prover's first message in the binary AND composition.
 //
 // This computes commitments for both branches using their respective protocols.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1]) (*CommitmentCartesian[A0, A1], *StateCartesian[S0, S1], error) {
+func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1]) (*CommitmentCartesian[A0, A1], *StateCartesian[S0, S1], error) {
 	var err error
 	a := new(CommitmentCartesian[A0, A1])
 	s := new(StateCartesian[S0, S1])
@@ -168,7 +178,7 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 // ComputeProverResponse generates the prover's response to the verifier's challenge.
 //
 // The same challenge is used for both branches.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1], commitment *CommitmentCartesian[A0, A1], state *StateCartesian[S0, S1], challengeBytes sigma.ChallengeBytes) (*ResponseCartesian[Z0, Z1], error) {
+func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1], commitment *CommitmentCartesian[A0, A1], state *StateCartesian[S0, S1], challengeBytes sigma.ChallengeBytes) (*ResponseCartesian[Z0, Z1], error) {
 	var err error
 	z := new(ResponseCartesian[Z0, Z1])
 
@@ -185,7 +195,7 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 // Verify checks that the binary AND proof is valid.
 //
 // Both branch transcripts are verified using the same challenge.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *StatementCartesian[X0, X1], commitment *CommitmentCartesian[A0, A1], challengeBytes sigma.ChallengeBytes, response *ResponseCartesian[Z0, Z1]) error {
+func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *StatementCartesian[X0, X1], commitment *CommitmentCartesian[A0, A1], challengeBytes sigma.ChallengeBytes, response *ResponseCartesian[Z0, Z1]) error {
 	if err := p.sigma0.Verify(statement.X0, commitment.A0, challengeBytes[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
@@ -199,7 +209,7 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(state
 // RunSimulator produces a simulated transcript for the binary AND composition.
 //
 // This runs the simulator for both branches using the same challenge.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *StatementCartesian[X0, X1], challengeBytes sigma.ChallengeBytes) (*CommitmentCartesian[A0, A1], *ResponseCartesian[Z0, Z1], error) {
+func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *StatementCartesian[X0, X1], challengeBytes sigma.ChallengeBytes) (*CommitmentCartesian[A0, A1], *ResponseCartesian[Z0, Z1], error) {
 	var err error
 	a := new(CommitmentCartesian[A0, A1])
 	z := new(ResponseCartesian[Z0, Z1])
@@ -215,24 +225,24 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator
 }
 
 // SpecialSoundness returns the special soundness parameter of the composed protocol.
-func (p *protocolCartesian[_, _, _, _, _, _, _, _, _, _]) SpecialSoundness() uint {
+func (p *ProtocolCartesian[_, _, _, _, _, _, _, _, _, _]) SpecialSoundness() uint {
 	return max(p.sigma0.SpecialSoundness(), p.sigma1.SpecialSoundness())
 }
 
 // GetChallengeBytesLength returns the challenge length in bytes for the composed protocol.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLength() int {
+func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLength() int {
 	return p.challengeBytesLength
 }
 
 // SoundnessError returns the soundness error of the composed protocol,
 // which is the minimum of the two underlying protocols' soundness errors.
-func (p protocolCartesian[_, _, _, _, _, _, _, _, _, _]) SoundnessError() uint {
+func (p ProtocolCartesian[_, _, _, _, _, _, _, _, _, _]) SoundnessError() uint {
 	return min(p.sigma0.SoundnessError(), p.sigma1.SoundnessError())
 }
 
 // ValidateStatement checks that both statement/witness pairs are valid.
 // For AND composition, both pairs must be valid.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1]) error {
+func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1]) error {
 	if err := p.sigma0.ValidateStatement(statement.X0, witness.W0); err != nil {
 		return errs.Wrap(err).WithMessage("invalid statement")
 	}
@@ -244,6 +254,6 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStat
 }
 
 // Name returns a human-readable name for the composed protocol.
-func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
+func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
 	return sigma.Name(fmt.Sprintf("(%s)_AND_(%s)", p.sigma0.Name(), p.sigma1.Name()))
 }

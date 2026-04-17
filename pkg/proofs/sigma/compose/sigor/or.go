@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -98,11 +99,16 @@ func (z Response[Z]) Bytes() []byte {
 var _ sigma.Response = (*Response[sigma.Response])(nil)
 
 // ComposeStatements creates an OR-composed statement from individual statements.
-func ComposeStatements[X sigma.Statement](statements ...X) Statement[X] {
-	return statements
+func ComposeStatements[X sigma.Statement](statements ...X) (Statement[X], error) {
+	for _, stmt := range statements {
+		if utils.IsNil(stmt) {
+			return nil, ErrInvalidArgument.WithMessage("statements cannot be nil")
+		}
+	}
+	return statements, nil
 }
 
-type protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	sigma sigma.Protocol[X, W, A, S, Z]
 	count int
 	prng  io.Reader
@@ -122,14 +128,14 @@ type protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // Returns an error if p is nil, prng is nil, or count < 2.
 func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](
 	p sigma.Protocol[X, W, A, S, Z], count uint, prng io.Reader,
-) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], *State[S, Z], *Response[Z]], error) {
+) (*Protocol[X, W, A, S, Z], error) {
 	if p == nil || prng == nil {
 		return nil, ErrIsNil.WithMessage("p or prng is nil")
 	}
 	if count < 2 {
 		return nil, ErrInvalidArgument.WithMessage("count must be >= 2")
 	}
-	return &protocol[X, W, A, S, Z]{
+	return &Protocol[X, W, A, S, Z]{
 		sigma: p,
 		count: int(count),
 		prng:  prng,
@@ -138,7 +144,7 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 
 // SoundnessError returns the soundness error of the composed protocol,
 // which equals the soundness error of the underlying protocol.
-func (p *protocol[X, W, A, S, Z]) SoundnessError() uint {
+func (p *Protocol[X, W, A, S, Z]) SoundnessError() uint {
 	return p.sigma.SoundnessError()
 }
 
@@ -147,7 +153,7 @@ func (p *protocol[X, W, A, S, Z]) SoundnessError() uint {
 // For the branch with a valid witness (the "true" branch), this computes a real
 // commitment using the underlying protocol. For all other branches, it samples
 // random challenges and runs the simulator to generate fake commitments and responses.
-func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X], witness Witness[W]) (Commitment[A], *State[S, Z], error) {
+func (p *Protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X], witness Witness[W]) (Commitment[A], *State[S, Z], error) {
 	if len(statement) != p.count {
 		return nil, nil, ErrInvalidLength.WithMessage("invalid statement length")
 	}
@@ -208,7 +214,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 // The challenge for the true branch is computed so that all challenges XOR to the
 // verifier's challenge: e_B = challenge XOR e_0 XOR ... XOR e_{n-1} (excluding e_B).
 // The response for the true branch is then computed using the real protocol.
-func (p *protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], witness Witness[W], commitment Commitment[A], state *State[S, Z], challenge sigma.ChallengeBytes) (*Response[Z], error) {
+func (p *Protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], witness Witness[W], commitment Commitment[A], state *State[S, Z], challenge sigma.ChallengeBytes) (*Response[Z], error) {
 	if len(statement) != p.count {
 		return nil, ErrInvalidLength.WithMessage("invalid statement length")
 	}
@@ -256,7 +262,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], 
 //
 // Verification ensures: (1) the XOR of all branch challenges equals the verifier's
 // challenge, and (2) each branch's transcript is accepting under the underlying protocol.
-func (p *protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commitment[A], challenge sigma.ChallengeBytes, response *Response[Z]) error {
+func (p *Protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commitment[A], challenge sigma.ChallengeBytes, response *Response[Z]) error {
 	if len(statement) != p.count {
 		return ErrInvalidLength.WithMessage("invalid statement length")
 	}
@@ -309,7 +315,7 @@ func (p *protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Comm
 // This generates random challenges for all but the last branch, then computes
 // the last challenge so that all challenges XOR to the given challenge.
 // Each branch's transcript is then simulated using the underlying protocol's simulator.
-func (p *protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge sigma.ChallengeBytes) (Commitment[A], *Response[Z], error) {
+func (p *Protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge sigma.ChallengeBytes) (Commitment[A], *Response[Z], error) {
 	if len(statement) != p.count {
 		return nil, nil, ErrInvalidLength.WithMessage("invalid statement length")
 	}
@@ -362,18 +368,18 @@ func (p *protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge
 }
 
 // SpecialSoundness returns the special soundness parameter of the composed protocol.
-func (p *protocol[X, W, A, S, Z]) SpecialSoundness() uint {
+func (p *Protocol[X, W, A, S, Z]) SpecialSoundness() uint {
 	return p.sigma.SpecialSoundness()
 }
 
 // GetChallengeBytesLength returns the challenge length in bytes for the composed protocol.
-func (p *protocol[X, W, A, S, Z]) GetChallengeBytesLength() int {
+func (p *Protocol[X, W, A, S, Z]) GetChallengeBytesLength() int {
 	return p.sigma.GetChallengeBytesLength()
 }
 
 // ValidateStatement checks that at least one statement/witness pair is valid.
 // For OR composition, only one valid pair is required (unlike AND composition).
-func (p *protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witness Witness[W]) error {
+func (p *Protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witness Witness[W]) error {
 	if len(statement) != p.count {
 		return ErrInvalidLength.WithMessage("invalid statement length")
 	}
@@ -388,7 +394,7 @@ func (p *protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witn
 
 // getB finds the index of the first branch with a valid statement/witness pair.
 // Returns an error if no valid pair is found.
-func (p *protocol[X, W, A, S, Z]) getB(statement Statement[X], witness Witness[W]) (uint, error) {
+func (p *Protocol[X, W, A, S, Z]) getB(statement Statement[X], witness Witness[W]) (uint, error) {
 	for i := range p.count {
 		if invalid := p.sigma.ValidateStatement(statement[i], witness.v); invalid == nil {
 			return uint(i), nil
@@ -398,7 +404,7 @@ func (p *protocol[X, W, A, S, Z]) getB(statement Statement[X], witness Witness[W
 }
 
 // Name returns a human-readable name for the composed protocol.
-func (p *protocol[X, W, A, S, Z]) Name() sigma.Name {
+func (p *Protocol[X, W, A, S, Z]) Name() sigma.Name {
 	return sigma.Name(fmt.Sprintf("SigmaOR(%s)^%d", p.sigma.Name(), p.count))
 }
 

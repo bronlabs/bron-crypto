@@ -15,16 +15,26 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
+// Name identifies the elcomop sigma protocol.
 const Name sigma.Name = "PROOF_OF_KNOWLEDGE_OF_OPENING_OF_ELGAMAL_COMMITMENT"
 
 type (
-	Witness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]    = maurer09.Witness[*constructions.FiniteDirectProductGroupElement[G, S]]
-	Statement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]  = maurer09.Statement[*constructions.FiniteDirectPowerModuleElement[G, S]]
-	State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]      = maurer09.State[*constructions.FiniteDirectProductGroupElement[G, S]]
+	// Witness is the elcomop witness, a pair (M, lambda) in G x F_q consisting
+	// of the ElGamal plaintext and the commitment nonce.
+	Witness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] = maurer09.Witness[*constructions.FiniteDirectProductGroupElement[G, S]]
+	// Statement is the elcomop statement, the ElGamal commitment pair
+	// (Gamma, Delta) = (g^lambda, M * X^lambda) in G x G.
+	Statement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] = maurer09.Statement[*constructions.FiniteDirectPowerModuleElement[G, S]]
+	// State holds the prover's internal state during a protocol run.
+	State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] = maurer09.State[*constructions.FiniteDirectProductGroupElement[G, S]]
+	// Commitment is the prover's first message, an element of G x G.
 	Commitment[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] = maurer09.Commitment[*constructions.FiniteDirectPowerModuleElement[G, S]]
-	Response[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]   = maurer09.Response[*constructions.FiniteDirectProductGroupElement[G, S]]
+	// Response is the prover's reply, an element of G x F_q.
+	Response[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] = maurer09.Response[*constructions.FiniteDirectProductGroupElement[G, S]]
 )
 
+// NewWitness constructs an elcomop witness from an ElGamal plaintext M and a
+// commitment nonce lambda.
 func NewWitness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](message *indcpacom.Message[*elgamal.Plaintext[G, S]], nonce *indcpacom.Witness[*elgamal.Nonce[S]]) (*Witness[G, S], error) {
 	if nonce == nil || nonce.Value() == nil || utils.IsNil(nonce.Value().Value()) || message == nil || message.Value() == nil || utils.IsNil(message.Value().Value()) {
 		return nil, ErrInvalidArgument.WithMessage("witness values cannot be nil")
@@ -42,6 +52,8 @@ func NewWitness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S
 	return &Witness[G, S]{W: witnessValue}, nil
 }
 
+// NewStatement constructs an elcomop statement from an IND-CPA commitment
+// (i.e. an ElGamal ciphertext) (Gamma, Delta).
 func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](x *indcpacom.Commitment[*elgamal.Ciphertext[G, S], *elgamal.Nonce[S], *elgamal.PublicKey[G, S]]) (*Statement[G, S], error) {
 	if x == nil || x.Value() == nil || utils.IsNil(x.Value().Value()) {
 		return nil, ErrInvalidArgument.WithMessage("statement values cannot be nil")
@@ -49,6 +61,8 @@ func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement
 	return &Statement[G, S]{X: x.Value().Value()}, nil
 }
 
+// Protocol is the elcomop sigma protocol, a Maurer instance whose homomorphism
+// maps (M, lambda) in G x F_q to the ElGamal commitment (g^lambda, M * X^lambda).
 type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	*maurer09.Protocol[
 		*constructions.FiniteDirectPowerModuleElement[G, S],
@@ -56,6 +70,8 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 	]
 }
 
+// NewProtocol constructs the elcomop protocol for the given prime-order group
+// and ElGamal public key.
 func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], key *indcpacom.Key[*elgamal.PublicKey[G, S]], prng io.Reader) (*Protocol[G, S], error) {
 	if group == nil || key == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("group, key, and prng cannot be nil")
