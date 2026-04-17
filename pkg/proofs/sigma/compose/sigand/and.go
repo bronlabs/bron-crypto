@@ -77,8 +77,9 @@ func ComposeWitnesses[W sigma.Witness](witnesses ...W) Witness[W] {
 }
 
 type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
-	protocols []sigma.Protocol[X, W, A, S, Z]
-	name      sigma.Name
+	protocol sigma.Protocol[X, W, A, S, Z]
+	count    int
+	name     sigma.Name
 }
 
 // Compose creates an n-way AND composition of a sigma protocol.
@@ -122,26 +123,26 @@ func ComposeNamed[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigm
 	if count == 0 {
 		return nil, ErrInvalidArgument.WithMessage("count must be positive")
 	}
-	return &Protocol[X, W, A, S, Z]{name: name, protocols: sliceutils.Repeat[[]sigma.Protocol[X, W, A, S, Z]](p, int(count))}, nil
+	return &Protocol[X, W, A, S, Z]{name: name, protocol: p, count: int(count)}, nil
 }
 
 // ComputeProverCommitment generates the prover's first message in the AND composition.
 //
 // This computes commitments for all branches in parallel using the underlying protocol.
 func (p *Protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X], witness Witness[W]) (Commitment[A], State[S], error) {
-	if len(statement) != len(p.protocols) {
+	if len(statement) != p.count {
 		return nil, nil, ErrInvalidLength.WithMessage("invalid number of statements")
 	}
-	if len(witness) != len(p.protocols) {
+	if len(witness) != p.count {
 		return nil, nil, ErrInvalidLength.WithMessage("invalid number of witnesses")
 	}
-	a := make(Commitment[A], len(p.protocols))
-	s := make(State[S], len(p.protocols))
+	a := make(Commitment[A], p.count)
+	s := make(State[S], p.count)
 	var eg errgroup.Group
-	for i, sigmai := range p.protocols {
+	for i := range p.count {
 		eg.Go(func() error {
 			var err error
-			a[i], s[i], err = sigmai.ComputeProverCommitment(statement[i], witness[i])
+			a[i], s[i], err = p.protocol.ComputeProverCommitment(statement[i], witness[i])
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to compute prover commitment")
 			}
@@ -158,24 +159,24 @@ func (p *Protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 //
 // The same challenge is used for all branches, computed in parallel.
 func (p *Protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], witness Witness[W], commitment Commitment[A], state State[S], challengeBytes sigma.ChallengeBytes) (Response[Z], error) {
-	if len(statement) != len(p.protocols) {
+	if len(statement) != p.count {
 		return nil, ErrInvalidLength.WithMessage("invalid number of statements")
 	}
-	if len(witness) != len(p.protocols) {
+	if len(witness) != p.count {
 		return nil, ErrInvalidLength.WithMessage("invalid number of witnesses")
 	}
-	if len(commitment) != len(p.protocols) {
+	if len(commitment) != p.count {
 		return nil, ErrInvalidLength.WithMessage("invalid number of commitments")
 	}
-	if len(state) != len(p.protocols) {
+	if len(state) != p.count {
 		return nil, ErrInvalidLength.WithMessage("invalid number of states")
 	}
-	z := make(Response[Z], len(p.protocols))
+	z := make(Response[Z], p.count)
 	var eg errgroup.Group
-	for i, sigmai := range p.protocols {
+	for i := range p.count {
 		eg.Go(func() error {
 			var err error
-			z[i], err = sigmai.ComputeProverResponse(statement[i], witness[i], commitment[i], state[i], challengeBytes)
+			z[i], err = p.protocol.ComputeProverResponse(statement[i], witness[i], commitment[i], state[i], challengeBytes)
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to compute prover response")
 			}
@@ -192,19 +193,19 @@ func (p *Protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], 
 //
 // Each branch's transcript is verified using the same challenge in parallel.
 func (p *Protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commitment[A], challengeBytes sigma.ChallengeBytes, response Response[Z]) error {
-	if len(statement) != len(p.protocols) {
+	if len(statement) != p.count {
 		return ErrInvalidLength.WithMessage("invalid number of statements")
 	}
-	if len(commitment) != len(p.protocols) {
+	if len(commitment) != p.count {
 		return ErrInvalidLength.WithMessage("invalid number of commitments")
 	}
-	if len(response) != len(p.protocols) {
+	if len(response) != p.count {
 		return ErrInvalidLength.WithMessage("invalid number of responses")
 	}
 	var eg errgroup.Group
-	for i, sigmai := range p.protocols {
+	for i := range p.count {
 		eg.Go(func() error {
-			return sigmai.Verify(statement[i], commitment[i], challengeBytes, response[i])
+			return p.protocol.Verify(statement[i], commitment[i], challengeBytes, response[i])
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -217,16 +218,16 @@ func (p *Protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Comm
 //
 // This runs the simulator for each branch in parallel using the same challenge.
 func (p *Protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeBytes sigma.ChallengeBytes) (Commitment[A], Response[Z], error) {
-	if len(statement) != len(p.protocols) {
+	if len(statement) != p.count {
 		return nil, nil, ErrInvalidLength.WithMessage("invalid number of statements")
 	}
-	a := make(Commitment[A], len(p.protocols))
-	s := make(Response[Z], len(p.protocols))
+	a := make(Commitment[A], p.count)
+	s := make(Response[Z], p.count)
 	var eg errgroup.Group
-	for i, sigmai := range p.protocols {
+	for i := range p.count {
 		eg.Go(func() error {
 			var err error
-			a[i], s[i], err = sigmai.RunSimulator(statement[i], challengeBytes)
+			a[i], s[i], err = p.protocol.RunSimulator(statement[i], challengeBytes)
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to run simulator")
 			}
@@ -241,30 +242,30 @@ func (p *Protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge
 
 // SpecialSoundness returns the special soundness parameter of the composed protocol.
 func (p *Protocol[X, W, A, S, Z]) SpecialSoundness() uint {
-	return p.protocols[0].SpecialSoundness()
+	return p.protocol.SpecialSoundness()
 }
 
 // GetChallengeBytesLength returns the challenge length in bytes for the composed protocol.
 func (p *Protocol[X, W, A, S, Z]) GetChallengeBytesLength() int {
-	return p.protocols[0].GetChallengeBytesLength()
+	return p.protocol.GetChallengeBytesLength()
 }
 
 // SoundnessError returns the soundness error of the composed protocol.
 func (p *Protocol[X, W, A, S, Z]) SoundnessError() uint {
-	return p.protocols[0].SoundnessError()
+	return p.protocol.SoundnessError()
 }
 
 // ValidateStatement checks that all statement/witness pairs are valid.
 // For AND composition, every pair must be valid.
 func (p *Protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witness Witness[W]) error {
-	if len(statement) != len(p.protocols) {
+	if len(statement) != p.count {
 		return ErrInvalidLength.WithMessage("invalid number of statements")
 	}
-	if len(witness) != len(p.protocols) {
+	if len(witness) != p.count {
 		return ErrInvalidLength.WithMessage("invalid number of witnesses")
 	}
-	for i := range p.protocols {
-		if err := p.protocols[i].ValidateStatement(statement[i], witness[i]); err != nil {
+	for i := range p.count {
+		if err := p.protocol.ValidateStatement(statement[i], witness[i]); err != nil {
 			return errs.Wrap(err).WithMessage("invalid statement/witness at index %d", i)
 		}
 	}
