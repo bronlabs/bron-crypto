@@ -42,12 +42,15 @@ func NewContext(id sharing.ID, quorum network.Quorum, commonSeed []byte, pairwis
 	if id < 1 || quorum == nil || pairwiseSeeds == nil || quorum.Size() < 2 || !quorum.Contains(id) {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}
+	if len(commonSeed) < base.CollisionResistanceBytesCeil {
+		return nil, ErrInvalidArgument.WithMessage("not enough entropy in common seed")
+	}
 	for i := range quorum.Iter() {
 		if i == id {
 			continue
 		}
-		if _, ok := pairwiseSeeds[i]; !ok {
-			return nil, ErrInvalidArgument.WithMessage("missing pairwise seed for %d", i)
+		if s, ok := pairwiseSeeds[i]; !ok || len(s) < base.CollisionResistanceBytesCeil {
+			return nil, ErrInvalidArgument.WithMessage("missing or not enough entropy for pairwise seed")
 		}
 	}
 
@@ -135,6 +138,9 @@ func (ctx *Context) Transcript() transcripts.Transcript {
 
 // SubContext derives a new context for a subset quorum that includes this participant.
 func (ctx *Context) SubContext(subQuorum network.Quorum) (*Context, error) {
+	if subQuorum == nil || subQuorum.Size() < 2 {
+		return nil, ErrInvalidArgument.WithMessage("new quorum must be at least 2")
+	}
 	if !subQuorum.IsSubSet(hashset.NewComparable(ctx.sortedQuorum...).Freeze()) || !subQuorum.Contains(ctx.holderID) {
 		return nil, ErrInvalidArgument.WithMessage("new quorum is not a subset of the current quorum")
 	}
@@ -210,7 +216,6 @@ func (ctx *Context) Clone() *Context {
 
 func (ctx *Context) Seeds() map[sharing.ID]io.Reader {
 	return maputils.MapValues(ctx.seeds, func(_ sharing.ID, shake *sha3.SHAKE) io.Reader {
-		clone := *shake
-		return &clone
+		return new(*shake)
 	})
 }
