@@ -129,7 +129,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	//
 	// Each row is a direct-sum module element of arity 2. ScalarDiagonal
 	// with the witness (lambda, y) and CoDiagonal produces the row's output.
-	directSum, err := constructions.NewFiniteDirectSumModule(group, 2)
+	directSum, err := constructions.NewFiniteDirectPowerModule(group, 2)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create direct sum module")
 	}

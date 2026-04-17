@@ -6,7 +6,8 @@ import (
 )
 
 type (
-	NAry[C any]                = crtp.NAry[C]
+	NAry                       = crtp.NAry
+	NAryProduct[C any]         = crtp.NAryProduct[C]
 	Mapping[F, C any]          = crtp.Mapping[F, C]
 	Product[P, C any]          = crtp.Product[P, C]
 	CoProduct[P, C any]        = crtp.CoProduct[P, C]

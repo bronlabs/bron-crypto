@@ -11,7 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -63,6 +65,27 @@ func Test_Simulator(t *testing.T) {
 		t.Parallel()
 		curve := bls12381.NewG2()
 		testSimulator(t, curve)
+	})
+}
+
+func Test_Anchor(t *testing.T) {
+	t.Parallel()
+
+	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
+		testAnchor(t, k256.NewCurve())
+	})
+	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
+		testAnchor(t, p256.NewCurve())
+	})
+	t.Run("bls12381g1", func(t *testing.T) {
+		t.Parallel()
+		testAnchor(t, bls12381.NewG1())
+	})
+	t.Run("bls12381g2", func(t *testing.T) {
+		t.Parallel()
+		testAnchor(t, bls12381.NewG2())
 	})
 }
 
@@ -152,6 +175,43 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	// verify
 	err = protocol.Verify(statement, commitment, challenge, response)
 	require.NoError(tb, err)
+}
+
+func testAnchor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {
+	tb.Helper()
+
+	prng := pcg.NewRandomised()
+	generator, err := curve.Random(prng)
+	require.NoError(tb, err)
+
+	protocol, err := schnorr.NewProtocol(generator, prng)
+	require.NoError(tb, err)
+
+	anchor := protocol.Anchor()
+
+	// L() is the group order.
+	expectedL, err := num.N().FromBytes(curve.Order().Bytes())
+	require.NoError(tb, err)
+	require.True(tb, anchor.L().Equal(expectedL))
+
+	// PreImage(x) is the scalar-field zero for every x.
+	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
+	require.True(tb, ok)
+	for range 8 {
+		x, err := curve.Random(pcg.NewRandomised())
+		require.NoError(tb, err)
+		require.True(tb, anchor.PreImage(x).Equal(sf.Zero()))
+	}
+
+	// Anchor invariant: phi(PreImage(x)) == x * L(). Both sides must equal the group identity.
+	phi := protocol.Phi()
+	for range 8 {
+		x, err := curve.Random(pcg.NewRandomised())
+		require.NoError(tb, err)
+		lhs := phi(anchor.PreImage(x))
+		rhs := algebrautils.ScalarMul(x, anchor.L())
+		require.True(tb, lhs.Equal(rhs))
+	}
 }
 
 func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {

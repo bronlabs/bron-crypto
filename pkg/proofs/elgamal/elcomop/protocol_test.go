@@ -1,4 +1,4 @@
-package elog_test
+package elcomop_test
 
 import (
 	"io"
@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/elog"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elcomop"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -27,19 +27,6 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("p256", func(t *testing.T) {
 		t.Parallel()
 		testHappyPath(t, p256.NewCurve())
-	})
-}
-
-func Test_ElGamalIndCPACommitment(t *testing.T) {
-	t.Parallel()
-
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		testElGamalCommitment(t, k256.NewCurve())
-	})
-	t.Run("p256", func(t *testing.T) {
-		t.Parallel()
-		testElGamalCommitment(t, p256.NewCurve())
 	})
 }
 
@@ -76,32 +63,27 @@ func Test_WrongWitness(t *testing.T) {
 	prng := pcg.NewRandomised()
 	sf := k256.NewScalarField()
 
-	pk, h := mustSetup(t, curve, prng)
-	g := curve.Generator()
+	pk, comKey, committer := mustSetup(t, curve, prng)
 
 	lambda, err := sf.Random(prng)
 	require.NoError(t, err)
 	y, err := sf.Random(prng)
 	require.NoError(t, err)
 
-	bigL := g.ScalarMul(lambda)
-	bigM := g.ScalarMul(y).Add(pk.Value().ScalarMul(lambda))
-	bigY := h.ScalarMul(y)
+	_, comStatement := mustCommit(t, curve.Generator(), y, lambda, committer)
 
-	protocol, err := elog.NewProtocol(curve, pk, h, prng)
+	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(t, err)
 
-	statement, err := elog.NewStatement(bigL, bigM, bigY)
+	statement, err := elcomop.NewStatement(comStatement)
 	require.NoError(t, err)
 
+	// Build a wrong witness (unrelated lambda and y).
 	wrongLambda, err := sf.Random(prng)
 	require.NoError(t, err)
 	wrongY, err := sf.Random(prng)
 	require.NoError(t, err)
-	wrongNonce, err := elgamal.NewNonce(wrongLambda)
-	require.NoError(t, err)
-	wrongWitness, err := elog.NewWitness(wrongNonce, wrongY)
-	require.NoError(t, err)
+	wrongWitness := mustBuildWitness(t, wrongLambda, wrongY)
 
 	commitment, state, err := protocol.ComputeProverCommitment(statement, wrongWitness)
 	require.NoError(t, err)
@@ -115,94 +97,28 @@ func Test_WrongWitness(t *testing.T) {
 
 	err = protocol.Verify(statement, commitment, challenge, response)
 	require.Error(t, err)
+
+	_ = pk
 }
 
 // --- Generic helpers ---
 
-// mustSetup returns an ElGamal public key and a second independent generator h.
+// mustSetup creates an ElGamal keypair, wraps the public key in an IND-CPA
+// commitment key, and returns a ready-to-use committer.
 func mustSetup[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
 	tb testing.TB, curve curves.Curve[P, F, S], prng io.Reader,
-) (*elgamal.PublicKey[P, S], P) {
-	tb.Helper()
-	scheme, err := elgamal.NewScheme(curve)
-	require.NoError(tb, err)
-	kg, err := scheme.Keygen()
-	require.NoError(tb, err)
-	_, pk, err := kg.Generate(prng)
-	require.NoError(tb, err)
-	// h is a second independent generator (e.g. hash-to-curve or random point)
-	hPoint, err := curve.Random(prng)
-	require.NoError(tb, err)
-	return pk, hPoint
-}
-
-func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
-	tb testing.TB, curve curves.Curve[P, F, S],
+) (
+	*elgamal.PublicKey[P, S],
+	*indcpacom.Key[*elgamal.PublicKey[P, S]],
+	*indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
 ) {
 	tb.Helper()
-	prng := pcg.NewRandomised()
-	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	pk, h := mustSetup(tb, curve, prng)
-	g := curve.Generator()
-
-	lambda, err := sf.Random(prng)
-	require.NoError(tb, err)
-	y, err := sf.Random(prng)
-	require.NoError(tb, err)
-
-	// L = g^lambda, M = g^y * X^lambda, Y = h^y
-	bigL := g.ScalarMul(lambda)
-	bigM := g.ScalarMul(y).Add(pk.Value().ScalarMul(lambda))
-	bigY := h.ScalarMul(y)
-
-	protocol, err := elog.NewProtocol(curve, pk, h, prng)
-	require.NoError(tb, err)
-
-	statement, err := elog.NewStatement(bigL, bigM, bigY)
-	require.NoError(tb, err)
-	nonce, err := elgamal.NewNonce(lambda)
-	require.NoError(tb, err)
-	witness, err := elog.NewWitness(nonce, y)
-	require.NoError(tb, err)
-
-	err = protocol.ValidateStatement(statement, witness)
-	require.NoError(tb, err)
-
-	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
-	require.NoError(tb, err)
-
-	challenge := make([]byte, protocol.GetChallengeBytesLength())
-	_, err = io.ReadFull(prng, challenge)
-	require.NoError(tb, err)
-
-	response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
-	require.NoError(tb, err)
-
-	err = protocol.Verify(statement, commitment, challenge, response)
-	require.NoError(tb, err)
-}
-
-// testElGamalCommitment tests the full path: create an ElGamal commitment via
-// indcpacom, extract the ciphertext components, and prove knowledge of
-// (lambda, y) such that (L, M) encrypts g^y and Y = h^y.
-func testElGamalCommitment[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
-	tb testing.TB, curve curves.Curve[P, F, S],
-) {
-	tb.Helper()
-	prng := pcg.NewRandomised()
-	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
-
-	// Setup ElGamal encryption and indcpacom commitment scheme.
-	// X = ElGamal public key, h = independent second generator.
 	encScheme, err := elgamal.NewScheme(curve)
 	require.NoError(tb, err)
 	kg, err := encScheme.Keygen()
 	require.NoError(tb, err)
 	_, pk, err := kg.Generate(prng)
-	require.NoError(tb, err)
-
-	h, err := curve.Random(prng)
 	require.NoError(tb, err)
 
 	comKey, err := indcpacom.NewKey(pk)
@@ -212,39 +128,81 @@ func testElGamalCommitment[P curves.Point[P, F, S], F algebra.FieldElement[F], S
 	committer, err := comScheme.Committer()
 	require.NoError(tb, err)
 
-	// Secret y, plaintext is g^y
-	g := curve.Generator()
+	return pk, comKey, committer
+}
+
+// mustCommit builds an ElGamal/IND-CPA commitment of g^y with nonce lambda, and
+// returns both the indcpacom commitment and the elcomop witness components.
+func mustCommit[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	tb testing.TB,
+	g P,
+	y, lambda S,
+	committer *indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
+) (
+	*elcomop.Witness[S],
+	*indcpacom.Commitment[*elgamal.Ciphertext[P, S], *elgamal.Nonce[S], *elgamal.PublicKey[P, S]],
+) {
+	tb.Helper()
+
+	nonce, err := elgamal.NewNonce(lambda)
+	require.NoError(tb, err)
+	indcpaWit, err := indcpacom.NewWitness(nonce)
+	require.NoError(tb, err)
+
+	plaintext, err := elgamal.NewPlaintext(g.ScalarMul(y))
+	require.NoError(tb, err)
+	msg, err := indcpacom.NewMessage(plaintext)
+	require.NoError(tb, err)
+
+	com, err := committer.CommitWithWitness(msg, indcpaWit)
+	require.NoError(tb, err)
+
+	yMsg, err := indcpacom.NewMessage(y)
+	require.NoError(tb, err)
+	witness, err := elcomop.NewWitness(indcpaWit, yMsg)
+	require.NoError(tb, err)
+
+	return witness, com
+}
+
+// mustBuildWitness constructs an elcomop witness from raw scalars, bypassing
+// any relation to a real commitment (useful for negative tests).
+func mustBuildWitness[S algebra.PrimeFieldElement[S]](
+	tb testing.TB, lambda, y S,
+) *elcomop.Witness[S] {
+	tb.Helper()
+
+	nonce, err := elgamal.NewNonce(lambda)
+	require.NoError(tb, err)
+	indcpaWit, err := indcpacom.NewWitness(nonce)
+	require.NoError(tb, err)
+	yMsg, err := indcpacom.NewMessage(y)
+	require.NoError(tb, err)
+	witness, err := elcomop.NewWitness(indcpaWit, yMsg)
+	require.NoError(tb, err)
+	return witness
+}
+
+func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, curve curves.Curve[P, F, S],
+) {
+	tb.Helper()
+	prng := pcg.NewRandomised()
+	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
+
+	_, comKey, committer := mustSetup(tb, curve, prng)
+
+	lambda, err := sf.Random(prng)
+	require.NoError(tb, err)
 	y, err := sf.Random(prng)
 	require.NoError(tb, err)
-	gY := g.ScalarMul(y)
 
-	pt, err := elgamal.NewPlaintext(gY)
-	require.NoError(tb, err)
-	msg, err := indcpacom.NewMessage(pt)
-	require.NoError(tb, err)
+	witness, com := mustCommit(tb, curve.Generator(), y, lambda, committer)
 
-	com, wit, err := committer.Commit(msg, prng)
+	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(tb, err)
 
-	// Extract ciphertext components: (L, M) = (g^lambda, g^y * X^lambda)
-	ct := com.Value()
-	components := ct.Value().Components()
-	bigL := components[0]
-	bigM := components[1]
-
-	// lambda is the ElGamal nonce (wit.Value() is already *elgamal.Nonce)
-	nonce := wit.Value()
-
-	// Y = h^y
-	bigY := h.ScalarMul(y)
-
-	// Prove knowledge of (lambda, y)
-	protocol, err := elog.NewProtocol(curve, pk, h, prng)
-	require.NoError(tb, err)
-
-	statement, err := elog.NewStatement(bigL, bigM, bigY)
-	require.NoError(tb, err)
-	witness, err := elog.NewWitness(nonce, y)
+	statement, err := elcomop.NewStatement(com)
 	require.NoError(tb, err)
 
 	err = protocol.ValidateStatement(statement, witness)
@@ -269,19 +227,22 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 ) {
 	tb.Helper()
 	prng := pcg.NewRandomised()
+	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	pk, h := mustSetup(tb, curve, prng)
-	protocol, err := elog.NewProtocol(curve, pk, h, prng)
+	_, comKey, committer := mustSetup(tb, curve, prng)
+	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(tb, err)
 
-	// Random statement (simulator doesn't need a valid witness)
-	r1, err := curve.Random(prng)
+	// Random statement produced by a well-formed commitment (simulator is
+	// zero-knowledge for any valid statement in the image of phi, and using a
+	// real commitment avoids relying on points outside the image).
+	lambda, err := sf.Random(prng)
 	require.NoError(tb, err)
-	r2, err := curve.Random(prng)
+	y, err := sf.Random(prng)
 	require.NoError(tb, err)
-	r3, err := curve.Random(prng)
-	require.NoError(tb, err)
-	statement, err := elog.NewStatement(r1, r2, r3)
+	_, com := mustCommit(tb, curve.Generator(), y, lambda, committer)
+
+	statement, err := elcomop.NewStatement(com)
 	require.NoError(tb, err)
 
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
@@ -302,26 +263,19 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	prng := pcg.NewRandomised()
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	pk, h := mustSetup(tb, curve, prng)
-	g := curve.Generator()
+	_, comKey, committer := mustSetup(tb, curve, prng)
 
 	lambda, err := sf.Random(prng)
 	require.NoError(tb, err)
 	y, err := sf.Random(prng)
 	require.NoError(tb, err)
 
-	bigL := g.ScalarMul(lambda)
-	bigM := g.ScalarMul(y).Add(pk.Value().ScalarMul(lambda))
-	bigY := h.ScalarMul(y)
+	witness, com := mustCommit(tb, curve.Generator(), y, lambda, committer)
 
-	protocol, err := elog.NewProtocol(curve, pk, h, prng)
+	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(tb, err)
 
-	statement, err := elog.NewStatement(bigL, bigM, bigY)
-	require.NoError(tb, err)
-	nonce, err := elgamal.NewNonce(lambda)
-	require.NoError(tb, err)
-	witness, err := elog.NewWitness(nonce, y)
+	statement, err := elcomop.NewStatement(com)
 	require.NoError(tb, err)
 
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
@@ -340,7 +294,7 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 
 	ei := []sigma.ChallengeBytes{challenge1, challenge2}
-	zi := []*elog.Response[S]{response1, response2}
+	zi := []*elcomop.Response[S]{response1, response2}
 
 	wExtracted, err := protocol.Extract(statement, commitment, ei, zi)
 	require.NoError(tb, err)

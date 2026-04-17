@@ -89,7 +89,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](generators[0].Structure())
 	baseScalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 
-	directSumModule, err := constructions.NewFiniteDirectSumModule(group, uint(len(generators)))
+	directSumModule, err := constructions.NewFiniteDirectPowerModule(group, uint(len(generators)))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create direct sum module")
 	}

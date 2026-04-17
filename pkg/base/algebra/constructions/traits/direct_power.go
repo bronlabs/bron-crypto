@@ -17,7 +17,7 @@ import (
 )
 
 type DirectPower[E algebra.SemiGroupElement[E]] interface {
-	algebra.NAry[E]
+	algebra.NAryProduct[E]
 	set(arity int, components ...E) error
 }
 
@@ -606,19 +606,19 @@ func (s *DirectPowerOfFiniteStructures[S, E, W, WT]) Hash(input []byte) (W, erro
 
 // ========== Module ==========.
 
-type DirectSumModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
+type DirectPowerModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	DirectPowerGroup[M, E, W, WT]
 }
 
-func (s *DirectSumModule[M, E, S, W, WT]) ScalarStructure() algebra.Structure[S] {
+func (s *DirectPowerModule[M, E, S, W, WT]) ScalarStructure() algebra.Structure[S] {
 	return s.base.ScalarStructure()
 }
 
-type DirectSumModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
+type DirectPowerModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	DirectPowerGroupElement[E, W, WT]
 }
 
-func (d *DirectSumModuleElement[E, S, W, WT]) CoDiagonal() E {
+func (d *DirectPowerModuleElement[E, S, W, WT]) CoDiagonal() E {
 	if d.Arity().IsZero() {
 		panic(ErrInvalidArgument.WithMessage("cannot compute diagonal of empty element"))
 	}
@@ -629,13 +629,13 @@ func (d *DirectSumModuleElement[E, S, W, WT]) CoDiagonal() E {
 	return out
 }
 
-func (d *DirectSumModuleElement[E, S, W, WT]) IsTorsionFree() bool {
+func (d *DirectPowerModuleElement[E, S, W, WT]) IsTorsionFree() bool {
 	return sliceutils.All(d.components, func(c E) bool {
 		return c.IsTorsionFree()
 	})
 }
 
-func (d *DirectSumModuleElement[E, S, W, WT]) ScalarOp(s S) W {
+func (d *DirectPowerModuleElement[E, S, W, WT]) ScalarOp(s S) W {
 	values := make([]E, d.arity)
 	for i, c := range d.components {
 		values[i] = c.ScalarOp(s)
@@ -649,19 +649,19 @@ func (d *DirectSumModuleElement[E, S, W, WT]) ScalarOp(s S) W {
 
 // ========== Algebra ==========.
 
-type DirectSumAlgebra[M algebra.Algebra[E, S], E algebra.AlgebraElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
+type DirectPowerAlgebra[M algebra.Algebra[E, S], E algebra.AlgebraElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	DirectPowerRing[M, E, W, WT]
 }
 
-func (s *DirectSumAlgebra[M, E, S, W, WT]) ScalarStructure() algebra.Structure[S] {
+func (s *DirectPowerAlgebra[M, E, S, W, WT]) ScalarStructure() algebra.Structure[S] {
 	return s.base.ScalarStructure()
 }
 
-type DirectSumAlgebraElement[E algebra.AlgebraElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
+type DirectPowerAlgebraElement[E algebra.AlgebraElement[E, S], S algebra.RingElement[S], W DirectPowerInheritterPtrConstraint[E, WT], WT any] struct {
 	DirectPowerRingElement[E, W, WT]
 }
 
-func (d *DirectSumAlgebraElement[E, S, W, WT]) CoDiagonal() E {
+func (d *DirectPowerAlgebraElement[E, S, W, WT]) CoDiagonal() E {
 	if d.Arity().IsZero() {
 		panic(ErrInvalidArgument.WithMessage("cannot compute diagonal of empty element"))
 	}
@@ -672,17 +672,17 @@ func (d *DirectSumAlgebraElement[E, S, W, WT]) CoDiagonal() E {
 	return out
 }
 
-func (d *DirectSumAlgebraElement[E, S, W, WT]) IsTorsionFree() bool {
+func (d *DirectPowerAlgebraElement[E, S, W, WT]) IsTorsionFree() bool {
 	return sliceutils.All(d.components, func(c E) bool {
 		return c.IsTorsionFree()
 	})
 }
 
-func (d *DirectSumAlgebraElement[E, S, W, WT]) ScalarOp(s S) W {
+func (d *DirectPowerAlgebraElement[E, S, W, WT]) ScalarOp(s S) W {
 	return d.ScalarMul(s)
 }
 
-func (d *DirectSumAlgebraElement[E, S, W, WT]) ScalarMul(s S) W {
+func (d *DirectPowerAlgebraElement[E, S, W, WT]) ScalarMul(s S) W {
 	values := make([]E, d.arity)
 	for i, c := range d.components {
 		values[i] = c.ScalarMul(s)
