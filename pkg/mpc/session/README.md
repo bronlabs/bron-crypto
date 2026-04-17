@@ -24,15 +24,38 @@ Without this step, downstream protocols would either:
 
 ## Spec
 ### Session Setup
-1. Each party samples and broadcasts a commitment key.
-2. Using receiver's keys, each party commits to a fresh per-peer contribution and sends commitments to it.
-3. Each party opens its contributions.
-4. Each party verifies received openings against stored commitments.
-5. For every peer pair, both sides derive the same pairwise seed by concatenating the two verified contributions in deterministic ID order.
-6. Parties use these pairwise seeds (plus common setup data) to build the session context (session ID + transcript initialization).
+The protocol runs in four rounds.
+
+1. Round 1:
+   Each party samples:
+   - a per-recipient commitment key
+   - a common random contribution
+   It commits to the common contribution under the fixed common commitment key and broadcasts:
+   - the commitment key
+   - the common contribution commitment
+2. Round 2:
+   After receiving every other party's round-1 broadcast, each party:
+   - stores the peers' commitment keys
+   - samples a fresh pairwise contribution for every peer
+   - commits to each pairwise contribution under the recipient's commitment key
+   It then:
+   - broadcasts the common contribution opening
+   - unicasts the pairwise contribution commitments
+3. Round 3:
+   Each party verifies every peer's common contribution opening against the round-1 common commitment,
+   stores the received pairwise contribution commitments, and unicasts the openings of its own pairwise contributions.
+4. Round 4:
+   Each party verifies every received pairwise contribution opening against the corresponding round-2 commitment 
+   and then derives:
+   - the common session seed from the sorted quorum, commitment keys, common commitments, common contribution openings,
+     and common contribution witnesses
+   - a symmetric pairwise seed with every peer by hashing the common session seed together with
+     the two verified pairwise contributions in deterministic ID order
+   Finally, the party constructs the session context from that common seed and the pairwise seeds.
 
 ## Security and Correctness Notes
 1. Deterministic sorted quorum ordering is required for all hash/concat operations.
-2. Commitment keys are per-recipient, so every opening is verified against recipient-local commitment key.
-3. Pairwise seed construction is symmetric by id-ordering, ensuring both sides derive identical material.
-4. Domain separators prevent collisions between setup, seed derivation, and sub-context derivation.
+2. The final common session seed is bound to both the common commitments and their verified openings, not just to the opened values.
+3. Commitment keys are per-recipient, so every pairwise opening is verified against a recipient-local commitment key.
+4. Pairwise seed construction is symmetric by ID ordering, ensuring both sides derive identical material.
+5. Domain separators prevent collisions between setup, seed derivation, and sub-context derivation.
