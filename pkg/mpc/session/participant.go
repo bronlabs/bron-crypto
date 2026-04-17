@@ -269,9 +269,7 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 	}
 
 	// collect all source of entropy
-	const partyContributionEstimatedSize = 160
-	commonSeed := make([]byte, 0, len(p.sortedQuorum)*partyContributionEstimatedSize)
-	commonSeed = append(commonSeed, sessionDomainSeparator...)
+	commonSeed := []byte(sessionDomainSeparator)
 	commonSeed = binary.LittleEndian.AppendUint64(commonSeed, uint64(len(p.sortedQuorum)))
 	for _, id := range p.sortedQuorum {
 		commonSeed = binary.LittleEndian.AppendUint64(commonSeed, uint64(id))
