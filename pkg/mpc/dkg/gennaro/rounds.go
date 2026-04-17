@@ -91,8 +91,14 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 			return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto statement for coefficient %d", i)
 		}
 	}
-	witness := sigand.ComposeWitnesses(witnesses...)
-	statement := sigand.ComposeStatements(statements...)
+	witness, err := sigand.ComposeWitnesses(witnesses...)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to compose okamoto witnesses")
+	}
+	statement, err := sigand.ComposeStatements(statements...)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to compose okamoto statements")
+	}
 	proof, err := prover.Prove(statement, witness)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto proof")
@@ -153,8 +159,12 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 			}
 			okStatements = append(okStatements, stmt)
 		}
+		composedStatements, err := sigand.ComposeStatements(okStatements...)
+		if err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to compose okamoto statements from party %d", pid)
+		}
 		if err := verifier.Verify(
-			sigand.ComposeStatements(okStatements...),
+			composedStatements,
 			inB.Proof,
 		); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify okamoto proof of knowledge of opening from party %d", pid)

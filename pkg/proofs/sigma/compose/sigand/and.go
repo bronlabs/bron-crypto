@@ -2,11 +2,13 @@ package sigand
 
 import (
 	"fmt"
+	"slices"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -66,14 +68,20 @@ var _ sigma.Response = (Response[sigma.Response])(nil)
 
 // ComposeStatements creates an AND-composed statement from individual statements.
 // All statements will be proven simultaneously using the same challenge.
-func ComposeStatements[X sigma.Statement](statements ...X) Statement[X] {
-	return statements
+func ComposeStatements[X sigma.Statement](statements ...X) (Statement[X], error) {
+	if slices.ContainsFunc(statements, utils.IsNil) {
+		return nil, ErrInvalidArgument.WithMessage("statements cannot be nil")
+	}
+	return statements, nil
 }
 
 // ComposeWitnesses creates an AND-composed witness from individual witnesses.
 // Every witness must be valid for its corresponding statement.
-func ComposeWitnesses[W sigma.Witness](witnesses ...W) Witness[W] {
-	return witnesses
+func ComposeWitnesses[W sigma.Witness](witnesses ...W) (Witness[W], error) {
+	if slices.ContainsFunc(witnesses, utils.IsNil) {
+		return nil, ErrInvalidArgument.WithMessage("witnesses cannot be nil")
+	}
+	return witnesses, nil
 }
 
 type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {

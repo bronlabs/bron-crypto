@@ -15,7 +15,7 @@ import (
 )
 
 // Name identifies the elog sigma protocol.
-const Name sigma.Name = "PROOF_OF_KNOWLEDGE_DISCRETE_LOGARITHM_OF_ELGAMAL_COMMITMENT"
+const Name sigma.Name = "PROOF_OF_KNOWLEDGE_OF_DISCRETE_LOGARITHM_OF_ELGAMAL_COMMITMENT"
 
 type (
 	// Witness is the AND-composed witness (elcomop witness, Schnorr witness),

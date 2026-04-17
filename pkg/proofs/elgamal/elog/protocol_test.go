@@ -210,10 +210,7 @@ func Test_Name(t *testing.T) {
 	protocol, err := elog.NewProtocol(curve, comKey, h, prng)
 	require.NoError(t, err)
 
-	name := string(protocol.Name())
-	require.Contains(t, name, string(elcomop.Name))
-	require.Contains(t, name, string(schnorrpok.Name))
-	require.Contains(t, name, "AND")
+	require.Equal(t, protocol.Name(), elog.Name)
 }
 
 func Test_ChallengeLengthAndSoundness(t *testing.T) {
