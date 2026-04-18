@@ -16,11 +16,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
-var (
-	ErrInvalidSize = errs.New("invalid size")
-	ErrIsNil       = errs.New("is nil")
-)
-
 // PrimeSamplable is an interface for types that can sample prime numbers.
 type PrimeSamplable[E algebra.NatPlusLike[E]] interface {
 	FromBig(*big.Int) (E, error)
@@ -60,7 +55,7 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 		return nilN, ErrIsNil.WithMessage("nil structure")
 	}
 	if bits < 3 {
-		return nilN, ErrInvalidSize.WithMessage("safe prime size must be at least 3-bits")
+		return nilN, ErrInvalidArgument.WithMessage("safe prime size must be at least 3-bits")
 	}
 
 	var p *big.Int
