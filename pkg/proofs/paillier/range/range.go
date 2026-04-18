@@ -2,6 +2,7 @@ package paillierrange
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"maps"
 	"slices"
@@ -29,7 +30,7 @@ var (
 
 // Witness contains the secret inputs for the range proof.
 type Witness struct {
-	x *paillier.Plaintext
+	m *paillier.Plaintext
 	r *paillier.Nonce
 }
 
@@ -40,7 +41,7 @@ func (w *Witness) Bytes() []byte {
 	}
 
 	out := []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, w.x.Value().Bytes())
+	out = sliceutils.AppendLengthPrefixed(out, w.m.Value().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, w.r.Value().Bytes())
 	return out
 }
@@ -51,7 +52,7 @@ func NewWitness(x *paillier.Plaintext, r *paillier.Nonce) (*Witness, error) {
 		return nil, ErrInvalidArgument.WithMessage("invalid witness")
 	}
 	return &Witness{
-		x: x,
+		m: x,
 		r: r,
 	}, nil
 }
@@ -170,6 +171,7 @@ func (r *Response) Bytes() []byte {
 
 // Protocol implements the Paillier range proof.
 type Protocol struct {
+	name      sigma.Name
 	t         uint
 	lowBound  *paillier.Plaintext
 	highBound *paillier.Plaintext
@@ -210,7 +212,10 @@ func NewPaillierRange(t uint, l *numct.Nat, sk *paillier.PrivateKey, pk *paillie
 	}
 	highBound := lowBound.Add(lowBound)
 
+	name := fmt.Sprintf("%s_L=%s_N=%s", Name, l.String(), pk.N().String())
+
 	return &Protocol{
+		name:      sigma.Name(name),
 		t:         t,
 		lowBound:  lowBound,
 		highBound: highBound,
@@ -221,8 +226,8 @@ func NewPaillierRange(t uint, l *numct.Nat, sk *paillier.PrivateKey, pk *paillie
 }
 
 // Name returns the protocol identifier.
-func (*Protocol) Name() sigma.Name {
-	return Name
+func (p *Protocol) Name() sigma.Name {
+	return p.name
 }
 
 // ComputeProverCommitment generates the initial commitment and state.
@@ -230,7 +235,7 @@ func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witnes
 	if statement == nil || statement.c == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
 	}
-	if witness == nil || witness.x == nil || witness.r == nil {
+	if witness == nil || witness.m == nil || witness.r == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid witness")
 	}
 	if p.sk == nil {
@@ -287,7 +292,7 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 	if statement == nil || statement.c == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid statement")
 	}
-	if witness == nil || witness.x == nil || witness.r == nil {
+	if witness == nil || witness.m == nil || witness.r == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid witness")
 	}
 	if state == nil {
@@ -320,13 +325,13 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 			z.R2[i] = state.R2[i]
 
 		case 1:
-			xPlusW1 := witness.x.Add(state.W1[i])
+			xPlusW1 := witness.m.Add(state.W1[i])
 			if isInRange(p.lowBound, p.highBound, xPlusW1) {
 				z.Wj[i] = xPlusW1
 				z.Rj[i] = witness.r.Mul(state.R1[i])
 				z.J[i] = 1
 			} else {
-				xPlusW2 := witness.x.Add(state.W2[i])
+				xPlusW2 := witness.m.Add(state.W2[i])
 				z.Wj[i] = xPlusW2
 				z.Rj[i] = witness.r.Mul(state.R2[i])
 				z.J[i] = 2
@@ -555,7 +560,7 @@ func (p *Protocol) ValidateStatement(statement *Statement, witness *Witness) err
 	if statement == nil || witness == nil {
 		return ErrInvalidArgument.WithMessage("nil argument")
 	}
-	if !p.pk.PlaintextSpace().Contains(witness.x) {
+	if !p.pk.PlaintextSpace().Contains(witness.m) {
 		return ErrValidationFailed.WithMessage("witness plaintext not in plaintext space")
 	}
 	if !p.pk.NonceSpace().Contains(witness.r) {
@@ -563,16 +568,16 @@ func (p *Protocol) ValidateStatement(statement *Statement, witness *Witness) err
 	}
 	senc, err := paillier.NewScheme().Encrypter()
 	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create self encrypter")
+		return errs.Wrap(err).WithMessage("failed to create encrypter")
 	}
-	cCheck, err := senc.EncryptWithNonce(witness.x, p.pk, witness.r)
+	cCheck, err := senc.EncryptWithNonce(witness.m, p.pk, witness.r)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to encrypt witness")
 	}
 	if !statement.c.Equal(cCheck) {
 		return ErrValidationFailed.WithMessage("plaintext/ciphertext mismatch")
 	}
-	if !isInRange(p.pk.PlaintextSpace().Zero(), p.lowBound, witness.x) {
+	if !isInRange(p.pk.PlaintextSpace().Zero(), p.lowBound, witness.m) {
 		return ErrValidationFailed.WithMessage("witness out of range")
 	}
 
