@@ -179,6 +179,10 @@ type Protocol struct {
 }
 
 // NewPaillierRange constructs a Paillier range-proof protocol instance.
+//
+// Exactly one of sk or pk is required: the prover must supply sk (pk is
+// derived from it), while the verifier only has pk and must pass it with
+// sk left nil. Passing both is allowed only if they refer to the same key.
 func NewPaillierRange(t uint, l *numct.Nat, sk *paillier.PrivateKey, pk *paillier.PublicKey, prng io.Reader) (*Protocol, error) {
 	if t < base.StatisticalSecurityBits {
 		return nil, ErrValidationFailed.WithMessage("insufficient statistical security")
