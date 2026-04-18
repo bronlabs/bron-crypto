@@ -2,6 +2,7 @@ package mat
 
 import (
 	"math/bits"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -49,9 +50,6 @@ func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal matrix")
 	}
-	if dto.Rows <= 0 || dto.Cols <= 0 {
-		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
-	}
 	expected, ok := expectedDataLen(dto.Rows, dto.Cols)
 	if !ok {
 		return ErrDimension.WithMessage("matrix dimensions overflow: %dx%d", dto.Rows, dto.Cols)
@@ -59,10 +57,8 @@ func (m *Matrix[S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) != expected {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), expected)
 	}
-	for _, v := range dto.Data {
-		if utils.IsNil(v) {
-			return ErrFailed.WithMessage("data contains nil element")
-		}
+	if slices.ContainsFunc(dto.Data, utils.IsNil) {
+		return ErrFailed.WithMessage("data contains nil element")
 	}
 	m.init(dto.Rows, dto.Cols)
 	copy(m.data(), dto.Data)
@@ -98,9 +94,6 @@ func (m *ModuleValuedMatrix[E, S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) == 0 {
 		return ErrFailed.WithMessage("empty data")
 	}
-	if dto.Rows <= 0 || dto.Cols <= 0 {
-		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Rows, dto.Cols)
-	}
 	expected, ok := expectedDataLen(dto.Rows, dto.Cols)
 	if !ok {
 		return ErrDimension.WithMessage("matrix dimensions overflow: %dx%d", dto.Rows, dto.Cols)
@@ -108,10 +101,8 @@ func (m *ModuleValuedMatrix[E, S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) != expected {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), expected)
 	}
-	for _, v := range dto.Data {
-		if utils.IsNil(v) {
-			return ErrFailed.WithMessage("data contains nil element")
-		}
+	if slices.ContainsFunc(dto.Data, utils.IsNil) {
+		return ErrFailed.WithMessage("data contains nil element")
 	}
 	m.init(dto.Rows, dto.Cols)
 	copy(m.data(), dto.Data)
@@ -145,9 +136,6 @@ func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) == 0 {
 		return ErrFailed.WithMessage("empty data")
 	}
-	if dto.Size <= 0 {
-		return ErrDimension.WithMessage("matrix dimensions must be positive: got %dx%d", dto.Size, dto.Size)
-	}
 	expected, ok := expectedDataLen(dto.Size, dto.Size)
 	if !ok {
 		return ErrDimension.WithMessage("matrix dimensions overflow: %dx%d", dto.Size, dto.Size)
@@ -155,10 +143,8 @@ func (m *SquareMatrix[S]) UnmarshalCBOR(data []byte) error {
 	if len(dto.Data) != expected {
 		return ErrFailed.WithMessage("data length does not match dimensions: got %d, expected %d", len(dto.Data), expected)
 	}
-	for _, v := range dto.Data {
-		if utils.IsNil(v) {
-			return ErrFailed.WithMessage("data contains nil element")
-		}
+	if slices.ContainsFunc(dto.Data, utils.IsNil) {
+		return ErrFailed.WithMessage("data contains nil element")
 	}
 	m.init(dto.Size, dto.Size)
 	copy(m.data(), dto.Data)
