@@ -38,7 +38,7 @@ func Test_HappyPath(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -52,16 +52,10 @@ func Test_HappyPath(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	err = protocol.ValidateStatement(statement, witness)
 	require.NoError(t, err)
@@ -92,7 +86,7 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	lowBound := new(big.Int).Neg(lBig)
@@ -108,16 +102,10 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	// this must fail as the witness is out of bound
 	err = protocol.ValidateStatement(statement, witness)
@@ -150,7 +138,7 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	highBound := new(big.Int).Add(lBig, lBig)
@@ -166,16 +154,10 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	// this must fail as witness is out of bound
 	err = protocol.ValidateStatement(statement, witness)
@@ -208,7 +190,7 @@ func Test_Simulator(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -221,16 +203,10 @@ func Test_Simulator(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	err = protocol.ValidateStatement(statement, witness)
 	require.NoError(t, err)
@@ -257,7 +233,7 @@ func Test_Interactive(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -270,16 +246,10 @@ func Test_Interactive(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	const proverId = 1
 	const verifierId = 2
@@ -319,7 +289,7 @@ func Test_InteractiveZk(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -332,16 +302,10 @@ func Test_InteractiveZk(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	const proverId = 1
 	const verifierId = 2
@@ -383,7 +347,7 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -396,16 +360,10 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
-	}
-	witness := &paillierrange.Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
-	}
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	compiler, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
@@ -446,7 +404,7 @@ func Test_InvalidArgumentHandling(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, l, sk, pk, prng)
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -458,14 +416,10 @@ func Test_InvalidArgumentHandling(t *testing.T) {
 	c, r, err := enc.Encrypt(x, pk, prng)
 	require.NoError(t, err)
 
-	statement := &paillierrange.Statement{Pk: pk, C: c, L: l}
-	witness := &paillierrange.Witness{Sk: sk, X: x, R: r}
-
-	t.Run("validate statement rejects nil fields", func(t *testing.T) {
-		t.Parallel()
-		err := protocol.ValidateStatement(paillierrange.NewStatement(nil, nil, nil), paillierrange.NewWitness(nil, nil, nil))
-		require.Error(t, err)
-	})
+	statement, err := paillierrange.NewStatement(c)
+	require.NoError(t, err)
+	witness, err := paillierrange.NewWitness(x, r)
+	require.NoError(t, err)
 
 	t.Run("compute prover response rejects short challenge", func(t *testing.T) {
 		t.Parallel()

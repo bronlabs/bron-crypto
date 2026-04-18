@@ -102,7 +102,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, prng)
+	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, nil, publicKey, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
 	}
@@ -120,7 +120,10 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	// Need to forget order on xEncrypted for the division
 	xUnknown := paillier.NewCiphertextFromUnit(xEncrypted.Value().ForgetOrder())
 	rangeCiphertext := xUnknown.HomSub(qThird)
-	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
+	rangeStatement, err := paillierrange.NewStatement(rangeCiphertext)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create Paillier range statement")
+	}
 	rangeVerifier, err := zkcompiler.NewVerifier(ctx, rangeProtocol, rangeStatement, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Paillier range verifier")
@@ -201,7 +204,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, prng)
+	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, secretKey, nil, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
 	}
@@ -236,8 +239,14 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't create range statement")
 	}
-	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
-	rangeStatement := paillierrange.NewStatement(secretKey.PublicKey(), rangeCipherText, qThirdNat)
+	rangeWitness, err := paillierrange.NewWitness(rangePlainText, r)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("couldn't create range witness")
+	}
+	rangeStatement, err := paillierrange.NewStatement(rangeCipherText)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("couldn't create range statement")
+	}
 	rangeProver, err := zkcompiler.NewProver(ctx, rangeProtocol, rangeStatement, rangeWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise prover")
@@ -307,7 +316,7 @@ func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[
 	return nil
 }
 
-func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], prng io.Reader) (rangeProtocol *paillierrange.Protocol, zModQ, zModQ2 *num.ZMod, qThird *numct.Nat, err error) {
+func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], sk *paillier.PrivateKey, pk *paillier.PublicKey, prng io.Reader) (rangeProtocol *paillierrange.Protocol, zModQ, zModQ2 *num.ZMod, qThird *numct.Nat, err error) {
 	q := curve.Order()
 	q2 := q.Mul(q)
 
@@ -325,7 +334,7 @@ func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B],
 	qThird = numct.NewNat(0)
 	qThird.EuclideanDivVarTime(nil, qNat, three)
 
-	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
+	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, qThird, sk, pk, prng)
 	if err != nil {
 		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("couldn't create range protocol")
 	}
