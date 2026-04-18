@@ -1,9 +1,10 @@
 package paillierrange
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 type witnessDTO struct {
