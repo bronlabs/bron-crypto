@@ -145,7 +145,7 @@ type PrimePairGenerator[E algebra.NatPlusLike[E]] struct {
 
 // Generate returns a pair of distinct primes (p, q) such that N = p*q has exactly the given keyLen bit length,
 // subject to the generator's safe and/or Paillier-Blum constraints.
-func (g *PrimePairGenerator[E]) Generate(keyLen uint, prng io.Reader) (E, E, error) {
+func (g *PrimePairGenerator[E]) Generate(keyLen uint, prng io.Reader) (p, q E, err error) {
 	bits := keyLen / 2
 	if bits < 3 {
 		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 3-bits")
@@ -273,6 +273,7 @@ func generatePrimePair[N algebra.NatPlusLike[N]](gen *PrimeGenerator[N], keyLen 
 		if len(predicates) == 0 || sliceutils.All(predicates, func(predicate func(N, N) bool) bool {
 			return predicate(pCandidate, qCandidate)
 		}) {
+
 			return pCandidate, qCandidate, nil
 		}
 	}

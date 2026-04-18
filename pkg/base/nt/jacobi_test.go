@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/stretchr/testify/require"
 )
 
 // https://en.wikipedia.org/wiki/Jacobi_symbol#Table_of_values

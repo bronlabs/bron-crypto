@@ -30,7 +30,7 @@ func (*Scheme) Name() encryption.Name {
 
 // Keygen creates a new key generator with the given options.
 func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
-	kg := &KeyGenerator{
+	kg := &KeyGenerator{ //nolint:exhaustruct // other values are set with options.
 		bits: MinKeyLen,
 	}
 	for _, opt := range opts {

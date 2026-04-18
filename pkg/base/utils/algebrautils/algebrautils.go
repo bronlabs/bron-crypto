@@ -68,6 +68,7 @@ func Random[S algebra.FiniteStructure[E], E algebra.Element[E]](s S, prng io.Rea
 		if len(predicates) == 0 || sliceutils.All(predicates, func(p func(E) bool) bool {
 			return p(out)
 		}) {
+
 			return out, nil
 		}
 	}

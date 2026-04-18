@@ -3,9 +3,10 @@
 package nt
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/cgo/boring"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Jacobi returns the Jacobi symbol (a/n) for a positive odd n, delegating to

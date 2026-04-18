@@ -2,7 +2,11 @@
 
 package nt
 
-import "github.com/bronlabs/errs-go/errs"
+import (
+	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+)
 
 // Jacobi returns the Jacobi symbol (x/y) for a positive odd y. It is a pure-Go
 // port of BoringSSL's BN_jacobi (itself an adaptation of Cohen's algorithm
