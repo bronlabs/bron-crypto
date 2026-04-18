@@ -12,19 +12,25 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
-// SampleRSAGroup generates an RSA group with keyLen of the given bit length.
-func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
+// SampleRSAGroup generates a random RSA group with known order whose modulus N = p*q has exactly the given bit length.
+// If withSafePrimes is true, p and q are safe primes.
+// If withPaillierBlumModulus is true, p ≡ q ≡ 3 (mod 4) and gcd(φ(N), N) = 1.
+func SampleRSAGroup(keyLen uint, withSafePrimes, withPaillierBlumModulus bool, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
 	}
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
+	pgen, err := nt.NewPrimePairGenerator(num.NPlus(), withSafePrimes, withPaillierBlumModulus)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create prime pair generator")
+	}
+	p, q, err := pgen.Generate(keyLen, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to generate prime pair")
 	}
 	return NewRSAGroup(p, q)
 }
 
-// NewRSAGroup generates an RSA group with random primes of the given bit length.
+// NewRSAGroup generates an RSA group with the given primes p and q.
 func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if p == nil || q == nil {
 		return nil, ErrValue.WithMessage("p and q must not be nil")
@@ -97,6 +103,20 @@ type (
 // X is the arithmetic type used for the group and determines whether the group has known or unknown order.
 type RSAGroup[X ArithmeticRSA] struct {
 	UnitGroupTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]
+}
+
+// IsQuadraticResidue checks if the given element is a quadratic residue in the RSA group.
+func (g *RSAGroup[X]) IsQuadraticResidue(elem *RSAGroupElement[X]) (bool, error) {
+	if elem == nil {
+		return false, ErrIsNil.WithMessage("elem")
+	}
+	if !elem.v.Group().Modulus().Equal(g.zMod.Modulus()) {
+		return false, ErrValue.WithMessage("element is not in the correct RSA group")
+	}
+	if elem.IsUnknownOrder() {
+		return false, ErrValue.WithMessage("it is intractable to determine quadratic residuosity for elements of unknown order")
+	}
+	return elem.IsTorsionFree(), nil
 }
 
 // Equal checks if two RSA groups are equal.

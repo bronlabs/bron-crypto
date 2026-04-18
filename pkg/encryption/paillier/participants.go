@@ -24,15 +24,33 @@ func WithKeyLen(bits uint) KeyGeneratorOption {
 	}
 }
 
+// WithSafePrimes configures the key generator to use safe primes for p and q.
+func WithSafePrimes() KeyGeneratorOption {
+	return func(kg *KeyGenerator) error {
+		kg.withSafePrimes = true
+		return nil
+	}
+}
+
+// WithPaillierBlumModulus configures the key generator to use Blum primes for p and q, which are required for certain optimizations in Paillier encryption.
+func WithPaillierBlumModulus() KeyGeneratorOption {
+	return func(kg *KeyGenerator) error {
+		kg.withPaillierBlumModulus = true
+		return nil
+	}
+}
+
 // KeyGenerator generates Paillier key pairs with configurable parameters.
 type KeyGenerator struct {
-	bits uint
+	bits                    uint
+	withSafePrimes          bool
+	withPaillierBlumModulus bool
 }
 
 // Generate creates a new Paillier key pair using the configured parameters.
 // Returns the private key, public key, and any error encountered.
 func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error) {
-	group, err := znstar.SamplePaillierGroup(kg.bits, prng)
+	group, err := znstar.SamplePaillierGroup(kg.bits, kg.withSafePrimes, kg.withPaillierBlumModulus, prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err)
 	}

@@ -22,6 +22,7 @@ type unitWrapper[A modular.Arithmetic] interface {
 	Arithmetic() A
 	Modulus() *num.NatPlus
 	IsUnknownOrder() bool
+	Jacobi() (int, error)
 	base.Transparent[*num.Uint]
 }
 
@@ -64,6 +65,35 @@ func (g *UnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
 		W(&u).set(r, g.arith, g.n)
 		if W(&u).Value().Lift().Coprime(g.Modulus().Lift()) {
 			return W(&u), nil
+		}
+	}
+}
+
+func (g *UnitGroupTrait[A, W, WT]) RandomQuadraticResidue(prng io.Reader) (W, error) {
+	r, err := g.Random(prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("couldn't sample r")
+	}
+	var r2 WT
+	W(&r2).set(r.Value().Mul(r.Value()), g.arith, g.n)
+	return W(&r2), nil
+}
+
+func (g *UnitGroupTrait[A, W, WT]) RandomWithJacobi(j int, prng io.Reader) (W, error) {
+	if j != 1 && j != -1 {
+		return nil, ErrValue.WithMessage("Jacobi symbol must be either 1 or -1")
+	}
+	for {
+		r, err := g.Random(prng)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("couldn't sample r")
+		}
+		jacobi, err := r.Jacobi()
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to compute Jacobi symbol")
+		}
+		if jacobi == j {
+			return r, nil
 		}
 	}
 }

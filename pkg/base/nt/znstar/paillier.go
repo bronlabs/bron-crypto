@@ -13,12 +13,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
-// SamplePaillierGroup generates a Paillier group with modulus of given bitlen.
-func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
+// SamplePaillierGroup generates a random Paillier group with known order whose modulus N = p*q has exactly the given bit length.
+// If withSafePrimes is true, p and q are safe primes.
+// If withPaillierBlumModulus is true, p ≡ q ≡ 3 (mod 4) and gcd(φ(N), N) = 1.
+func SamplePaillierGroup(keyLen uint, withSafePrimes, withPaillierBlumModulus bool, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
 	}
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
+	pgen, err := nt.NewPrimePairGenerator(num.NPlus(), withSafePrimes, withPaillierBlumModulus)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create prime pair generator")
+	}
+	p, q, err := pgen.Generate(keyLen, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to generate prime pair")
 	}
