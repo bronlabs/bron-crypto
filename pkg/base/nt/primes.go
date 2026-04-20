@@ -19,12 +19,8 @@ import (
 )
 
 // PrimeSamplable constrains the target structure a freshly sampled prime is
-// lifted into. Sampling happens in big.Int and the result is converted via
-// FromBig so the prime lands in a typed set (e.g. NatPlus) where downstream
-// modular arithmetic is defined.
-type PrimeSamplable[E algebra.NatPlusLike[E]] interface {
-	FromBig(*big.Int) (E, error)
-}
+// lifted into.
+type PrimeSamplable[E algebra.NatPlusLike[E]] algebra.NumericStructure[E]
 
 // PrimeSampler is the signature of a single-prime sampling strategy. Different
 // strategies impose different structural constraints on the output prime
@@ -94,11 +90,11 @@ func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], keyLen u
 	if pBig.BitLen() != int(keyLen/2) || qBig.BitLen() != int(keyLen/2) {
 		return *new(N), *new(N), errs.New("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), keyLen)
 	}
-	p, err = set.FromBig(pBig)
+	p, err = set.FromBytesBE(pBig.Bytes())
 	if err != nil {
 		return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot convert p to structure")
 	}
-	q, err = set.FromBig(qBig)
+	q, err = set.FromBytesBE(qBig.Bytes())
 	if err != nil {
 		return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot convert q to structure")
 	}
@@ -117,24 +113,26 @@ func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	if bits < 3 {
 		return *new(E), ErrInvalidArgument.WithMessage("blum prime size must be at least 3-bits")
 	}
-	four, err := num.NPlus().FromUint64(4)
-	if err != nil {
-		return *new(E), errs.Wrap(err).WithMessage("cannot create 4 in NPlus structure")
-	}
-	three := num.N().FromUint64(3)
+	checks := MillerRabinChecks(bits)
+	numBytes := (bits + 7) / 8
+	topBits := max(bits%8, 8)
+	topByteMask := byte((1 << topBits) - 1)
+	topByteMSB := byte(1) << (topBits - 1)
+	buf := make([]byte, numBytes)
 	for {
-		pBig, err := crand.Prime(prng, int(bits)-1)
-		if err != nil {
-			return *new(E), errs.Wrap(err).WithMessage("reading from crand")
+		if _, err := io.ReadFull(prng, buf); err != nil {
+			return *new(E), errs.Wrap(err).WithMessage("failed to read random bytes")
 		}
-		p, err := num.NPlus().FromBig(pBig)
-		if err != nil {
-			return *new(E), errs.Wrap(err).WithMessage("cannot convert prime to NatPlus")
-		}
-		if !p.Mod(four).Nat().Equal(three) {
+		buf[0] &= topByteMask   // clamp: no bits above position (bits-1)
+		buf[0] |= topByteMSB    // force top bit → candidate has exactly `bits` bits
+		buf[numBytes-1] |= 0b11 // force ≡ 3 (mod 4); also implies odd
+
+		candidate := new(big.Int).SetBytes(buf)
+
+		if !candidate.ProbablyPrime(checks) {
 			continue
 		}
-		out, err := set.FromBig(p.Big())
+		out, err := set.FromBytesBE(buf)
 		if err != nil {
 			return *new(E), errs.Wrap(err).WithMessage("cannot convert prime to structure")
 		}
@@ -177,8 +175,8 @@ func GeneratePaillierBlumModulus[E algebra.NatPlusLike[E]](set PrimeSamplable[E]
 		return *new(E), *new(E), *new(E), ErrInvalidArgument.WithMessage("blum prime pair size must be at least 6-bits")
 	}
 	p, q, err = generatePrimePair(GenerateBlumPrime, set, keyLen, prng, func(p, q E) bool {
-		N := p.Mul(q)
-		NAsNatPlus, err := num.NPlus().FromCardinal(N.Cardinal())
+		n := p.Mul(q)
+		nAsNatPlus, err := num.NPlus().FromCardinal(n.Cardinal())
 		if err != nil {
 			return false
 		}
@@ -191,14 +189,13 @@ func GeneratePaillierBlumModulus[E algebra.NatPlusLike[E]](set PrimeSamplable[E]
 			return false
 		}
 		phiN := pAsNatPlus.Lift().Decrement().Mul(qAsNatPlus.Lift().Decrement())
-		return phiN.Abs().Coprime(NAsNatPlus.Nat())
+		return phiN.Abs().Coprime(nAsNatPlus.Nat())
 	})
 	if err != nil {
 		return *new(E), *new(E), *new(E), errs.Wrap(err).WithMessage("failed to generate blum prime pair")
 	}
 	N = p.Mul(q)
 	return N, p, q, nil
-
 }
 
 // GenerateSafePrime samples a safe prime p of the requested bit length, i.e.
@@ -231,7 +228,7 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 		if !p.Big().ProbablyPrime(checks) {
 			continue
 		}
-		out, err := set.FromBig(p.Big())
+		out, err := set.FromBytesBE(p.Big().Bytes())
 		if err != nil {
 			return *new(E), errs.Wrap(err).WithMessage("cannot convert prime to structure")
 		}

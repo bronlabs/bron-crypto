@@ -736,12 +736,12 @@ func (u *Uint) Big() *big.Int {
 	return u.v.Big()
 }
 
-// TrueLen returns the true length in bytes of the Uint element.
+// TrueLen returns the true length in bits of the Uint element.
 func (u *Uint) TrueLen() int {
 	return u.v.TrueLen()
 }
 
-// AnnouncedLen returns the announced length in bytes of the Uint element.
+// AnnouncedLen returns the announced length in bits of the Uint element.
 func (u *Uint) AnnouncedLen() int {
 	return u.v.AnnouncedLen()
 }

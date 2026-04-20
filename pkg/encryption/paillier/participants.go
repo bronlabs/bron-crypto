@@ -53,11 +53,12 @@ type KeyGenerator struct {
 func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error) {
 	var group *znstar.PaillierGroupKnownOrder
 	var err error
-	if kg.withSafePrimes {
+	switch {
+	case kg.withSafePrimes:
 		group, err = znstar.SampleSafePaillierGroup(kg.bits, prng)
-	} else if kg.withPaillierBlumModulus {
+	case kg.withPaillierBlumModulus:
 		group, err = znstar.SamplePaillierBlumGroup(kg.bits, prng)
-	} else {
+	default:
 		group, err = znstar.SamplePaillierGroup(kg.bits, prng)
 	}
 	if err != nil {

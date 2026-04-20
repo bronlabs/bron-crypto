@@ -18,7 +18,7 @@ This package exposes a family of prime and prime-pair generators, each producing
 | Function | Output | Constraint | Typical use |
 | --- | --- | --- | --- |
 | `GeneratePrime` | single prime | bit length only | keys where only primality matters |
-| `GeneratePrimePair` | (p, q) with `|pq| = keyLen` | equal-length primes | plain RSA / Paillier moduli |
+| `GeneratePrimePair` | (p, q) with `bitlen(pq) = keyLen` | equal-length primes | plain RSA / Paillier moduli |
 | `GenerateBlumPrime` | single Blum prime | `p ≡ 3 (mod 4)` | components of Blum integers |
 | `GenerateBlumPrimePair` | Blum pair (p, q) | both `≡ 3 (mod 4)` | Blum-integer moduli (canonical square roots, Rabin commitments) |
 | `GeneratePaillierBlumModulus` | (N, p, q) | Blum + `gcd(N, φ(N)) = 1` | CGGMP21 Paillier instances; required for `Π^{mod}` / `Π^{fac}` soundness |

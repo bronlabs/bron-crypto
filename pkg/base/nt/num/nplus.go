@@ -472,12 +472,12 @@ func (np *NatPlus) ModulusCT() *numct.Modulus {
 	return np.m
 }
 
-// TrueLen returns the true length of the NatPlus in bytes.
+// TrueLen returns the true length of the NatPlus in bits.
 func (np *NatPlus) TrueLen() int {
 	return np.v.TrueLen()
 }
 
-// AnnouncedLen returns the announced length of the NatPlus in bytes.
+// AnnouncedLen returns the announced length of the NatPlus in bits.
 func (np *NatPlus) AnnouncedLen() int {
 	return np.v.AnnouncedLen()
 }

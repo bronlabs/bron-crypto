@@ -68,6 +68,7 @@ func TestPrimeGenerator_Blum(t *testing.T) {
 	prime, err := GenerateBlumPrime(num.NPlus(), 128, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
+	require.Equal(t, 128, prime.Big().BitLen())
 	require.Equal(t, uint64(3), prime.Mod(four).Nat().Uint64())
 }
 

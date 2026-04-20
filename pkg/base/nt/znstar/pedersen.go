@@ -3,8 +3,9 @@ package znstar
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
 // SamplePedersenParameters generates a full ring-Pedersen setup for the
@@ -33,7 +34,7 @@ import (
 // open arbitrary Pedersen commitments; they must be kept secret from
 // every other protocol participant and zeroised as soon as they are no
 // longer needed.
-func SamplePedersenParameters(keyLen uint, prng io.Reader) (NHat *num.NatPlus, s, t *RSAGroupElementUnknownOrder, p, q *num.NatPlus, lambda *num.NatPlus, err error) {
+func SamplePedersenParameters(keyLen uint, prng io.Reader) (NHat *num.NatPlus, s, t *RSAGroupElementUnknownOrder, p, q, lambda *num.NatPlus, err error) { //nolint:gocritic // intentionally returning too many results.
 	if prng == nil {
 		return nil, nil, nil, nil, nil, nil, ErrIsNil.WithMessage("prng")
 	}

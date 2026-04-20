@@ -198,6 +198,32 @@ func (n *Nat) Bit(i uint) byte {
 	return (*saferith.Nat)(n).Byte(int(i/8)) >> (i % 8) & 1
 }
 
+// SetBit sets n such that with n's i'th bit set to b (0 or 1). That is,
+// if b is 1, SetBit sets n = n | (1 << i);
+// if b is 0, SetBit sets n = n &^ (1 << i);
+// if b is not 0 or 1, SetBit will panic.
+// If i lies beyond n's announced capacity, the capacity is extended to i+1
+// bits so that the target position exists.
+func (n *Nat) SetBit(i int, b uint) {
+	if i < 0 || b > 1 {
+		panic("invalid arguments: i must be non-negative and b must be 0 or 1")
+	}
+
+	capBits := max(n.AnnouncedLen(), i+1)
+	capBytes := (capBits + 7) / 8
+	buf := make([]byte, capBytes)
+	(*saferith.Nat)(n).FillBytes(buf)
+
+	byteOffsetFromLSB := i / 8
+	bitOffsetInByte := uint(i % 8)
+	mask := byte(1) << bitOffsetInByte
+	bufIdx := capBytes - 1 - byteOffsetFromLSB
+	// b ∈ {0, 1} here; b * mask is 0 or mask without a branch on b.
+	buf[bufIdx] = (buf[bufIdx] &^ mask) | (byte(b) * mask)
+
+	(*saferith.Nat)(n).SetBytes(buf).Resize(capBits)
+}
+
 // Byte returns the i-th byte of n.
 func (n *Nat) Byte(i uint) byte {
 	return (*saferith.Nat)(n).Byte(int(i))
