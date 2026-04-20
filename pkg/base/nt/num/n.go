@@ -553,12 +553,12 @@ func (n *Nat) ScalarMul(sc *Nat) *Nat {
 	return n.Mul(sc)
 }
 
-// TrueLen returns the true length of the Nat in bytes.
+// TrueLen returns the true length of the Nat in bits.
 func (n *Nat) TrueLen() int {
 	return n.v.TrueLen()
 }
 
-// AnnouncedLen returns the announced length of the Nat in bytes.
+// AnnouncedLen returns the announced length of the Nat in bits.
 func (n *Nat) AnnouncedLen() int {
 	return n.v.AnnouncedLen()
 }

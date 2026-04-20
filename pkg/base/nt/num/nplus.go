@@ -73,8 +73,11 @@ func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 }
 
 // FromModulusCT creates a NatPlus from the given numct.Modulus.
-func (*PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) *NatPlus {
-	return &NatPlus{v: m.Nat(), m: m}
+func (*PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) (*NatPlus, error) {
+	if m == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	return &NatPlus{v: m.Nat(), m: m}, nil
 }
 
 // FromRat creates a NatPlus from the given Rat, returning an error if the Rat is not a positive integer.
@@ -469,12 +472,12 @@ func (np *NatPlus) ModulusCT() *numct.Modulus {
 	return np.m
 }
 
-// TrueLen returns the true length of the NatPlus in bytes.
+// TrueLen returns the true length of the NatPlus in bits.
 func (np *NatPlus) TrueLen() int {
 	return np.v.TrueLen()
 }
 
-// AnnouncedLen returns the announced length of the NatPlus in bytes.
+// AnnouncedLen returns the announced length of the NatPlus in bits.
 func (np *NatPlus) AnnouncedLen() int {
 	return np.v.AnnouncedLen()
 }

@@ -39,7 +39,11 @@ func NewZModFromModulus(m *numct.Modulus) (*ZMod, error) {
 	if m.Nat() == nil {
 		return nil, ErrIsNil.WithStackFrame()
 	}
-	return &ZMod{n: NPlus().FromModulusCT(m)}, nil
+	n, err := NPlus().FromModulusCT(m)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+	return &ZMod{n: n}, nil
 }
 
 // NewUintGivenModulus creates a new Uint element given a value Nat and a modulus Modulus.
@@ -310,8 +314,12 @@ func (u *Uint) isValid(x *Uint) (*Uint, error) {
 
 // Group returns the ZMod structure that this Uint belongs to.
 func (u *Uint) Group() *ZMod {
+	n, err := NPlus().FromModulusCT(u.m)
+	if err != nil {
+		panic(err)
+	}
 	return &ZMod{
-		n: NPlus().FromModulusCT(u.m),
+		n: n,
 	}
 }
 
@@ -387,13 +395,21 @@ func (u *Uint) Mul(other *Uint) *Uint {
 // Lsh performs left shift on the Uint element.
 // Lsh is equivalent to multiplying by 2^shift mod modulus.
 func (u *Uint) Lsh(shift uint) *Uint {
-	return u.Lift().Lsh(shift).Mod(NPlus().FromModulusCT(u.m))
+	n, err := NPlus().FromModulusCT(u.m)
+	if err != nil {
+		panic(err)
+	}
+	return u.Lift().Lsh(shift).Mod(n)
 }
 
 // Rsh performs right shift on the Uint element.
 // Rsh is equivalent to floor division by 2^shift, then mod modulus.
 func (u *Uint) Rsh(shift uint) *Uint {
-	return u.Lift().Rsh(shift).Mod(NPlus().FromModulusCT(u.m))
+	n, err := NPlus().FromModulusCT(u.m)
+	if err != nil {
+		panic(err)
+	}
+	return u.Lift().Rsh(shift).Mod(n)
 }
 
 // Exp performs exponentiation of the Uint element by a Nat exponent.
@@ -720,12 +736,12 @@ func (u *Uint) Big() *big.Int {
 	return u.v.Big()
 }
 
-// TrueLen returns the true length in bytes of the Uint element.
+// TrueLen returns the true length in bits of the Uint element.
 func (u *Uint) TrueLen() int {
 	return u.v.TrueLen()
 }
 
-// AnnouncedLen returns the announced length in bytes of the Uint element.
+// AnnouncedLen returns the announced length in bits of the Uint element.
 func (u *Uint) AnnouncedLen() int {
 	return u.v.AnnouncedLen()
 }
