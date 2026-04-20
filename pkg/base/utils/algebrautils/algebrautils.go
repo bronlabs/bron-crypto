@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 // RandomNonIdentity samples a random element from the given finite monoid that is not the identity element.
@@ -19,25 +20,58 @@ func RandomNonIdentity[M interface {
 	algebra.FiniteStructure[E]
 	algebra.Monoid[E]
 }, E algebra.MonoidElement[E]](m M, prng io.Reader) (E, error) {
+	out, err := Random(m, prng, func(e E) bool {
+		return !e.IsOpIdentity()
+	})
+	if err != nil {
+		return *new(E), errs.Wrap(err)
+	}
+	return out, nil
+}
+
+// RandomTorsionFreeNonIdentity samples a random element from the given finite module that is not the identity element and is torsion-free.
+func RandomTorsionFreeNonIdentity[M interface {
+	algebra.Module[E, S]
+	algebra.FiniteStructure[E]
+}, E algebra.ModuleElement[E, S], S algebra.UintLike[S]](m M, prng io.Reader) (E, error) {
+	out, err := Random(m, prng, func(e E) bool {
+		return !e.IsOpIdentity() || e.IsTorsionFree()
+	})
+	if err != nil {
+		return *new(E), errs.Wrap(err)
+	}
+	return out, nil
+}
+
+// Random samples a random element from the given finite structure that satisfies all provided predicates.
+func Random[S algebra.FiniteStructure[E], E algebra.Element[E]](s S, prng io.Reader, predicates ...func(E) bool) (E, error) {
 	validationErrors := []error{}
-	if utils.IsNil(m) {
-		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("monoid"))
+	if utils.IsNil(s) {
+		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("structure"))
 	}
 	if prng == nil {
 		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("prng"))
 	}
+	for _, p := range predicates {
+		if p == nil {
+			validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("predicate"))
+		}
+	}
 	if len(validationErrors) > 0 {
 		return *new(E), errs.Join(validationErrors...)
 	}
-	var err error
-	out := m.OpIdentity()
-	for out.IsOpIdentity() {
-		out, err = m.Random(prng)
+	for {
+		out, err := s.Random(prng)
 		if err != nil {
 			return *new(E), errs.Wrap(err)
 		}
+		if len(predicates) == 0 || sliceutils.All(predicates, func(p func(E) bool) bool {
+			return p(out)
+		}) {
+
+			return out, nil
+		}
 	}
-	return out, nil
 }
 
 // Fold applies the binary operation of the given operand type to all provided elements, returning the final result.

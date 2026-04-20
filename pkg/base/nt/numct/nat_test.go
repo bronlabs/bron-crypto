@@ -254,6 +254,62 @@ func TestNat_Byte(t *testing.T) {
 	require.Equal(t, byte(0x12), n.Byte(1))
 }
 
+func TestNat_SetBit(t *testing.T) {
+	t.Parallel()
+
+	t.Run("set existing bit to 1", func(t *testing.T) {
+		t.Parallel()
+		n := numct.NewNat(0b10100000)
+		n.SetBit(1, 1)
+		require.Equal(t, uint64(0b10100010), n.Uint64())
+	})
+
+	t.Run("clear existing bit to 0", func(t *testing.T) {
+		t.Parallel()
+		n := numct.NewNat(0b10101010)
+		n.SetBit(1, 0)
+		require.Equal(t, uint64(0b10101000), n.Uint64())
+	})
+
+	t.Run("setting a bit to its current value is idempotent", func(t *testing.T) {
+		t.Parallel()
+		n := numct.NewNat(0b10101010)
+		n.SetBit(1, 1)
+		require.Equal(t, uint64(0b10101010), n.Uint64())
+		n.SetBit(0, 0)
+		require.Equal(t, uint64(0b10101010), n.Uint64())
+	})
+
+	t.Run("setting a bit beyond capacity extends", func(t *testing.T) {
+		t.Parallel()
+		n := numct.NewNat(1)
+		n.SetBit(63, 1)
+		require.Equal(t, uint64(1)|(uint64(1)<<63), n.Uint64())
+	})
+
+	t.Run("round-trip with Bit", func(t *testing.T) {
+		t.Parallel()
+		n := numct.NewNat(0)
+		for i := range 32 {
+			bit := uint(i % 2)
+			n.SetBit(i, bit)
+			require.Equal(t, byte(bit), n.Bit(uint(i)))
+		}
+	})
+
+	t.Run("b > 1 panics", func(t *testing.T) {
+		t.Parallel()
+		n := numct.NewNat(0b1111)
+		require.Panics(t, func() { n.SetBit(0, 2) })
+	})
+
+	t.Run("negative index panics", func(t *testing.T) {
+		t.Parallel()
+		n := numct.NewNat(5)
+		require.Panics(t, func() { n.SetBit(-1, 1) })
+	})
+}
+
 func TestNat_Compare(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

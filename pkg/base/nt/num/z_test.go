@@ -1474,6 +1474,34 @@ func TestInt_AnnouncedLen(t *testing.T) {
 	require.GreaterOrEqual(t, v.AnnouncedLen(), v.TrueLen())
 }
 
+func TestInt_TrueLen_IsBits(t *testing.T) {
+	t.Parallel()
+	z := num.Z()
+	cases := []struct {
+		value   int64
+		wantBit int
+	}{
+		{1, 1},
+		{2, 2},
+		{255, 8},
+		{256, 9},
+		{-255, 8}, // sign-agnostic — magnitude decides
+		{-256, 9},
+	}
+	for _, tc := range cases {
+		v := z.FromInt64(tc.value)
+		require.Equal(t, tc.wantBit, v.TrueLen(),
+			"TrueLen must be in bits: value=%d expected %d bits, got %d",
+			tc.value, tc.wantBit, v.TrueLen())
+	}
+}
+
+func TestInt_AnnouncedLen_IsBits(t *testing.T) {
+	t.Parallel()
+	v := num.Z().FromInt64(1)
+	require.Equal(t, 64, v.AnnouncedLen())
+}
+
 // ============================================================================
 // Edge Cases Tests
 // ============================================================================

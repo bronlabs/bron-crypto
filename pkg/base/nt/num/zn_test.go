@@ -1401,6 +1401,27 @@ func TestUint_AnnouncedLen(t *testing.T) {
 	require.GreaterOrEqual(t, a.AnnouncedLen(), a.TrueLen())
 }
 
+func TestUint_TrueLen_IsBits(t *testing.T) {
+	t.Parallel()
+	zmod := testZMod(t, 1031) // prime > 1024 so all small values below fit without reduction
+	cases := []struct {
+		value   uint64
+		wantBit int
+	}{
+		{1, 1},
+		{2, 2},
+		{255, 8},
+		{256, 9},
+		{1023, 10},
+	}
+	for _, tc := range cases {
+		a := zmod.FromUint64(tc.value)
+		require.Equal(t, tc.wantBit, a.TrueLen(),
+			"TrueLen must be in bits: value=%d expected %d bits, got %d",
+			tc.value, tc.wantBit, a.TrueLen())
+	}
+}
+
 // ============================================================================
 // Constant-Time Operation Tests
 // ============================================================================

@@ -579,12 +579,12 @@ func (i *Int) Cardinal() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(i.Abs())
 }
 
-// TrueLen returns the true length of the integer in bytes.
+// TrueLen returns the true length of the integer in bits.
 func (i *Int) TrueLen() int {
 	return i.v.TrueLen()
 }
 
-// AnnouncedLen returns the announced length of the integer in bytes.
+// AnnouncedLen returns the announced length of the integer in bits.
 func (i *Int) AnnouncedLen() int {
 	return i.v.AnnouncedLen()
 }

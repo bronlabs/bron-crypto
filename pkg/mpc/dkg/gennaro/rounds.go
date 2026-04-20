@@ -175,7 +175,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	}
 
 	// Produce batch schnorr proof of knowledge of Feldman verification vector's coefficients' dlog.
-	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.state.lsss.MSP().D()), p.state.key.Group(), p.prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.state.lsss.MSP().D()), p.group, p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
 	}
@@ -212,7 +212,7 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		return nil, errs.Wrap(errB)
 	}
 
-	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.state.lsss.MSP().D()), p.state.key.Group(), p.prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.state.lsss.MSP().D()), p.group, p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create batch schnorr protocol")
 	}
