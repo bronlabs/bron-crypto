@@ -16,7 +16,7 @@ const rsaGroupLen = 1024
 
 func RSAUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.RSAGroupElementUnknownOrder], *znstar.RSAGroupUnknownOrder) {
 	t.Helper()
-	group := errs.Must1(znstar.SampleRSAGroup(rsaGroupLen, false, false, pcg.NewRandomised()))
+	group := errs.Must1(znstar.SampleRSAGroup(rsaGroupLen, pcg.NewRandomised()))
 	return UnitGenerator(t, group.ForgetOrder()), group.ForgetOrder()
 }
 

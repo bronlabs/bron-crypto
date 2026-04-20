@@ -46,18 +46,14 @@ func TestPrimeGenerator_Regular(t *testing.T) {
 	t.Parallel()
 	// bits >= 512 is required because the regular path internally calls
 	// rsa.GenerateKey(2*bits), which rejects keys smaller than 1024 bits.
-	gen, err := NewPrimeGenerator(num.N(), false, false)
-	require.NoError(t, err)
-	prime, err := gen.Generate(512, pcg.NewRandomised())
+	prime, err := GeneratePrime(num.NPlus(), 512, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
 }
 
 func TestPrimeGenerator_Safe(t *testing.T) {
 	t.Parallel()
-	gen, err := NewPrimeGenerator(num.N(), true, false)
-	require.NoError(t, err)
-	prime, err := gen.Generate(128, pcg.NewRandomised())
+	prime, err := GenerateSafePrime(num.NPlus(), 128, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
 	sophieGermain := new(big.Int).Rsh(prime.Big(), 1)
@@ -69,9 +65,7 @@ func TestPrimeGenerator_Blum(t *testing.T) {
 	four, err := num.NPlus().FromUint64(4)
 	require.NoError(t, err)
 
-	gen, err := NewPrimeGenerator(num.N(), false, true)
-	require.NoError(t, err)
-	prime, err := gen.Generate(128, pcg.NewRandomised())
+	prime, err := GenerateBlumPrime(num.NPlus(), 128, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
 	require.Equal(t, uint64(3), prime.Mod(four).Nat().Uint64())
@@ -82,9 +76,7 @@ func TestPrimeGenerator_SafeBlum(t *testing.T) {
 	four, err := num.NPlus().FromUint64(4)
 	require.NoError(t, err)
 
-	gen, err := NewPrimeGenerator(num.N(), true, true)
-	require.NoError(t, err)
-	prime, err := gen.Generate(128, pcg.NewRandomised())
+	prime, err := GenerateSafePrime(num.NPlus(), 128, pcg.NewRandomised()) // Safe primes are also Blum primes
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
 	require.Equal(t, uint64(3), prime.Mod(four).Nat().Uint64())
@@ -94,9 +86,7 @@ func TestPrimeGenerator_SafeBlum(t *testing.T) {
 
 func TestPrimePairGenerator_Regular(t *testing.T) {
 	t.Parallel()
-	gen, err := NewPrimePairGenerator(num.N(), false, false)
-	require.NoError(t, err)
-	p, q, err := gen.Generate(2048, pcg.NewRandomised())
+	p, q, err := GeneratePrimePair(num.NPlus(), 2048, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, p.Equal(q))
 	require.True(t, p.IsProbablyPrime())
@@ -105,9 +95,7 @@ func TestPrimePairGenerator_Regular(t *testing.T) {
 
 func TestPrimePairGenerator_Safe(t *testing.T) {
 	t.Parallel()
-	gen, err := NewPrimePairGenerator(num.N(), true, false)
-	require.NoError(t, err)
-	p, q, err := gen.Generate(256, pcg.NewRandomised())
+	p, q, err := GenerateSafePrimePair(num.NPlus(), 256, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, p.Equal(q))
 	require.True(t, p.IsProbablyPrime())
@@ -124,9 +112,7 @@ func TestPrimePairGenerator_PaillierBlum(t *testing.T) {
 	four, err := num.NPlus().FromUint64(4)
 	require.NoError(t, err)
 
-	gen, err := NewPrimePairGenerator(num.NPlus(), false, true)
-	require.NoError(t, err)
-	p, q, err := gen.Generate(keyLen, pcg.NewRandomised())
+	n, p, q, err := GeneratePaillierBlumModulus(num.NPlus(), keyLen, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, p.Equal(q))
 
@@ -139,6 +125,8 @@ func TestPrimePairGenerator_PaillierBlum(t *testing.T) {
 	N := p.Mul(q)
 	require.Equal(t, int(keyLen), N.AnnouncedLen())
 
+	require.True(t, n.Equal(N))
+
 	phiN := p.Lift().Decrement().Mul(q.Lift().Decrement())
 	require.True(t, phiN.Abs().Coprime(N.Nat()))
 }
@@ -149,9 +137,7 @@ func TestPrimePairGenerator_SafePaillierBlum(t *testing.T) {
 	four, err := num.NPlus().FromUint64(4)
 	require.NoError(t, err)
 
-	gen, err := NewPrimePairGenerator(num.NPlus(), true, true)
-	require.NoError(t, err)
-	p, q, err := gen.Generate(keyLen, pcg.NewRandomised())
+	p, q, err := GenerateSafePrimePair(num.NPlus(), keyLen, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, p.Equal(q))
 

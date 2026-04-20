@@ -27,6 +27,7 @@ func WithKeyLen(bits uint) KeyGeneratorOption {
 // WithSafePrimes configures the key generator to use safe primes for p and q.
 func WithSafePrimes() KeyGeneratorOption {
 	return func(kg *KeyGenerator) error {
+		kg.withPaillierBlumModulus = true
 		kg.withSafePrimes = true
 		return nil
 	}
@@ -50,7 +51,15 @@ type KeyGenerator struct {
 // Generate creates a new Paillier key pair using the configured parameters.
 // Returns the private key, public key, and any error encountered.
 func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error) {
-	group, err := znstar.SamplePaillierGroup(kg.bits, kg.withSafePrimes, kg.withPaillierBlumModulus, prng)
+	var group *znstar.PaillierGroupKnownOrder
+	var err error
+	if kg.withSafePrimes {
+		group, err = znstar.SampleSafePaillierGroup(kg.bits, prng)
+	} else if kg.withPaillierBlumModulus {
+		group, err = znstar.SamplePaillierBlumGroup(kg.bits, prng)
+	} else {
+		group, err = znstar.SamplePaillierGroup(kg.bits, prng)
+	}
 	if err != nil {
 		return nil, nil, errs.Wrap(err)
 	}

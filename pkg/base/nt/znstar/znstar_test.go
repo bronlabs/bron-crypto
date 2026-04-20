@@ -14,11 +14,7 @@ import (
 )
 
 func generateRSAPrimePair() (*num.NatPlus, *num.NatPlus, error) {
-	gen, err := nt.NewPrimePairGenerator(num.NPlus(), false, false)
-	if err != nil {
-		return nil, nil, err
-	}
-	return gen.Generate(rsaGroupLen, pcg.NewRandomised())
+	return nt.GeneratePrimePair(num.NPlus(), rsaGroupLen, pcg.NewRandomised())
 }
 
 // ========== RSA Group Tests ==========
