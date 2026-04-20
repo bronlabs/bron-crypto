@@ -648,6 +648,34 @@ func TestNat_TrueLen_AnnouncedLen(t *testing.T) {
 	require.True(t, n.AnnouncedLen() >= n.TrueLen())
 }
 
+func TestNat_TrueLen_IsBits(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		value   uint64
+		wantBit int
+	}{
+		{1, 1},
+		{2, 2},
+		{255, 8}, // 0xFF → 8 bits
+		{256, 9}, // 0x100 → 9 bits
+		{1023, 10},
+		{1024, 11},
+	}
+	for _, tc := range cases {
+		n := num.N().FromUint64(tc.value)
+		require.Equal(t, tc.wantBit, n.TrueLen(),
+			"TrueLen must be in bits: value=%d expected %d bits, got %d",
+			tc.value, tc.wantBit, n.TrueLen())
+	}
+}
+
+func TestNat_AnnouncedLen_IsBits(t *testing.T) {
+	t.Parallel()
+	// FromUint64 → SetUint64 → 64-bit announced capacity.
+	n := num.N().FromUint64(1)
+	require.Equal(t, 64, n.AnnouncedLen())
+}
+
 func TestNat_HashCode(t *testing.T) {
 	t.Parallel()
 	a := num.N().FromUint64(42)

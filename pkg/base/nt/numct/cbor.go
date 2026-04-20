@@ -98,7 +98,3 @@ func (m *Modulus) UnmarshalCBOR(data []byte) error {
 	}
 	return nil
 }
-
-var (
-	ErrDeserialisation = errs.New("deserialisation failed")
-)
