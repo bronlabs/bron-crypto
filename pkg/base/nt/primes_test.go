@@ -107,31 +107,6 @@ func TestPrimePairGenerator_Safe(t *testing.T) {
 	require.True(t, sgQ.ProbablyPrime(40))
 }
 
-func TestPrimePairGenerator_PaillierBlum(t *testing.T) {
-	t.Parallel()
-	keyLen := uint(256) // this is to keep the test reliably fast
-	four, err := num.NPlus().FromUint64(4)
-	require.NoError(t, err)
-
-	n, p, q, err := GeneratePaillierBlumModulus(num.NPlus(), keyLen, pcg.NewRandomised())
-	require.NoError(t, err)
-	require.False(t, p.Equal(q))
-
-	require.True(t, p.IsProbablyPrime())
-	require.Equal(t, uint64(3), p.Mod(four).Nat().Uint64())
-
-	require.True(t, q.IsProbablyPrime())
-	require.Equal(t, uint64(3), q.Mod(four).Nat().Uint64())
-
-	N := p.Mul(q)
-	require.Equal(t, int(keyLen), N.AnnouncedLen())
-
-	require.True(t, n.Equal(N))
-
-	phiN := p.Lift().Decrement().Mul(q.Lift().Decrement())
-	require.True(t, phiN.Abs().Coprime(N.Nat()))
-}
-
 func TestPrimePairGenerator_SafePaillierBlum(t *testing.T) {
 	t.Parallel()
 	keyLen := uint(256)

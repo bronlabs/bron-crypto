@@ -656,8 +656,8 @@ func TestNat_TrueLen_IsBits(t *testing.T) {
 	}{
 		{1, 1},
 		{2, 2},
-		{255, 8},  // 0xFF → 8 bits
-		{256, 9},  // 0x100 → 9 bits
+		{255, 8}, // 0xFF → 8 bits
+		{256, 9}, // 0x100 → 9 bits
 		{1023, 10},
 		{1024, 11},
 	}

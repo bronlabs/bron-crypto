@@ -58,22 +58,22 @@ func SamplePedersenParameters(keyLen uint, prng io.Reader) (NHat *num.NatPlus, s
 			return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample t")
 		}
 		// Check that t is a generator of QR(NHat). The probability of it not being one is ~2^{-|p|+1}.
+		// Let N = pq with p = 2p'+1, q = 2q'+1 (safe primes).
+		// Then QR_N ≅ C_{p'} × C_{q'} with p', q' prime ⇒ QR_N is cyclic.
+		//
+		// We sample x = a^2 mod N ⇒ x ∈ QR_N.
+		// In each component (mod p, mod q), order is either 1 or full.
+		// So x generates QR_N ⇔ x ≠ 1 mod p AND x ≠ 1 mod q.
+		//
+		// Since N = pq, gcd(x-1, N) = 1 ⇔ p ∤ (x-1) and q ∤ (x-1)
+		// ⇔ x ≠ 1 mod p AND x ≠ 1 mod q.
+		//
+		// Hence: x is a generator ⇔ gcd(x-1, N) = 1.
 		if tKnownOrder.Value().Decrement().Nat().Coprime(NHat.Nat()) {
 			break
 		}
 	}
-	phiNHat, err := num.NPlus().FromModulusCT(rsaGroup.arith.Phi)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create NatPlus from phi(NHat)")
-	}
-	four, err := num.NPlus().FromUint64(4)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create 4 in NatPlus")
-	}
-	phiNHatOver4, err := phiNHat.TryDiv(four)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to compute phi(NHat)/4")
-	}
+	phiNHatOver4 := p.Rsh(1).Mul(q.Rsh(1))
 	lambda, err = num.NPlus().Random(num.NPlus().One(), phiNHatOver4, prng)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample lambda")

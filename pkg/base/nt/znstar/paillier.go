@@ -51,11 +51,13 @@ func SampleSafePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOr
 // gives canonical square roots, while gcd(N, φ(N)) = 1 is what makes the
 // map x ↦ x^N bijective on (Z/N²Z)* and is the soundness hinge for
 // Π^{mod} / Π^{fac} proofs.
+// Note that we effectively skip gcd(N, φ(N)) = 1 check, because it will be reduntant
+// if p and q have the same bit length.
 func SamplePaillierBlumGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
 	}
-	_, p, q, err := nt.GeneratePaillierBlumModulus(num.NPlus(), keyLen, prng)
+	p, q, err := nt.GenerateBlumPrimePair(num.NPlus(), keyLen, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to generate blum prime pair")
 	}

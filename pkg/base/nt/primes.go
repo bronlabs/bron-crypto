@@ -61,6 +61,8 @@ func MillerRabinChecks(bits uint) int {
 // prime pair so that callers pay the same high-entropy generation cost and
 // receive a prime drawn from the same distribution used by GeneratePrimePair.
 func GeneratePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
+	// generating a prime pair via rsa.GenerateKey and discarding one of them, is less expensive than
+	// calling crand.Prime(bits) directly.
 	p, _, err := GeneratePrimePair(set, bits*2, prng)
 	if err != nil {
 		return *new(E), errs.Wrap(err).WithMessage("failed to generate prime pair")
@@ -158,44 +160,6 @@ func GenerateBlumPrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 		return *new(E), *new(E), errs.Wrap(err).WithMessage("failed to generate blum prime pair")
 	}
 	return p, q, nil
-}
-
-// GeneratePaillierBlumModulus samples a Paillier-Blum modulus: N = pq where
-// p, q are Blum primes (each ≡ 3 mod 4) and additionally gcd(N, φ(N)) = 1.
-// The coprimality condition ensures (a) the map x ↦ x^N is a bijection on
-// Z/N²Z*, which is exactly the soundness requirement underlying CGGMP21's
-// Π^{mod} / Π^{fac} proofs that a committed modulus is a well-formed
-// Paillier-Blum integer, and (b) that p-1 and q-1 do not share a common
-// factor dividing N (in particular, neither p nor q divides (p-1)(q-1)).
-func GeneratePaillierBlumModulus[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyLen uint, prng io.Reader) (N, p, q E, err error) {
-	if set == nil {
-		return *new(E), *new(E), *new(E), ErrIsNil.WithMessage("nil structure")
-	}
-	if keyLen < 6 {
-		return *new(E), *new(E), *new(E), ErrInvalidArgument.WithMessage("blum prime pair size must be at least 6-bits")
-	}
-	p, q, err = generatePrimePair(GenerateBlumPrime, set, keyLen, prng, func(p, q E) bool {
-		n := p.Mul(q)
-		nAsNatPlus, err := num.NPlus().FromCardinal(n.Cardinal())
-		if err != nil {
-			return false
-		}
-		pAsNatPlus, err := num.NPlus().FromCardinal(p.Cardinal())
-		if err != nil {
-			return false
-		}
-		qAsNatPlus, err := num.NPlus().FromCardinal(q.Cardinal())
-		if err != nil {
-			return false
-		}
-		phiN := pAsNatPlus.Lift().Decrement().Mul(qAsNatPlus.Lift().Decrement())
-		return phiN.Abs().Coprime(nAsNatPlus.Nat())
-	})
-	if err != nil {
-		return *new(E), *new(E), *new(E), errs.Wrap(err).WithMessage("failed to generate blum prime pair")
-	}
-	N = p.Mul(q)
-	return N, p, q, nil
 }
 
 // GenerateSafePrime samples a safe prime p of the requested bit length, i.e.
