@@ -1,16 +1,16 @@
 package bls
 
-import "github.com/bronlabs/errs-go/errs"
+import "github.com/bronlabs/bron-crypto/pkg/signatures"
 
 var (
-	// ErrInvalidArgument indicates missing, nil, or inconsistent inputs.
-	ErrInvalidArgument = errs.New("invalid argument")
-	// ErrFailed indicates a general failure during protocol execution.
-	ErrFailed = errs.New("failed")
-	// ErrVerificationFailed signals a failed signature or proof verification.
-	ErrVerificationFailed = errs.New("verification failed")
-	// ErrNotSupported indicates an unsupported algorithm or variant.
-	ErrNotSupported = errs.New("not supported")
-	// ErrInvalidSubGroup indicates an element is not in the correct subgroup.
-	ErrInvalidSubGroup = errs.New("invalid subgroup")
+	// ErrInvalidArgument is kept for compatibility; prefer signatures.ErrInvalidArgument.
+	ErrInvalidArgument = signatures.ErrInvalidArgument
+	// ErrFailed is kept for compatibility; prefer signatures.ErrFailed.
+	ErrFailed = signatures.ErrFailed
+	// ErrVerificationFailed is kept for compatibility; prefer signatures.ErrVerificationFailed.
+	ErrVerificationFailed = signatures.ErrVerificationFailed
+	// ErrNotSupported is kept for compatibility; prefer signatures.ErrNotSupported.
+	ErrNotSupported = signatures.ErrNotSupported
+	// ErrInvalidSubGroup is kept for compatibility; prefer signatures.ErrInvalidSubGroup.
+	ErrInvalidSubGroup = signatures.ErrInvalidSubGroup
 )

@@ -1,14 +1,14 @@
 package bip340
 
-import "github.com/bronlabs/errs-go/errs"
+import "github.com/bronlabs/bron-crypto/pkg/signatures"
 
 var (
-	// ErrInvalidArgument indicates missing, nil, or inconsistent inputs.
-	ErrInvalidArgument = errs.New("invalid argument")
-	// ErrFailed indicates a general failure during protocol execution.
-	ErrFailed = errs.New("failed")
-	// ErrVerificationFailed signals a failed signature verification.
-	ErrVerificationFailed = errs.New("verification failed")
-	// ErrSerialization indicates a serialisation or deserialization error.
-	ErrSerialization = errs.New("serialisation error")
+	// ErrInvalidArgument is kept for compatibility; prefer signatures.ErrInvalidArgument.
+	ErrInvalidArgument = signatures.ErrInvalidArgument
+	// ErrFailed is kept for compatibility; prefer signatures.ErrFailed.
+	ErrFailed = signatures.ErrFailed
+	// ErrVerificationFailed is kept for compatibility; prefer signatures.ErrVerificationFailed.
+	ErrVerificationFailed = signatures.ErrVerificationFailed
+	// ErrSerialization is kept for compatibility; prefer signatures.ErrSerialization.
+	ErrSerialization = signatures.ErrSerialization
 )

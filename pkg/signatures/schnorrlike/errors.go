@@ -1,12 +1,12 @@
 package schnorrlike
 
-import "github.com/bronlabs/errs-go/errs"
+import "github.com/bronlabs/bron-crypto/pkg/signatures"
 
 var (
-	// ErrInvalidArgument indicates missing, nil, or inconsistent inputs.
-	ErrInvalidArgument = errs.New("invalid argument")
-	// ErrFailed indicates a general failure during protocol execution.
-	ErrFailed = errs.New("failed")
-	// ErrVerificationFailed signals a failed signature verification.
-	ErrVerificationFailed = errs.New("verification failed")
+	// ErrInvalidArgument is kept for compatibility; prefer signatures.ErrInvalidArgument.
+	ErrInvalidArgument = signatures.ErrInvalidArgument
+	// ErrFailed is kept for compatibility; prefer signatures.ErrFailed.
+	ErrFailed = signatures.ErrFailed
+	// ErrVerificationFailed is kept for compatibility; prefer signatures.ErrVerificationFailed.
+	ErrVerificationFailed = signatures.ErrVerificationFailed
 )

@@ -1,8 +1,8 @@
 package vanilla
 
-import "github.com/bronlabs/errs-go/errs"
+import "github.com/bronlabs/bron-crypto/pkg/signatures"
 
 var (
-	// ErrInvalidArgument indicates missing, nil, or inconsistent inputs.
-	ErrInvalidArgument = errs.New("invalid argument")
+	// ErrInvalidArgument is kept for compatibility; prefer signatures.ErrInvalidArgument.
+	ErrInvalidArgument = signatures.ErrInvalidArgument
 )
