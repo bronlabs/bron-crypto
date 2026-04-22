@@ -57,12 +57,15 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 	if group == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("group or prng must not be nil")
 	}
-	oneWayHomomorphism := func(x *znstar.PaillierGroupElement[A]) *znstar.PaillierGroupElement[A] {
+	oneWayHomomorphism := func(x *znstar.PaillierGroupElement[A]) (*znstar.PaillierGroupElement[A], error) {
+		if x == nil {
+			return nil, ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
+		}
 		y, err := group.NthResidue(x.ForgetOrder())
 		if err != nil {
-			panic(errs.Wrap(err).WithMessage("cannot compute nth residue"))
+			return nil, errs.Wrap(err).WithMessage("cannot compute nth residue")
 		}
-		return y
+		return y, nil
 	}
 	anc := &anchor[A]{
 		n: group.N().Nat(),

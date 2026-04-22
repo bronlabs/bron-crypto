@@ -37,7 +37,10 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 			return nil, errs.Wrap(err).WithMessage("cannot create statement for ciphertext")
 		}
 	}
-	verifier.state.x = sigand.ComposeStatements(xv...)
+	verifier.state.x, err = sigand.ComposeStatements(xv...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compose statements")
+	}
 	witnesses := make([]*nthroot.Witness[*modular.SimpleModulus], len(nonces))
 	for i, y := range nonces {
 		embeddedNonce, err := verifier.paillierPublicKey.Group().EmbedRSA(y.Value())
@@ -49,7 +52,10 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 			return nil, errs.Wrap(err).WithMessage("cannot create witness for nonce")
 		}
 	}
-	verifier.state.y = sigand.ComposeWitnesses(witnesses...)
+	verifier.state.y, err = sigand.ComposeWitnesses(witnesses...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compose witnesses")
+	}
 	verifier.state.rootsProver, err = sigma.NewProver(verifier.ctx, verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create sigma protocol prover")

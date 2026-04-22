@@ -113,88 +113,88 @@ func (r *FiniteDirectPowerRingElement[E]) Structure() algebra.Structure[*FiniteD
 
 // =========== Module ===========.
 
-func NewDirectSumModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m M, arity uint) (*DirectSumModule[M, E, S], error) {
-	out := &DirectSumModule[M, E, S]{}
+func NewDirectPowerModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m M, arity uint) (*DirectPowerModule[M, E, S], error) {
+	out := &DirectPowerModule[M, E, S]{}
 	if err := out.Set(m, arity); err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to set module and arity")
 	}
-	var _ algebra.Module[*DirectSumModuleElement[E, S], S] = out
+	var _ algebra.Module[*DirectPowerModuleElement[E, S], S] = out
 	return out, nil
 }
 
-func NewFiniteDirectSumModule[M algebra.FiniteModule[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m M, arity uint) (*FiniteDirectSumModule[M, E, S], error) {
-	out := &FiniteDirectSumModule[M, E, S]{}
+func NewFiniteDirectPowerModule[M algebra.FiniteModule[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m M, arity uint) (*FiniteDirectPowerModule[M, E, S], error) {
+	out := &FiniteDirectPowerModule[M, E, S]{}
 	if err := out.Set(m, arity); err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to set module and arity")
 	}
 	if err := out.SetFiniteStructureAttributes(m, arity); err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to set finite structure attributes")
 	}
-	var _ algebra.Module[*FiniteDirectSumModuleElement[E, S], S] = out
+	var _ algebra.Module[*FiniteDirectPowerModuleElement[E, S], S] = out
 	return out, nil
 }
 
-type DirectSumModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
-	traits.DirectSumModule[M, E, S, *DirectSumModuleElement[E, S], DirectSumModuleElement[E, S]]
+type DirectPowerModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectPowerModule[M, E, S, *DirectPowerModuleElement[E, S], DirectPowerModuleElement[E, S]]
 }
 
-type FiniteDirectSumModule[M algebra.FiniteModule[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
-	traits.DirectSumModule[M, E, S, *FiniteDirectSumModuleElement[E, S], FiniteDirectSumModuleElement[E, S]]
-	traits.DirectPowerOfFiniteStructures[M, E, *FiniteDirectSumModuleElement[E, S], FiniteDirectSumModuleElement[E, S]]
+type FiniteDirectPowerModule[M algebra.FiniteModule[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectPowerModule[M, E, S, *FiniteDirectPowerModuleElement[E, S], FiniteDirectPowerModuleElement[E, S]]
+	traits.DirectPowerOfFiniteStructures[M, E, *FiniteDirectPowerModuleElement[E, S], FiniteDirectPowerModuleElement[E, S]]
 }
 
-type DirectSumModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
-	traits.DirectSumModuleElement[E, S, *DirectSumModuleElement[E, S], DirectSumModuleElement[E, S]]
+type DirectPowerModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectPowerModuleElement[E, S, *DirectPowerModuleElement[E, S], DirectPowerModuleElement[E, S]]
 }
 
-func (m *DirectSumModuleElement[E, S]) Structure() algebra.Structure[*DirectSumModuleElement[E, S]] {
+func (m *DirectPowerModuleElement[E, S]) Structure() algebra.Structure[*DirectPowerModuleElement[E, S]] {
 	module := algebra.StructureMustBeAs[algebra.Module[E, S]](m.Components()[0].Structure())
-	out, _ := NewDirectSumModule(module, uint(m.Arity().Uint64()))
+	out, _ := NewDirectPowerModule(module, uint(m.Arity().Uint64()))
 	return out
 }
 
-func (m *DirectSumModuleElement[E, S]) ScalarDiagonal(s *DirectPowerRingElement[S]) *DirectSumModuleElement[E, S] {
+func (m *DirectPowerModuleElement[E, S]) ScalarDiagonal(s *DirectPowerRingElement[S]) *DirectPowerModuleElement[E, S] {
 	arity := m.Arity().Uint64()
 	scaledComponents := make([]E, arity)
 	for i := range arity {
 		scaledComponents[i] = m.Components()[i].ScalarOp(s.Components()[i])
 	}
 	module := algebra.StructureMustBeAs[algebra.Module[E, S]](m.Components()[0].Structure())
-	directSumModule, err := NewDirectSumModule(module, uint(m.Arity().Uint64()))
+	directPowerModule, err := NewDirectPowerModule(module, uint(m.Arity().Uint64()))
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("failed to create direct sum module for scalar diagonal operation"))
+		panic(errs.Wrap(err).WithMessage("failed to create direct power module for scalar diagonal operation"))
 	}
-	out, err := directSumModule.New(scaledComponents...)
+	out, err := directPowerModule.New(scaledComponents...)
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("failed to create direct sum module element for scalar diagonal operation"))
+		panic(errs.Wrap(err).WithMessage("failed to create direct power module element for scalar diagonal operation"))
 	}
 	return out
 }
 
-type FiniteDirectSumModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
-	traits.DirectSumModuleElement[E, S, *FiniteDirectSumModuleElement[E, S], FiniteDirectSumModuleElement[E, S]]
+type FiniteDirectPowerModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectPowerModuleElement[E, S, *FiniteDirectPowerModuleElement[E, S], FiniteDirectPowerModuleElement[E, S]]
 }
 
-func (m *FiniteDirectSumModuleElement[E, S]) Structure() algebra.Structure[*FiniteDirectSumModuleElement[E, S]] {
+func (m *FiniteDirectPowerModuleElement[E, S]) Structure() algebra.Structure[*FiniteDirectPowerModuleElement[E, S]] {
 	module := algebra.StructureMustBeAs[algebra.FiniteModule[E, S]](m.Components()[0].Structure())
-	out, _ := NewFiniteDirectSumModule(module, uint(m.Arity().Uint64()))
+	out, _ := NewFiniteDirectPowerModule(module, uint(m.Arity().Uint64()))
 	return out
 }
 
-func (m *FiniteDirectSumModuleElement[E, S]) ScalarDiagonal(s *FiniteDirectPowerRingElement[S]) *FiniteDirectSumModuleElement[E, S] {
+func (m *FiniteDirectPowerModuleElement[E, S]) ScalarDiagonal(s *FiniteDirectPowerRingElement[S]) *FiniteDirectPowerModuleElement[E, S] {
 	arity := m.Arity().Uint64()
 	scaledComponents := make([]E, arity)
 	for i := range arity {
 		scaledComponents[i] = m.Components()[i].ScalarOp(s.Components()[i])
 	}
 	module := algebra.StructureMustBeAs[algebra.FiniteModule[E, S]](m.Components()[0].Structure())
-	directSumModule, err := NewFiniteDirectSumModule(module, uint(m.Arity().Uint64()))
+	directPowerModule, err := NewFiniteDirectPowerModule(module, uint(m.Arity().Uint64()))
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("failed to create direct sum module for scalar diagonal operation"))
+		panic(errs.Wrap(err).WithMessage("failed to create direct power module for scalar diagonal operation"))
 	}
-	out, err := directSumModule.New(scaledComponents...)
+	out, err := directPowerModule.New(scaledComponents...)
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("failed to create direct sum module element for scalar diagonal operation"))
+		panic(errs.Wrap(err).WithMessage("failed to create direct power module element for scalar diagonal operation"))
 	}
 	return out
 }

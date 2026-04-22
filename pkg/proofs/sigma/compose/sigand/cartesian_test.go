@@ -65,8 +65,10 @@ func Test_CartesianAnd_Simulator(t *testing.T) {
 func Test_CartesianAnd_BytesAreLengthDelimited(t *testing.T) {
 	t.Parallel()
 
-	statementA := sigand.CartesianComposeStatements[sigma.Statement, sigma.Statement](testBytes("a"), testBytes("bc"))
-	statementB := sigand.CartesianComposeStatements[sigma.Statement, sigma.Statement](testBytes("ab"), testBytes("c"))
+	statementA, err := sigand.CartesianComposeStatements[sigma.Statement, sigma.Statement](testBytes("a"), testBytes("bc"))
+	require.NoError(t, err)
+	statementB, err := sigand.CartesianComposeStatements[sigma.Statement, sigma.Statement](testBytes("ab"), testBytes("c"))
+	require.NoError(t, err)
 	require.NotEqual(t, statementA.Bytes(), statementB.Bytes())
 
 	responseA := &sigand.ResponseCartesian[sigma.Response, sigma.Response]{Z0: testBytes("a"), Z1: testBytes("bc")}
@@ -98,11 +100,14 @@ func testCartesianAndHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F
 	x0 := base.ScalarMul(w0)
 	x1 := base.ScalarMul(w1)
 
-	statement := sigand.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
-	witness := sigand.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	statement, err := sigand.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
+	require.NoError(tb, err)
+	witness, err := sigand.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	require.NoError(tb, err)
 
 	// Compose AND protocol
-	andProtocol := sigand.CartesianCompose(protocol, protocol)
+	andProtocol, err := sigand.CartesianCompose(protocol, protocol)
+	require.NoError(tb, err)
 
 	// Validate all statements
 	err = andProtocol.ValidateStatement(statement, witness)
@@ -144,10 +149,12 @@ func testCartesianAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F
 	x1, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
-	statement := sigand.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
+	statement, err := sigand.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
+	require.NoError(tb, err)
 
 	// Compose AND protocol
-	andProtocol := sigand.CartesianCompose(protocol, protocol)
+	andProtocol, err := sigand.CartesianCompose(protocol, protocol)
+	require.NoError(tb, err)
 
 	// Generate random challenge
 	challenge := make([]byte, andProtocol.GetChallengeBytesLength())

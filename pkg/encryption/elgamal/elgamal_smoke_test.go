@@ -24,7 +24,7 @@ func _[E elgamal.FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]]() {
 		_ encryption.GroupHomomorphicScheme[
 			*elgamal.PrivateKey[E, S], *elgamal.PublicKey[E, S],
 			*elgamal.Plaintext[E, S], E,
-			*elgamal.Ciphertext[E, S], *constructions.FiniteDirectSumModuleElement[E, S],
+			*elgamal.Ciphertext[E, S], *constructions.FiniteDirectPowerModuleElement[E, S],
 			*elgamal.Nonce[S], S,
 			*elgamal.KeyGenerator[E, S], *elgamal.Encrypter[E, S], *elgamal.Decrypter[E, S], algebra.Numeric,
 		] = (*elgamal.Scheme[E, S])(nil)
