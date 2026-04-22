@@ -1,5 +1,5 @@
 // Package polynomials provides univariate polynomial rings and modules over
-// algebraic structures, together with direct-sum (Cartesian product)
+// algebraic structures, together with direct-power (Cartesian product)
 // constructions for working with tuples of polynomials.
 //
 // The two core structures are:
@@ -14,14 +14,14 @@
 // multiplying each coefficient by a base module element (see [LiftPolynomial]).
 //
 // For protocols that operate on vectors of polynomials, the package also
-// provides direct-sum types:
+// provides direct-power types:
 //
-//   - [DirectSumOfPolynomialRings] / [DirectSumOfPolynomials] — a direct sum
+//   - [DirectPowerOfPolynomialRings] / [DirectPowerOfPolynomials] — a direct power
 //     of scalar polynomial rings, viewed as a module over the scalar ring.
-//   - [DirectSumOfPolynomialModules] / [DirectSumOfModuleValuedPolynomials] —
-//     a direct sum of module-valued polynomial modules.
+//   - [DirectPowerOfPolynomialModules] / [DirectPowerOfModuleValuedPolynomials] —
+//     a direct power of module-valued polynomial modules.
 //
-// [LiftDirectSumOfPolynomialsToExponent] lifts an entire direct sum of scalar
-// polynomials into a direct sum of module-valued polynomials given per-component
+// [LiftDirectPowerOfPolynomialsToExponent] lifts an entire direct power of scalar
+// polynomials into a direct power of module-valued polynomials given per-component
 // base points.
 package polynomials

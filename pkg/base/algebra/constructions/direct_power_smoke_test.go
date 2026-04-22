@@ -27,10 +27,10 @@ func _[R algebra.FiniteRing[E], E algebra.RingElement[E]]() {
 
 func _[M algebra.FiniteModule[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]]() {
 	var (
-		_ algebra.Module[*constructions.DirectSumModuleElement[E, S], S]        = (*constructions.DirectSumModule[M, E, S])(nil)
-		_ algebra.ModuleElement[*constructions.DirectSumModuleElement[E, S], S] = (*constructions.DirectSumModuleElement[E, S])(nil)
+		_ algebra.Module[*constructions.DirectPowerModuleElement[E, S], S]        = (*constructions.DirectPowerModule[M, E, S])(nil)
+		_ algebra.ModuleElement[*constructions.DirectPowerModuleElement[E, S], S] = (*constructions.DirectPowerModuleElement[E, S])(nil)
 
-		_ algebra.Module[*constructions.FiniteDirectSumModuleElement[E, S], S]        = (*constructions.FiniteDirectSumModule[M, E, S])(nil)
-		_ algebra.ModuleElement[*constructions.FiniteDirectSumModuleElement[E, S], S] = (*constructions.FiniteDirectSumModuleElement[E, S])(nil)
+		_ algebra.Module[*constructions.FiniteDirectPowerModuleElement[E, S], S]        = (*constructions.FiniteDirectPowerModule[M, E, S])(nil)
+		_ algebra.ModuleElement[*constructions.FiniteDirectPowerModuleElement[E, S], S] = (*constructions.FiniteDirectPowerModuleElement[E, S])(nil)
 	)
 }

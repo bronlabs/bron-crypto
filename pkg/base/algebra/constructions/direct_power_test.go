@@ -573,33 +573,33 @@ func TestFiniteDirectPowerRing(t *testing.T) {
 	})
 }
 
-// =========== DirectSumModule ===========
+// =========== DirectPowerModule ===========
 
-func TestDirectSumModule(t *testing.T) {
+func TestDirectPowerModule(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 
-	t.Run("NewDirectSumModule", func(t *testing.T) {
+	t.Run("NewDirectPowerModule", func(t *testing.T) {
 		t.Parallel()
 
 		t.Run("Valid", func(t *testing.T) {
 			t.Parallel()
-			m, err := constructions.NewDirectSumModule(curve, 3)
+			m, err := constructions.NewDirectPowerModule(curve, 3)
 			require.NoError(t, err)
 			require.NotNil(t, m)
 		})
 
 		t.Run("Arity zero", func(t *testing.T) {
 			t.Parallel()
-			m, err := constructions.NewDirectSumModule(curve, 0)
+			m, err := constructions.NewDirectPowerModule(curve, 0)
 			require.Error(t, err)
 			require.Nil(t, m)
 		})
 
 		t.Run("Nil module", func(t *testing.T) {
 			t.Parallel()
-			m, err := constructions.NewDirectSumModule((*k256.Curve)(nil), 3)
+			m, err := constructions.NewDirectPowerModule((*k256.Curve)(nil), 3)
 			require.Error(t, err)
 			require.Nil(t, m)
 		})
@@ -607,14 +607,14 @@ func TestDirectSumModule(t *testing.T) {
 
 	t.Run("ScalarStructure", func(t *testing.T) {
 		t.Parallel()
-		m, err := constructions.NewDirectSumModule(curve, 2)
+		m, err := constructions.NewDirectPowerModule(curve, 2)
 		require.NoError(t, err)
 		require.Equal(t, field.Name(), m.ScalarStructure().Name())
 	})
 
 	t.Run("Element operations", func(t *testing.T) {
 		t.Parallel()
-		m, err := constructions.NewDirectSumModule(curve, 2)
+		m, err := constructions.NewDirectPowerModule(curve, 2)
 		require.NoError(t, err)
 
 		gen := curve.Generator()
@@ -669,7 +669,7 @@ func TestDirectSumModule(t *testing.T) {
 
 	t.Run("Structure", func(t *testing.T) {
 		t.Parallel()
-		m, err := constructions.NewDirectSumModule(curve, 2)
+		m, err := constructions.NewDirectPowerModule(curve, 2)
 		require.NoError(t, err)
 
 		elem, err := m.New(curve.Generator(), curve.Generator())
@@ -681,32 +681,32 @@ func TestDirectSumModule(t *testing.T) {
 	})
 }
 
-// =========== FiniteDirectSumModule ===========
+// =========== FiniteDirectPowerModule ===========
 
-func TestFiniteDirectSumModule(t *testing.T) {
+func TestFiniteDirectPowerModule(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 
-	t.Run("NewFiniteDirectSumModule", func(t *testing.T) {
+	t.Run("NewFiniteDirectPowerModule", func(t *testing.T) {
 		t.Parallel()
 
 		t.Run("Valid", func(t *testing.T) {
 			t.Parallel()
-			m, err := constructions.NewFiniteDirectSumModule(curve, 2)
+			m, err := constructions.NewFiniteDirectPowerModule(curve, 2)
 			require.NoError(t, err)
 			require.NotNil(t, m)
 		})
 
 		t.Run("Arity zero", func(t *testing.T) {
 			t.Parallel()
-			m, err := constructions.NewFiniteDirectSumModule(curve, 0)
+			m, err := constructions.NewFiniteDirectPowerModule(curve, 0)
 			require.Error(t, err)
 			require.Nil(t, m)
 		})
 
 		t.Run("Nil module", func(t *testing.T) {
 			t.Parallel()
-			m, err := constructions.NewFiniteDirectSumModule((*k256.Curve)(nil), 2)
+			m, err := constructions.NewFiniteDirectPowerModule((*k256.Curve)(nil), 2)
 			require.Error(t, err)
 			require.Nil(t, m)
 		})
@@ -714,7 +714,7 @@ func TestFiniteDirectSumModule(t *testing.T) {
 
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
-		m, err := constructions.NewFiniteDirectSumModule(curve, 2)
+		m, err := constructions.NewFiniteDirectPowerModule(curve, 2)
 		require.NoError(t, err)
 
 		order := m.Order()
@@ -727,7 +727,7 @@ func TestFiniteDirectSumModule(t *testing.T) {
 
 	t.Run("Random", func(t *testing.T) {
 		t.Parallel()
-		m, err := constructions.NewFiniteDirectSumModule(curve, 2)
+		m, err := constructions.NewFiniteDirectPowerModule(curve, 2)
 		require.NoError(t, err)
 
 		prng := pcg.NewRandomised()
@@ -742,14 +742,14 @@ func TestFiniteDirectSumModule(t *testing.T) {
 
 	t.Run("ElementSize", func(t *testing.T) {
 		t.Parallel()
-		m, err := constructions.NewFiniteDirectSumModule(curve, 3)
+		m, err := constructions.NewFiniteDirectPowerModule(curve, 3)
 		require.NoError(t, err)
 		require.Equal(t, 3*curve.ElementSize(), m.ElementSize())
 	})
 
 	t.Run("Structure", func(t *testing.T) {
 		t.Parallel()
-		m, err := constructions.NewFiniteDirectSumModule(curve, 2)
+		m, err := constructions.NewFiniteDirectPowerModule(curve, 2)
 		require.NoError(t, err)
 
 		elem, err := m.New(curve.Generator(), curve.Generator())
