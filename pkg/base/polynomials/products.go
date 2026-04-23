@@ -8,15 +8,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions/traits"
 )
 
-// LiftDirectSumOfPolynomialsToExponent lifts a direct sum of scalar polynomials
-// into a direct sum of module-valued polynomials by lifting each component with
+// LiftDirectPowerOfPolynomialsToExponent lifts a direct power of scalar polynomials
+// into a direct power of module-valued polynomials by lifting each component with
 // the corresponding base point.
-func LiftDirectSumOfPolynomialsToExponent[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](dsum *DirectSumOfPolynomials[S], basePoints ...C) (*DirectSumOfModuleValuedPolynomials[C, S], error) {
-	if dsum == nil {
-		return nil, ErrValidation.WithMessage("dsum is nil")
+func LiftDirectPowerOfPolynomialsToExponent[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](dpow *DirectPowerOfPolynomials[S], basePoints ...C) (*DirectPowerOfModuleValuedPolynomials[C, S], error) {
+	if dpow == nil {
+		return nil, ErrValidation.WithMessage("dpow is nil")
 	}
-	if len(dsum.Components()) == 0 {
-		return nil, ErrValidation.WithMessage("dsum must not be empty")
+	if len(dpow.Components()) == 0 {
+		return nil, ErrValidation.WithMessage("dpow must not be empty")
 	}
 	if len(basePoints) == 0 {
 		return nil, ErrValidation.WithMessage("base points must not be empty")
@@ -29,41 +29,41 @@ func LiftDirectSumOfPolynomialsToExponent[C algebra.ModuleElement[C, S], S algeb
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create polynomial module")
 	}
-	dsumOfModules, err := NewDirectSumOfPolynomialModules(polyModule, uint(dsum.Arity().Uint64()))
+	dpowOfModules, err := NewDirectPowerOfPolynomialModules(polyModule, uint(dpow.Arity().Uint64()))
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create direct sum of polynomial modules")
+		return nil, errs.Wrap(err).WithMessage("could not create direct power of polynomial modules")
 	}
-	out, err := dsumOfModules.Lift(dsum.Components(), basePoints...)
+	out, err := dpowOfModules.Lift(dpow.Components(), basePoints...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not lift direct sum of polynomials to exponent")
+		return nil, errs.Wrap(err).WithMessage("could not lift direct power of polynomials to exponent")
 	}
 	return out, nil
 }
 
-// NewDirectSumOfPolynomialRings constructs a direct sum of the given polynomial
+// NewDirectPowerOfPolynomialRings constructs a direct power of the given polynomial
 // ring with the specified arity (number of components).
-func NewDirectSumOfPolynomialRings[S algebra.RingElement[S]](polyRing *PolynomialRing[S], arity uint) (*DirectSumOfPolynomialRings[S], error) {
+func NewDirectPowerOfPolynomialRings[S algebra.RingElement[S]](polyRing *PolynomialRing[S], arity uint) (*DirectPowerOfPolynomialRings[S], error) {
 	if arity == 0 {
 		return nil, ErrValidation.WithMessage("arity must be greater than 0")
 	}
-	out := &DirectSumOfPolynomialRings[S]{}
+	out := &DirectPowerOfPolynomialRings[S]{}
 	if err := out.Set(polyRing, arity); err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not set direct sum of polynomial rings")
+		return nil, errs.Wrap(err).WithMessage("could not set direct power of polynomial rings")
 	}
-	var _ algebra.Module[*DirectSumOfPolynomials[S], S] = out
+	var _ algebra.Module[*DirectPowerOfPolynomials[S], S] = out
 	return out, nil
 }
 
-// DirectSumOfPolynomialRings is the direct sum of polynomial rings, viewed as
+// DirectPowerOfPolynomialRings is the direct power of polynomial rings, viewed as
 // a module over the scalar ring S. It implements
-// algebra.Module[*DirectSumOfPolynomials[S], S].
-type DirectSumOfPolynomialRings[S algebra.RingElement[S]] struct {
-	traits.DirectSumAlgebra[*PolynomialRing[S], *Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
+// algebra.Module[*DirectPowerOfPolynomials[S], S].
+type DirectPowerOfPolynomialRings[S algebra.RingElement[S]] struct {
+	traits.DirectPowerAlgebra[*PolynomialRing[S], *Polynomial[S], S, *DirectPowerOfPolynomials[S], DirectPowerOfPolynomials[S]]
 }
 
-// CoefficientAlgebra returns the direct sum of regular algebras formed from
+// CoefficientAlgebra returns the direct power of regular algebras formed from
 // the coefficient ring.
-func (r *DirectSumOfPolynomialRings[S]) CoefficientAlgebra() *constructions.DirectSumModule[
+func (r *DirectPowerOfPolynomialRings[S]) CoefficientAlgebra() *constructions.DirectPowerModule[
 	*constructions.FiniteRegularAlgebra[
 		algebra.FiniteRing[S],
 		S,
@@ -73,19 +73,19 @@ func (r *DirectSumOfPolynomialRings[S]) CoefficientAlgebra() *constructions.Dire
 ] {
 	coeffRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](r.Factor().ScalarStructure())
 	alg := errs.Must1(constructions.NewFiniteRegularAlgebra(coeffRing))
-	out := errs.Must1(constructions.NewDirectSumModule(alg, uint(r.Arity().Uint64())))
+	out := errs.Must1(constructions.NewDirectPowerModule(alg, uint(r.Arity().Uint64())))
 	return out
 }
 
-// DirectSumOfPolynomials is an element of [DirectSumOfPolynomialRings]:
+// DirectPowerOfPolynomials is an element of [DirectPowerOfPolynomialRings]:
 // a fixed-length tuple of scalar polynomials.
-type DirectSumOfPolynomials[S algebra.RingElement[S]] struct {
-	traits.DirectSumAlgebraElement[*Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
+type DirectPowerOfPolynomials[S algebra.RingElement[S]] struct {
+	traits.DirectPowerAlgebraElement[*Polynomial[S], S, *DirectPowerOfPolynomials[S], DirectPowerOfPolynomials[S]]
 }
 
-// Structure reconstructs the parent DirectSumOfPolynomialRings from the
+// Structure reconstructs the parent DirectPowerOfPolynomialRings from the
 // first component.
-func (p *DirectSumOfPolynomials[S]) Structure() algebra.Structure[*DirectSumOfPolynomials[S]] {
+func (p *DirectPowerOfPolynomials[S]) Structure() algebra.Structure[*DirectPowerOfPolynomials[S]] {
 	arity := p.Arity()
 	if arity.IsZero() {
 		return nil
@@ -94,26 +94,26 @@ func (p *DirectSumOfPolynomials[S]) Structure() algebra.Structure[*DirectSumOfPo
 	if !ok {
 		panic(ErrValidation.WithMessage("component is not a polynomial ring"))
 	}
-	out := errs.Must1(NewDirectSumOfPolynomialRings(polyRing, uint(arity.Uint64())))
+	out := errs.Must1(NewDirectPowerOfPolynomialRings(polyRing, uint(arity.Uint64())))
 	return out
 }
 
-// CoefficientAlgebra returns the direct sum of regular algebras formed from
+// CoefficientAlgebra returns the direct power of regular algebras formed from
 // the coefficient ring of the first component.
-func (p *DirectSumOfPolynomials[S]) CoefficientAlgebra() *constructions.DirectSumModule[
+func (p *DirectPowerOfPolynomials[S]) CoefficientAlgebra() *constructions.DirectPowerModule[
 	*constructions.FiniteRegularAlgebra[
 		algebra.FiniteRing[S],
 		S,
 	], *constructions.FiniteRegularAlgebraElement[S], S] {
 	coeffRing := algebra.StructureMustBeAs[algebra.FiniteRing[S]](p.Components()[0].CoefficientStructure())
 	alg := errs.Must1(constructions.NewFiniteRegularAlgebra(coeffRing))
-	out := errs.Must1(constructions.NewDirectSumModule(alg, uint(p.Arity().Uint64())))
+	out := errs.Must1(constructions.NewDirectPowerModule(alg, uint(p.Arity().Uint64())))
 	return out
 }
 
 // RegulariseScalars wraps each scalar value into a FiniteRegularAlgebraElement.
-// The number of values must equal the arity of the direct sum.
-func (p *DirectSumOfPolynomials[S]) RegulariseScalars(values ...S) ([]*constructions.FiniteRegularAlgebraElement[S], error) {
+// The number of values must equal the arity of the direct power.
+func (p *DirectPowerOfPolynomials[S]) RegulariseScalars(values ...S) ([]*constructions.FiniteRegularAlgebraElement[S], error) {
 	if len(values) != int(p.Arity().Uint64()) {
 		return nil, ErrValidation.WithMessage("incorrect component count")
 	}
@@ -129,8 +129,8 @@ func (p *DirectSumOfPolynomials[S]) RegulariseScalars(values ...S) ([]*construct
 }
 
 // Eval evaluates every component polynomial at the given point and returns
-// the results as a direct-sum element of regular algebra elements.
-func (p *DirectSumOfPolynomials[S]) Eval(at S) *constructions.DirectSumModuleElement[*constructions.FiniteRegularAlgebraElement[S], S] {
+// the results as a direct-power element of regular algebra elements.
+func (p *DirectPowerOfPolynomials[S]) Eval(at S) *constructions.DirectPowerModuleElement[*constructions.FiniteRegularAlgebraElement[S], S] {
 	values, err := traits.EvalDirectProductOfPolynomialLikes(p, at)
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("could not evaluate direct product of polynomials"))
@@ -149,29 +149,29 @@ func (p *DirectSumOfPolynomials[S]) Eval(at S) *constructions.DirectSumModuleEle
 	return out
 }
 
-// NewDirectSumOfPolynomialModules constructs a direct sum of the given
+// NewDirectPowerOfPolynomialModules constructs a direct power of the given
 // polynomial module with the specified arity (number of components).
-func NewDirectSumOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](polyModule *PolynomialModule[C, S], arity uint) (*DirectSumOfPolynomialModules[C, S], error) {
+func NewDirectPowerOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](polyModule *PolynomialModule[C, S], arity uint) (*DirectPowerOfPolynomialModules[C, S], error) {
 	if arity == 0 {
 		return nil, ErrValidation.WithMessage("arity must be greater than 0")
 	}
-	out := &DirectSumOfPolynomialModules[C, S]{}
+	out := &DirectPowerOfPolynomialModules[C, S]{}
 	if err := out.Set(polyModule, arity); err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not set direct sum of polynomial modules")
+		return nil, errs.Wrap(err).WithMessage("could not set direct power of polynomial modules")
 	}
-	var _ algebra.Module[*DirectSumOfModuleValuedPolynomials[C, S], S] = out
+	var _ algebra.Module[*DirectPowerOfModuleValuedPolynomials[C, S], S] = out
 	return out, nil
 }
 
-// DirectSumOfPolynomialModules is the direct sum of module-valued polynomial
-// modules. It implements algebra.Module[*DirectSumOfModuleValuedPolynomials[C, S], S].
-type DirectSumOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
-	traits.DirectSumModule[*PolynomialModule[C, S], *ModuleValuedPolynomial[C, S], S, *DirectSumOfModuleValuedPolynomials[C, S], DirectSumOfModuleValuedPolynomials[C, S]]
+// DirectPowerOfPolynomialModules is the direct power of module-valued polynomial
+// modules. It implements algebra.Module[*DirectPowerOfModuleValuedPolynomials[C, S], S].
+type DirectPowerOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
+	traits.DirectPowerModule[*PolynomialModule[C, S], *ModuleValuedPolynomial[C, S], S, *DirectPowerOfModuleValuedPolynomials[C, S], DirectPowerOfModuleValuedPolynomials[C, S]]
 }
 
-// Lift lifts a slice of scalar polynomials into a direct sum of module-valued
+// Lift lifts a slice of scalar polynomials into a direct power of module-valued
 // polynomials by lifting each polynomial with the corresponding base point.
-func (m *DirectSumOfPolynomialModules[C, S]) Lift(ps []*Polynomial[S], basePoints ...C) (*DirectSumOfModuleValuedPolynomials[C, S], error) {
+func (m *DirectPowerOfPolynomialModules[C, S]) Lift(ps []*Polynomial[S], basePoints ...C) (*DirectPowerOfModuleValuedPolynomials[C, S], error) {
 	if len(ps) != int(m.Arity().Uint64()) {
 		return nil, ErrValidation.WithMessage("polynomial count does not match arity")
 	}
@@ -188,24 +188,24 @@ func (m *DirectSumOfPolynomialModules[C, S]) Lift(ps []*Polynomial[S], basePoint
 	}
 	out, err := m.New(mps...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create direct sum of module valued polynomials")
+		return nil, errs.Wrap(err).WithMessage("could not create direct power of module valued polynomials")
 	}
 	return out, nil
 }
 
-// CoefficientModule returns the direct sum of coefficient modules.
-func (m *DirectSumOfPolynomialModules[C, S]) CoefficientModule() *constructions.DirectSumModule[algebra.Module[C, S], C, S] {
+// CoefficientModule returns the direct power of coefficient modules.
+func (m *DirectPowerOfPolynomialModules[C, S]) CoefficientModule() *constructions.DirectPowerModule[algebra.Module[C, S], C, S] {
 	coeffModule := algebra.StructureMustBeAs[algebra.Module[C, S]](m.Factor().CoefficientStructure())
-	out, err := constructions.NewDirectSumModule(coeffModule, uint(m.Arity().Uint64()))
+	out, err := constructions.NewDirectPowerModule(coeffModule, uint(m.Arity().Uint64()))
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("could not create direct sum of coefficient modules"))
+		panic(errs.Wrap(err).WithMessage("could not create direct power of coefficient modules"))
 	}
 	return out
 }
 
-// BaseAlgebra returns the direct sum of regular algebras formed from the
+// BaseAlgebra returns the direct power of regular algebras formed from the
 // scalar ring of the polynomial module.
-func (m *DirectSumOfPolynomialModules[C, S]) BaseAlgebra() *constructions.DirectSumModule[
+func (m *DirectPowerOfPolynomialModules[C, S]) BaseAlgebra() *constructions.DirectPowerModule[
 	*constructions.FiniteRegularAlgebra[
 		algebra.FiniteRing[S], S,
 	], *constructions.FiniteRegularAlgebraElement[S], S] {
@@ -214,46 +214,46 @@ func (m *DirectSumOfPolynomialModules[C, S]) BaseAlgebra() *constructions.Direct
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("could not create finite regular algebra"))
 	}
-	out, err := constructions.NewDirectSumModule(alg, uint(m.Arity().Uint64()))
+	out, err := constructions.NewDirectPowerModule(alg, uint(m.Arity().Uint64()))
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("could not create direct sum of finite regular algebras"))
+		panic(errs.Wrap(err).WithMessage("could not create direct power of finite regular algebras"))
 	}
 	return out
 }
 
-// DirectSumOfModuleValuedPolynomials is an element of
-// [DirectSumOfPolynomialModules]: a fixed-length tuple of module-valued
+// DirectPowerOfModuleValuedPolynomials is an element of
+// [DirectPowerOfPolynomialModules]: a fixed-length tuple of module-valued
 // polynomials.
-type DirectSumOfModuleValuedPolynomials[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
-	traits.DirectSumModuleElement[*ModuleValuedPolynomial[C, S], S, *DirectSumOfModuleValuedPolynomials[C, S], DirectSumOfModuleValuedPolynomials[C, S]]
+type DirectPowerOfModuleValuedPolynomials[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
+	traits.DirectPowerModuleElement[*ModuleValuedPolynomial[C, S], S, *DirectPowerOfModuleValuedPolynomials[C, S], DirectPowerOfModuleValuedPolynomials[C, S]]
 }
 
-// Structure reconstructs the parent DirectSumOfPolynomialModules from the
+// Structure reconstructs the parent DirectPowerOfPolynomialModules from the
 // first component.
-func (m *DirectSumOfModuleValuedPolynomials[C, S]) Structure() algebra.Structure[*DirectSumOfModuleValuedPolynomials[C, S]] {
+func (m *DirectPowerOfModuleValuedPolynomials[C, S]) Structure() algebra.Structure[*DirectPowerOfModuleValuedPolynomials[C, S]] {
 	polyModule, ok := m.Components()[0].Structure().(*PolynomialModule[C, S])
 	if !ok {
 		panic(ErrValidation.WithMessage("component is not a polynomial module"))
 	}
-	out, err := NewDirectSumOfPolynomialModules(polyModule, uint(m.Arity().Uint64()))
+	out, err := NewDirectPowerOfPolynomialModules(polyModule, uint(m.Arity().Uint64()))
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("could not create direct sum of polynomial modules"))
+		panic(errs.Wrap(err).WithMessage("could not create direct power of polynomial modules"))
 	}
 	return out
 }
 
-// CoefficientModule returns the direct sum of coefficient modules.
-func (m *DirectSumOfModuleValuedPolynomials[C, S]) CoefficientModule() *constructions.DirectSumModule[algebra.Module[C, S], C, S] {
+// CoefficientModule returns the direct power of coefficient modules.
+func (m *DirectPowerOfModuleValuedPolynomials[C, S]) CoefficientModule() *constructions.DirectPowerModule[algebra.Module[C, S], C, S] {
 	coefficientModule := algebra.StructureMustBeAs[algebra.Module[C, S]](m.Components()[0].CoefficientStructure())
-	out, err := constructions.NewDirectSumModule(coefficientModule, uint(m.Arity().Uint64()))
+	out, err := constructions.NewDirectPowerModule(coefficientModule, uint(m.Arity().Uint64()))
 	if err != nil {
-		panic(errs.Wrap(err).WithMessage("could not create direct sum of coefficient modules"))
+		panic(errs.Wrap(err).WithMessage("could not create direct power of coefficient modules"))
 	}
 	return out
 }
 
 // BaseRing returns the direct power ring of scalars matching the arity.
-func (m *DirectSumOfModuleValuedPolynomials[C, S]) BaseRing() *constructions.DirectPowerRing[algebra.Ring[S], S] {
+func (m *DirectPowerOfModuleValuedPolynomials[C, S]) BaseRing() *constructions.DirectPowerRing[algebra.Ring[S], S] {
 	polyModule, ok := m.Components()[0].Structure().(*PolynomialModule[C, S])
 	if !ok {
 		panic(ErrValidation.WithMessage("component is not a polynomial module"))
@@ -267,8 +267,8 @@ func (m *DirectSumOfModuleValuedPolynomials[C, S]) BaseRing() *constructions.Dir
 }
 
 // Eval evaluates every component module-valued polynomial at the given scalar
-// point and returns the results as a direct-sum element.
-func (m *DirectSumOfModuleValuedPolynomials[C, S]) Eval(at S) *constructions.DirectSumModuleElement[C, S] {
+// point and returns the results as a direct-power element.
+func (m *DirectPowerOfModuleValuedPolynomials[C, S]) Eval(at S) *constructions.DirectPowerModuleElement[C, S] {
 	values, err := traits.EvalDirectProductOfPolynomialLikes(m, at)
 	if err != nil {
 		panic(errs.Wrap(err).WithMessage("could not evaluate direct product of polynomials"))

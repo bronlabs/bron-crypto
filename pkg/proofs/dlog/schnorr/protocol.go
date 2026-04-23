@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -51,7 +52,12 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	challengeByteLen := base.ComputationalSecurityBytesCeil // To make it non interactive, it has to be at least equal to computational security parameter.
 	soundnessError := uint(challengeByteLen * 8)
-	homomorphism := func(s S) G { return generator.ScalarOp(s) }
+	homomorphism := func(s S) (G, error) {
+		if utils.IsNil(s) {
+			return *new(G), ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
+		}
+		return generator.ScalarOp(s), nil
+	}
 	l, err := num.N().FromBytes(group.Order().Bytes())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create anchor")

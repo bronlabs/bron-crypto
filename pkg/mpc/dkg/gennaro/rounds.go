@@ -7,7 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
@@ -87,10 +86,19 @@ func (p *Participant[E, S]) Round1() (*Round1Broadcast[E, S], network.OutgoingUn
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto witness for coefficient %d", i)
 		}
-		statements[i] = okamoto.NewStatement(pedersenVerificationVectorElements[i])
+		statements[i], err = okamoto.NewStatement(pedersenVerificationVectorElements[i])
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto statement for coefficient %d", i)
+		}
 	}
-	witness := sigand.ComposeWitnesses(witnesses...)
-	statement := sigand.ComposeStatements(statements...)
+	witness, err := sigand.ComposeWitnesses(witnesses...)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to compose okamoto witnesses")
+	}
+	statement, err := sigand.ComposeStatements(statements...)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to compose okamoto statements")
+	}
 	proof, err := prover.Prove(statement, witness)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create okamoto proof")
@@ -142,8 +150,21 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create okamoto verifier")
 		}
+		vvRows, _ := inB.PedersenVerificationVector.Value().Dimensions()
+		okStatements := make([]*okamoto.Statement[E, S], 0, vvRows)
+		for x := range inB.PedersenVerificationVector.Value().Iter() {
+			stmt, err := okamoto.NewStatement(x)
+			if err != nil {
+				return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to create okamoto statement from party %d", pid)
+			}
+			okStatements = append(okStatements, stmt)
+		}
+		composedStatements, err := sigand.ComposeStatements(okStatements...)
+		if err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to compose okamoto statements from party %d", pid)
+		}
 		if err := verifier.Verify(
-			sigand.ComposeStatements(slices.Collect(iterutils.Map(inB.PedersenVerificationVector.Value().Iter(), okamoto.NewStatement))...),
+			composedStatements,
 			inB.Proof,
 		); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("failed to verify okamoto proof of knowledge of opening from party %d", pid)

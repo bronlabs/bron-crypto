@@ -115,11 +115,9 @@ redo:
 
 	// 7. π ← (m, e, z)
 	proof := &Proof[A, Z]{
-		Rho: p.rho,
-		B:   p.b,
-		A:   aI, // 2. m ← (m_1, ..., m_ρ)
-		E:   eI, // 5. e ← (e_1, ..., e_ρ)
-		Z:   zI, // 6. z ← (z_1, ..., z_ρ)
+		A: aI, // 2. m ← (m_1, ..., m_ρ)
+		E: eI, // 5. e ← (e_1, ..., e_ρ)
+		Z: zI, // 6. z ← (z_1, ..., z_ρ)
 	}
 	proofBytes, err := serde.MarshalCBOR(proof)
 	if err != nil {

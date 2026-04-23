@@ -10,9 +10,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
-// =========== DirectSumOfPolynomialRings ===========
+// =========== DirectPowerOfPolynomialRings ===========
 
-func TestNewDirectSumOfPolynomialRings(t *testing.T) {
+func TestNewDirectPowerOfPolynomialRings(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
@@ -20,33 +20,33 @@ func TestNewDirectSumOfPolynomialRings(t *testing.T) {
 
 	t.Run("Valid", func(t *testing.T) {
 		t.Parallel()
-		dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 3)
+		dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 3)
 		require.NoError(t, err)
-		require.NotNil(t, dsum)
+		require.NotNil(t, dpow)
 	})
 
 	t.Run("Arity zero", func(t *testing.T) {
 		t.Parallel()
-		dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 0)
+		dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 0)
 		require.Error(t, err)
-		require.Nil(t, dsum)
+		require.Nil(t, dpow)
 	})
 
 	t.Run("Nil polyRing", func(t *testing.T) {
 		t.Parallel()
-		dsum, err := polynomials.NewDirectSumOfPolynomialRings[*k256.Scalar](nil, 2)
+		dpow, err := polynomials.NewDirectPowerOfPolynomialRings[*k256.Scalar](nil, 2)
 		require.Error(t, err)
-		require.Nil(t, dsum)
+		require.Nil(t, dpow)
 	})
 }
 
-func TestDirectSumOfPolynomialRingsNew(t *testing.T) {
+func TestDirectPowerOfPolynomialRingsNew(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2)) // 1 + 2x
@@ -54,7 +54,7 @@ func TestDirectSumOfPolynomialRingsNew(t *testing.T) {
 
 	t.Run("Valid components", func(t *testing.T) {
 		t.Parallel()
-		elem, err := dsum.New(p1, p2)
+		elem, err := dpow.New(p1, p2)
 		require.NoError(t, err)
 		require.NotNil(t, elem)
 		require.Len(t, elem.Components(), 2)
@@ -64,87 +64,87 @@ func TestDirectSumOfPolynomialRingsNew(t *testing.T) {
 
 	t.Run("Wrong arity", func(t *testing.T) {
 		t.Parallel()
-		_, err := dsum.New(p1)
+		_, err := dpow.New(p1)
 		require.Error(t, err)
 	})
 }
 
-func TestDirectSumOfPolynomialRingsCoefficientAlgebra(t *testing.T) {
+func TestDirectPowerOfPolynomialRingsCoefficientAlgebra(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 3)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 3)
 	require.NoError(t, err)
 
-	coeffAlg := dsum.CoefficientAlgebra()
+	coeffAlg := dpow.CoefficientAlgebra()
 	require.NotNil(t, coeffAlg)
 }
 
-// =========== DirectSumOfPolynomials ===========
+// =========== DirectPowerOfPolynomials ===========
 
-func TestDirectSumOfPolynomialsStructure(t *testing.T) {
+func TestDirectPowerOfPolynomialsStructure(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2))
 	p2, _ := polyRing.New(field.FromUint64(3))
 
-	elem, err := dsum.New(p1, p2)
+	elem, err := dpow.New(p1, p2)
 	require.NoError(t, err)
 
 	s := elem.Structure()
 	require.NotNil(t, s)
-	require.Equal(t, dsum.Name(), s.Name())
+	require.Equal(t, dpow.Name(), s.Name())
 }
 
-func TestDirectSumOfPolynomialsIsDomain(t *testing.T) {
+func TestDirectPowerOfPolynomialsIsDomain(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
-	// Direct sums are never domains
-	require.False(t, dsum.IsDomain())
+	// Direct powers are never domains
+	require.False(t, dpow.IsDomain())
 }
 
-func TestDirectSumOfPolynomialsCoefficientAlgebra(t *testing.T) {
+func TestDirectPowerOfPolynomialsCoefficientAlgebra(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	p1, _ := polyRing.New(field.FromUint64(1))
 	p2, _ := polyRing.New(field.FromUint64(2))
-	elem, _ := dsum.New(p1, p2)
+	elem, _ := dpow.New(p1, p2)
 
 	coeffAlg := elem.CoefficientAlgebra()
 	require.NotNil(t, coeffAlg)
 }
 
-func TestDirectSumOfPolynomialsRegulariseScalars(t *testing.T) {
+func TestDirectPowerOfPolynomialsRegulariseScalars(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	p1, _ := polyRing.New(field.FromUint64(1))
 	p2, _ := polyRing.New(field.FromUint64(2))
-	elem, _ := dsum.New(p1, p2)
+	elem, _ := dpow.New(p1, p2)
 
 	t.Run("Valid", func(t *testing.T) {
 		t.Parallel()
@@ -163,19 +163,19 @@ func TestDirectSumOfPolynomialsRegulariseScalars(t *testing.T) {
 	})
 }
 
-func TestDirectSumOfPolynomialsEval(t *testing.T) {
+func TestDirectPowerOfPolynomialsEval(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	// p1 = 1 + 2x, p2 = 3 + 4x
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2))
 	p2, _ := polyRing.New(field.FromUint64(3), field.FromUint64(4))
-	elem, _ := dsum.New(p1, p2)
+	elem, _ := dpow.New(p1, p2)
 
 	t.Run("Eval at zero", func(t *testing.T) {
 		t.Parallel()
@@ -202,13 +202,13 @@ func TestDirectSumOfPolynomialsEval(t *testing.T) {
 	})
 }
 
-func TestDirectSumOfPolynomialsOp(t *testing.T) {
+func TestDirectPowerOfPolynomialsOp(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2))
@@ -216,8 +216,8 @@ func TestDirectSumOfPolynomialsOp(t *testing.T) {
 	p3, _ := polyRing.New(field.FromUint64(4), field.FromUint64(5))
 	p4, _ := polyRing.New(field.FromUint64(6))
 
-	elem1, _ := dsum.New(p1, p2)
-	elem2, _ := dsum.New(p3, p4)
+	elem1, _ := dpow.New(p1, p2)
+	elem2, _ := dpow.New(p3, p4)
 
 	t.Run("Component-wise addition", func(t *testing.T) {
 		t.Parallel()
@@ -235,19 +235,19 @@ func TestDirectSumOfPolynomialsOp(t *testing.T) {
 	})
 }
 
-func TestDirectSumOfPolynomialsScalarOp(t *testing.T) {
+func TestDirectPowerOfPolynomialsScalarOp(t *testing.T) {
 	t.Parallel()
 	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	// p1 = 1 + 2x, p2 = 3
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2))
 	p2, _ := polyRing.New(field.FromUint64(3))
-	elem, _ := dsum.New(p1, p2)
+	elem, _ := dpow.New(p1, p2)
 
 	scalar := field.FromUint64(5)
 	result := elem.ScalarOp(scalar)
@@ -257,9 +257,9 @@ func TestDirectSumOfPolynomialsScalarOp(t *testing.T) {
 	require.True(t, result.Components()[1].Equal(p2.ScalarMul(scalar)))
 }
 
-// =========== DirectSumOfPolynomialModules ===========
+// =========== DirectPowerOfPolynomialModules ===========
 
-func TestNewDirectSumOfPolynomialModules(t *testing.T) {
+func TestNewDirectPowerOfPolynomialModules(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	polyModule, err := polynomials.NewPolynomialModule(curve)
@@ -267,27 +267,27 @@ func TestNewDirectSumOfPolynomialModules(t *testing.T) {
 
 	t.Run("Valid", func(t *testing.T) {
 		t.Parallel()
-		dsum, err := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+		dpow, err := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 		require.NoError(t, err)
-		require.NotNil(t, dsum)
+		require.NotNil(t, dpow)
 	})
 
 	t.Run("Arity zero", func(t *testing.T) {
 		t.Parallel()
-		dsum, err := polynomials.NewDirectSumOfPolynomialModules(polyModule, 0)
+		dpow, err := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 0)
 		require.Error(t, err)
-		require.Nil(t, dsum)
+		require.Nil(t, dpow)
 	})
 
 	t.Run("Nil polyModule", func(t *testing.T) {
 		t.Parallel()
-		dsum, err := polynomials.NewDirectSumOfPolynomialModules[*k256.Point, *k256.Scalar](nil, 2)
+		dpow, err := polynomials.NewDirectPowerOfPolynomialModules[*k256.Point, *k256.Scalar](nil, 2)
 		require.Error(t, err)
-		require.Nil(t, dsum)
+		require.Nil(t, dpow)
 	})
 }
 
-func TestDirectSumOfPolynomialModulesLift(t *testing.T) {
+func TestDirectPowerOfPolynomialModulesLift(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
@@ -296,7 +296,7 @@ func TestDirectSumOfPolynomialModulesLift(t *testing.T) {
 	polyModule, err := polynomials.NewPolynomialModule(curve)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 	require.NoError(t, err)
 
 	gen := curve.Generator()
@@ -307,7 +307,7 @@ func TestDirectSumOfPolynomialModulesLift(t *testing.T) {
 
 	t.Run("Valid lift", func(t *testing.T) {
 		t.Parallel()
-		lifted, err := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen2)
+		lifted, err := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen2)
 		require.NoError(t, err)
 		require.NotNil(t, lifted)
 		require.Len(t, lifted.Components(), 2)
@@ -323,123 +323,123 @@ func TestDirectSumOfPolynomialModulesLift(t *testing.T) {
 
 	t.Run("Wrong polynomial count", func(t *testing.T) {
 		t.Parallel()
-		_, err := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1}, gen, gen2)
+		_, err := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1}, gen, gen2)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "polynomial count does not match arity")
 	})
 
 	t.Run("Wrong base points count", func(t *testing.T) {
 		t.Parallel()
-		_, err := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen)
+		_, err := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "base points count does not match arity")
 	})
 }
 
-func TestDirectSumOfPolynomialModulesCoefficientModule(t *testing.T) {
+func TestDirectPowerOfPolynomialModulesCoefficientModule(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	polyModule, err := polynomials.NewPolynomialModule(curve)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 	require.NoError(t, err)
 
-	coeffMod := dsum.CoefficientModule()
+	coeffMod := dpow.CoefficientModule()
 	require.NotNil(t, coeffMod)
 }
 
-func TestDirectSumOfPolynomialModulesBaseAlgebra(t *testing.T) {
+func TestDirectPowerOfPolynomialModulesBaseAlgebra(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	polyModule, err := polynomials.NewPolynomialModule(curve)
 	require.NoError(t, err)
 
-	dsum, err := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, err := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 	require.NoError(t, err)
 
-	baseAlg := dsum.BaseAlgebra()
+	baseAlg := dpow.BaseAlgebra()
 	require.NotNil(t, baseAlg)
 }
 
-// =========== DirectSumOfModuleValuedPolynomials ===========
+// =========== DirectPowerOfModuleValuedPolynomials ===========
 
-func TestDirectSumOfModuleValuedPolynomialsStructure(t *testing.T) {
+func TestDirectPowerOfModuleValuedPolynomialsStructure(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	polyRing, _ := polynomials.NewPolynomialRing(field)
 	polyModule, _ := polynomials.NewPolynomialModule(curve)
 
-	dsum, _ := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, _ := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 
 	gen := curve.Generator()
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2))
 	p2, _ := polyRing.New(field.FromUint64(3))
 
-	elem, err := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
+	elem, err := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
 	require.NoError(t, err)
 
 	s := elem.Structure()
 	require.NotNil(t, s)
-	require.Equal(t, dsum.Name(), s.Name())
+	require.Equal(t, dpow.Name(), s.Name())
 }
 
-func TestDirectSumOfModuleValuedPolynomialsCoefficientModule(t *testing.T) {
+func TestDirectPowerOfModuleValuedPolynomialsCoefficientModule(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	polyRing, _ := polynomials.NewPolynomialRing(field)
 	polyModule, _ := polynomials.NewPolynomialModule(curve)
 
-	dsum, _ := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, _ := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 
 	gen := curve.Generator()
 	p1, _ := polyRing.New(field.FromUint64(1))
 	p2, _ := polyRing.New(field.FromUint64(2))
 
-	elem, err := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
+	elem, err := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
 	require.NoError(t, err)
 
 	coeffMod := elem.CoefficientModule()
 	require.NotNil(t, coeffMod)
 }
 
-func TestDirectSumOfModuleValuedPolynomialsBaseRing(t *testing.T) {
+func TestDirectPowerOfModuleValuedPolynomialsBaseRing(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	polyRing, _ := polynomials.NewPolynomialRing(field)
 	polyModule, _ := polynomials.NewPolynomialModule(curve)
 
-	dsum, _ := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, _ := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 
 	gen := curve.Generator()
 	p1, _ := polyRing.New(field.FromUint64(1))
 	p2, _ := polyRing.New(field.FromUint64(2))
 
-	elem, err := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
+	elem, err := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
 	require.NoError(t, err)
 
 	baseRing := elem.BaseRing()
 	require.NotNil(t, baseRing)
 }
 
-func TestDirectSumOfModuleValuedPolynomialsEval(t *testing.T) {
+func TestDirectPowerOfModuleValuedPolynomialsEval(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	polyRing, _ := polynomials.NewPolynomialRing(field)
 	polyModule, _ := polynomials.NewPolynomialModule(curve)
 
-	dsum, _ := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, _ := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 
 	gen := curve.Generator()
 	// p1 = 1 + 2x, p2 = 3
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2))
 	p2, _ := polyRing.New(field.FromUint64(3))
 
-	elem, err := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
+	elem, err := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
 	require.NoError(t, err)
 
 	t.Run("Eval at zero", func(t *testing.T) {
@@ -474,14 +474,14 @@ func TestDirectSumOfModuleValuedPolynomialsEval(t *testing.T) {
 	})
 }
 
-func TestDirectSumOfModuleValuedPolynomialsOp(t *testing.T) {
+func TestDirectPowerOfModuleValuedPolynomialsOp(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	polyRing, _ := polynomials.NewPolynomialRing(field)
 	polyModule, _ := polynomials.NewPolynomialModule(curve)
 
-	dsum, _ := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, _ := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 
 	gen := curve.Generator()
 	p1, _ := polyRing.New(field.FromUint64(1))
@@ -489,8 +489,8 @@ func TestDirectSumOfModuleValuedPolynomialsOp(t *testing.T) {
 	p3, _ := polyRing.New(field.FromUint64(3))
 	p4, _ := polyRing.New(field.FromUint64(4))
 
-	elem1, _ := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
-	elem2, _ := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p3, p4}, gen, gen)
+	elem1, _ := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
+	elem2, _ := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p3, p4}, gen, gen)
 
 	t.Run("Component-wise addition", func(t *testing.T) {
 		t.Parallel()
@@ -511,20 +511,20 @@ func TestDirectSumOfModuleValuedPolynomialsOp(t *testing.T) {
 	})
 }
 
-func TestDirectSumOfModuleValuedPolynomialsScalarOp(t *testing.T) {
+func TestDirectPowerOfModuleValuedPolynomialsScalarOp(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
 	polyRing, _ := polynomials.NewPolynomialRing(field)
 	polyModule, _ := polynomials.NewPolynomialModule(curve)
 
-	dsum, _ := polynomials.NewDirectSumOfPolynomialModules(polyModule, 2)
+	dpow, _ := polynomials.NewDirectPowerOfPolynomialModules(polyModule, 2)
 
 	gen := curve.Generator()
 	p1, _ := polyRing.New(field.FromUint64(2))
 	p2, _ := polyRing.New(field.FromUint64(3))
 
-	elem, _ := dsum.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
+	elem, _ := dpow.Lift([]*polynomials.Polynomial[*k256.Scalar]{p1, p2}, gen, gen)
 
 	scalar := field.FromUint64(5)
 	result := elem.ScalarOp(scalar)
@@ -537,9 +537,9 @@ func TestDirectSumOfModuleValuedPolynomialsScalarOp(t *testing.T) {
 	require.True(t, evalResult.Components()[1].Equal(fifteenG))
 }
 
-// =========== LiftDirectSumOfPolynomialsToExponent ===========
+// =========== LiftDirectPowerOfPolynomialsToExponent ===========
 
-func TestLiftDirectSumOfPolynomialsToExponent(t *testing.T) {
+func TestLiftDirectPowerOfPolynomialsToExponent(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	field := k256.NewScalarField()
@@ -548,17 +548,17 @@ func TestLiftDirectSumOfPolynomialsToExponent(t *testing.T) {
 	gen := curve.Generator()
 	gen2 := gen.Double()
 
-	// Build a DirectSumOfPolynomials with 2 scalar polynomials
-	dsumRings, err := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	// Build a DirectPowerOfPolynomials with 2 scalar polynomials
+	dpowRings, err := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 	require.NoError(t, err)
 
 	p1, _ := polyRing.New(field.FromUint64(1), field.FromUint64(2)) // 1 + 2x
 	p2, _ := polyRing.New(field.FromUint64(3), field.FromUint64(4)) // 3 + 4x
-	dsum, _ := dsumRings.New(p1, p2)
+	dpow, _ := dpowRings.New(p1, p2)
 
 	t.Run("Valid lift", func(t *testing.T) {
 		t.Parallel()
-		lifted, err := polynomials.LiftDirectSumOfPolynomialsToExponent(dsum, gen, gen2)
+		lifted, err := polynomials.LiftDirectPowerOfPolynomialsToExponent(dpow, gen, gen2)
 		require.NoError(t, err)
 		require.NotNil(t, lifted)
 		require.Len(t, lifted.Components(), 2)
@@ -577,16 +577,16 @@ func TestLiftDirectSumOfPolynomialsToExponent(t *testing.T) {
 		require.True(t, result.Components()[1].Equal(fourteenG))
 	})
 
-	t.Run("Nil dsum", func(t *testing.T) {
+	t.Run("Nil dpow", func(t *testing.T) {
 		t.Parallel()
-		_, err := polynomials.LiftDirectSumOfPolynomialsToExponent[*k256.Point, *k256.Scalar](nil, gen)
+		_, err := polynomials.LiftDirectPowerOfPolynomialsToExponent[*k256.Point, *k256.Scalar](nil, gen)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "dsum is nil")
+		require.Contains(t, err.Error(), "dpow is nil")
 	})
 
 	t.Run("Empty base points", func(t *testing.T) {
 		t.Parallel()
-		_, err := polynomials.LiftDirectSumOfPolynomialsToExponent[*k256.Point](dsum)
+		_, err := polynomials.LiftDirectPowerOfPolynomialsToExponent[*k256.Point](dpow)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "base points must not be empty")
 	})
@@ -603,21 +603,21 @@ func TestEvalLiftConsistency(t *testing.T) {
 	gen := curve.Generator()
 	prng := pcg.NewRandomised()
 
-	dsumRings, _ := polynomials.NewDirectSumOfPolynomialRings(polyRing, 2)
+	dpowRings, _ := polynomials.NewDirectPowerOfPolynomialRings(polyRing, 2)
 
 	p1, _ := polyRing.RandomPolynomial(3, prng)
 	p2, _ := polyRing.RandomPolynomial(2, prng)
-	dsum, _ := dsumRings.New(p1, p2)
+	dpow, _ := dpowRings.New(p1, p2)
 
 	point, _ := field.Random(prng)
 
 	// Lift then eval
-	lifted, err := polynomials.LiftDirectSumOfPolynomialsToExponent(dsum, gen, gen)
+	lifted, err := polynomials.LiftDirectPowerOfPolynomialsToExponent(dpow, gen, gen)
 	require.NoError(t, err)
 	liftThenEval := lifted.Eval(point)
 
 	// Scalar eval then lift to module elements
-	scalarEval := dsum.Eval(point)
+	scalarEval := dpow.Eval(point)
 	v0 := gen.ScalarOp(scalarEval.Components()[0].Value())
 	v1 := gen.ScalarOp(scalarEval.Components()[1].Value())
 
