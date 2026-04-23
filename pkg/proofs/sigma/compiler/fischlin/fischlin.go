@@ -36,11 +36,9 @@ var (
 // challenge (E), and response (Z). The Rho and B parameters are included
 // for verification.
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
-	Rho uint64   `cbor:"rho"`
-	B   uint64   `cbor:"b"`
-	A   []A      `cbor:"a"`
-	E   [][]byte `cbor:"e"`
-	Z   []Z      `cbor:"z"`
+	A []A      `cbor:"a"`
+	E [][]byte `cbor:"e"`
+	Z []Z      `cbor:"z"`
 }
 
 var _ compiler.NonInteractiveProtocol[sigma.Statement, sigma.Witness] = (*simplifiedFischlin[
@@ -118,6 +116,9 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (c
 	return &verifier[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
+		b:             c.b,
+		rho:           c.rho,
+		t:             c.t,
 	}, nil
 }
 
