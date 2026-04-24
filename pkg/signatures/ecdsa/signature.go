@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 // Signature represents an ECDSA signature consisting of two scalar values (r, s)
@@ -36,10 +37,10 @@ type signatureDTO[S algebra.PrimeFieldElement[S]] struct {
 // Both r and s must be non-zero. If provided, v must be in the range [0, 3].
 func NewSignature[S algebra.PrimeFieldElement[S]](r, s S, v *int) (*Signature[S], error) {
 	if r.IsZero() || s.IsZero() {
-		return nil, ErrFailed.WithMessage("r/s cannot be zero")
+		return nil, signatures.ErrFailed.WithMessage("r/s cannot be zero")
 	}
 	if v != nil && (*v < 0 || *v > 3) {
-		return nil, ErrFailed.WithMessage("v must be 0/1/2/3")
+		return nil, signatures.ErrFailed.WithMessage("v must be 0/1/2/3")
 	}
 
 	sig := &Signature[S]{

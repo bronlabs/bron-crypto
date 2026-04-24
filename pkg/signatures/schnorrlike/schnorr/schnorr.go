@@ -64,17 +64,17 @@ func NewScheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[
 	prng io.Reader,
 ) (*Scheme[GE, S], error) {
 	if group == nil {
-		return nil, ErrInvalidArgument.WithMessage("group is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("group is nil")
 	}
 	if f == nil {
-		return nil, ErrInvalidArgument.WithMessage("hash function is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("hash function is nil")
 	}
 	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	sf, ok := group.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, ErrInvalidArgument.WithMessage("group type assertion failed")
+		return nil, signatures.ErrInvalidArgument.WithMessage("group type assertion failed")
 	}
 	return &Scheme[GE, S]{
 		vr: &Variant[GE, S]{
@@ -124,7 +124,7 @@ func (s *Scheme[GE, S]) Keygen(opts ...KeyGeneratorOption[GE, S]) (*KeyGenerator
 // Signer creates a signer for producing Schnorr signatures.
 func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOption[GE, S]) (*Signer[GE, S], error) {
 	if privateKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("private key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	verifier, err := s.Verifier()
 	if err != nil {
@@ -168,7 +168,7 @@ func (s *Scheme[GE, S]) PartialSignatureVerifier(
 	opts ...signatures.VerifierOption[*Verifier[GE, S], *PublicKey[GE, S], Message, *Signature[GE, S]],
 ) (schnorrlike.Verifier[*Variant[GE, S], GE, S, Message], error) {
 	if publicKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("public key is nil or invalid")
+		return nil, signatures.ErrInvalidArgument.WithMessage("public key is nil or invalid")
 	}
 	verifier, err := s.Verifier(opts...)
 	if err != nil {
@@ -247,7 +247,7 @@ func (v *Variant[GE, S]) HashFunc() func() hash.Hash {
 // If shouldNegateNonce was configured, applies parity correction to k.
 func (v *Variant[GE, S]) ComputeNonceCommitment() (R GE, k S, err error) {
 	if v == nil {
-		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("variant is nil")
+		return *new(GE), *new(S), signatures.ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	ge, s, err := schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng, v.shouldNegateNonce)
 	if err != nil {
@@ -260,16 +260,16 @@ func (v *Variant[GE, S]) ComputeNonceCommitment() (R GE, k S, err error) {
 // Uses the configured hash function and byte ordering.
 func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment, publicKeyValue GE, message Message) (S, error) {
 	if v == nil {
-		return *new(S), ErrInvalidArgument.WithMessage("variant is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	if utils.IsNil(nonceCommitment) {
-		return *new(S), ErrInvalidArgument.WithMessage("nonce commitment is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("nonce commitment is nil")
 	}
 	if utils.IsNil(publicKeyValue) {
-		return *new(S), ErrInvalidArgument.WithMessage("public key value is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("public key value is nil")
 	}
 	if utils.IsNil(message) {
-		return *new(S), ErrInvalidArgument.WithMessage("message is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("message is nil")
 	}
 	challenge, err := schnorrlike.MakeGenericChallenge(v.sf, v.h, v.challengeElementsAreLittleEndian, nonceCommitment.Bytes(), publicKeyValue.Bytes(), message)
 	if err != nil {
@@ -282,16 +282,16 @@ func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment, publicKeyValue GE, me
 // The sign depends on the responseOperatorIsNegative configuration.
 func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S, error) {
 	if v == nil {
-		return *new(S), ErrInvalidArgument.WithMessage("variant is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	if utils.IsNil(privateKeyValue) {
-		return *new(S), ErrInvalidArgument.WithMessage("private key value is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("private key value is nil")
 	}
 	if utils.IsNil(nonce) {
-		return *new(S), ErrInvalidArgument.WithMessage("nonce is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("nonce is nil")
 	}
 	if utils.IsNil(challenge) {
-		return *new(S), ErrInvalidArgument.WithMessage("challenge is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("challenge is nil")
 	}
 	response, err := schnorrlike.ComputeGenericResponse(privateKeyValue, nonce, challenge, v.responseOperatorIsNegative)
 	if err != nil {
@@ -303,16 +303,16 @@ func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S
 // SerializeSignature encodes the signature as (R || s) in native byte format.
 func (v *Variant[GE, S]) SerializeSignature(signature *Signature[GE, S]) ([]byte, error) {
 	if v == nil {
-		return nil, ErrInvalidArgument.WithMessage("variant is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	if signature == nil {
-		return nil, ErrInvalidArgument.WithMessage("signature is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	if utils.IsNil(signature.R) {
-		return nil, ErrInvalidArgument.WithMessage("signature.R is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("signature.R is nil")
 	}
 	if utils.IsNil(signature.S) {
-		return nil, ErrInvalidArgument.WithMessage("signature.S is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("signature.S is nil")
 	}
 	// Vanilla Schnorr signature format: (R, s)
 	// Note: E (challenge) can be recomputed during verification
@@ -329,15 +329,15 @@ func (*Variant[GE, S]) NonceIsFunctionOfMessage() bool {
 // Returns the nonce and its commitment unchanged.
 func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (R GE, correctedNonce S, err error) {
 	if utils.IsNil(aggregatedNonceCommitment) {
-		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
+		return *new(GE), *new(S), signatures.ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
 	}
 	if utils.IsNil(nonce) {
-		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("nonce is nil")
+		return *new(GE), *new(S), signatures.ErrInvalidArgument.WithMessage("nonce is nil")
 	}
 	// No change in MPC context
 	group, ok := aggregatedNonceCommitment.Structure().(algebra.PrimeGroup[GE, S])
 	if !ok {
-		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment type assertion failed")
+		return *new(GE), *new(S), signatures.ErrInvalidArgument.WithMessage("aggregated nonce commitment type assertion failed")
 	}
 	R = group.ScalarBaseOp(nonce)
 	return R, nonce, nil
@@ -347,10 +347,10 @@ func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, n
 // Returns the partial nonce commitment unchanged.
 func (*Variant[GE, S]) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment, partialNonceCommitment GE) (GE, error) {
 	if utils.IsNil(aggregatedNonceCommitment) {
-		return *new(GE), ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
+		return *new(GE), signatures.ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
 	}
 	if utils.IsNil(partialNonceCommitment) {
-		return *new(GE), ErrInvalidArgument.WithMessage("partial nonce commitment is nil")
+		return *new(GE), signatures.ErrInvalidArgument.WithMessage("partial nonce commitment is nil")
 	}
 	// No change in MPC context
 	return partialNonceCommitment, nil
@@ -360,7 +360,7 @@ func (*Variant[GE, S]) CorrectPartialNonceCommitmentParity(aggregatedNonceCommit
 // Returns a clone of the share unchanged.
 func (*Variant[GE, S]) CorrectAdditiveSecretShareParity(publicKey *schnorrlike.PublicKey[GE, S], share *additive.Share[S]) (*additive.Share[S], error) {
 	if publicKey == nil || share == nil {
-		return nil, ErrInvalidArgument.WithMessage("public key or secret share is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("public key or secret share is nil")
 	}
 	// No change in MPC context
 	return share.Clone(), nil

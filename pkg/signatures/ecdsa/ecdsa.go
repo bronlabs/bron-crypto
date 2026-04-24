@@ -84,10 +84,10 @@ func ComputeRecoveryID[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 // Reference: SEC 1 v2.0 Section 4.1.6: https://www.secg.org/sec1-v2.pdf
 func RecoverPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], signature *Signature[S], message []byte) (*PublicKey[P, B, S], error) {
 	if suite == nil || signature == nil {
-		return nil, ErrInvalidArgument.WithMessage("suite or signature is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("suite or signature is nil")
 	}
 	if signature.v == nil {
-		return nil, ErrInvalidArgument.WithMessage("no recovery id")
+		return nil, signatures.ErrInvalidArgument.WithMessage("no recovery id")
 	}
 
 	// Calculate point R = (x1, x2) where
@@ -173,7 +173,7 @@ func DigestToScalar[S algebra.PrimeFieldElement[S]](field algebra.PrimeField[S],
 // first byte, but we can't have nice things.
 func rightShift(b []byte, shift int) ([]byte, error) {
 	if shift <= 0 || shift >= 8 {
-		return nil, ErrFailed.WithMessage("shift can only be by 1 to 7 bits")
+		return nil, signatures.ErrFailed.WithMessage("shift can only be by 1 to 7 bits")
 	}
 	b = bytes.Clone(b)
 	for i := len(b) - 1; i >= 0; i-- {

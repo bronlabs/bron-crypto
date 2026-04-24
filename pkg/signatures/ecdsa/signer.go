@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 // Signer produces ECDSA signatures using a private key.
@@ -26,7 +27,7 @@ type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 // For deterministic suites (RFC 6979), prng can be nil.
 func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], sk *PrivateKey[P, B, S], prng io.Reader) (*Signer[P, B, S], error) {
 	if suite == nil || (prng == nil && !suite.IsDeterministic()) || sk == nil {
-		return nil, ErrInvalidArgument.WithMessage("suite or prng or secret key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("suite or prng or secret key is nil")
 	}
 
 	s := &Signer[P, B, S]{
@@ -57,7 +58,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 		return nil, errs.Wrap(err).WithMessage("cannot convert secret key to native ECDSA format")
 	}
 	if nativeSk == nil {
-		return nil, ErrInvalidArgument.WithMessage("secret key cannot be converted to native ECDSA format")
+		return nil, signatures.ErrInvalidArgument.WithMessage("secret key cannot be converted to native ECDSA format")
 	}
 
 	var nativeR, nativeS *big.Int
@@ -107,7 +108,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 		}
 	}
 
-	return nil, ErrVerificationFailed.WithMessage("cannot compute recovery id")
+	return nil, signatures.ErrVerificationFailed.WithMessage("cannot compute recovery id")
 }
 
 // IsDeterministic returns true if this signer uses RFC 6979 deterministic nonce generation.

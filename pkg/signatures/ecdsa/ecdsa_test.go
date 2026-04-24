@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
@@ -308,5 +309,5 @@ func Test_VerifyNonMalleably(t *testing.T) {
 
 	err = nonMalleableVerifier.Verify(highS, pk, message[:])
 	require.Error(t, err, "non-malleable verifier must reject high-s")
-	require.ErrorIs(t, err, ecdsa.ErrVerificationFailed)
+	require.ErrorIs(t, err, signatures.ErrVerificationFailed)
 }

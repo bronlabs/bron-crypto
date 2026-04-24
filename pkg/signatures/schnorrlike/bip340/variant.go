@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -56,7 +57,7 @@ func (*Variant) HashFunc() func() hash.Hash {
 // the auxiliary randomness provides side-channel protection.
 func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.sk == nil || v.msg == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("need both private key and message")
+		return nil, nil, signatures.ErrInvalidArgument.WithMessage("need both private key and message")
 	}
 	g := k256.NewCurve().Generator()
 	f := k256.NewScalarField()
@@ -64,7 +65,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 	dPrime := v.sk.Value()
 	// 2. Fail if d' = 0 or d' ≥ n
 	if dPrime.IsZero() {
-		return nil, nil, ErrFailed.WithMessage("d' is invalid")
+		return nil, nil, signatures.ErrFailed.WithMessage("d' is invalid")
 	}
 	// 3. Let P = d'⋅G
 	bigP := g.ScalarMul(v.sk.Value())
@@ -86,7 +87,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 	}
 	t := make([]byte, len(auxDigest))
 	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
-		return nil, nil, ErrFailed.WithMessage("invalid scalar bytes length")
+		return nil, nil, signatures.ErrFailed.WithMessage("invalid scalar bytes length")
 	}
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
 	rand, err := hashing.Hash(
@@ -104,7 +105,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 
 	// 8. Fail if k' = 0
 	if kPrime.IsZero() {
-		return nil, nil, ErrFailed.WithMessage("k' is invalid")
+		return nil, nil, signatures.ErrFailed.WithMessage("k' is invalid")
 	}
 
 	// 9. Let R = k'⋅G.
@@ -146,7 +147,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 // Uses the adjusted private key d (negated if P.y was odd during nonce commitment).
 func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
-		return nil, ErrInvalidArgument.WithMessage("arguments are nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("arguments are nil")
 	}
 	// Use the adjusted private key if available (from ComputeNonceCommitment)
 	// This ensures we use d (not d') when P.y is odd
@@ -203,7 +204,7 @@ var _ mpcschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Vari
 // consistent (negated) shares when P.y is odd.
 func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
 	if publicKey == nil || share == nil {
-		return nil, ErrInvalidArgument.WithMessage("public key or secret share is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("public key or secret share is nil")
 	}
 	out := share.Clone()
 	pky, err := publicKey.Value().AffineY()
@@ -228,7 +229,7 @@ func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *ad
 // based on the aggregate public key's Y coordinate parity.
 func (*Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {
 	if aggregatePublicKey == nil || share == nil {
-		return nil, ErrInvalidArgument.WithMessage("aggregate public key or share is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("aggregate public key or share is nil")
 	}
 	pky, err := aggregatePublicKey.Value().AffineY()
 	if err != nil {
@@ -250,7 +251,7 @@ func (*Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share
 // This ensures the aggregate response s = Σk_i + e·Σx_i uses the correct nonces.
 func (*Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
 	if nonceCommitment == nil || k == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
+		return nil, nil, signatures.ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}
 	correctedK := k.Clone()
 	y, err := nonceCommitment.AffineY()
@@ -272,7 +273,7 @@ func (*Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.S
 // to ensure the aggregate R has even y.
 func (*Variant) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment, partialNonceCommitment *k256.Point) (*k256.Point, error) {
 	if aggregatedNonceCommitment == nil || partialNonceCommitment == nil {
-		return nil, ErrInvalidArgument.WithMessage("aggregated nonce commitment or partial nonce commitment is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("aggregated nonce commitment or partial nonce commitment is nil")
 	}
 	correctedPartialNonceCommitment := partialNonceCommitment
 	y, err := aggregatedNonceCommitment.AffineY()
