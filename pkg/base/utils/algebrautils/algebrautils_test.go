@@ -207,7 +207,7 @@ func TestScalarMulSigned(t *testing.T) {
 			if abs < 0 {
 				abs = -abs
 			}
-			for i := int64(0); i < abs; i++ {
+			for range abs {
 				expected = expected.Op(step)
 			}
 			require.True(t, result.Equal(expected), "scalar %d", v)
@@ -295,7 +295,7 @@ func TestScalarMulSignedNative(t *testing.T) {
 			if abs < 0 {
 				abs = -abs
 			}
-			for i := int64(0); i < abs; i++ {
+			for range abs {
 				expected = expected.Op(step)
 			}
 			require.True(t, result.Equal(expected), "scalar %d", v)

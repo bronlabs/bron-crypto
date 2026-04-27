@@ -28,6 +28,7 @@ type Scheme[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct 
 // simulation in security proofs and zero-knowledge protocols.
 type EquivocableScheme[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct {
 	Scheme[E, S]
+
 	trapdoor *Trapdoor[E, S]
 }
 

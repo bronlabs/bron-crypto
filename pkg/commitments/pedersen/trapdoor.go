@@ -3,13 +3,14 @@ package pedersen
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Trapdoor extends a Pedersen Key with the secret λ such that h = g^λ.
@@ -19,6 +20,7 @@ import (
 // which is required for inversion mod q during equivocation.
 type Trapdoor[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct {
 	Key[E, S]
+
 	lambda *num.Uint
 }
 
@@ -127,7 +129,7 @@ func SamplePrimeGroupTrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.Pr
 // newTrapdoorKeyUnchecked builds a Trapdoor without enforcing the group-specific
 // preconditions on (g, λ). It still rejects nil, identity-or-torsion generators
 // and trivial λ ∈ {0, 1}; callers above this layer are responsible for the
-// remaining flavor-specific checks (lambda's modulus, generator validity).
+// remaining flavour-specific checks (lambda's modulus, generator validity).
 func newTrapdoorKeyUnchecked[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]](g E, lambda *num.Uint) (*Trapdoor[E, S], error) {
 	if utils.IsNil(g) || utils.IsNil(lambda) {
 		return nil, ErrInvalidArgument.WithMessage("generator and trapdoor value cannot be nil")
@@ -204,7 +206,11 @@ func scalarToZModQ[S algebra.RingElement[S]](v S, modulus *num.NatPlus, zModQ *n
 		return intVal.Mod(modulus), nil
 	}
 	if u, ok := any(v).(algebra.UnsignedNumeric); ok {
-		return zModQ.FromBytesBEReduce(u.BytesBE())
+		out, err := zModQ.FromBytesBEReduce(u.BytesBE())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to reduce unsigned scalar into ZModQ")
+		}
+		return out, nil
 	}
 	return nil, ErrInvalidArgument.WithMessage("unsupported scalar type for reduction into ZModQ")
 }
@@ -222,7 +228,11 @@ func zModQToScalar[S algebra.RingElement[S]](u *num.Uint, exemplar S) (S, error)
 	if from, ok := any(exemplar.Structure()).(interface {
 		FromBytesBEReduce([]byte) (S, error)
 	}); ok {
-		return from.FromBytesBEReduce(u.BytesBE())
+		out, err := from.FromBytesBEReduce(u.BytesBE())
+		if err != nil {
+			return zero, errs.Wrap(err).WithMessage("failed to lift Uint into S")
+		}
+		return out, nil
 	}
 	return zero, ErrInvalidArgument.WithMessage("unsupported scalar structure for lifting from ZModQ")
 }

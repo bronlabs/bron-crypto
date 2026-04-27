@@ -336,6 +336,7 @@ func TestRingPedersen_WitnessOrderWrapProducesSameCommitment(t *testing.T) {
 	// the range check is unambiguous: it bounds magnitude for hiding
 	// statistics and witness extraction, not for binding.
 	group, sElem, tElem, _, err := znstar.SamplePedersenParameters(ringPedersenKeyLen, crand.Reader)
+	require.NoError(t, err)
 	arith, ok := group.Arithmetic().(*modular.OddPrimeFactors)
 	require.True(t, ok, "expected RSA group arithmetic to be OddPrimeFactors")
 	p, err := num.NPlus().FromNatCT(arith.Params.PNat)

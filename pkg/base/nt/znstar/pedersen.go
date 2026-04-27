@@ -35,7 +35,7 @@ import (
 // open arbitrary Pedersen commitments; they must be kept secret from
 // every other protocol participant and zeroised as soon as they are no
 // longer needed.
-func SamplePedersenParameters(keyLen uint, prng io.Reader) (group *RSAGroupKnownOrder, s, t *RSAGroupElementUnknownOrder, lambda *num.Uint, err error) { //nolint:gocritic // intentionally returning too many results.
+func SamplePedersenParameters(keyLen uint, prng io.Reader) (group *RSAGroupKnownOrder, s, t *RSAGroupElementUnknownOrder, lambda *num.Uint, err error) {
 	if prng == nil {
 		return nil, nil, nil, nil, ErrIsNil.WithMessage("prng")
 	}
