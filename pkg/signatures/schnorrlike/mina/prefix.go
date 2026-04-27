@@ -9,6 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 // NetworkID identifies a Mina network for domain separation in signatures.
@@ -43,7 +44,7 @@ type Prefix []byte
 func (p Prefix) ToBaseFieldElement() (*pasta.PallasBaseFieldElement, error) {
 	fieldSize := pasta.NewPallasBaseField().ElementSize()
 	if len(p) > fieldSize {
-		return nil, ErrSerialization.WithMessage("prefix too long")
+		return nil, signatures.ErrSerialization.WithMessage("prefix too long")
 	}
 
 	var feBytes [32]byte

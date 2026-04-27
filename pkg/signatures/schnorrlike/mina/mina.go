@@ -64,10 +64,10 @@ func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 // The scalar must be non-zero. The corresponding public key P = x·G is computed.
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if scalar == nil {
-		return nil, ErrInvalidArgument.WithMessage("scalar is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("scalar is nil")
 	}
 	if scalar.IsZero() {
-		return nil, ErrInvalidArgument.WithMessage("scalar is zero")
+		return nil, signatures.ErrInvalidArgument.WithMessage("scalar is zero")
 	}
 	pkv := group.ScalarBaseMul(scalar)
 	pk, err := schnorrlike.NewPublicKey(pkv)
@@ -142,7 +142,7 @@ func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 // Signer creates a signer for producing Mina signatures.
 func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, error) {
 	if privateKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("private key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	verifier, err := s.Verifier()
 	if err != nil {
@@ -184,7 +184,7 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 // PartialSignatureVerifier creates a verifier for threshold/partial signatures.
 func (s *Scheme) PartialSignatureVerifier(publicKey *PublicKey, opts ...signatures.VerifierOption[*Verifier, *PublicKey, *Message, *Signature]) (schnorrlike.Verifier[*Variant, *GroupElement, *Scalar, *Message], error) {
 	if publicKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("public key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("public key is nil")
 	}
 	verifier, err := s.Verifier(opts...)
 	if err != nil {
@@ -230,7 +230,7 @@ type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, *Message,
 func VerifyWithPRNG(prng io.Reader) VerifierOption {
 	return func(v *Verifier) error {
 		if prng == nil {
-			return ErrInvalidArgument.WithMessage("prng is nil")
+			return signatures.ErrInvalidArgument.WithMessage("prng is nil")
 		}
 		v.prng = prng
 		return nil
@@ -249,7 +249,7 @@ type Verifier struct {
 // This matches the Mina/o1js serialisation convention.
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil {
-		return nil, ErrInvalidArgument.WithMessage("signature is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	// Mina uses LITTLE-ENDIAN for field elements
 	rx, err := signature.R.AffineX()
@@ -273,7 +273,7 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 
 	out := slices.Concat(rxBytesLE, sBytesLE)
 	if len(out) != SignatureSize {
-		return nil, ErrSerialization.WithMessage("invalid signature size. got :%d, need :%d", len(out), SignatureSize)
+		return nil, signatures.ErrSerialization.WithMessage("invalid signature size. got :%d, need :%d", len(out), SignatureSize)
 	}
 	return out, nil
 }
@@ -283,7 +283,7 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 // The challenge E is not stored and will be recomputed during verification.
 func DeserializeSignature(input []byte) (*Signature, error) {
 	if len(input) != SignatureSize {
-		return nil, ErrSerialization.WithMessage("invalid signature size. got :%d, need :%d", len(input), SignatureSize)
+		return nil, signatures.ErrSerialization.WithMessage("invalid signature size. got :%d, need :%d", len(input), SignatureSize)
 	}
 
 	rxBytesLE := input[:group.ElementSize()]
@@ -304,7 +304,7 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 	// The underlying SetBytes silently reduces an out-of-range x modulo the
 	// base field prime, so we enforce canonical encoding by round-tripping.
 	if _, isEq, _ := ct.CompareBytes(rxBytesBE, rx.Bytes()); isEq != ct.True {
-		return nil, ErrSerialization.WithMessage("R.x is not canonical")
+		return nil, signatures.ErrSerialization.WithMessage("R.x is not canonical")
 	}
 
 	// Reconstruct R from x-coordinate
@@ -327,7 +327,7 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 	// The underlying SetBytes silently reduces an out-of-range s modulo the
 	// scalar field order, so we enforce canonical encoding by round-tripping.
 	if _, isEq, _ := ct.CompareBytes(sBytesBE, s.Bytes()); isEq != ct.True {
-		return nil, ErrSerialization.WithMessage("s is not canonical")
+		return nil, signatures.ErrSerialization.WithMessage("s is not canonical")
 	}
 
 	return &Signature{
