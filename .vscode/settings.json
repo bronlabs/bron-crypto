@@ -1,0 +1,15 @@
+{
+  // -Wl,-no_warn_duplicate_libraries is an Apple ld64 flag and is rejected by
+  // GNU ld on Linux, so it is omitted here for portability. Add it to your
+  // local shell env on macOS if the duplicate-library warnings are noisy.
+  "go.toolsEnvVars": {
+    "CGO_ENABLED": "1",
+    "CGO_CFLAGS": "-I${workspaceFolder}/thirdparty/boringssl -I${workspaceFolder}/thirdparty/boringssl/include",
+    "CGO_LDFLAGS": "-L${workspaceFolder}/thirdparty/boringssl/build-local/crypto -lcrypto"
+  },
+  "go.testEnvVars": {
+    "CGO_ENABLED": "1",
+    "CGO_CFLAGS": "-I${workspaceFolder}/thirdparty/boringssl -I${workspaceFolder}/thirdparty/boringssl/include",
+    "CGO_LDFLAGS": "-L${workspaceFolder}/thirdparty/boringssl/build-local/crypto -lcrypto"
+  }
+}

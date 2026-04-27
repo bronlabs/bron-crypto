@@ -30,7 +30,10 @@ testdata/
 
 # Mac
 .DS_Store
-.vscode
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
 
 # Latex
 docs/build/*
@@ -42,5 +45,6 @@ docs/build/*
 
 /thirdparty/boringssl
 
+.docs/
 /coverage.out
 /coverage.html
