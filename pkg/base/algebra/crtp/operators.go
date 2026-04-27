@@ -1,23 +1,27 @@
 package crtp
 
 type (
-	NAry[C any] interface {
+	NAry interface {
 		Arity() Cardinal
+	}
+
+	NAryProduct[C any] interface {
+		NAry
 		Components() []C
 	}
 
 	Mapping[E, C any] interface {
-		NAry[C]
+		NAryProduct[C]
 		New(...C) (E, error)
 	}
 
 	Product[P, C any] interface {
-		NAry[C]
+		NAryProduct[C]
 		Diagonal(C) P
 	}
 
 	CoProduct[P, C any] interface {
-		NAry[C]
+		NAryProduct[C]
 		CoDiagonal() C
 	}
 	Power[P, C any] interface {

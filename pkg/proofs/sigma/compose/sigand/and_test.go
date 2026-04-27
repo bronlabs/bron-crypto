@@ -97,8 +97,10 @@ func Test_And_InvalidInputs(t *testing.T) {
 func Test_And_BytesAreLengthDelimited(t *testing.T) {
 	t.Parallel()
 
-	statementA := sigand.ComposeStatements[sigma.Statement](testBytes("a"), testBytes("bc"))
-	statementB := sigand.ComposeStatements[sigma.Statement](testBytes("ab"), testBytes("c"))
+	statementA, err := sigand.ComposeStatements[sigma.Statement](testBytes("a"), testBytes("bc"))
+	require.NoError(t, err)
+	statementB, err := sigand.ComposeStatements[sigma.Statement](testBytes("ab"), testBytes("c"))
+	require.NoError(t, err)
 	require.NotEqual(t, statementA.Bytes(), statementB.Bytes())
 
 	responseA := sigand.Response[sigma.Response]{testBytes("a"), testBytes("bc")}

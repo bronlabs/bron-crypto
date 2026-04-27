@@ -191,7 +191,7 @@ func NewCiphertext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](c1, 
 		return nil, ErrSubGroupMembership.WithMessage("invalid ciphertext: first component is identity")
 	}
 	g := algebra.StructureMustBeAs[FiniteCyclicGroup[E, S]](c1.Structure())
-	ctSpace, err := constructions.NewFiniteDirectSumModule(g, 2)
+	ctSpace, err := constructions.NewFiniteDirectPowerModule(g, 2)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create ciphertext space")
 	}
@@ -203,9 +203,9 @@ func NewCiphertext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](c1, 
 }
 
 // Ciphertext is a pair (c₁, c₂) = (g^r, m · h^r) in G × G,
-// represented as an element of the direct-sum module G².
+// represented as an element of the direct-power module G².
 type Ciphertext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
-	v *constructions.FiniteDirectSumModuleElement[E, S]
+	v *constructions.FiniteDirectPowerModuleElement[E, S]
 }
 
 // ScalarRing returns Z/nZ derived from the ciphertext's group structure.
@@ -217,8 +217,8 @@ func (c *Ciphertext[E, S]) ScalarRing() algebra.ZModLike[S] {
 	return algebra.StructureMustBeAs[algebra.ZModLike[S]](g.ScalarStructure())
 }
 
-// Value returns the underlying direct-sum module element (c₁, c₂).
-func (c *Ciphertext[E, S]) Value() *constructions.FiniteDirectSumModuleElement[E, S] {
+// Value returns the underlying direct-power module element (c₁, c₂).
+func (c *Ciphertext[E, S]) Value() *constructions.FiniteDirectPowerModuleElement[E, S] {
 	return c.v
 }
 

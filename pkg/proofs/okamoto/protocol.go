@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -39,6 +40,11 @@ func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) (*Witness[S], error) {
 	if len(ws) == 0 {
 		return nil, ErrInvalidArgument.WithMessage("at least one witness value is required")
 	}
+	for _, w := range ws {
+		if utils.IsNil(w) {
+			return nil, ErrInvalidArgument.WithMessage("witness values cannot be nil")
+		}
+	}
 	baseRing := algebra.StructureMustBeAs[algebra.PrimeField[S]](ws[0].Structure())
 	powerRing, err := constructions.NewFiniteDirectPowerRing(baseRing, uint(len(ws)))
 	if err != nil {
@@ -54,8 +60,11 @@ func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) (*Witness[S], error) {
 // NewStatement constructs a statement from individual group elements whose product
 // forms the public element z = g_1 * g_2 * ... * g_m.
 // For proving knowledge of a Pedersen opening, pass the commitment value directly.
-func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](g G) *Statement[G, S] {
-	return &Statement[G, S]{X: g}
+func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](g G) (*Statement[G, S], error) {
+	if utils.IsNil(g) {
+		return nil, ErrInvalidArgument.WithMessage("group element cannot be nil")
+	}
+	return &Statement[G, S]{X: g}, nil
 }
 
 // Protocol implements Okamoto's sigma protocol for proving knowledge of a representation.
@@ -80,7 +89,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](generators[0].Structure())
 	baseScalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 
-	directSumModule, err := constructions.NewFiniteDirectSumModule(group, uint(len(generators)))
+	directSumModule, err := constructions.NewFiniteDirectPowerModule(group, uint(len(generators)))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create direct sum module")
 	}
@@ -96,8 +105,11 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create direct sum module element for generators")
 	}
-	homomorphism := func(s *constructions.FiniteDirectPowerRingElement[S]) G {
-		return generatorsVector.ScalarDiagonal(s).CoDiagonal()
+	homomorphism := func(s *constructions.FiniteDirectPowerRingElement[S]) (G, error) {
+		if s == nil {
+			return *new(G), ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
+		}
+		return generatorsVector.ScalarDiagonal(s).CoDiagonal(), nil
 	}
 
 	l, err := num.N().FromBytes(group.Order().Bytes())
