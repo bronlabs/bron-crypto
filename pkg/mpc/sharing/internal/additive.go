@@ -58,7 +58,7 @@ func (s *AdditiveShare[E]) Add(other *AdditiveShare[E]) *AdditiveShare[E] {
 }
 
 // ScalarOp returns a new share that is the result of multiplying this share's value by a scalar actor. The ID remains unchanged.
-func (s *AdditiveShare[E]) ScalarOp(actor algebra.Numeric) *AdditiveShare[E] {
+func (s *AdditiveShare[E]) ScalarOp(actor algebra.UnsignedNumeric) *AdditiveShare[E] {
 	return &AdditiveShare[E]{
 		id: s.id,
 		v:  algebrautils.ScalarMul(s.v, actor),

@@ -15,13 +15,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
 	transcriptLabel              = "BRON_CRYPTO_DKG_GENNARO-"
-	secondPedersenGeneratorLabel = "second generator of pedersen key"
+	secondPedersenGeneratorLabel = "BRON_CRYPTO_DKG_GENNARO_PEDERSEN_KEY_SECOND_GENERATOR-"
 )
 
 type Participant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
@@ -84,14 +83,11 @@ func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, ctx.SessionID(), group.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	h, err := ts.Extract(ctx.Transcript(), secondPedersenGeneratorLabel, group)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
-	}
-	key, err := pedcom.NewCommitmentKey(group.Generator(), h)
+	key, err := pedcom.NewPrimeGroupCommitmentKey(ctx.Transcript(), secondPedersenGeneratorLabel, group.Generator())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen key")
 	}
+
 	pedersenVSS, err := pedersen.NewScheme(key, ac)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen VSS scheme")

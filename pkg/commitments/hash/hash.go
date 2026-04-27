@@ -18,7 +18,7 @@ var (
 	_ commitments.Commitment[Commitment] = Commitment{}
 	_ commitments.Message                = Message(nil)
 	_ commitments.Witness                = Witness{}
-	_ commitments.Key                    = Key{}
+	_ commitments.CommitmentKey          = Key{}
 
 	// HmacFunc defines the hash function used to instantiate the HMAC-based commitments.
 	HmacFunc = blake2b.New256

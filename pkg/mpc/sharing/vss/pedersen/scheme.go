@@ -46,7 +46,7 @@ func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
 
-	commitmentScheme, err := pedcom.NewScheme(key)
+	commitmentScheme, err := pedcom.NewPrimeGroupScheme(key)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create Pedersen commitment scheme")
 	}

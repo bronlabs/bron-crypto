@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 )
 
-func _[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]() {
+func _[E pedersen.FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]]() {
 	var (
 		_ commitments.GroupHomomorphicScheme[
 			*pedersen.Key[E, S],
@@ -15,8 +15,18 @@ func _[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]() {
 			*pedersen.Commitment[E, S], E,
 			*pedersen.Committer[E, S],
 			*pedersen.Verifier[E, S],
-			algebra.PrimeGroup[E, S],
+			pedersen.FiniteAbelianGroup[E, S],
 		] = (*pedersen.Scheme[E, S])(nil)
+
+		_ commitments.EquivocableScheme[
+			*pedersen.Key[E, S],
+			*pedersen.Trapdoor[E, S],
+			*pedersen.Witness[S],
+			*pedersen.Message[S],
+			*pedersen.Commitment[E, S],
+			*pedersen.Committer[E, S],
+			*pedersen.Verifier[E, S],
+		] = (*pedersen.EquivocableScheme[E, S])(nil)
 
 		_ commitments.ReRandomisableCommitment[
 			*pedersen.Commitment[E, S],

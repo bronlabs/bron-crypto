@@ -11,8 +11,14 @@ import (
 type Name string
 
 type (
-	// Key represents scheme configuration/CRS material.
-	Key any
+	// CommitmentKey represents scheme configuration/CRS material.
+	CommitmentKey                                      any
+	TrapdoorKey[K CommitmentKey, M Message, W Witness] interface {
+		// CommitmentKey returns the commitment key associated with the trapdoor.
+		CommitmentKey() K
+		// Equivocate produces a witness that opens a commitment to a new message, given the original message and witness.
+		Equivocate(message M, witness W, newMessage M) (W, error)
+	}
 	// Message is the plaintext being committed.
 	Message any
 	// Witness is the randomness used to hide the message.
@@ -21,7 +27,7 @@ type (
 	Commitment[C any] base.Equatable[C]
 
 	// ReRandomisableCommitment supports re-randomisation of an existing commitment.
-	ReRandomisableCommitment[C Commitment[C], W Witness, K Key] interface {
+	ReRandomisableCommitment[C Commitment[C], W Witness, K CommitmentKey] interface {
 		Commitment[C]
 		// ReRandomiseWithWitness re-randomises an existing commitment using caller-supplied witness shift.
 		ReRandomiseWithWitness(K, W) (C, error)
@@ -59,7 +65,7 @@ type (
 )
 
 // Scheme exposes a commitment protocol with its committer, verifier, and key material.
-type Scheme[K Key, W Witness, M Message, C Commitment[C], COM Committer[W, M, C], VF Verifier[W, M, C]] interface {
+type Scheme[K CommitmentKey, W Witness, M Message, C Commitment[C], COM Committer[W, M, C], VF Verifier[W, M, C]] interface {
 	// Name returns the identifier of the commitment scheme.
 	Name() Name
 	// Committer returns a committer configured with the scheme.
@@ -70,10 +76,17 @@ type Scheme[K Key, W Witness, M Message, C Commitment[C], COM Committer[W, M, C]
 	Key() K
 }
 
+// EquivocableScheme extends Scheme with a trapdoor key for equivocation of commitments.
+type EquivocableScheme[K CommitmentKey, T TrapdoorKey[K, M, W], W Witness, M Message, C Commitment[C], COM Committer[W, M, C], VF Verifier[W, M, C]] interface {
+	Scheme[K, W, M, C, COM, VF]
+	// Trapdoor returns a trapdoor key that can be used to equivocate commitments.
+	TrapdoorKey() T
+}
+
 // ******** Homomorphic.
 
 type HomomorphicScheme[
-	K Key,
+	K CommitmentKey,
 	W interface {
 		Witness
 		algebra.HomomorphicLike[W, WT]
@@ -91,15 +104,15 @@ type HomomorphicScheme[
 ] Scheme[K, W, M, C, CO, VF]
 
 type GroupHomomorphicScheme[
-	K Key,
+	K CommitmentKey,
 	W interface {
 		Witness
 		algebra.HomomorphicLike[W, WT]
-	}, WT algebra.UintLike[WT],
+	}, WT algebra.RingElement[WT],
 	M interface {
 		Message
 		algebra.HomomorphicLike[M, MT]
-	}, MT algebra.UintLike[MT],
+	}, MT algebra.RingElement[MT],
 	C interface {
 		Commitment[C]
 		algebra.HomomorphicLike[C, CT]

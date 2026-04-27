@@ -6,26 +6,26 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // Witness holds the randomness used to hide the committed message.
-type Witness[S algebra.PrimeFieldElement[S]] struct {
+type Witness[S algebra.RingElement[S]] struct {
 	v S
 }
 
-type witnessDTO[S algebra.PrimeFieldElement[S]] struct {
+type witnessDTO[S algebra.RingElement[S]] struct {
 	V S `cbor:"w"`
 }
 
 // NewWitness constructs a witness, rejecting zero values to prevent degenerate commitments.
-func NewWitness[S algebra.PrimeFieldElement[S]](v S) (*Witness[S], error) {
-	if v.IsZero() {
-		return nil, ErrInvalidArgument.WithMessage("witness value cannot be zero")
+func NewWitness[S algebra.RingElement[S]](v S) (*Witness[S], error) {
+	if utils.IsNil(v) {
+		return nil, ErrInvalidArgument.WithMessage("witness value cannot be nil")
 	}
-	w := &Witness[S]{
+	return &Witness[S]{
 		v: v,
-	}
-	return w, nil
+	}, nil
 }
 
 // Value returns the witness scalar.

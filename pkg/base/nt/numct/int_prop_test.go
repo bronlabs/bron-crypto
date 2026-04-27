@@ -476,7 +476,7 @@ func TestInt_SetTwosComplementBEBytes_Property(t *testing.T) {
 			uint64(b4)<<24 | uint64(b5)<<16 | uint64(b6)<<8 | uint64(b7))
 
 		var xInt numct.Int
-		xInt.SetTwosComplementBEBytes(beBytes)
+		xInt.SetTwosComplementBytesBE(beBytes)
 
 		// Property: SetTwosComplementBEBytes correctly interprets the bytes
 		require.Equal(t, 64, xInt.AnnouncedLen())
@@ -492,9 +492,9 @@ func TestInt_TwosComplementBEBytes_Roundtrip_Property(t *testing.T) {
 		original.SetInt64(x)
 
 		// Property: SetTwosComplementBEBytes(TwosComplementBEBytes(x)) == x
-		beBytes := original.TwosComplementBEBytes()
+		beBytes := original.TwosComplementBytesBE()
 		var roundtrip numct.Int
-		roundtrip.SetTwosComplementBEBytes(beBytes)
+		roundtrip.SetTwosComplementBytesBE(beBytes)
 
 		require.Equal(t, x, roundtrip.Int64())
 	})

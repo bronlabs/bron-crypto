@@ -52,7 +52,7 @@ func (s *Share[F]) Op(e *Share[F]) *Share[F] {
 }
 
 // ScalarOp multiplies the share value by a field scalar.
-func (s *Share[F]) ScalarOp(actor algebra.Numeric) *Share[F] {
+func (s *Share[F]) ScalarOp(actor algebra.UnsignedNumeric) *Share[F] {
 	return &Share[F]{
 		id:    s.id,
 		value: algebrautils.ScalarMul(s.value, actor),
