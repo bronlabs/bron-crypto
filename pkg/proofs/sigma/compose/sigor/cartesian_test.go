@@ -110,7 +110,8 @@ func Test_CartesianOr_VerifyRejectsMalformedChallenges(t *testing.T) {
 	require.NoError(t, err)
 	protocol, err := schnorr.NewProtocol(base, prng)
 	require.NoError(t, err)
-	orProtocol := sigor.CartesianCompose(protocol, protocol, prng)
+	orProtocol, err := sigor.CartesianCompose(protocol, protocol, prng)
+	require.NoError(t, err)
 
 	sf, ok := curve.ScalarStructure().(algebra.PrimeField[*k256.Scalar])
 	require.True(t, ok)
@@ -119,11 +120,13 @@ func Test_CartesianOr_VerifyRejectsMalformedChallenges(t *testing.T) {
 	w1, err := sf.Random(prng)
 	require.NoError(t, err)
 
-	statement := sigor.CartesianComposeStatements(
+	statement, err := sigor.CartesianComposeStatements(
 		schnorr.NewStatement(base.ScalarMul(w0)),
 		schnorr.NewStatement(base),
 	)
-	witness := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	require.NoError(t, err)
+	witness, err := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	require.NoError(t, err)
 	commitment, state, err := orProtocol.ComputeProverCommitment(statement, witness)
 	require.NoError(t, err)
 
@@ -173,11 +176,14 @@ func testCartesianOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F]
 		x1 = base.ScalarMul(w1)  // Valid
 	}
 
-	statement := sigor.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
-	witness := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	statement, err := sigor.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
+	require.NoError(tb, err)
+	witness, err := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	require.NoError(tb, err)
 
 	// Compose OR protocol
-	orProtocol := sigor.CartesianCompose(protocol, protocol, prng)
+	orProtocol, err := sigor.CartesianCompose(protocol, protocol, prng)
+	require.NoError(tb, err)
 
 	// Round 1: Prover commitment
 	commitment, state, err := orProtocol.ComputeProverCommitment(statement, witness)
@@ -215,10 +221,12 @@ func testCartesianOrSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F]
 	x1, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
-	statement := sigor.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
+	statement, err := sigor.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
+	require.NoError(tb, err)
 
 	// Compose OR protocol
-	orProtocol := sigor.CartesianCompose(protocol, protocol, prng)
+	orProtocol, err := sigor.CartesianCompose(protocol, protocol, prng)
+	require.NoError(tb, err)
 
 	// Generate random challenge
 	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
@@ -259,11 +267,14 @@ func testCartesianOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElemen
 	x1, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
-	statement := sigor.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
-	witness := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	statement, err := sigor.CartesianComposeStatements(schnorr.NewStatement(x0), schnorr.NewStatement(x1))
+	require.NoError(tb, err)
+	witness, err := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	require.NoError(tb, err)
 
 	// Compose OR protocol
-	orProtocol := sigor.CartesianCompose(protocol, protocol, prng)
+	orProtocol, err := sigor.CartesianCompose(protocol, protocol, prng)
+	require.NoError(tb, err)
 
 	// Run protocol
 	commitment, state, err := orProtocol.ComputeProverCommitment(statement, witness)

@@ -6,7 +6,8 @@ import (
 )
 
 type (
-	NAry[C any]                = crtp.NAry[C]
+	NAry                       = crtp.NAry
+	NAryProduct[C any]         = crtp.NAryProduct[C]
 	Mapping[F, C any]          = crtp.Mapping[F, C]
 	Product[P, C any]          = crtp.Product[P, C]
 	CoProduct[P, C any]        = crtp.CoProduct[P, C]
@@ -85,7 +86,7 @@ type (
 	ResizableCapacity[E any] crtp.ResizableCapacity[E]
 )
 
-type Homomorphism[E2 SemiGroupElement[E2], E1 SemiGroupElement[E1]] func(E1) E2
+type Homomorphism[E2 SemiGroupElement[E2], E1 SemiGroupElement[E1]] func(E1) (E2, error)
 
 type HomomorphicLike[T any, TV any] interface {
 	base.Transparent[TV]

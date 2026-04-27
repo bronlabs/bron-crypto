@@ -5,9 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -22,6 +20,9 @@ var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
+	rho           uint64
+	b             uint64
+	t             uint64
 }
 
 // Verify checks that a Fischlin proof is valid for the given statement.
@@ -38,19 +39,11 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	// 2. If m, e, and z do not each have ρ elements, then output 'reject'
-	if uint64(len(fischlinProof.A)) != fischlinProof.Rho || uint64(len(fischlinProof.E)) != fischlinProof.Rho || uint64(len(fischlinProof.Z)) != fischlinProof.Rho {
-		return ErrInvalid.WithMessage("invalid length")
-	}
-	if fischlinProof.Rho < 2 || fischlinProof.B < 2 {
+	if uint64(len(fischlinProof.A)) != v.rho || uint64(len(fischlinProof.E)) != v.rho || uint64(len(fischlinProof.Z)) != v.rho {
 		return ErrInvalid.WithMessage("invalid length")
 	}
 
-	b := fischlinProof.B - uint64(mathutils.CeilLog2(int(v.sigmaProtocol.SpecialSoundness())-1))
-	if (fischlinProof.Rho * b) < base.ComputationalSecurityBits {
-		return ErrVerification.WithMessage("insufficient soundness")
-	}
-
-	v.ctx.Transcript().AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, fischlinProof.Rho))
+	v.ctx.Transcript().AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, v.rho))
 	v.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 	commonHKey, err := v.ctx.Transcript().ExtractBytes(commonHLabel, 32)
 	if err != nil {
@@ -58,14 +51,14 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	commitmentSerialized := make([][]byte, 0)
-	for i := range fischlinProof.Rho {
+	for i := range v.rho {
 		commitmentSerialized = append(commitmentSerialized, fischlinProof.A[i].Bytes())
 	}
 	v.ctx.Transcript().AppendBytes(commitmentLabel, commitmentSerialized...)
 	v.ctx.Transcript().AppendBytes(challengeLabel, fischlinProof.E...)
 
 	a := make([]byte, 0)
-	for i := range fischlinProof.Rho {
+	for i := range v.rho {
 		a = append(a, fischlinProof.A[i].Bytes()...)
 	}
 
@@ -77,8 +70,12 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	// 4. For i ∈ {1, ..., ρ}
-	for i := range fischlinProof.Rho {
-		digest, err := hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i].Bytes())
+	eByteLen := (v.t + 7) / 8
+	for i := range v.rho {
+		if len(fischlinProof.E[i]) != int(eByteLen) {
+			return ErrVerification.WithMessage("invalid proof")
+		}
+		digest, err := hash(v.b, commonH, i, fischlinProof.E[i], fischlinProof.Z[i].Bytes())
 		if err != nil {
 			return errs.Wrap(err).WithMessage("cannot compute digest")
 		}
@@ -102,7 +99,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	responseSerialized := make([][]byte, 0)
-	for i := range fischlinProof.Rho {
+	for i := range v.rho {
 		responseSerialized = append(responseSerialized, fischlinProof.Z[i].Bytes())
 	}
 	v.ctx.Transcript().AppendBytes(responseLabel, responseSerialized...)

@@ -23,10 +23,10 @@ func _[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]]() {
 			RE,
 		] = (*polynomials.ModuleValuedPolynomial[ME, RE])(nil)
 
-		_ algebra.Ring[*polynomials.DirectSumOfPolynomials[RE]]        = (*polynomials.DirectSumOfPolynomialRings[RE])(nil)
-		_ algebra.RingElement[*polynomials.DirectSumOfPolynomials[RE]] = (*polynomials.DirectSumOfPolynomials[RE])(nil)
+		_ algebra.Ring[*polynomials.DirectPowerOfPolynomials[RE]]        = (*polynomials.DirectPowerOfPolynomialRings[RE])(nil)
+		_ algebra.RingElement[*polynomials.DirectPowerOfPolynomials[RE]] = (*polynomials.DirectPowerOfPolynomials[RE])(nil)
 
-		_ algebra.Module[*polynomials.DirectSumOfModuleValuedPolynomials[ME, RE], RE]        = (*polynomials.DirectSumOfPolynomialModules[ME, RE])(nil)
-		_ algebra.ModuleElement[*polynomials.DirectSumOfModuleValuedPolynomials[ME, RE], RE] = (*polynomials.DirectSumOfModuleValuedPolynomials[ME, RE])(nil)
+		_ algebra.Module[*polynomials.DirectPowerOfModuleValuedPolynomials[ME, RE], RE]        = (*polynomials.DirectPowerOfPolynomialModules[ME, RE])(nil)
+		_ algebra.ModuleElement[*polynomials.DirectPowerOfModuleValuedPolynomials[ME, RE], RE] = (*polynomials.DirectPowerOfModuleValuedPolynomials[ME, RE])(nil)
 	)
 }
