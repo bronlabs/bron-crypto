@@ -6,15 +6,17 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // CommitterOption is a functional option for configuring committers.
-type CommitterOption[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] = func(*Committer[E, S]) error
+type CommitterOption[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] = func(*Committer[E, S]) error
 
 // Committer produces Pedersen commitments using the provided key.
-type Committer[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	key *Key[E, S]
+type Committer[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct {
+	key                 *Key[E, S]
+	witnessValueSampler func(prng io.Reader) (S, error)
+	messageRangeCheck   func(message *Message[S]) error
+	witnessRangeCheck   func(witness *Witness[S]) error
 }
 
 // Commit samples fresh randomness and commits to a message, returning the commitment and witness.
@@ -22,13 +24,11 @@ func (c *Committer[E, S]) Commit(message *Message[S], prng io.Reader) (*Commitme
 	if prng == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("prng cannot be nil")
 	}
-	if message == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("message cannot be nil")
+	if err := c.messageRangeCheck(message); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 
-	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](c.key.h.Structure())
-	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
-	wv, err := algebrautils.RandomNonIdentity(field, prng)
+	wv, err := c.witnessValueSampler(prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random witness")
 	}
@@ -48,8 +48,8 @@ func (c *Committer[E, S]) CommitWithWitness(message *Message[S], witness *Witnes
 	if message == nil {
 		return nil, ErrInvalidArgument.WithMessage("message cannot be nil")
 	}
-	if witness == nil {
-		return nil, ErrInvalidArgument.WithMessage("witness cannot be nil")
+	if err := c.witnessRangeCheck(witness); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid witness")
 	}
 
 	// Compute g^m * h^r

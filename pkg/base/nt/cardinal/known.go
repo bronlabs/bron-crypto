@@ -31,7 +31,7 @@ func NewFromBig(n *big.Int) Cardinal {
 }
 
 // NewFromNumeric creates a new Cardinal from a Numeric value.
-func NewFromNumeric(num acrtp.Numeric) Cardinal {
+func NewFromNumeric(num acrtp.UnsignedNumeric) Cardinal {
 	return Known(num.BytesBE())
 }
 

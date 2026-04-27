@@ -174,7 +174,7 @@ func (s *Share[E]) ToAdditive(to *unanimity.Unanimity) (*additive.Share[E], erro
 //   - scalar: The scalar value to multiply with each share component
 //
 // Returns a new share with all components scaled by the given scalar.
-func (s *Share[E]) ScalarOp(scalar algebra.Numeric) *Share[E] {
+func (s *Share[E]) ScalarOp(scalar algebra.UnsignedNumeric) *Share[E] {
 	result := &Share[E]{
 		id: s.id,
 		v:  make(map[bitset.ImmutableBitSet[sharing.ID]]E),

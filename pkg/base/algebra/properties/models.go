@@ -483,9 +483,9 @@ func PolynomialModule[
 
 func NumericStructure[S interface {
 	Structure
-	algebra.NumericStructure[E]
+	algebra.UnsignedNumericStructure[E]
 }, E interface {
-	algebra.Numeric
+	algebra.UnsignedNumeric
 	base.Equatable[E]
 }](
 	t *testing.T, structure S, g *rapid.Generator[E],

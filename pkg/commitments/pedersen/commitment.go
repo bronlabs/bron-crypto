@@ -12,16 +12,16 @@ import (
 )
 
 // Commitment represents a Pedersen commitment value held in the prime order group.
-type Commitment[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+type Commitment[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct {
 	v E
 }
 
-type commitmentDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+type commitmentDTO[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct {
 	V E `cbor:"v"`
 }
 
 // NewCommitment wraps the provided group element as a commitment, rejecting the identity element.
-func NewCommitment[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](v E) (*Commitment[E, S], error) {
+func NewCommitment[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]](v E) (*Commitment[E, S], error) {
 	if v.IsOpIdentity() {
 		return nil, ErrInvalidArgument.WithMessage("commitment value cannot be the identity element")
 	}
@@ -84,8 +84,8 @@ func (c *Commitment[E, S]) ReRandomise(key *Key[E, S], prng io.Reader) (*Commitm
 		return nil, nil, ErrInvalidArgument.WithMessage("prng cannot be nil")
 	}
 
-	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](key.h.Structure())
-	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+	group := algebra.StructureMustBeAs[FiniteAbelianGroup[E, S]](key.h.Structure())
+	field := algebra.StructureMustBeAs[algebra.FiniteRing[S]](group.ScalarStructure())
 	wv, err := algebrautils.RandomNonIdentity(field, prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random witness")

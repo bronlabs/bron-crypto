@@ -467,9 +467,9 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	h, err := curve.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
-	scheme, err := pedersen.NewScheme(key)
+	scheme, err := pedersen.NewPrimeGroupScheme(key)
 	require.NoError(t, err)
 	committer, err := scheme.Committer()
 	require.NoError(t, err)

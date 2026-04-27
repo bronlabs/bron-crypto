@@ -114,12 +114,12 @@ func (s *Share[FE]) SubPlain(other FE) *Share[FE] {
 }
 
 // ScalarOp is an alias for ScalarMul.
-func (s *Share[FE]) ScalarOp(scalar algebra.Numeric) *Share[FE] {
+func (s *Share[FE]) ScalarOp(scalar algebra.UnsignedNumeric) *Share[FE] {
 	return s.ScalarMul(scalar)
 }
 
 // ScalarMul returns a new share with the value multiplied by a scalar.
-func (s *Share[FE]) ScalarMul(scalar algebra.Numeric) *Share[FE] {
+func (s *Share[FE]) ScalarMul(scalar algebra.UnsignedNumeric) *Share[FE] {
 	return &Share[FE]{
 		id: s.id,
 		v:  algebrautils.ScalarMul(s.v, scalar),

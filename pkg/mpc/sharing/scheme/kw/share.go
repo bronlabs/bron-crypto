@@ -91,13 +91,13 @@ func (s *Share[FE]) Add(other *Share[FE]) *Share[FE] {
 }
 
 // ScalarOp is an alias for ScalarMul, satisfying the generic module-element interface.
-func (s *Share[FE]) ScalarOp(scalar algebra.Numeric) *Share[FE] {
+func (s *Share[FE]) ScalarOp(scalar algebra.UnsignedNumeric) *Share[FE] {
 	return s.ScalarMul(scalar)
 }
 
 // ScalarMul returns a new share with each component multiplied by the scalar.
 // This enables the linear homomorphic property: ScalarMul(share(a), k) reconstructs to k * a.
-func (s *Share[FE]) ScalarMul(scalar algebra.Numeric) *Share[FE] {
+func (s *Share[FE]) ScalarMul(scalar algebra.UnsignedNumeric) *Share[FE] {
 	out := make([]FE, len(s.v))
 	for i := range s.v {
 		out[i] = algebrautils.ScalarMul(s.v[i], scalar)

@@ -52,7 +52,7 @@ func newPedersenKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("meta-pedersen-test-h"))
 	require.NoError(tb, err)
-	key, err := pedcom.NewCommitmentKey(g, h)
+	key, err := pedcom.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(tb, err)
 	return key
 }

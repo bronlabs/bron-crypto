@@ -128,6 +128,190 @@ func TestScalarMul(t *testing.T) {
 	require.True(t, result.Equal(expected))
 }
 
+func TestScalarMulSigned(t *testing.T) {
+	t.Parallel()
+	curve := k256.NewCurve()
+	g := curve.Generator()
+
+	t.Run("zero scalar returns identity", func(t *testing.T) {
+		t.Parallel()
+		zero := num.Z().FromInt64(0)
+		result := algebrautils.ScalarMulSigned(g, zero)
+		require.True(t, result.IsOpIdentity())
+	})
+
+	t.Run("positive scalar matches repeated Op", func(t *testing.T) {
+		t.Parallel()
+		five := num.Z().FromInt64(5)
+		result := algebrautils.ScalarMulSigned(g, five)
+		expected := g.Op(g).Op(g).Op(g).Op(g)
+		require.True(t, result.Equal(expected))
+	})
+
+	t.Run("scalar one returns base", func(t *testing.T) {
+		t.Parallel()
+		one := num.Z().FromInt64(1)
+		result := algebrautils.ScalarMulSigned(g, one)
+		require.True(t, result.Equal(g))
+	})
+
+	t.Run("scalar minus one returns OpInv of base", func(t *testing.T) {
+		t.Parallel()
+		minusOne := num.Z().FromInt64(-1)
+		result := algebrautils.ScalarMulSigned(g, minusOne)
+		require.True(t, result.Equal(g.OpInv()))
+	})
+
+	t.Run("negative scalar matches OpInv of positive", func(t *testing.T) {
+		t.Parallel()
+		seven := num.Z().FromInt64(7)
+		minusSeven := num.Z().FromInt64(-7)
+		positive := algebrautils.ScalarMulSigned(g, seven)
+		negative := algebrautils.ScalarMulSigned(g, minusSeven)
+		require.True(t, negative.Equal(positive.OpInv()))
+	})
+
+	t.Run("opposite signs cancel to identity", func(t *testing.T) {
+		t.Parallel()
+		n := num.Z().FromInt64(123456)
+		minusN := num.Z().FromInt64(-123456)
+		sum := algebrautils.ScalarMulSigned(g, n).Op(algebrautils.ScalarMulSigned(g, minusN))
+		require.True(t, sum.IsOpIdentity())
+	})
+
+	t.Run("agrees with ScalarMulSignedNative on small int64", func(t *testing.T) {
+		t.Parallel()
+		for _, v := range []int64{-65, -3, -1, 0, 1, 2, 17, 1024} {
+			expected := algebrautils.ScalarMulSignedNative(g, v)
+			actual := algebrautils.ScalarMulSigned(g, num.Z().FromInt64(v))
+			require.True(t, actual.Equal(expected), "scalar %d", v)
+		}
+	})
+
+	t.Run("random scalar matches naive double-and-add", func(t *testing.T) {
+		t.Parallel()
+		p, err := curve.Random(pcg.NewRandomised())
+		require.NoError(t, err)
+
+		for _, v := range []int64{-1234, -42, -7, 0, 7, 42, 1234} {
+			n := num.Z().FromInt64(v)
+			result := algebrautils.ScalarMulSigned(p, n)
+
+			// Naive: |v| applications of Op (or its inverse), starting from identity.
+			expected := curve.OpIdentity()
+			step := p
+			if v < 0 {
+				step = p.OpInv()
+			}
+			abs := v
+			if abs < 0 {
+				abs = -abs
+			}
+			for range abs {
+				expected = expected.Op(step)
+			}
+			require.True(t, result.Equal(expected), "scalar %d", v)
+		}
+	})
+
+	t.Run("works on Edwards25519", func(t *testing.T) {
+		t.Parallel()
+		ed := edwards25519.NewPrimeSubGroup()
+		eg := ed.Generator()
+		minusFive := num.Z().FromInt64(-5)
+		result := algebrautils.ScalarMulSigned(eg, minusFive)
+		expected := eg.Op(eg).Op(eg).Op(eg).Op(eg).OpInv()
+		require.True(t, result.Equal(expected))
+	})
+}
+
+func TestScalarMulSignedNative(t *testing.T) {
+	t.Parallel()
+	curve := k256.NewCurve()
+	g := curve.Generator()
+
+	t.Run("zero scalar returns identity", func(t *testing.T) {
+		t.Parallel()
+		result := algebrautils.ScalarMulSignedNative(g, int64(0))
+		require.True(t, result.IsOpIdentity())
+	})
+
+	t.Run("scalar one returns base", func(t *testing.T) {
+		t.Parallel()
+		result := algebrautils.ScalarMulSignedNative(g, int64(1))
+		require.True(t, result.Equal(g))
+	})
+
+	t.Run("scalar minus one returns OpInv of base", func(t *testing.T) {
+		t.Parallel()
+		result := algebrautils.ScalarMulSignedNative(g, int64(-1))
+		require.True(t, result.Equal(g.OpInv()))
+	})
+
+	t.Run("positive scalar matches repeated Op", func(t *testing.T) {
+		t.Parallel()
+		result := algebrautils.ScalarMulSignedNative(g, int64(5))
+		expected := g.Op(g).Op(g).Op(g).Op(g)
+		require.True(t, result.Equal(expected))
+	})
+
+	t.Run("negative scalar matches OpInv of positive", func(t *testing.T) {
+		t.Parallel()
+		positive := algebrautils.ScalarMulSignedNative(g, int64(11))
+		negative := algebrautils.ScalarMulSignedNative(g, int64(-11))
+		require.True(t, negative.Equal(positive.OpInv()))
+	})
+
+	t.Run("opposite signs cancel to identity", func(t *testing.T) {
+		t.Parallel()
+		sum := algebrautils.ScalarMulSignedNative(g, int64(98765)).
+			Op(algebrautils.ScalarMulSignedNative(g, int64(-98765)))
+		require.True(t, sum.IsOpIdentity())
+	})
+
+	t.Run("works for narrower signed types", func(t *testing.T) {
+		t.Parallel()
+		fromInt8 := algebrautils.ScalarMulSignedNative(g, int8(-3))
+		fromInt32 := algebrautils.ScalarMulSignedNative(g, int32(-3))
+		fromInt64 := algebrautils.ScalarMulSignedNative(g, int64(-3))
+		require.True(t, fromInt8.Equal(fromInt64))
+		require.True(t, fromInt32.Equal(fromInt64))
+	})
+
+	t.Run("random point matches naive double-and-add", func(t *testing.T) {
+		t.Parallel()
+		p, err := curve.Random(pcg.NewRandomised())
+		require.NoError(t, err)
+
+		for _, v := range []int64{-1024, -33, -2, 0, 2, 33, 1024} {
+			result := algebrautils.ScalarMulSignedNative(p, v)
+
+			expected := curve.OpIdentity()
+			step := p
+			if v < 0 {
+				step = p.OpInv()
+			}
+			abs := v
+			if abs < 0 {
+				abs = -abs
+			}
+			for range abs {
+				expected = expected.Op(step)
+			}
+			require.True(t, result.Equal(expected), "scalar %d", v)
+		}
+	})
+
+	t.Run("works on Edwards25519", func(t *testing.T) {
+		t.Parallel()
+		ed := edwards25519.NewPrimeSubGroup()
+		eg := ed.Generator()
+		result := algebrautils.ScalarMulSignedNative(eg, int64(-4))
+		expected := eg.Op(eg).Op(eg).Op(eg).OpInv()
+		require.True(t, result.Equal(expected))
+	})
+}
+
 func TestPippengerMultiScalarMul_K256(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()

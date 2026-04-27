@@ -12,7 +12,7 @@ type Cardinal interface {
 	base.Clonable[Cardinal]
 	base.Hashable[Cardinal]
 	base.BytesLike
-	Numeric
+	UnsignedNumeric
 	fmt.Stringer
 
 	Summand[Cardinal]
@@ -27,23 +27,31 @@ type Cardinal interface {
 	BitLen() int
 }
 
-type NumericStructure[E any] interface {
+type UnsignedNumericStructure[E any] interface {
 	FromBytesBE([]byte) (E, error)
 }
 
-type Numeric interface {
+type UnsignedNumeric interface {
 	BytesBE() []byte
+}
+
+type SignedNumericStructure[E any] interface {
+	FromTwosComplementBytesBE([]byte) (E, error)
+}
+type SignedNumeric interface {
+	AbsBytesBE() []byte
+	TwosComplementBytesBE() []byte
 }
 
 type NPlusLike[E any] interface {
 	HemiRing[E]
-	NumericStructure[E]
+	UnsignedNumericStructure[E]
 	FromCardinal(Cardinal) (E, error)
 }
 
 type NatPlusLike[E any] interface {
 	HemiRingElement[E]
-	Numeric
+	UnsignedNumeric
 	IsProbablyPrime() bool
 
 	IsOdd() bool
@@ -64,9 +72,13 @@ type NatLike[E any] interface {
 	IsZero() bool
 }
 
-type ZLike[E any] EuclideanDomain[E]
+type ZLike[E any] interface {
+	SignedNumericStructure[E]
+	EuclideanDomain[E]
+}
 
 type IntLike[E any] interface {
+	SignedNumeric
 	EuclideanDomainElement[E]
 	IsProbablyPrime() bool
 

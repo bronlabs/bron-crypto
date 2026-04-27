@@ -10,16 +10,16 @@ import (
 )
 
 // Message wraps a scalar plaintext committed with Pedersen commitments.
-type Message[S algebra.PrimeFieldElement[S]] struct {
+type Message[S algebra.RingElement[S]] struct {
 	v S
 }
 
-type messageDTO[S algebra.PrimeFieldElement[S]] struct {
+type messageDTO[S algebra.RingElement[S]] struct {
 	V S `cbor:"v"`
 }
 
 // NewMessage constructs a message from the provided scalar value.
-func NewMessage[S algebra.PrimeFieldElement[S]](v S) (*Message[S], error) {
+func NewMessage[S algebra.RingElement[S]](v S) (*Message[S], error) {
 	if utils.IsNil(v) {
 		return nil, ErrInvalidArgument.WithMessage("message value cannot be nil")
 	}
