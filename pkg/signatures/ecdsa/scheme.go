@@ -25,7 +25,7 @@ type Scheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 // as the nonce is derived from the private key and message.
 func NewScheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], prng io.Reader) (*Scheme[P, B, S], error) {
 	if suite == nil || (!suite.IsDeterministic() && prng == nil) {
-		return nil, ErrInvalidArgument.WithMessage("suite or prng is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("suite or prng is nil")
 	}
 
 	s := &Scheme[P, B, S]{

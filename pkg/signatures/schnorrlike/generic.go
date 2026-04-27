@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -23,11 +24,11 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
 	group Group[GE, S], prng io.Reader, shouldNegateNonce func(nonceCommitment GE) bool,
 ) (R GE, k S, err error) {
 	if prng == nil {
-		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("prng is nil")
+		return *new(GE), *new(S), signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	sf, ok := group.ScalarStructure().(ScalarField[S])
 	if !ok {
-		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("group type assertion failed")
+		return *new(GE), *new(S), signatures.ErrInvalidArgument.WithMessage("group type assertion failed")
 	}
 	k, err = algebrautils.RandomNonIdentity(sf, prng)
 	if err != nil {
@@ -53,13 +54,13 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
 //   - responseOperatorIsNegative: if true, subtracts e·x instead of adding
 func ComputeGenericResponse[S Scalar[S]](privateKeyValue, nonce, challenge S, responseOperatorIsNegative bool) (S, error) {
 	if utils.IsNil(privateKeyValue) {
-		return *new(S), ErrInvalidArgument.WithMessage("private key is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	if utils.IsNil(nonce) {
-		return *new(S), ErrInvalidArgument.WithMessage("nonce is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("nonce is nil")
 	}
 	if utils.IsNil(challenge) {
-		return *new(S), ErrInvalidArgument.WithMessage("challenge is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("challenge is nil")
 	}
 	operand := challenge.Mul(privateKeyValue)
 	if responseOperatorIsNegative {
@@ -79,11 +80,11 @@ func ComputeGenericResponse[S Scalar[S]](privateKeyValue, nonce, challenge S, re
 // The hash output is reduced modulo n using FromWideBytes to avoid bias.
 func MakeGenericChallenge[S Scalar[S]](scalarField ScalarField[S], hashFunc func() hash.Hash, challengeElementsAreLittleEndian bool, xs ...[]byte) (S, error) {
 	if scalarField == nil {
-		return *new(S), ErrInvalidArgument.WithMessage("scalar field is nil")
+		return *new(S), signatures.ErrInvalidArgument.WithMessage("scalar field is nil")
 	}
 	for _, x := range xs {
 		if x == nil {
-			return *new(S), ErrInvalidArgument.WithMessage("an input is nil")
+			return *new(S), signatures.ErrInvalidArgument.WithMessage("an input is nil")
 		}
 	}
 	digest, err := hashing.Hash(hashFunc, xs...)

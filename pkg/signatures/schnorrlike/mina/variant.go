@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -28,7 +29,7 @@ var (
 // following the legacy Mina/o1js implementation.
 func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("private key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	return &Variant{
 		nid:  nid,
@@ -42,7 +43,7 @@ func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, e
 // This is used for MPC/threshold signing where nonces are collaboratively generated.
 func NewRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
 	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return &Variant{
 		nid:  nid,
@@ -120,7 +121,7 @@ func bitsToBytes(bits []bool) []byte {
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L249
 func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	if v.msg == nil {
-		return nil, ErrInvalidArgument.WithMessage("message is nil for deterministic nonce derivation")
+		return nil, signatures.ErrInvalidArgument.WithMessage("message is nil for deterministic nonce derivation")
 	}
 
 	pkx, err := v.sk.PublicKey().V.AffineX()
@@ -241,7 +242,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 // Reference: https://github.com/o1-labs/o1js/blob/885b50e60ead596cdcd8dc944df55fd3a4467a0a/src/mina-signer/src/signature.ts#L242
 func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement, message *Message) (*Scalar, error) {
 	if nonceCommitment == nil || publicKeyValue == nil || message == nil {
-		return nil, ErrInvalidArgument.WithMessage("nonceCommitment, publicKeyValue and message must not be nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("nonceCommitment, publicKeyValue and message must not be nil")
 	}
 	input := message.Clone()
 	pkx, err := publicKeyValue.AffineX()
@@ -272,7 +273,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 // ComputeResponse computes the Mina signature response: s = k + e·x mod n.
 func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
-		return nil, ErrInvalidArgument.WithMessage("privateKeyValue, nonce and challenge must not be nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("privateKeyValue, nonce and challenge must not be nil")
 	}
 	return nonce.Add(challenge.Mul(privateKeyValue)), nil
 }
@@ -291,7 +292,7 @@ func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 // is needed for secret shares (only for nonce commitments).
 func (*Variant) CorrectAdditiveSecretShareParity(_ *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
 	if share == nil {
-		return nil, ErrInvalidArgument.WithMessage("share is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("share is nil")
 	}
 	// no changes needed
 	return share.Clone(), nil
@@ -302,7 +303,7 @@ func (*Variant) CorrectAdditiveSecretShareParity(_ *PublicKey, share *additive.S
 // partial nonce k_i to ensure the final signature is valid.
 func (*Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (correctedR *GroupElement, correctedK *Scalar, err error) {
 	if aggregatedNonceCommitments == nil || localNonce == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
+		return nil, nil, signatures.ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}
 	correctedK = localNonce.Clone()
 	ancy, err := aggregatedNonceCommitments.AffineY()
@@ -322,7 +323,7 @@ func (*Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupEleme
 // partial nonce commitment R_i to ensure the final signature is valid.
 func (*Variant) CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment, partialNonceCommitment *GroupElement) (*GroupElement, error) {
 	if aggregatedNonceCommitment == nil || partialNonceCommitment == nil {
-		return nil, ErrInvalidArgument.WithMessage("aggregated nonce commitment or partial nonce commitment is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("aggregated nonce commitment or partial nonce commitment is nil")
 	}
 	ancy, err := aggregatedNonceCommitment.AffineY()
 	if err != nil {

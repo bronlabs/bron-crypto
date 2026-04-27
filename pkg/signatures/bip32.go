@@ -139,8 +139,3 @@ func bip32Like[
 
 	return shift, childChainCode, nil
 }
-
-var (
-	ErrInvalidDerivation = errs.New("invalid derivation")
-	ErrInvalidArgument   = errs.New("invalid argument")
-)
