@@ -28,12 +28,12 @@ testdata/
 .#*
 \#*
 
-# Mac
-.DS_Store
-
 # Visual Studio Code
 .vscode/*
 !.vscode/settings.json
+
+# Mac
+.DS_Store
 
 # Latex
 docs/build/*
@@ -43,8 +43,18 @@ docs/build/*
 /.golangcicache
 /.gocache
 
+# BoringSSL
 /thirdparty/boringssl
 
+# Claude
+**/.claude/
+!/.claude/
+!/.claude/**
+/.claude/settings.local.json
+/.claude/local/
+/.claude/*.local.md
+
+# Misc.
 .docs/
 /coverage.out
 /coverage.html
