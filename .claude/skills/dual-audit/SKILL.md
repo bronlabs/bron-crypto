@@ -35,7 +35,7 @@ ARGUMENTS: `<target>` — a file path, package path, or diff reference (e.g. `pk
    ```
    ## Dual audit — <T>
 
-   **Scope:** <in-scope / experimental — take the stricter of the two if they disagree, and note the disagreement>
+   **Scope:** <in-scope / experimental — take the broader of the two if they disagree, and note the disagreement>
 
    ### Findings unique to Claude
    - **[critical]** `file.go:42` — …

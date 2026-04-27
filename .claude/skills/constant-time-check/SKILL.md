@@ -9,7 +9,7 @@ You are checking whether code introduces timing leaks on secret data. Be specifi
 ## Library context (read once)
 
 - `README.md` / `SECURITY.md`: this library is **not** fully side-channel resistant. The CT foundation is in `pkg/base/curves/**/impl/` (fiat-crypto), `pkg/base/cgo/boring/` (BoringSSL), and `pkg/base/nt/numct/` (saferith/BoringSSL wrapper). Higher protocols are built on top.
-- Timing attacks are **out of scope for the bug bounty** (`SECURITY.md`), but new timing leaks in audited code (`pkg/mpc/signatures/**` and what it depends on) are a regression. Treat them as findings.
+- Timing attacks are **out of scope for the bug bounty** (`SECURITY.md`), but new timing leaks in otherwise constant-time packages are considered as a vulnerability. Treat them as findings.
 
 ## What counts as "secret"
 
@@ -23,7 +23,7 @@ If you're unsure whether a value is secret, *say so* in the finding rather than 
 
 ## Steps
 
-1. Identify the target (file / package / diff). Determine audit scope: is it reachable from `pkg/mpc/signatures/**`? In-scope code gets the higher bar.
+1. Identify the target (file / package / diff). Determine audit scope: is it reachable from `pkg/mpc/signatures/**` or transitively depended on by it? In-scope code gets the higher bar.
 2. List the secret values in the function. For each one, check the patterns below.
 3. Output findings as a flat list with severity.
 
