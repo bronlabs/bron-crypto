@@ -93,16 +93,33 @@ If you're unsure whether a value is secret, *say so* in the finding rather than 
 - `if err != nil { … }` — `err` is not secret as long as the error doesn't encode a secret and has no stack traces.
 
 ## Output format
-**Constant-time check**:
 
-**Audit scope**: in-scope / experimental
-**Secret values identified**:
+Output as GitHub-flavoured markdown. Use headers, **bold** severity tags, and `code` spans for paths and replacements so the terminal renders a clear visual hierarchy. Don't wrap the whole report in a fenced code block. Template:
 
-Findings
-- file:line — short description — severity (critical / major / minor / question)
-  - replace with: <ct.Foo / numct.Bar / canonical encoding / etc.>
+```
+## Constant-time check — <target>
 
-Summary: <count by severity, or "no findings">
+**Scope:** in-scope — _or_ — experimental
+**Secrets identified:** `secret1`, `secret2`, …
+
+### Findings
+
+- **[critical]** `file.go:42` — short description
+  - _Replace with:_ `ct.Foo`
+- **[major]** `file.go:99` — short description
+  - _Replace with:_ `numct.Bar`
+- **[minor]** `file.go:120` — short description
+  - _Replace with:_ ...
+- **[question]** `file.go:150` — value may be secret; needs caller-side confirmation
+
+_(If none: "No findings.")_
+
+### Summary
+
+**Counts:** N critical, N major, N minor, N question.
+```
+
+Severity tags must be one of `[critical]`, `[major]`, `[minor]`, `[question]` and always bolded. Order findings by severity (critical first), then by file path.
 
 ## Don'ts
 - Don't claim a value is constant-time without verifying the underlying implementation. If you're unsure whether `numct.Nat.Foo` is CT, say so and link to the source line.

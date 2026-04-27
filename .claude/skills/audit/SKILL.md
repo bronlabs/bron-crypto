@@ -17,9 +17,32 @@ You are auditing crypto code. Be skeptical, cite line numbers, and don't fix thi
     - **Deserialization**: `UnmarshalCBOR` and any other decoder validate every field after parsing. Treat as a trust boundary. Cross-check that the validation in Unmarshal matches the constructor's `New…` validation — divergence is a vulnerability.
     - **Interactive Protocols**: if the package implements an interactive protocol, check that the messages (typically in `messages.go`) are serializable and immune against adversarial tampering.
     - **PRNG**: `io.Reader` is a parameter, not a package-level default. Failures from the PRNG are wrapped, not panicked.
-4. Output as a flat list:
-    - `path:line` — finding — severity (info / minor / major / critical) — suggested fix in one sentence.
-5. End with a summary: count by severity + the single highest-risk item.
+4. Output as GitHub-flavoured markdown. Use headers, **bold** severity tags, and `code` spans for paths. Don't wrap the whole report in a fenced code block. Template:
+
+    ```
+    ## Audit — <target>
+
+    **Scope:** in-scope (reachable from `pkg/mpc/signatures/**`) — _or_ — experimental
+
+    ### Findings
+
+    - **[critical]** `path:line` — finding
+      - _Fix:_ one-sentence suggestion
+    - **[major]** `path:line` — finding
+      - _Fix:_ ...
+    - **[minor]** `path:line` — finding
+      - _Fix:_ ...
+    - **[info]** `path:line` — observation
+
+    _(If none: "No findings.")_
+
+    ### Summary
+
+    **Counts:** N critical, N major, N minor, N info.
+    **Highest-risk:** `path:line` — finding.
+    ```
+
+    Severity tags must be one of `[critical]`, `[major]`, `[minor]`, `[info]` and always bolded. Order findings by severity (critical first), then by file path.
 
 ## Don'ts
 - Don't edit code.

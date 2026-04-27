@@ -20,17 +20,31 @@ You are reviewing a PR for this repo. Be terse. Cite file:line. Don't approve or
     - **Generated code**: changes to `*.gen.go` should come with the matching generator change in `tools/`, or whereever they were generated in the first place.
     - **BoringSSL / audited deps**: bumps belong in their own PR.
 4. Pre-existing issues: if the diff touches a file with pre-existing issues, note whether the diff makes them worse, better, or has no impact.
-5. Output:
-PR #:
+5. Output as GitHub-flavoured markdown. Use headers, **bold** severity tags, and `code` spans for paths so the terminal renders a clear visual hierarchy. Do not wrap the whole report in a fenced code block (that defeats the renderer). Template:
 
-    Audit-scope files: <list or "none">
+    ```
+    ## PR #<N> — <title>
 
-    Findings
-- file:line — short description — severity (blocker / nit / question)
+    **Audit-scope files:** `path1`, `path2` _(or "none")_
 
-    Description vs. diff: <one line if mismatch, otherwise "matches">
+    ### Findings
 
-    Recommendation:
+    - **[blocker]** `file.go:42` — short description
+    - **[nit]** `file.go:99` — short description
+    - **[question]** `file.go:123` — short description
+
+    _(If none: "No findings.")_
+
+    ### Description vs. diff
+
+    <one line: "matches" or the specific mismatch>
+
+    ### Recommendation
+
+    <one short paragraph>
+    ```
+
+    Severity tags must be one of `[blocker]`, `[nit]`, `[question]` and always bolded so they pop in the terminal. Group findings by severity (blockers first), then by file path.
 
 ## Don'ts
 - Don't post the review; just print it. The user will paste / edit.

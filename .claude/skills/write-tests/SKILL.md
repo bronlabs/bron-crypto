@@ -28,11 +28,29 @@ You are adding tests in a crypto library. Tests must verify *correctness*, not j
     - Sometimes you cannot compare or check equality of two types using native operators eg. can't check equality of two `*k256.Point` with `==` because it would mean pointer equality. Use the relevant internal methods like `Equal(T)` and alike if present.
     - If the code has any identifiable aborts, write tests that trigger them. Malicious parties should be correctly identified, and honest parties should not be identified.
     - If the code has non-identifiable aborts (ie. `base/errors.go:ErrAbort`), write a test that triggers that abort.
+
 6. CGO heads-up: most tests need BoringSSL. Run with the Makefile's CGO flags (see TESTING.md). When in doubt, run `make test` from repo root.
-7. Output:
-    - Show the new test file in full.
-    - Run `go test <pkg>` (with CGO env or via Makefile) and report pass/fail.
-    - If any subtests fail, fix them or report the discrepancy — don't paper over with `t.Skip`.
+7. Output as GitHub-flavoured markdown. Use headers, **bold**, and `code` spans so the terminal renders a clear visual hierarchy. Show the new file content via the editing tools (Write/Edit), not by pasting it inside this report. Don't wrap the whole report in a fenced code block. Template:
+
+    ```
+    ## Tests for <target>
+
+    **File:** `path/to/x_test.go`
+    **Types:** unit, property, smoke _(whichever apply)_
+
+    ### Test plan
+
+    - `TestFoo` — exact-value checks for the happy path
+    - `TestFoo_Errors` — wrapped-error assertions for each `New…` precondition
+    - `TestFoo_Property` — invariant: <one-liner>
+    - `TestFoo_Smoke` — interface compliance for `<scheme>`
+
+    ### Run
+
+    `go test <pkg>` → **PASS** (N tests, T) — _or_ — **FAIL**: `<one-line summary>`
+    ```
+
+    If any subtests fail, fix them or report the discrepancy — don't paper over with `t.Skip`. Quote the failing subtest name and the assertion that fired in the **FAIL** line.
 
 ## Don'ts
 
