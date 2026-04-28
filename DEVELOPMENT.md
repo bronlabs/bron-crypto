@@ -86,4 +86,3 @@ builds across platforms.
 
 We have some Claude/Codex skills in the `.claude/` directory. They require working and authenticated Claude Code and OpenAI Codex.
 Install them for your specific platforms and ensure you are logged in and authenticated.
-Note that for OpenAI Codex, you have to manually load the skills you're interested in from the `.claude/` directory.

@@ -54,6 +54,11 @@ docs/build/*
 /.claude/local/
 /.claude/*.local.md
 
+# Codex
+**/.agents/
+!/.agents/
+!/.agents/skills/**
+
 # Misc.
 .docs/
 /coverage.out
