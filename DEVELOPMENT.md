@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go `1.25` (see [go.mod](./go.mod) for the exact minimum)
+- Go `1.26` (see [go.mod](./go.mod) for the exact minimum)
 - C/C++ toolchain (tested with GCC but clang should work too)
 - `cmake` and `ninja` (used to build BoringSSL)
 - `git` (used to vendor BoringSSL)

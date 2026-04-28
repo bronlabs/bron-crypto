@@ -60,6 +60,7 @@ docs/build/*
 !/.agents/skills/**
 
 # Misc.
-.docs/
+/docs/papers/**
+!/docs/papers/README.md
 /coverage.out
 /coverage.html
