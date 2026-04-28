@@ -81,3 +81,8 @@ This builds a container from [build.Dockerfile](./build.Dockerfile), mounts the 
 so the BoringSSL build stays separate from the host build. None of the intermediate artifacts are shared between
 the host and container builds, and this is by design to avoid polluting the host filesystem and to have consistent
 builds across platforms.
+
+## Agent workflow (optional)
+
+We have some Claude/Codex skills in the `.claude/` directory. They require working and authenticated Claude Code and OpenAI Codex.
+Install them for your specific platforms and ensure you are logged in and authenticated.
