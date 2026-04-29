@@ -28,12 +28,6 @@ func _[E pedersen.FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]]() {
 			*pedersen.Verifier[E, S],
 		] = (*pedersen.EquivocableScheme[E, S])(nil)
 
-		_ commitments.ReRandomisableCommitment[
-			*pedersen.Commitment[E, S],
-			*pedersen.Witness[S],
-			*pedersen.Key[E, S],
-		] = (*pedersen.Commitment[E, S])(nil)
-
 		_ algebra.Actable[*pedersen.Commitment[E, S], *pedersen.Message[S]] = (*pedersen.Commitment[E, S])(nil)
 	)
 }

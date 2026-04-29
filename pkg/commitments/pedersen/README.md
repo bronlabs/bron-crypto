@@ -62,7 +62,7 @@ For the prime-group flavor, $\mathrm{ord}(g)$ is the scalar field order $q$, so 
 
 ## Homomorphism
 
-Multiplying two commitments adds their messages and witnesses; `ScalarOp` raises a commitment to a scalar (in the message space). `ReRandomise` blinds an existing commitment with fresh randomness without changing the committed message — useful for linear proof systems and aggregation.
+Multiplying two commitments adds their messages and witnesses; `ScalarOp` raises a commitment to a scalar (in the message space).
 
 ## References
 <!-- paper[CGGMP21]: docs/papers/2021-060_20241021_172019.pdf -->

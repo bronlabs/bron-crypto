@@ -16,8 +16,6 @@ type (
 	TrapdoorKey[K CommitmentKey, M Message, W Witness] interface {
 		// CommitmentKey returns the commitment key associated with the trapdoor.
 		CommitmentKey() K
-		// Equivocate produces a witness that opens a commitment to a new message, given the original message and witness.
-		Equivocate(message M, witness W, newMessage M) (W, error)
 	}
 	// Message is the plaintext being committed.
 	Message any
@@ -79,6 +77,12 @@ type Scheme[K CommitmentKey, W Witness, M Message, C Commitment[C], COM Committe
 // EquivocableScheme extends Scheme with a trapdoor key for equivocation of commitments.
 type EquivocableScheme[K CommitmentKey, T TrapdoorKey[K, M, W], W Witness, M Message, C Commitment[C], COM Committer[W, M, C], VF Verifier[W, M, C]] interface {
 	Scheme[K, W, M, C, COM, VF]
+	// Equivocate produces a witness that opens a commitment to a new message, given
+	// the original message and witness. prng is consumed when the equivocator must
+	// re-randomise the output to match the honest witness distribution; flavours
+	// whose canonical equivocated witness already follows the honest distribution
+	// may ignore prng but must not panic on a nil reader.
+	Equivocate(message M, witness W, newMessage M, prng io.Reader) (W, error)
 	// Trapdoor returns a trapdoor key that can be used to equivocate commitments.
 	TrapdoorKey() T
 }

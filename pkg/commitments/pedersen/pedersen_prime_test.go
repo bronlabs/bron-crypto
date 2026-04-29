@@ -164,28 +164,6 @@ func TestPrimeGroup_AdditiveHomomorphism(t *testing.T) {
 		"product of commitments must verify against the sum of (messages, witnesses)")
 }
 
-// ─── Re-randomisation ────────────────────────────────────────────────
-
-func TestPrimeGroup_ReRandomisePreservesOpening(t *testing.T) {
-	t.Parallel()
-	scheme, committer, verifier := newPrimeGroupScheme(t)
-
-	message := newPrimeGroupMessage(t, 11)
-	c1, w1, err := committer.Commit(message, pcg.NewRandomised())
-	require.NoError(t, err)
-
-	c2, wDelta, err := c1.ReRandomise(scheme.Key(), pcg.NewRandomised())
-	require.NoError(t, err)
-
-	require.False(t, c1.Equal(c2),
-		"re-randomisation must produce a new commitment")
-
-	wCombined, err := pedersen.NewWitness(w1.Value().Add(wDelta.Value()))
-	require.NoError(t, err)
-	require.NoError(t, verifier.Verify(c2, message, wCombined),
-		"re-randomised commitment must open to the same message with combined witness")
-}
-
 // ─── Equivocation (trapdoor) ────────────────────────────────────────
 
 func TestPrimeGroup_TrapdoorEquivocation(t *testing.T) {
@@ -199,7 +177,7 @@ func TestPrimeGroup_TrapdoorEquivocation(t *testing.T) {
 
 	// The trapdoor holder picks a different opening.
 	alternateMessage := newPrimeGroupMessage(t, 200)
-	alternateWitness, err := scheme.TrapdoorKey().Equivocate(originalMessage, originalWitness, alternateMessage)
+	alternateWitness, err := scheme.Equivocate(originalMessage, originalWitness, alternateMessage, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.False(t, originalWitness.Equal(alternateWitness),
 		"equivocation must produce a different witness")
@@ -351,12 +329,16 @@ func TestPrimeGroup_TrapdoorCBORRoundTrip(t *testing.T) {
 		"λ must round-trip exactly — a corrupted λ silently breaks the equivocation contract")
 
 	// Equivocate using the decoded trapdoor against a commitment
-	// produced under the original key.
+	// produced under the original key. Wrap the decoded trapdoor in a
+	// fresh EquivocableScheme so we exercise the public Equivocate path
+	// rather than the internal canonicalEquivocation step.
+	decodedScheme, err := pedersen.NewPrimeGroupEquivocableScheme(decoded)
+	require.NoError(t, err)
 	originalMessage := newPrimeGroupMessage(t, 100)
 	commitment, originalWitness, err := committer.Commit(originalMessage, pcg.NewRandomised())
 	require.NoError(t, err)
 	alternateMessage := newPrimeGroupMessage(t, 200)
-	alternateWitness, err := decoded.Equivocate(originalMessage, originalWitness, alternateMessage)
+	alternateWitness, err := decodedScheme.Equivocate(originalMessage, originalWitness, alternateMessage, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NoError(t, verifier.Verify(commitment, alternateMessage, alternateWitness),
 		"decoded trapdoor must equivocate the original commitment to the new message")

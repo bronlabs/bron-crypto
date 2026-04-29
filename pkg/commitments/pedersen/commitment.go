@@ -1,14 +1,11 @@
 package pedersen
 
 import (
-	"io"
-
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // Commitment represents a Pedersen commitment value held in the prime order group.
@@ -55,50 +52,6 @@ func (c *Commitment[E, S]) ScalarOp(message *Message[S]) *Commitment[E, S] {
 		return c
 	}
 	return &Commitment[E, S]{v: c.v.ScalarOp(message.v)}
-}
-
-// ReRandomiseWithWitness blinds the commitment using the provided witness randomness.
-func (c *Commitment[E, S]) ReRandomiseWithWitness(key *Key[E, S], r *Witness[S]) (*Commitment[E, S], error) {
-	if r == nil {
-		return nil, ErrInvalidArgument.WithMessage("witness cannot be nil")
-	}
-	if key == nil {
-		return nil, ErrInvalidArgument.WithMessage("key cannot be nil")
-	}
-	if c == nil {
-		return nil, ErrInvalidArgument.WithMessage("commitment cannot be nil")
-	}
-	newCom, err := NewCommitment(c.v.Op(key.h.ScalarOp(r.v)))
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot re-randomise commitment")
-	}
-	return newCom, nil
-}
-
-// ReRandomise samples fresh randomness and blinds the commitment, returning the new commitment and witness.
-func (c *Commitment[E, S]) ReRandomise(key *Key[E, S], prng io.Reader) (*Commitment[E, S], *Witness[S], error) {
-	if key == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("key cannot be nil")
-	}
-	if prng == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("prng cannot be nil")
-	}
-
-	group := algebra.StructureMustBeAs[FiniteAbelianGroup[E, S]](key.h.Structure())
-	field := algebra.StructureMustBeAs[algebra.FiniteRing[S]](group.ScalarStructure())
-	wv, err := algebrautils.RandomNonIdentity(field, prng)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random witness")
-	}
-	witness, err := NewWitness(wv)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create witness")
-	}
-	commitment, err := c.ReRandomiseWithWitness(key, witness)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot re-randomise commitment with witness")
-	}
-	return commitment, witness, nil
 }
 
 // Clone returns a deep copy of the commitment.

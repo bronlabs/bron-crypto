@@ -14,18 +14,23 @@ import (
 )
 
 // Scheme wires together the Pedersen CRS with its committer and verifier.
+// equivocationLift turns the canonical trapdoor residue r₀ ∈ [0, q) into a
+// witness drawn from the same distribution Commit emits; for the ring
+// flavour this includes re-randomising r₀ across the honest sampler range,
+// for the prime flavour it is a direct lift into the scalar field.
 type Scheme[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct {
 	key                 *Key[E, S]
 	witnessValueSampler func(prng io.Reader) (S, error)
 	witnessRangeCheck   func(witness *Witness[S]) error
 	messageRangeCheck   func(message *Message[S]) error
+	equivocationLift    func(r0 *num.Uint, prng io.Reader) (S, error)
 }
 
 // EquivocableScheme augments a Scheme with the trapdoor λ such that h = g^λ.
-// A holder of the trapdoor can open any commitment to any message by adjusting
-// the witness via Trapdoor.Equivocate. The trapdoor must therefore be kept
-// secret in production deployments; the type exists primarily to support
-// simulation in security proofs and zero-knowledge protocols.
+// A holder of the trapdoor can open any commitment to any message via
+// EquivocableScheme.Equivocate. The trapdoor must therefore be kept secret
+// in production deployments; the type exists primarily to support simulation
+// in security proofs and zero-knowledge protocols.
 type EquivocableScheme[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct {
 	Scheme[E, S]
 
@@ -96,12 +101,51 @@ func NewRingPedersenScheme(key *Key[*znstar.RSAGroupElementUnknownOrder, *num.In
 		}
 		return nil
 	}
+	// Lift r₀ ∈ [0, q) into the honest sampler range [lower, upper) by
+	// adding a uniform multiple of q. The output distribution equals the
+	// honest distribution conditioned on residue ≡ r₀ (mod q), which is
+	// statistically ≤ 2^{-σ} from honest — without this re-randomisation
+	// the equivocated witness would be trivially distinguishable (always
+	// non-negative and ~σ+2 bits smaller than honest).
+	equivocationLift := func(r0 *num.Uint, prng io.Reader) (*num.Int, error) {
+		if r0 == nil {
+			return nil, ErrInvalidArgument.WithMessage("r0 cannot be nil")
+		}
+		if prng == nil {
+			return nil, ErrInvalidArgument.WithMessage("prng cannot be nil")
+		}
+		q := r0.Modulus().Lift()
+		r0Int := r0.Lift()
+		one := num.Z().FromInt64(1)
+		// kMin = ceil((lower - r0) / q): EuclideanDiv gives floor for any
+		// sign, so add 1 when there is a non-zero remainder.
+		kMinFloor, kMinRem, err := lower.Sub(r0Int).EuclideanDivVarTime(q)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to compute lower offset bound")
+		}
+		kMin := kMinFloor
+		if !kMinRem.IsZero() {
+			kMin = kMinFloor.Add(one)
+		}
+		// kMax = floor((upper - 1 - r0) / q); upper is positive and r0 < q,
+		// so the dividend is positive and floor is direct.
+		kMax, _, err := upper.Sub(one).Sub(r0Int).EuclideanDivVarTime(q)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to compute upper offset bound")
+		}
+		k, err := num.Z().Random(kMin, kMax.Add(one), prng)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to sample re-randomisation offset")
+		}
+		return r0Int.Add(k.Mul(q)), nil
+	}
 
 	s := &Scheme[*znstar.RSAGroupElementUnknownOrder, *num.Int]{
 		key:                 key,
 		witnessValueSampler: witnessValueSampler,
 		witnessRangeCheck:   witnessRangeChecker,
 		messageRangeCheck:   messageRangeChecker,
+		equivocationLift:    equivocationLift,
 	}
 	return s, nil
 }
@@ -136,11 +180,33 @@ func NewPrimeGroupScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 		field := algebra.StructureMustBeAs[algebra.FiniteRing[S]](key.Group().ScalarStructure())
 		return algebrautils.RandomNonIdentity(field, prng)
 	}
+	// The honest witness sampler emits uniform field elements (canonical
+	// representative in [0, q)), so the trapdoor's canonical r₀ already
+	// matches that distribution — lift via the field's reducer and ignore
+	// prng. A nil prng is tolerated because no randomness is consumed.
+	fromBytes, ok := any(key.Group().ScalarStructure()).(interface {
+		FromBytesBEReduce([]byte) (S, error)
+	})
+	if !ok {
+		return nil, ErrInvalidArgument.WithMessage("scalar structure does not support FromBytesBEReduce")
+	}
+	equivocationLift := func(r0 *num.Uint, _ io.Reader) (S, error) {
+		var zero S
+		if r0 == nil {
+			return zero, ErrInvalidArgument.WithMessage("r0 cannot be nil")
+		}
+		out, err := fromBytes.FromBytesBEReduce(r0.BytesBE())
+		if err != nil {
+			return zero, errs.Wrap(err).WithMessage("failed to lift r0 into the scalar field")
+		}
+		return out, nil
+	}
 	s := &Scheme[E, S]{
 		key:                 key,
 		witnessValueSampler: witnessValueSampler,
 		witnessRangeCheck:   func(*Witness[S]) error { return nil }, // enforced at compile time.
 		messageRangeCheck:   func(*Message[S]) error { return nil }, // enforced at compile time.
+		equivocationLift:    equivocationLift,
 	}
 	return s, nil
 }
@@ -215,4 +281,28 @@ func (s *Scheme[E, S]) Group() FiniteAbelianGroup[E, S] {
 // TrapdoorKey returns the underlying trapdoor. Callers must treat the result as secret.
 func (s *EquivocableScheme[E, S]) TrapdoorKey() *Trapdoor[E, S] {
 	return s.trapdoor
+}
+
+// Equivocate produces a witness that opens the same commitment to newMessage,
+// given (message, witness) that already opens it. The trapdoor handles the
+// algebraic step (computing the canonical residue r₀ ∈ [0, q)); the scheme's
+// equivocationLift handles the flavour-specific lift of r₀ back into the
+// honest witness distribution. For ring-Pedersen this re-randomises r₀ across
+// the σ-bit-larger honest range so the equivocated witness is statistically
+// indistinguishable from a fresh honest one (mandatory for any consuming ZK
+// simulator); for the prime flavour it is a direct lift into the scalar field.
+func (s *EquivocableScheme[E, S]) Equivocate(message *Message[S], witness *Witness[S], newMessage *Message[S], prng io.Reader) (*Witness[S], error) {
+	r0, err := s.trapdoor.canonicalEquivocation(message, witness, newMessage)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute canonical equivocation")
+	}
+	value, err := s.equivocationLift(r0, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot lift equivocated witness")
+	}
+	out, err := NewWitness(value)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create equivocated witness")
+	}
+	return out, nil
 }

@@ -69,6 +69,9 @@ func ExtractRingPedersenCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Tran
 // extracted from the transcript using the given label. The discrete log of h
 // to base g is hidden by the transcript extraction, so no party knows it.
 func ExtractPrimeGroupCommitmentKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](transcript ts.Transcript, label string, basePoint E) (*Key[E, S], error) {
+	if utils.IsNil(basePoint) {
+		return nil, ErrInvalidArgument.WithMessage("basePoint cannot be nil")
+	}
 	if transcript == nil {
 		return nil, ErrInvalidArgument.WithMessage("transcript cannot be nil")
 	}

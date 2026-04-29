@@ -79,9 +79,19 @@ func SamplePedersenParameters(keyLen uint, prng io.Reader) (group *RSAGroupKnown
 	if err != nil {
 		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create ZMod for sampling lambda")
 	}
-	lambda, err = algebrautils.RandomNonIdentity(zModPhiNHatOver4, prng)
-	if err != nil {
-		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample lambda")
+	// Rejection-sample λ until it is a unit mod p'q'. The probability of
+	// hitting a non-unit (a multiple of p' or q') is ≈ 1/p' + 1/q', i.e.
+	// negligible for safe-prime moduli, but a non-unit λ has no inverse
+	// and yields s = t^λ of strictly smaller order than ⟨t⟩ — both of
+	// which break the trapdoor downstream.
+	for {
+		lambda, err = algebrautils.RandomNonIdentity(zModPhiNHatOver4, prng)
+		if err != nil {
+			return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample lambda")
+		}
+		if lambda.IsUnit() {
+			break
+		}
 	}
 	sKnownOrder = tKnownOrder.Exp(lambda.Abs())
 	return rsaGroup, sKnownOrder.ForgetOrder(), tKnownOrder.ForgetOrder(), lambda, nil

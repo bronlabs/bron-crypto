@@ -167,7 +167,7 @@ func TestRingPedersen_TrapdoorEquivocation(t *testing.T) {
 	require.NoError(t, verifier.Verify(commitment, originalMessage, originalWitness))
 
 	alternateMessage := newRingPedersenMessage(t, 200)
-	alternateWitness, err := scheme.TrapdoorKey().Equivocate(originalMessage, originalWitness, alternateMessage)
+	alternateWitness, err := scheme.Equivocate(originalMessage, originalWitness, alternateMessage, crand.Reader)
 	require.NoError(t, err)
 
 	require.NoError(t, verifier.Verify(commitment, alternateMessage, alternateWitness))
@@ -423,11 +423,16 @@ func TestRingPedersen_TrapdoorCBORRoundTrip(t *testing.T) {
 	require.True(t, original.Lambda().Modulus().Equal(decoded.Lambda().Modulus()),
 		"λ's modulus (φ(N̂)/4) must round-trip — without it TryInv silently fails during equivocation")
 
+	// Wrap the decoded trapdoor in a fresh EquivocableScheme so we
+	// exercise the public Equivocate path (and its honest-range
+	// re-randomisation) rather than the internal canonicalEquivocation step.
+	decodedScheme, err := pedersen.NewRingPedersenEquivocableScheme(decoded, ringPedersenSlack)
+	require.NoError(t, err)
 	originalMessage := newRingPedersenMessage(t, 100)
 	commitment, originalWitness, err := committer.Commit(originalMessage, crand.Reader)
 	require.NoError(t, err)
 	alternateMessage := newRingPedersenMessage(t, 200)
-	alternateWitness, err := decoded.Equivocate(originalMessage, originalWitness, alternateMessage)
+	alternateWitness, err := decodedScheme.Equivocate(originalMessage, originalWitness, alternateMessage, crand.Reader)
 	require.NoError(t, err)
 	require.NoError(t, verifier.Verify(commitment, alternateMessage, alternateWitness),
 		"decoded trapdoor must equivocate the original commitment to the new message")

@@ -27,7 +27,6 @@ func (c *Committer[E, S]) Commit(message *Message[S], prng io.Reader) (*Commitme
 	if err := c.messageRangeCheck(message); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
-
 	wv, err := c.witnessValueSampler(prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot generate random witness")
@@ -47,6 +46,9 @@ func (c *Committer[E, S]) Commit(message *Message[S], prng io.Reader) (*Commitme
 func (c *Committer[E, S]) CommitWithWitness(message *Message[S], witness *Witness[S]) (*Commitment[E, S], error) {
 	if message == nil {
 		return nil, ErrInvalidArgument.WithMessage("message cannot be nil")
+	}
+	if err := c.messageRangeCheck(message); err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid message")
 	}
 	if err := c.witnessRangeCheck(witness); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid witness")
