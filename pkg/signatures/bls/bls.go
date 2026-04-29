@@ -75,17 +75,17 @@ func newScheme[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*CipherSuite, error) {
 	if curveFamily == nil {
-		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
 	var cipherSuite *CipherSuite
 	switch curveFamily.Name() {
 	case bls12381.FamilyName:
 		cipherSuite = BLS12381CipherSuite()
 	default:
-		return nil, ErrNotSupported.WithMessage("no ciphersuite for curve family %s", curveFamily.Name())
+		return nil, signatures.ErrNotSupported.WithMessage("no ciphersuite for curve family %s", curveFamily.Name())
 	}
 	if !RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
-		return nil, ErrNotSupported.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
+		return nil, signatures.ErrNotSupported.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
 	return cipherSuite, nil
 }
@@ -175,7 +175,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK,
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKFE, SG, SGFE, E, S], opts ...SignerOption[PK, PKFE, SG, SGFE, E, S]) (*Signer[PK, PKFE, SG, SGFE, E, S], error) {
 	if privateKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("privateKey is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("privateKey is nil")
 	}
 	out := &Signer[PK, PKFE, SG, SGFE, E, S]{
 		privateKey:        privateKey,
@@ -221,7 +221,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, P
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.8
 func (*Scheme[PK, PKFE, SG, SGFE, E, S]) AggregateSignatures(sigs ...*Signature[SG, SGFE, PK, PKFE, E, S]) (*Signature[SG, SGFE, PK, PKFE, E, S], error) {
 	if sigs == nil {
-		return nil, ErrInvalidArgument.WithMessage("signature is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	return AggregateAll[PK](sigs)
 }

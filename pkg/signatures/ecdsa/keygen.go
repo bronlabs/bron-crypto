@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -33,7 +34,7 @@ func NewKeyGenerator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 // The prng must be a cryptographically secure random source (e.g., crypto/rand.Reader).
 func (kg *KeyGenerator[P, B, S]) Generate(prng io.Reader) (*PrivateKey[P, B, S], *PublicKey[P, B, S], error) {
 	if prng == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil")
+		return nil, nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	skRaw, err := kg.scalarField.Random(prng)
 	if err != nil {

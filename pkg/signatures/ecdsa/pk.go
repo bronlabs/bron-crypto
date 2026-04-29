@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 // PublicKey represents an ECDSA public key as a point on an elliptic curve.
@@ -27,7 +28,7 @@ type publicKeyDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 // The point must be a valid, non-zero point on a supported ECDSA curve.
 func NewPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](pk P) (*PublicKey[P, B, S], error) {
 	if pk.IsZero() {
-		return nil, ErrFailed.WithMessage("public key is zero")
+		return nil, signatures.ErrFailed.WithMessage("public key is zero")
 	}
 	if _, err := algebra.StructureAs[Curve[P, B, S]](pk.Structure()); err != nil {
 		return nil, errs.Wrap(err).WithMessage("curve structure is not supported")
@@ -74,7 +75,7 @@ func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
 // This enables interoperability with Go's crypto/ecdsa package.
 func (pk *PublicKey[P, B, S]) ToElliptic() (*nativeEcdsa.PublicKey, error) {
 	if pk == nil || utils.IsNil(pk.pk) {
-		return nil, ErrInvalidArgument.WithMessage("public key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("public key is nil")
 	}
 
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())

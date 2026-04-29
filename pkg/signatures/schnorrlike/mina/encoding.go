@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 // Base58Check version prefixes for Mina key and signature encoding.
@@ -26,7 +27,7 @@ const (
 // Format: Base58Check(0xCB || 0x01 || 0x01 || x_LE[32] || y_parity[1])
 func EncodePublicKey(publicKey *PublicKey) (base58.Base58, error) {
 	if publicKey == nil {
-		return "", ErrInvalidArgument.WithMessage("public key is nil")
+		return "", signatures.ErrInvalidArgument.WithMessage("public key is nil")
 	}
 	// Mina uses a 3-byte version prefix: [0xCB, 0x01, 0x01]
 	// Mina uses LITTLE-ENDIAN for field elements
@@ -71,15 +72,15 @@ func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 		return nil, errs.Wrap(err).WithMessage("failed to decode public key")
 	}
 	if v != NonZeroCurvePointCompressedBase58VersionPrefix {
-		return nil, ErrVerificationFailed.WithMessage("invalid version prefix for public key. got :%d, need :%d", v, NonZeroCurvePointCompressedBase58VersionPrefix)
+		return nil, signatures.ErrVerificationFailed.WithMessage("invalid version prefix for public key. got :%d, need :%d", v, NonZeroCurvePointCompressedBase58VersionPrefix)
 	}
 	// Mina format: [0x01, 0x01] + x-coordinate (32 bytes, LE) + y-parity (1 byte) = 35 bytes
 	if len(data) != 35 {
-		return nil, ErrSerialization.WithMessage("decoded public key data. got :%d, need :%d", len(data), 35)
+		return nil, signatures.ErrSerialization.WithMessage("decoded public key data. got :%d, need :%d", len(data), 35)
 	}
 	// Verify additional version bytes
 	if data[0] != 0x01 || data[1] != 0x01 {
-		return nil, ErrVerificationFailed.WithMessage("invalid additional version bytes. got :[%02x, %02x], need :[0x01, 0x01]", data[0], data[1])
+		return nil, signatures.ErrVerificationFailed.WithMessage("invalid additional version bytes. got :[%02x, %02x], need :[0x01, 0x01]", data[0], data[1])
 	}
 
 	// Extract x-coordinate and y-parity
@@ -100,7 +101,7 @@ func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 	// The underlying SetBytes silently reduces an out-of-range x modulo the
 	// base field prime, so we enforce canonical encoding by round-tripping.
 	if _, isEq, _ := ct.CompareBytes(xBytesBE, x.Bytes()); isEq != ct.True {
-		return nil, ErrSerialization.WithMessage("x is not canonical")
+		return nil, signatures.ErrSerialization.WithMessage("x is not canonical")
 	}
 
 	// Reconstruct point from x and y-parity
@@ -121,7 +122,7 @@ func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 // Format: Base58Check(0x5A || 0x01 || scalar_LE[32])
 func EncodePrivateKey(privateKey *PrivateKey) (base58.Base58, error) {
 	if privateKey == nil {
-		return "", ErrInvalidArgument.WithMessage("private key is nil")
+		return "", signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	// Mina uses a 2-byte version prefix for private keys: [0x5A, 0x01]
 	// Mina uses LITTLE-ENDIAN for scalar bytes (contrary to our internal big-endian)
@@ -149,15 +150,15 @@ func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 		return nil, errs.Wrap(err).WithMessage("failed to decode private key")
 	}
 	if v != PrivateKeyBase58VersionPrefix {
-		return nil, ErrVerificationFailed.WithMessage("invalid version prefix for private key. got :%d, need :%d", v, PrivateKeyBase58VersionPrefix)
+		return nil, signatures.ErrVerificationFailed.WithMessage("invalid version prefix for private key. got :%d, need :%d", v, PrivateKeyBase58VersionPrefix)
 	}
 	// Mina format: [0x01] + scalar (32 bytes, LE) = 33 bytes
 	if len(data) != 33 {
-		return nil, ErrSerialization.WithMessage("decoded private key data. got :%d, need :%d", len(data), 33)
+		return nil, signatures.ErrSerialization.WithMessage("decoded private key data. got :%d, need :%d", len(data), 33)
 	}
 	// Verify additional version byte
 	if data[0] != 0x01 {
-		return nil, ErrVerificationFailed.WithMessage("invalid additional version byte. got :0x%02x, need :0x01", data[0])
+		return nil, signatures.ErrVerificationFailed.WithMessage("invalid additional version byte. got :0x%02x, need :0x01", data[0])
 	}
 
 	// Extract scalar bytes (skip first version byte)
@@ -176,7 +177,7 @@ func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 	// The underlying SetBytes silently reduces an out-of-range scalar modulo
 	// the scalar field order, so we enforce canonical encoding by round-tripping.
 	if _, isEq, _ := ct.CompareBytes(scalarBytesBE, skv.Bytes()); isEq != ct.True {
-		return nil, ErrSerialization.WithMessage("scalar is not canonical")
+		return nil, signatures.ErrSerialization.WithMessage("scalar is not canonical")
 	}
 	privateKey, err := NewPrivateKey(skv)
 	if err != nil {
@@ -190,7 +191,7 @@ func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 // then encoded with version prefix 0x9A.
 func EncodeSignature(signature *Signature) (base58.Base58, error) {
 	if signature == nil {
-		return "", ErrInvalidArgument.WithMessage("signature is nil")
+		return "", signatures.ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	data, err := SerializeSignature(signature)
 	if err != nil {
@@ -208,10 +209,10 @@ func DecodeSignature(s base58.Base58) (*Signature, error) {
 		return nil, errs.Wrap(err).WithMessage("failed to decode signature")
 	}
 	if v != SignatureBase58VersionPrefix {
-		return nil, ErrVerificationFailed.WithMessage("invalid version prefix for signature. got :%d, need :%d", v, SignatureBase58VersionPrefix)
+		return nil, signatures.ErrVerificationFailed.WithMessage("invalid version prefix for signature. got :%d, need :%d", v, SignatureBase58VersionPrefix)
 	}
 	if len(data) != SignatureSize {
-		return nil, ErrSerialization.WithMessage("decoded signature data. got :%d, need :%d", len(data), SignatureSize)
+		return nil, signatures.ErrSerialization.WithMessage("decoded signature data. got :%d, need :%d", len(data), SignatureSize)
 	}
 	sig, err := DeserializeSignature(data)
 	if err != nil {

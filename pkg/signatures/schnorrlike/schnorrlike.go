@@ -103,13 +103,13 @@ type Message signatures.Message
 // (in the prime-order subgroup) to be valid.
 func NewPublicKey[PKV GroupElement[PKV, S], S Scalar[S]](value PKV) (*PublicKey[PKV, S], error) {
 	if utils.IsNil(value) {
-		return nil, ErrInvalidArgument.WithMessage("value is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("value is nil")
 	}
 	if value.IsOpIdentity() {
-		return nil, ErrFailed.WithMessage("value is identity")
+		return nil, signatures.ErrFailed.WithMessage("value is identity")
 	}
 	if !value.IsTorsionFree() {
-		return nil, ErrFailed.WithMessage("value is not torsion free")
+		return nil, signatures.ErrFailed.WithMessage("value is not torsion free")
 	}
 	return &PublicKey[PKV, S]{
 		PublicKeyTrait: signatures.PublicKeyTrait[PKV, S]{
@@ -176,13 +176,13 @@ func (pk *PublicKey[PKV, S]) UnmarshalCBOR(data []byte) error {
 // The public key should satisfy P = x·G where x is the private key scalar.
 func NewPrivateKey[PKV GroupElement[PKV, SKV], SKV Scalar[SKV]](value SKV, publicKey *PublicKey[PKV, SKV]) (*PrivateKey[PKV, SKV], error) {
 	if utils.IsNil(value) {
-		return nil, ErrInvalidArgument.WithMessage("value is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("value is nil")
 	}
 	if value.IsOpIdentity() {
-		return nil, ErrFailed.WithMessage("value is identity")
+		return nil, signatures.ErrFailed.WithMessage("value is identity")
 	}
 	if publicKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("publicKey is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("publicKey is nil")
 	}
 	return &PrivateKey[PKV, SKV]{
 		PrivateKeyTrait: signatures.PrivateKeyTrait[PKV, SKV]{
@@ -236,13 +236,13 @@ func (sk *PrivateKey[PKV, SKV]) Clone() *PrivateKey[PKV, SKV] {
 // (e can be recomputed from R, P, and m).
 func NewSignature[GE GroupElement[GE, S], S Scalar[S]](e S, r GE, s S) (*Signature[GE, S], error) {
 	if utils.IsNil(s) {
-		return nil, ErrInvalidArgument.WithMessage("s is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("s is nil")
 	}
 	if s.IsZero() {
-		return nil, ErrInvalidArgument.WithMessage("s is zero")
+		return nil, signatures.ErrInvalidArgument.WithMessage("s is zero")
 	}
 	if utils.IsNil(r) && utils.IsNil(e) {
-		return nil, ErrInvalidArgument.WithMessage("r and e can't both be nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("r and e can't both be nil")
 	}
 	return &Signature[GE, S]{
 		E: e,
@@ -300,7 +300,7 @@ type KeyGeneratorTrait[GE GroupElement[GE, S], S Scalar[S]] struct {
 // The private key is a random scalar x in [1, n-1], and the public key is P = x·G.
 func (kg *KeyGeneratorTrait[GE, S]) Generate(prng io.Reader) (*PrivateKey[GE, S], *PublicKey[GE, S], error) {
 	if prng == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil")
+		return nil, nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	sc, err := algebrautils.RandomNonIdentity(kg.SF, prng)
 	if err != nil {
@@ -387,16 +387,16 @@ func (v *VerifierTrait[VR, GE, S, M]) Variant() VR {
 // different public key for challenge computation than for the verification equation.
 func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey *PublicKey[GE, S], message M) error {
 	if publicKey == nil {
-		return ErrInvalidArgument.WithMessage("publicKey is nil")
+		return signatures.ErrInvalidArgument.WithMessage("publicKey is nil")
 	}
 	if publicKey.Value().IsOpIdentity() {
-		return ErrInvalidArgument.WithMessage("publicKey is identity")
+		return signatures.ErrInvalidArgument.WithMessage("publicKey is identity")
 	}
 	if sigma == nil || utils.IsNil(sigma.R) || utils.IsNil(sigma.S) {
-		return ErrInvalidArgument.WithMessage("signature is nil or incomplete")
+		return signatures.ErrInvalidArgument.WithMessage("signature is nil or incomplete")
 	}
 	if sigma.S.IsZero() || sigma.R.IsOpIdentity() || !sigma.R.IsTorsionFree() {
-		return ErrVerificationFailed.WithMessage("signature components out of range")
+		return signatures.ErrVerificationFailed.WithMessage("signature components out of range")
 	}
 	// For partial signature verification (when ChallengePublicKey is set), use the pre-computed
 	// challenge from sigma.E (which was computed from aggregate R), rather than recomputing
@@ -426,7 +426,7 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 	right := sigma.R.Op(rhsOperand)
 	left := generator.ScalarOp(sigma.S)
 	if !left.Equal(right) {
-		return ErrVerificationFailed.WithMessage("signature verification failed")
+		return signatures.ErrVerificationFailed.WithMessage("signature verification failed")
 	}
 	return nil
 }
@@ -436,7 +436,7 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 // Some variants (like BIP-340) provide optimised batch verification.
 func (v *VerifierTrait[VR, GE, S, M]) BatchVerify(sigs []*Signature[GE, S], publicKeys []*PublicKey[GE, S], messages []M) error {
 	if len(sigs) != len(publicKeys) || len(sigs) != len(messages) {
-		return ErrFailed.WithMessage("mismatched lengths")
+		return signatures.ErrFailed.WithMessage("mismatched lengths")
 	}
 	for i := range sigs {
 		if err := v.Verify(sigs[i], publicKeys[i], messages[i]); err != nil {

@@ -66,10 +66,10 @@ func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 // The scalar must be non-zero. The corresponding public key P = x·G is computed.
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if scalar == nil {
-		return nil, ErrInvalidArgument.WithMessage("scalar is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("scalar is nil")
 	}
 	if scalar.IsZero() {
-		return nil, ErrInvalidArgument.WithMessage("scalar is zero")
+		return nil, signatures.ErrInvalidArgument.WithMessage("scalar is zero")
 	}
 	pkv := k256.NewCurve().ScalarBaseMul(scalar)
 	pk, err := schnorrlike.NewPublicKey(pkv)
@@ -97,7 +97,7 @@ func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
 // This provides protection against side-channel attacks.
 func NewScheme(prng io.Reader) (*Scheme, error) {
 	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("prng is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 
 	aux := [AuxSizeBytes]byte{}
@@ -151,7 +151,7 @@ func (*Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 // The signer uses deterministic nonce derivation per BIP-340.
 func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, error) {
 	if privateKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("private key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	variant := &Variant{
 		sk:         privateKey,
@@ -201,7 +201,7 @@ func (s *Scheme) PartialSignatureVerifier(
 	opts ...signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature],
 ) (schnorrlike.Verifier[*Variant, *GroupElement, *Scalar, Message], error) {
 	if publicKey == nil || publicKey.Value() == nil {
-		return nil, ErrInvalidArgument.WithMessage("public key is nil or invalid")
+		return nil, signatures.ErrInvalidArgument.WithMessage("public key is nil or invalid")
 	}
 	verifier, err := s.Verifier(opts...)
 	if err != nil {
@@ -216,7 +216,7 @@ func (s *Scheme) PartialSignatureVerifier(
 // and s is the 32-byte response scalar.
 func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	if len(input) != 64 {
-		return nil, ErrSerialization.WithMessage("invalid length")
+		return nil, signatures.ErrSerialization.WithMessage("invalid length")
 	}
 
 	r, err := decodePoint(input[:32])
@@ -232,7 +232,7 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	// round-tripping and rejecting on mismatch.
 	_, isEq, _ := ct.CompareBytes(input[32:], s.Bytes())
 	if isEq != ct.True {
-		return nil, ErrSerialization.WithMessage("s is not canonical")
+		return nil, signatures.ErrSerialization.WithMessage("s is not canonical")
 	}
 	return &Signature{
 		E: nil,
@@ -283,7 +283,7 @@ type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, Message, 
 func VerifyWithPRNG(prng io.Reader) VerifierOption {
 	return func(v *Verifier) error {
 		if prng == nil {
-			return ErrInvalidArgument.WithMessage("prng is nil")
+			return signatures.ErrInvalidArgument.WithMessage("prng is nil")
 		}
 		v.prng = prng
 		return nil
@@ -313,16 +313,16 @@ func (v *Verifier) Variant() *Variant {
 // Returns nil if valid, otherwise returns an error describing the failure.
 func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Message) error {
 	if publicKey == nil || publicKey.Value() == nil {
-		return ErrInvalidArgument.WithMessage("curve not supported")
+		return signatures.ErrInvalidArgument.WithMessage("curve not supported")
 	}
 	if signature == nil || signature.R == nil || signature.S == nil || signature.R.IsZero() || signature.S.IsZero() {
-		return ErrVerificationFailed.WithMessage("some signature elements are nil/zero")
+		return signatures.ErrVerificationFailed.WithMessage("some signature elements are nil/zero")
 	}
 	if publicKey.Value().IsOpIdentity() {
-		return ErrVerificationFailed.WithMessage("public key is identity")
+		return signatures.ErrVerificationFailed.WithMessage("public key is identity")
 	}
 	if !publicKey.Value().IsTorsionFree() {
-		return ErrInvalidArgument.WithMessage("Public Key not in the prime subgroup")
+		return signatures.ErrInvalidArgument.WithMessage("Public Key not in the prime subgroup")
 	}
 
 	// For partial signature verification (when challengePublicKey is set), we should NOT
@@ -371,7 +371,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 
 	// 6. Fail if is_infinite(R).
 	if bigR.IsZero() {
-		return ErrVerificationFailed.WithMessage("signature is invalid")
+		return signatures.ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 
 	// For partial signature verification (when challengePublicKey is set), individual R_i values
@@ -380,7 +380,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	if v.challengePublicKey != nil {
 		// Partial signature verification: check that computed R matches signature.R exactly
 		if !bigR.Equal(signature.R) {
-			return ErrVerificationFailed.WithMessage("signature is invalid")
+			return signatures.ErrVerificationFailed.WithMessage("signature is invalid")
 		}
 		return nil
 	}
@@ -393,7 +393,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 		return errs.Wrap(err).WithMessage("cannot compute y coordinate")
 	}
 	if ry.IsOdd() {
-		return ErrVerificationFailed.WithMessage("signature is invalid")
+		return signatures.ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 
 	// 8. Fail if x(R) ≠ r.
@@ -406,7 +406,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 		return errs.Wrap(err).WithMessage("cannot compute x coordinate")
 	}
 	if !sigRx.Equal(rx) {
-		return ErrVerificationFailed.WithMessage("signature is invalid")
+		return signatures.ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 	return nil
 }
@@ -423,16 +423,16 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 // that pass batch verification but fail individual verification.
 func (v *Verifier) BatchVerify(sigs []*Signature, publicKeys []*PublicKey, messages []Message) error {
 	if v.prng == nil {
-		return ErrInvalidArgument.WithMessage("batch verification requires a prng. Initialise the verifier with the prng option")
+		return signatures.ErrInvalidArgument.WithMessage("batch verification requires a prng. Initialise the verifier with the prng option")
 	}
 	if len(publicKeys) != len(sigs) || len(sigs) != len(messages) || len(sigs) == 0 {
-		return ErrInvalidArgument.WithMessage("length of publickeys, messages and signatures must be equal and greater than zero")
+		return signatures.ErrInvalidArgument.WithMessage("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
 	if sliceutils.Any(publicKeys, func(pk *PublicKey) bool {
 		return pk == nil || pk.Value() == nil || pk.Value().IsOpIdentity()
 	}) {
 
-		return ErrInvalidArgument.WithMessage("some public keys are nil or identity")
+		return signatures.ErrInvalidArgument.WithMessage("some public keys are nil or identity")
 	}
 	curve := k256.NewCurve()
 	sf := k256.NewScalarField()
@@ -482,7 +482,7 @@ func (v *Verifier) BatchVerify(sigs []*Signature, publicKeys []*PublicKey, messa
 	}
 	right := rightA.Add(rightB)
 	if !curve.Generator().ScalarMul(left).Equal(right) {
-		return ErrVerificationFailed.WithMessage("signature is invalid")
+		return signatures.ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 
 	// Return success iff no failure occurred before reaching this point.
@@ -511,7 +511,7 @@ func LiftX(p *k256.Point) *k256.Point {
 // The R point is encoded as its 32-byte x-coordinate (x-only encoding).
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil || signature.R == nil || signature.S == nil {
-		return nil, ErrInvalidArgument.WithMessage("signature is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	return slices.Concat(signature.R.ToCompressed()[1:], signature.S.Bytes()), nil
 }
@@ -534,7 +534,7 @@ func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
 // Only the x-coordinate is serialised; y is implicitly even.
 func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	if publicKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("public key is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("public key is nil")
 	}
 	return publicKey.Value().ToCompressed()[1:], nil
 }
@@ -557,7 +557,7 @@ func decodePoint(data []byte) (*k256.Point, error) {
 	// enforce canonical encoding by round-tripping the compressed bytes.
 	_, isEq, _ := ct.CompareBytes(data, p.ToCompressed()[1:])
 	if isEq != ct.True {
-		return nil, ErrSerialization.WithMessage("x is not canonical")
+		return nil, signatures.ErrSerialization.WithMessage("x is not canonical")
 	}
 
 	return p, nil

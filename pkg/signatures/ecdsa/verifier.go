@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 // Verifier validates ECDSA signatures against public keys.
@@ -21,7 +22,7 @@ type Verifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 // VerifyNonMalleably configures the verifier to reject non-normalised signatures, which are vulnerable to malleability attacks.
 func VerifyNonMalleably[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](vf *Verifier[P, B, S]) error {
 	if vf == nil {
-		return ErrInvalidArgument.WithMessage("verifier is nil")
+		return signatures.ErrInvalidArgument.WithMessage("verifier is nil")
 	}
 	vf.mustBeNonMalleable = true
 	return nil
@@ -32,7 +33,7 @@ func VerifyNonMalleably[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B],
 // Note that the output verifier does not enforce non-malleability by default; apply the VerifyNonMalleably option to enable that check.
 func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S]) (*Verifier[P, B, S], error) {
 	if suite == nil {
-		return nil, ErrInvalidArgument.WithMessage("suite is nil")
+		return nil, signatures.ErrInvalidArgument.WithMessage("suite is nil")
 	}
 
 	v := &Verifier[P, B, S]{
@@ -57,10 +58,10 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 // Returns nil if the signature is valid, or an error describing the failure.
 func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []byte) error {
 	if s == nil || pk == nil {
-		return ErrInvalidArgument.WithMessage("signature & public key cannot be nil")
+		return signatures.ErrInvalidArgument.WithMessage("signature & public key cannot be nil")
 	}
 	if v.mustBeNonMalleable && !s.IsNormalized() {
-		return ErrVerificationFailed.WithMessage("signature is not in normalised form")
+		return signatures.ErrVerificationFailed.WithMessage("signature is not in normalised form")
 	}
 
 	if s.v != nil {
@@ -69,7 +70,7 @@ func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []
 			return errs.Wrap(err).WithMessage("cannot recover public key")
 		}
 		if !recoveredPublicKey.Equal(pk) {
-			return ErrVerificationFailed.WithMessage("recovered public key does not match")
+			return signatures.ErrVerificationFailed.WithMessage("recovered public key does not match")
 		}
 	}
 
@@ -83,12 +84,12 @@ func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []
 		return errs.Wrap(err).WithMessage("cannot convert public key to native ECDSA format")
 	}
 	if nativePk == nil {
-		return ErrInvalidArgument.WithMessage("public key cannot be converted to native ECDSA format")
+		return signatures.ErrInvalidArgument.WithMessage("public key cannot be converted to native ECDSA format")
 	}
 	nativeR, nativeS := s.ToElliptic()
 	ok := nativeEcdsa.Verify(nativePk, digest, nativeR, nativeS)
 	if !ok {
-		return ErrVerificationFailed.WithMessage("invalid signature")
+		return signatures.ErrVerificationFailed.WithMessage("invalid signature")
 	}
 	return nil
 }
