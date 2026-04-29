@@ -83,8 +83,8 @@ If you're unsure whether a value is secret, *say so* in the finding rather than 
 
 ### Calls into variable-time primitives
 
-- `crypto/elliptic` (the deprecated curve API) is variable-time on most curves.
-- **Use**: this repo's curve packages (`pkg/base/curves/k256`, `…/edwards25519`, `…/p256`, etc.) which build on fiat-crypto / BoringSSL.
+- `crypto/elliptic` (the deprecated curve API) is variable-time on most curves, Instead **Use**: this repo's curve packages (`pkg/base/curves/k256`, `…/edwards25519`, `…/p256`, etc.) which build on fiat-crypto.
+
 
 ## What is acceptable
 
