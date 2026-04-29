@@ -44,6 +44,13 @@ const ringPedersenKeyLen = 512
 // |ord(t)| ≈ |N̂|−2 = 510, so the strong-RSA reduction holds.
 const ringPedersenEll = 256
 
+// ringPedersenSlack is the messageSlack value that yields the bit budget
+// ringPedersenEll for ringPedersenKeyLen-bit moduli. The constructor's
+// accept rule is |m|.TrueLen() + messageSlack < nBits, so the largest
+// accepted TrueLen is nBits − messageSlack − 1; setting that equal to
+// ringPedersenEll gives messageSlack = nBits − ell − 1.
+const ringPedersenSlack = ringPedersenKeyLen - ringPedersenEll - 1
+
 // ─── Fixtures ─────────────────────────────────────────────────────────
 
 func newRingPedersenScheme(t *testing.T) (
@@ -57,7 +64,7 @@ func newRingPedersenScheme(t *testing.T) (
 	transcript := hagrid.NewTranscript("pedersen-ring-test")
 	key, err := pedersen.ExtractRingPedersenCommitmentKey(transcript, "st", rsaGroup)
 	require.NoError(t, err)
-	scheme, err := pedersen.NewRingPedersenScheme(key, ringPedersenEll)
+	scheme, err := pedersen.NewRingPedersenScheme(key, ringPedersenSlack)
 	require.NoError(t, err)
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
@@ -74,7 +81,7 @@ func newRingPedersenEquivocableScheme(t *testing.T) (
 	t.Helper()
 	trapdoor, err := pedersen.SampleRingPedersenTrapdoorKey(ringPedersenKeyLen, crand.Reader)
 	require.NoError(t, err)
-	scheme, err := pedersen.NewRingPedersenEquivocableScheme(trapdoor, ringPedersenEll)
+	scheme, err := pedersen.NewRingPedersenEquivocableScheme(trapdoor, ringPedersenSlack)
 	require.NoError(t, err)
 	committer, err := scheme.Committer()
 	require.NoError(t, err)
@@ -313,7 +320,7 @@ func TestRingPedersen_OrderWrapEnablesEquivocation(t *testing.T) {
 	// configured ell rejects m2 at Commit time.
 	key, err := pedersen.NewCommitmentKeyUnchecked(sElem, tElem)
 	require.NoError(t, err)
-	scheme, err := pedersen.NewRingPedersenScheme(key, ringPedersenEll)
+	scheme, err := pedersen.NewRingPedersenScheme(key, ringPedersenSlack)
 	require.NoError(t, err)
 	committer, err := scheme.Committer()
 	require.NoError(t, err)

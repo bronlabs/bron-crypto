@@ -64,6 +64,8 @@ For the prime-group flavor, $\mathrm{ord}(g)$ is the scalar field order $q$, so 
 
 Multiplying two commitments adds their messages and witnesses; `ScalarOp` raises a commitment to a scalar (in the message space). `ReRandomise` blinds an existing commitment with fresh randomness without changing the committed message — useful for linear proof systems and aggregation.
 
-## CBOR encoding
-
-`Key`, `Commitment`, `Message`, `Witness` and `Trapdoor` all expose `MarshalCBOR` / `UnmarshalCBOR`. Trapdoor encoding stores only $(g, \lambda)$ and recomputes $h = g^{\lambda}$ on decode, re-running the constructor invariants.
+## References
+<!-- paper[CGGMP21]: docs/papers/2021-060_20241021_172019.pdf -->
+- [CGGMP21](https://eprint.iacr.org/2021/060) for the Ring-Pedersen flavour
+<!-- paper[Ped91]: docs/papers/ped91.pdf -->
+- [Ped91](https://link.springer.com/chapter/10.1007/3-540-46766-1_9)
