@@ -39,8 +39,7 @@ If you're unsure whether a value is secret, *say so* in the finding rather than 
 
 - `math/big.Int`, `math/big.NewInt`, `math/big.Exp`, `Mod`, `ModInverse`, `Cmp` are all variable time. Same for `pkg/base/nt/num` (the variable-time signed-int wrapper).
 - **Use**: `pkg/base/nt/numct` (constant-time `Nat` / `Modulus` / `Int`) for any value that holds or is derived from a secret. Particularly `numct.Modulus.Exp`, `numct.Nat.ModInverse`, `numct.Nat.Mod`.
-- `*big.Int.Bit(i)`, `.BitLen()` — variable-time on a secret leaks the magnitude; flag.
-- Modular exponentiation with a secret exponent must be CT and (where the modulus has unknown order) blinded. Check the call site uses `numct` and not `num` / `math/big`.
+- Modular exponentiation with a secret exponent must be CT and (where the modulus has unknown order) blinded. Check the call site uses `numct` or `modular` and not `num` / `math/big`.
 
 ### Equality on byte buffers
 
@@ -59,13 +58,8 @@ If you're unsure whether a value is secret, *say so* in the finding rather than 
 
 ### Secret-dependent allocation or length
 
-- `make([]byte, secretLen)`, `append(buf, secret...)` where caller can observe size.
+- If length is secret, ensure the secret is not variable-length.
 - Pad to a fixed length, or work in-place on a fixed-size buffer.
-
-### Secret-dependent error returns / early returns
-
-- `if invalid { return ErrFoo }` where `invalid` depends on a secret in a way that distinguishes which check failed.
-- For decryption / verification, prefer one error code that doesn't reveal *which* check failed (think padding-oracle).
 
 ### Logging / formatting / Stringer on secrets
 
@@ -90,7 +84,7 @@ If you're unsure whether a value is secret, *say so* in the finding rather than 
 
 - Branching on **public** values (group order `n`, public key `P`, public message `m`, hash output of public data).
 - Early exit when the secret has already been spent / committed (e.g., after the response `s` is published).
-- `if err != nil { … }` — `err` is not secret as long as the error doesn't encode a secret and has no stack traces.
+- `if err != nil { … }` — `err` is not secret as long as the error doesn't encode a secret/sensitive information about the secret.
 
 ## Output format
 
@@ -123,6 +117,5 @@ Severity tags must be one of `[critical]`, `[major]`, `[minor]`, `[question]` an
 
 ## Don'ts
 - Don't claim a value is constant-time without verifying the underlying implementation. If you're unsure whether `numct.Nat.Foo` is CT, say so and link to the source line.
-- Don't propose `crypto/subtle.ConstantTimeCompare` for variable-length inputs — it requires equal lengths; `ct.SliceEqual` is the safer default.
 - Don't suggest "just remove the branch" without giving a CT replacement.
 - Don't edit the code — this is an audit, not a fix.
