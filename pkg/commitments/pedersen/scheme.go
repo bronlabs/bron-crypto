@@ -33,30 +33,38 @@ type EquivocableScheme[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[
 }
 
 // NewRingPedersenScheme builds a CGGMP21 ring-Pedersen scheme over the
-// supplied unknown-order RSA group. messageBitBound is the protocol-level
-// bit budget for messages (referred to as ℓ in the literature) and must
-// be chosen well below |ord(t)| ≈ |N̂|−2 — typically the bit length of
-// the consuming curve's prime order. Setting it too close to |N̂| voids
-// the strong-RSA reduction and lets a prover equivocate by exploiting
-// the order wrap.
-func NewRingPedersenScheme(key *Key[*znstar.RSAGroupElementUnknownOrder, *num.Int], messageBitBound int) (*Scheme[*znstar.RSAGroupElementUnknownOrder, *num.Int], error) {
+// supplied unknown-order RSA group. messageSlack is the bit gap reserved
+// between the accepted message size and the public modulus size: a message
+// m is accepted iff |m|.AnnouncedLen() + messageSlack < |N̂|. Equivalently,
+// the effective message bit budget is ℓ = |N̂| − messageSlack − 1.
+//
+// How to choose messageSlack:
+//   - Strong-RSA binding alone needs only ℓ < |ord(t)| ≈ |N̂|−2, i.e.
+//     messageSlack ≥ 2. Since ord(t) is hidden, this is the public floor.
+//   - Consuming Σ-protocols (range proofs, Πenc, Πaff-g, …) extract
+//     witnesses of size ≈ ℓ + |challenge| + σ; for that extraction not to
+//     wrap mod ord(t), pick messageSlack ≥ |challenge| + σ + 2. In CGGMP21
+//     with a λ-bit Fiat-Shamir challenge and σ = StatisticalSecurityBits,
+//     this is λ + σ + 2.
+//   - For a curve-scalar-sized message (ℓ ≈ |q| ≈ 256) over |N̂| = 2048,
+//     messageSlack = |N̂| − |q| (≈ 1792) is a comfortable default that
+//     leaves headroom for any consuming protocol.
+//
+// Setting messageSlack at the floor (2) keeps binding intact but voids the
+// soundness of any Σ-protocol layered on top, since extracted witnesses can
+// wrap mod ord(t).
+func NewRingPedersenScheme(key *Key[*znstar.RSAGroupElementUnknownOrder, *num.Int], messageSlack int) (*Scheme[*znstar.RSAGroupElementUnknownOrder, *num.Int], error) {
 	if key == nil {
 		return nil, ErrInvalidArgument.WithMessage("key cannot be nil")
 	}
-	if messageBitBound <= 0 {
-		return nil, ErrInvalidArgument.WithMessage("messageBitBound must be positive")
+	// Slack of 2 is the public floor that keeps ℓ strictly below
+	// |ord(t)| ≈ |N̂|−2. Soundness of consuming Σ-protocols requires more;
+	// see the function comment for guidance on the correct value.
+	if messageSlack < 2 {
+		return nil, ErrInvalidArgument.WithMessage("messageSlack must be >= 2 to leave headroom below |ord(t)| ≈ |N̂|-2")
 	}
 	group := algebra.StructureMustBeAs[*znstar.RSAGroupUnknownOrder](key.Group())
 	nBits := group.ModulusCT().BitLen()
-	// Need a strict safety gap below the RSA modulus size. The literature
-	// informally wants ℓ well below |ord(t)| ≈ |N|-2; since ord(t) is hidden,
-	// enforce a conservative public gap against |N|.
-	if messageBitBound >= nBits-2 {
-		return nil, ErrInvalidArgument.WithMessage("messageBitBound must leave headroom below |ord(t)| ≈ |N̂|-2")
-	}
-	if minUnknownOrderBindingSlackBits >= nBits {
-		return nil, ErrInvalidArgument.WithMessage("unknown-order group modulus is too small to support the required binding slack")
-	}
 	upper := group.Modulus().Lsh(base.StatisticalSecurityBits).Lift()
 	lower := upper.Neg()
 	witnessValueSampler := func(prng io.Reader) (*num.Int, error) {
@@ -83,7 +91,7 @@ func NewRingPedersenScheme(key *Key[*znstar.RSAGroupElementUnknownOrder, *num.In
 		if message == nil {
 			return ErrInvalidArgument.WithMessage("message cannot be nil")
 		}
-		if message.Value().Abs().TrueLen() > messageBitBound {
+		if message.Value().Abs().TrueLen()+messageSlack >= nBits {
 			return ErrInvalidArgument.WithMessage("message size is too large to commit to")
 		}
 		return nil
@@ -99,13 +107,14 @@ func NewRingPedersenScheme(key *Key[*znstar.RSAGroupElementUnknownOrder, *num.In
 }
 
 // NewRingPedersenEquivocableScheme wraps a CGGMP21 ring-Pedersen Scheme together
-// with its trapdoor λ so the holder can equivocate openings. messageBitBound is
-// applied to the underlying Scheme; see NewRingPedersenScheme for the constraints.
-func NewRingPedersenEquivocableScheme(trapdoor *Trapdoor[*znstar.RSAGroupElementUnknownOrder, *num.Int], messageBitBound int) (*EquivocableScheme[*znstar.RSAGroupElementUnknownOrder, *num.Int], error) {
+// with its trapdoor λ so the holder can equivocate openings. messageSlack is
+// forwarded to the underlying Scheme; see NewRingPedersenScheme for how to
+// choose it.
+func NewRingPedersenEquivocableScheme(trapdoor *Trapdoor[*znstar.RSAGroupElementUnknownOrder, *num.Int], messageSlack int) (*EquivocableScheme[*znstar.RSAGroupElementUnknownOrder, *num.Int], error) {
 	if trapdoor == nil {
 		return nil, ErrInvalidArgument.WithMessage("trapdoor cannot be nil")
 	}
-	s, err := NewRingPedersenScheme(&trapdoor.Key, messageBitBound)
+	s, err := NewRingPedersenScheme(&trapdoor.Key, messageSlack)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create underlying Pedersen scheme")
 	}
@@ -130,8 +139,8 @@ func NewPrimeGroupScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 	s := &Scheme[E, S]{
 		key:                 key,
 		witnessValueSampler: witnessValueSampler,
-		witnessRangeCheck:   primeGroupRangeChecker[*Witness[S], S],
-		messageRangeCheck:   primeGroupRangeChecker[*Message[S], S],
+		witnessRangeCheck:   func(*Witness[S]) error { return nil }, // enforced at compile time.
+		messageRangeCheck:   func(*Message[S]) error { return nil }, // enforced at compile time.
 	}
 	return s, nil
 }
@@ -206,18 +215,4 @@ func (s *Scheme[E, S]) Group() FiniteAbelianGroup[E, S] {
 // TrapdoorKey returns the underlying trapdoor. Callers must treat the result as secret.
 func (s *EquivocableScheme[E, S]) TrapdoorKey() *Trapdoor[E, S] {
 	return s.trapdoor
-}
-
-func primeGroupRangeChecker[T interface {
-	base.Transparent[S]
-	*Witness[S] | *Message[S]
-}, S algebra.PrimeFieldElement[S]](t T) error {
-	if t == nil {
-		return ErrInvalidArgument.WithMessage("input cannot be nil")
-	}
-	order := algebra.StructureMustBeAs[algebra.FiniteRing[S]](t.Value().Structure()).Order()
-	if !base.PartialCompare(t.Value().Cardinal(), order).IsLessThan() {
-		return ErrInvalidArgument.WithMessage("value is out of valid range")
-	}
-	return nil
 }

@@ -83,7 +83,7 @@ func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, ctx.SessionID(), group.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	key, err := pedcom.NewPrimeGroupCommitmentKey(ctx.Transcript(), secondPedersenGeneratorLabel, group.Generator())
+	key, err := pedcom.ExtractPrimeGroupCommitmentKey(ctx.Transcript(), secondPedersenGeneratorLabel, group.Generator())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen key")
 	}

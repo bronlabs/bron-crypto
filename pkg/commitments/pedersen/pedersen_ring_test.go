@@ -55,7 +55,7 @@ func newRingPedersenScheme(t *testing.T) (
 	rsaGroup, err := znstar.SampleSafeRSAGroup(ringPedersenKeyLen, crand.Reader)
 	require.NoError(t, err)
 	transcript := hagrid.NewTranscript("pedersen-ring-test")
-	key, err := pedersen.NewRingPedersenCommitmentKey(transcript, "s", "t", rsaGroup)
+	key, err := pedersen.ExtractRingPedersenCommitmentKey(transcript, "st", rsaGroup)
 	require.NoError(t, err)
 	scheme, err := pedersen.NewRingPedersenScheme(key, ringPedersenEll)
 	require.NoError(t, err)

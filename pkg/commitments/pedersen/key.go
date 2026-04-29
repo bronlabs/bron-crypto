@@ -1,6 +1,7 @@
 package pedersen
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -24,32 +25,29 @@ type keyDTO[E FiniteAbelianGroupElement[E, S], S algebra.RingElement[S]] struct 
 	H E `cbor:"h"`
 }
 
-// NewRingPedersenCommitmentKey deterministically derives a CGGMP21 ring-Pedersen
+// ExtractRingPedersenCommitmentKey deterministically derives a CGGMP21 ring-Pedersen
 // CRS (s, t) ∈ QR(N̂)² from the supplied transcript. The two generators are
 // extracted from the transcript labels and squared into the quadratic-residue
 // subgroup; extraction repeats until both squares are coprime to N̂ to avoid
 // the (negligibly probable) factor-leaking elements. The returned key forgets
 // the order of the underlying RSA group.
-func NewRingPedersenCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, sLabel, tLabel string, group *znstar.RSAGroup[A]) (*Key[*znstar.RSAGroupElementUnknownOrder, *num.Int], error) { // The return type must be UnknownOrder for the CommitmentKey method to be secure.
+func ExtractRingPedersenCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, label string, group *znstar.RSAGroup[A]) (*Key[*znstar.RSAGroupElementUnknownOrder, *num.Int], error) { // The return type must be UnknownOrder for the CommitmentKey method to be secure.
 	if transcript == nil {
 		return nil, ErrInvalidArgument.WithMessage("transcript cannot be nil")
 	}
-	if sLabel == "" {
-		return nil, ErrInvalidArgument.WithMessage("sLabel cannot be empty")
-	}
-	if tLabel == "" {
-		return nil, ErrInvalidArgument.WithMessage("tLabel cannot be empty")
+	if label == "" {
+		return nil, ErrInvalidArgument.WithMessage("label cannot be empty")
 	}
 	if group == nil {
 		return nil, ErrInvalidArgument.WithMessage("group cannot be nil")
 	}
 	var s, t *znstar.RSAGroupElement[A]
 	for {
-		sSqrt, err := ts.Extract(transcript, sLabel, group)
+		sSqrt, err := ts.Extract(transcript, fmt.Sprintf("s_%s", label), group)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to extract sSqrt for pedersen key")
 		}
-		tSqrt, err := ts.Extract(transcript, tLabel, group)
+		tSqrt, err := ts.Extract(transcript, fmt.Sprintf("t_%s", label), group)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to extract tSqrt for pedersen key")
 		}
@@ -66,11 +64,11 @@ func NewRingPedersenCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcri
 	return out, nil
 }
 
-// NewPrimeGroupCommitmentKey deterministically derives a Pedersen CRS in a
+// ExtractPrimeGroupCommitmentKey deterministically derives a Pedersen CRS in a
 // prime-order group: the caller-supplied basePoint is reused as g and h is
 // extracted from the transcript using the given label. The discrete log of h
 // to base g is hidden by the transcript extraction, so no party knows it.
-func NewPrimeGroupCommitmentKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](transcript ts.Transcript, label string, basePoint E) (*Key[E, S], error) {
+func ExtractPrimeGroupCommitmentKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](transcript ts.Transcript, label string, basePoint E) (*Key[E, S], error) {
 	if transcript == nil {
 		return nil, ErrInvalidArgument.WithMessage("transcript cannot be nil")
 	}

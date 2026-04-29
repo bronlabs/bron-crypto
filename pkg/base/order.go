@@ -59,11 +59,11 @@ func (o PartialOrdering) Is(other Ordering) bool {
 
 // Is checks if the Ordering is equal to the given PartialOrdering.
 // It takes variadic PartialOrderings to allow checking against multiple values, returning true if any match and false if any are Incomparable.
-func (o Ordering) Is(os ...PartialOrdering) bool {
-	if slices.Contains(os, Incomparable) {
+func (o Ordering) Is(first PartialOrdering, rest ...PartialOrdering) bool {
+	if first == Incomparable || slices.Contains(rest, Incomparable) {
 		return false
 	}
-	return sliceutils.Any(os, func(other PartialOrdering) bool {
+	return o == Ordering(first) || sliceutils.Any(rest, func(other PartialOrdering) bool {
 		return o == Ordering(other)
 	})
 }

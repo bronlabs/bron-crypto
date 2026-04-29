@@ -83,16 +83,21 @@ func SampleRingPedersenTrapdoorKey(keyLen uint, prng io.Reader) (*Trapdoor[*znst
 // NewPrimeGroupTrapdoorKey constructs a prime-group trapdoor from a generator g
 // and a scalar λ. The lambda's modulus must match the group's scalar order so
 // that h = g^λ has the expected discrete log relationship.
-func NewPrimeGroupTrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](g E, lambda *num.Uint) (*Trapdoor[E, S], error) {
-	if utils.IsNil(g) || lambda == nil {
+func NewPrimeGroupTrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](g E, lambda S) (*Trapdoor[E, S], error) {
+	if utils.IsNil(g) || utils.IsNil(lambda) {
 		return nil, ErrInvalidArgument.WithMessage("generator and lambda cannot be nil")
 	}
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](g.Structure())
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
-	if !lambda.Modulus().Cardinal().Equal(sf.Order()) {
-		return nil, ErrInvalidArgument.WithMessage("lambda modulus must equal group scalar order")
+	zModQ, err := num.NewZModFromCardinal(sf.Order())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create Z Mod ScalarFieldOrder")
 	}
-	out, err := newTrapdoorKeyUnchecked(g, lambda)
+	lambdaUint, err := zModQ.FromBytesBE(lambda.BytesBE())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to convert lambda into ZModQ")
+	}
+	out, err := newTrapdoorKeyUnchecked(g, lambdaUint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Pedersen trapdoor key")
 	}

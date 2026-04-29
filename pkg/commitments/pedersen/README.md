@@ -3,7 +3,7 @@
 This package provides two flavors of Pedersen commitments behind a uniform `Scheme` / `Committer` / `Verifier` API:
 
 - **Prime-order group flavor**: classical Pedersen over a prime-order group $\mathbb{G}$ (e.g. an elliptic curve). Commitments are *perfectly hiding* and *computationally binding* under the discrete-logarithm assumption.
-- **CGGMP21 ring-Pedersen flavor** (cf. [Canetti–Gennaro–Goldfeder–Makriyannis–Peled, *UC Non-Interactive, Proactive, Threshold ECDSA with Identifiable Aborts*](https://eprint.iacr.org/2021/060)): Pedersen over the unknown-order quadratic-residue subgroup $\mathrm{QR}(\hat N)$ of an RSA modulus $\hat N = pq$. Commitments are *statistically hiding* and *computationally binding* under the strong-RSA assumption.
+- **CGGMP21 ring-Pedersen flavor** (cf. [Canetti–Gennaro–Goldfeder–Makriyannis–Peled, *UC Non-Interactive, Proactive, Threshold ECDSA with Identifiable Aborts*](https://eprint.iacr.org/2021/060)): Pedersen over the unknown-order quadratic-residue subgroup $\mathrm{QR}(\hat N)$ of an RSA modulus $\hat N = pq$ for safeprime $p$ and $q$. Commitments are *statistically hiding* and *computationally binding* under the strong-RSA assumption.
 
 Each flavor has an `EquivocableScheme` companion that retains the trapdoor $\lambda$ with $h = g^{\lambda}$, enabling simulation-style openings. All public types implement CBOR encoding for transport and persistence.
 
@@ -31,8 +31,8 @@ commitment, witness, _ := committer.Commit(msg, prng)
 ## Ring-Pedersen flavor
 
 ```go
-trapdoor, _ := pedersen.SampleRingPedersenTrapdoorKey(2048, prng) // |N̂| in bits
-scheme,   _ := pedersen.NewRingPedersenScheme(trapdoor.CommitmentKey(), 256)  // ℓ
+trapdoor, _ := pedersen.SampleRingPedersenTrapdoorKey(2048, prng)              // |N̂| in bits
+scheme,   _ := pedersen.NewRingPedersenScheme(trapdoor.CommitmentKey(), 1792)  // messageSlack = |N̂| − ℓ
 verifier, _ := scheme.Verifier()
 ```
 
@@ -44,11 +44,10 @@ $$
 
 Two protocol-level parameters control security:
 
-- **`messageBitBound` (ℓ)** — the maximum bit length of $m$ that the scheme will accept. Must stay strictly below $|\mathrm{ord}(t)| \approx |\hat N| - 2$. The constructor enforces a public conservative gap (`messageBitBound < |\hat N| - 2`).
+- **`messageSlack`** — bits of headroom reserved between the accepted message size and $|\hat N|$. A message $m$ is accepted iff $|m|_\text{bits} + \texttt{messageSlack} < |\hat N|$, so the effective bit budget is $\ell = |\hat N| - \texttt{messageSlack} - 1$. The public floor is `messageSlack ≥ 2` (keeps $\ell < |\mathrm{ord}(t)| \approx |\hat N|-2$, which is what strong-RSA binding requires). Consuming Σ-protocols extract witnesses of size $\approx \ell + |\text{challenge}| + \sigma$, so for soundness pick `messageSlack ≥ |challenge| + σ + 2`; in CGGMP21 that is $\lambda + \sigma + 2$. A safe default for curve-scalar-sized messages over $|\hat N| = 2048$ is `messageSlack = |N̂| − |q|` ≈ 1792.
 - **Statistical hiding slack** — `Commit` samples $r$ from $[-\hat N \cdot 2^{\sigma}, \hat N \cdot 2^{\sigma})$ with $\sigma$ = `base.StatisticalSecurityBits`, ensuring the distribution of $t^{r}$ is statistically close to uniform on $\mathrm{QR}(\hat N)$.
-- **Computational binding slack** — the modulus must exceed `base.ComputationalSecurityBits`; the constructor refuses moduli that are too small to support the strong-RSA reduction.
 
-If $\ell$ is set too close to $|\hat N|$ (i.e. close to $|\mathrm{ord}(t)|$) the strong-RSA reduction collapses and a prover can equivocate by exploiting wrap-around mod $\mathrm{ord}(t)$.
+If `messageSlack` is set at the floor (2), binding still holds but any layered Σ-protocol's extractor can wrap mod $\mathrm{ord}(t)$, voiding its soundness.
 
 ## Trapdoor and equivocation
 

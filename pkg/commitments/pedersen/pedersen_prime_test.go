@@ -31,7 +31,7 @@ func newPrimeGroupScheme(t *testing.T) (
 	t.Helper()
 	curve := k256.NewCurve()
 	transcript := hagrid.NewTranscript("pedersen-prime-group-test")
-	key, err := pedersen.NewPrimeGroupCommitmentKey(transcript, "h", curve.Generator())
+	key, err := pedersen.ExtractPrimeGroupCommitmentKey(transcript, "h", curve.Generator())
 	require.NoError(t, err)
 	scheme, err := pedersen.NewPrimeGroupScheme(key)
 	require.NoError(t, err)

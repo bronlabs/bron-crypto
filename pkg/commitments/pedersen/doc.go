@@ -5,8 +5,8 @@
 //     and computationally binding under the discrete-log assumption.
 //
 //   - CGGMP21 ring-Pedersen: Pedersen over the unknown-order quadratic
-//     residue subgroup QR(N̂) of an RSA modulus N̂ = pq. Hiding is
-//     statistical (with witnesses sampled from a range exceeding ord(t) by
+//     residue subgroup QR(N̂) of an RSA modulus N̂ = pq for safe primes p and q.
+//     Hiding is statistical (with witnesses sampled from a range exceeding ord(t) by
 //     a statistical security parameter) and binding reduces to the strong-RSA
 //     assumption, provided messages stay well within ord(t) ≈ N̂/4.
 //
