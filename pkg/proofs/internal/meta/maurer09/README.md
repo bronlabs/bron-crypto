@@ -51,4 +51,5 @@ The scalar multiplication in either group can be overridden via `WithImageScalar
 
 ## References
 
+<!-- paper[Maurer09]: docs/papers/Maurer09.pdf -->
 - [1] Maurer, U. [Unifying Zero-Knowledge Proofs of Knowledge](https://crypto-test.ethz.ch/publications/files/Maurer09.pdf). AFRICACRYPT 2009.
