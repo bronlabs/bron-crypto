@@ -1,4 +1,4 @@
-// Package base58 implements Bitcoin-flavor Base58 and Base58Check
+// Package base58 implements Bitcoin-flavour Base58 and Base58Check
 // encoding for binary data such as version-tagged addresses and key
 // material.
 //
