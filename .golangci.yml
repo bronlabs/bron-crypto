@@ -616,10 +616,6 @@ linters:
       - path: impl/
         linters:
           - dupl
-      - path: pkg/encryption/hpke/internal
-        linters:
-          - dupl
-          - exhaustruct
       # Exclude some revive messages
       # We don't want to check whether statements like `x, err := ...` shadows `err`
       - linters:
@@ -635,10 +631,6 @@ linters:
         linters:
           - gochecknoinits
           - wrapcheck
-      - path: hpke/
-        text: "ST1003: should not use ALL_CAPS in Go names; use CamelCase instead"
-        linters:
-          - staticcheck
       # Exclude algebra package from wrapcheck - lots of interface method calls
       - path: pkg/base/algebra/
         linters:
