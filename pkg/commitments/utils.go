@@ -1,29 +1,38 @@
 package commitments
 
 import (
+	"io"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/errs-go/errs"
 )
 
-var (
-	ErrVerificationFailed = errs.New("verification failed")
-)
-
-func NewGenericVerifier[T Committer[W, M, C], W Witness, M Message, C Commitment[C]](committer T) *GenericVerifier[T, W, M, C] {
-	return &GenericVerifier[T, W, M, C]{committer: committer}
-}
-
-type GenericVerifier[T Committer[W, M, C], W Witness, M Message, C Commitment[C]] struct {
-	committer T
-}
-
-// Verify verifies correctness of the commitment.
-func (v *GenericVerifier[T, W, M, C]) Verify(commitment C, message M, witness W) error {
-	recomputed, err := v.committer.CommitWithWitness(message, witness)
+func Commit[K CommitmentKey[K, M, W, C], M Message, W Witness, C Commitment[C]](key K, message M, prng io.Reader) (C, W, error) {
+	if utils.IsNil(key) || utils.IsNil(message) || prng == nil {
+		return *new(C), *new(W), ErrIsNil.WithMessage("key, message, and prng must not be nil")
+	}
+	witness, err := key.SampleWitness(prng)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot recompute commitment")
+		return *new(C), *new(W), errs.Wrap(err).WithMessage("could not sample witness")
 	}
-	if !recomputed.Equal(commitment) {
-		return ErrVerificationFailed.WithMessage("commitment does not match")
+	commitment, err := key.CommitWithWitness(message, witness)
+	if err != nil {
+		return *new(C), *new(W), errs.Wrap(err).WithMessage("could not compute commitment")
 	}
-	return nil
+	return commitment, witness, nil
+}
+
+func ReRandomise[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, commitment C, prng io.Reader) (C, W, error) {
+	if utils.IsNil(key) || utils.IsNil(commitment) || prng == nil {
+		return *new(C), *new(W), ErrIsNil.WithMessage("key, commitment, and prng must not be nil")
+	}
+	witness, err := key.SampleWitness(prng)
+	if err != nil {
+		return *new(C), *new(W), errs.Wrap(err).WithMessage("could not sample witness")
+	}
+	newCommitment, err := key.ReRandomise(commitment, witness)
+	if err != nil {
+		return *new(C), *new(W), errs.Wrap(err).WithMessage("could not compute commitment")
+	}
+	return newCommitment, witness, nil
 }
