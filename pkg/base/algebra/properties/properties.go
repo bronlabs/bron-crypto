@@ -717,10 +717,10 @@ func BaseRingIdentityActsAsModuleIdentityProperty[S algebra.Module[E, RE], R alg
 }
 
 func NumericStructureFromBytesBERoundTripProperty[S interface {
-	algebra.NumericStructure[E]
+	algebra.UnsignedNumericStructure[E]
 	Structure
 }, E interface {
-	algebra.Numeric
+	algebra.UnsignedNumeric
 	base.Equatable[E]
 }](
 	t *testing.T, c *Carrier[S, E],

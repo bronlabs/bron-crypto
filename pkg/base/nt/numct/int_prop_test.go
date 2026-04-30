@@ -457,7 +457,7 @@ func TestInt_Sqrt_NonPerfectSquare_Property(t *testing.T) {
 	})
 }
 
-func TestInt_SetTwosComplementBEBytes_Property(t *testing.T) {
+func TestInt_SetTwosComplementBytesBE_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		// Generate random 8 bytes
@@ -476,9 +476,10 @@ func TestInt_SetTwosComplementBEBytes_Property(t *testing.T) {
 			uint64(b4)<<24 | uint64(b5)<<16 | uint64(b6)<<8 | uint64(b7))
 
 		var xInt numct.Int
-		xInt.SetTwosComplementBEBytes(beBytes)
+		ok := xInt.SetTwosComplementBytesBE(beBytes)
+		require.Equal(t, ct.True, ok)
 
-		// Property: SetTwosComplementBEBytes correctly interprets the bytes
+		// Property: SetTwosComplementBytesBE correctly interprets the bytes
 		require.Equal(t, 64, xInt.AnnouncedLen())
 		require.Equal(t, x, xInt.Int64())
 	})
@@ -492,9 +493,10 @@ func TestInt_TwosComplementBEBytes_Roundtrip_Property(t *testing.T) {
 		original.SetInt64(x)
 
 		// Property: SetTwosComplementBEBytes(TwosComplementBEBytes(x)) == x
-		beBytes := original.TwosComplementBEBytes()
+		beBytes := original.TwosComplementBytesBE()
 		var roundtrip numct.Int
-		roundtrip.SetTwosComplementBEBytes(beBytes)
+		ok := roundtrip.SetTwosComplementBytesBE(beBytes)
+		require.Equal(t, ct.True, ok)
 
 		require.Equal(t, x, roundtrip.Int64())
 	})

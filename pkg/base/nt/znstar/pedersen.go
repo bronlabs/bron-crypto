@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // SamplePedersenParameters generates a full ring-Pedersen setup for the
@@ -34,28 +35,28 @@ import (
 // open arbitrary Pedersen commitments; they must be kept secret from
 // every other protocol participant and zeroised as soon as they are no
 // longer needed.
-func SamplePedersenParameters(keyLen uint, prng io.Reader) (NHat *num.NatPlus, s, t *RSAGroupElementUnknownOrder, p, q, lambda *num.NatPlus, err error) { //nolint:gocritic // intentionally returning too many results.
+func SamplePedersenParameters(keyLen uint, prng io.Reader) (group *RSAGroupKnownOrder, s, t *RSAGroupElementUnknownOrder, lambda *num.Uint, err error) {
 	if prng == nil {
-		return nil, nil, nil, nil, nil, nil, ErrIsNil.WithMessage("prng")
+		return nil, nil, nil, nil, ErrIsNil.WithMessage("prng")
 	}
 	rsaGroup, err := SampleSafeRSAGroup(keyLen, prng)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample RSA group with safe primes")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample RSA group with safe primes")
 	}
-	NHat = rsaGroup.n
-	p, err = num.NPlus().FromNatCT(rsaGroup.arith.Params.PNat)
+	NHat := rsaGroup.n
+	p, err := num.NPlus().FromNatCT(rsaGroup.arith.Params.PNat)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create NatPlus from p")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create NatPlus from p")
 	}
-	q, err = num.NPlus().FromNatCT(rsaGroup.arith.Params.QNat)
+	q, err := num.NPlus().FromNatCT(rsaGroup.arith.Params.QNat)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create NatPlus from q")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create NatPlus from q")
 	}
 	var tKnownOrder, sKnownOrder *RSAGroupElementKnownOrder
 	for {
 		tKnownOrder, err = rsaGroup.RandomQuadraticResidue(prng)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample t")
+			return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample t")
 		}
 		// Check that t is a generator of QR(NHat). The probability of it not being one is ~2^{-|p|+1}.
 		// Let N = pq with p = 2p'+1, q = 2q'+1 (safe primes).
@@ -74,10 +75,24 @@ func SamplePedersenParameters(keyLen uint, prng io.Reader) (NHat *num.NatPlus, s
 		}
 	}
 	phiNHatOver4 := p.Rsh(1).Mul(q.Rsh(1))
-	lambda, err = num.NPlus().Random(num.NPlus().One(), phiNHatOver4, prng)
+	zModPhiNHatOver4, err := num.NewZMod(phiNHatOver4)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample lambda")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to create ZMod for sampling lambda")
 	}
-	sKnownOrder = tKnownOrder.Exp(lambda.Nat())
-	return NHat, sKnownOrder.ForgetOrder(), tKnownOrder.ForgetOrder(), p, q, lambda, nil
+	// Rejection-sample λ until it is a unit mod p'q'. The probability of
+	// hitting a non-unit (a multiple of p' or q') is ≈ 1/p' + 1/q', i.e.
+	// negligible for safe-prime moduli, but a non-unit λ has no inverse
+	// and yields s = t^λ of strictly smaller order than ⟨t⟩ — both of
+	// which break the trapdoor downstream.
+	for {
+		lambda, err = algebrautils.RandomNonIdentity(zModPhiNHatOver4, prng)
+		if err != nil {
+			return nil, nil, nil, nil, errs.Wrap(err).WithMessage("failed to sample lambda")
+		}
+		if lambda.IsUnit() {
+			break
+		}
+	}
+	sKnownOrder = tKnownOrder.Exp(lambda.Abs())
+	return rsaGroup, sKnownOrder.ForgetOrder(), tKnownOrder.ForgetOrder(), lambda, nil
 }

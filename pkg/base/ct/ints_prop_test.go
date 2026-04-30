@@ -22,6 +22,18 @@ func TestIsZero_Property(t *testing.T) {
 	})
 }
 
+func TestIsNegative_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		// Generate a random integer value
+		value := rapid.Int().Draw(t, "value")
+		// Check if IsNegative returns One for negative values and Zero otherwise
+		drewNegative := value < 0
+		actual := ct.IsNegative(value) == ct.True
+		require.Equal(t, drewNegative, actual)
+	})
+}
+
 func TestEqual_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {

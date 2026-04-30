@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -105,7 +106,25 @@ func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 }
 
 // ScalarMul computes the scalar multiplication of the given base element by the given exponent using a fixed-window method.
-func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](base E, exponent S) E {
+func ScalarMul[E algebra.MonoidElement[E], S algebra.UnsignedNumeric](base E, exponent S) E {
+	return scalarMul(base, exponent.BytesBE())
+}
+
+// ScalarMulSigned computes the scalar multiplication of the given base element by the given signed exponent using a fixed-window method.
+func ScalarMulSigned[E algebra.GroupElement[E], S algebra.SignedNumeric](base E, exponent S) E {
+	isNegative := ct.Choice(exponent.TwosComplementBytesBE()[0] >> 7)
+	baseBytes := base.Bytes()
+	baseInvBytes := base.OpInv().Bytes()
+	outBytes := ct.CSelectInts(isNegative, baseBytes, baseInvBytes)
+	group := algebra.StructureMustBeAs[algebra.Group[E]](base.Structure())
+	out, err := group.FromBytes(outBytes)
+	if err != nil {
+		panic("algebrautils: failed to parse base or its inverse from bytes")
+	}
+	return scalarMul(out, exponent.AbsBytesBE())
+}
+
+func scalarMul[E algebra.MonoidElement[E]](base E, exponentBytesBE []byte) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](base.Structure())
 
 	precomputed := make([]E, 16)
@@ -117,7 +136,7 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](base E, exponent S
 	}
 
 	res := monoid.OpIdentity()
-	exponentBigEndianBytes := exponent.BytesBE()
+	exponentBigEndianBytes := exponentBytesBE
 	for _, si := range exponentBigEndianBytes {
 		res = res.Op(res)
 		res = res.Op(res)
@@ -138,7 +157,28 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](base E, exponent S
 }
 
 // ScalarMulNative computes the scalar multiplication of the given base element by the given exponent.
-func ScalarMulNative[E algebra.MonoidElement[E], S constraints.Unsigned](e E, s S) E {
+func ScalarMulNative[E algebra.MonoidElement[E], S constraints.Unsigned](base E, exponent S) E {
+	return scalarMulNative(base, exponent)
+}
+
+// ScalarMulSignedNative computes the scalar multiplication of the given base element by the given signed exponent.
+func ScalarMulSignedNative[E algebra.GroupElement[E], S constraints.Signed](base E, exponent S) E {
+	isNegative := ct.IsNegative(exponent)
+
+	baseBytes := base.Bytes()
+	baseInvBytes := base.OpInv().Bytes()
+	outBytes := ct.CSelectInts(isNegative, baseBytes, baseInvBytes)
+	group := algebra.StructureMustBeAs[algebra.Group[E]](base.Structure())
+	outBase, err := group.FromBytes(outBytes)
+	if err != nil {
+		panic("algebrautils: failed to parse base or its inverse from bytes")
+	}
+
+	outExponent := ct.CSelectInt(isNegative, exponent, -exponent)
+	return scalarMulNative(outBase, uint64(outExponent))
+}
+
+func scalarMulNative[E algebra.MonoidElement[E], S constraints.Unsigned](e E, s S) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](e.Structure())
 
 	if s == 0 {
@@ -163,7 +203,7 @@ func ScalarMulNative[E algebra.MonoidElement[E], S constraints.Unsigned](e E, s 
 // using a fixed window size w.
 //
 // It assumes S.Bytes() is big-endian. Bits are extracted in LSB-first order.
-func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
+func MultiScalarMul[E algebra.MonoidElement[E], S algebra.UnsignedNumeric](
 	scalars []S,
 	points []E,
 ) E {

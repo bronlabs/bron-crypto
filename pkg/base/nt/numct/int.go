@@ -51,6 +51,16 @@ func NewIntFromBytes(b []byte) *Int {
 	return n
 }
 
+// NewIntFromTwosComplementBytesBE creates a new Int from a two's-complement big-endian byte slice.
+func NewIntFromTwosComplementBytesBE(b []byte) *Int {
+	n := new(Int)
+	ok := n.SetTwosComplementBytesBE(b)
+	if ok == ct.False {
+		panic("numct.NewIntFromTwosComplementBytesBE: invalid input")
+	}
+	return n
+}
+
 // NewIntFromBig creates a new Int from a big.Int with the given capacity.
 func NewIntFromBig(n *big.Int, capacity int) *Int {
 	return (*Int)(new(saferith.Int).SetBig(n, capacity))
@@ -416,8 +426,11 @@ func (i *Int) SetBytes(b []byte) (ok ct.Bool) {
 	return utils.BoolTo[ct.Bool](err == nil)
 }
 
-// SetTwosComplementBEBytes sets i from the two's-complement big-endian byte representation.
-func (i *Int) SetTwosComplementBEBytes(b []byte) {
+// SetTwosComplementBytesBE sets i from the two's-complement big-endian byte representation.
+func (i *Int) SetTwosComplementBytesBE(b []byte) (ok ct.Bool) {
+	if len(b) == 0 {
+		return ct.False // this is fine because length is public.
+	}
 	sign := b[0] >> 7
 	notBytes := make([]byte, len(b))
 	ct.NotBytes(notBytes, b)
@@ -431,6 +444,7 @@ func (i *Int) SetTwosComplementBEBytes(b []byte) {
 	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(sign)), len(b)*8)
 	(*saferith.Int)(i).SetNat(&nat)
 	(*saferith.Int)(i).Neg(saferith.Choice(sign))
+	return ct.True
 }
 
 // Increment sets i = i + 1.
@@ -666,11 +680,14 @@ func (i *Int) AndCap(x, y *Int, capacity int) {
 	yClone.Set(y)
 	yClone.Resize(capacity)
 
-	xBytes := xClone.TwosComplementBEBytes()
-	yBytes := yClone.TwosComplementBEBytes()
+	xBytes := xClone.TwosComplementBytesBE()
+	yBytes := yClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.AndBytes(zBytes, xBytes, yBytes)
-	i.SetTwosComplementBEBytes(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.AndCap: unexpected error from SetTwosComplementBytesBE")
+	}
 }
 
 // Or sets i = x | y.
@@ -691,11 +708,14 @@ func (i *Int) OrCap(x, y *Int, capacity int) {
 	yClone.Set(y)
 	yClone.Resize(capacity)
 
-	xBytes := xClone.TwosComplementBEBytes()
-	yBytes := yClone.TwosComplementBEBytes()
+	xBytes := xClone.TwosComplementBytesBE()
+	yBytes := yClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.OrBytes(zBytes, xBytes, yBytes)
-	i.SetTwosComplementBEBytes(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.OrCap: unexpected error from SetTwosComplementBytesBE")
+	}
 }
 
 // Xor sets i = x ^ y.
@@ -716,11 +736,14 @@ func (i *Int) XorCap(x, y *Int, capacity int) {
 	yClone.Set(y)
 	yClone.Resize(capacity)
 
-	xBytes := xClone.TwosComplementBEBytes()
-	yBytes := yClone.TwosComplementBEBytes()
+	xBytes := xClone.TwosComplementBytesBE()
+	yBytes := yClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.XorBytes(zBytes, xBytes, yBytes)
-	i.SetTwosComplementBEBytes(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.XorCap: unexpected error from SetTwosComplementBytesBE")
+	}
 	// Don't resize - result may need more bits than inputs
 }
 
@@ -741,10 +764,13 @@ func (i *Int) NotCap(x *Int, capacity int) {
 	xClone.Set(x)
 	xClone.Resize(capacity)
 
-	xBytes := xClone.TwosComplementBEBytes()
+	xBytes := xClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.NotBytes(zBytes, xBytes)
-	i.SetTwosComplementBEBytes(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.NotCap: unexpected error from SetTwosComplementBytesBE")
+	}
 	// Don't resize down - NOT may produce a value that needs more bits
 	// (e.g., NOT(2^63-1) = -2^63 needs 64 bits for magnitude)
 }
@@ -787,8 +813,8 @@ func (i *Int) SetRandomRangeLH(lowInclusive, highExclusive *Int, prng io.Reader)
 	return nil
 }
 
-// TwosComplementBEBytes returns the two's-complement big-endian byte representation of i.
-func (i *Int) TwosComplementBEBytes() []byte {
+// TwosComplementBytesBE returns the two's-complement big-endian byte representation of i.
+func (i *Int) TwosComplementBytesBE() []byte {
 	// keep extra bit for sign
 	capacityBits := i.AnnouncedLen() + 1
 	capacityBytes := (capacityBits + 7) / 8

@@ -139,6 +139,14 @@ func (*Integers) FromBytes(input []byte) (*Int, error) {
 	return &Int{v: numct.NewIntFromBytes(input)}, nil
 }
 
+// FromTwosComplementBytesBE creates an integer from a two's-complement big-endian byte slice.
+func (*Integers) FromTwosComplementBytesBE(input []byte) (*Int, error) {
+	if len(input) == 0 {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	return &Int{v: numct.NewIntFromTwosComplementBytesBE(input)}, nil
+}
+
 // FromUint creates an integer from a Uint value.
 func (zs *Integers) FromUint(input *Uint) (*Int, error) {
 	if input == nil {
@@ -552,6 +560,16 @@ func (i *Int) Rat() *Rat {
 // Bytes returns the byte representation of the integer.
 func (i *Int) Bytes() []byte {
 	return i.v.Bytes()
+}
+
+// AbsBytesBE returns the big-endian byte representation of the absolute value of the integer.
+func (i *Int) AbsBytesBE() []byte {
+	return i.Abs().v.BytesBE()
+}
+
+// TwosComplementBytesBE returns the two's-complement big-endian byte representation of the integer.
+func (i *Int) TwosComplementBytesBE() []byte {
+	return i.v.TwosComplementBytesBE()
 }
 
 // IsEven checks if the integer is even.

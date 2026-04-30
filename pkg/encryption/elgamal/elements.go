@@ -168,7 +168,7 @@ func (p *Plaintext[E, S]) OpInv() *Plaintext[E, S] {
 }
 
 // ScalarOp returns the plaintext raised to the given scalar: m^k.
-func (p *Plaintext[E, S]) ScalarOp(scalar algebra.Numeric) *Plaintext[E, S] {
+func (p *Plaintext[E, S]) ScalarOp(scalar algebra.UnsignedNumeric) *Plaintext[E, S] {
 	if p == nil || scalar == nil {
 		return nil
 	}
@@ -302,7 +302,7 @@ func (c *Ciphertext[E, S]) Op(other *Ciphertext[E, S]) *Ciphertext[E, S] {
 
 // ScalarOp raises both ciphertext components to the given scalar:
 // (c₁, c₂)^k = (c₁^k, c₂^k). If c encrypts m, the result encrypts m^k.
-func (c *Ciphertext[E, S]) ScalarOp(scalar algebra.Numeric) *Ciphertext[E, S] {
+func (c *Ciphertext[E, S]) ScalarOp(scalar algebra.UnsignedNumeric) *Ciphertext[E, S] {
 	if c == nil || scalar == nil {
 		return nil
 	}
@@ -368,7 +368,7 @@ func (n *Nonce[S]) OpInv() *Nonce[S] {
 }
 
 // ScalarOp returns the product of the nonce with a scalar: r · k. This is the nonce that corresponds to raising a ciphertext to a scalar.
-func (n *Nonce[S]) ScalarOp(scalar algebra.Numeric) *Nonce[S] {
+func (n *Nonce[S]) ScalarOp(scalar algebra.UnsignedNumeric) *Nonce[S] {
 	if n == nil || scalar == nil {
 		return nil
 	}

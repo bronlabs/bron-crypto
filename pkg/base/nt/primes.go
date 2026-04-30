@@ -20,7 +20,7 @@ import (
 
 // PrimeSamplable constrains the target structure a freshly sampled prime is
 // lifted into.
-type PrimeSamplable[E algebra.NatPlusLike[E]] algebra.NumericStructure[E]
+type PrimeSamplable[E algebra.NatPlusLike[E]] algebra.UnsignedNumericStructure[E]
 
 // PrimeSampler is the signature of a single-prime sampling strategy. Different
 // strategies impose different structural constraints on the output prime

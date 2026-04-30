@@ -116,7 +116,7 @@ func (s *Share[S]) Add(other *Share[S]) *Share[S] {
 // ScalarOp multiplies both the secret and blinding components of the share by
 // a scalar. This preserves the Pedersen commitment structure:
 // Com(c·m, c·r) = [c·m]G + [c·r]H = c·([m]G + [r]H) = c·Com(m, r).
-func (s *Share[S]) ScalarOp(sc algebra.Numeric) *Share[S] {
+func (s *Share[S]) ScalarOp(sc algebra.UnsignedNumeric) *Share[S] {
 	primeField := algebra.StructureMustBeAs[algebra.PrimeField[S]](s.secret[0].Value().Structure())
 	scalar, err := primeField.FromBytesBE(sc.BytesBE())
 	if err != nil {
@@ -138,7 +138,7 @@ func (s *Share[S]) ScalarOp(sc algebra.Numeric) *Share[S] {
 }
 
 // ScalarMul is an alias for ScalarOp.
-func (s *Share[S]) ScalarMul(scalar algebra.Numeric) *Share[S] {
+func (s *Share[S]) ScalarMul(scalar algebra.UnsignedNumeric) *Share[S] {
 	return s.ScalarOp(scalar)
 }
 

@@ -71,7 +71,7 @@ type LinearShare[S interface {
 ] interface {
 	Share[S]
 	algebra.HomomorphicLike[S, SV]
-	algebra.Actable[S, algebra.Numeric]
+	algebra.Actable[S, algebra.UnsignedNumeric]
 }
 
 // LSSS (Linear Secret Sharing Scheme) is a scheme where shares form a vector space.

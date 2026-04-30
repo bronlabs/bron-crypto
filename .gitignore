@@ -48,8 +48,8 @@ docs/build/*
 
 # Claude
 **/.claude/
-!/.claude/
-!/.claude/**
+!/.claude/skills/
+!/.claude/skills/**
 /.claude/settings.local.json
 /.claude/local/
 /.claude/*.local.md

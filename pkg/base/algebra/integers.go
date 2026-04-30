@@ -5,9 +5,11 @@ import (
 )
 
 type (
-	Cardinal                    = crtp.Cardinal
-	NumericStructure[E Numeric] = crtp.NumericStructure[E]
-	Numeric                     = crtp.Numeric
+	Cardinal                                    = crtp.Cardinal
+	UnsignedNumericStructure[E UnsignedNumeric] = crtp.UnsignedNumericStructure[E]
+	UnsignedNumeric                             = crtp.UnsignedNumeric
+	SignedNumericStructure[E SignedNumeric]     = crtp.SignedNumericStructure[E]
+	SignedNumeric                               = crtp.SignedNumeric
 
 	NPlusLike[E NatPlusLike[E]]        crtp.NPlusLike[E]
 	NatPlusLike[E crtp.NatPlusLike[E]] crtp.NatPlusLike[E]

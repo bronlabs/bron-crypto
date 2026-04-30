@@ -1,11 +1,14 @@
 package base
 
 import (
+	"slices"
+
 	"golang.org/x/exp/constraints"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 type (
@@ -55,8 +58,14 @@ func (o PartialOrdering) Is(other Ordering) bool {
 }
 
 // Is checks if the Ordering is equal to the given PartialOrdering.
-func (o Ordering) Is(other PartialOrdering) bool {
-	return other != Incomparable && PartialOrdering(o) == other
+// It takes variadic PartialOrderings to allow checking against multiple values, returning true if any match and false if any are Incomparable.
+func (o Ordering) Is(first PartialOrdering, rest ...PartialOrdering) bool {
+	if first == Incomparable || slices.Contains(rest, Incomparable) {
+		return false
+	}
+	return o == Ordering(first) || sliceutils.Any(rest, func(other PartialOrdering) bool {
+		return o == Ordering(other)
+	})
 }
 
 // IsLessThan checks if the PartialOrdering represents LessThan.
