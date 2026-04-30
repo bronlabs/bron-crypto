@@ -8,12 +8,12 @@ A variant of Fischlin's transform using fixed parameters and random challenge sa
 
 ## Parameters
 
-| Param | Value | Description |
-|-------|-------|-------------|
-| Lambda | 128 | Security parameter |
-| L | 8 | Hash output bits |
-| R | 16 | Parallel repetitions |
-| T | 56 | Challenge sampling bound |
+| Param  | Value | Description              |
+|--------|-------|--------------------------|
+| Lambda | 128   | Security parameter       |
+| L      | 8     | Hash output bits         |
+| R      | 16    | Parallel repetitions     |
+| T      | 56    | Challenge sampling bound |
 
 ## Usage
 
