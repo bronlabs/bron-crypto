@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -111,14 +112,16 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.UnsignedNumeric](base E, ex
 
 // ScalarMulSigned computes the scalar multiplication of the given base element by the given signed exponent using a fixed-window method.
 func ScalarMulSigned[E algebra.GroupElement[E], S algebra.SignedNumeric](base E, exponent S) E {
-	isNegative := exponent.TwosComplementBytesBE()[0]>>7 == 1
-	var b E
-	if isNegative {
-		b = base.OpInv()
-	} else {
-		b = base
+	isNegative := ct.Choice(exponent.TwosComplementBytesBE()[0] >> 7)
+	baseBytes := base.Bytes()
+	baseInvBytes := base.OpInv().Bytes()
+	outBytes := ct.CSelectInts(isNegative, baseBytes, baseInvBytes)
+	group := algebra.StructureMustBeAs[algebra.Group[E]](base.Structure())
+	out, err := group.FromBytes(outBytes)
+	if err != nil {
+		panic("algebrautils: failed to parse base or its inverse from bytes")
 	}
-	return scalarMul(b, exponent.AbsBytesBE())
+	return scalarMul(out, exponent.AbsBytesBE())
 }
 
 func scalarMul[E algebra.MonoidElement[E]](base E, exponentBytesBE []byte) E {
@@ -160,17 +163,19 @@ func ScalarMulNative[E algebra.MonoidElement[E], S constraints.Unsigned](base E,
 
 // ScalarMulSignedNative computes the scalar multiplication of the given base element by the given signed exponent.
 func ScalarMulSignedNative[E algebra.GroupElement[E], S constraints.Signed](base E, exponent S) E {
-	isNegative := exponent < 0
-	var b E
-	var e S
-	if isNegative {
-		b = base.OpInv()
-		e = -exponent
-	} else {
-		b = base
-		e = exponent
+	isNegative := ct.IsNegative(exponent)
+
+	baseBytes := base.Bytes()
+	baseInvBytes := base.OpInv().Bytes()
+	outBytes := ct.CSelectInts(isNegative, baseBytes, baseInvBytes)
+	group := algebra.StructureMustBeAs[algebra.Group[E]](base.Structure())
+	outBase, err := group.FromBytes(outBytes)
+	if err != nil {
+		panic("algebrautils: failed to parse base or its inverse from bytes")
 	}
-	return scalarMulNative(b, uint64(e))
+
+	outExponent := ct.CSelectInt(isNegative, exponent, -exponent)
+	return scalarMulNative(outBase, uint64(outExponent))
 }
 
 func scalarMulNative[E algebra.MonoidElement[E], S constraints.Unsigned](e E, s S) E {

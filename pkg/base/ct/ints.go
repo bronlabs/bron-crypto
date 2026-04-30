@@ -15,6 +15,11 @@ func IsZero[I constraints.Integer](x I) Choice {
 	return Choice(((xx | -xx) >> 63) ^ 1)
 }
 
+// IsNegative returns 1 if x < 0 and 0 otherwise. Works for signed integer types.
+func IsNegative[I constraints.Signed](x I) Choice {
+	return Choice((uint64(int64(x)) >> 63) & 1)
+}
+
 // Equal returns 1 if x == y and 0 otherwise.
 func Equal[I constraints.Integer](x, y I) Choice {
 	return IsZero(x ^ y)

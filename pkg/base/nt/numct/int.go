@@ -54,7 +54,10 @@ func NewIntFromBytes(b []byte) *Int {
 // NewIntFromTwosComplementBytesBE creates a new Int from a two's-complement big-endian byte slice.
 func NewIntFromTwosComplementBytesBE(b []byte) *Int {
 	n := new(Int)
-	n.SetTwosComplementBytesBE(b)
+	ok := n.SetTwosComplementBytesBE(b)
+	if ok == ct.False {
+		panic("numct.NewIntFromTwosComplementBytesBE: invalid input")
+	}
 	return n
 }
 
@@ -424,7 +427,10 @@ func (i *Int) SetBytes(b []byte) (ok ct.Bool) {
 }
 
 // SetTwosComplementBytesBE sets i from the two's-complement big-endian byte representation.
-func (i *Int) SetTwosComplementBytesBE(b []byte) {
+func (i *Int) SetTwosComplementBytesBE(b []byte) (ok ct.Bool) {
+	if len(b) == 0 {
+		return ct.False // this is fine because length is public.
+	}
 	sign := b[0] >> 7
 	notBytes := make([]byte, len(b))
 	ct.NotBytes(notBytes, b)
@@ -438,6 +444,7 @@ func (i *Int) SetTwosComplementBytesBE(b []byte) {
 	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(sign)), len(b)*8)
 	(*saferith.Int)(i).SetNat(&nat)
 	(*saferith.Int)(i).Neg(saferith.Choice(sign))
+	return ct.True
 }
 
 // Increment sets i = i + 1.
@@ -677,7 +684,10 @@ func (i *Int) AndCap(x, y *Int, capacity int) {
 	yBytes := yClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.AndBytes(zBytes, xBytes, yBytes)
-	i.SetTwosComplementBytesBE(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.AndCap: unexpected error from SetTwosComplementBytesBE")
+	}
 }
 
 // Or sets i = x | y.
@@ -702,7 +712,10 @@ func (i *Int) OrCap(x, y *Int, capacity int) {
 	yBytes := yClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.OrBytes(zBytes, xBytes, yBytes)
-	i.SetTwosComplementBytesBE(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.OrCap: unexpected error from SetTwosComplementBytesBE")
+	}
 }
 
 // Xor sets i = x ^ y.
@@ -727,7 +740,10 @@ func (i *Int) XorCap(x, y *Int, capacity int) {
 	yBytes := yClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.XorBytes(zBytes, xBytes, yBytes)
-	i.SetTwosComplementBytesBE(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.XorCap: unexpected error from SetTwosComplementBytesBE")
+	}
 	// Don't resize - result may need more bits than inputs
 }
 
@@ -751,7 +767,10 @@ func (i *Int) NotCap(x *Int, capacity int) {
 	xBytes := xClone.TwosComplementBytesBE()
 	zBytes := make([]byte, len(xBytes))
 	ct.NotBytes(zBytes, xBytes)
-	i.SetTwosComplementBytesBE(zBytes)
+	ok := i.SetTwosComplementBytesBE(zBytes)
+	if ok == ct.False {
+		panic("numct.Int.NotCap: unexpected error from SetTwosComplementBytesBE")
+	}
 	// Don't resize down - NOT may produce a value that needs more bits
 	// (e.g., NOT(2^63-1) = -2^63 needs 64 bits for magnitude)
 }
