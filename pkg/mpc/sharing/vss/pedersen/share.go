@@ -253,7 +253,7 @@ func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 	if key == nil {
 		return nil, sharing.ErrIsNil.WithMessage("pedersen commitment key cannot be nil")
 	}
-	comScheme, err := pedcom.NewPrimeGroupScheme(key)
+	comScheme, err := pedcom.NewScheme(key)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Pedersen commitment scheme for lifting share")
 	}
