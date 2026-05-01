@@ -320,6 +320,11 @@ func (u *PaillierGroupElement[X]) Clone() *PaillierGroupElement[X] {
 
 // Structure returns the Paillier group structure of the element.
 func (u *PaillierGroupElement[X]) Structure() algebra.Structure[*PaillierGroupElement[X]] {
+	return u.Group()
+}
+
+// Group returns the Paillier group this element belongs to.
+func (u *PaillierGroupElement[X]) Group() *PaillierGroup[X] {
 	return &PaillierGroup[X]{
 		UnitGroupTrait: UnitGroupTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
 			zMod:  u.v.Group(),

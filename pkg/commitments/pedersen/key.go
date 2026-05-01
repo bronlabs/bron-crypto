@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
@@ -101,24 +100,9 @@ func (k *CommitmentKey[E, S]) Open(commitment *Commitment[E, S], message *Messag
 }
 
 func (k *CommitmentKey[E, S]) WitnessOp(first, second *Witness[S], rest ...*Witness[S]) (*Witness[S], error) {
-	if first == nil || second == nil {
-		return nil, ErrIsNil.WithMessage("first and second witnesses must not be nil")
-	}
-	if len(rest) > 0 && sliceutils.Any(rest, utils.IsNil[*Witness[S]]) {
-		return nil, ErrIsNil.WithMessage("all witnesses must not be nil")
-	}
-	restValues, err := sliceutils.MapOrError(rest, func(w *Witness[S]) (S, error) {
-		if w == nil {
-			return *new(S), ErrIsNil.WithMessage("witness must not be nil")
-		}
-		return w.r, nil
-	})
+	out, err := internal.Op(NewWitness, first, second, rest...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid witness in rest witnesses")
-	}
-	out, err := NewWitness(algebrautils.Fold(first.r.Op(second.r), restValues...))
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create new witness")
+		return nil, errs.Wrap(err).WithMessage("failed to combine witnesses")
 	}
 	return out, nil
 }
@@ -149,24 +133,9 @@ func (k *CommitmentKey[E, S]) WitnessScalarOp(w *Witness[S], scalar S) (*Witness
 }
 
 func (k *CommitmentKey[E, S]) MessageOp(first, second *Message[S], rest ...*Message[S]) (*Message[S], error) {
-	if first == nil || second == nil {
-		return nil, ErrIsNil.WithMessage("first and second messages must not be nil")
-	}
-	if len(rest) > 0 && sliceutils.Any(rest, utils.IsNil[*Message[S]]) {
-		return nil, ErrIsNil.WithMessage("all messages must not be nil")
-	}
-	restValues, err := sliceutils.MapOrError(rest, func(m *Message[S]) (S, error) {
-		if m == nil {
-			return *new(S), ErrIsNil.WithMessage("message must not be nil")
-		}
-		return m.m, nil
-	})
+	out, err := internal.Op(NewMessage, first, second, rest...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid message in rest messages")
-	}
-	out, err := NewMessage(algebrautils.Fold(first.m.Op(second.m), restValues...))
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create new message")
+		return nil, errs.Wrap(err).WithMessage("failed to combine messages")
 	}
 	return out, nil
 }
@@ -197,24 +166,9 @@ func (k *CommitmentKey[E, S]) MessageScalarOp(m *Message[S], scalar S) (*Message
 }
 
 func (k *CommitmentKey[E, S]) CommitmentOp(first, second *Commitment[E, S], rest ...*Commitment[E, S]) (*Commitment[E, S], error) {
-	if first == nil || second == nil {
-		return nil, ErrIsNil.WithMessage("first and second commitments must not be nil")
-	}
-	if len(rest) > 0 && sliceutils.Any(rest, utils.IsNil[*Commitment[E, S]]) {
-		return nil, ErrIsNil.WithMessage("all commitments must not be nil")
-	}
-	restValues, err := sliceutils.MapOrError(rest, func(c *Commitment[E, S]) (E, error) {
-		if c == nil {
-			return *new(E), ErrIsNil.WithMessage("commitment must not be nil")
-		}
-		return c.v, nil
-	})
+	out, err := internal.Op(NewCommitment, first, second, rest...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid commitment in rest commitments")
-	}
-	out, err := NewCommitment(algebrautils.Fold(first.v.Op(second.v), restValues...))
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create new commitment")
+		return nil, errs.Wrap(err).WithMessage("failed to combine commitments")
 	}
 	return out, nil
 }
