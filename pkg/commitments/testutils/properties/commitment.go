@@ -3,7 +3,7 @@ package properties
 import (
 	"testing"
 
-	serdeprop "github.com/bronlabs/bron-crypto/pkg/base/serde/properties"
+	serdeprop "github.com/bronlabs/bron-crypto/pkg/base/serde/testutils/properties"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"pgregory.net/rapid"
 )

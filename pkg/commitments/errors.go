@@ -7,4 +7,5 @@ import (
 var (
 	ErrVerificationFailed = errs.New("verification failed")
 	ErrIsNil              = errs.New("is nil")
+	ErrInvalidArgument    = errs.New("invalid argument")
 )

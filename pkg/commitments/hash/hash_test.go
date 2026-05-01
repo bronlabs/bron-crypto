@@ -1,12 +1,14 @@
 package hash_comm_test
 
 import (
+	"bytes"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
@@ -31,6 +33,106 @@ func (r *shortReader) Read(p []byte) (int, error) {
 	}
 	r.remaining -= n
 	return n, nil
+}
+
+func TestNewCommitment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input rejected", func(t *testing.T) {
+		t.Parallel()
+		c, err := hash_comm.NewCommitment(nil)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Commitment{}, c)
+	})
+
+	t.Run("empty input rejected", func(t *testing.T) {
+		t.Parallel()
+		c, err := hash_comm.NewCommitment([]byte{})
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Commitment{}, c)
+	})
+
+	t.Run("too short rejected", func(t *testing.T) {
+		t.Parallel()
+		c, err := hash_comm.NewCommitment(bytes.Repeat([]byte{0xAB}, hash_comm.DigestSize-1))
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Commitment{}, c)
+	})
+
+	t.Run("too long rejected", func(t *testing.T) {
+		t.Parallel()
+		c, err := hash_comm.NewCommitment(bytes.Repeat([]byte{0xAB}, hash_comm.DigestSize+1))
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Commitment{}, c)
+	})
+
+	t.Run("exact length succeeds and copies contents", func(t *testing.T) {
+		t.Parallel()
+		in := bytes.Repeat([]byte{0xAB}, hash_comm.DigestSize)
+		c, err := hash_comm.NewCommitment(in)
+		require.NoError(t, err)
+		require.Equal(t, in, c[:])
+	})
+
+	t.Run("input mutation does not affect commitment", func(t *testing.T) {
+		t.Parallel()
+		in := bytes.Repeat([]byte{0xAB}, hash_comm.DigestSize)
+		c, err := hash_comm.NewCommitment(in)
+		require.NoError(t, err)
+
+		in[0] ^= 0xFF
+		require.Equal(t, byte(0xAB), c[0])
+	})
+}
+
+func TestNewWitness(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input rejected", func(t *testing.T) {
+		t.Parallel()
+		w, err := hash_comm.NewWitness(nil)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Witness{}, w)
+	})
+
+	t.Run("empty input rejected", func(t *testing.T) {
+		t.Parallel()
+		w, err := hash_comm.NewWitness([]byte{})
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Witness{}, w)
+	})
+
+	t.Run("too short rejected", func(t *testing.T) {
+		t.Parallel()
+		w, err := hash_comm.NewWitness(bytes.Repeat([]byte{0xCD}, hash_comm.DigestSize-1))
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Witness{}, w)
+	})
+
+	t.Run("too long rejected", func(t *testing.T) {
+		t.Parallel()
+		w, err := hash_comm.NewWitness(bytes.Repeat([]byte{0xCD}, hash_comm.DigestSize+1))
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Witness{}, w)
+	})
+
+	t.Run("exact length succeeds and copies contents", func(t *testing.T) {
+		t.Parallel()
+		in := bytes.Repeat([]byte{0xCD}, hash_comm.DigestSize)
+		w, err := hash_comm.NewWitness(in)
+		require.NoError(t, err)
+		require.Equal(t, in, w[:])
+	})
+
+	t.Run("input mutation does not affect witness", func(t *testing.T) {
+		t.Parallel()
+		in := bytes.Repeat([]byte{0xCD}, hash_comm.DigestSize)
+		w, err := hash_comm.NewWitness(in)
+		require.NoError(t, err)
+
+		in[0] ^= 0xFF
+		require.Equal(t, byte(0xCD), w[0])
+	})
 }
 
 func TestSampleCommitmentKey(t *testing.T) {
@@ -179,5 +281,57 @@ func TestExtractCommitmentKey(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, k.Open(c, msg, w))
+	})
+}
+
+func TestCantUnmarshalInvalid(t *testing.T) {
+	t.Parallel()
+
+	t.Run("short commitment length", func(t *testing.T) {
+		t.Parallel()
+		data := bytes.Repeat([]byte{0xAB}, hash_comm.DigestSize-1)
+		out, err := serde.UnmarshalCBOR[hash_comm.Commitment](data)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Commitment{}, out)
+	})
+
+	t.Run("long commitment length", func(t *testing.T) {
+		t.Parallel()
+		data := bytes.Repeat([]byte{0xAB}, hash_comm.DigestSize+1)
+		out, err := serde.UnmarshalCBOR[hash_comm.Commitment](data)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Commitment{}, out)
+	})
+
+	t.Run("short witness length", func(t *testing.T) {
+		t.Parallel()
+		data := bytes.Repeat([]byte{0xCD}, hash_comm.DigestSize-1)
+		out, err := serde.UnmarshalCBOR[hash_comm.Witness](data)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Witness{}, out)
+	})
+
+	t.Run("long witness length", func(t *testing.T) {
+		t.Parallel()
+		data := bytes.Repeat([]byte{0xCD}, hash_comm.DigestSize+1)
+		out, err := serde.UnmarshalCBOR[hash_comm.Witness](data)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.Witness{}, out)
+	})
+
+	t.Run("short key length", func(t *testing.T) {
+		t.Parallel()
+		data := bytes.Repeat([]byte{0xEF}, hash_comm.KeySize-1)
+		out, err := serde.UnmarshalCBOR[hash_comm.CommitmentKey](data)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.CommitmentKey{}, out)
+	})
+
+	t.Run("long key length", func(t *testing.T) {
+		t.Parallel()
+		data := bytes.Repeat([]byte{0xEF}, hash_comm.KeySize+1)
+		out, err := serde.UnmarshalCBOR[hash_comm.CommitmentKey](data)
+		require.Error(t, err)
+		require.Equal(t, hash_comm.CommitmentKey{}, out)
 	})
 }

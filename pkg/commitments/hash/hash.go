@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -20,7 +21,7 @@ const (
 	DigestSize = 32
 
 	// Name identifies the hash-based commitment scheme.
-	Name commitments.Name = "HashBasedCommitmentScheme"
+	Name commitments.Name = "HashCommitment"
 )
 
 type (
@@ -34,6 +35,10 @@ type (
 
 func (c Commitment) Equal(other Commitment) bool {
 	return bytes.Equal(c[:], other[:])
+}
+
+func (w Witness) Equal(other Witness) bool {
+	return ct.SliceEqual(w[:], other[:]) == ct.True
 }
 
 func NewCommitment(v []byte) (Commitment, error) {

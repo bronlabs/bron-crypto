@@ -22,5 +22,5 @@ var (
 	_ commitments.Witness                = Witness{}
 	_ commitments.Commitment[Commitment] = Commitment{}
 
-	_ commitments.CommitmentKey[CommitmentKey, Message, Witness, Commitment] = CommitmentKey{}
+	_ commitments.CommitmentKey[*CommitmentKey, Message, Witness, Commitment] = (*CommitmentKey)(nil)
 )

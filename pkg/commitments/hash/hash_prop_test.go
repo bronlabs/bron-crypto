@@ -7,16 +7,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/commitments/properties"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils/properties"
 	"pgregory.net/rapid"
 )
 
-func CommitmentKeyGenerator() *rapid.Generator[hash_comm.CommitmentKey] {
-	return rapid.Custom(func(t *rapid.T) hash_comm.CommitmentKey {
+func CommitmentKeyGenerator() *rapid.Generator[*hash_comm.CommitmentKey] {
+	return rapid.Custom(func(t *rapid.T) *hash_comm.CommitmentKey {
 		b := rapid.SliceOfN(rapid.Byte(), hash_comm.DigestSize, hash_comm.DigestSize).Draw(t, "commitment key bytes")
 		var out hash_comm.CommitmentKey
 		copy(out[:], b)
-		return out
+		return &out
 	})
 }
 
@@ -44,11 +44,11 @@ func WitnessGenerator() *rapid.Generator[hash_comm.Witness] {
 	})
 }
 
-func CommitmentKeyPropertySuite() *properties.CommitmentKeyProperties[hash_comm.CommitmentKey, hash_comm.Message, hash_comm.Witness, hash_comm.Commitment] {
-	return &properties.CommitmentKeyProperties[hash_comm.CommitmentKey, hash_comm.Message, hash_comm.Witness, hash_comm.Commitment]{
-		PRNG:                   prng.PRNGFuncTypeErase(pcg.NewRandomised),
-		CommitmentKeyGenerator: CommitmentKeyGenerator(),
-		MessageGenerator:       MessageGenerator(),
+func CommitmentKeyPropertySuite() *properties.CommitmentKeyProperties[*hash_comm.CommitmentKey, hash_comm.Message, hash_comm.Witness, hash_comm.Commitment] {
+	return &properties.CommitmentKeyProperties[*hash_comm.CommitmentKey, hash_comm.Message, hash_comm.Witness, hash_comm.Commitment]{
+		PRNG:             prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		KeyGenerator:     CommitmentKeyGenerator(),
+		MessageGenerator: MessageGenerator(),
 		MessagesAreEqual: func(m1, m2 hash_comm.Message) bool {
 			return bytes.Equal(m1, m2)
 		},

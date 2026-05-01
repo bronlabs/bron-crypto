@@ -29,9 +29,10 @@ type CommitmentKey[K CommitmentKey[K, M, W, C], M Message, W Witness, C Commitme
 	base.Equatable[K]
 }
 
-type TrapdoorKey[K TrapdoorKey[K, M, W, C], M Message, W Witness, C Commitment[C]] interface {
-	CommitmentKey[K, M, W, C]
-	Equivocate(message M, witness W, newMessage M, prng io.Reader) (W, error)
+type TrapdoorKey[K CommitmentKey[K, M, W, C], T TrapdoorKey[K, T, M, W, C], M Message, W Witness, C Commitment[C]] interface {
+	CommitmentKey[T, M, W, C]
+	Export() K
+	Equivocate(message M, witness W, newMessage M) (W, error)
 }
 
 type Homomorphic[M Message, W Witness, C Commitment[C], S any] interface {
@@ -41,12 +42,16 @@ type Homomorphic[M Message, W Witness, C Commitment[C], S any] interface {
 	WitnessOpInv(W) (W, error)
 	WitnessScalarOp(W, S) (W, error)
 
+	MessageOp(first, second M, rest ...M) (M, error)
+	MessageOpInv(M) (M, error)
+	MessageScalarOp(M, S) (M, error)
+
 	CommitmentOp(first, second C, rest ...C) (C, error)
-	CommitmentOpInv(W) (C, error)
+	CommitmentOpInv(C) (C, error)
 	CommitmentScalarOp(C, S) (C, error)
 
 	ReRandomise(commitment C, witnessShift W) (C, error)
-	CommitmentShift(C, M) (C, error)
+	Shift(C, M) (C, error)
 }
 
 type HomomorphicCommitmentKey[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any] interface {
@@ -54,8 +59,8 @@ type HomomorphicCommitmentKey[K HomomorphicCommitmentKey[K, M, W, C, S], M Messa
 	Homomorphic[M, W, C, S]
 }
 
-type HomomorphicTrapdoorKey[K HomomorphicTrapdoorKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any] interface {
-	TrapdoorKey[K, M, W, C]
+type HomomorphicTrapdoorKey[K HomomorphicCommitmentKey[K, M, W, C, S], T HomomorphicTrapdoorKey[K, T, M, W, C, S], M Message, W Witness, C Commitment[C], S any] interface {
+	TrapdoorKey[K, T, M, W, C]
 	Homomorphic[M, W, C, S]
 }
 
@@ -78,7 +83,7 @@ type GroupHomomorphic[
 
 	MessageGroup() MG
 	WitnessGroup() WG
-	CommitmentsGroup() CG
+	CommitmentGroup() CG
 }
 
 type GroupHomomorphicCommitmentKey[
@@ -97,12 +102,13 @@ type GroupHomomorphicCommitmentKey[
 	}, CG algebra.FiniteGroup[CV], CV algebra.GroupElement[CV],
 	S any,
 ] interface {
-	CommitmentKey[K, M, W, C]
+	HomomorphicCommitmentKey[K, M, W, C, S]
 	GroupHomomorphic[M, MG, MV, W, WG, WV, C, CG, CV, S]
 }
 
 type GroupHomomorphicTrapdoorKey[
-	K GroupHomomorphicTrapdoorKey[K, M, MG, MV, W, WG, WV, C, CG, CV, S],
+	K GroupHomomorphicCommitmentKey[K, M, MG, MV, W, WG, WV, C, CG, CV, S],
+	T GroupHomomorphicTrapdoorKey[K, T, M, MG, MV, W, WG, WV, C, CG, CV, S],
 	M interface {
 		Message
 		base.Transparent[MV]
@@ -117,6 +123,6 @@ type GroupHomomorphicTrapdoorKey[
 	}, CG algebra.FiniteGroup[CV], CV algebra.GroupElement[CV],
 	S any,
 ] interface {
-	TrapdoorKey[K, M, W, C]
+	HomomorphicTrapdoorKey[K, T, M, W, C, S]
 	GroupHomomorphic[M, MG, MV, W, WG, WV, C, CG, CV, S]
 }
