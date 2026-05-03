@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkCommittingWithCommitmentKey(b *testing.B) {
+func BenchmarkCommitting(b *testing.B) {
 	key, err := pedersen.SampleCommitmentKey(k256.NewCurve(), pcg.NewRandomised())
 	require.NoError(b, err)
 	trapdoor, err := pedersen.SampleTrapdoorKey(k256.NewCurve(), pcg.NewRandomised())
