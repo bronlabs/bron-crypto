@@ -5,9 +5,10 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -17,7 +18,7 @@ func SampleCommitmentKey(keyLen uint, messageSlack int, prng io.Reader) (*Commit
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to sample Pedersen parameters")
 	}
-	out, err := NewCommitmentKeyUnchecked(s, t, messageSlack)
+	out, err := newCommitmentKey(s, t, messageSlack)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create Pedersen commitment key")
 	}
@@ -71,14 +72,14 @@ func ExtractCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, labe
 			break
 		}
 	}
-	out, err := NewCommitmentKeyUnchecked(s.ForgetOrder(), t.ForgetOrder(), messageSlack)
+	out, err := newCommitmentKey(s.ForgetOrder(), t.ForgetOrder(), messageSlack)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Pedersen commitment key")
 	}
 	return out, nil
 }
 
-// NewCommitmentKeyUnchecked builds a Key directly from two generators without
+// newCommitmentKey builds a Key directly from two generators without
 // going through a transcript-based setup. It still rejects nil, identity, equal
 // or torsion-bearing generators, but it does not enforce that the discrete log
 // of h to base g is hidden from the caller — using this constructor outside of
@@ -98,7 +99,7 @@ func ExtractCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, labe
 // Setting messageSlack at the floor (2) keeps binding intact but voids the
 // soundness of any Σ-protocol layered on top, since extracted witnesses can
 // wrap mod ord(t).
-func NewCommitmentKeyUnchecked(s, t *znstar.RSAGroupElementUnknownOrder, messageSlack int) (*CommitmentKey, error) {
+func newCommitmentKey(s, t *znstar.RSAGroupElementUnknownOrder, messageSlack int) (*CommitmentKey, error) {
 	if s == nil || t == nil {
 		return nil, ErrInvalidArgument.WithMessage("generators cannot be nil")
 	}
@@ -134,20 +135,23 @@ func NewCommitmentKeyUnchecked(s, t *znstar.RSAGroupElementUnknownOrder, message
 	}
 
 	return &CommitmentKey{
-		KeyTrait: KeyTrait[*modular.SimpleModulus]{
-			s: s,
-			t: t,
+		s: s,
+		t: t,
 
-			messageSlack: messageSlack,
-			nBits:        nBits,
-			witnessUpper: witnessUpper,
-			witnessLower: witnessLower,
-		},
+		messageSlack: messageSlack,
+		nBits:        nBits,
+		witnessUpper: witnessUpper,
+		witnessLower: witnessLower,
 	}, nil
 }
 
 type CommitmentKey struct {
-	KeyTrait[*modular.SimpleModulus]
+	s, t *znstar.RSAGroupElementUnknownOrder
+
+	messageSlack int
+	nBits        int
+	witnessUpper *num.Int
+	witnessLower *num.Int
 }
 
 type commitmentKeyDTO struct {
@@ -156,12 +160,94 @@ type commitmentKeyDTO struct {
 	MessageSlack int                                 `cbor:"slack"`
 }
 
+func (k *CommitmentKey) SampleWitness(prng io.Reader) (*Witness, error) {
+	if prng == nil {
+		return nil, ErrIsNil.WithMessage("prng cannot be nil")
+	}
+	wv, err := num.Z().Random(k.witnessLower, k.witnessUpper, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to sample witness value")
+	}
+	witness, err := NewWitness(wv)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create witness from sampled value")
+	}
+	return witness, nil
+}
+
+func (k *CommitmentKey) WitnessInRange(witness *Witness) bool {
+	return witness != nil &&
+		k.witnessLower.IsLessThanOrEqual(witness.Value()) &&
+		base.Compare(witness.Value(), k.witnessUpper).IsLessThan()
+}
+
+func (k *CommitmentKey) MessageInRange(message *Message) bool {
+	return message != nil &&
+		message.Value().Abs().TrueLen()+k.messageSlack < k.nBits
+}
+
+func (k *CommitmentKey) CommitWithWitness(message *Message, witness *Witness) (*Commitment, error) {
+	if message == nil || witness == nil {
+		return nil, ErrIsNil.WithMessage("message and witness cannot be nil")
+	}
+	if !k.WitnessInRange(witness) {
+		return nil, ErrInvalidArgument.WithMessage("witness value out of range")
+	}
+	if !k.MessageInRange(message) {
+		return nil, ErrInvalidArgument.WithMessage("message value out of range")
+	}
+	out, err := NewCommitment(k.s.ExpI(message.Value()).Mul(k.t.ExpI(witness.Value())).ForgetOrder())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create commitment from message and witness")
+	}
+	return out, nil
+}
+
+func (k *CommitmentKey) Open(commitment *Commitment, message *Message, witness *Witness) error {
+	if err := internal.GenericOpen(k, commitment, message, witness); err != nil {
+		return errs.Wrap(err).WithMessage("failed to open commitment")
+	}
+	return nil
+}
+
+func (k *CommitmentKey) S() *znstar.RSAGroupElementUnknownOrder {
+	return k.s
+}
+
+func (k *CommitmentKey) T() *znstar.RSAGroupElementUnknownOrder {
+	return k.t
+}
+
+func (k *CommitmentKey) MessageSlack() int {
+	return k.messageSlack
+}
+
+func (k *CommitmentKey) Group() *znstar.RSAGroupUnknownOrder {
+	return k.s.Group()
+}
+
+func (k *CommitmentKey) Equal(other *CommitmentKey) bool {
+	if k == nil || other == nil {
+		return k == other
+	}
+	return k.s.Equal(other.s) &&
+		k.t.Equal(other.t) &&
+		k.s.IsUnknownOrder() == other.s.IsUnknownOrder() &&
+		k.messageSlack == other.messageSlack
+}
+
+func (k *CommitmentKey) HashCode() base.HashCode {
+	return k.s.HashCode().Combine(k.t.HashCode())
+}
+
 func (k *CommitmentKey) Clone() *CommitmentKey {
 	return &CommitmentKey{
-		KeyTrait: KeyTrait[*modular.SimpleModulus]{
-			s: k.s.Clone(),
-			t: k.t.Clone(),
-		},
+		s:            k.s.Clone(),
+		t:            k.t.Clone(),
+		messageSlack: k.messageSlack,
+		nBits:        k.nBits,
+		witnessUpper: k.witnessUpper.Clone(),
+		witnessLower: k.witnessLower.Clone(),
 	}
 }
 
@@ -183,7 +269,7 @@ func (k *CommitmentKey) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not unmarshal commitment key from CBOR")
 	}
-	kk, err := NewCommitmentKeyUnchecked(dto.S, dto.T, dto.MessageSlack)
+	kk, err := newCommitmentKey(dto.S, dto.T, dto.MessageSlack)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("invalid commitment key parameters")
 	}

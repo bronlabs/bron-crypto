@@ -29,6 +29,12 @@ type CommitmentKey[K CommitmentKey[K, M, W, C], M Message, W Witness, C Commitme
 	base.Equatable[K]
 }
 
+type BatchableCommitmentKey[K BatchableCommitmentKey[K, M, W, C], M Message, W Witness, C Commitment[C]] interface {
+	CommitmentKey[K, M, W, C]
+	BatchCommitWithWitness(messages []M, witnesses []W) ([]C, error)
+	BatchOpen(commitments []C, messages []M, witnesses []W) error
+}
+
 type TrapdoorKey[K CommitmentKey[K, M, W, C], T TrapdoorKey[K, T, M, W, C], M Message, W Witness, C Commitment[C]] interface {
 	CommitmentKey[T, M, W, C]
 	Export() K
@@ -54,16 +60,6 @@ type Homomorphic[M Message, W Witness, C Commitment[C], S any] interface {
 	Shift(C, M) (C, error)
 }
 
-type HomomorphicCommitmentKey[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any] interface {
-	CommitmentKey[K, M, W, C]
-	Homomorphic[M, W, C, S]
-}
-
-type HomomorphicTrapdoorKey[K HomomorphicCommitmentKey[K, M, W, C, S], T HomomorphicTrapdoorKey[K, T, M, W, C, S], M Message, W Witness, C Commitment[C], S any] interface {
-	TrapdoorKey[K, T, M, W, C]
-	Homomorphic[M, W, C, S]
-}
-
 type GroupHomomorphic[
 	M interface {
 		Message
@@ -84,6 +80,15 @@ type GroupHomomorphic[
 	MessageGroup() MG
 	WitnessGroup() WG
 	CommitmentGroup() CG
+}
+type HomomorphicCommitmentKey[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any] interface {
+	CommitmentKey[K, M, W, C]
+	Homomorphic[M, W, C, S]
+}
+
+type HomomorphicTrapdoorKey[K HomomorphicCommitmentKey[K, M, W, C, S], T HomomorphicTrapdoorKey[K, T, M, W, C, S], M Message, W Witness, C Commitment[C], S any] interface {
+	TrapdoorKey[K, T, M, W, C]
+	Homomorphic[M, W, C, S]
 }
 
 type GroupHomomorphicCommitmentKey[
