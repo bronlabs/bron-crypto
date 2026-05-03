@@ -7,6 +7,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -87,6 +91,72 @@ func (k *TrapdoorKey) CommitWithWitness(message *Message, witness *Witness) (*Co
 	out, err := NewCommitment(t.ExpI(message.m.Mul(k.lambda.Lift()).Add(witness.r)).ForgetOrder())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create commitment from message and witness")
+	}
+	return out, nil
+}
+
+func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitment) (*Commitment, error) {
+	if first == nil || second == nil {
+		return nil, ErrIsNil.WithMessage("first and second commitments cannot be nil")
+	}
+	firstValue, err := first.Value().LearnOrder(k.group)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not learn order of first commitment value")
+	}
+	secondValue, err := second.Value().LearnOrder(k.group)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not learn order of second commitment value")
+	}
+	restValues, err := sliceutils.MapOrError(rest, func(w *Commitment) (*znstar.RSAGroupElementKnownOrder, error) {
+		if utils.IsNil(w) {
+			return nil, commitments.ErrIsNil.WithMessage("object must not be nil")
+		}
+		out, err := w.Value().LearnOrder(k.group)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("could not learn order of commitment value")
+		}
+		return out, nil
+	})
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid commitment in rest commitments")
+	}
+	outValue, err := internal.OpValues(firstValue, secondValue, restValues...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to combine commitment values")
+	}
+	out, err := NewCommitment(outValue.ForgetOrder())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create new commitment from combined value")
+	}
+	return out, nil
+}
+
+func (k *TrapdoorKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
+	if c == nil {
+		return nil, ErrIsNil.WithMessage("commitment cannot be nil")
+	}
+	value, err := c.Value().LearnOrder(k.group)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not learn order of commitment value")
+	}
+	out, err := NewCommitment(value.OpInv().ForgetOrder())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create new commitment from inverse value")
+	}
+	return out, nil
+}
+
+func (k *TrapdoorKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Commitment, error) {
+	if c == nil || scalar == nil {
+		return nil, ErrIsNil.WithMessage("commitment and scalar cannot be nil")
+	}
+	value, err := c.Value().LearnOrder(k.group)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not learn order of commitment value")
+	}
+	out, err := NewCommitment(value.ExpI(scalar).ForgetOrder())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create new commitment from scalar multiplied value")
 	}
 	return out, nil
 }
