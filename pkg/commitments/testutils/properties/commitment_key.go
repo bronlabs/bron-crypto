@@ -17,7 +17,7 @@ func NewCommitmentKeyProperties[K commitments.CommitmentKey[K, M, W, C], M commi
 	tb testing.TB,
 	prng func() io.Reader,
 	keyGenerator *rapid.Generator[K],
-	messageGenerator *MessageGenerator[M],
+	messageGenerator func(testing.TB, commitments.CommitmentKey[K, M, W, C]) *MessageGenerator[M],
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
 ) *CommitmentKeyProperties[K, M, W, C] {
@@ -39,7 +39,7 @@ func NewCommitmentKeyProperties[K commitments.CommitmentKey[K, M, W, C], M commi
 type CommitmentKeyProperties[K commitments.CommitmentKey[K, M, W, C], M commitments.Message, W commitments.Witness, C commitments.Commitment[C]] struct {
 	PRNG             func() io.Reader
 	KeyGenerator     *rapid.Generator[K]
-	MessageGenerator *MessageGenerator[M]
+	MessageGenerator func(testing.TB, commitments.CommitmentKey[K, M, W, C]) *MessageGenerator[M]
 
 	MessagesAreEqual  func(M, M) bool
 	WitnessesAreEqual func(W, W) bool
@@ -73,7 +73,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CommitOpenRoundtrip(t *testing.T) 
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -90,7 +90,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) SameMessageWitnessSameCommitment(t
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -109,7 +109,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) DifferentWitnessSameMessageDiffere
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness1, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -131,8 +131,8 @@ func (p *CommitmentKeyProperties[K, M, W, C]) SameWitnessDifferentMessageDiffere
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message1 := p.MessageGenerator.Draw(rt, "message1")
-		message2 := p.MessageGenerator.Filter(func(m M) bool {
+		message1 := p.MessageGenerator(t, key).Draw(rt, "message1")
+		message2 := p.MessageGenerator(t, key).Filter(func(m M) bool {
 			return !p.MessagesAreEqual(message1, m)
 		}).Draw(rt, "message2")
 
@@ -153,7 +153,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CantOpenWithWrongWitness(t *testin
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness1, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -179,8 +179,8 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CantOpenWithWrongMessage(t *testin
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message1 := p.MessageGenerator.Draw(rt, "message1")
-		message2 := p.MessageGenerator.Filter(func(m M) bool {
+		message1 := p.MessageGenerator(t, key).Draw(rt, "message1")
+		message2 := p.MessageGenerator(t, key).Filter(func(m M) bool {
 			return !p.MessagesAreEqual(message1, m)
 		}).Draw(rt, "message2")
 
@@ -203,7 +203,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CantOpenWithDifferentKey(t *testin
 			return !k.Equal(key1)
 		}).Draw(rt, "commitment key 2")
 
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key1).Draw(rt, "message")
 
 		witness, err := key1.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -225,7 +225,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) DifferentKeysSameMessageWitnessDif
 			return !k.Equal(key1)
 		}).Draw(rt, "commitment key 2")
 
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key1).Draw(rt, "message")
 
 		witness, err := key1.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -245,8 +245,8 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CantOpenWithDifferentCommitment(t 
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
 
-		message1 := p.MessageGenerator.Draw(rt, "message1")
-		message2 := p.MessageGenerator.Filter(func(m M) bool {
+		message1 := p.MessageGenerator(t, key).Draw(rt, "message1")
+		message2 := p.MessageGenerator(t, key).Filter(func(m M) bool {
 			return !p.MessagesAreEqual(message1, m)
 		}).Draw(rt, "message2")
 
@@ -282,7 +282,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CommitMatchesCommitWithWitness(t *
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		commitment, witness, err := commitments.Commit(key, message, p.PRNG())
 		require.NoError(t, err)
@@ -298,7 +298,7 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CommittingDoesntMutateAnything(t *
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -331,10 +331,10 @@ func NewHomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKe
 	tb testing.TB,
 	prng func() io.Reader,
 	keyGenerator *rapid.Generator[K],
-	messageGenerator *MessageGenerator[M],
+	messageGenerator func(tb testing.TB, key commitments.CommitmentKey[K, M, W, C]) *MessageGenerator[M],
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
-	scalarGenerator *rapid.Generator[S],
+	scalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S],
 ) *HomomorphicCommitmentKeyProperties[K, M, W, C, S] {
 	tb.Helper()
 	require.NotNil(tb, scalarGenerator)
@@ -346,7 +346,7 @@ func NewHomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKe
 
 type HomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKey[K, M, W, C, S], M commitments.Message, W commitments.Witness, C commitments.Commitment[C], S any] struct {
 	CommitmentKeyProperties[K, M, W, C]
-	ScalarGenerator *rapid.Generator[S]
+	ScalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S]
 }
 
 func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CheckAll(t *testing.T) {
@@ -362,8 +362,8 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentMultIsMess
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		m1 := p.MessageGenerator.Draw(rt, "message 1")
-		m2 := p.MessageGenerator.Draw(rt, "message 2")
+		m1 := p.MessageGenerator(t, key).Draw(rt, "message 1")
+		m2 := p.MessageGenerator(t, key).Draw(rt, "message 2")
 
 		w1, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -400,8 +400,8 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentScalarOpIs
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
-		scalar := p.ScalarGenerator.Draw(rt, "scalar")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+		scalar := p.ScalarGenerator(t, key).Draw(rt, "scalar")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -429,7 +429,7 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) ReRandomiseShiftsWit
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -455,8 +455,8 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CanShiftCommitmentBy
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
-		shift := p.MessageGenerator.Draw(rt, "shift")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+		shift := p.MessageGenerator(t, key).Draw(rt, "shift")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -494,26 +494,35 @@ func NewGroupHomomorphicCommitmentKeyProperties[
 	tb testing.TB,
 	prng func() io.Reader,
 	keyGenerator *rapid.Generator[K],
-	messageGenerator *MessageGenerator[M],
+	messageGenerator func(tb testing.TB, key commitments.CommitmentKey[K, M, W, C]) *MessageGenerator[M],
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
-	scalarGenerator *rapid.Generator[S],
-	commitmentGenerator *rapid.Generator[C],
+	scalarGenerator func(tb testing.TB, key commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S],
+	commitmentGenerator func(tb testing.TB, key commitments.CommitmentKey[K, M, W, C]) *rapid.Generator[C],
 	newMessage func(MV) (M, error),
 	newWitness func(WV) (W, error),
 	newCommitment func(CV) (C, error),
+	messageScalarOp func(testing.TB, M, S) M,
+	witnessScalarOp func(testing.TB, W, S) W,
+	commitmentScalarOp func(testing.TB, C, S) C,
 ) *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S] {
 	tb.Helper()
 	require.NotNil(tb, commitmentGenerator)
 	require.NotNil(tb, newMessage)
 	require.NotNil(tb, newWitness)
 	require.NotNil(tb, newCommitment)
+	require.NotNil(tb, messageScalarOp)
+	require.NotNil(tb, witnessScalarOp)
+	require.NotNil(tb, commitmentScalarOp)
 	return &GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]{
 		HomomorphicCommitmentKeyProperties: *NewHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator),
 		CommitmentGenerator:                commitmentGenerator,
 		NewMessage:                         newMessage,
 		NewWitness:                         newWitness,
 		NewCommitment:                      newCommitment,
+		MessageScalarOp:                    messageScalarOp,
+		WitnessScalarOp:                    witnessScalarOp,
+		CommitmentScalarOp:                 commitmentScalarOp,
 	}
 }
 
@@ -535,11 +544,15 @@ type GroupHomomorphicCommitmentKeyProperties[
 ] struct {
 	HomomorphicCommitmentKeyProperties[K, M, W, C, S]
 
-	CommitmentGenerator *rapid.Generator[C]
+	CommitmentGenerator func(tb testing.TB, key commitments.CommitmentKey[K, M, W, C]) *rapid.Generator[C]
 
 	NewMessage    func(MV) (M, error)
 	NewWitness    func(WV) (W, error)
 	NewCommitment func(CV) (C, error)
+
+	MessageScalarOp    func(testing.TB, M, S) M
+	WitnessScalarOp    func(testing.TB, W, S) W
+	CommitmentScalarOp func(testing.TB, C, S) C
 }
 
 func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) CheckAll(t *testing.T) {
@@ -549,10 +562,14 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	t.Run("CommitmentInvIsMessageInvWitnessInv", p.CommitmentInvIsMessageInvWitnessInv)
 	t.Run("WitnessOp", p.WitnessOp)
 	t.Run("WitnessOpInv", p.WitnessOpInv)
+	t.Run("WitnessScalarOpWorks", p.WitnessScalarOpWorks)
 	t.Run("MessageOp", p.MessageOp)
 	t.Run("MessageOpInv", p.MessageOpInv)
+	t.Run("MessageScalarOpWorks", p.MessageScalarOpWorks)
 	t.Run("CommitmentOp", p.CommitmentOp)
 	t.Run("CommitmentOpInv", p.CommitmentOpInv)
+	t.Run("CommitmentScalarOpWorks", p.CommitmentScalarOpWorks)
+	t.Run("CommitmentScalarOpIsMessageWitnessScalarOp", p.CommitmentScalarOpIsMessageWitnessScalarOp)
 }
 
 func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) CommitmentToZerosIsIdentity(t *testing.T) {
@@ -580,7 +597,7 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err)
@@ -647,11 +664,29 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	})
 }
 
+func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) WitnessScalarOpWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		witness, err := key.SampleWitness(p.PRNG())
+		require.NoError(t, err)
+
+		scalar := p.ScalarGenerator(t, key).Draw(rt, "scalar")
+
+		actual, err := key.WitnessScalarOp(witness, scalar)
+		require.NoError(t, err)
+
+		expected := p.WitnessScalarOp(t, witness, scalar)
+
+		require.True(t, p.WitnessesAreEqual(expected, actual))
+	})
+}
+
 func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) MessageOp(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		messages := rapid.SliceOfN(p.MessageGenerator, 2, 10).Draw(rt, "messages")
+		messages := rapid.SliceOfN(p.MessageGenerator(t, key), 2, 10).Draw(rt, "messages")
 		actual, err := key.MessageOp(messages[0], messages[1], messages[2:]...)
 		require.NoError(t, err)
 
@@ -670,7 +705,7 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		actual, err := key.MessageOpInv(message)
 		require.NoError(t, err)
@@ -683,11 +718,27 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	})
 }
 
+func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) MessageScalarOpWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+		scalar := p.ScalarGenerator(t, key).Draw(rt, "scalar")
+
+		actual, err := key.MessageScalarOp(message, scalar)
+		require.NoError(t, err)
+
+		expected := p.MessageScalarOp(t, message, scalar)
+
+		require.True(t, p.MessagesAreEqual(expected, actual))
+	})
+}
+
 func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) CommitmentOp(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		commitments := rapid.SliceOfN(p.CommitmentGenerator, 2, 10).Draw(rt, "commitments")
+		commitments := rapid.SliceOfN(p.CommitmentGenerator(t, key), 2, 10).Draw(rt, "commitments")
 		actual, err := key.CommitmentOp(commitments[0], commitments[1], commitments[2:]...)
 		require.NoError(t, err)
 
@@ -706,7 +757,7 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		commitment := p.CommitmentGenerator.Draw(rt, "commitment")
+		commitment := p.CommitmentGenerator(t, key).Draw(rt, "commitment")
 
 		actual, err := key.CommitmentOpInv(commitment)
 		require.NoError(t, err)
@@ -716,5 +767,50 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 		require.NoError(t, err)
 
 		require.True(t, expected.Equal(actual))
+	})
+}
+
+func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) CommitmentScalarOpWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		commitment := p.CommitmentGenerator(t, key).Draw(rt, "commitment")
+		scalar := p.ScalarGenerator(t, key).Draw(rt, "scalar")
+
+		actual, err := key.CommitmentScalarOp(commitment, scalar)
+		require.NoError(t, err)
+
+		expected := p.CommitmentScalarOp(t, commitment, scalar)
+
+		require.True(t, expected.Equal(actual))
+	})
+}
+
+func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) CommitmentScalarOpIsMessageWitnessScalarOp(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+		scalar := p.ScalarGenerator(t, key).Draw(rt, "scalar")
+
+		witness, err := key.SampleWitness(p.PRNG())
+		require.NoError(t, err)
+
+		commitment, err := key.CommitWithWitness(message, witness)
+		require.NoError(t, err)
+
+		messageScalar, err := key.MessageScalarOp(message, scalar)
+		require.NoError(t, err)
+
+		witnessScalar, err := key.WitnessScalarOp(witness, scalar)
+		require.NoError(t, err)
+
+		commitmentScalarExpected, err := key.CommitWithWitness(messageScalar, witnessScalar)
+		require.NoError(t, err)
+
+		commitmentScalarActual, err := key.CommitmentScalarOp(commitment, scalar)
+		require.NoError(t, err)
+
+		require.True(t, commitmentScalarExpected.Equal(commitmentScalarActual))
 	})
 }

@@ -15,22 +15,18 @@ func NewTrapdoorKeyProperties[K commitments.CommitmentKey[K, M, W, C], T commitm
 	tb testing.TB,
 	prng func() io.Reader,
 	keyGenerator *rapid.Generator[T],
-	messageGenerator *MessageGenerator[M],
+	messageGenerator func(testing.TB, commitments.CommitmentKey[T, M, W, C]) *MessageGenerator[M],
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
-	commitmentKeyGenerator *rapid.Generator[K],
 ) *TrapdoorKeyProperties[K, T, M, W, C] {
 	tb.Helper()
-	require.NotNil(tb, commitmentKeyGenerator)
 	return &TrapdoorKeyProperties[K, T, M, W, C]{
 		CommitmentKeyProperties: *NewCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual),
-		CommitmentKeyGenerator:  commitmentKeyGenerator,
 	}
 }
 
 type TrapdoorKeyProperties[K commitments.CommitmentKey[K, M, W, C], T commitments.TrapdoorKey[K, T, M, W, C], M commitments.Message, W commitments.Witness, C commitments.Commitment[C]] struct {
 	CommitmentKeyProperties[T, M, W, C]
-	CommitmentKeyGenerator *rapid.Generator[K]
 }
 
 func (p *TrapdoorKeyProperties[K, T, M, W, C]) CheckAll(t *testing.T) {
@@ -46,14 +42,14 @@ func (p *TrapdoorKeyProperties[K, T, M, W, C]) CanEquivocate(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "trapdoor key")
-		message := p.MessageGenerator.Draw(rt, "message")
-		alternateMessage := p.MessageGenerator.Filter(func(m M) bool { return !p.MessagesAreEqual(m, message) }).Draw(rt, "alternate message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+		alternateMessage := p.MessageGenerator(t, key).Filter(func(m M) bool { return !p.MessagesAreEqual(m, message) }).Draw(rt, "alternate message")
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err, "failed to sample witness")
 		commitment, err := key.CommitWithWitness(message, witness)
 		require.NoError(t, err, "failed to compute commitment")
 
-		alternateWitness, err := key.Equivocate(message, witness, alternateMessage)
+		alternateWitness, err := key.Equivocate(message, witness, alternateMessage, p.PRNG())
 		require.NoError(t, err, "failed to compute alternate witness")
 
 		err = key.Open(commitment, alternateMessage, alternateWitness)
@@ -66,12 +62,12 @@ func (p *TrapdoorKeyProperties[K, T, M, W, C]) EquivocateChangesWitnessForDiffer
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "trapdoor key")
 
-		message := p.MessageGenerator.Draw(rt, "message")
-		alternateMessage := p.MessageGenerator.Filter(func(m M) bool { return !p.MessagesAreEqual(m, message) }).Draw(rt, "alternate message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+		alternateMessage := p.MessageGenerator(t, key).Filter(func(m M) bool { return !p.MessagesAreEqual(m, message) }).Draw(rt, "alternate message")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err, "failed to sample witness")
-		alternateWitness, err := key.Equivocate(message, witness, alternateMessage)
+		alternateWitness, err := key.Equivocate(message, witness, alternateMessage, p.PRNG())
 		require.NoError(t, err, "failed to compute alternate witness")
 
 		require.False(t, p.WitnessesAreEqual(witness, alternateWitness), "witness should change when equivocating to a different message")
@@ -83,11 +79,11 @@ func (p *TrapdoorKeyProperties[K, T, M, W, C]) EquivocateDoesntChangeWitnessForS
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "trapdoor key")
 
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
 
 		witness, err := key.SampleWitness(p.PRNG())
 		require.NoError(t, err, "failed to sample witness")
-		alternateWitness, err := key.Equivocate(message, witness, message)
+		alternateWitness, err := key.Equivocate(message, witness, message, p.PRNG())
 		require.NoError(t, err, "failed to compute alternate witness")
 
 		require.True(t, p.WitnessesAreEqual(witness, alternateWitness), "witness should not change when equivocating to the same message")
@@ -98,7 +94,7 @@ func (p *TrapdoorKeyProperties[K, T, M, W, C]) CanExportCommitmentKey(t *testing
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		trapdoorKey := p.KeyGenerator.Draw(rt, "trapdoor key")
-		message := p.MessageGenerator.Draw(rt, "message")
+		message := p.MessageGenerator(t, trapdoorKey).Draw(rt, "message")
 		witness, err := trapdoorKey.SampleWitness(p.PRNG())
 		require.NoError(t, err, "failed to sample witness")
 		commitment, err := trapdoorKey.CommitWithWitness(message, witness)
@@ -124,16 +120,15 @@ func NewHomomorphicTrapdoorKeyProperties[K commitments.HomomorphicCommitmentKey[
 	tb testing.TB,
 	prng func() io.Reader,
 	keyGenerator *rapid.Generator[T],
-	messageGenerator *MessageGenerator[M],
+	messageGenerator func(testing.TB, commitments.CommitmentKey[T, M, W, C]) *MessageGenerator[M],
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
-	scalarGenerator *rapid.Generator[S],
-	commitmentKeyGenerator *rapid.Generator[K],
+	scalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[T, M, W, C, S]) *rapid.Generator[S],
 ) *HomomorphicTrapdoorKeyProperties[K, T, M, W, C, S] {
 	tb.Helper()
 	require.NotNil(tb, scalarGenerator)
 	return &HomomorphicTrapdoorKeyProperties[K, T, M, W, C, S]{
-		TrapdoorKeyProperties:              *NewTrapdoorKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, commitmentKeyGenerator),
+		TrapdoorKeyProperties:              *NewTrapdoorKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual),
 		HomomorphicCommitmentKeyProperties: *NewHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator),
 	}
 }
@@ -169,23 +164,25 @@ func NewGroupHomomorphicTrapdoorKeyProperties[
 	tb testing.TB,
 	prng func() io.Reader,
 	keyGenerator *rapid.Generator[T],
-	messageGenerator *MessageGenerator[M],
+	messageGenerator func(testing.TB, commitments.CommitmentKey[T, M, W, C]) *MessageGenerator[M],
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
-	scalarGenerator *rapid.Generator[S],
-	commitmentGenerator *rapid.Generator[C],
+	scalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[T, M, W, C, S]) *rapid.Generator[S],
+	commitmentGenerator func(testing.TB, commitments.CommitmentKey[T, M, W, C]) *rapid.Generator[C],
 	newMessage func(MV) (M, error),
 	newWitness func(WV) (W, error),
 	newCommitment func(CV) (C, error),
-	commitmentKeyGenerator *rapid.Generator[K],
+	messageScalarOp func(testing.TB, M, S) M,
+	witnessScalarOp func(testing.TB, W, S) W,
+	commitmentScalarOp func(testing.TB, C, S) C,
 ) *GroupHomomorphicTrapdoorKeyProperties[K, T, M, MG, MV, W, WG, WV, C, CG, CV, S] {
 	tb.Helper()
 	require.NotNil(tb, newMessage)
 	require.NotNil(tb, newWitness)
 	require.NotNil(tb, newCommitment)
 	return &GroupHomomorphicTrapdoorKeyProperties[K, T, M, MG, MV, W, WG, WV, C, CG, CV, S]{
-		HomomorphicTrapdoorKeyProperties:        *NewHomomorphicTrapdoorKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, commitmentKeyGenerator),
-		GroupHomomorphicCommitmentKeyProperties: *NewGroupHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, commitmentGenerator, newMessage, newWitness, newCommitment),
+		HomomorphicTrapdoorKeyProperties:        *NewHomomorphicTrapdoorKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator),
+		GroupHomomorphicCommitmentKeyProperties: *NewGroupHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, commitmentGenerator, newMessage, newWitness, newCommitment, messageScalarOp, witnessScalarOp, commitmentScalarOp),
 	}
 }
 

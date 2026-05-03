@@ -76,7 +76,7 @@ func (t *TrapdoorKey[E, S]) CommitWithWitness(message *Message[S], witness *Witn
 	return out, nil
 }
 
-func (t *TrapdoorKey[E, S]) Equivocate(message *Message[S], witness *Witness[S], newMessage *Message[S]) (*Witness[S], error) {
+func (t *TrapdoorKey[E, S]) Equivocate(message *Message[S], witness *Witness[S], newMessage *Message[S], _ io.Reader) (*Witness[S], error) {
 	if message == nil || witness == nil || newMessage == nil {
 		return nil, ErrIsNil.WithMessage("message, witness, and new message must not be nil")
 	}

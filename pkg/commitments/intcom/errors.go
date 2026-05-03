@@ -1,4 +1,4 @@
-package boundedintcom
+package intcom
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"

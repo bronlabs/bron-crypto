@@ -38,7 +38,7 @@ type BatchableCommitmentKey[K BatchableCommitmentKey[K, M, W, C], M Message, W W
 type TrapdoorKey[K CommitmentKey[K, M, W, C], T TrapdoorKey[K, T, M, W, C], M Message, W Witness, C Commitment[C]] interface {
 	CommitmentKey[T, M, W, C]
 	Export() K
-	Equivocate(message M, witness W, newMessage M) (W, error)
+	Equivocate(message M, witness W, newMessage M, prng io.Reader) (W, error) // prng is needed to correct output witness' distribution if needed.
 }
 
 type Homomorphic[M Message, W Witness, C Commitment[C], S any] interface {

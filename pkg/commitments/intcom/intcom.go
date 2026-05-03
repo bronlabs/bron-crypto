@@ -1,4 +1,4 @@
-package boundedintcom
+package intcom
 
 import (
 	"io"
@@ -134,6 +134,10 @@ func (c *Commitment) HashCode() base.HashCode {
 	return c.v.HashCode()
 }
 
+func (c *Commitment) Clone() *Commitment {
+	return &Commitment{v: c.v.Clone()}
+}
+
 func (c *Commitment) MarshalCBOR() ([]byte, error) {
 	dto := &commitmentDTO{
 		V: c.v,
@@ -188,6 +192,10 @@ func (w *Witness) HashCode() base.HashCode {
 	return w.r.HashCode()
 }
 
+func (w *Witness) Clone() *Witness {
+	return &Witness{r: w.r.Clone()}
+}
+
 func (w *Witness) MarshalCBOR() ([]byte, error) {
 	dto := &witnessDTO{
 		R: w.r,
@@ -240,6 +248,10 @@ func (m *Message) Equal(other *Message) bool {
 
 func (m *Message) HashCode() base.HashCode {
 	return m.m.HashCode()
+}
+
+func (m *Message) Clone() *Message {
+	return &Message{m: m.m.Clone()}
 }
 
 func (m *Message) MarshalCBOR() ([]byte, error) {
