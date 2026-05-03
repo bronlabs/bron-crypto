@@ -29,12 +29,6 @@ type CommitmentKey[K CommitmentKey[K, M, W, C], M Message, W Witness, C Commitme
 	base.Equatable[K]
 }
 
-type BatchableCommitmentKey[K BatchableCommitmentKey[K, M, W, C], M Message, W Witness, C Commitment[C]] interface {
-	CommitmentKey[K, M, W, C]
-	BatchCommitWithWitness(messages []M, witnesses []W) ([]C, error)
-	BatchOpen(commitments []C, messages []M, witnesses []W) error
-}
-
 type TrapdoorKey[K CommitmentKey[K, M, W, C], T TrapdoorKey[K, T, M, W, C], M Message, W Witness, C Commitment[C]] interface {
 	CommitmentKey[T, M, W, C]
 	Export() K
