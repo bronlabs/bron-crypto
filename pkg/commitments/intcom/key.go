@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
+	"golang.org/x/sync/errgroup"
 )
 
 func SampleCommitmentKey(keyLen uint, prng io.Reader) (*CommitmentKey, error) {
@@ -36,21 +37,41 @@ func ExtractCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, labe
 		return nil, ErrInvalidArgument.WithMessage("group cannot be nil")
 	}
 	var s, t *znstar.RSAGroupElement[A]
-	for {
-		sSqrt, err := ts.Extract(transcript, fmt.Sprintf("s_%s", label), group)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to extract sSqrt for pedersen key")
+	eg := errgroup.Group{}
+	eg.Go(func() error {
+		for {
+			counter := 0
+			sSqrt, err := ts.Extract(transcript, fmt.Sprintf("s_%s_%d", label, counter), group)
+			if err != nil {
+				return errs.Wrap(err).WithMessage("failed to extract sSqrt for pedersen key")
+			}
+			s = sSqrt.Mul(sSqrt)
+			if s.Value().Decrement().Nat().Coprime(group.Modulus().Nat()) {
+				break
+			}
+			counter++
 		}
-		tSqrt, err := ts.Extract(transcript, fmt.Sprintf("t_%s", label), group)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to extract tSqrt for pedersen key")
+		return nil
+	})
+	eg.Go(func() error {
+		for {
+			counter := 0
+			tSqrt, err := ts.Extract(transcript, fmt.Sprintf("t_%s_%d", label, counter), group)
+			if err != nil {
+				return errs.Wrap(err).WithMessage("failed to extract tSqrt for pedersen key")
+			}
+			t = tSqrt.Mul(tSqrt)
+			if t.Value().Decrement().Nat().Coprime(group.Modulus().Nat()) {
+				break
+			}
+			counter++
 		}
-		s = sSqrt.Mul(sSqrt)
-		t = tSqrt.Mul(tSqrt)
-		if s.Value().Decrement().Nat().Coprime(group.Modulus().Nat()) && t.Value().Decrement().Nat().Coprime(group.Modulus().Nat()) {
-			break
-		}
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to extract generators for pedersen key")
 	}
+
 	out, err := newCommitmentKey(s.ForgetOrder(), t.ForgetOrder())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Pedersen commitment key")
