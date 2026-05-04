@@ -8,22 +8,21 @@ import (
 
 func _[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]() {
 	var (
-		_ commitments.GroupHomomorphicScheme[
-			*pedersen.Key[E, S],
-			*pedersen.Witness[S], S,
-			*pedersen.Message[S], S,
-			*pedersen.Commitment[E, S], E,
-			*pedersen.Committer[E, S],
-			*pedersen.Verifier[E, S],
-			algebra.PrimeGroup[E, S],
-		] = (*pedersen.Scheme[E, S])(nil)
+		_ commitments.GroupHomomorphicCommitmentKey[
+			*pedersen.CommitmentKey[E, S],
+			*pedersen.Message[S], algebra.PrimeField[S], S,
+			*pedersen.Witness[S], algebra.PrimeField[S], S,
+			*pedersen.Commitment[E, S], algebra.PrimeGroup[E, S], E,
+			S,
+		] = (*pedersen.CommitmentKey[E, S])(nil)
 
-		_ commitments.ReRandomisableCommitment[
-			*pedersen.Commitment[E, S],
-			*pedersen.Witness[S],
-			*pedersen.Key[E, S],
-		] = (*pedersen.Commitment[E, S])(nil)
-
-		_ algebra.Actable[*pedersen.Commitment[E, S], *pedersen.Message[S]] = (*pedersen.Commitment[E, S])(nil)
+		_ commitments.GroupHomomorphicTrapdoorKey[
+			*pedersen.CommitmentKey[E, S],
+			*pedersen.TrapdoorKey[E, S],
+			*pedersen.Message[S], algebra.PrimeField[S], S,
+			*pedersen.Witness[S], algebra.PrimeField[S], S,
+			*pedersen.Commitment[E, S], algebra.PrimeGroup[E, S], E,
+			S,
+		] = (*pedersen.TrapdoorKey[E, S])(nil)
 	)
 }

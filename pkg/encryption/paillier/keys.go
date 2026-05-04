@@ -58,11 +58,7 @@ func (sk *PrivateKey) Group() *znstar.PaillierGroupKnownOrder {
 
 // Arithmetic returns the modular arithmetic instance for efficient computations mod n².
 func (sk *PrivateKey) Arithmetic() *modular.OddPrimeSquareFactors {
-	out, ok := sk.group.Arithmetic().(*modular.OddPrimeSquareFactors)
-	if !ok {
-		panic("expected modular.OddPrimeSquareFactors")
-	}
-	return out
+	return sk.group.Arithmetic()
 }
 
 // PublicKey derives and returns the corresponding public key.

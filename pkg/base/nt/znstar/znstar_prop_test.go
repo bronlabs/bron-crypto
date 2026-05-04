@@ -11,5 +11,5 @@ import (
 
 func UnitGenerator[U znstar.Unit[U]](t *testing.T, group znstar.UnitGroup[U]) *rapid.Generator[U] {
 	t.Helper()
-	return properties.UniformDomainGenerator(group)
+	return properties.UniformDomainGenerator(t, group)
 }

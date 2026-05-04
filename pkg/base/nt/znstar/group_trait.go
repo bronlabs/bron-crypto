@@ -71,6 +71,14 @@ func (g *UnitGroupTrait[A, W, WT]) Order() cardinal.Cardinal {
 	return g.arith.MultiplicativeOrder()
 }
 
+// IsUnknownOrder reports whether this group is being viewed as one of unknown
+// order (i.e. with the SimpleModulus arithmetic) or known order (with
+// OddPrimeFactors / OddPrimeSquareFactors).
+func (g *UnitGroupTrait[A, W, WT]) IsUnknownOrder() bool {
+	_, ok := any(g.arith).(*modular.SimpleModulus)
+	return ok
+}
+
 // OpIdentity is the multiplicative identity (i.e. 1), exposed under the
 // generic group-operation name expected by the algebra interfaces.
 func (g *UnitGroupTrait[A, W, WT]) OpIdentity() W {
@@ -337,10 +345,10 @@ func (*UnitGroupTrait[A, W, WT]) ScalarStructure() algebra.Structure[*num.Int] {
 	return num.Z()
 }
 
-// Arithmetic returns the opaque modular-arithmetic backend. The concrete
+// Arithmetic returns the modular-arithmetic backend. The concrete
 // type (SimpleModulus vs OddPrimeFactors vs OddPrimeSquareFactors)
 // determines whether the trapdoor view is active and whether CRT
 // acceleration is available.
-func (g *UnitGroupTrait[A, W, WT]) Arithmetic() modular.Arithmetic {
+func (g *UnitGroupTrait[A, W, WT]) Arithmetic() A {
 	return g.arith
 }
