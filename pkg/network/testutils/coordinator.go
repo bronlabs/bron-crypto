@@ -1,12 +1,14 @@
 package ntu
 
 import (
+	"context"
 	"maps"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 const messageBufferSize = 128
@@ -67,23 +69,40 @@ func (d *mockDelivery) Quorum() []sharing.ID {
 }
 
 // Send enqueues a message to the destination's channel.
-func (d *mockDelivery) Send(sharingID sharing.ID, payload []byte) error {
-	payloadClone := make([]byte, len(payload))
-	copy(payloadClone, payload)
+func (d *mockDelivery) Send(ctx context.Context, sharingID sharing.ID, payload []byte) error {
 	sendChan, ok := d.sendChannels[sharingID]
 	if !ok {
 		return errs.Wrap(network.ErrFailed).WithMessage("no channel for recipient")
 	}
+	if err := ctx.Err(); err != nil {
+		return errs.Wrap(err).WithMessage("context canceled while sending message")
+	}
 
-	sendChan <- deliveryMessage{
+	payloadClone := make([]byte, len(payload))
+	copy(payloadClone, payload)
+	msg := deliveryMessage{
 		From:    d.sharingID,
 		Payload: payloadClone,
 	}
-	return nil
+
+	select {
+	case <-ctx.Done():
+		return errs.Wrap(ctx.Err()).WithMessage("context canceled while sending message")
+	case sendChan <- msg:
+		return nil
+	}
 }
 
 // Receive blocks until a message is available for the party.
-func (d *mockDelivery) Receive() (from sharing.ID, payload []byte, err error) {
-	msg := <-d.receiveChannel
-	return msg.From, msg.Payload, nil
+func (d *mockDelivery) Receive(ctx context.Context) (from sharing.ID, payload []byte, err error) {
+	if err := ctx.Err(); err != nil {
+		return 0, nil, errs.Wrap(err).WithMessage("context canceled while receiving message")
+	}
+
+	select {
+	case <-ctx.Done():
+		return 0, nil, errs.Wrap(ctx.Err()).WithMessage("context canceled while receiving message")
+	case msg := <-d.receiveChannel:
+		return msg.From, msg.Payload, nil
+	}
 }

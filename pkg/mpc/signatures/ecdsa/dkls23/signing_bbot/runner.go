@@ -1,6 +1,7 @@
 package signing_bbot
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -39,12 +40,12 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	return &signRunner[P, B, S]{cosigner: cosigner, message: message}, nil
 }
 
-func (r *signRunner[P, B, S]) Run(rt *network.Router) (*dkls23.PartialSignature[P, B, S], error) {
+func (r *signRunner[P, B, S]) Run(ctx context.Context, rt *network.Router) (*dkls23.PartialSignature[P, B, S], error) {
 	r1bOut, r1uOut, err := r.cosigner.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bIn, r2uIn, err := exchange.Exchange(rt, r1CorrelationID, r.cosigner.ctx.Quorum(), r1bOut, r1uOut)
+	r2bIn, r2uIn, err := exchange.Exchange(ctx, rt, r1CorrelationID, r.cosigner.ctx.Quorum(), r1bOut, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
@@ -53,7 +54,7 @@ func (r *signRunner[P, B, S]) Run(rt *network.Router) (*dkls23.PartialSignature[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3bIn, r3uIn, err := exchange.Exchange(rt, r2CorrelationID, r.cosigner.ctx.Quorum(), r2bOut, r2uOut)
+	r3bIn, r3uIn, err := exchange.Exchange(ctx, rt, r2CorrelationID, r.cosigner.ctx.Quorum(), r2bOut, r2uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 messages")
 	}
@@ -62,7 +63,7 @@ func (r *signRunner[P, B, S]) Run(rt *network.Router) (*dkls23.PartialSignature[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
-	r4bIn, r4uIn, err := exchange.Exchange(rt, r3CorrelationID, r.cosigner.ctx.Quorum(), r3bOut, r3uOut)
+	r4bIn, r4uIn, err := exchange.Exchange(ctx, rt, r3CorrelationID, r.cosigner.ctx.Quorum(), r3bOut, r3uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 3 messages")
 	}

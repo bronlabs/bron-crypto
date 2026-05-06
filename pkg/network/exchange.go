@@ -1,6 +1,8 @@
 package network
 
 import (
+	"context"
+
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -8,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 )
 
-func SendUnicast[U Message[P], P any](rt *Router, correlationID string, messages RoundMessages[U, P]) error {
+func SendUnicast[U Message[P], P any](ctx context.Context, rt *Router, correlationID string, messages RoundMessages[U, P]) error {
 	messagesSerialized := make(map[sharing.ID][]byte)
 	for id, message := range messages.Iter() {
 		messageSerialized, err := serde.MarshalCBOR(message)
@@ -17,18 +19,18 @@ func SendUnicast[U Message[P], P any](rt *Router, correlationID string, messages
 		}
 		messagesSerialized[id] = messageSerialized
 	}
-	err := rt.SendTo(correlationID, messagesSerialized)
+	err := rt.SendTo(ctx, correlationID, messagesSerialized)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to send messages")
 	}
 	return nil
 }
 
-func ReceiveUnicast[U Message[P], P any](rt *Router, correlationID string, quorum Quorum) (RoundMessages[U, P], error) {
+func ReceiveUnicast[U Message[P], P any](ctx context.Context, rt *Router, correlationID string, quorum Quorum) (RoundMessages[U, P], error) {
 	coparties := quorum.Clone().Unfreeze()
 	coparties.Remove(rt.PartyID())
 
-	receivedMessagesSerialized, err := rt.ReceiveFrom(correlationID, coparties.List()...)
+	receivedMessagesSerialized, err := rt.ReceiveFrom(ctx, correlationID, coparties.List()...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to exchange messages")
 	}

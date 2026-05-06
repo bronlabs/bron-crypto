@@ -1,15 +1,17 @@
 package ntu
 
 import (
+	"context"
 	"maps"
 	"slices"
 	"sync"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 )
 
 // TestExecuteRunners concurrently executes the given runners with mock deliveries and collects their outputs.
@@ -24,7 +26,7 @@ func TestExecuteRunners[O any](tb testing.TB, runners map[sharing.ID]network.Run
 	for id, runner := range runners {
 		errGroup.Go(func() error {
 			rt := network.NewRouter(testCoordinator.DeliveryFor(id))
-			result, err := runner.Run(rt)
+			result, err := runner.Run(context.Background(), rt)
 			if err != nil {
 				return err
 			}
@@ -53,7 +55,7 @@ func TestExecuteRunnersWithQuorum[O any](tb testing.TB, quorum network.Quorum, r
 	for id, runner := range runners {
 		errGroup.Go(func() error {
 			rt := network.NewRouter(testCoordinator.DeliveryFor(id))
-			result, err := runner.Run(rt)
+			result, err := runner.Run(context.Background(), rt)
 			if err != nil {
 				return err
 			}
