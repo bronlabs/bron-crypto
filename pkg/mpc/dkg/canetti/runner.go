@@ -1,6 +1,7 @@
 package canetti
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -42,13 +43,13 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 // Run executes the protocol against the provided router.
-func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
+func (r *runner[G, S]) Run(ctx context.Context, rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	// r1
 	r1bOut, err := r.p.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bIn, err := exchange.BroadcastExchange(rt, r1CorrelationID, r.p.ctx.Quorum(), r1bOut)
+	r2bIn, err := exchange.BroadcastExchange(ctx, rt, r1CorrelationID, r.p.ctx.Quorum(), r1bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
@@ -58,7 +59,7 @@ func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3bIn, r3uIn, err := exchange.Exchange(rt, r2CorrelationID, r.p.ctx.Quorum(), r2bOut, r2uOut)
+	r3bIn, r3uIn, err := exchange.Exchange(ctx, rt, r2CorrelationID, r.p.ctx.Quorum(), r2bOut, r2uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 messages")
 	}
@@ -68,7 +69,7 @@ func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
-	r4bIn, err := exchange.BroadcastExchange(rt, r3CorrelationID, r.p.ctx.Quorum(), r3bOut)
+	r4bIn, err := exchange.BroadcastExchange(ctx, rt, r3CorrelationID, r.p.ctx.Quorum(), r3bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 3 messages")
 	}

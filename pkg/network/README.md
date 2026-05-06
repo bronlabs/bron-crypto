@@ -12,16 +12,16 @@ Utilities for coordinating multi-party protocols: session identifiers, message r
 
 ## Key Types
 
-- `Delivery`: user-supplied transport with `Send`/`Receive`, `PartyID`, and `Quorum`.
+- `Delivery`: user-supplied transport with context-aware `Send`/`Receive`, `PartyID`, and `Quorum`.
 - `Router`: correlation-aware shim over a `Delivery`; buffers unrelated messages for later retrieval.
-- `Runner`: interface for protocol executors (`Run(rt *Router)`).
+- `Runner`: interface for protocol executors (`Run(ctx context.Context, rt *Router)`).
 - `SID`: 32-byte session identifier derived via SHA3-256 over user-provided blobs.
 
 ## Typical Flow
 
 1. Implement `Delivery` (or use `testutils.MockCoordinator`) for your environment.
 2. Create a `Router` with `NewRouter(delivery)`.
-3. Exchange messages with `SendTo`/`ReceiveFrom` or use helpers like `SendUnicast`/`ReceiveUnicast`.
+3. Exchange messages with `SendTo`/`ReceiveFrom` or use helpers like `SendUnicast`/`ReceiveUnicast`, passing the caller's context.
 4. Compose more complex protocols via runners that accept a `*Router`.
 
 ## Notes
