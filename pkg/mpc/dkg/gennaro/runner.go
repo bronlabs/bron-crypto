@@ -15,6 +15,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
+const (
+	// ProtocolName identifies the Gennaro DKG runner in notifications.
+	ProtocolName = "Gennaro_DKG"
+)
+
 type runner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	party *Participant[G, S]
 }
@@ -29,32 +34,35 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 // Run executes the DKG rounds using the provided router and returns the final output.
-func (r *runner[G, S]) Run(ctx context.Context, rt *network.Router) (*mpc.BaseShard[G, S], error) {
+func (r *runner[G, S]) Run(ctx context.Context, rt *network.Router, notificationCallback network.NotificationCallback) (*mpc.BaseShard[G, S], error) {
 	// r1
 	r1OutB, r1OutU, err := r.party.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 1)
+
+	// r2
 	r2InB, r2InU, err := exchange.Exchange(ctx, rt, "GennaroDKGRound1", r.party.MSP().Shareholders(), r1OutB, r1OutU)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
-
-	// r2
 	r2OutB, err := r.party.Round2(r2InB, r2InU)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 2)
+
+	// r3
 	r3InB, err := exchange.BroadcastExchange(ctx, rt, "GennaroDKGRound2", r.party.MSP().Shareholders(), r2OutB)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
-
-	// r3
 	dkgOutput, err := r.party.Round3(r3InB)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 3)
 
 	return dkgOutput, nil
 }

@@ -16,6 +16,9 @@ import (
 )
 
 const (
+	// ProtocolName identifies the DKLS23 soft-spoken signing runner in notifications.
+	ProtocolName = "DKLS23_Signing_SoftSpoken"
+
 	r1CorrelationID = "DKLS23SignRound1"
 	r2CorrelationID = "DKLS23SignRound2"
 	r3CorrelationID = "DKLS23SignRound3"
@@ -41,46 +44,57 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	return &signRunner[P, B, S]{cosigner: cosigner, message: message}, nil
 }
 
-func (r *signRunner[P, B, S]) Run(ctx context.Context, rt *network.Router) (*dkls23.PartialSignature[P, B, S], error) {
+func (r *signRunner[P, B, S]) Run(ctx context.Context, rt *network.Router, notificationCallback network.NotificationCallback) (*dkls23.PartialSignature[P, B, S], error) {
+	// r1
 	r1uOut, err := r.cosigner.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 1)
+
+	// r2
 	r2uIn, err := exchange.UnicastExchange(ctx, rt, r1CorrelationID, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
-
 	r2uOut, err := r.cosigner.Round2(r2uIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 2)
+
+	// r3
 	r3uIn, err := exchange.UnicastExchange(ctx, rt, r2CorrelationID, r2uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 messages")
 	}
-
 	r3bOut, r3uOut, err := r.cosigner.Round3(r3uIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 3)
+
+	// r4
 	r4bIn, r4uIn, err := exchange.Exchange(ctx, rt, r3CorrelationID, r.cosigner.ctx.Quorum(), r3bOut, r3uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 3 messages")
 	}
-
 	r4bOut, r4uOut, err := r.cosigner.Round4(r4bIn, r4uIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 4")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 4)
+
+	// r5
 	r5bIn, r5uIn, err := exchange.Exchange(ctx, rt, r4CorrelationID, r.cosigner.ctx.Quorum(), r4bOut, r4uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 4 messages")
 	}
-
 	psig, err := r.cosigner.Round5(r5bIn, r5uIn, r.message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 5")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 5)
+
 	return psig, nil
 }

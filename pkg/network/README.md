@@ -14,7 +14,7 @@ Utilities for coordinating multi-party protocols: session identifiers, message r
 
 - `Delivery`: user-supplied transport with context-aware `Send`/`Receive`, `PartyID`, and `Quorum`.
 - `Router`: correlation-aware shim over a `Delivery`; buffers unrelated messages for later retrieval.
-- `Runner`: interface for protocol executors (`Run(ctx context.Context, rt *Router)`).
+- `Runner`: interface for protocol executors (`Run(ctx context.Context, rt *Router, notificationCallback NotificationCallback)`).
 - `SID`: 32-byte session identifier derived via SHA3-256 over user-provided blobs.
 
 ## Typical Flow
