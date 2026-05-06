@@ -1,6 +1,7 @@
 package signing_softspoken
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -40,12 +41,12 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	return &signRunner[P, B, S]{cosigner: cosigner, message: message}, nil
 }
 
-func (r *signRunner[P, B, S]) Run(rt *network.Router) (*dkls23.PartialSignature[P, B, S], error) {
+func (r *signRunner[P, B, S]) Run(ctx context.Context, rt *network.Router) (*dkls23.PartialSignature[P, B, S], error) {
 	r1uOut, err := r.cosigner.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2uIn, err := exchange.UnicastExchange(rt, r1CorrelationID, r1uOut)
+	r2uIn, err := exchange.UnicastExchange(ctx, rt, r1CorrelationID, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
@@ -54,7 +55,7 @@ func (r *signRunner[P, B, S]) Run(rt *network.Router) (*dkls23.PartialSignature[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3uIn, err := exchange.UnicastExchange(rt, r2CorrelationID, r2uOut)
+	r3uIn, err := exchange.UnicastExchange(ctx, rt, r2CorrelationID, r2uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 messages")
 	}
@@ -63,7 +64,7 @@ func (r *signRunner[P, B, S]) Run(rt *network.Router) (*dkls23.PartialSignature[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
-	r4bIn, r4uIn, err := exchange.Exchange(rt, r3CorrelationID, r.cosigner.ctx.Quorum(), r3bOut, r3uOut)
+	r4bIn, r4uIn, err := exchange.Exchange(ctx, rt, r3CorrelationID, r.cosigner.ctx.Quorum(), r3bOut, r3uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 3 messages")
 	}
@@ -72,7 +73,7 @@ func (r *signRunner[P, B, S]) Run(rt *network.Router) (*dkls23.PartialSignature[
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 4")
 	}
-	r5bIn, r5uIn, err := exchange.Exchange(rt, r4CorrelationID, r.cosigner.ctx.Quorum(), r4bOut, r4uOut)
+	r5bIn, r5uIn, err := exchange.Exchange(ctx, rt, r4CorrelationID, r.cosigner.ctx.Quorum(), r4bOut, r4uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 4 messages")
 	}

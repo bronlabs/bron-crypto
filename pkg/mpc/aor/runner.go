@@ -1,6 +1,7 @@
 package aor
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -26,13 +27,13 @@ type agreeOnRandomRunner struct {
 }
 
 // Run executes the three-round Agree-on-Random protocol over the provided message router.
-func (r *agreeOnRandomRunner) Run(rt *network.Router) ([]byte, error) {
+func (r *agreeOnRandomRunner) Run(ctx context.Context, rt *network.Router) ([]byte, error) {
 	// r1
 	r1Out, err := r.participant.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2In, err := exchange.BroadcastExchange(rt, "AgreeOnRandomRound1Broadcast", r.participant.quorum, r1Out)
+	r2In, err := exchange.BroadcastExchange(ctx, rt, "AgreeOnRandomRound1Broadcast", r.participant.quorum, r1Out)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
@@ -42,7 +43,7 @@ func (r *agreeOnRandomRunner) Run(rt *network.Router) ([]byte, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3In, err := exchange.BroadcastExchange(rt, "AgreeOnRandomRound2Broadcast", r.participant.quorum, r2Out)
+	r3In, err := exchange.BroadcastExchange(ctx, rt, "AgreeOnRandomRound2Broadcast", r.participant.quorum, r2Out)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}

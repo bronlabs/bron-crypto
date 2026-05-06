@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -34,7 +35,7 @@ func NewSessionRunner(id sharing.ID, quorum ds.Set[sharing.ID], prng io.Reader) 
 	return r, nil
 }
 
-func (r *runner) Run(rt *network.Router) (*Context, error) {
+func (r *runner) Run(ctx context.Context, rt *network.Router) (*Context, error) {
 	quorum := hashset.NewComparable(r.party.sortedQuorum...).Freeze()
 
 	// round 1
@@ -42,7 +43,7 @@ func (r *runner) Run(rt *network.Router) (*Context, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bi, err := exchange.BroadcastExchange(rt, r1CorrelationID, quorum, r1bo)
+	r2bi, err := exchange.BroadcastExchange(ctx, rt, r1CorrelationID, quorum, r1bo)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
@@ -52,11 +53,11 @@ func (r *runner) Run(rt *network.Router) (*Context, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3bi, err := exchange.BroadcastExchange(rt, r2CorrelationID, quorum, r2bo)
+	r3bi, err := exchange.BroadcastExchange(ctx, rt, r2CorrelationID, quorum, r2bo)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
-	r3ui, err := exchange.UnicastExchange(rt, r2CorrelationID, r2uo)
+	r3ui, err := exchange.UnicastExchange(ctx, rt, r2CorrelationID, r2uo)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange unicast")
 	}
@@ -66,15 +67,15 @@ func (r *runner) Run(rt *network.Router) (*Context, error) {
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
-	r4ui, err := exchange.UnicastExchange(rt, r3CorrelationID, r3uo)
+	r4ui, err := exchange.UnicastExchange(ctx, rt, r3CorrelationID, r3uo)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange unicast")
 	}
 
 	// round 4
-	ctx, err := r.party.Round4(r4ui)
+	sessionCtx, err := r.party.Round4(r4ui)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 4")
 	}
-	return ctx, nil
+	return sessionCtx, nil
 }

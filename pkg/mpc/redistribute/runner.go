@@ -1,6 +1,7 @@
 package redistribute
 
 import (
+	"context"
 	"io"
 	"slices"
 
@@ -41,18 +42,18 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 // Run executes the redistribution rounds over the provided router.
-func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
+func (r *runner[G, S]) Run(ctx context.Context, rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	// r1
 	r1bOut, r1uOut, err := r.participant.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r1bIn, err := exchange.BroadcastExchange(rt, r1CorrelationID, r.participant.ctx.Quorum(), r1bOut)
+	r1bIn, err := exchange.BroadcastExchange(ctx, rt, r1CorrelationID, r.participant.ctx.Quorum(), r1bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 broadcast")
 	}
 	if r1uOut != nil {
-		err = exchange.UnicastSend(rt, r1CorrelationID, r1uOut)
+		err = exchange.UnicastSend(ctx, rt, r1CorrelationID, r1uOut)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot send round 1 p2p")
 		}
@@ -62,7 +63,7 @@ func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	prevSenders := hashset.NewComparable(slices.Collect(r.participant.otherPrevShareholders())...).Freeze()
 	r1uIn := hashmap.NewComparable[sharing.ID, *Round1P2P[G, S]]().Freeze()
 	if r.participant.isPrevShareholder(r.participant.ctx.HolderID()) {
-		r1uIn, err = exchange.UnicastReceive[*Round1P2P[G, S], *Participant[G, S]](rt, r1CorrelationID, prevSenders)
+		r1uIn, err = exchange.UnicastReceive[*Round1P2P[G, S], *Participant[G, S]](ctx, rt, r1CorrelationID, prevSenders)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot receive round 1 p2p")
 		}
@@ -72,12 +73,12 @@ func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
 
-	r2bIn, err := exchange.BroadcastExchange(rt, r2CorrelationID, r.participant.ctx.Quorum(), r2bOut)
+	r2bIn, err := exchange.BroadcastExchange(ctx, rt, r2CorrelationID, r.participant.ctx.Quorum(), r2bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 broadcast")
 	}
 	if r2uOut != nil {
-		err = exchange.UnicastSend(rt, r2CorrelationID, r2uOut)
+		err = exchange.UnicastSend(ctx, rt, r2CorrelationID, r2uOut)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot send round 2 p2p")
 		}
@@ -86,7 +87,7 @@ func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
 	// r3
 	r2uIn := hashmap.NewComparable[sharing.ID, *Round2P2P[G, S]]().Freeze()
 	if r.participant.isNextShareholder(r.participant.ctx.HolderID()) {
-		r2uIn, err = exchange.UnicastReceive[*Round2P2P[G, S], *Participant[G, S]](rt, r2CorrelationID, prevSenders)
+		r2uIn, err = exchange.UnicastReceive[*Round2P2P[G, S], *Participant[G, S]](ctx, rt, r2CorrelationID, prevSenders)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot receive round 2 p2p")
 		}

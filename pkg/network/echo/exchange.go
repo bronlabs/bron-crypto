@@ -1,6 +1,8 @@
 package echo
 
 import (
+	"context"
+
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -9,12 +11,12 @@ import (
 )
 
 // ExchangeEchoBroadcast runs an echo broadcast: send, echo, and verify consistent payloads for selected parties.
-func ExchangeEchoBroadcast[B network.Message[P], P any](rt *network.Router, correlationID string, quorum network.Quorum, message B) (network.RoundMessages[B, P], error) {
+func ExchangeEchoBroadcast[B network.Message[P], P any](ctx context.Context, rt *network.Router, correlationID string, quorum network.Quorum, message B) (network.RoundMessages[B, P], error) {
 	r, err := NewEchoBroadcastRunner(rt.PartyID(), quorum, correlationID, message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create echo broadcast runner")
 	}
-	result, err := r.Run(rt)
+	result, err := r.Run(ctx, rt)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to run echo broadcast")
 	}

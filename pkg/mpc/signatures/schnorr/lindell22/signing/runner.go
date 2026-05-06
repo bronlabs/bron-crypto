@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -46,12 +47,12 @@ func NewRunner[
 	}, nil
 }
 
-func (r *signingRunner[GE, S, M]) Run(rt *network.Router) (*lindell22.PartialSignature[GE, S], error) {
+func (r *signingRunner[GE, S, M]) Run(ctx context.Context, rt *network.Router) (*lindell22.PartialSignature[GE, S], error) {
 	r1bOut, r1uOut, err := r.cosigner.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bIn, r2uIn, err := exchange.Exchange(rt, r1CorrelationID, r.cosigner.Quorum(), r1bOut, r1uOut)
+	r2bIn, r2uIn, err := exchange.Exchange(ctx, rt, r1CorrelationID, r.cosigner.Quorum(), r1bOut, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
@@ -60,7 +61,7 @@ func (r *signingRunner[GE, S, M]) Run(rt *network.Router) (*lindell22.PartialSig
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3bIn, err := exchange.BroadcastExchange(rt, r2CorrelationID, r.cosigner.Quorum(), r2bOut)
+	r3bIn, err := exchange.BroadcastExchange(ctx, rt, r2CorrelationID, r.cosigner.Quorum(), r2bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 messages")
 	}
