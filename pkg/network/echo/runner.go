@@ -31,7 +31,7 @@ func NewEchoBroadcastRunner[B network.Message[BP], BP any](sharingID sharing.ID,
 }
 
 // Run executes the three-round echo broadcast protocol over the provided router.
-func (r *echoBroadcastRunner[B, BP]) Run(ctx context.Context, rt *network.Router) (network.RoundMessages[B, BP], error) {
+func (r *echoBroadcastRunner[B, BP]) Run(ctx context.Context, rt *network.Router, _ network.NotificationCallback) (network.RoundMessages[B, BP], error) {
 	// r1
 	r1Out, err := r.party.Round1(r.message)
 	if err != nil {

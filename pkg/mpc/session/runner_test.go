@@ -26,7 +26,7 @@ func TestHappyPathRunner(t *testing.T) {
 		runners[id] = r
 	}
 
-	contexts := ntu.TestExecuteRunners(t, runners)
+	contexts, notifications := ntu.TestExecuteRunners(t, runners)
 	t.Run("should agree on session id", func(t *testing.T) {
 		t.Parallel()
 		sid := contexts[quorum.List()[0]].SessionID()
@@ -58,5 +58,10 @@ func TestHappyPathRunner(t *testing.T) {
 			sum = sum.Op(share.Value())
 		}
 		require.True(t, sum.IsOpIdentity())
+	})
+
+	t.Run("notifications are consistent", func(t *testing.T) {
+		t.Parallel()
+		ntu.RequireRoundCompletedNotifications(t, notifications, quorum, session.ProtocolName, 4)
 	})
 }

@@ -10,11 +10,11 @@ import (
 )
 
 type stubRunner[O any] struct {
-	run func(context.Context, *network.Router) (O, error)
+	run func(context.Context, *network.Router, network.NotificationCallback) (O, error)
 }
 
-func (r stubRunner[O]) Run(ctx context.Context, rt *network.Router) (O, error) {
-	return r.run(ctx, rt)
+func (r stubRunner[O]) Run(ctx context.Context, rt *network.Router, notificationCallback network.NotificationCallback) (O, error) {
+	return r.run(ctx, rt, notificationCallback)
 }
 
 func TestSafeRunnerRun(t *testing.T) {
@@ -24,13 +24,13 @@ func TestSafeRunnerRun(t *testing.T) {
 		t.Parallel()
 
 		r, err := network.NewSafeRunner[int](stubRunner[int]{
-			run: func(context.Context, *network.Router) (int, error) {
+			run: func(context.Context, *network.Router, network.NotificationCallback) (int, error) {
 				return 7, nil
 			},
 		})
 		require.NoError(t, err)
 
-		got, err := r.Run(context.Background(), nil)
+		got, err := r.Run(context.Background(), nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, 7, got)
 	})
@@ -39,13 +39,13 @@ func TestSafeRunnerRun(t *testing.T) {
 		t.Parallel()
 
 		r, err := network.NewSafeRunner[int](stubRunner[int]{
-			run: func(context.Context, *network.Router) (int, error) {
+			run: func(context.Context, *network.Router, network.NotificationCallback) (int, error) {
 				panic("boom")
 			},
 		})
 		require.NoError(t, err)
 
-		got, err := r.Run(context.Background(), nil)
+		got, err := r.Run(context.Background(), nil, nil)
 		require.Error(t, err)
 		require.Zero(t, got)
 		require.Contains(t, err.Error(), "runner panicked")

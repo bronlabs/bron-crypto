@@ -16,7 +16,7 @@ func ExchangeEchoBroadcast[B network.Message[P], P any](ctx context.Context, rt 
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create echo broadcast runner")
 	}
-	result, err := r.Run(ctx, rt)
+	result, err := r.Run(ctx, rt, nil)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to run echo broadcast")
 	}

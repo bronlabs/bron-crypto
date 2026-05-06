@@ -6,12 +6,15 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -20,7 +23,6 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRunnerHappyPath(t *testing.T) {
@@ -59,7 +61,7 @@ func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 	ctxs := session_testutils.MakeRandomContexts(t, quorum, prng)
 
 	runners := tu.MakeGennaroDKGRunners(t, ctxs, ac, niCompiler, group)
-	dkgOutputs := ntu.TestExecuteRunners(t, runners)
+	dkgOutputs, notifications := ntu.TestExecuteRunners(t, runners)
 
 	t.Run("public materials are consistent", func(t *testing.T) {
 		t.Parallel()
@@ -143,5 +145,10 @@ func testRunnerHappyPath[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 		for s := 1; s < len(tapeSamples); s++ {
 			require.True(t, bytes.Equal(tapeSamples[s-1], tapeSamples[s]))
 		}
+	})
+
+	t.Run("notifications are consistent", func(t *testing.T) {
+		t.Parallel()
+		ntu.RequireRoundCompletedNotifications(t, notifications, quorum, gennaro.ProtocolName, 3)
 	})
 }
