@@ -3,6 +3,7 @@ package pcg
 import (
 	"encoding/binary"
 	mrand "math/rand/v2"
+	"sync"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -14,26 +15,33 @@ var (
 	ErrInvalidSaltLength = errs.New("salt length is not 8 bytes")
 )
 
+// Pcg is a non-cryptographic seedable PCG PRNG for tests.
 type Pcg struct {
-	v *mrand.PCG
+	mu sync.Mutex
+	v  *mrand.PCG
 }
 
 // New creates a new PCG PRNG seeded with the given seed and salt.
 func New(seed, salt uint64) *Pcg {
 	return &Pcg{
-		v: mrand.NewPCG(seed, salt),
+		mu: sync.Mutex{},
+		v:  mrand.NewPCG(seed, salt),
 	}
 }
 
 // NewRandomised creates a new PCG PRNG with random seed and salt.
 func NewRandomised() *Pcg {
 	return &Pcg{
-		v: mrand.NewPCG(mrand.Uint64(), mrand.Uint64()), //nolint:gosec // weak prng is intentional.
+		mu: sync.Mutex{},
+		v:  mrand.NewPCG(mrand.Uint64(), mrand.Uint64()), //nolint:gosec // weak prng is intentional.
 	}
 }
 
 // Read fills the provided byte slice p with random bytes.
 func (r *Pcg) Read(p []byte) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	n := len(p)
 	for len(p) >= 8 {
 		binary.LittleEndian.PutUint64(p[:8], r.v.Uint64())
@@ -54,6 +62,8 @@ func (r *Pcg) Seed(seed, salt []byte) error {
 	}
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.v.Seed(seedUint64, saltUint64)
 	return nil
 }

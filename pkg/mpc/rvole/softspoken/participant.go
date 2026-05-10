@@ -82,15 +82,23 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 	}, nil
 }
 
-// NewAlice returns a new Alice participant.
-func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader) (*Alice[P, B, S], error) {
-	p, err := newParticipant(ctx, suite, prng, 2)
+func newParticipantAndSoftspokenSuite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader, initialRound int) (*participant[P, B, S], *softspoken.Suite, error) {
+	p, err := newParticipant(ctx, suite, prng, initialRound)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
+		return nil, nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
 	}
 	softspokenSuite, err := softspoken.NewSuite(p.xi, suite.l+p.rho, suite.hashFunc)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
+		return nil, nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
+	}
+	return p, softspokenSuite, nil
+}
+
+// NewAlice returns a new Alice participant.
+func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader) (*Alice[P, B, S], error) {
+	p, softspokenSuite, err := newParticipantAndSoftspokenSuite(ctx, suite, prng, 2)
+	if err != nil {
+		return nil, err
 	}
 
 	sender, err := softspoken.NewSender(ctx, seeds, softspokenSuite, prng)
@@ -113,13 +121,9 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 
 // NewBob returns a new Bob participant.
 func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader) (*Bob[P, B, S], error) {
-	p, err := newParticipant(ctx, suite, prng, 1)
+	p, softspokenSuite, err := newParticipantAndSoftspokenSuite(ctx, suite, prng, 1)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
-	}
-	softspokenSuite, err := softspoken.NewSuite(p.xi, suite.l+p.rho, suite.hashFunc)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
+		return nil, err
 	}
 
 	receiver, err := softspoken.NewReceiver(ctx, seeds, softspokenSuite, prng)

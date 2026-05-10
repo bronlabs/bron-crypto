@@ -260,12 +260,25 @@ func (f *Fp) SetLimbs(data []uint64) (ok ct.Bool) {
 
 // SetBytes sets the receiver from bytes.
 func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
-	if len(data) != int(FpBytes) || (data[FpBytes-1]&0x80 != 0) {
+	if len(data) != int(FpBytes) {
+		return 0
+	}
+	if isCanonicalFpBytes(data) == ct.False {
 		return 0
 	}
 
 	fiatFpFromBytes(&f.v, (*[FpBytes]uint8)(data))
 	return 1
+}
+
+func isCanonicalFpBytes(data []byte) ct.Bool {
+	var lt, gt ct.Choice
+	for i := FpBytes - 1; i >= 0; i-- {
+		undecided := (lt | gt).Not()
+		lt |= undecided & ct.Less(data[i], FpModulus[i])
+		gt |= undecided & ct.Greater(data[i], FpModulus[i])
+	}
+	return lt
 }
 
 // SetBytesWide sets the receiver from wide bytes.

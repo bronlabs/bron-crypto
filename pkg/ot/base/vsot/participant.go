@@ -30,6 +30,26 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	prng      io.Reader
 }
 
+func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader, round int) (*participant[P, B, S], error) {
+	if suite == nil || ctx == nil || prng == nil {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
+	}
+	if ctx.Quorum().Size() != 2 {
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	}
+
+	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
+	sessionID := ctx.SessionID()
+	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	return &participant[P, B, S]{
+		ctx:       ctx,
+		copartyID: copartyID,
+		suite:     suite,
+		round:     round,
+		prng:      prng,
+	}, nil
+}
+
 func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
 	sessionID := p.ctx.SessionID()
 	digest, err := hashing.HashIndexLengthPrefixed(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), sessionID[:], b.ToCompressed(), a.ToCompressed(), data)
@@ -56,25 +76,14 @@ type senderState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 
 // NewSender creates a VSOT sender bound to the session, suite, transcript, and randomness source.
 func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Sender[P, B, S], error) {
-	if suite == nil || ctx == nil || prng == nil {
-		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
-	}
-	if ctx.Quorum().Size() != 2 {
-		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	p, err := newParticipant(ctx, suite, prng, 1)
+	if err != nil {
+		return nil, err
 	}
 
-	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
-	sessionID := ctx.SessionID()
-	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	s := &Sender[P, B, S]{
-		participant: participant[P, B, S]{
-			ctx:       ctx,
-			copartyID: copartyID,
-			suite:     suite,
-			round:     1,
-			prng:      prng,
-		},
-		state: senderState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
+		participant: *p,
+		state:       senderState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
 
 	return s, nil
@@ -99,25 +108,14 @@ type receiverState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 
 // NewReceiver creates a VSOT receiver bound to the session, suite, transcript, and randomness source.
 func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Receiver[P, B, S], error) {
-	if suite == nil || ctx == nil || prng == nil {
-		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
-	}
-	if ctx.Quorum().Size() != 2 {
-		return nil, ot.ErrInvalidArgument.WithMessage("invalid quorum size")
+	p, err := newParticipant(ctx, suite, prng, 2)
+	if err != nil {
+		return nil, err
 	}
 
-	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
-	sessionID := ctx.SessionID()
-	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	r := &Receiver[P, B, S]{
-		participant: participant[P, B, S]{
-			ctx:       ctx,
-			copartyID: copartyID,
-			suite:     suite,
-			round:     2,
-			prng:      prng,
-		},
-		state: receiverState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
+		participant: *p,
+		state:       receiverState[P, B, S]{}, //nolint:exhaustruct // zero value, populated during protocol
 	}
 
 	return r, nil

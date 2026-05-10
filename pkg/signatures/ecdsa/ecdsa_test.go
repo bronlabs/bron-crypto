@@ -44,6 +44,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	signature, err := signer.Sign(message[:])
 	require.NoError(t, err)
+	require.True(t, signature.IsNormalized())
 	verifier, err := scheme.Verifier()
 	require.NoError(t, err)
 	err = verifier.Verify(signature, pk, message[:])
@@ -249,8 +250,16 @@ func Test_RFC6979(t *testing.T) {
 		signature, err := signer.Sign([]byte(v.message))
 		require.NoError(t, err)
 
+		expectedSBytes, err := hex.DecodeString(v.s)
+		require.NoError(t, err)
+		expectedS, err := curve.ScalarField().FromBytes(expectedSBytes)
+		require.NoError(t, err)
+		expectedSignature, err := ecdsa.NewSignature(signature.R(), expectedS, nil)
+		require.NoError(t, err)
+		expectedSignature.Normalise()
+
 		require.Equal(t, v.r, strings.ToUpper(hex.EncodeToString(signature.R().Bytes())))
-		require.Equal(t, v.s, strings.ToUpper(hex.EncodeToString(signature.S().Bytes())))
+		require.Equal(t, strings.ToUpper(hex.EncodeToString(expectedSignature.S().Bytes())), strings.ToUpper(hex.EncodeToString(signature.S().Bytes())))
 	}
 }
 
@@ -301,7 +310,9 @@ func Test_VerifyNonMalleably(t *testing.T) {
 	defaultVerifier, err := scheme.Verifier()
 	require.NoError(t, err)
 	require.NoError(t, defaultVerifier.Verify(lowS, pk, message[:]), "default verifier must accept low-s")
-	require.NoError(t, defaultVerifier.Verify(highS, pk, message[:]), "default verifier accepts high-s (malleability baseline)")
+	err = defaultVerifier.Verify(highS, pk, message[:])
+	require.Error(t, err, "default verifier must reject high-s")
+	require.ErrorIs(t, err, signatures.ErrVerificationFailed)
 
 	nonMalleableVerifier, err := scheme.Verifier(ecdsa.VerifyNonMalleably[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
 	require.NoError(t, err)
@@ -310,4 +321,12 @@ func Test_VerifyNonMalleably(t *testing.T) {
 	err = nonMalleableVerifier.Verify(highS, pk, message[:])
 	require.Error(t, err, "non-malleable verifier must reject high-s")
 	require.ErrorIs(t, err, signatures.ErrVerificationFailed)
+
+	legacyVerifier, err := scheme.Verifier(ecdsa.AllowMalleableSignatures[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	require.NoError(t, err)
+	require.NoError(t, legacyVerifier.Verify(highS, pk, message[:]), "legacy verifier must accept high-s only by opt-in")
+
+	legacyVerifier, err = ecdsa.NewMalleableVerifier(suite)
+	require.NoError(t, err)
+	require.NoError(t, legacyVerifier.Verify(highS, pk, message[:]), "legacy verifier constructor must accept high-s")
 }

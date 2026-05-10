@@ -24,27 +24,69 @@ func ScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](out, pp *P, s [
 		PP(&res).Double(&res)
 		PP(&res).Double(&res)
 		w := (s[i] >> 4) & 0b1111
-		PP(&res).Add(&res, &precomputed[w])
+		var selected P
+		selectScalarMulWindow[PP](&selected, &precomputed, w)
+		PP(&res).Add(&res, &selected)
 
 		PP(&res).Double(&res)
 		PP(&res).Double(&res)
 		PP(&res).Double(&res)
 		PP(&res).Double(&res)
 		w = s[i] & 0b1111
-		PP(&res).Add(&res, &precomputed[w])
+		selectScalarMulWindow[PP](&selected, &precomputed, w)
+		PP(&res).Add(&res, &selected)
 	}
 
 	PP(out).Set(&res)
 }
 
-// MultiScalarMulLowLevel performs a Pippenger-style multi-scalar multiplication:
+func selectScalarMulWindow[PP GroupElementPtrLowLevel[PP, P], P any](out *P, precomputed *[16]P, w byte) {
+	PP(out).SetZero()
+	for i := range precomputed {
+		PP(out).Select(ct.Equal(w, byte(i)), out, &precomputed[i])
+	}
+}
+
+// MultiScalarMulLowLevel performs multi-scalar multiplication:
 //
 //	sum_i scalars[i] * points[i]
 //
-// using a fixed window size w.
+// This default path is constant-time with respect to scalar values: it uses
+// ScalarMulLowLevel for each scalar and never indexes or branches on scalar
+// bits. It assumes S.Bytes() is little-endian (LSB at index 0).
+func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
+	out *P,
+	points []*P,
+	scalars [][]byte,
+) {
+	n := len(points)
+	if n == 0 {
+		panic("MultiScalarMul: no points")
+	}
+	if n != len(scalars) {
+		panic("MultiScalarMul: number of points and scalars must be equal")
+	}
+
+	var acc P
+	PP(&acc).SetZero()
+	for i := range n {
+		var term P
+		ScalarMulLowLevel[PP](&term, points[i], scalars[i])
+		PP(&acc).Add(&acc, &term)
+	}
+	PP(out).Set(&acc)
+}
+
+// MultiScalarMulLowLevelVartimePublic performs a Pippenger-style multi-scalar multiplication:
+//
+//	sum_i scalars[i] * points[i]
+//
+// using a fixed window size w. This function is variable-time and may branch
+// and index by scalar bits. It is suitable only when every scalar is public,
+// such as batch verification coefficients.
 //
 // It assumes S.Bytes() is little-endian (LSB at index 0).
-func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
+func MultiScalarMulLowLevelVartimePublic[PP GroupElementPtrLowLevel[PP, P], P any](
 	out *P,
 	points []*P,
 	scalars [][]byte,
@@ -127,19 +169,14 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 		for range w {
 			PP(&acc).Add(&acc, &acc)
 		}
-		buckets := make([]PP, windowSize)
-		for i := range buckets {
-			var b P
-			PP(&b).SetZero()
-			buckets[i] = PP(&b)
-		}
+		buckets := make([]P, windowSize)
 		startBit := wIdx * w
 		for i := range n {
 			win := getWindow(scalarBytes[i], startBit)
 			if win == 0 {
 				continue
 			}
-			buckets[win].Add(buckets[win], points[i])
+			PP(&buckets[win]).Add(&buckets[win], points[i])
 		}
 
 		// Summation by running sum from highest bucket down.
@@ -148,8 +185,8 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 		var running P
 		PP(&running).SetZero()
 		for k := windowSize - 1; k > 0; k-- {
-			if isIdentity := buckets[k].IsZero(); isIdentity == ct.False {
-				PP(&running).Add(&running, buckets[k])
+			if isIdentity := PP(&buckets[k]).IsZero(); isIdentity == ct.False {
+				PP(&running).Add(&running, &buckets[k])
 			}
 			PP(&acc).Add(&acc, &running)
 		}

@@ -50,21 +50,21 @@ func NewShortKeyAggregator[
 	publicMaterial *boldyreva02.PublicMaterial[P1, FE1, P2, FE2, E, S],
 	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
 ) (*Aggregator[P1, FE1, P2, FE2, E, S], error) {
-	if curveFamily == nil {
-		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
-	}
-	if publicMaterial == nil {
-		return nil, ErrInvalidArgument.WithMessage("publicMaterial is nil")
-	}
-	scheme, err := bls.NewShortKeyScheme(curveFamily, bls.POP)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create BLS short key scheme")
-	}
-	out, err := newAggregator(scheme, publicMaterial, curveFamily.TwistedSubGroup(), rogueKeyAlg, bls.ShortKey)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create short key aggregator")
-	}
-	return out, nil
+	return newVariantAggregator[
+		P1, FE1, P2, FE2, E, S,
+		P1, FE1, P2, FE2,
+	](
+		curveFamily,
+		publicMaterial,
+		rogueKeyAlg,
+		bls.NewShortKeyScheme[P1, FE1, P2, FE2, E, S],
+		func(curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S]) curves.PairingFriendlyCurve[P2, FE2, P1, FE1, E, S] {
+			return curveFamily.TwistedSubGroup()
+		},
+		bls.ShortKey,
+		"failed to create BLS short key scheme",
+		"failed to create short key aggregator",
+	)
 }
 
 // NewLongKeyAggregator creates a new Aggregator for the long key variant of BLS signatures.
@@ -78,19 +78,52 @@ func NewLongKeyAggregator[
 	publicMaterial *boldyreva02.PublicMaterial[P2, FE2, P1, FE1, E, S],
 	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
 ) (*Aggregator[P2, FE2, P1, FE1, E, S], error) {
+	return newVariantAggregator[
+		P1, FE1, P2, FE2, E, S,
+		P2, FE2, P1, FE1,
+	](
+		curveFamily,
+		publicMaterial,
+		rogueKeyAlg,
+		bls.NewLongKeyScheme[P1, FE1, P2, FE2, E, S],
+		func(curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S]) curves.PairingFriendlyCurve[P1, FE1, P2, FE2, E, S] {
+			return curveFamily.SourceSubGroup()
+		},
+		bls.LongKey,
+		"failed to create BLS long key scheme",
+		"failed to create long key aggregator",
+	)
+}
+
+func newVariantAggregator[
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
+](
+	curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S],
+	publicMaterial *boldyreva02.PublicMaterial[PK, PKFE, SG, SGFE, E, S],
+	rogueKeyAlg bls.RogueKeyPreventionAlgorithm,
+	newScheme func(curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], bls.RogueKeyPreventionAlgorithm) (*bls.Scheme[PK, PKFE, SG, SGFE, E, S], error),
+	signatureSubGroup func(curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S]) curves.PairingFriendlyCurve[SG, SGFE, PK, PKFE, E, S],
+	variant bls.Variant,
+	schemeErrorMessage string,
+	aggregatorErrorMessage string,
+) (*Aggregator[PK, PKFE, SG, SGFE, E, S], error) {
 	if curveFamily == nil {
 		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
 	if publicMaterial == nil {
 		return nil, ErrInvalidArgument.WithMessage("publicMaterial is nil")
 	}
-	scheme, err := bls.NewLongKeyScheme(curveFamily, bls.POP)
+	scheme, err := newScheme(curveFamily, bls.POP)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create BLS long key scheme")
+		return nil, errs.Wrap(err).WithMessage(schemeErrorMessage)
 	}
-	out, err := newAggregator(scheme, publicMaterial, curveFamily.SourceSubGroup(), rogueKeyAlg, bls.LongKey)
+	out, err := newAggregator(scheme, publicMaterial, signatureSubGroup(curveFamily), rogueKeyAlg, variant)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create long key aggregator")
+		return nil, errs.Wrap(err).WithMessage(aggregatorErrorMessage)
 	}
 	return out, nil
 }

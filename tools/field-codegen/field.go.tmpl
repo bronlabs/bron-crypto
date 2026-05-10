@@ -3,6 +3,7 @@
 package {{ .Pkg }}
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"io"
 	"math/big"
@@ -55,12 +56,23 @@ func (f *{{- .TypeName }}) SetUint64(v uint64) {
 }
 
 func (f *{{- .TypeName }}) SetLimbs(data []uint64) (ok ct.Bool) {
-	{{ .FiatPrefix -}}ToMontgomery(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, (*{{- .FiatPrefix -}}NonMontgomeryDomainFieldElement)(data))
-	return 1
+	if len(data) != {{ .TypeName -}}Limbs {
+		return 0
+	}
+
+	var byteData [{{ .TypeName -}}Bytes]byte
+	for i, limb := range data {
+		binary.LittleEndian.PutUint64(byteData[8*i:8*(i+1)], limb)
+	}
+
+	return f.SetBytes(byteData[:])
 }
 
 func (f *{{- .TypeName }}) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != {{ .TypeName -}}Bytes {
+		return 0
+	}
+	if isCanonical{{ .TypeName }}Bytes(data) == ct.False {
 		return 0
 	}
 
@@ -68,6 +80,16 @@ func (f *{{- .TypeName }}) SetBytes(data []byte) (ok ct.Bool) {
 	{{ .FiatPrefix -}}FromBytes((*[{{ .TypeName -}}Limbs]uint64)(&nonMonty), (*[{{ .TypeName -}}Bytes]uint8)(data))
 	{{ .FiatPrefix -}}ToMontgomery(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &nonMonty)
 	return 1
+}
+
+func isCanonical{{ .TypeName }}Bytes(data []byte) ct.Bool {
+	var lt, gt ct.Choice
+	for i := {{ .TypeName -}}Bytes - 1; i >= 0; i-- {
+		undecided := (lt | gt).Not()
+		lt |= undecided & ct.Less(data[i], {{ .TypeName -}}Modulus[i])
+		gt |= undecided & ct.Greater(data[i], {{ .TypeName -}}Modulus[i])
+	}
+	return lt
 }
 
 func (f *{{- .TypeName }}) SetBytesWide(data []byte) (ok ct.Bool) {

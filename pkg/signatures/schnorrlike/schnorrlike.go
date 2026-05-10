@@ -173,7 +173,7 @@ func (pk *PublicKey[PKV, S]) UnmarshalCBOR(data []byte) error {
 
 // NewPrivateKey creates a Schnorr private key from a scalar value.
 // The scalar must be non-zero and the corresponding public key must be provided.
-// The public key should satisfy P = x·G where x is the private key scalar.
+// The public key must satisfy P = x·G where x is the private key scalar.
 func NewPrivateKey[PKV GroupElement[PKV, SKV], SKV Scalar[SKV]](value SKV, publicKey *PublicKey[PKV, SKV]) (*PrivateKey[PKV, SKV], error) {
 	if utils.IsNil(value) {
 		return nil, signatures.ErrInvalidArgument.WithMessage("value is nil")
@@ -183,6 +183,16 @@ func NewPrivateKey[PKV GroupElement[PKV, SKV], SKV Scalar[SKV]](value SKV, publi
 	}
 	if publicKey == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("publicKey is nil")
+	}
+	if utils.IsNil(publicKey.Value()) {
+		return nil, signatures.ErrInvalidArgument.WithMessage("publicKey value is nil")
+	}
+	group, err := algebra.StructureAs[Group[PKV, SKV]](publicKey.Value().Structure())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("public key structure is not supported")
+	}
+	if !group.ScalarBaseOp(value).Equal(publicKey.Value()) {
+		return nil, signatures.ErrFailed.WithMessage("private key doesn't match public key")
 	}
 	return &PrivateKey[PKV, SKV]{
 		PrivateKeyTrait: signatures.PrivateKeyTrait[PKV, SKV]{

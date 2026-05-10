@@ -73,9 +73,6 @@ func (m *Modulus) cacheMont() {
 }
 
 func (m *Modulus) ensureMont() {
-	if m.mont != nil {
-		return
-	}
 	m.once.Do(func() { m.cacheMont() })
 }
 

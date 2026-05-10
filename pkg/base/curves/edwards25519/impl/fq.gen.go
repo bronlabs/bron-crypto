@@ -3,6 +3,7 @@
 package impl
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"io"
 	"math/big"
@@ -55,12 +56,23 @@ func (f *Fq) SetUint64(v uint64) {
 }
 
 func (f *Fq) SetLimbs(data []uint64) (ok ct.Bool) {
-	fiatFqToMontgomery(&f.fiatFqMontgomeryDomainFieldElement, (*fiatFqNonMontgomeryDomainFieldElement)(data))
-	return 1
+	if len(data) != FqLimbs {
+		return 0
+	}
+
+	var byteData [FqBytes]byte
+	for i, limb := range data {
+		binary.LittleEndian.PutUint64(byteData[8*i:8*(i+1)], limb)
+	}
+
+	return f.SetBytes(byteData[:])
 }
 
 func (f *Fq) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != FqBytes {
+		return 0
+	}
+	if isCanonicalFqBytes(data) == ct.False {
 		return 0
 	}
 
@@ -68,6 +80,16 @@ func (f *Fq) SetBytes(data []byte) (ok ct.Bool) {
 	fiatFqFromBytes((*[FqLimbs]uint64)(&nonMonty), (*[FqBytes]uint8)(data))
 	fiatFqToMontgomery(&f.fiatFqMontgomeryDomainFieldElement, &nonMonty)
 	return 1
+}
+
+func isCanonicalFqBytes(data []byte) ct.Bool {
+	var lt, gt ct.Choice
+	for i := FqBytes - 1; i >= 0; i-- {
+		undecided := (lt | gt).Not()
+		lt |= undecided & ct.Less(data[i], FqModulus[i])
+		gt |= undecided & ct.Greater(data[i], FqModulus[i])
+	}
+	return lt
 }
 
 func (f *Fq) SetBytesWide(data []byte) (ok ct.Bool) {
@@ -108,7 +130,7 @@ func (f *Fq) SetRandom(prng io.Reader) (ok ct.Bool) {
 }
 
 func (f *Fq) Select(choice ct.Choice, z, nz *Fq) {
-	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement),fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
+	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement), fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
 }
 
 func (f *Fq) Add(lhs, rhs *Fq) {

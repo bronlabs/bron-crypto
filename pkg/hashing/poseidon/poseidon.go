@@ -92,7 +92,7 @@ func (p *Poseidon) CloneHasher() *Poseidon {
 	}
 }
 
-// Write implements io.Writer by converting bytes to field elements and hashing them.
+// Write implements io.Writer by reducing fixed-width byte chunks to field elements and hashing them.
 // Note: The sponge absorbs bytes in rate-sized blocks, the callers must pad to full blocks before passing,
 // and callers who need injective variable-length hashing must perform their own framing, length encoding,
 // or domain separation before absorption, hence the data length must be a multiple of (32 * rate) bytes.
@@ -104,7 +104,7 @@ func (p *Poseidon) Write(data []byte) (n int, err error) {
 	var elems []*pasta.PallasBaseFieldElement
 	for i := range len(data) / pastaImpl.FpBytes {
 		bytes := data[pastaImpl.FpBytes*i : pastaImpl.FpBytes*(i+1)]
-		fe, err := pasta.NewPallasBaseField().FromBytes(bytes)
+		fe, err := pasta.NewPallasBaseField().FromBytesBEReduce(bytes)
 		if err != nil {
 			return 0, errs.Wrap(err).WithMessage("cannot create Pallas base field element")
 		}

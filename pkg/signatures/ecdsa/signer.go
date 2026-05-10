@@ -104,6 +104,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 			continue
 		}
 		if recoveredPk.Equal(s.sk.pk) {
+			signature.Normalise()
 			return signature, nil
 		}
 	}

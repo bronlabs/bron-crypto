@@ -74,3 +74,90 @@ func TestRouterReceiveFromFiltersUnexpectedSenders(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, map[sharing.ID][]byte{2: []byte("expected")}, received)
 }
+
+func TestRouterReceiveFromRejectsOversizedFrameBeforeDecode(t *testing.T) {
+	t.Parallel()
+
+	delivery := &stubDelivery{
+		partyID: 1,
+		quorum:  []sharing.ID{1, 2},
+		queue: []queuedDelivery{
+			{from: 2, message: []byte("not-cbor")},
+		},
+	}
+
+	router := network.NewRouterWithOptions(delivery, network.RouterOptions{MaxFrameBytes: 4})
+	_, err := router.ReceiveFrom(context.Background(), "cid", 2)
+	require.Error(t, err)
+	require.ErrorIs(t, err, network.ErrFrameTooLarge)
+}
+
+func TestRouterReceiveFromRejectsOversizedPayload(t *testing.T) {
+	t.Parallel()
+
+	message := marshalRouterTestMessage(t, "cid", []byte("too large"))
+	delivery := &stubDelivery{
+		partyID: 1,
+		quorum:  []sharing.ID{1, 2},
+		queue: []queuedDelivery{
+			{from: 2, message: message},
+		},
+	}
+
+	router := network.NewRouterWithOptions(delivery, network.RouterOptions{MaxPayloadBytes: 4})
+	_, err := router.ReceiveFrom(context.Background(), "cid", 2)
+	require.Error(t, err)
+	require.ErrorIs(t, err, network.ErrPayloadTooLarge)
+}
+
+func TestRouterReceiveFromRejectsOversizedCorrelationID(t *testing.T) {
+	t.Parallel()
+
+	message := marshalRouterTestMessage(t, "correlation-id", []byte("ok"))
+	delivery := &stubDelivery{
+		partyID: 1,
+		quorum:  []sharing.ID{1, 2},
+		queue: []queuedDelivery{
+			{from: 2, message: message},
+		},
+	}
+
+	router := network.NewRouterWithOptions(delivery, network.RouterOptions{MaxCorrelationIDBytes: 4})
+	_, err := router.ReceiveFrom(context.Background(), "cid", 2)
+	require.Error(t, err)
+	require.ErrorIs(t, err, network.ErrCorrelationIDTooLarge)
+}
+
+func TestRouterReceiveFromCapsBufferedBytes(t *testing.T) {
+	t.Parallel()
+
+	first := marshalRouterTestMessage(t, "other", []byte("1234567"))
+	second := marshalRouterTestMessage(t, "other", []byte("7654321"))
+	delivery := &stubDelivery{
+		partyID: 1,
+		quorum:  []sharing.ID{1, 2, 3},
+		queue: []queuedDelivery{
+			{from: 3, message: first},
+			{from: 3, message: second},
+		},
+	}
+
+	router := network.NewRouterWithOptions(delivery, network.RouterOptions{MaxBufferedBytes: 16})
+	_, err := router.ReceiveFrom(context.Background(), "cid", 2)
+	require.Error(t, err)
+	require.ErrorIs(t, err, network.ErrReceiveBufferFull)
+}
+
+func marshalRouterTestMessage(t *testing.T, correlationID string, payload []byte) []byte {
+	t.Helper()
+
+	message, err := serde.MarshalCBOR(&struct {
+		CorrelationID string `cbor:"correlationID"`
+		Payload       []byte `cbor:"payload"`
+	}{
+		CorrelationID: correlationID,
+		Payload:       payload,
+	})
+	require.NoError(t, err)
+	return message
+}

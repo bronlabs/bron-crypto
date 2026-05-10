@@ -63,3 +63,4 @@ docs/build/*
 /docs/papers
 /coverage.out
 /coverage.html
+/sbom.modules.json

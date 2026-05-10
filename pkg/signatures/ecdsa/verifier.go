@@ -28,9 +28,18 @@ func VerifyNonMalleably[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B],
 	return nil
 }
 
+// AllowMalleableSignatures configures the verifier to accept legacy high-S signatures.
+func AllowMalleableSignatures[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](vf *Verifier[P, B, S]) error {
+	if vf == nil {
+		return signatures.ErrInvalidArgument.WithMessage("verifier is nil")
+	}
+	vf.mustBeNonMalleable = false
+	return nil
+}
+
 // NewVerifier creates a verifier with the given cryptographic suite.
 // The suite defines the curve and hash function used for verification.
-// Note that the output verifier does not enforce non-malleability by default; apply the VerifyNonMalleably option to enable that check.
+// The output verifier rejects malleable high-S signatures by default.
 func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S]) (*Verifier[P, B, S], error) {
 	if suite == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("suite is nil")
@@ -38,8 +47,18 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 
 	v := &Verifier[P, B, S]{
 		suite:              suite,
-		mustBeNonMalleable: false,
+		mustBeNonMalleable: true,
 	}
+	return v, nil
+}
+
+// NewMalleableVerifier creates a legacy verifier that accepts high-S signatures.
+func NewMalleableVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S]) (*Verifier[P, B, S], error) {
+	v, err := NewVerifier(suite)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
+	}
+	v.mustBeNonMalleable = false
 	return v, nil
 }
 

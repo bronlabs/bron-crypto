@@ -3,6 +3,7 @@
 package impl
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"io"
 	"math/big"
@@ -55,12 +56,23 @@ func (f *Fp) SetUint64(v uint64) {
 }
 
 func (f *Fp) SetLimbs(data []uint64) (ok ct.Bool) {
-	fiatFpToMontgomery(&f.fiatFpMontgomeryDomainFieldElement, (*fiatFpNonMontgomeryDomainFieldElement)(data))
-	return 1
+	if len(data) != FpLimbs {
+		return 0
+	}
+
+	var byteData [FpBytes]byte
+	for i, limb := range data {
+		binary.LittleEndian.PutUint64(byteData[8*i:8*(i+1)], limb)
+	}
+
+	return f.SetBytes(byteData[:])
 }
 
 func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != FpBytes {
+		return 0
+	}
+	if isCanonicalFpBytes(data) == ct.False {
 		return 0
 	}
 
@@ -68,6 +80,16 @@ func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	fiatFpFromBytes((*[FpLimbs]uint64)(&nonMonty), (*[FpBytes]uint8)(data))
 	fiatFpToMontgomery(&f.fiatFpMontgomeryDomainFieldElement, &nonMonty)
 	return 1
+}
+
+func isCanonicalFpBytes(data []byte) ct.Bool {
+	var lt, gt ct.Choice
+	for i := FpBytes - 1; i >= 0; i-- {
+		undecided := (lt | gt).Not()
+		lt |= undecided & ct.Less(data[i], FpModulus[i])
+		gt |= undecided & ct.Greater(data[i], FpModulus[i])
+	}
+	return lt
 }
 
 func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
@@ -108,7 +130,7 @@ func (f *Fp) SetRandom(prng io.Reader) (ok ct.Bool) {
 }
 
 func (f *Fp) Select(choice ct.Choice, z, nz *Fp) {
-	fiatFpSelectznz((*[FpLimbs]uint64)(&f.fiatFpMontgomeryDomainFieldElement),fiatFpUint1(choice), (*[FpLimbs]uint64)(&z.fiatFpMontgomeryDomainFieldElement), (*[FpLimbs]uint64)(&nz.fiatFpMontgomeryDomainFieldElement))
+	fiatFpSelectznz((*[FpLimbs]uint64)(&f.fiatFpMontgomeryDomainFieldElement), fiatFpUint1(choice), (*[FpLimbs]uint64)(&z.fiatFpMontgomeryDomainFieldElement), (*[FpLimbs]uint64)(&nz.fiatFpMontgomeryDomainFieldElement))
 }
 
 func (f *Fp) Add(lhs, rhs *Fp) {

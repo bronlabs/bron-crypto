@@ -39,6 +39,24 @@ func Test_VanillaSchnorr_BasicSigning_k256(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_VanillaSchnorr_NewPrivateKeyRejectsMismatchedPublicKey(t *testing.T) {
+	t.Parallel()
+
+	group := k256.NewCurve()
+	scalarField := k256.NewScalarField()
+	skValue := scalarField.FromUint64(2)
+
+	validPk, err := vanilla.NewPublicKey(group.ScalarBaseMul(skValue))
+	require.NoError(t, err)
+	_, err = vanilla.NewPrivateKey(skValue, validPk)
+	require.NoError(t, err)
+
+	wrongPk, err := vanilla.NewPublicKey(group.ScalarBaseMul(scalarField.FromUint64(3)))
+	require.NoError(t, err)
+	_, err = vanilla.NewPrivateKey(skValue, wrongPk)
+	require.Error(t, err)
+}
+
 func Test_VanillaSchnorr_BasicSigning_p256(t *testing.T) {
 	t.Parallel()
 
