@@ -10,7 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
@@ -23,25 +23,16 @@ func PaillierUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.PaillierGroup
 	return UnitGenerator(t, group.ForgetOrder()), group.ForgetOrder()
 }
 
-func PaillierPlaintextGenerator(group *znstar.PaillierGroupKnownOrder) *rapid.Generator[*numct.Int] {
-	return rapid.Custom(func(t *rapid.T) *numct.Int {
-		nHalf := group.N().Value().Clone()
-		nHalf.Rsh(nHalf, 1)
-
-		bytes := rapid.SliceOfN(rapid.Byte(), 1, nHalf.AnnouncedLen()/8).Draw(t, "bytes")
-		var nat numct.Nat
-		nat.SetBytes(bytes)
-
-		var reduced numct.Nat
-		group.N().ModulusCT().Mod(&reduced, &nat)
-
-		isNegative := rapid.Bool().Draw(t, "isNegative")
-		var result numct.Int
-		result.SetNat(&reduced)
-		if isNegative {
-			result.Neg(&result)
-		}
-		return &result
+func PaillierPlaintextGenerator(group *znstar.PaillierGroupKnownOrder) *rapid.Generator[*num.Uint] {
+	return rapid.Custom(func(t *rapid.T) *num.Uint {
+		zModN, err := num.NewZMod(group.N())
+		require.NoError(t, err)
+		seed := rapid.Uint64().Draw(t, "plaintextSeed")
+		salt := rapid.Uint64().Draw(t, "plaintextSalt")
+		prng := pcg.New(seed, salt)
+		out, err := zModN.Random(prng)
+		require.NoError(t, err)
+		return out
 	})
 }
 
@@ -65,7 +56,7 @@ func TestMultiplicativeGroup_Properties(t *testing.T) {
 }
 
 // TestPaillierGroup_Representative_Property tests that Representative produces valid group elements.
-// Property: For any plaintext m in [-n/2, n/2), Representative(m) should be a valid group element equal to (1 + m*n) mod n^2.
+// Property: For any plaintext m in [0, n), Representative(m) should be a valid group element equal to (1 + m*n) mod n^2.
 func TestPaillierGroup_Representative_Property(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
@@ -90,34 +81,16 @@ func TestPaillierGroup_Representative_Homomorphism_Property(t *testing.T) {
 	group := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, prng))
 
 	rapid.Check(t, func(t *rapid.T) {
-		bytes1 := rapid.SliceOfN(rapid.Byte(), 1, 32).Draw(t, "bytes1")
-		bytes2 := rapid.SliceOfN(rapid.Byte(), 1, 32).Draw(t, "bytes2")
+		m1 := PaillierPlaintextGenerator(group).Draw(t, "plaintext1")
+		m2 := PaillierPlaintextGenerator(group).Draw(t, "plaintext2")
+		m12 := m1.Add(m2)
 
-		var nat1, nat2 numct.Nat
-		nat1.SetBytes(bytes1)
-		nat2.SetBytes(bytes2)
-
-		var m1, m2 numct.Int
-		m1.SetNat(&nat1)
-		m2.SetNat(&nat2)
-
-		// Randomly negate
-		if rapid.Bool().Draw(t, "neg1") {
-			m1.Neg(&m1)
-		}
-		if rapid.Bool().Draw(t, "neg2") {
-			m2.Neg(&m2)
-		}
-
-		rep1, err := group.Representative(&m1)
+		rep1, err := group.Representative(m1)
 		require.NoError(t, err)
-		rep2, err := group.Representative(&m2)
+		rep2, err := group.Representative(m2)
 		require.NoError(t, err)
 
-		var sum numct.Int
-		sum.Add(&m1, &m2)
-
-		repSum, err := group.Representative(&sum)
+		repSum, err := group.Representative(m12)
 		require.NoError(t, err)
 
 		product := rep1.Mul(rep2)
@@ -131,8 +104,7 @@ func TestPaillierGroup_NthResidue_Property(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
 	group := errs.Must1(znstar.SamplePaillierGroup(paillierGroupNLen, prng))
-	unknownOrderGroup := group.ForgetOrder()
-	gen := UnitGenerator(t, unknownOrderGroup)
+	gen := UnitGenerator(t, group)
 
 	rapid.Check(t, func(rt *rapid.T) {
 		u := gen.Draw(rt, "u")
@@ -187,7 +159,7 @@ func TestPaillierGroup_NthResidue_OfEmbeddedRSA_Property(t *testing.T) {
 		embedded, err := paillierGroup.EmbedRSA(rsaElem)
 		require.NoError(t, err)
 
-		nthRes, err := paillierGroup.NthResidue(embedded.ForgetOrder())
+		nthRes, err := paillierGroup.NthResidue(embedded)
 		require.NoError(t, err)
 
 		expected := embedded.Exp(paillierGroup.N().Nat())

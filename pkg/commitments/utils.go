@@ -3,6 +3,8 @@ package commitments
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -22,7 +24,22 @@ func Commit[K CommitmentKey[K, M, W, C], M Message, W Witness, C Commitment[C]](
 	return commitment, witness, nil
 }
 
-func ReRandomise[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, commitment C, prng io.Reader) (C, W, error) {
+func ReRandomise[
+	K GroupHomomorphicCommitmentKey[K, M, MG, MV, W, WG, WV, C, CG, CV, S],
+	M interface {
+		Message
+		base.Transparent[MV]
+	}, MG algebra.Group[MV], MV algebra.GroupElement[MV],
+	W interface {
+		Witness
+		base.Transparent[WV]
+	}, WG algebra.Group[WV], WV algebra.GroupElement[WV],
+	C interface {
+		Commitment[C]
+		base.Transparent[CV]
+	}, CG algebra.FiniteGroup[CV], CV algebra.GroupElement[CV],
+	S any,
+](key K, commitment C, prng io.Reader) (C, W, error) {
 	if utils.IsNil(key) || utils.IsNil(commitment) || prng == nil {
 		return *new(C), *new(W), ErrIsNil.WithMessage("key, commitment, and prng must not be nil")
 	}

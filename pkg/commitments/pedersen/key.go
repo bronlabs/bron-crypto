@@ -100,7 +100,7 @@ func (k *CommitmentKey[E, S]) Open(commitment *Commitment[E, S], message *Messag
 }
 
 func (k *CommitmentKey[E, S]) WitnessOp(first, second *Witness[S], rest ...*Witness[S]) (*Witness[S], error) {
-	out, err := internal.Op(NewWitness, first, second, rest...)
+	out, err := algebrautils.Op(NewWitness, first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine witnesses")
 	}
@@ -133,7 +133,7 @@ func (k *CommitmentKey[E, S]) WitnessScalarOp(w *Witness[S], scalar S) (*Witness
 }
 
 func (k *CommitmentKey[E, S]) MessageOp(first, second *Message[S], rest ...*Message[S]) (*Message[S], error) {
-	out, err := internal.Op(NewMessage, first, second, rest...)
+	out, err := algebrautils.Op(NewMessage, first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine messages")
 	}
@@ -166,7 +166,7 @@ func (k *CommitmentKey[E, S]) MessageScalarOp(m *Message[S], scalar S) (*Message
 }
 
 func (k *CommitmentKey[E, S]) CommitmentOp(first, second *Commitment[E, S], rest ...*Commitment[E, S]) (*Commitment[E, S], error) {
-	out, err := internal.Op(NewCommitment, first, second, rest...)
+	out, err := algebrautils.Op(NewCommitment, first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine commitments")
 	}

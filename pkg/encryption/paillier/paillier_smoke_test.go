@@ -8,34 +8,28 @@ import (
 )
 
 var (
-	_ encryption.Scheme[
-		*paillier.PrivateKey,
+	_ encryption.GroupHomomorphicEncryptionKey[
 		*paillier.PublicKey,
+		*paillier.Plaintext, *num.ZMod, *num.Uint,
+		*paillier.Nonce, *znstar.RSAGroupUnknownOrder, *znstar.RSAGroupElementUnknownOrder,
+		*paillier.Ciphertext, *znstar.PaillierGroupUnknownOrder, *znstar.PaillierGroupElementUnknownOrder,
+		*num.Int,
+	] = (*paillier.PublicKey)(nil)
+
+	_ encryption.GroupHomomorphicDecryptionKey[
+		*paillier.PublicKey,
+		*paillier.SecretKey,
+		*paillier.Plaintext, *num.ZMod, *num.Uint,
+		*paillier.Nonce, *znstar.RSAGroupUnknownOrder, *znstar.RSAGroupElementUnknownOrder,
+		*paillier.Ciphertext, *znstar.PaillierGroupUnknownOrder, *znstar.PaillierGroupElementUnknownOrder,
+		*num.Int,
+	] = (*paillier.SecretKey)(nil)
+
+	_ encryption.OpeningKey[
+		*paillier.PublicKey,
+		*paillier.SecretKey,
 		*paillier.Plaintext,
+		*paillier.Nonce,
 		*paillier.Ciphertext,
-		*paillier.Nonce,
-		*paillier.KeyGenerator,
-		*paillier.Encrypter,
-		*paillier.Decrypter,
-	] = (*paillier.Scheme)(nil)
-
-	_ encryption.ShiftTypeCiphertext[
-		*paillier.Ciphertext, *znstar.PaillierGroupElementUnknownOrder,
-		*paillier.Plaintext,
-		*paillier.PublicKey,
-		*paillier.Nonce,
-		*num.Nat,
-	] = (*paillier.Ciphertext)(nil)
-
-	_ encryption.GroupHomomorphicScheme[
-		*paillier.PrivateKey,
-		*paillier.PublicKey,
-		*paillier.Plaintext, *num.Int,
-		*paillier.Ciphertext, *znstar.PaillierGroupElementUnknownOrder,
-		*paillier.Nonce, *znstar.RSAGroupElementUnknownOrder,
-		*paillier.KeyGenerator,
-		*paillier.Encrypter,
-		*paillier.Decrypter,
-		*num.Nat,
-	] = (*paillier.Scheme)(nil)
+	] = (*paillier.SecretKey)(nil)
 )

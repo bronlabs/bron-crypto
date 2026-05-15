@@ -42,7 +42,7 @@ const Name commitments.Name = "Bounded Integer Commitment Scheme (CGGMP21)"
 // longer needed.
 func SamplePedersenParameters(keyLen uint, prng io.Reader) (group *znstar.RSAGroupKnownOrder, s, t *znstar.RSAGroupElementUnknownOrder, lambda *num.Uint, err error) {
 	if prng == nil {
-		return nil, nil, nil, nil, ErrIsNil.WithMessage("prng")
+		return nil, nil, nil, nil, commitments.ErrIsNil.WithMessage("prng")
 	}
 	rsaGroup, err := znstar.SampleSafeRSAGroup(keyLen, prng)
 	if err != nil {
@@ -104,7 +104,7 @@ func SamplePedersenParameters(keyLen uint, prng io.Reader) (group *znstar.RSAGro
 
 func NewCommitment(v *znstar.RSAGroupElementUnknownOrder) (*Commitment, error) {
 	if v == nil {
-		return nil, ErrIsNil.WithMessage("commitment value must not be nil")
+		return nil, commitments.ErrIsNil.WithMessage("commitment value must not be nil")
 	}
 	return &Commitment{
 		v: v,
@@ -164,7 +164,7 @@ func (c *Commitment) UnmarshalCBOR(data []byte) error {
 
 func NewWitness(v *num.Int) (*Witness, error) {
 	if v == nil {
-		return nil, ErrIsNil.WithMessage("witness value must not be nil")
+		return nil, commitments.ErrIsNil.WithMessage("witness value must not be nil")
 	}
 	return &Witness{r: v}, nil
 }
@@ -222,7 +222,7 @@ func (w *Witness) UnmarshalCBOR(data []byte) error {
 
 func NewMessage(v *num.Int) (*Message, error) {
 	if v == nil {
-		return nil, ErrIsNil.WithMessage("message value must not be nil")
+		return nil, commitments.ErrIsNil.WithMessage("message value must not be nil")
 	}
 	return &Message{m: v}, nil
 }

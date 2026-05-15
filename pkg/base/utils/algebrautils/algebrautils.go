@@ -48,14 +48,14 @@ func RandomTorsionFreeNonIdentity[M interface {
 func Random[S algebra.FiniteStructure[E], E algebra.Element[E]](s S, prng io.Reader, predicates ...func(E) bool) (E, error) {
 	validationErrors := []error{}
 	if utils.IsNil(s) {
-		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("structure"))
+		validationErrors = append(validationErrors, ErrIsNil.WithMessage("structure"))
 	}
 	if prng == nil {
-		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("prng"))
+		validationErrors = append(validationErrors, ErrIsNil.WithMessage("prng"))
 	}
 	for _, p := range predicates {
 		if p == nil {
-			validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("predicate"))
+			validationErrors = append(validationErrors, ErrIsNil.WithMessage("predicate"))
 		}
 	}
 	if len(validationErrors) > 0 {
@@ -310,5 +310,3 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.UnsignedNumeric](
 
 	return acc
 }
-
-var ErrArgumentIsNil = errs.New("argument is nil")

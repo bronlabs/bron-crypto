@@ -264,13 +264,27 @@ func TestNoExponentReductionProperty(t *testing.T) {
 		require.NoError(rt, err, "failed to compute commitment")
 
 		modulus := key.Group().Modulus()
-		shiftedMessage, err := intcom.NewMessage(message.Value().Add(modulus.Lift()))
-		require.NoError(rt, err, "failed to create shifted message")
 
-		commitmentWithShiftedMessage, err := key.CommitWithWitness(shiftedMessage, witness)
-		require.NoError(rt, err, "failed to compute commitment with shifted message")
+		t.Run("Shift message by modulus", func(t *testing.T) {
+			t.Parallel()
+			shiftedMessage, err := intcom.NewMessage(message.Value().Add(modulus.Lift()))
+			require.NoError(rt, err, "failed to create shifted message")
 
-		require.False(t, commitment.Equal(commitmentWithShiftedMessage), "commitments should not be equal when message is shifted by modulus")
+			commitmentWithShiftedMessage, err := key.CommitWithWitness(shiftedMessage, witness)
+			require.NoError(rt, err, "failed to compute commitment with shifted message")
+
+			require.False(t, commitment.Equal(commitmentWithShiftedMessage), "commitments should not be equal when message is shifted by modulus")
+		})
+		t.Run("Shift witness by modulus", func(t *testing.T) {
+			t.Parallel()
+			shiftedWitness, err := intcom.NewWitness(witness.Value().Add(modulus.Lift()))
+			require.NoError(rt, err, "failed to create shifted witness")
+
+			commitmentWithShiftedWitness, err := key.CommitWithWitness(message, shiftedWitness)
+			require.NoError(rt, err, "failed to compute commitment with shifted witness")
+
+			require.False(t, commitment.Equal(commitmentWithShiftedWitness), "commitments should not be equal when witness is shifted by modulus")
+		})
 	})
 }
 

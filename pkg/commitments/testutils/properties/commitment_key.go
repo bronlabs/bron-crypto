@@ -352,13 +352,13 @@ type HomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKey[K
 func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CheckAll(t *testing.T) {
 	t.Parallel()
 	t.Run("CommitmentKeyProperties", p.CommitmentKeyProperties.CheckAll)
-	t.Run("CommitmentMultIsMessageWitnessAdd", p.CommitmentMultIsMessageWitnessAdd)
+	t.Run("CommitmentHomOpIsMessageWitnessOp", p.CommitmentHomOpIsMessageWitnessOp)
 	t.Run("CommitmentScalarOpIsMessageWitnessScalarOp", p.CommitmentScalarOpIsMessageWitnessScalarOp)
 	t.Run("ReRandomiseShiftsWitness", p.ReRandomiseShiftsWitness)
 	t.Run("CanShiftCommitmentByMessage", p.CanShiftCommitmentByMessage)
 }
 
-func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentMultIsMessageWitnessAdd(t *testing.T) {
+func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentHomOpIsMessageWitnessOp(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
@@ -812,5 +812,18 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 		require.NoError(t, err)
 
 		require.True(t, commitmentScalarExpected.Equal(commitmentScalarActual))
+	})
+}
+
+func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) CommitmentGroupIsValid(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		group := key.CommitmentGroup()
+		commitmentValue, err := group.Random(p.PRNG())
+		require.NoError(t, err)
+		commitment, err := p.NewCommitment(commitmentValue)
+		require.NoError(t, err)
+		require.True(t, commitment.Value().Equal(commitmentValue))
 	})
 }

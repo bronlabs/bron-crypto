@@ -263,3 +263,22 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	// One-multiply CRT using precomputed (q^2)^{-1} mod p^2 inside m.CrtModN2
 	out.Set(m.CrtModN2.Recombine(&yp, &yq))
 }
+
+func (m *OddPrimeSquareFactors) FermatQuotient(outLp, outLq, x *numct.Nat) {
+	var wg sync.WaitGroup
+	wg.Add(2)
+	// L_p(x) = ((x^{p-1} - 1 mod p^2)) / p mod p
+	go func() {
+		defer wg.Done()
+		m.P.Squared.ModExp(outLp, x, m.P.PhiFactor.Nat())
+		m.P.Squared.ModSub(outLp, outLp, numct.NatOne())
+		m.P.Factor.Quo(outLp, outLp)
+	}()
+	go func() {
+		defer wg.Done()
+		m.Q.Squared.ModExp(outLq, x, m.Q.PhiFactor.Nat())
+		m.Q.Squared.ModSub(outLq, outLq, numct.NatOne())
+		m.Q.Factor.Quo(outLq, outLq)
+	}()
+	wg.Wait()
+}

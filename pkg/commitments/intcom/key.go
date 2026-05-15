@@ -8,6 +8,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
@@ -28,13 +30,13 @@ func SampleCommitmentKey(keyLen uint, prng io.Reader) (*CommitmentKey, error) {
 
 func ExtractCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, label string, group *znstar.RSAGroup[A]) (*CommitmentKey, error) {
 	if transcript == nil {
-		return nil, ErrInvalidArgument.WithMessage("transcript cannot be nil")
+		return nil, commitments.ErrInvalidArgument.WithMessage("transcript cannot be nil")
 	}
 	if label == "" {
-		return nil, ErrInvalidArgument.WithMessage("label cannot be empty")
+		return nil, commitments.ErrInvalidArgument.WithMessage("label cannot be empty")
 	}
 	if group == nil {
-		return nil, ErrInvalidArgument.WithMessage("group cannot be nil")
+		return nil, commitments.ErrInvalidArgument.WithMessage("group cannot be nil")
 	}
 	var s, t *znstar.RSAGroupElement[A]
 	eg := errgroup.Group{}
@@ -81,26 +83,31 @@ func ExtractCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, labe
 
 func newCommitmentKey(s, t *znstar.RSAGroupElementUnknownOrder) (*CommitmentKey, error) {
 	if s == nil || t == nil {
-		return nil, ErrInvalidArgument.WithMessage("generators cannot be nil")
+		return nil, commitments.ErrInvalidArgument.WithMessage("generators cannot be nil")
 	}
 	if s.Structure().Name() != t.Structure().Name() {
-		return nil, ErrInvalidArgument.WithMessage("s and t must belong to the same group")
+		return nil, commitments.ErrInvalidArgument.WithMessage("s and t must belong to the same group")
 	}
 	if s.Equal(t) {
-		return nil, ErrInvalidArgument.WithMessage("s and t cannot be equal")
+		return nil, commitments.ErrInvalidArgument.WithMessage("s and t cannot be equal")
 	}
 	if s.IsOne() || t.IsOne() {
-		return nil, ErrInvalidArgument.WithMessage("s or t cannot be the identity element")
+		return nil, commitments.ErrInvalidArgument.WithMessage("s or t cannot be the identity element")
 	}
 	// TorsionFree checks the jacobi symbol. This is necessary but not sufficient.
 	// We can't check if they are in QR(N̂) due to not having the order.
 	if !s.IsTorsionFree() || !t.IsTorsionFree() {
-		return nil, ErrInvalidArgument.WithMessage("s and t must be torsion-free")
+		return nil, commitments.ErrInvalidArgument.WithMessage("s and t must be torsion-free")
+	}
+	// If s and t are in QR(N̂), then they must be generators of QR(N̂).
+	if !s.Value().Decrement().Nat().Coprime(s.Modulus().Nat()) {
+		return nil, commitments.ErrInvalidArgument.WithMessage("s cannot be a generator of QR(NHat)")
+	}
+	if !t.Value().Decrement().Nat().Coprime(t.Modulus().Nat()) {
+		return nil, commitments.ErrInvalidArgument.WithMessage("t cannot be a generator of QR(NHat)")
 	}
 
-	group := s.Group()
-
-	witnessUpper := group.Modulus().Lsh(base.StatisticalSecurityBits).Lift()
+	witnessUpper := s.Group().Modulus().Lsh(base.StatisticalSecurityBits).Lift()
 	witnessLower := witnessUpper.Neg()
 
 	return &CommitmentKey{
@@ -127,7 +134,7 @@ type commitmentKeyDTO struct {
 
 func (k *CommitmentKey) SampleWitness(prng io.Reader) (*Witness, error) {
 	if prng == nil {
-		return nil, ErrIsNil.WithMessage("prng cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("prng cannot be nil")
 	}
 	wv, err := num.Z().Random(k.witnessLower, k.witnessUpper, prng)
 	if err != nil {
@@ -148,7 +155,7 @@ func (k *CommitmentKey) WitnessIsFreshlySampled(witness *Witness) bool {
 
 func (k *CommitmentKey) CommitWithWitness(message *Message, witness *Witness) (*Commitment, error) {
 	if message == nil || witness == nil {
-		return nil, ErrIsNil.WithMessage("message and witness cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("message and witness cannot be nil")
 	}
 	out, err := NewCommitment(k.s.ExpI(message.Value()).Mul(k.t.ExpI(witness.Value())).ForgetOrder())
 	if err != nil {
@@ -165,7 +172,7 @@ func (k *CommitmentKey) Open(commitment *Commitment, message *Message, witness *
 }
 
 func (k *CommitmentKey) WitnessOp(first, second *Witness, rest ...*Witness) (*Witness, error) {
-	out, err := internal.Op(NewWitness, first, second, rest...)
+	out, err := algebrautils.Op(NewWitness, first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine witnesses")
 	}
@@ -174,7 +181,7 @@ func (k *CommitmentKey) WitnessOp(first, second *Witness, rest ...*Witness) (*Wi
 
 func (k *CommitmentKey) WitnessOpInv(w *Witness) (*Witness, error) {
 	if w == nil {
-		return nil, ErrIsNil.WithMessage("witness cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("witness cannot be nil")
 	}
 	out, err := NewWitness(w.Value().Neg())
 	if err != nil {
@@ -185,10 +192,10 @@ func (k *CommitmentKey) WitnessOpInv(w *Witness) (*Witness, error) {
 
 func (k *CommitmentKey) WitnessScalarOp(w *Witness, scalar *num.Int) (*Witness, error) {
 	if w == nil {
-		return nil, ErrIsNil.WithMessage("witness cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("witness cannot be nil")
 	}
 	if scalar == nil {
-		return nil, ErrIsNil.WithMessage("scalar cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("scalar cannot be nil")
 	}
 	out, err := NewWitness(w.Value().Mul(scalar))
 	if err != nil {
@@ -198,7 +205,7 @@ func (k *CommitmentKey) WitnessScalarOp(w *Witness, scalar *num.Int) (*Witness, 
 }
 
 func (k *CommitmentKey) MessageOp(first, second *Message, rest ...*Message) (*Message, error) {
-	out, err := internal.Op(NewMessage, first, second, rest...)
+	out, err := algebrautils.Op(NewMessage, first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine messages")
 	}
@@ -207,7 +214,7 @@ func (k *CommitmentKey) MessageOp(first, second *Message, rest ...*Message) (*Me
 
 func (k *CommitmentKey) MessageOpInv(m *Message) (*Message, error) {
 	if m == nil {
-		return nil, ErrIsNil.WithMessage("message cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("message cannot be nil")
 	}
 	out, err := NewMessage(m.Value().Neg())
 	if err != nil {
@@ -218,10 +225,10 @@ func (k *CommitmentKey) MessageOpInv(m *Message) (*Message, error) {
 
 func (k *CommitmentKey) MessageScalarOp(m *Message, scalar *num.Int) (*Message, error) {
 	if m == nil {
-		return nil, ErrIsNil.WithMessage("message cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("message cannot be nil")
 	}
 	if scalar == nil {
-		return nil, ErrIsNil.WithMessage("scalar cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("scalar cannot be nil")
 	}
 	out, err := NewMessage(m.Value().Mul(scalar))
 	if err != nil {
@@ -231,7 +238,7 @@ func (k *CommitmentKey) MessageScalarOp(m *Message, scalar *num.Int) (*Message, 
 }
 
 func (k *CommitmentKey) CommitmentOp(first, second *Commitment, rest ...*Commitment) (*Commitment, error) {
-	out, err := internal.Op(NewCommitment, first, second, rest...)
+	out, err := algebrautils.Op(NewCommitment, first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine commitments")
 	}
@@ -240,7 +247,7 @@ func (k *CommitmentKey) CommitmentOp(first, second *Commitment, rest ...*Commitm
 
 func (k *CommitmentKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
 	if c == nil {
-		return nil, ErrIsNil.WithMessage("commitment cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("commitment cannot be nil")
 	}
 	out, err := NewCommitment(c.Value().Inv())
 	if err != nil {
@@ -251,10 +258,10 @@ func (k *CommitmentKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
 
 func (k *CommitmentKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Commitment, error) {
 	if c == nil {
-		return nil, ErrIsNil.WithMessage("commitment cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("commitment cannot be nil")
 	}
 	if scalar == nil {
-		return nil, ErrIsNil.WithMessage("scalar cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("scalar cannot be nil")
 	}
 	out, err := NewCommitment(c.Value().ExpI(scalar))
 	if err != nil {
@@ -265,10 +272,10 @@ func (k *CommitmentKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Com
 
 func (k *CommitmentKey) ReRandomise(c *Commitment, witnessShift *Witness) (*Commitment, error) {
 	if c == nil {
-		return nil, ErrIsNil.WithMessage("commitment cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("commitment cannot be nil")
 	}
 	if witnessShift == nil {
-		return nil, ErrIsNil.WithMessage("witness shift cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("witness shift cannot be nil")
 	}
 	out, err := NewCommitment(c.Value().Mul(k.t.ExpI(witnessShift.Value())))
 	if err != nil {
@@ -279,10 +286,10 @@ func (k *CommitmentKey) ReRandomise(c *Commitment, witnessShift *Witness) (*Comm
 
 func (k *CommitmentKey) Shift(c *Commitment, message *Message) (*Commitment, error) {
 	if c == nil {
-		return nil, ErrIsNil.WithMessage("commitment cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("commitment cannot be nil")
 	}
 	if message == nil {
-		return nil, ErrIsNil.WithMessage("message cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("message cannot be nil")
 	}
 	out, err := NewCommitment(c.Value().Mul(k.s.ExpI(message.Value())))
 	if err != nil {

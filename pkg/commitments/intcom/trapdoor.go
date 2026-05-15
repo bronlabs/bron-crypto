@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -32,13 +32,13 @@ func SampleTrapdoorKey(keyLen uint, prng io.Reader) (*TrapdoorKey, error) {
 
 func NewTrapdoorKey(t *znstar.RSAGroupElementKnownOrder, lambda *num.Uint) (*TrapdoorKey, error) {
 	if t == nil || lambda == nil {
-		return nil, ErrIsNil.WithMessage("t and lambda must not be nil")
+		return nil, commitments.ErrIsNil.WithMessage("t and lambda must not be nil")
 	}
 	if t.IsOpIdentity() || !t.IsTorsionFree() {
-		return nil, ErrInvalidArgument.WithMessage("t cannot be the identity element or have torsion")
+		return nil, commitments.ErrInvalidArgument.WithMessage("t cannot be the identity element or have torsion")
 	}
 	if !t.Value().Decrement().Nat().Coprime(t.Modulus().Nat()) {
-		return nil, ErrInvalidArgument.WithMessage("t is not a generator of QR(NHat)")
+		return nil, commitments.ErrInvalidArgument.WithMessage("t is not a generator of QR(NHat)")
 	}
 	p, err := num.NPlus().FromNatCT(t.Arithmetic().Params.PNat)
 	if err != nil {
@@ -50,10 +50,10 @@ func NewTrapdoorKey(t *znstar.RSAGroupElementKnownOrder, lambda *num.Uint) (*Tra
 	}
 	phiNHatOver4 := p.Rsh(1).Mul(q.Rsh(1))
 	if !lambda.Modulus().Equal(phiNHatOver4) {
-		return nil, ErrInvalidArgument.WithMessage("lambda modulus must equal φ(NHat)/4")
+		return nil, commitments.ErrInvalidArgument.WithMessage("lambda modulus must equal φ(NHat)/4")
 	}
 	if lambda.IsOne() || !lambda.IsUnit() {
-		return nil, ErrInvalidArgument.WithMessage("lambda must be a unit mod φ(NHat)/4 and not equal to one")
+		return nil, commitments.ErrInvalidArgument.WithMessage("lambda must be a unit mod φ(NHat)/4 and not equal to one")
 	}
 	s := t.ExpI(lambda.Lift())
 	ck, err := newCommitmentKey(s.ForgetOrder(), t.ForgetOrder())
@@ -80,7 +80,7 @@ type trapdoorKeyDTO struct {
 
 func (k *TrapdoorKey) CommitWithWitness(message *Message, witness *Witness) (*Commitment, error) {
 	if message == nil || witness == nil {
-		return nil, ErrIsNil.WithMessage("message and witness cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("message and witness cannot be nil")
 	}
 	t, err := k.t.LearnOrder(k.group)
 	if err != nil {
@@ -97,7 +97,7 @@ func (k *TrapdoorKey) CommitWithWitness(message *Message, witness *Witness) (*Co
 
 func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitment) (*Commitment, error) {
 	if first == nil || second == nil {
-		return nil, ErrIsNil.WithMessage("first and second commitments cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("first and second commitments cannot be nil")
 	}
 	firstValue, err := first.Value().LearnOrder(k.group)
 	if err != nil {
@@ -120,7 +120,7 @@ func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitmen
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid commitment in rest commitments")
 	}
-	outValue, err := internal.OpValues(firstValue, secondValue, restValues...)
+	outValue, err := algebrautils.OpValues(firstValue, secondValue, restValues...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine commitment values")
 	}
@@ -133,7 +133,7 @@ func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitmen
 
 func (k *TrapdoorKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
 	if c == nil {
-		return nil, ErrIsNil.WithMessage("commitment cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("commitment cannot be nil")
 	}
 	value, err := c.Value().LearnOrder(k.group)
 	if err != nil {
@@ -148,7 +148,7 @@ func (k *TrapdoorKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
 
 func (k *TrapdoorKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Commitment, error) {
 	if c == nil || scalar == nil {
-		return nil, ErrIsNil.WithMessage("commitment and scalar cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("commitment and scalar cannot be nil")
 	}
 	value, err := c.Value().LearnOrder(k.group)
 	if err != nil {
@@ -163,7 +163,7 @@ func (k *TrapdoorKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Commi
 
 func (k *TrapdoorKey) Equivocate(message *Message, witness *Witness, newMessage *Message, prng io.Reader) (*Witness, error) {
 	if message == nil || witness == nil || newMessage == nil || prng == nil {
-		return nil, ErrIsNil.WithMessage("message, witness, new message, and prng cannot be nil")
+		return nil, commitments.ErrIsNil.WithMessage("message, witness, new message, and prng cannot be nil")
 	}
 	// s^m * t^r mod n = s^m' * t^r' mod n => t^(lambda*m + r) = t^(lambda*m' + r') => lambda*m + r = lambda*m' + r'
 	// => r' = r + lambda*(m - m')

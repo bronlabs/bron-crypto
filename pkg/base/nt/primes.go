@@ -61,13 +61,32 @@ func MillerRabinChecks(bits uint) int {
 // prime pair so that callers pay the same high-entropy generation cost and
 // receive a prime drawn from the same distribution used by GeneratePrimePair.
 func GeneratePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
-	// generating a prime pair via rsa.GenerateKey and discarding one of them, is less expensive than
-	// calling crand.Prime(bits) directly.
-	p, _, err := GeneratePrimePair(set, bits*2, prng)
-	if err != nil {
-		return *new(E), errs.Wrap(err).WithMessage("failed to generate prime pair")
+	// https://pkg.go.dev/crypto/rsa#hdr-Minimum_key_size
+	if bits < 512 {
+		checks := MillerRabinChecks(bits)
+		for {
+			pBig, err := crand.Prime(prng, int(bits)-1)
+			if err != nil {
+				return *new(E), errs.Wrap(err).WithMessage("reading from crand")
+			}
+			if !pBig.ProbablyPrime(checks) {
+				continue
+			}
+			out, err := set.FromBytesBE(pBig.Bytes())
+			if err != nil {
+				return *new(E), errs.Wrap(err).WithMessage("cannot convert prime to structure")
+			}
+			return out, nil
+		}
+	} else {
+		// generating a prime pair via rsa.GenerateKey and discarding one of them, is less expensive than
+		// calling crand.Prime(bits) directly.
+		p, _, err := GeneratePrimePair(set, bits*2, prng)
+		if err != nil {
+			return *new(E), errs.Wrap(err).WithMessage("failed to generate prime pair")
+		}
+		return p, nil
 	}
-	return p, nil
 }
 
 // GeneratePrimePair samples an RSA-style prime pair (p, q) whose product has
@@ -81,26 +100,35 @@ func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], keyLen u
 	if set == nil {
 		return *new(N), *new(N), ErrIsNil.WithMessage("nil structure")
 	}
-	rsaPrivateKey, err := rsa.GenerateKey(prng, int(keyLen))
-	if err != nil {
-		return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot generate keys pair")
-	}
+	// https://pkg.go.dev/crypto/rsa#hdr-Minimum_key_size
+	if keyLen < 1024 {
+		p, q, err := generatePrimePair(GeneratePrime, set, keyLen, prng)
+		if err != nil {
+			return *new(N), *new(N), errs.Wrap(err).WithMessage("failed to generate prime pair")
+		}
+		return p, q, nil
+	} else {
+		rsaPrivateKey, err := rsa.GenerateKey(prng, int(keyLen))
+		if err != nil {
+			return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot generate keys pair")
+		}
 
-	pBig := rsaPrivateKey.Primes[0]
-	qBig := rsaPrivateKey.Primes[1]
-	// double check
-	if pBig.BitLen() != int(keyLen/2) || qBig.BitLen() != int(keyLen/2) {
-		return *new(N), *new(N), errs.New("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), keyLen)
+		pBig := rsaPrivateKey.Primes[0]
+		qBig := rsaPrivateKey.Primes[1]
+		// double check
+		if pBig.BitLen() != int(keyLen/2) || qBig.BitLen() != int(keyLen/2) {
+			return *new(N), *new(N), errs.New("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), keyLen)
+		}
+		p, err = set.FromBytesBE(pBig.Bytes())
+		if err != nil {
+			return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot convert p to structure")
+		}
+		q, err = set.FromBytesBE(qBig.Bytes())
+		if err != nil {
+			return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot convert q to structure")
+		}
+		return p, q, nil
 	}
-	p, err = set.FromBytesBE(pBig.Bytes())
-	if err != nil {
-		return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot convert p to structure")
-	}
-	q, err = set.FromBytesBE(qBig.Bytes())
-	if err != nil {
-		return *new(N), *new(N), errs.Wrap(err).WithMessage("cannot convert q to structure")
-	}
-	return p, q, nil
 }
 
 // GenerateBlumPrime samples a prime p of the requested bit length with

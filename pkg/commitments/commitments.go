@@ -15,7 +15,7 @@ type (
 	// Witness is the randomness used to hide the message.
 	Witness any
 	// Commitment is the opaque commitment value.
-	Commitment[C any] base.Equatable[C]
+	Commitment[C Commitment[C]] base.Equatable[C]
 )
 
 type WitnessSampler[W Witness] interface {

@@ -267,6 +267,40 @@ func (g *UnitGroupTrait[A, W, WT]) FromUint(input *num.Uint) (W, error) {
 	return W(&out), nil
 }
 
+// FromNatPlus lifts a *num.NatPlus to a group element. The input must be a unit.
+func (g *UnitGroupTrait[A, W, WT]) FromNatPlus(input *num.NatPlus) (W, error) {
+	if input == nil {
+		return nil, ErrIsNil.WithMessage("input must not be nil")
+	}
+	v, err := g.zMod.FromNatPlus(input)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create element from nat plus")
+	}
+	var out WT
+	W(&out).set(v, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, ErrValue.WithMessage("input is not a unit")
+	}
+	return W(&out), nil
+}
+
+// FromNat lifts a *num.Nat to a group element. The input must be a unit.
+func (g *UnitGroupTrait[A, W, WT]) FromNat(input *num.Nat) (W, error) {
+	if input == nil {
+		return nil, ErrIsNil.WithMessage("input must not be nil")
+	}
+	v, err := g.zMod.FromNat(input)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create element from nat")
+	}
+	var out WT
+	W(&out).set(v, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, ErrValue.WithMessage("input is not a unit")
+	}
+	return W(&out), nil
+}
+
 // FromBytes decodes a group element from its canonical big-endian byte
 // encoding. The result is validated as a unit; any byte string that
 // encodes a value not coprime with N is rejected with ErrValue, so this
