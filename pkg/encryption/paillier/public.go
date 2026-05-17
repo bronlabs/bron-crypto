@@ -77,10 +77,7 @@ func (pk *PublicKey) IdentityNoise(n *Nonce) (*Ciphertext, error) {
 }
 
 func (pk *PublicKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, error) {
-	out, err := algebrautils.Op(
-		func(rv *znstar.RSAGroupElementUnknownOrder) (*Nonce, error) {
-			return &Nonce{r: rv}, nil
-		}, first, second, rest...,
+	out, err := algebrautils.Op(NewNonceFromGroupElement, first, second, rest...,
 	)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine nonces")
@@ -133,11 +130,7 @@ func (pk *PublicKey) PlaintextScalarOp(p *Plaintext, scalar *num.Int) (*Plaintex
 }
 
 func (pk *PublicKey) CiphertextOp(c1, c2 *Ciphertext, rest ...*Ciphertext) (*Ciphertext, error) {
-	out, err := algebrautils.Op(
-		func(cv *znstar.PaillierGroupElementUnknownOrder) (*Ciphertext, error) {
-			return &Ciphertext{c: cv}, nil
-		}, c1, c2, rest...,
-	)
+	out, err := algebrautils.Op(NewCiphertextFromGroupElement, c1, c2, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute ciphertext operation")
 	}

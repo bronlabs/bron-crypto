@@ -50,6 +50,18 @@ func EncryptManyWithNonces[P Plaintext, N Nonce, C Ciphertext[C]](plaintexts []P
 	if receiver == nil {
 		return nil, ErrIsNil.WithMessage("receiver must not be nil")
 	}
+
+	obj, internallyDefined := any(receiver).(interface {
+		EncryptManyWithNonces([]P, []N) ([]C, error)
+	})
+	if internallyDefined {
+		ciphertexts, err := obj.EncryptManyWithNonces(plaintexts, nonces)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("could not encrypt plaintexts with nonces using receiver's internal implementation")
+		}
+		return ciphertexts, nil
+	}
+
 	if len(plaintexts) != len(nonces) {
 		return nil, ErrIsNil.WithMessage("number of plaintexts and nonces must be the same")
 	}
@@ -78,6 +90,18 @@ func DecryptMany[EK EncryptionKey[EK, P, N, C], DK DecryptionKey[EK, DK, P, N, C
 	if utils.IsNil(receiver) {
 		return nil, ErrIsNil.WithMessage("receiver must not be nil")
 	}
+
+	obj, internallyDefined := any(receiver).(interface {
+		DecryptMany([]C) ([]P, error)
+	})
+	if internallyDefined {
+		plaintexts, err := obj.DecryptMany(ciphertexts)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("could not decrypt ciphertexts using receiver's internal implementation")
+		}
+		return plaintexts, nil
+	}
+
 	if len(ciphertexts) < 2 {
 		return nil, ErrIsNil.WithMessage("must decrypt at least 2 ciphertexts")
 	}
@@ -103,6 +127,18 @@ func OpenMany[EK EncryptionKey[EK, P, N, C], OK OpeningKey[EK, OK, P, N, C], P P
 	if utils.IsNil(receiver) {
 		return nil, nil, ErrIsNil.WithMessage("receiver must not be nil")
 	}
+
+	obj, internallyDefined := any(receiver).(interface {
+		OpenMany([]C) ([]P, []N, error)
+	})
+	if internallyDefined {
+		plaintexts, nonces, err := obj.OpenMany(ciphertexts)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("could not open ciphertexts using receiver's internal implementation")
+		}
+		return plaintexts, nonces, nil
+	}
+
 	if len(ciphertexts) < 2 {
 		return nil, nil, ErrIsNil.WithMessage("must decrypt at least 2 ciphertexts")
 	}
