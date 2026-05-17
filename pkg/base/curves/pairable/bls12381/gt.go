@@ -95,6 +95,10 @@ func (*Gt) FromBytes(inBytes []byte) (*GtElement, error) {
 	return &element, nil
 }
 
+func (*Gt) Contains(e *GtElement) bool {
+	return e != nil
+}
+
 // GtElement represents an element of the target group.
 type GtElement struct {
 	V bls12381Impl.Gt

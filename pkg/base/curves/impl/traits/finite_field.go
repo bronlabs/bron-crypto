@@ -47,6 +47,10 @@ func (*FiniteFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, erro
 	return &e, nil
 }
 
+func (*FiniteFieldTrait[FP, WP, W]) Contains(e WP) bool {
+	return e != nil
+}
+
 // Random samples a field element using the provided PRNG.
 func (*FiniteFieldTrait[FP, WP, W]) Random(prng io.Reader) (WP, error) {
 	if prng == nil {

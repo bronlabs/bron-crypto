@@ -74,6 +74,10 @@ func (*PrimeFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, error
 	return &e, nil
 }
 
+func (*PrimeFieldTrait[FP, WP, W]) Contains(e WP) bool {
+	return e != nil
+}
+
 // FromUint64 builds an element from a uint64 value.
 func (*PrimeFieldTrait[FP, WP, W]) FromUint64(v uint64) WP {
 	var e W

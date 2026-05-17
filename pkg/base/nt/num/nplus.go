@@ -35,6 +35,11 @@ func (*PositiveNaturalNumbers) Name() string {
 	return "N\\{0}"
 }
 
+// Contains checks if the given element is a valid positive natural number (greater than zero).
+func (*PositiveNaturalNumbers) Contains(e *NatPlus) bool {
+	return e != nil
+}
+
 // Characteristic returns the characteristic of PositiveNaturalNumbers, which is 0.
 func (*PositiveNaturalNumbers) Characteristic() cardinal.Cardinal {
 	return cardinal.Zero()

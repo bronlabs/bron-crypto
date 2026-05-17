@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 // PolynomialRing is the ring R[x] of univariate polynomials with coefficients
@@ -62,6 +63,14 @@ func (r *PolynomialRing[RE]) RandomPolynomialWithConstantTerm(degree int, consta
 		coeffs: coeffs,
 	}
 	return p, nil
+}
+
+// Contains checks whether the given polynomial belongs to this polynomial ring.
+func (r *PolynomialRing[RE]) Contains(p *Polynomial[RE]) bool {
+	return p != nil && p.CoefficientStructure().Name() == r.ring.Name() && sliceutils.All(
+		p.Coefficients(),
+		func(c RE) bool { return r.ring.Contains(c) },
+	)
 }
 
 // New creates a polynomial from the given coefficients in ascending degree

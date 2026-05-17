@@ -31,6 +31,10 @@ func (u *UnitTrait[A, W, WT]) Value() *num.Uint {
 	return u.v
 }
 
+func (u *UnitTrait[A, W, WT]) n_() *num.NatPlus {
+	return u.n
+}
+
 // Arithmetic returns the modular-arithmetic backend carried by the element.
 // Concrete callers can type-switch on the returned value to recover
 // trapdoor material when the element is held under the known-order view.

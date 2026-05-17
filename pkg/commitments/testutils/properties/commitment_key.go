@@ -570,6 +570,8 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	t.Run("CommitmentOpInv", p.CommitmentOpInv)
 	t.Run("CommitmentScalarOpWorks", p.CommitmentScalarOpWorks)
 	t.Run("CommitmentScalarOpIsMessageWitnessScalarOp", p.CommitmentScalarOpIsMessageWitnessScalarOp)
+	t.Run("CommitmentGroupIsValid", p.CommitmentGroupIsValid)
+	t.Run("SampleWitnessSamplesFromCorrectGroup", p.SampleWitnessSamplesFromCorrectGroup)
 }
 
 func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) CommitmentToZerosIsIdentity(t *testing.T) {
@@ -825,5 +827,18 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 		commitment, err := p.NewCommitment(commitmentValue)
 		require.NoError(t, err)
 		require.True(t, commitment.Value().Equal(commitmentValue))
+	})
+}
+
+func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]) SampleWitnessSamplesFromCorrectGroup(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+
+		witness, err := key.SampleWitness(p.PRNG())
+		require.NoError(t, err)
+
+		group := key.WitnessGroup()
+		require.True(t, group.Contains(witness.Value()))
 	})
 }

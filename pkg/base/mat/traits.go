@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -98,6 +99,13 @@ func (mm *MatrixGroupTrait[G, S, W, WT]) FromBytes(data []byte) (W, error) {
 		d[i] = element
 	}
 	return W(&matrix), nil
+}
+
+func (mm *MatrixGroupTrait[G, S, W, WT]) Contains(e W) bool {
+	return e != nil && e.rows() == mm.rows && e.cols() == mm.cols && sliceutils.All(
+		e.data(),
+		func(el S) bool { return mm.baseStructure.Contains(el) },
+	)
 }
 
 // OpIdentity returns the additive identity (zero matrix).

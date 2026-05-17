@@ -35,6 +35,11 @@ func (*NaturalNumbers) Name() string {
 	return "N"
 }
 
+// Contains checks if the given element is a valid natural number (non-negative integer).
+func (*NaturalNumbers) Contains(e *Nat) bool {
+	return e != nil
+}
+
 // Characteristic returns the characteristic of the NaturalNumbers structure, which is 0.
 func (*NaturalNumbers) Characteristic() cardinal.Cardinal {
 	return cardinal.Zero()

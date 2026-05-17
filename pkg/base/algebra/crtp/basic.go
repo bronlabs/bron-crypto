@@ -20,7 +20,7 @@ type Element[E any] interface {
 type Structure[E any] interface {
 	Name() string
 	Order() Cardinal
-	// Contains(E) bool
+	Contains(E) bool
 	base.BytesLikeFactory[E]
 }
 

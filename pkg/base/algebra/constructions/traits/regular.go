@@ -70,6 +70,13 @@ func (m *RegularModule[R, E, W, WT]) Zero() W {
 	return W(&out)
 }
 
+func (m *RegularModule[R, E, W, WT]) Contains(e W) bool {
+	if utils.IsNil(e) {
+		return false
+	}
+	return m.Ring.Contains(e.Value())
+}
+
 func (*RegularModule[R, E, W, WT]) New(e E) (W, error) {
 	var out WT
 	if err := W(&out).set(e); err != nil {

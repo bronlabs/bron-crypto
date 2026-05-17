@@ -737,6 +737,7 @@ func (pr *GroupHomomorphicEncryptionProperties[DK, EK, P, PG, PV, N, NG, NV, C, 
 	t.Run("NonceGroupIsValid", pr.NonceGroupIsValid)
 	t.Run("PlaintextGroupIsValid", pr.PlaintextGroupIsValid)
 	t.Run("CiphertextGroupIsValid", pr.CiphertextGroupIsValid)
+	t.Run("SampleNonceSamplesFromCorrectGroup", pr.SampleNonceSamplesFromCorrectGroup)
 }
 
 func (pr *GroupHomomorphicEncryptionProperties[DK, EK, P, PG, PV, N, NG, NV, C, CG, CV, S]) EncryptingPlaintextIdentityActsAsCiphertextSpaceIdentityUpToPlaintext(t *testing.T) {
@@ -1046,11 +1047,13 @@ func (pr *GroupHomomorphicEncryptionProperties[DK, EK, P, PG, PV, N, NG, NV, C, 
 	})
 }
 
-// func (pr *GroupHomomorphicEncryptionProperties[DK, EK, P, PG, PV, N, NG, NV, C, CG, CV, S]) SampleNonceWorks(t *testing.T) {
-// 	t.Parallel()
-// 	rapid.Check(t, func(rt *rapid.T) {
-// 		key := pr.EncryptionKeyGenerator.Draw(rt, "encryption key")
-// 		nonce, err := key.SampleNonce(pr.PRNG())
-// 		require.NoError(rt, err)
-// 	})
-// }
+func (pr *GroupHomomorphicEncryptionProperties[DK, EK, P, PG, PV, N, NG, NV, C, CG, CV, S]) SampleNonceSamplesFromCorrectGroup(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		decKey := pr.DecryptionKeyGenerator.Draw(rt, "decryption key")
+		key := pr.getEncryptionKey(t, decKey)
+		nonce, err := key.SampleNonce(pr.PRNG())
+		require.NoError(rt, err)
+		require.True(rt, key.NonceGroup().Contains(nonce.Value()))
+	})
+}

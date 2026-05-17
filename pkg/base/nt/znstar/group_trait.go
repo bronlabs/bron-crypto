@@ -23,6 +23,7 @@ type unitWrapper[A modular.Arithmetic] interface {
 	Modulus() *num.NatPlus
 	IsUnknownOrder() bool
 	Jacobi() (int, error)
+	n_() *num.NatPlus
 	base.Transparent[*num.Uint]
 }
 
@@ -60,6 +61,11 @@ type UnitGroupTrait[A modular.Arithmetic, W unitWrapperPtrConstraint[A, WT], WT 
 // identifier matters for domain separation.
 func (g *UnitGroupTrait[A, W, WT]) Name() string {
 	return fmt.Sprintf("U(Z/%sZ)*", g.Modulus().String())
+}
+
+// Contains checks whether the given element belongs to this group.
+func (g *UnitGroupTrait[A, W, WT]) Contains(e W) bool {
+	return e != nil && e.IsUnknownOrder() == g.IsUnknownOrder() && e.Modulus().Equal(g.Modulus()) && e.n_().Equal(g.n)
 }
 
 // Order returns the multiplicative order of the group. For the known-order

@@ -84,6 +84,21 @@ func (s *DirectPowerSemiGroup[S, E, W, WT]) FromBytes(input []byte) (W, error) {
 	return W(&out), nil
 }
 
+func (s *DirectPowerSemiGroup[S, E, W, WT]) Contains(e W) bool {
+	if utils.IsNil(e) {
+		return false
+	}
+	if !s.Arity().Equal(e.Arity()) {
+		return false
+	}
+	for _, c := range e.Components() {
+		if !s.base.Contains(c) {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *DirectPowerSemiGroup[S, E, W, WT]) New(es ...E) (W, error) {
 	if len(es) != s.arity {
 		return nil, ErrInvalidArgument.WithMessage("incorrect component count")

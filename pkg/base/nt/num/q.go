@@ -64,6 +64,11 @@ func (*Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
 	}, nil
 }
 
+// Contains checks if the given element is a valid Rat element.
+func (*Rationals) Contains(e *Rat) bool {
+	return e != nil
+}
+
 // FromBytes deserializes a Rat element from the given byte slice.
 func (*Rationals) FromBytes(data []byte) (*Rat, error) {
 	var r Rat

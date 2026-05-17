@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // PointWrapper exposes the underlying curve point.
@@ -68,6 +69,10 @@ func (*CurveTrait[FP, P, W, WT]) PrimeSubGroupGenerator() W {
 	var gen WT
 	W(&gen).P().SetGenerator()
 	return &gen
+}
+
+func (*CurveTrait[FP, P, W, WT]) Contains(e W) bool {
+	return !utils.IsNil(e)
 }
 
 // PrimeCurveTrait provides helpers for prime-order curves.
