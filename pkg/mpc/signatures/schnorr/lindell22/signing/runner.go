@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -16,6 +17,9 @@ import (
 )
 
 const (
+	// ProtocolName identifies the Lindell22 signing runner in notifications.
+	ProtocolName = "Lindell22_Signing"
+
 	r1CorrelationID = "Lindell22SigningRound1"
 	r2CorrelationID = "Lindell22SigningRound2"
 )
@@ -46,28 +50,35 @@ func NewRunner[
 	}, nil
 }
 
-func (r *signingRunner[GE, S, M]) Run(rt *network.Router) (*lindell22.PartialSignature[GE, S], error) {
+func (r *signingRunner[GE, S, M]) Run(ctx context.Context, rt *network.Router, notificationCallback network.NotificationCallback) (*lindell22.PartialSignature[GE, S], error) {
+	// r1
 	r1bOut, r1uOut, err := r.cosigner.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bIn, r2uIn, err := exchange.Exchange(rt, r1CorrelationID, r.cosigner.Quorum(), r1bOut, r1uOut)
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 1)
+
+	// r2
+	r2bIn, r2uIn, err := exchange.Exchange(ctx, rt, r1CorrelationID, r.cosigner.Quorum(), r1bOut, r1uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
-
 	r2bOut, err := r.cosigner.Round2(r2bIn, r2uIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3bIn, err := exchange.BroadcastExchange(rt, r2CorrelationID, r.cosigner.Quorum(), r2bOut)
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 2)
+
+	// r3
+	r3bIn, err := exchange.BroadcastExchange(ctx, rt, r2CorrelationID, r.cosigner.Quorum(), r2bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 messages")
 	}
-
 	psig, err := r.cosigner.Round3(r3bIn, r.message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 3)
+
 	return psig, nil
 }

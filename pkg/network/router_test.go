@@ -1,6 +1,7 @@
 package network_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,11 +30,11 @@ func (d *stubDelivery) Quorum() []sharing.ID {
 	return d.quorum
 }
 
-func (*stubDelivery) Send(sharing.ID, []byte) error {
+func (*stubDelivery) Send(context.Context, sharing.ID, []byte) error {
 	return nil
 }
 
-func (d *stubDelivery) Receive() (sharing.ID, []byte, error) {
+func (d *stubDelivery) Receive(context.Context) (sharing.ID, []byte, error) {
 	msg := d.queue[0]
 	d.queue = d.queue[1:]
 	return msg.from, msg.message, nil
@@ -69,7 +70,7 @@ func TestRouterReceiveFromFiltersUnexpectedSenders(t *testing.T) {
 	}
 
 	router := network.NewRouter(delivery)
-	received, err := router.ReceiveFrom("cid", 2)
+	received, err := router.ReceiveFrom(context.Background(), "cid", 2)
 	require.NoError(t, err)
 	require.Equal(t, map[sharing.ID][]byte{2: []byte("expected")}, received)
 }

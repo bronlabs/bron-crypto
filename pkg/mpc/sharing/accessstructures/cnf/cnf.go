@@ -36,10 +36,12 @@ func ConvertToCNF(ac interface {
 	if ac == nil {
 		return nil, ErrIsNil.WithMessage("access structure cannot be nil")
 	}
-	return &CNF{
-		shareholders:           ac.Shareholders(),
-		maximalUnqualifiedSets: slices.Collect(ac.MaximalUnqualifiedSetsIter()),
-	}, nil
+	maxUnqualifiedSets := slices.Collect(ac.MaximalUnqualifiedSetsIter())
+	cnf, err := NewCNFAccessStructure(maxUnqualifiedSets...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to convert access structure to CNF")
+	}
+	return cnf, nil
 }
 
 // NewCNFAccessStructure constructs a CNF access structure from unqualified sets
@@ -164,6 +166,9 @@ func InducedMSP[E algebra.PrimeFieldElement[E]](f algebra.PrimeField[E], c *CNF)
 	}
 	if c == nil {
 		return nil, ErrIsNil.WithMessage("access structure cannot be nil")
+	}
+	if len(c.maximalUnqualifiedSets) == 0 {
+		return nil, ErrValue.WithMessage("access structure has no maximal unqualified sets")
 	}
 
 	// Sort maximal unqualified sets into a canonical order so that every caller

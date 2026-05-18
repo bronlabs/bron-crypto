@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/aor"
 	tu "github.com/bronlabs/bron-crypto/pkg/mpc/aor/testutils"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	ttu "github.com/bronlabs/bron-crypto/pkg/transcripts/testutils"
@@ -39,7 +40,7 @@ func testHappyPathRunner(t *testing.T, total int) {
 	quorum := ntu.MakeRandomQuorum(t, prng, total)
 	tapes := ttu.MakeRandomTapes(t, prng, quorum)
 	runners := tu.MakeAgreeOnRandomRunners(t, quorum, tapes, sampleLength)
-	samples := ntu.TestExecuteRunners(t, runners)
+	samples, notifications := ntu.TestExecuteRunners(t, runners)
 
 	t.Run("should generate valid samples", func(t *testing.T) {
 		t.Parallel()
@@ -66,5 +67,10 @@ func testHappyPathRunner(t *testing.T, total int) {
 				require.True(t, slices.Equal(tapeValues[i-1], tapeValues[i]))
 			}
 		}
+	})
+
+	t.Run("notifications are consistent", func(t *testing.T) {
+		t.Parallel()
+		ntu.RequireRoundCompletedNotifications(t, notifications, quorum, aor.ProtocolName, 3)
 	})
 }

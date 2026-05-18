@@ -57,8 +57,9 @@ func TestRunner_HappyPath(t *testing.T) {
 		runners[id] = runner
 	}
 
-	partialSignatures := ntu.TestExecuteRunners(t, runners)
+	partialSignatures, notifications := ntu.TestExecuteRunners(t, runners)
 	require.Len(t, partialSignatures, signingQuorum.Size())
+	ntu.RequireRoundCompletedNotifications(t, notifications, signingQuorum, signing_bbot.ProtocolName, 4)
 
 	publicKey := slices.Collect(maps.Values(shards))[0].PublicKey()
 	signature, err := dkls23.Aggregate(suite, publicKey, message, slices.Collect(maps.Values(partialSignatures))...)

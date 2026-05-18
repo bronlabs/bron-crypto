@@ -65,7 +65,7 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 		runners[id], err = canetti.NewRunner(ctxs[id], accessStructure, group, pcg.NewRandomised())
 		require.NoError(t, err)
 	}
-	shards := ntu.TestExecuteRunners(t, runners)
+	shards, notifications := ntu.TestExecuteRunners(t, runners)
 
 	t.Run("public materials are consistent", func(t *testing.T) {
 		t.Parallel()
@@ -117,5 +117,10 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 		for s := 1; s < len(tapeSamples); s++ {
 			require.True(t, bytes.Equal(tapeSamples[s-1], tapeSamples[s]))
 		}
+	})
+
+	t.Run("notifications are consistent", func(t *testing.T) {
+		t.Parallel()
+		ntu.RequireRoundCompletedNotifications(t, notifications, quorum, canetti.ProtocolName, 4)
 	})
 }

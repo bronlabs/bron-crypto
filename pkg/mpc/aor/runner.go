@@ -1,6 +1,7 @@
 package aor
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -9,6 +10,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+)
+
+const (
+	// ProtocolName identifies the Agree-on-Random runner in notifications.
+	ProtocolName = "AgreeOnRandom"
 )
 
 // NewAgreeOnRandomRunner constructs a runner that executes the Agree-on-Random protocol.
@@ -26,32 +32,35 @@ type agreeOnRandomRunner struct {
 }
 
 // Run executes the three-round Agree-on-Random protocol over the provided message router.
-func (r *agreeOnRandomRunner) Run(rt *network.Router) ([]byte, error) {
+func (r *agreeOnRandomRunner) Run(ctx context.Context, rt *network.Router, notificationCallback network.NotificationCallback) ([]byte, error) {
 	// r1
 	r1Out, err := r.participant.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2In, err := exchange.BroadcastExchange(rt, "AgreeOnRandomRound1Broadcast", r.participant.quorum, r1Out)
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 1)
+
+	// r2
+	r2In, err := exchange.BroadcastExchange(ctx, rt, "AgreeOnRandomRound1Broadcast", r.participant.quorum, r1Out)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
-
-	// r2
 	r2Out, err := r.participant.Round2(r2In)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3In, err := exchange.BroadcastExchange(rt, "AgreeOnRandomRound2Broadcast", r.participant.quorum, r2Out)
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 2)
+
+	// r3
+	r3In, err := exchange.BroadcastExchange(ctx, rt, "AgreeOnRandomRound2Broadcast", r.participant.quorum, r2Out)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
 	}
-
-	// r3
 	sample, err := r.participant.Round3(r3In)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
+	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 3)
 
 	return sample, nil
 }

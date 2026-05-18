@@ -58,7 +58,8 @@ func testRunnerHappyRecover[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFi
 		runners[id] = runner
 	}
 
-	newShards := ntu.TestExecuteRunners(tb, runners)
+	newShards, notifications := ntu.TestExecuteRunners(tb, runners)
+	ntu.RequireRoundCompletedNotifications(tb, notifications, shareholders, redistribute.ProtocolName, 3)
 
 	scheme, err := feldman.NewScheme(group, as)
 	require.NoError(tb, err)
@@ -104,7 +105,8 @@ func testRunnerHappyRecoverNoTrustedAnchor[G algebra.PrimeGroupElement[G, S], S 
 		runners[id] = runner
 	}
 
-	newShards := ntu.TestExecuteRunners(tb, runners)
+	newShards, notifications := ntu.TestExecuteRunners(tb, runners)
+	ntu.RequireRoundCompletedNotifications(tb, notifications, shareholders, redistribute.ProtocolName, 3)
 
 	scheme, err := feldman.NewScheme(group, as)
 	require.NoError(tb, err)

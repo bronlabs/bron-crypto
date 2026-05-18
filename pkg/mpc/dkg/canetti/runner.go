@@ -1,6 +1,7 @@
 package canetti
 
 import (
+	"context"
 	"io"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -14,6 +15,9 @@ import (
 )
 
 const (
+	// ProtocolName identifies the Canetti DKG runner in notifications.
+	ProtocolName = "Canetti_DKG"
+
 	r1CorrelationID = "BRON_CRYPTO_DKG_CANETTI_R1"
 	r2CorrelationID = "BRON_CRYPTO_DKG_CANETTI_R2"
 	r3CorrelationID = "BRON_CRYPTO_DKG_CANETTI_R3"
@@ -42,41 +46,45 @@ func NewRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 }
 
 // Run executes the protocol against the provided router.
-func (r *runner[G, S]) Run(rt *network.Router) (*mpc.BaseShard[G, S], error) {
+func (r *runner[G, S]) Run(ctx context.Context, rt *network.Router, callback network.NotificationCallback) (*mpc.BaseShard[G, S], error) {
 	// r1
 	r1bOut, err := r.p.Round1()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 1")
 	}
-	r2bIn, err := exchange.BroadcastExchange(rt, r1CorrelationID, r.p.ctx.Quorum(), r1bOut)
+	network.NotifyRoundCompleted(callback, ProtocolName, 1)
+
+	// r2
+	r2bIn, err := exchange.BroadcastExchange(ctx, rt, r1CorrelationID, r.p.ctx.Quorum(), r1bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 1 messages")
 	}
-
-	// r2
 	r2bOut, r2uOut, err := r.p.Round2(r2bIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 2")
 	}
-	r3bIn, r3uIn, err := exchange.Exchange(rt, r2CorrelationID, r.p.ctx.Quorum(), r2bOut, r2uOut)
+	network.NotifyRoundCompleted(callback, ProtocolName, 2)
+
+	// r3
+	r3bIn, r3uIn, err := exchange.Exchange(ctx, rt, r2CorrelationID, r.p.ctx.Quorum(), r2bOut, r2uOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 2 messages")
 	}
-
-	// r3
 	r3bOut, err := r.p.Round3(r3bIn, r3uIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 3")
 	}
-	r4bIn, err := exchange.BroadcastExchange(rt, r3CorrelationID, r.p.ctx.Quorum(), r3bOut)
+	network.NotifyRoundCompleted(callback, ProtocolName, 3)
+
+	// r4
+	r4bIn, err := exchange.BroadcastExchange(ctx, rt, r3CorrelationID, r.p.ctx.Quorum(), r3bOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 3 messages")
 	}
-
-	// r4
 	shard, err := r.p.Round4(r4bIn)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 4")
 	}
+	network.NotifyRoundCompleted(callback, ProtocolName, 4)
 	return shard, err
 }

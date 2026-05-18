@@ -3,6 +3,7 @@ package cnf
 
 import (
 	"fmt"
+	"iter"
 	"slices"
 	"strings"
 	"testing"
@@ -16,6 +17,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 )
+
+type emptyIteratorAccessStructure struct{}
+
+func (emptyIteratorAccessStructure) Shareholders() ds.Set[ID] {
+	return hashset.NewComparable[ID](1, 2).Freeze()
+}
+
+func (emptyIteratorAccessStructure) MaximalUnqualifiedSetsIter() iter.Seq[ds.Set[ID]] {
+	return func(yield func(ds.Set[ID]) bool) {}
+}
 
 func TestNewCNF(t *testing.T) {
 	t.Parallel()
@@ -81,6 +92,26 @@ func TestNewCNF(t *testing.T) {
 		require.Equal(t, expected, got)
 		require.True(t, c.Shareholders().Equal(hashset.NewComparable[ID](1, 2, 3, 4).Freeze()))
 	})
+}
+
+func TestConvertToCNFRejectsEmptyMaximalUnqualifiedSets(t *testing.T) {
+	t.Parallel()
+
+	_, err := ConvertToCNF(emptyIteratorAccessStructure{})
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrValue)
+}
+
+func TestInducedMSPRejectsEmptyMaximalUnqualifiedSets(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	c := &CNF{
+		shareholders: hashset.NewComparable[ID](1, 2).Freeze(),
+	}
+	_, err := InducedMSP(field, c)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrValue)
 }
 
 func TestCNFIsQualified(t *testing.T) {

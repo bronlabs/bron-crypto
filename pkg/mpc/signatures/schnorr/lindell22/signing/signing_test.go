@@ -97,8 +97,9 @@ func signAndAggregate(
 		runners[id] = runner
 	}
 
-	partialSignatures := ntu.TestExecuteRunners(t, runners)
+	partialSignatures, notifications := ntu.TestExecuteRunners(t, runners)
 	require.Len(t, partialSignatures, len(quorumIDs))
+	ntu.RequireRoundCompletedNotifications(t, notifications, quorumSet, signing.ProtocolName, 3)
 
 	anyID := quorumIDs[0]
 	aggregator, err := signing.NewAggregator(shards[anyID].PublicKeyMaterial(), scheme)
@@ -387,7 +388,8 @@ func TestSigning_TranscriptConsistency(t *testing.T) {
 		runners[id] = runner
 	}
 
-	ntu.TestExecuteRunners(t, runners)
+	_, notifications := ntu.TestExecuteRunners(t, runners)
+	ntu.RequireRoundCompletedNotifications(t, notifications, quorumSet, signing.ProtocolName, 3)
 
 	// All parties' transcripts must be identical.
 	firstTape, err := signingCtxs[quorum[0]].Transcript().ExtractBytes("test", 32)
@@ -446,8 +448,9 @@ func TestSigning_RunnerEndToEnd(t *testing.T) {
 			// DKG via runners
 			dkgCtxs := session_testutils.MakeRandomContexts(t, fx.ac.Shareholders(), prng)
 			dkgRunners := dkgtu.MakeGennaroDKGRunners(t, dkgCtxs, fx.ac, fiatshamir.Name, group)
-			dkgOutputs := ntu.TestExecuteRunners(t, dkgRunners)
+			dkgOutputs, dkgNotifications := ntu.TestExecuteRunners(t, dkgRunners)
 			require.Len(t, dkgOutputs, len(fx.shareholders))
+			ntu.RequireRoundCompletedNotifications(t, dkgNotifications, fx.ac.Shareholders(), gennaro.ProtocolName, 3)
 
 			shards := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
 			for id, output := range dkgOutputs {
@@ -469,8 +472,9 @@ func TestSigning_RunnerEndToEnd(t *testing.T) {
 				runners[id] = runner
 			}
 
-			partialSigs := ntu.TestExecuteRunners(t, runners)
+			partialSigs, notifications := ntu.TestExecuteRunners(t, runners)
 			require.Len(t, partialSigs, len(quorum))
+			ntu.RequireRoundCompletedNotifications(t, notifications, quorumSet, signing.ProtocolName, 3)
 
 			aggregator, err := signing.NewAggregator(shards[quorum[0]].PublicKeyMaterial(), scheme)
 			require.NoError(t, err)
