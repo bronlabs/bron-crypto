@@ -36,7 +36,7 @@ type Participant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[
 }
 
 type State[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	key         *pedcom.Key[E, S]
+	key         *pedcom.CommitmentKey[E, S]
 	lsss        *kw.Scheme[S]
 	pedersenVSS *pedersen.Scheme[E, S]
 	feldmanVSS  *feldman.Scheme[E, S]
@@ -85,11 +85,7 @@ func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, ctx.SessionID(), group.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	h, err := ts.Extract(ctx.Transcript(), secondPedersenGeneratorLabel, group)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
-	}
-	key, err := pedcom.NewCommitmentKey(group.Generator(), h)
+	key, err := pedcom.ExtractCommitmentKey(ctx.Transcript(), secondPedersenGeneratorLabel, group.Generator())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen key")
 	}

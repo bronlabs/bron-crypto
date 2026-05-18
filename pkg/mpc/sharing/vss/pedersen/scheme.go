@@ -29,8 +29,8 @@ import (
 // commitment Com(r_g_j, r_h_j) = [r_g_j]G + [r_h_j]H, where G and H are
 // independent generators whose discrete-log relation is unknown.
 type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	commitmentScheme *pedcom.Scheme[E, S]
-	lsss             *kw.Scheme[S]
+	commitmentKey *pedcom.CommitmentKey[E, S]
+	lsss          *kw.Scheme[S]
 }
 
 // NewScheme creates a new Pedersen VSS scheme over the given Pedersen
@@ -38,7 +38,7 @@ type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] s
 // from the key's group. The key must consist of two independent generators
 // (G, H) of a prime-order group; the security of the hiding property relies
 // on the discrete-log relation between G and H being unknown.
-func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], accessStructure accessstructures.Monotone) (*Scheme[E, S], error) {
+func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.CommitmentKey[E, S], accessStructure accessstructures.Monotone) (*Scheme[E, S], error) {
 	if key == nil {
 		return nil, sharing.ErrIsNil.WithMessage("pedersen commitment key is nil")
 	}
@@ -46,20 +46,15 @@ func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 		return nil, sharing.ErrIsNil.WithMessage("access structure is nil")
 	}
 
-	commitmentScheme, err := pedcom.NewScheme(key)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create Pedersen commitment scheme")
-	}
-
-	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](key.Group().ScalarStructure())
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](key.CommitmentGroup().ScalarStructure())
 
 	lsss, err := kw.NewScheme(field, accessStructure)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create LSSS scheme")
 	}
 	return &Scheme[E, S]{
-		commitmentScheme: commitmentScheme,
-		lsss:             lsss,
+		commitmentKey: key,
+		lsss:          lsss,
 	}, nil
 }
 
@@ -114,7 +109,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *kw.Secret[S], prng io.Rea
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create Pedersen dealer func")
 	}
-	liftedDealerFunc, err := LiftDealerFunc(dealerFunc, s.commitmentScheme.Key())
+	liftedDealerFunc, err := LiftDealerFunc(dealerFunc, s.commitmentKey.Key())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not lift Pedersen dealer func")
 	}
@@ -227,7 +222,7 @@ func (s *Scheme[E, S]) Verify(share *Share[S], vector *VerificationVector[E, S])
 		return errs.Wrap(err).WithMessage("could not get lifted share for share ID %d", share.ID())
 	}
 
-	manuallyLiftedShare, err := LiftShare(share, s.commitmentScheme.Key())
+	manuallyLiftedShare, err := LiftShare(share, s.commitmentKey.Key())
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not manually lift share for share ID %d", share.ID())
 	}

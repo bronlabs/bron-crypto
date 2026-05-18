@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -21,20 +21,20 @@ const (
 
 // Participant runs the Agree-on-Random protocol for a single party.
 type Participant struct {
-	id               sharing.ID
-	size             int
-	quorum           network.Quorum
-	round            network.Round
-	tape             transcripts.Transcript
-	commitmentScheme *hash_comm.Scheme
-	prng             io.Reader
-	state            State
+	id            sharing.ID
+	size          int
+	quorum        network.Quorum
+	round         network.Round
+	tape          transcripts.Transcript
+	commitmentKey *hashcom.CommitmentKey
+	prng          io.Reader
+	state         State
 }
 
 type State struct {
 	r            []byte
-	rWitness     hash_comm.Witness
-	rCommitments map[sharing.ID]hash_comm.Commitment
+	rWitness     hashcom.Witness
+	rCommitments map[sharing.ID]hashcom.Commitment
 }
 
 // NewParticipant initialises an AOR participant with transcript binding and randomness.
@@ -45,26 +45,20 @@ func NewParticipant(id sharing.ID, quorum network.Quorum, size int, tape transcr
 
 	tape.AppendDomainSeparator(transcriptLabel)
 	tape.AppendBytes(sizeLabel, binary.LittleEndian.AppendUint64(nil, uint64(size)))
-	keyBytes, err := tape.ExtractBytes(commitmentKeyLabel, hash_comm.KeySize)
+	key, err := hashcom.ExtractCommitmentKey(tape, commitmentKeyLabel)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot extract commitment key")
-	}
-	var key hash_comm.Key
-	copy(key[:], keyBytes)
-	commitmentScheme, err := hash_comm.NewScheme(key)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("could not extract commitment key from transcript")
 	}
 
 	return &Participant{
-		id:               id,
-		size:             size,
-		quorum:           quorum,
-		round:            1,
-		tape:             tape,
-		commitmentScheme: commitmentScheme,
-		prng:             prng,
-		state:            State{}, //nolint:exhaustruct // initially empty state
+		id:            id,
+		size:          size,
+		quorum:        quorum,
+		round:         1,
+		tape:          tape,
+		commitmentKey: key,
+		prng:          prng,
+		state:         State{}, //nolint:exhaustruct // initially empty state
 	}, nil
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
@@ -45,7 +46,7 @@ func (c *Cosigner[E, S, M]) Round1() (*Round1Broadcast[E, S, M], network.Outgoin
 	}
 
 	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
-	commitment, opening, err := commitBigR(c, bigR)
+	commitment, opening, err := commitments.Commit(c.cks[c.SharingID()], bigR.Bytes(), c.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot commit to R")
 	}
@@ -134,7 +135,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		theirOpening := received.BigROpening
 		theirCommitment := c.state.theirBigRCommitments[pid]
 		// step 3.2: Open(sid || R_j || j || S)
-		if err := verifyBigRCommitment(c, pid, theirBigR.X, theirOpening, theirCommitment); err != nil {
+		if err := c.cks[pid].Open(theirCommitment, theirBigR.X.Bytes(), theirOpening); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("cannot verify commitment for participant")
 		}
 		// step 3.3: Run NIPoKDL.Verify(R_j, π^dl_j)
@@ -256,50 +257,6 @@ func (c *Cosigner[GE, S, M]) computeEffectivePartialPublicKeys(zeroShare *feldma
 	}
 
 	return partialPublicKeyValues, additiveZeroShare, nil
-}
-
-func commitBigR[
-	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
-](c *Cosigner[E, S, M], bigR E) (commitment lindell22.Commitment, opening lindell22.Opening, err error) {
-	key, err := lindell22.NewCommitmentKey(c.ctx.SessionID(), c.SharingID(), c.state.quorumBytes)
-	if err != nil {
-		return lindell22.Commitment{}, lindell22.Opening{}, errs.Wrap(err).WithMessage("cannot create commitment key")
-	}
-	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
-	commitmentScheme, err := lindell22.NewCommitmentScheme(key)
-	if err != nil {
-		return lindell22.Commitment{}, lindell22.Opening{}, errs.Wrap(err).WithMessage("cannot create commitment scheme")
-	}
-	committer, err := commitmentScheme.Committer()
-	if err != nil {
-		return lindell22.Commitment{}, lindell22.Opening{}, errs.Wrap(err).WithMessage("cannot create commitment committer")
-	}
-	commitment, opening, err = committer.Commit(bigR.Bytes(), c.prng)
-	if err != nil {
-		return lindell22.Commitment{}, lindell22.Opening{}, errs.Wrap(err).WithMessage("cannot commit to R")
-	}
-	return commitment, opening, nil
-}
-
-func verifyBigRCommitment[
-	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
-](c *Cosigner[E, S, M], theirID sharing.ID, theirBigR E, theirOpening lindell22.Opening, theirCommitment lindell22.Commitment) error {
-	key, err := lindell22.NewCommitmentKey(c.ctx.SessionID(), theirID, c.state.quorumBytes)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create commitment key for participant %d", theirID)
-	}
-	commitmentScheme, err := lindell22.NewCommitmentScheme(key)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create commitment scheme for participant %d", theirID)
-	}
-	verifier, err := commitmentScheme.Verifier()
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create commitment verifier for participant %d", theirID)
-	}
-	if err := verifier.Verify(theirCommitment, theirBigR.Bytes(), theirOpening); err != nil {
-		return errs.Wrap(err).WithMessage("cannot verify commitment for participant %d", theirID)
-	}
-	return nil
 }
 
 func dlogProve[

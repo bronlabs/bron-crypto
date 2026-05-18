@@ -1,5 +1,5 @@
 //nolint:testpackage // Preventing the app from running if HmacFunc doesn't match collision resistance.
-package hash_comm
+package hashcom
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"

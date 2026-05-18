@@ -1,4 +1,4 @@
-package hash_comm
+package hashcom
 
 import (
 	"bytes"
@@ -36,6 +36,10 @@ func ExtractCommitmentKey(transcript ts.Transcript, label string) (*CommitmentKe
 }
 
 type CommitmentKey [KeySize]byte
+
+func (k *CommitmentKey) Type() commitments.Name {
+	return Name
+}
 
 func (k *CommitmentKey) SampleWitness(prng io.Reader) (Witness, error) {
 	out, err := SampleWitness(prng)

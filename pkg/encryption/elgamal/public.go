@@ -40,6 +40,10 @@ type publicKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struc
 	H E `cbor:"h"`
 }
 
+func (pk *PublicKey[E, S]) Type() encryption.Name {
+	return Name
+}
+
 func (pk *PublicKey[E, S]) SampleNonce(prng io.Reader) (*Nonce[S], error) {
 	if prng == nil {
 		return nil, encryption.ErrIsNil.WithMessage("prng must not be nil")

@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -19,13 +20,13 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, ErrRound.WithMessage("%d != 1", verifier.round)
 	}
 
-	zero, err := verifier.paillierPublicKey.PlaintextSpace().FromNat(numct.NatZero())
+	zero, err := paillier.NewPlaintext(verifier.paillierPublicKey.PlaintextGroup().Zero())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create plaintext zero")
 	}
 	// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
 	zeros := sliceutils.Repeat[[]*paillier.Plaintext](zero, verifier.k)
-	ciphertexts, nonces, err := verifier.enc.EncryptMany(zeros, verifier.paillierPublicKey, verifier.prng)
+	ciphertexts, nonces, err := encryption.EncryptMany(zeros, verifier.paillierPublicKey, verifier.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("encryption failed")
 	}
@@ -158,13 +159,13 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	// Computing in (Z/NZ)* using CrtModN, with exponent = N^(-1) mod φ(N)
 	// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
 	var m numct.Nat
-	prover.paillierSecretKey.Arithmetic().CrtModN.Phi.ModInv(&m, prover.paillierSecretKey.Group().N().Value())
+	prover.paillierSecretKey.Group().Arithmetic().CrtModN.Phi.ModInv(&m, prover.paillierSecretKey.Group().N().Value())
 
 	yPrime := make([]*numct.Nat, prover.k)
 	for i := range yPrime {
 		yPrime[i] = numct.NewNat(0) // initialise.
 	}
-	prover.paillierSecretKey.Arithmetic().CrtModN.MultiBaseExp(
+	prover.paillierSecretKey.Group().Arithmetic().CrtModN.MultiBaseExp(
 		yPrime,
 		sliceutils.MapCast[[]*numct.Nat](prover.state.x, func(s *nthroot.Statement[*modular.OddPrimeSquareFactors]) *numct.Nat { return s.X.Value().Value() }),
 		&m,
@@ -191,7 +192,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	for i := range verifier.k {
 		// Reduce y mod N for comparison (yPrime is computed mod N, but y is in (Z/N²Z)*)
 		var yModN numct.Nat
-		verifier.paillierPublicKey.N().Mod(&yModN, verifier.state.y[i].W.Value().Value())
+		verifier.paillierPublicKey.Group().N().ModulusCT().Mod(&yModN, verifier.state.y[i].W.Value().Value())
 		ok &= input.YPrime[i].Equal(&yModN)
 	}
 	if ok == ct.False {

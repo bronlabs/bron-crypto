@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/dkls23"
@@ -55,14 +55,14 @@ func (m *Round2P2P[P, B, S]) Validate(p *Cosigner[P, B, S], from sharing.ID) err
 
 // Round3Broadcast carries round 3 broadcast messages.
 type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigRCommitment hash_comm.Commitment `cbor:"bigRCommitment"`
+	BigRCommitment hashcom.Commitment `cbor:"bigRCommitment"`
 }
 
 func (m *Round3Broadcast[P, B, S]) Validate(p *Cosigner[P, B, S], from sharing.ID) error {
 	if m == nil {
 		return dkls23.ErrNil.WithMessage("missing fields in Round3Broadcast message")
 	}
-	if m.BigRCommitment == [hash_comm.DigestSize]byte{} {
+	if m.BigRCommitment == [hashcom.DigestSize]byte{} {
 		return dkls23.ErrNil.WithMessage("missing BigRCommitment")
 	}
 
@@ -91,16 +91,16 @@ func (m *Round3P2P[P, B, S]) Validate(p *Cosigner[P, B, S], from sharing.ID) err
 
 // Round4Broadcast carries round 4 broadcast messages.
 type Round4Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigR        P                 `cbor:"bigR"`
-	BigRWitness hash_comm.Witness `cbor:"bigRWitness"`
-	Pk          P                 `cbor:"pk"`
+	BigR        P               `cbor:"bigR"`
+	BigRWitness hashcom.Witness `cbor:"bigRWitness"`
+	Pk          P               `cbor:"pk"`
 }
 
 func (m *Round4Broadcast[P, B, S]) Validate(_ *Cosigner[P, B, S], _ sharing.ID) error {
 	if m == nil || utils.IsNil(m.BigR) || utils.IsNil(m.Pk) {
 		return dkls23.ErrNil.WithMessage("missing fields in Round4Broadcast message")
 	}
-	if m.BigRWitness == [hash_comm.DigestSize]byte{} {
+	if m.BigRWitness == [hashcom.DigestSize]byte{} {
 		return dkls23.ErrNil.WithMessage("missing BigRWitness")
 	}
 

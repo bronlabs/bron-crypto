@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -15,7 +15,7 @@ import (
 type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	participant[X, W, A, S, Z]
 
-	challengeCommitment hash_comm.Commitment
+	challengeCommitment hashcom.Commitment
 	witness             W
 	state               S
 }
@@ -34,7 +34,7 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 	p.round = 2 // Prover starts at round 2 (receives verifier's challenge commitment first)
 	return &Prover[X, W, A, S, Z]{
 		participant:         *p,
-		challengeCommitment: hash_comm.Commitment{},
+		challengeCommitment: hashcom.Commitment{},
 		witness:             witness,
 		state:               *new(S),
 	}, nil
@@ -42,13 +42,13 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 
 // Round2 processes the verifier's challenge commitment and returns the prover's
 // sigma protocol commitment. This is the first prover round in the 5-round protocol.
-func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, error) {
+func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hashcom.Commitment) (A, error) {
 	var zero A
 	if p.round != 2 {
 		return zero, ErrRound.WithMessage("r != 2 (%d)", p.round)
 	}
 
-	transcripts.Append(p.ctx.Transcript(), challengeCommitmentLabel, eCommitment)
+	p.ctx.Transcript().AppendBytes(challengeCommitmentLabel, eCommitment[:])
 
 	p.challengeCommitment = eCommitment
 
@@ -66,18 +66,14 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 
 // Round4 verifies the verifier's challenge commitment opening and computes the
 // prover's response. Returns the sigma protocol response (z).
-func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash_comm.Witness) (Z, error) {
+func (p *Prover[X, W, A, S, Z]) Round4(challenge hashcom.Message, witness hashcom.Witness) (Z, error) {
 	var zero Z
 	p.ctx.Transcript().AppendBytes(challengeLabel, challenge)
 
 	if p.round != 4 {
 		return zero, ErrRound.WithMessage("r != 4 (%d)", p.round)
 	}
-	verifier, err := p.comm.Verifier()
-	if err != nil {
-		return zero, errs.Wrap(err).WithMessage("cannot create verifier")
-	}
-	if err := verifier.Verify(p.challengeCommitment, challenge, witness); err != nil {
+	if err := p.ck.Open(p.challengeCommitment, challenge, witness); err != nil {
 		return zero, errs.Wrap(err).WithMessage("invalid challenge")
 	}
 

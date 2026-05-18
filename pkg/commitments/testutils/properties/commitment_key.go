@@ -2,6 +2,7 @@ package properties
 
 import (
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -9,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	serdeprop "github.com/bronlabs/bron-crypto/pkg/base/serde/testutils/properties"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/errs-go/errs"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 )
@@ -213,7 +215,11 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CantOpenWithDifferentKey(t *testin
 
 		err = key2.Open(commitment, message, witness)
 		require.Error(t, err)
-		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
+
+		require.True(t,
+			errs.Is(err, commitments.ErrVerificationFailed) ||
+				strings.Contains(errs.Unwrap(err)[0].Error(), "cannot recompute commitment"), // in indcpacom for paillier, CommitWithWitness usually fails before the euqality check due to different moduli.
+		)
 	})
 }
 
@@ -234,9 +240,11 @@ func (p *CommitmentKeyProperties[K, M, W, C]) DifferentKeysSameMessageWitnessDif
 		require.NoError(t, err)
 
 		commitment2, err := key2.CommitWithWitness(message, witness)
-		require.NoError(t, err)
-
-		require.False(t, commitment1.Equal(commitment2))
+		if err != nil {
+			require.Nil(t, commitment2) // indcpacom with paillier would return an error here because modulus of the key is different.
+		} else {
+			require.False(t, commitment1.Equal(commitment2))
+		}
 	})
 }
 

@@ -329,6 +329,10 @@ func (sk *SecretKey) Shift(c *Ciphertext, m *Plaintext) (*Ciphertext, error) {
 	return out, nil
 }
 
+func (sk *SecretKey) Group() *znstar.PaillierGroupKnownOrder {
+	return sk.group
+}
+
 func (sk *SecretKey) precompute() error {
 	arith := sk.group.Arithmetic()
 	p := arith.P.Factor

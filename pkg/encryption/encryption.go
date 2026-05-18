@@ -24,6 +24,7 @@ type encryptionKey[P Plaintext, N Nonce, C Ciphertext[C]] interface {
 }
 
 type EncryptionKey[EK EncryptionKey[EK, P, N, C], P Plaintext, N Nonce, C Ciphertext[C]] interface {
+	Type() Name
 	encryptionKey[P, N, C]
 	base.Equatable[EK]
 }

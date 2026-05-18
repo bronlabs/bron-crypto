@@ -1,4 +1,4 @@
-package hash_comm
+package hashcom
 
 import (
 	"bytes"

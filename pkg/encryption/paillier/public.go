@@ -28,6 +28,10 @@ type publicKeyDTO struct {
 	Group *znstar.PaillierGroupUnknownOrder `cbor:"group"`
 }
 
+func (pk *PublicKey) Type() encryption.Name {
+	return Name
+}
+
 func (pk *PublicKey) SampleNonce(prng io.Reader) (*Nonce, error) {
 	if prng == nil {
 		return nil, encryption.ErrIsNil.WithMessage("prng must not be nil")
@@ -171,6 +175,10 @@ func (pk *PublicKey) Shift(c *Ciphertext, delta *Plaintext) (*Ciphertext, error)
 		return nil, errs.Wrap(err).WithMessage("could not shift ciphertext by delta")
 	}
 	return &Ciphertext{c: out.Value()}, nil
+}
+
+func (pk *PublicKey) Group() *znstar.PaillierGroupUnknownOrder {
+	return pk.group
 }
 
 func (pk *PublicKey) PlaintextGroup() *num.ZMod {

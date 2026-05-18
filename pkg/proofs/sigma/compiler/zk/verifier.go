@@ -5,7 +5,8 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -17,7 +18,7 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 	participant[X, W, A, S, Z]
 
 	challengeBytes []byte
-	eWitness       hash_comm.Witness
+	eWitness       hashcom.Witness
 	prng           io.Reader
 }
 
@@ -36,44 +37,40 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 	return &Verifier[X, W, A, S, Z]{
 		participant:    *p,
 		challengeBytes: nil,
-		eWitness:       hash_comm.Witness{},
+		eWitness:       hashcom.Witness{},
 		prng:           prng,
 	}, nil
 }
 
 // Round1 generates a random challenge, commits to it, and returns the commitment.
 // This is the first round of the 5-round protocol.
-func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
+func (v *Verifier[X, W, A, S, Z]) Round1() (hashcom.Commitment, error) {
 	if v.round != 1 {
-		return hash_comm.Commitment{}, ErrRound.WithMessage("r != 1 (%d)", v.round)
+		return hashcom.Commitment{}, ErrRound.WithMessage("r != 1 (%d)", v.round)
 	}
 
 	v.challengeBytes = make([]byte, v.protocol.GetChallengeBytesLength())
 	_, err := io.ReadFull(v.prng, v.challengeBytes)
 	if err != nil {
-		return hash_comm.Commitment{}, errs.Wrap(err).WithMessage("couldn't sample challenge")
+		return hashcom.Commitment{}, errs.Wrap(err).WithMessage("couldn't sample challenge")
 	}
 
-	committer, err := v.comm.Committer()
+	eCommitment, eWitness, err := commitments.Commit(v.ck, v.challengeBytes, v.prng)
 	if err != nil {
-		return hash_comm.Commitment{}, errs.Wrap(err).WithMessage("couldn't create committer")
-	}
-	eCommitment, eWitness, err := committer.Commit(v.challengeBytes, v.prng)
-	if err != nil {
-		return hash_comm.Commitment{}, errs.Wrap(err).WithMessage("couldn't commit to challenge")
+		return hashcom.Commitment{}, errs.Wrap(err).WithMessage("couldn't commit to challenge")
 	}
 	v.eWitness = eWitness
 
-	transcripts.Append(v.ctx.Transcript(), challengeCommitmentLabel, eCommitment)
+	v.ctx.Transcript().AppendBytes(challengeCommitmentLabel, eCommitment[:])
 	v.round += 2
 	return eCommitment, nil
 }
 
 // Round3 receives the prover's commitment and opens the challenge commitment.
 // Returns the challenge message and witness for the prover to verify.
-func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hash_comm.Message, hash_comm.Witness, error) {
+func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hashcom.Message, hashcom.Witness, error) {
 	if v.round != 3 {
-		return hash_comm.Message(nil), hash_comm.Witness{}, ErrRound.WithMessage("r != 3 (%d)", v.round)
+		return hashcom.Message(nil), hashcom.Witness{}, ErrRound.WithMessage("r != 3 (%d)", v.round)
 	}
 	transcripts.Append(v.ctx.Transcript(), commitmentLabel, commitment)
 	v.ctx.Transcript().AppendBytes(challengeLabel, v.challengeBytes)

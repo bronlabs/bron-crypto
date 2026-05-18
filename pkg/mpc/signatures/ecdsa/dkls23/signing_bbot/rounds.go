@@ -9,7 +9,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
@@ -25,13 +26,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast[P, B, S], r1uOut n
 		return nil, nil, dkls23.ErrValidationFailed.WithMessage("invalid round")
 	}
 
-	var ck [hash_comm.KeySize]byte
-	ckBytes, err := c.ctx.Transcript().ExtractBytes(ckLabel, uint(len(ck)))
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("failed to extract commitment key")
-	}
-	copy(ck[:], ckBytes)
-	c.state.ck, err = hash_comm.NewScheme(ck)
+	c.state.ck, err = hashcom.ExtractCommitmentKey(c.ctx.Transcript(), ckLabel)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create commitment scheme")
 	}
@@ -42,12 +37,8 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast[P, B, S], r1uOut n
 	}
 	c.state.bigR = make(map[sharing.ID]P)
 	c.state.bigR[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.r)
-	c.state.bigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
-	committer, err := c.state.ck.Committer()
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create committer")
-	}
-	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = committer.Commit(c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
+	c.state.bigRCommitment = make(map[sharing.ID]hashcom.Commitment)
+	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = commitments.Commit(c.state.ck, c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot commit to r")
 	}
@@ -139,10 +130,6 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 	c.state.pk = make(map[sharing.ID]P)
 	c.state.pk[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.sk)
 	c.state.c = make(map[sharing.ID][]S)
-	verifier, err := c.state.ck.Verifier()
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create verifier")
-	}
 
 	r3b := &Round3Broadcast[P, B, S]{Pk: c.state.pk[c.shard.Share().ID()]}
 	r3u := hashmap.NewComparable[sharing.ID, *Round3P2P[P, B, S]]()
@@ -151,7 +138,7 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 		uIn, _ := r2u.Get(id)
 		uOut := new(Round3P2P[P, B, S])
 
-		if err := verifier.Verify(c.state.bigRCommitment[id], bIn.BigR.ToCompressed(), bIn.BigRWitness); err != nil {
+		if err := c.state.ck.Open(c.state.bigRCommitment[id], bIn.BigR.ToCompressed(), bIn.BigRWitness); err != nil {
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
 		c.state.bigR[id] = bIn.BigR

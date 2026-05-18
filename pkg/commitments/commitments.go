@@ -23,6 +23,7 @@ type WitnessSampler[W Witness] interface {
 }
 
 type CommitmentKey[K CommitmentKey[K, M, W, C], M Message, W Witness, C Commitment[C]] interface {
+	Type() Name
 	WitnessSampler[W]
 	CommitWithWitness(message M, witness W) (C, error)
 	Open(commitment C, message M, witness W) error

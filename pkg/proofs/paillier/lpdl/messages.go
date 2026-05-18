@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
@@ -14,9 +14,9 @@ import (
 
 // Round1Output carries the verifier's first-round data.
 type Round1Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	RangeVerifierOutput    hash_comm.Commitment
+	RangeVerifierOutput    hashcom.Commitment
 	CPrime                 *paillier.Ciphertext
-	CDoublePrimeCommitment hash_comm.Commitment
+	CDoublePrimeCommitment hashcom.Commitment
 }
 
 // Validate checks the Round1Output shape.
@@ -24,13 +24,13 @@ func (m *Round1Output[P, B, S]) Validate(p *Prover[P, B, S], _ sharing.ID) error
 	if m == nil {
 		return ErrInvalidArgument.WithMessage("round 1 output is nil")
 	}
-	if m.RangeVerifierOutput == [hash_comm.DigestSize]byte{} {
+	if m.RangeVerifierOutput == [hashcom.DigestSize]byte{} {
 		return ErrInvalid.WithMessage("range verifier output is empty")
 	}
 	if m.CPrime == nil {
 		return ErrInvalidArgument.WithMessage("CPrime is nil")
 	}
-	if m.CDoublePrimeCommitment == [hash_comm.DigestSize]byte{} {
+	if m.CDoublePrimeCommitment == [hashcom.DigestSize]byte{} {
 		return ErrInvalid.WithMessage("CDoublePrimeCommitment is empty")
 	}
 
@@ -40,7 +40,7 @@ func (m *Round1Output[P, B, S]) Validate(p *Prover[P, B, S], _ sharing.ID) error
 // Round2Output carries the prover's second-round data.
 type Round2Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	RangeProverOutput *paillierrange.Commitment
-	CHat              hash_comm.Commitment
+	CHat              hashcom.Commitment
 }
 
 // Validate checks the Round2Output shape.
@@ -57,11 +57,11 @@ func (m *Round2Output[P, B, S]) Validate(_ *Verifier[P, B, S], _ sharing.ID) err
 
 // Round3Output carries the verifier's third-round data.
 type Round3Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	RangeVerifierMessage hash_comm.Message
-	RangeVerifierWitness hash_comm.Witness
+	RangeVerifierMessage hashcom.Message
+	RangeVerifierWitness hashcom.Witness
 	A                    *num.Uint
 	B                    *num.Uint
-	CDoublePrimeWitness  hash_comm.Witness
+	CDoublePrimeWitness  hashcom.Witness
 }
 
 // Validate checks the Round3Output shape.
@@ -89,7 +89,7 @@ func (m *Round3Output[P, B, S]) Validate(_ *Prover[P, B, S], _ sharing.ID) error
 type Round4Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	RangeProverOutput *paillierrange.Response
 	BigQHat           P
-	BigQHatWitness    hash_comm.Witness
+	BigQHatWitness    hashcom.Witness
 }
 
 // Validate checks the Round4Output shape.

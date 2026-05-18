@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -27,7 +27,7 @@ const (
 // Participant executes the Canetti-style DKG rounds for one party.
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	ctx           *session.Context
-	commitmentKey hash_comm.Key
+	commitmentKey *hashcom.CommitmentKey
 	group         algebra.PrimeGroup[G, S]
 	sharingScheme *feldman.Scheme[G, S]
 	schScheme     *batch_schnorr.Protocol[G, S]
@@ -49,8 +49,8 @@ type state[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 	tau *batch_schnorr.State[S]
 	msg map[sharing.ID]*CommitmentMessage[G, S]
 
-	u  hash_comm.Witness
-	vs map[sharing.ID]hash_comm.Commitment
+	u  hashcom.Witness
+	vs map[sharing.ID]hashcom.Commitment
 }
 
 // NewParticipant creates a participant bound to the provided session context,
@@ -64,12 +64,10 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	}
 
 	ctx.Transcript().AppendDomainSeparator(domainSeparator)
-	ckBytes, err := ctx.Transcript().ExtractBytes(ckLabel, hash_comm.KeySize)
+	commitmentKey, err := hashcom.ExtractCommitmentKey(ctx.Transcript(), ckLabel)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create commitment key")
+		return nil, errs.Wrap(err).WithMessage("could not extract commitment key from transcript")
 	}
-	var commitmentKey hash_comm.Key
-	copy(commitmentKey[:], ckBytes)
 	sharingScheme, err := feldman.NewScheme(group, accessStructure)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create feldman scheme")
@@ -111,39 +109,4 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 // SharingID returns the sharing identifier of the local participant.
 func (p *Participant[G, S]) SharingID() sharing.ID {
 	return p.ctx.HolderID()
-}
-
-func (p *Participant[G, S]) commit(message base.BytesLike) (hash_comm.Commitment, hash_comm.Witness, error) {
-	messageBytes := message.Bytes()
-	commitmentScheme, err := hash_comm.NewScheme(p.commitmentKey)
-	if err != nil {
-		return hash_comm.Commitment{}, hash_comm.Witness{}, errs.Wrap(err).WithMessage("cannot create commitment scheme")
-	}
-	committer, err := commitmentScheme.Committer()
-	if err != nil {
-		return hash_comm.Commitment{}, hash_comm.Witness{}, errs.Wrap(err).WithMessage("cannot create committer")
-	}
-	commitment, witness, err := committer.Commit(messageBytes, p.prng)
-	if err != nil {
-		return hash_comm.Commitment{}, hash_comm.Witness{}, errs.Wrap(err).WithMessage("cannot commit")
-	}
-
-	return commitment, witness, nil
-}
-
-func (p *Participant[G, S]) verify(message base.BytesLike, commitment hash_comm.Commitment, witness hash_comm.Witness) error {
-	messageBytes := message.Bytes()
-	commitmentScheme, err := hash_comm.NewScheme(p.commitmentKey)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create commitment scheme")
-	}
-	verifier, err := commitmentScheme.Verifier()
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create verifier")
-	}
-	if err := verifier.Verify(commitment, messageBytes, witness); err != nil {
-		return errs.Wrap(err).WithMessage("invalid commitment")
-	}
-
-	return nil
 }

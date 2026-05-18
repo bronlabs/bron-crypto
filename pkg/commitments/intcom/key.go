@@ -132,6 +132,10 @@ type commitmentKeyDTO struct {
 	MessageSlack int                                 `cbor:"slack"`
 }
 
+func (k *CommitmentKey) Type() commitments.Name {
+	return Name
+}
+
 func (k *CommitmentKey) SampleWitness(prng io.Reader) (*Witness, error) {
 	if prng == nil {
 		return nil, commitments.ErrIsNil.WithMessage("prng cannot be nil")

@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
@@ -90,6 +91,10 @@ func (k *CommitmentKey[E, S]) CommitWithWitness(message *Message[S], witness *Wi
 		return nil, errs.Wrap(err).WithMessage("failed to create commitment")
 	}
 	return out, nil
+}
+
+func (k *CommitmentKey[E, S]) Type() commitments.Name {
+	return Name
 }
 
 func (k *CommitmentKey[E, S]) Open(commitment *Commitment[E, S], message *Message[S], witness *Witness[S]) error {

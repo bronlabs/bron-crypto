@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
@@ -16,7 +16,7 @@ import (
 
 // Round1Broadcast carries the dealer's commitment digest for round 1.
 type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	V hash_comm.Commitment
+	V hashcom.Commitment
 }
 
 // Validate checks whether the round 1 broadcast is well formed.
@@ -24,7 +24,7 @@ func (m *Round1Broadcast[G, S]) Validate(*Participant[G, S], sharing.ID) error {
 	if m == nil {
 		return ErrValidationFailed.WithMessage("nil message")
 	}
-	if m.V == ([hash_comm.DigestSize]byte{}) {
+	if m.V == ([hashcom.DigestSize]byte{}) {
 		return ErrValidationFailed.WithMessage("empty commitment")
 	}
 
@@ -58,7 +58,7 @@ func (m *CommitmentMessage[G, S]) Bytes() []byte {
 // Round2Broadcast opens the sender's round 1 commitment.
 type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	Message *CommitmentMessage[G, S]
-	U       hash_comm.Witness
+	U       hashcom.Witness
 }
 
 // Validate checks whether the round 2 broadcast is well formed for the local
@@ -67,7 +67,7 @@ func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], senderID sharing.
 	if m == nil || m.Message == nil || m.Message.X == nil || m.Message.Rho == nil || m.Message.A == nil {
 		return ErrValidationFailed.WithMessage("nil argument")
 	}
-	if m.U == ([hash_comm.DigestSize]byte{}) {
+	if m.U == ([hashcom.DigestSize]byte{}) {
 		return ErrValidationFailed.WithMessage("empty witness")
 	}
 	if m.Message.SessionID != p.ctx.SessionID() {

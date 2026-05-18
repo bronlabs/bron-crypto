@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/dkls23"
@@ -14,14 +14,14 @@ import (
 
 // Round1Broadcast carries round 1 broadcast messages.
 type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigRCommitment hash_comm.Commitment `cbor:"bigRCommitment"`
+	BigRCommitment hashcom.Commitment `cbor:"bigRCommitment"`
 }
 
 func (m *Round1Broadcast[P, B, S]) Validate(_ *Cosigner[P, B, S], _ sharing.ID) error {
 	if m == nil {
 		return dkls23.ErrNil.WithMessage("missing fields in Round1Broadcast message")
 	}
-	if m.BigRCommitment == [hash_comm.DigestSize]byte{} {
+	if m.BigRCommitment == [hashcom.DigestSize]byte{} {
 		return dkls23.ErrNil.WithMessage("missing BigRCommitment")
 	}
 
@@ -50,15 +50,15 @@ func (m *Round1P2P[P, B, S]) Validate(p *Cosigner[P, B, S], from sharing.ID) err
 
 // Round2Broadcast carries round 2 broadcast messages.
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigR        P                 `cbor:"bigR"`
-	BigRWitness hash_comm.Witness `cbor:"bigRWitness"`
+	BigR        P               `cbor:"bigR"`
+	BigRWitness hashcom.Witness `cbor:"bigRWitness"`
 }
 
 func (m *Round2Broadcast[P, B, S]) Validate(_ *Cosigner[P, B, S], _ sharing.ID) error {
 	if m == nil || utils.IsNil(m.BigR) {
 		return dkls23.ErrNil.WithMessage("missing fields in Round2Broadcast message")
 	}
-	if m.BigRWitness == [hash_comm.DigestSize]byte{} {
+	if m.BigRWitness == [hashcom.DigestSize]byte{} {
 		return dkls23.ErrNil.WithMessage("missing BigRWitness")
 	}
 	if m.BigR.IsZero() || !m.BigR.IsTorsionFree() {

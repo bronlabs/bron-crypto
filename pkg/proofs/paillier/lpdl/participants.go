@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -50,9 +50,9 @@ type State[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 type VerifierState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	State[P, B, S]
 
-	cDoublePrimeWitness hash_comm.Witness
+	cDoublePrimeWitness hashcom.Witness
 	bigQPrime           P
-	cHat                hash_comm.Commitment
+	cHat                hashcom.Commitment
 }
 
 // Verifier runs the LPDL verifier role.
@@ -63,7 +63,7 @@ type Verifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebr
 	paillierEncrypter *paillier.Encrypter
 	c                 *paillier.Ciphertext
 	state             *VerifierState[P, B, S]
-	commitmentScheme  *hash_comm.Scheme
+	commitmentScheme  *hashcom.Scheme
 }
 
 // ProverState tracks the prover's internal state across rounds.
@@ -72,8 +72,8 @@ type ProverState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 
 	alpha                  *paillier.Plaintext
 	bigQHat                P
-	bigQHatWitness         hash_comm.Witness
-	cDoublePrimeCommitment hash_comm.Commitment
+	bigQHatWitness         hashcom.Witness
+	cDoublePrimeCommitment hashcom.Commitment
 }
 
 // Prover runs the LPDL prover role.
@@ -85,7 +85,7 @@ type Prover[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.
 	sk                *paillier.PrivateKey
 	x                 S
 	state             *ProverState[P, B, S]
-	commitmentScheme  *hash_comm.Scheme
+	commitmentScheme  *hashcom.Scheme
 }
 
 // NewVerifier constructs a verifier instance for the LPDL protocol.
@@ -126,11 +126,11 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 		return nil, errs.Wrap(err).WithMessage("cannot create Paillier range verifier")
 	}
 
-	ck, err := hash_comm.NewKeyFromCRSBytes(ctx.SessionID(), appTranscriptLabel)
+	ck, err := hashcom.NewKeyFromCRSBytes(ctx.SessionID(), appTranscriptLabel)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot instantiate committer")
 	}
-	commitmentScheme, err := hash_comm.NewScheme(ck)
+	commitmentScheme, err := hashcom.NewScheme(ck)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot instantiate commitment scheme")
 	}
@@ -161,9 +161,9 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 				a:      nil,
 				b:      nil,
 			},
-			cDoublePrimeWitness: hash_comm.Witness{},
+			cDoublePrimeWitness: hashcom.Witness{},
 			bigQPrime:           *new(P),
-			cHat:                hash_comm.Commitment{},
+			cHat:                hashcom.Commitment{},
 		},
 	}, nil
 }
@@ -218,11 +218,11 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	}
 	rangePlainText := xAsPlaintext.Sub(qThirdAsPlaintext)
 
-	ck, err := hash_comm.NewKeyFromCRSBytes(ctx.SessionID(), appTranscriptLabel)
+	ck, err := hashcom.NewKeyFromCRSBytes(ctx.SessionID(), appTranscriptLabel)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot instantiate committer")
 	}
-	commitmentScheme, err := hash_comm.NewScheme(ck)
+	commitmentScheme, err := hashcom.NewScheme(ck)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot instantiate commitment scheme")
 	}
@@ -272,8 +272,8 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 			},
 			alpha:                  nil,
 			bigQHat:                *new(P),
-			bigQHatWitness:         hash_comm.Witness{},
-			cDoublePrimeCommitment: hash_comm.Commitment{},
+			bigQHatWitness:         hashcom.Witness{},
+			cDoublePrimeCommitment: hashcom.Commitment{},
 		},
 	}, nil
 }
