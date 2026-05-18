@@ -433,6 +433,9 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentScalarOpIs
 		require.NoError(t, err)
 
 		require.True(t, commitmentScalarExpected.Equal(commitmentScalarActual))
+
+		err = key.Open(commitmentScalarActual, messageScalar, witnessScalar)
+		require.NoError(t, err)
 	})
 }
 
@@ -483,6 +486,11 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CanShiftCommitmentBy
 
 		err = key.Open(shifted, combinedMessage, witness)
 		require.NoError(t, err)
+
+		commitmentOfShfitedMessage, err := key.CommitWithWitness(combinedMessage, witness)
+		require.NoError(t, err)
+
+		require.True(t, shifted.Equal(commitmentOfShfitedMessage))
 	})
 }
 
