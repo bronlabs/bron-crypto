@@ -218,7 +218,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	}
 
 	xNat := numct.NewNatFromBytes(x.Bytes())
-	xUint, err := num.NewUintGivenModulus(xNat, secretKey.Group().ModulusCT())
+	xUint, err := num.NewUintGivenModulus(xNat, secretKey.PlaintextGroup().ModulusCT())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't convert x to uint")
 	}
@@ -229,11 +229,6 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	rangePlainText, err := secretKey.PlaintextOp(xAsPlaintext, qThirdAsPlaintextInv)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't compute range plaintext")
-	}
-
-	ck, err := hashcom.ExtractCommitmentKey(ctx.Transcript(), appTranscriptLabel)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot extract commitment key")
 	}
 
 	rangeCipherText, err := secretKey.EncryptWithNonce(rangePlainText, r)
@@ -251,6 +246,11 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	rangeProver, err := zkcompiler.NewProver(ctx, rangeProtocol, rangeStatement, rangeWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise prover")
+	}
+
+	ck, err := hashcom.ExtractCommitmentKey(ctx.Transcript(), appTranscriptLabel)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot extract commitment key")
 	}
 
 	return &Prover[P, B, S]{

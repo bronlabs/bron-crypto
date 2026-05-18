@@ -9,6 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
@@ -142,22 +143,22 @@ func TestSampleCommitmentKey(t *testing.T) {
 		t.Parallel()
 		k, err := hashcom.SampleCommitmentKey(nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "nil")
-		require.Equal(t, hashcom.CommitmentKey{}, k)
+		require.ErrorIs(t, err, commitments.ErrIsNil)
+		require.Nil(t, k)
 	})
 
 	t.Run("failing reader", func(t *testing.T) {
 		t.Parallel()
 		k, err := hashcom.SampleCommitmentKey(badReader{})
 		require.Error(t, err)
-		require.Equal(t, hashcom.CommitmentKey{}, k)
+		require.Nil(t, k)
 	})
 
 	t.Run("short reader", func(t *testing.T) {
 		t.Parallel()
 		k, err := hashcom.SampleCommitmentKey(&shortReader{remaining: hashcom.KeySize - 1})
 		require.Error(t, err)
-		require.Equal(t, hashcom.CommitmentKey{}, k)
+		require.Nil(t, k)
 	})
 
 	t.Run("valid prng produces full-length key", func(t *testing.T) {
@@ -201,15 +202,16 @@ func TestExtractCommitmentKey(t *testing.T) {
 		t.Parallel()
 		k, err := hashcom.ExtractCommitmentKey(nil, "label")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "nil")
-		require.Equal(t, hashcom.CommitmentKey{}, k)
+		require.ErrorIs(t, err, commitments.ErrIsNil)
+		require.Nil(t, k)
 	})
 
 	t.Run("empty label", func(t *testing.T) {
 		t.Parallel()
 		k, err := hashcom.ExtractCommitmentKey(hagrid.NewTranscript("test"), "")
 		require.Error(t, err)
-		require.Equal(t, hashcom.CommitmentKey{}, k)
+		require.ErrorIs(t, err, commitments.ErrIsNil)
+		require.Nil(t, k)
 	})
 
 	t.Run("valid transcript and label produces full-length key", func(t *testing.T) {
