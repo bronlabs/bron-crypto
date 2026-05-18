@@ -17,5 +17,17 @@
 // adapted to the HJKY zero-sharing, Feldman-style verification, and MSP-based
 // sharing abstractions used in this repository.
 //
+// Round2 uses a single broadcast to the whole session quorum. That broadcast
+// includes old-shareholder public-key material for all previous shareholders,
+// including previous verification-vector commitments such as [s_i]G. The
+// current design therefore treats every new participant as a consumer of this
+// public old-shareholder material, even if a next-only participant did not
+// configure a trusted anchor and will not use the material for identifiable
+// abort checks.
+//
+// Redistribution, refresh, and recovery do not erase or revoke previous shares.
+// Applications using this package must securely erase obsolete shares and all
+// serialised or backed-up copies after a successful protocol run.
+//
 // See README.md for details.
 package redistribute
