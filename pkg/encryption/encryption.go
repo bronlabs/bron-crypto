@@ -23,7 +23,7 @@ type encryptionKey[P Plaintext, N Nonce, C Ciphertext[C]] interface {
 	EncryptWithNonce(P, N) (C, error)
 }
 
-type EncryptionKey[EK EncryptionKey[EK, P, N, C], P Plaintext, N Nonce, C Ciphertext[C]] interface {
+type EncryptionKey[EK EncryptionKey[EK, P, N, C], P Plaintext, N Nonce, C Ciphertext[C]] interface { //nolint:revive // prefixing "Encryption" for readability.
 	Type() Name
 	encryptionKey[P, N, C]
 	base.Equatable[EK]

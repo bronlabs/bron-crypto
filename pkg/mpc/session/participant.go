@@ -240,11 +240,11 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 	commonSeed = binary.LittleEndian.AppendUint64(commonSeed, uint64(len(p.sortedQuorum)))
 	for _, id := range p.sortedQuorum {
 		commonSeed = binary.LittleEndian.AppendUint64(commonSeed, uint64(id))
-		ck, ok := p.commitmentKeys[id]
+		ckid, ok := p.commitmentKeys[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing commitment key for %d", id)
 		}
-		commonSeed = append(commonSeed, ck[:]...)
+		commonSeed = append(commonSeed, ckid[:]...)
 		c, ok := p.commonContributionCommitments[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing common commitment for %d", id)

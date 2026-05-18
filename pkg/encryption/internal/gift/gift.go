@@ -1,9 +1,10 @@
 package gift
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func Encrypt[M encryption.Plaintext, N encryption.Nonce, C encryption.Ciphertext[C]](key interface {

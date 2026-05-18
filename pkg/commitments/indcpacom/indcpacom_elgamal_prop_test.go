@@ -3,6 +3,9 @@ package indcpacom_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
@@ -14,8 +17,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils/properties"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 type (
@@ -220,7 +221,7 @@ func ElGamalCommitmentKeyPropertySuite[
 	tb.Helper()
 	return properties.NewHomomorphicCommitmentKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		ElGamalCommitmentKeyGenerator(tb, group),
 		ElGamalMessageGenerator[*elgamal.PublicKey[E, S]],
 		func(m1, m2 *elgamalMessage[E, S]) bool { return m1.Value().Equal(m2.Value()) },
@@ -237,7 +238,7 @@ func ElGamalCommitmentKeyPropertySuite_SelfEncrypt[
 	tb.Helper()
 	return properties.NewHomomorphicCommitmentKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		ElGamalCommitmentKeyGenerator_SelfEncrypt(tb, group),
 		ElGamalMessageGenerator[*elgamal.SecretKey[E, S]],
 		func(m1, m2 *elgamalMessage[E, S]) bool { return m1.Value().Equal(m2.Value()) },

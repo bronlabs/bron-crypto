@@ -4,6 +4,9 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
@@ -11,8 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/testutils/properties"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func decryptionKeyGenerator(tb testing.TB, keyLen int, sampler func(keyLen uint, prng io.Reader) (*paillier.SecretKey, error)) *rapid.Generator[*paillier.SecretKey] {
@@ -133,7 +134,7 @@ func encryptionPropertySuite(
 	require.NotNil(tb, decryptionKeyGeneratorFunc, "decryption key generator function must not be nil")
 	return properties.NewGroupHomomorphicEncryptionProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		selfEncrypt,
 		true,
 		decryptionKeyGeneratorFunc(tb, keyLen),
@@ -167,26 +168,32 @@ func encryptionPropertySuite(
 }
 
 func EncryptionPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicEncryptionProperties {
+	tb.Helper()
 	return encryptionPropertySuite(tb, false, keyLen, DecryptionKeyGenerator)
 }
 
 func SelfEncryptionPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicEncryptionProperties {
+	tb.Helper()
 	return encryptionPropertySuite(tb, true, keyLen, DecryptionKeyGenerator)
 }
 
 func PaillierBlumEncryptionPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicEncryptionProperties {
+	tb.Helper()
 	return encryptionPropertySuite(tb, false, keyLen, PaillierBlumDecryptionKeyGenerator)
 }
 
 func PaillierBlumSelfEncryptionPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicEncryptionProperties {
+	tb.Helper()
 	return encryptionPropertySuite(tb, true, keyLen, PaillierBlumDecryptionKeyGenerator)
 }
 
 func SafeEncryptionPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicEncryptionProperties {
+	tb.Helper()
 	return encryptionPropertySuite(tb, false, keyLen, SafeDecryptionKeyGenerator)
 }
 
 func SafeSelfEncryptionPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicEncryptionProperties {
+	tb.Helper()
 	return encryptionPropertySuite(tb, true, keyLen, SafeDecryptionKeyGenerator)
 }
 

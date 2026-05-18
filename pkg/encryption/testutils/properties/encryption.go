@@ -4,14 +4,15 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	serdeprop "github.com/bronlabs/bron-crypto/pkg/base/serde/testutils/properties"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/testutils"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func NewEncryptionProperties[
@@ -437,6 +438,7 @@ type HomomorphicEncryptionProperties[
 	S any,
 ] struct {
 	EncryptionProperties[DK, EK, P, N, C]
+
 	ScalarGenerator func(testing.TB, testutils.TypeErasedHomomorphicEncryptionKey[P, N, C, S]) *rapid.Generator[S]
 }
 

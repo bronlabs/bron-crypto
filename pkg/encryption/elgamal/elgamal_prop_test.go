@@ -3,6 +3,9 @@ package elgamal_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -11,8 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/testutils/properties"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func DecryptionKeyGenerator[E elgamal.FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](
@@ -122,7 +123,7 @@ func encryptionPropertySuite[E elgamal.FiniteCyclicGroupElement[E, S], S algebra
 	tb.Helper()
 	return properties.NewGroupHomomorphicEncryptionProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		selfEncrypt,
 		false,
 		DecryptionKeyGenerator(tb, group),
@@ -156,10 +157,12 @@ func encryptionPropertySuite[E elgamal.FiniteCyclicGroupElement[E, S], S algebra
 }
 
 func EncryptionPropertySuite[E elgamal.FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](tb testing.TB, group elgamal.FiniteCyclicGroup[E, S]) *GroupHomomorphicEncryptionProperties[E, S] {
+	tb.Helper()
 	return encryptionPropertySuite(tb, group, false)
 }
 
 func SelfEncryptionPropertySuite[E elgamal.FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](tb testing.TB, group elgamal.FiniteCyclicGroup[E, S]) *GroupHomomorphicEncryptionProperties[E, S] {
+	tb.Helper()
 	return encryptionPropertySuite(tb, group, true)
 }
 

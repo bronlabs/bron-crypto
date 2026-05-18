@@ -3,6 +3,8 @@ package elgamal
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -10,7 +12,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/internal/gift"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // Generate samples a fresh key pair using randomness from prng.
@@ -64,6 +65,7 @@ func NewSecretKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](g E, 
 
 type SecretKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	PublicKey[E, S]
+
 	a S
 }
 
@@ -73,7 +75,7 @@ type secretKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struc
 }
 
 func (sk *SecretKey[E, S]) Public() *PublicKey[E, S] {
-	return sk.PublicKey.Clone()
+	return sk.Clone()
 }
 
 func (sk *SecretKey[E, S]) Decrypt(ciphertext *Ciphertext[E, S]) (*Plaintext[E, S], error) {

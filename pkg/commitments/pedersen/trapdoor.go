@@ -3,12 +3,13 @@ package pedersen
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func SampleTrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[E, S], prng io.Reader) (*TrapdoorKey[E, S], error) {
@@ -56,6 +57,7 @@ func NewTrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 
 type TrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	CommitmentKey[E, S]
+
 	lambda S
 }
 
@@ -100,7 +102,7 @@ func (t *TrapdoorKey[E, S]) Lambda() S {
 }
 
 func (t *TrapdoorKey[E, S]) Export() *CommitmentKey[E, S] {
-	return t.CommitmentKey.Clone()
+	return t.Clone()
 }
 
 func (t *TrapdoorKey[E, S]) Equal(other *TrapdoorKey[E, S]) bool {

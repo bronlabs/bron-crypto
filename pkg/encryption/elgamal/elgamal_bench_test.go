@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -12,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func benchmarkEncrypting[E elgamal.FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](

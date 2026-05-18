@@ -1,11 +1,12 @@
 package indcpacom
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func NewCommitment[C encryption.Ciphertext[C]](c C) (*Commitment[C], error) {

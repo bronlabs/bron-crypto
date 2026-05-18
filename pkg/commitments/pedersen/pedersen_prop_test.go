@@ -3,6 +3,9 @@ package pedersen_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	algebra_prop "github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
@@ -13,8 +16,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils/properties"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func CommitmentKeyGenerator[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *rapid.Generator[*pedersen.CommitmentKey[E, S]] {
@@ -146,7 +147,7 @@ func CommitmentKeyPropertySuite[
 	tb.Helper()
 	return properties.NewGroupHomomorphicCommitmentKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		CommitmentKeyGenerator(tb, group),
 		MessageGenerator,
 		func(m1, m2 *pedersen.Message[S]) bool {
@@ -190,7 +191,7 @@ func TrapdoorKeyPropertySuite[
 	tb.Helper()
 	return properties.NewGroupHomomorphicTrapdoorKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		TrapdoorKeyGenerator(tb, group),
 		MessageGenerator,
 		func(m1, m2 *pedersen.Message[S]) bool {

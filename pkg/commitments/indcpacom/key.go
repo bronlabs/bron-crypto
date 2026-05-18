@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func NewCommitmentKey[EK encryption.EncryptionKey[EK, P, N, C], P encryption.Plaintext, N encryption.Nonce, C encryption.Ciphertext[C]](encryptionKey EK) (*CommitmentKey[EK, P, N, C], error) {

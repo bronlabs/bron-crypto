@@ -1,9 +1,10 @@
 package internal
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // GenericOpen is used in the implementation of CommitmentKey.Open.

@@ -3,13 +3,14 @@ package intcom
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const Name commitments.Name = "Bounded Integer Commitment Scheme (CGGMP21)"

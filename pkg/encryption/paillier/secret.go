@@ -3,6 +3,10 @@ package paillier
 import (
 	"io"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -14,8 +18,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/internal/gift"
-	"github.com/bronlabs/errs-go/errs"
-	"golang.org/x/sync/errgroup"
 )
 
 func SampleSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
@@ -58,7 +60,7 @@ func NewSecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
 	if group == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group must not be nil")
 	}
-	sk := &SecretKey{
+	sk := &SecretKey{ //nolint:exhaustruct // other fields are lazily computed.
 		PublicKey: PublicKey{group: group.ForgetOrder()},
 		group:     group,
 	}
@@ -70,6 +72,7 @@ func NewSecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
 
 type SecretKey struct {
 	PublicKey
+
 	group *znstar.PaillierGroupKnownOrder
 
 	nonceGroup  *znstar.RSAGroupKnownOrder
@@ -93,7 +96,10 @@ func (sk *SecretKey) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 	if ciphertext == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
 	}
-	//mp = -L_p(c)*q^-1 mod p && mq = -L_q(c)*p^-1 mod q
+	if !sk.group.ForgetOrder().Contains(ciphertext.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
+	// mp = -L_p(c)*q^-1 mod p && mq = -L_q(c)*p^-1 mod q
 	var lp, lq numct.Nat
 	sk.group.Arithmetic().FermatQuotient(&lp, &lq, ciphertext.Value().Value().Value())
 	var mp, mq numct.Nat
@@ -166,6 +172,12 @@ func (sk *SecretKey) EncryptWithNonce(p *Plaintext, n *Nonce) (*Ciphertext, erro
 	if p == nil || n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext and nonce must not be nil")
 	}
+	if !sk.PlaintextGroup().Contains(p.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("plaintext must be in plaintext group")
+	}
+	if !sk.NonceGroup().Contains(n.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
+	}
 	out, err := gift.Encrypt(sk, p, n)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not encrypt message with nonce")
@@ -176,6 +188,9 @@ func (sk *SecretKey) EncryptWithNonce(p *Plaintext, n *Nonce) (*Ciphertext, erro
 func (sk *SecretKey) Representative(p *Plaintext) (*Ciphertext, error) {
 	if p == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
+	}
+	if !sk.PlaintextGroup().Contains(p.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("plaintext must be in plaintext group")
 	}
 	gm, err := sk.group.Representative(p.Value())
 	if err != nil {
@@ -188,6 +203,9 @@ func (sk *SecretKey) IdentityNoise(n *Nonce) (*Ciphertext, error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
 	}
+	if !sk.NonceGroup().Contains(n.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
+	}
 	embeddedNonce, err := sk.group.EmbedRSA(n.Value())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not embed nonce into group")
@@ -199,7 +217,7 @@ func (sk *SecretKey) IdentityNoise(n *Nonce) (*Ciphertext, error) {
 	return &Ciphertext{c: rn.ForgetOrder()}, nil
 }
 
-func (sk *SecretKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, error) {
+func (sk *SecretKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, error) { //nolint:dupl // similar to CiphertextOp. Helper would be too complicated.
 	if first == nil || second == nil {
 		return nil, encryption.ErrIsNil.WithMessage("first and second nonce cannot be nil")
 	}
@@ -224,7 +242,7 @@ func (sk *SecretKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, erro
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid nonce in rest nonces")
 	}
-	outValue, err := algebrautils.OpValues(firstValue, secondValue, restValues...)
+	outValue, err := algebrautils.OpValues(sk.nonceGroup, firstValue, secondValue, restValues...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine nonce values")
 	}
@@ -234,6 +252,9 @@ func (sk *SecretKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, erro
 func (sk *SecretKey) NonceOpInv(n *Nonce) (*Nonce, error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
+	}
+	if !sk.NonceGroup().Contains(n.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
 	}
 	value, err := n.Value().LearnOrder(sk.nonceGroup)
 	if err != nil {
@@ -246,6 +267,9 @@ func (sk *SecretKey) NonceScalarOp(n *Nonce, scalar *num.Int) (*Nonce, error) {
 	if n == nil || scalar == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce and scalar must not be nil")
 	}
+	if !sk.NonceGroup().Contains(n.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
+	}
 	value, err := n.Value().LearnOrder(sk.nonceGroup)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order of nonce value")
@@ -253,7 +277,7 @@ func (sk *SecretKey) NonceScalarOp(n *Nonce, scalar *num.Int) (*Nonce, error) {
 	return &Nonce{r: value.ScalarOp(scalar).ForgetOrder()}, nil
 }
 
-func (sk *SecretKey) CiphertextOp(first, second *Ciphertext, rest ...*Ciphertext) (*Ciphertext, error) {
+func (sk *SecretKey) CiphertextOp(first, second *Ciphertext, rest ...*Ciphertext) (*Ciphertext, error) { //nolint:dupl // similar to NonceOp. Helper would be too complicated.
 	if first == nil || second == nil {
 		return nil, encryption.ErrIsNil.WithMessage("first and second ciphertext cannot be nil")
 	}
@@ -278,7 +302,7 @@ func (sk *SecretKey) CiphertextOp(first, second *Ciphertext, rest ...*Ciphertext
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid ciphertext in rest ciphertexts")
 	}
-	outValue, err := algebrautils.OpValues(firstValue, secondValue, restValues...)
+	outValue, err := algebrautils.OpValues(sk.group, firstValue, secondValue, restValues...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine ciphertext values")
 	}
@@ -288,6 +312,9 @@ func (sk *SecretKey) CiphertextOp(first, second *Ciphertext, rest ...*Ciphertext
 func (sk *SecretKey) CiphertextOpInv(c *Ciphertext) (*Ciphertext, error) {
 	if c == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
+	}
+	if !sk.group.ForgetOrder().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
 	}
 	value, err := c.Value().LearnOrder(sk.group)
 	if err != nil {
@@ -300,6 +327,9 @@ func (sk *SecretKey) CiphertextScalarOp(c *Ciphertext, scalar *num.Int) (*Cipher
 	if c == nil || scalar == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and scalar must not be nil")
 	}
+	if !sk.group.ForgetOrder().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
 	value, err := c.Value().LearnOrder(sk.group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order of ciphertext value")
@@ -311,6 +341,12 @@ func (sk *SecretKey) ReRandomise(c *Ciphertext, n *Nonce) (*Ciphertext, error) {
 	if c == nil || n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and nonce must not be nil")
 	}
+	if !sk.group.ForgetOrder().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
+	if !sk.NonceGroup().Contains(n.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
+	}
 	out, err := gift.ReRandomise(sk, c, n)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not re-randomise ciphertext")
@@ -321,6 +357,12 @@ func (sk *SecretKey) ReRandomise(c *Ciphertext, n *Nonce) (*Ciphertext, error) {
 func (sk *SecretKey) Shift(c *Ciphertext, m *Plaintext) (*Ciphertext, error) {
 	if c == nil || m == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and plaintext must not be nil")
+	}
+	if !sk.group.ForgetOrder().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
+	if !sk.PlaintextGroup().Contains(m.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("plaintext must be in plaintext group")
 	}
 	out, err := gift.Shift(sk, c, m)
 	if err != nil {

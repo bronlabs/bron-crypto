@@ -3,6 +3,8 @@ package pedersen
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -11,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func SampleCommitmentKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[E, S], prng io.Reader) (*CommitmentKey[E, S], error) {
@@ -93,7 +94,7 @@ func (k *CommitmentKey[E, S]) CommitWithWitness(message *Message[S], witness *Wi
 	return out, nil
 }
 
-func (k *CommitmentKey[E, S]) Type() commitments.Name {
+func (*CommitmentKey[E, S]) Type() commitments.Name {
 	return Name
 }
 
@@ -105,14 +106,14 @@ func (k *CommitmentKey[E, S]) Open(commitment *Commitment[E, S], message *Messag
 }
 
 func (k *CommitmentKey[E, S]) WitnessOp(first, second *Witness[S], rest ...*Witness[S]) (*Witness[S], error) {
-	out, err := algebrautils.Op(NewWitness, first, second, rest...)
+	out, err := algebrautils.Op(NewWitness, k.WitnessGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine witnesses")
 	}
 	return out, nil
 }
 
-func (k *CommitmentKey[E, S]) WitnessOpInv(w *Witness[S]) (*Witness[S], error) {
+func (*CommitmentKey[E, S]) WitnessOpInv(w *Witness[S]) (*Witness[S], error) {
 	if w == nil {
 		return nil, ErrIsNil.WithMessage("witness must not be nil")
 	}
@@ -123,7 +124,7 @@ func (k *CommitmentKey[E, S]) WitnessOpInv(w *Witness[S]) (*Witness[S], error) {
 	return out, nil
 }
 
-func (k *CommitmentKey[E, S]) WitnessScalarOp(w *Witness[S], scalar S) (*Witness[S], error) {
+func (*CommitmentKey[E, S]) WitnessScalarOp(w *Witness[S], scalar S) (*Witness[S], error) {
 	if w == nil {
 		return nil, ErrIsNil.WithMessage("witness must not be nil")
 	}
@@ -138,14 +139,14 @@ func (k *CommitmentKey[E, S]) WitnessScalarOp(w *Witness[S], scalar S) (*Witness
 }
 
 func (k *CommitmentKey[E, S]) MessageOp(first, second *Message[S], rest ...*Message[S]) (*Message[S], error) {
-	out, err := algebrautils.Op(NewMessage, first, second, rest...)
+	out, err := algebrautils.Op(NewMessage, k.MessageGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine messages")
 	}
 	return out, nil
 }
 
-func (k *CommitmentKey[E, S]) MessageOpInv(m *Message[S]) (*Message[S], error) {
+func (*CommitmentKey[E, S]) MessageOpInv(m *Message[S]) (*Message[S], error) {
 	if m == nil {
 		return nil, ErrIsNil.WithMessage("message must not be nil")
 	}
@@ -156,7 +157,7 @@ func (k *CommitmentKey[E, S]) MessageOpInv(m *Message[S]) (*Message[S], error) {
 	return out, nil
 }
 
-func (k *CommitmentKey[E, S]) MessageScalarOp(m *Message[S], scalar S) (*Message[S], error) {
+func (*CommitmentKey[E, S]) MessageScalarOp(m *Message[S], scalar S) (*Message[S], error) {
 	if m == nil {
 		return nil, ErrIsNil.WithMessage("message must not be nil")
 	}
@@ -171,14 +172,14 @@ func (k *CommitmentKey[E, S]) MessageScalarOp(m *Message[S], scalar S) (*Message
 }
 
 func (k *CommitmentKey[E, S]) CommitmentOp(first, second *Commitment[E, S], rest ...*Commitment[E, S]) (*Commitment[E, S], error) {
-	out, err := algebrautils.Op(NewCommitment, first, second, rest...)
+	out, err := algebrautils.Op(NewCommitment, k.CommitmentGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine commitments")
 	}
 	return out, nil
 }
 
-func (k *CommitmentKey[E, S]) CommitmentOpInv(c *Commitment[E, S]) (*Commitment[E, S], error) {
+func (*CommitmentKey[E, S]) CommitmentOpInv(c *Commitment[E, S]) (*Commitment[E, S], error) {
 	if c == nil {
 		return nil, ErrIsNil.WithMessage("commitment must not be nil")
 	}
@@ -189,7 +190,7 @@ func (k *CommitmentKey[E, S]) CommitmentOpInv(c *Commitment[E, S]) (*Commitment[
 	return out, nil
 }
 
-func (k *CommitmentKey[E, S]) CommitmentScalarOp(c *Commitment[E, S], scalar S) (*Commitment[E, S], error) {
+func (*CommitmentKey[E, S]) CommitmentScalarOp(c *Commitment[E, S], scalar S) (*Commitment[E, S], error) {
 	if c == nil {
 		return nil, ErrIsNil.WithMessage("commitment must not be nil")
 	}

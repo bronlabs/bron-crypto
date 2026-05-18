@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func benchmarkCommitting(b *testing.B, keyLen uint) {

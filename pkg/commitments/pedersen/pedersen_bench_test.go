@@ -3,11 +3,12 @@ package pedersen_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCommitting(b *testing.B) {

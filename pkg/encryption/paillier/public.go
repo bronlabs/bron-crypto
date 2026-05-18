@@ -3,14 +3,16 @@ package paillier
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/internal/gift"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func NewPublicKey(group *znstar.PaillierGroupUnknownOrder) (*PublicKey, error) {
@@ -28,7 +30,7 @@ type publicKeyDTO struct {
 	Group *znstar.PaillierGroupUnknownOrder `cbor:"group"`
 }
 
-func (pk *PublicKey) Type() encryption.Name {
+func (*PublicKey) Type() encryption.Name {
 	return Name
 }
 
@@ -81,8 +83,13 @@ func (pk *PublicKey) IdentityNoise(n *Nonce) (*Ciphertext, error) {
 }
 
 func (pk *PublicKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, error) {
-	out, err := algebrautils.Op(NewNonceFromGroupElement, first, second, rest...,
-	)
+	if !pk.NonceGroup().Contains(first.r) || !pk.NonceGroup().Contains(second.r) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("first and second nonces must be in nonce group")
+	}
+	if len(rest) > 0 && sliceutils.Any(rest, func(n *Nonce) bool { return n == nil || !pk.NonceGroup().Contains(n.r) }) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("all nonces must be in nonce group")
+	}
+	out, err := algebrautils.Op(NewNonceFromGroupElement, pk.NonceGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine nonces")
 	}
@@ -93,6 +100,9 @@ func (pk *PublicKey) NonceOpInv(n *Nonce) (*Nonce, error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
 	}
+	if !pk.NonceGroup().Contains(n.r) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
+	}
 	return &Nonce{r: n.Value().OpInv()}, nil
 }
 
@@ -100,11 +110,14 @@ func (pk *PublicKey) NonceScalarOp(n *Nonce, scalar *num.Int) (*Nonce, error) {
 	if n == nil || scalar == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce and scalar must not be nil")
 	}
+	if !pk.NonceGroup().Contains(n.r) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
+	}
 	return &Nonce{r: n.Value().ScalarOp(scalar)}, nil
 }
 
 func (pk *PublicKey) PlaintextOp(first, second *Plaintext, rest ...*Plaintext) (*Plaintext, error) {
-	out, err := algebrautils.Op(NewPlaintext, first, second, rest...)
+	out, err := algebrautils.Op(NewPlaintext, pk.PlaintextGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine plaintexts")
 	}
@@ -114,6 +127,9 @@ func (pk *PublicKey) PlaintextOp(first, second *Plaintext, rest ...*Plaintext) (
 func (pk *PublicKey) PlaintextOpInv(p *Plaintext) (*Plaintext, error) {
 	if p == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
+	}
+	if !pk.PlaintextGroup().Contains(p.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("plaintext must be in plaintext group")
 	}
 	out, err := NewPlaintext(p.Value().OpInv())
 	if err != nil {
@@ -126,6 +142,9 @@ func (pk *PublicKey) PlaintextScalarOp(p *Plaintext, scalar *num.Int) (*Plaintex
 	if p == nil || scalar == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext and scalar must not be nil")
 	}
+	if !pk.PlaintextGroup().Contains(p.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("plaintext must be in plaintext group")
+	}
 	v, err := pk.PlaintextGroup().FromInt(p.Value().Lift().Mul(scalar))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create new plaintext from scalar multiplied value")
@@ -134,7 +153,7 @@ func (pk *PublicKey) PlaintextScalarOp(p *Plaintext, scalar *num.Int) (*Plaintex
 }
 
 func (pk *PublicKey) CiphertextOp(c1, c2 *Ciphertext, rest ...*Ciphertext) (*Ciphertext, error) {
-	out, err := algebrautils.Op(NewCiphertextFromGroupElement, c1, c2, rest...)
+	out, err := algebrautils.Op(NewCiphertextFromGroupElement, pk.CiphertextGroup(), c1, c2, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute ciphertext operation")
 	}
@@ -145,6 +164,9 @@ func (pk *PublicKey) CiphertextOpInv(c *Ciphertext) (*Ciphertext, error) {
 	if c == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
 	}
+	if !pk.CiphertextGroup().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
 	return &Ciphertext{c: c.Value().OpInv()}, nil
 }
 
@@ -152,12 +174,21 @@ func (pk *PublicKey) CiphertextScalarOp(c *Ciphertext, scalar *num.Int) (*Cipher
 	if c == nil || scalar == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and scalar must not be nil")
 	}
+	if !pk.CiphertextGroup().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
 	return &Ciphertext{c: c.Value().ScalarOp(scalar)}, nil
 }
 
 func (pk *PublicKey) ReRandomise(c *Ciphertext, nonce *Nonce) (*Ciphertext, error) {
 	if c == nil || nonce == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and nonce must not be nil")
+	}
+	if !pk.CiphertextGroup().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
+	if !pk.NonceGroup().Contains(nonce.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("nonce must be in nonce group")
 	}
 	out, err := gift.ReRandomise(pk, c, nonce)
 	if err != nil {
@@ -169,6 +200,12 @@ func (pk *PublicKey) ReRandomise(c *Ciphertext, nonce *Nonce) (*Ciphertext, erro
 func (pk *PublicKey) Shift(c *Ciphertext, delta *Plaintext) (*Ciphertext, error) {
 	if c == nil || delta == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and delta must not be nil")
+	}
+	if !pk.CiphertextGroup().Contains(c.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("ciphertext must be in ciphertext group")
+	}
+	if !pk.PlaintextGroup().Contains(delta.Value()) {
+		return nil, encryption.ErrSubGroupMembership.WithMessage("delta must be in plaintext group")
 	}
 	out, err := gift.Shift(pk, c, delta)
 	if err != nil {

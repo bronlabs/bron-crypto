@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"testing"
 
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils/properties"
-	"pgregory.net/rapid"
 )
 
 func CommitmentKeyGenerator() *rapid.Generator[*hashcom.CommitmentKey] {
@@ -51,7 +52,7 @@ func WitnessGenerator(tb testing.TB, _ commitments.CommitmentKey[*hashcom.Commit
 func CommitmentKeyPropertySuite(tb testing.TB) *properties.CommitmentKeyProperties[*hashcom.CommitmentKey, hashcom.Message, hashcom.Witness, hashcom.Commitment] {
 	tb.Helper()
 	return &properties.CommitmentKeyProperties[*hashcom.CommitmentKey, hashcom.Message, hashcom.Witness, hashcom.Commitment]{
-		PRNG:             prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		PRNG:             prng.FuncTypeErase(pcg.NewRandomised),
 		KeyGenerator:     CommitmentKeyGenerator(),
 		MessageGenerator: MessageGenerator,
 		MessagesAreEqual: func(m1, m2 hashcom.Message) bool {
@@ -94,17 +95,21 @@ func CommitmentPropertySuite(tb testing.TB) *properties.CommitmentProperties[has
 }
 
 func TestCommitmentKeyProperties(t *testing.T) {
-	CommitmentKeyPropertySuite(t).CheckAll(t)
+	t.Parallel()
+	t.Run("CommitmentKeyProperties", CommitmentKeyPropertySuite(t).CheckAll)
 }
 
 func TestWitnessProperties(t *testing.T) {
-	WitnessPropertySuite(t).CheckAll(t)
+	t.Parallel()
+	t.Run("WitnessProperties", WitnessPropertySuite(t).CheckAll)
 }
 
 func TestMessageProperties(t *testing.T) {
-	MessagePropertySuite(t).CheckAll(t)
+	t.Parallel()
+	t.Run("MessageProperties", MessagePropertySuite(t).CheckAll)
 }
 
 func TestCommitmentProperties(t *testing.T) {
-	CommitmentPropertySuite(t).CheckAll(t)
+	t.Parallel()
+	t.Run("CommitmentProperties", CommitmentPropertySuite(t).CheckAll)
 }

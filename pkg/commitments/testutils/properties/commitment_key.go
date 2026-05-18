@@ -5,14 +5,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	serdeprop "github.com/bronlabs/bron-crypto/pkg/base/serde/testutils/properties"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/errs-go/errs"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func NewCommitmentKeyProperties[K commitments.CommitmentKey[K, M, W, C], M commitments.Message, W commitments.Witness, C commitments.Commitment[C]](
@@ -329,9 +331,9 @@ func (p *CommitmentKeyProperties[K, M, W, C]) CommittingDoesntMutateAnything(t *
 		postWitnessMarshalled, err := serde.MarshalCBOR(witness)
 		require.NoError(t, err)
 
-		require.EqualValues(t, messageMarshalled, postMessageMarshalled)
-		require.EqualValues(t, witnessMarshalled, postWitnessMarshalled)
-		require.EqualValues(t, keyMarshalled, postKeyMarshalled)
+		require.Equal(t, messageMarshalled, postMessageMarshalled)
+		require.Equal(t, witnessMarshalled, postWitnessMarshalled)
+		require.Equal(t, keyMarshalled, postKeyMarshalled)
 	})
 }
 
@@ -354,6 +356,7 @@ func NewHomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKe
 
 type HomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKey[K, M, W, C, S], M commitments.Message, W commitments.Witness, C commitments.Commitment[C], S any] struct {
 	CommitmentKeyProperties[K, M, W, C]
+
 	ScalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S]
 }
 
@@ -748,12 +751,12 @@ func (p *GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG,
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		key := p.KeyGenerator.Draw(rt, "commitment key")
-		commitments := rapid.SliceOfN(p.CommitmentGenerator(t, key), 2, 10).Draw(rt, "commitments")
-		actual, err := key.CommitmentOp(commitments[0], commitments[1], commitments[2:]...)
+		cs := rapid.SliceOfN(p.CommitmentGenerator(t, key), 2, 10).Draw(rt, "commitments")
+		actual, err := key.CommitmentOp(cs[0], cs[1], cs[2:]...)
 		require.NoError(t, err)
 
-		expectedValue := commitments[0].Value()
-		for _, w := range commitments[1:] {
+		expectedValue := cs[0].Value()
+		for _, w := range cs[1:] {
 			expectedValue = expectedValue.Op(w.Value())
 		}
 		expected, err := p.NewCommitment(expectedValue)

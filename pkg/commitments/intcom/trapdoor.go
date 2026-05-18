@@ -3,6 +3,8 @@ package intcom
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -11,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 func SampleTrapdoorKey(keyLen uint, prng io.Reader) (*TrapdoorKey, error) {
@@ -69,6 +70,7 @@ func NewTrapdoorKey(t *znstar.RSAGroupElementKnownOrder, lambda *num.Uint) (*Tra
 
 type TrapdoorKey struct {
 	CommitmentKey
+
 	group  *znstar.RSAGroupKnownOrder
 	lambda *num.Uint
 }
@@ -78,32 +80,32 @@ type trapdoorKeyDTO struct {
 	Lambda *num.Uint                         `cbor:"lambda"`
 }
 
-func (k *TrapdoorKey) CommitWithWitness(message *Message, witness *Witness) (*Commitment, error) {
+func (t *TrapdoorKey) CommitWithWitness(message *Message, witness *Witness) (*Commitment, error) {
 	if message == nil || witness == nil {
 		return nil, commitments.ErrIsNil.WithMessage("message and witness cannot be nil")
 	}
-	t, err := k.t.LearnOrder(k.group)
+	tt, err := t.t.LearnOrder(t.group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order")
 	}
 
 	// s^m * t^r = t^(lambda*m + r)
-	out, err := NewCommitment(t.ExpI(message.m.Mul(k.lambda.Lift()).Add(witness.r)).ForgetOrder())
+	out, err := NewCommitment(tt.ExpI(message.m.Mul(t.lambda.Lift()).Add(witness.r)).ForgetOrder())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create commitment from message and witness")
 	}
 	return out, nil
 }
 
-func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitment) (*Commitment, error) {
+func (t *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitment) (*Commitment, error) {
 	if first == nil || second == nil {
 		return nil, commitments.ErrIsNil.WithMessage("first and second commitments cannot be nil")
 	}
-	firstValue, err := first.Value().LearnOrder(k.group)
+	firstValue, err := first.Value().LearnOrder(t.group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order of first commitment value")
 	}
-	secondValue, err := second.Value().LearnOrder(k.group)
+	secondValue, err := second.Value().LearnOrder(t.group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order of second commitment value")
 	}
@@ -111,7 +113,7 @@ func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitmen
 		if utils.IsNil(w) {
 			return nil, commitments.ErrIsNil.WithMessage("object must not be nil")
 		}
-		out, err := w.Value().LearnOrder(k.group)
+		out, err := w.Value().LearnOrder(t.group)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not learn order of commitment value")
 		}
@@ -120,7 +122,7 @@ func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitmen
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid commitment in rest commitments")
 	}
-	outValue, err := algebrautils.OpValues(firstValue, secondValue, restValues...)
+	outValue, err := algebrautils.OpValues(t.group, firstValue, secondValue, restValues...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine commitment values")
 	}
@@ -131,13 +133,16 @@ func (k *TrapdoorKey) CommitmentOp(first, second *Commitment, rest ...*Commitmen
 	return out, nil
 }
 
-func (k *TrapdoorKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
+func (t *TrapdoorKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
 	if c == nil {
 		return nil, commitments.ErrIsNil.WithMessage("commitment cannot be nil")
 	}
-	value, err := c.Value().LearnOrder(k.group)
+	value, err := c.Value().LearnOrder(t.group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order of commitment value")
+	}
+	if !t.group.Contains(value) {
+		return nil, commitments.ErrSubGroupMembership.WithMessage("commitment must be in commitment group")
 	}
 	out, err := NewCommitment(value.OpInv().ForgetOrder())
 	if err != nil {
@@ -146,13 +151,16 @@ func (k *TrapdoorKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
 	return out, nil
 }
 
-func (k *TrapdoorKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Commitment, error) {
+func (t *TrapdoorKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Commitment, error) {
 	if c == nil || scalar == nil {
 		return nil, commitments.ErrIsNil.WithMessage("commitment and scalar cannot be nil")
 	}
-	value, err := c.Value().LearnOrder(k.group)
+	value, err := c.Value().LearnOrder(t.group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order of commitment value")
+	}
+	if !t.group.Contains(value) {
+		return nil, commitments.ErrSubGroupMembership.WithMessage("commitment must be in commitment group")
 	}
 	out, err := NewCommitment(value.ExpI(scalar).ForgetOrder())
 	if err != nil {
@@ -161,7 +169,7 @@ func (k *TrapdoorKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Commi
 	return out, nil
 }
 
-func (k *TrapdoorKey) Equivocate(message *Message, witness *Witness, newMessage *Message, prng io.Reader) (*Witness, error) {
+func (t *TrapdoorKey) Equivocate(message *Message, witness *Witness, newMessage *Message, prng io.Reader) (*Witness, error) {
 	if message == nil || witness == nil || newMessage == nil || prng == nil {
 		return nil, commitments.ErrIsNil.WithMessage("message, witness, new message, and prng cannot be nil")
 	}
@@ -171,11 +179,11 @@ func (k *TrapdoorKey) Equivocate(message *Message, witness *Witness, newMessage 
 	if message.Equal(newMessage) {
 		return witness.Clone(), nil
 	}
-	rPrime := witness.r.Add(k.lambda.Lift().Mul(message.m.Sub(newMessage.m)))
+	rPrime := witness.r.Add(t.lambda.Lift().Mul(message.m.Sub(newMessage.m)))
 	// r0 is now [0, Phi(NHat)/4)
-	r0 := rPrime.Mod(k.lambda.Modulus())
+	r0 := rPrime.Mod(t.lambda.Modulus())
 	// We need to find a random number x so that r'' is in [k.witnessLower, k.witnessUpper)
-	lowerInner, err := num.Q().New(k.witnessLower.Sub(r0.Lift()), (k.lambda.Modulus()))
+	lowerInner, err := num.Q().New(t.witnessLower.Sub(r0.Lift()), (t.lambda.Modulus()))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create lowerInner from witnessLower and r0")
 	}
@@ -184,7 +192,7 @@ func (k *TrapdoorKey) Equivocate(message *Message, witness *Witness, newMessage 
 		return nil, errs.Wrap(err).WithMessage("failed to compute xMin")
 	}
 
-	upperInner, err := num.Q().New(k.witnessUpper.Sub(r0.Lift()).Decrement(), (k.lambda.Modulus()))
+	upperInner, err := num.Q().New(t.witnessUpper.Sub(r0.Lift()).Decrement(), (t.lambda.Modulus()))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create upperInner from witnessUpper and r0")
 	}
@@ -196,7 +204,7 @@ func (k *TrapdoorKey) Equivocate(message *Message, witness *Witness, newMessage 
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to generate random x")
 	}
-	rDoublePrime := r0.Lift().Add(x.Mul(k.lambda.Modulus().Lift()))
+	rDoublePrime := r0.Lift().Add(x.Mul(t.lambda.Modulus().Lift()))
 	out, err := NewWitness(rDoublePrime)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create new witness from rDoublePrime")
@@ -212,29 +220,29 @@ func (t *TrapdoorKey) Lambda() *num.Uint {
 	return t.lambda
 }
 
-func (k *TrapdoorKey) Export() *CommitmentKey {
-	return k.CommitmentKey.Clone()
+func (t *TrapdoorKey) Export() *CommitmentKey {
+	return t.Clone()
 }
 
-func (k *TrapdoorKey) Equal(other *TrapdoorKey) bool {
-	if k == nil || other == nil {
-		return k == other
+func (t *TrapdoorKey) Equal(other *TrapdoorKey) bool {
+	if t == nil || other == nil {
+		return t == other
 	}
-	return k.t.Equal(other.t) && k.lambda.Equal(other.lambda)
+	return t.t.Equal(other.t) && t.lambda.Equal(other.lambda)
 }
 
-func (k *TrapdoorKey) HashCode() base.HashCode {
-	return k.t.HashCode().Combine(k.lambda.HashCode())
+func (t *TrapdoorKey) HashCode() base.HashCode {
+	return t.t.HashCode().Combine(t.lambda.HashCode())
 }
 
-func (k *TrapdoorKey) MarshalCBOR() ([]byte, error) {
-	learned, err := k.t.LearnOrder(k.group)
+func (t *TrapdoorKey) MarshalCBOR() ([]byte, error) {
+	learned, err := t.t.LearnOrder(t.group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not learn order")
 	}
 	dto := &trapdoorKeyDTO{
 		T:      learned,
-		Lambda: k.lambda,
+		Lambda: t.lambda,
 	}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -243,7 +251,7 @@ func (k *TrapdoorKey) MarshalCBOR() ([]byte, error) {
 	return out, nil
 }
 
-func (k *TrapdoorKey) UnmarshalCBOR(data []byte) error {
+func (t *TrapdoorKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[trapdoorKeyDTO](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal trapdoor key")
@@ -252,6 +260,6 @@ func (k *TrapdoorKey) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("invalid trapdoor key data")
 	}
-	*k = *kk
+	*t = *kk
 	return nil
 }

@@ -3,6 +3,9 @@ package indcpacom_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
@@ -12,8 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils/properties"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 type (
@@ -202,7 +203,7 @@ func PaillierCommitmentKeyPropertySuite(tb testing.TB, keyLen int) *PaillierHomo
 	tb.Helper()
 	return properties.NewHomomorphicCommitmentKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		PaillierCommitmentKeyGenerator(tb, keyLen),
 		PaillierMessageGenerator[*paillier.PublicKey],
 		func(m1, m2 *paillierMessage) bool { return m1.Value().Equal(m2.Value()) },
@@ -215,7 +216,7 @@ func PaillierCommitmentKeyPropertySuite_SelfEncrypt(tb testing.TB, keyLen int) *
 	tb.Helper()
 	return properties.NewHomomorphicCommitmentKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		PaillierCommitmentKeyGenerator_SelfEncrypt(tb, keyLen),
 		PaillierMessageGenerator[*paillier.SecretKey],
 		func(m1, m2 *paillierMessage) bool { return m1.Value().Equal(m2.Value()) },

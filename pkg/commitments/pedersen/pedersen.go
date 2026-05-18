@@ -1,12 +1,13 @@
 package pedersen
 
 import (
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const Name commitments.Name = "Prime-order Pedersen commitment scheme"

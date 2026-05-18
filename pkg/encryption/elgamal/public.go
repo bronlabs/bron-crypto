@@ -3,6 +3,8 @@ package elgamal
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
@@ -11,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/internal/gift"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 // NewPublicKey constructs a public key h = g^a from the group element v.
@@ -40,7 +41,7 @@ type publicKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struc
 	H E `cbor:"h"`
 }
 
-func (pk *PublicKey[E, S]) Type() encryption.Name {
+func (*PublicKey[E, S]) Type() encryption.Name {
 	return Name
 }
 
@@ -108,14 +109,14 @@ func (pk *PublicKey[E, S]) IdentityNoise(nonce *Nonce[S]) (*Ciphertext[E, S], er
 }
 
 func (pk *PublicKey[E, S]) NonceOp(first, second *Nonce[S], rest ...*Nonce[S]) (*Nonce[S], error) {
-	out, err := algebrautils.Op(NewNonce, first, second, rest...)
+	out, err := algebrautils.Op(NewNonce, pk.NonceGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine nonces")
 	}
 	return out, nil
 }
 
-func (pk *PublicKey[E, S]) NonceOpInv(n *Nonce[S]) (*Nonce[S], error) {
+func (*PublicKey[E, S]) NonceOpInv(n *Nonce[S]) (*Nonce[S], error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
 	}
@@ -126,7 +127,7 @@ func (pk *PublicKey[E, S]) NonceOpInv(n *Nonce[S]) (*Nonce[S], error) {
 	return out, nil
 }
 
-func (pk *PublicKey[E, S]) NonceScalarOp(n *Nonce[S], s S) (*Nonce[S], error) {
+func (*PublicKey[E, S]) NonceScalarOp(n *Nonce[S], s S) (*Nonce[S], error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
 	}
@@ -138,14 +139,14 @@ func (pk *PublicKey[E, S]) NonceScalarOp(n *Nonce[S], s S) (*Nonce[S], error) {
 }
 
 func (pk *PublicKey[E, S]) PlaintextOp(first, second *Plaintext[E, S], rest ...*Plaintext[E, S]) (*Plaintext[E, S], error) {
-	out, err := algebrautils.Op(NewPlaintext, first, second, rest...)
+	out, err := algebrautils.Op(NewPlaintext, pk.PlaintextGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine plaintexts")
 	}
 	return out, nil
 }
 
-func (pk *PublicKey[E, S]) PlaintextOpInv(p *Plaintext[E, S]) (*Plaintext[E, S], error) {
+func (*PublicKey[E, S]) PlaintextOpInv(p *Plaintext[E, S]) (*Plaintext[E, S], error) {
 	if p == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
 	}
@@ -156,7 +157,7 @@ func (pk *PublicKey[E, S]) PlaintextOpInv(p *Plaintext[E, S]) (*Plaintext[E, S],
 	return out, nil
 }
 
-func (pk *PublicKey[E, S]) PlaintextScalarOp(p *Plaintext[E, S], s S) (*Plaintext[E, S], error) {
+func (*PublicKey[E, S]) PlaintextScalarOp(p *Plaintext[E, S], s S) (*Plaintext[E, S], error) {
 	if p == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
 	}
@@ -168,14 +169,14 @@ func (pk *PublicKey[E, S]) PlaintextScalarOp(p *Plaintext[E, S], s S) (*Plaintex
 }
 
 func (pk *PublicKey[E, S]) CiphertextOp(c1, c2 *Ciphertext[E, S], rest ...*Ciphertext[E, S]) (*Ciphertext[E, S], error) {
-	out, err := algebrautils.Op(NewCiphertextFromGroupElement, c1, c2, rest...)
+	out, err := algebrautils.Op(NewCiphertextFromGroupElement, pk.CiphertextGroup(), c1, c2, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute ciphertext operation")
 	}
 	return out, nil
 }
 
-func (pk *PublicKey[E, S]) CiphertextOpInv(c *Ciphertext[E, S]) (*Ciphertext[E, S], error) {
+func (*PublicKey[E, S]) CiphertextOpInv(c *Ciphertext[E, S]) (*Ciphertext[E, S], error) {
 	if c == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
 	}
@@ -186,7 +187,7 @@ func (pk *PublicKey[E, S]) CiphertextOpInv(c *Ciphertext[E, S]) (*Ciphertext[E, 
 	return out, nil
 }
 
-func (pk *PublicKey[E, S]) CiphertextScalarOp(c *Ciphertext[E, S], s S) (*Ciphertext[E, S], error) {
+func (*PublicKey[E, S]) CiphertextScalarOp(c *Ciphertext[E, S], s S) (*Ciphertext[E, S], error) {
 	if c == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
 	}

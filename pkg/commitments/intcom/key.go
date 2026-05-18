@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"io"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -12,8 +16,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/internal"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/errs-go/errs"
-	"golang.org/x/sync/errgroup"
 )
 
 func SampleCommitmentKey(keyLen uint, prng io.Reader) (*CommitmentKey, error) {
@@ -41,8 +43,8 @@ func ExtractCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, labe
 	var s, t *znstar.RSAGroupElement[A]
 	eg := errgroup.Group{}
 	eg.Go(func() error {
+		counter := 0
 		for {
-			counter := 0
 			sSqrt, err := ts.Extract(transcript, fmt.Sprintf("s_%s_%d", label, counter), group)
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to extract sSqrt for pedersen key")
@@ -56,8 +58,8 @@ func ExtractCommitmentKey[A znstar.ArithmeticRSA](transcript ts.Transcript, labe
 		return nil
 	})
 	eg.Go(func() error {
+		counter := 0
 		for {
-			counter := 0
 			tSqrt, err := ts.Extract(transcript, fmt.Sprintf("t_%s_%d", label, counter), group)
 			if err != nil {
 				return errs.Wrap(err).WithMessage("failed to extract tSqrt for pedersen key")
@@ -127,12 +129,11 @@ type CommitmentKey struct {
 }
 
 type commitmentKeyDTO struct {
-	S            *znstar.RSAGroupElementUnknownOrder `cbor:"s"`
-	T            *znstar.RSAGroupElementUnknownOrder `cbor:"t"`
-	MessageSlack int                                 `cbor:"slack"`
+	S *znstar.RSAGroupElementUnknownOrder `cbor:"s"`
+	T *znstar.RSAGroupElementUnknownOrder `cbor:"t"`
 }
 
-func (k *CommitmentKey) Type() commitments.Name {
+func (*CommitmentKey) Type() commitments.Name {
 	return Name
 }
 
@@ -176,14 +177,14 @@ func (k *CommitmentKey) Open(commitment *Commitment, message *Message, witness *
 }
 
 func (k *CommitmentKey) WitnessOp(first, second *Witness, rest ...*Witness) (*Witness, error) {
-	out, err := algebrautils.Op(NewWitness, first, second, rest...)
+	out, err := algebrautils.Op(NewWitness, k.WitnessGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine witnesses")
 	}
 	return out, nil
 }
 
-func (k *CommitmentKey) WitnessOpInv(w *Witness) (*Witness, error) {
+func (*CommitmentKey) WitnessOpInv(w *Witness) (*Witness, error) {
 	if w == nil {
 		return nil, commitments.ErrIsNil.WithMessage("witness cannot be nil")
 	}
@@ -194,7 +195,7 @@ func (k *CommitmentKey) WitnessOpInv(w *Witness) (*Witness, error) {
 	return out, nil
 }
 
-func (k *CommitmentKey) WitnessScalarOp(w *Witness, scalar *num.Int) (*Witness, error) {
+func (*CommitmentKey) WitnessScalarOp(w *Witness, scalar *num.Int) (*Witness, error) {
 	if w == nil {
 		return nil, commitments.ErrIsNil.WithMessage("witness cannot be nil")
 	}
@@ -209,14 +210,14 @@ func (k *CommitmentKey) WitnessScalarOp(w *Witness, scalar *num.Int) (*Witness, 
 }
 
 func (k *CommitmentKey) MessageOp(first, second *Message, rest ...*Message) (*Message, error) {
-	out, err := algebrautils.Op(NewMessage, first, second, rest...)
+	out, err := algebrautils.Op(NewMessage, k.MessageGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine messages")
 	}
 	return out, nil
 }
 
-func (k *CommitmentKey) MessageOpInv(m *Message) (*Message, error) {
+func (*CommitmentKey) MessageOpInv(m *Message) (*Message, error) {
 	if m == nil {
 		return nil, commitments.ErrIsNil.WithMessage("message cannot be nil")
 	}
@@ -227,7 +228,7 @@ func (k *CommitmentKey) MessageOpInv(m *Message) (*Message, error) {
 	return out, nil
 }
 
-func (k *CommitmentKey) MessageScalarOp(m *Message, scalar *num.Int) (*Message, error) {
+func (*CommitmentKey) MessageScalarOp(m *Message, scalar *num.Int) (*Message, error) {
 	if m == nil {
 		return nil, commitments.ErrIsNil.WithMessage("message cannot be nil")
 	}
@@ -242,7 +243,7 @@ func (k *CommitmentKey) MessageScalarOp(m *Message, scalar *num.Int) (*Message, 
 }
 
 func (k *CommitmentKey) CommitmentOp(first, second *Commitment, rest ...*Commitment) (*Commitment, error) {
-	out, err := algebrautils.Op(NewCommitment, first, second, rest...)
+	out, err := algebrautils.Op(NewCommitment, k.CommitmentGroup(), first, second, rest...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to combine commitments")
 	}
@@ -252,6 +253,9 @@ func (k *CommitmentKey) CommitmentOp(first, second *Commitment, rest ...*Commitm
 func (k *CommitmentKey) CommitmentOpInv(c *Commitment) (*Commitment, error) {
 	if c == nil {
 		return nil, commitments.ErrIsNil.WithMessage("commitment cannot be nil")
+	}
+	if !k.CommitmentGroup().Contains(c.Value()) {
+		return nil, commitments.ErrSubGroupMembership.WithMessage("commitment must be in commitment group")
 	}
 	out, err := NewCommitment(c.Value().Inv())
 	if err != nil {
@@ -267,6 +271,9 @@ func (k *CommitmentKey) CommitmentScalarOp(c *Commitment, scalar *num.Int) (*Com
 	if scalar == nil {
 		return nil, commitments.ErrIsNil.WithMessage("scalar cannot be nil")
 	}
+	if !k.CommitmentGroup().Contains(c.v) {
+		return nil, commitments.ErrSubGroupMembership.WithMessage("commitment must be in commitment group")
+	}
 	out, err := NewCommitment(c.Value().ExpI(scalar))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create new commitment")
@@ -280,6 +287,9 @@ func (k *CommitmentKey) ReRandomise(c *Commitment, witnessShift *Witness) (*Comm
 	}
 	if witnessShift == nil {
 		return nil, commitments.ErrIsNil.WithMessage("witness shift cannot be nil")
+	}
+	if !k.CommitmentGroup().Contains(c.Value()) {
+		return nil, commitments.ErrSubGroupMembership.WithMessage("commitment must be in commitment group")
 	}
 	out, err := NewCommitment(c.Value().Mul(k.t.ExpI(witnessShift.Value())))
 	if err != nil {
@@ -295,6 +305,9 @@ func (k *CommitmentKey) Shift(c *Commitment, message *Message) (*Commitment, err
 	if message == nil {
 		return nil, commitments.ErrIsNil.WithMessage("message cannot be nil")
 	}
+	if !k.CommitmentGroup().Contains(c.Value()) {
+		return nil, commitments.ErrSubGroupMembership.WithMessage("commitment must be in commitment group")
+	}
 	out, err := NewCommitment(c.Value().Mul(k.s.ExpI(message.Value())))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create new commitment")
@@ -302,11 +315,11 @@ func (k *CommitmentKey) Shift(c *Commitment, message *Message) (*Commitment, err
 	return out, nil
 }
 
-func (k *CommitmentKey) MessageGroup() *num.Integers {
+func (*CommitmentKey) MessageGroup() *num.Integers {
 	return num.Z()
 }
 
-func (k *CommitmentKey) WitnessGroup() *num.Integers {
+func (*CommitmentKey) WitnessGroup() *num.Integers {
 	return num.Z()
 }
 

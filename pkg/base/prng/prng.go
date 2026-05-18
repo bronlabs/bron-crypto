@@ -11,9 +11,9 @@ type SeedablePRNG interface {
 	New(seed, salt []byte) (SeedablePRNG, error)
 }
 
-// PRNGFuncTypeErase converts a generic PRNG constructor to a non-generic one returning io.Reader.
+// FuncTypeErase converts a generic PRNG constructor to a non-generic one returning io.Reader.
 // This is useful when interfacing with APIs that require func() io.Reader.
-func PRNGFuncTypeErase[H io.Reader](prngFunc func() H) func() io.Reader {
+func FuncTypeErase[H io.Reader](prngFunc func() H) func() io.Reader {
 	return func() io.Reader {
 		return prngFunc()
 	}

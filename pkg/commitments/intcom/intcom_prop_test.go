@@ -3,6 +3,9 @@ package intcom_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
@@ -10,8 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils/properties"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func CommitmentKeyGenerator(tb testing.TB, keyLen int) *rapid.Generator[*intcom.CommitmentKey] {
@@ -125,7 +126,7 @@ func CommitmentKeyPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicComm
 	tb.Helper()
 	return properties.NewGroupHomomorphicCommitmentKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		CommitmentKeyGenerator(tb, keyLen),
 		MessageGenerator,
 		func(m1, m2 *intcom.Message) bool { return m1.Equal(m2) },
@@ -160,7 +161,7 @@ func TrapdoorKeyPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicTrapdo
 	tb.Helper()
 	return properties.NewGroupHomomorphicTrapdoorKeyProperties(
 		tb,
-		prng.PRNGFuncTypeErase(pcg.NewRandomised),
+		prng.FuncTypeErase(pcg.NewRandomised),
 		TrapdoorKeyGenerator(tb, keyLen),
 		MessageGenerator,
 		func(m1, m2 *intcom.Message) bool { return m1.Equal(m2) },

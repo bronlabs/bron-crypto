@@ -5,10 +5,11 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCommitting(b *testing.B) {

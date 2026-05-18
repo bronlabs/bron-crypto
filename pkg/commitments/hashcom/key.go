@@ -37,11 +37,11 @@ func ExtractCommitmentKey(transcript ts.Transcript, label string) (*CommitmentKe
 
 type CommitmentKey [KeySize]byte
 
-func (k *CommitmentKey) Type() commitments.Name {
+func (*CommitmentKey) Type() commitments.Name {
 	return Name
 }
 
-func (k *CommitmentKey) SampleWitness(prng io.Reader) (Witness, error) {
+func (*CommitmentKey) SampleWitness(prng io.Reader) (Witness, error) {
 	out, err := SampleWitness(prng)
 	if err != nil {
 		return Witness{}, errs.Wrap(err).WithMessage("could not sample witness")
