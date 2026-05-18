@@ -4,18 +4,24 @@ Pedersen commitments are perfectly hiding and computationally binding (under the
 
 ## Overview
 
-- Common reference string: two independent generators `g` and `h` of the same prime-order group.
+- Common reference string: two generators `g` and `h` of the same prime-order group, where the discrete-log relation between them is unknown.
 - Commitment to scalar message $m$ with randomness $r$: $C = g^m \cdot h^r$.
 - Additive homomorphism: multiplying commitments corresponds to adding messages; commitments can be re-randomised without changing the message.
 - All types implement CBOR encoding for transport and persistence.
 
 ## Types
 
-- `Key`: holds generators `g` and `h`; constructor rejects identity elements and identical generators.
+- `Key`: holds generators `g` and `h`.
 - `Message`: wraps the scalar message in the group’s field.
 - `Witness`: randomness used to hide the message.
 - `Commitment`: prime-group element representing $g^m \cdot h^r$.
 - `Scheme`: wires the committer and verifier around a fixed `Key`.
+
+## Key Generation
+
+Pedersen binding fails if a committer knows a scalar `s` such that `h = g^s`. Prefer `NewCommitmentKeyFromTranscript`, which derives `h` by hashing transcript output into the group and pairs it with the group's canonical generator. An externally supplied key is supported only when it comes from a trusted setup or other ceremony that guarantees the discrete-log relation between `g` and `h` is unknown.
+
+`NewCommitmentKeyUnchecked` only rejects identity elements and identical generators. Use it only when the unknown-discrete-log precondition has already been established outside this package. CBOR-decoded keys have the same requirement and must not be accepted from an untrusted source as a binding CRS.
 
 ## Algorithms
 

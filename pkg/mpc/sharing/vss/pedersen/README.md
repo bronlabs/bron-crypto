@@ -20,14 +20,14 @@ The two are algebraically equivalent for threshold access structures: the Vander
 ## Security
 
 - **Perfectly hiding**: V = [r_g]G + [r_h]H reveals no information about the secret, even to a computationally unbounded adversary. This is the key advantage over Feldman VSS, where V[0] = [secret]G leaks the secret in the exponent.
-- **Computationally binding**: opening the commitment to a different secret requires computing the discrete-log relation between G and H.
+- **Computationally binding**: opening the commitment to a different secret requires computing the discrete-log relation between G and H. The commitment key must therefore be generated so that this relation is unknown, for example with `pedcom.NewCommitmentKeyFromTranscript` or a trusted external setup.
 - **Public verifiability**: any party can verify shares given the verification vector and the public MSP.
 
 ## Usage
 
 ```go
-// Create a Pedersen commitment key (G, H must be independent generators).
-key, _ := pedcom.NewCommitmentKey(g, h)
+// Derive a Pedersen commitment key from a protocol transcript.
+key, _ := pedcom.NewCommitmentKeyFromTranscript(tape, "pedersen-vss-h", group)
 
 // Any linear access structure works.
 ac, _ := boolexpr.NewThresholdGateAccessStructure(

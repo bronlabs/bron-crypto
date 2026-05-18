@@ -7,6 +7,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 // Key holds the generators defining a Pedersen commitment CRS.
@@ -20,8 +22,10 @@ type keyDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] s
 	H E
 }
 
-// NewCommitmentKey validates and constructs a Pedersen key from two independent generators.
-func NewCommitmentKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](g, h E) (*Key[E, S], error) {
+// NewCommitmentKeyUnchecked constructs a Pedersen key from caller-supplied
+// generators after basic validation. The caller must ensure that the discrete
+// logarithm relation between g and h is unknown.
+func NewCommitmentKeyUnchecked[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](g, h E) (*Key[E, S], error) {
 	if g.IsOpIdentity() || h.IsOpIdentity() {
 		return nil, ErrInvalidArgument.WithMessage("g or h cannot be the identity element")
 	}
@@ -34,6 +38,27 @@ func NewCommitmentKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEle
 		h: h,
 	}
 	return k, nil
+}
+
+// NewCommitmentKeyFromTranscript derives h from a transcript and pairs it with
+// the group's canonical generator g. This is the preferred constructor when no
+// external trusted setup generated the Pedersen commitment key.
+func NewCommitmentKeyFromTranscript[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tape ts.Transcript, label string, group algebra.PrimeGroup[E, S]) (*Key[E, S], error) {
+	if tape == nil || label == "" || utils.IsNil(group) {
+		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+	}
+
+	g := group.Generator()
+	h, err := ts.Extract(tape, label, group)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot extract h")
+	}
+
+	key, err := NewCommitmentKeyUnchecked(g, h)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create commitment key")
+	}
+	return key, nil
 }
 
 // G returns the first generator.
@@ -75,7 +100,7 @@ func (k *Key[E, S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal Pedersen key")
 	}
-	k2, err := NewCommitmentKey(dto.G, dto.H)
+	k2, err := NewCommitmentKeyUnchecked(dto.G, dto.H)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create commitment key")
 	}
