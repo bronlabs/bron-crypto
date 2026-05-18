@@ -12,6 +12,21 @@ import (
 
 const Name encryption.Name = "ElGamal"
 
+type EncryptionKey[EK encryption.GroupHomomorphicEncryptionKey[
+	EK,
+	*Plaintext[E, S], FiniteCyclicGroup[E, S], E,
+	*Nonce[S], algebra.ZModLike[S], S,
+	*Ciphertext[E, S], *constructions.FiniteDirectPowerModule[FiniteCyclicGroup[E, S], E, S], *constructions.FiniteDirectPowerModuleElement[E, S],
+	S,
+], E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S],
+] = encryption.GroupHomomorphicEncryptionKey[
+	EK,
+	*Plaintext[E, S], FiniteCyclicGroup[E, S], E,
+	*Nonce[S], algebra.ZModLike[S], S,
+	*Ciphertext[E, S], *constructions.FiniteDirectPowerModule[FiniteCyclicGroup[E, S], E, S], *constructions.FiniteDirectPowerModuleElement[E, S],
+	S,
+]
+
 // FiniteCyclicGroup constrains the group G in which ElGamal operates.
 // G must be a finite abelian cyclic group whose DDH problem is hard.
 // Typical instantiations: prime-order elliptic curve groups (k256, p256, ed25519 prime subgroup).

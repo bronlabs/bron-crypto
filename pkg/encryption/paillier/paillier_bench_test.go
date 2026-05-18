@@ -47,9 +47,9 @@ func benchmarkDecrypting(b *testing.B, keyLen uint) {
 	)
 }
 
-func benchmarkManyEncryptions(b *testing.B, keyLen uint, count int) {
+func benchmarkManyEncryptions(b *testing.B, keyLen, count uint) {
 	b.Helper()
-	require.Greater(b, count, 1)
+	require.Greater(b, count, uint(1))
 	prng := pcg.NewRandomised()
 
 	key, err := paillier.SampleSecretKey(keyLen, prng)
@@ -79,10 +79,9 @@ func benchmarkManyEncryptions(b *testing.B, keyLen uint, count int) {
 	)
 }
 
-// TODO: why count cannot be a uint?!!
-func benchmarkManyDecryptions(b *testing.B, keyLen uint, count int) {
+func benchmarkManyDecryptions(b *testing.B, keyLen, count uint) {
 	b.Helper()
-	require.Greater(b, count, 1)
+	require.Greater(b, count, uint(1))
 	prng := pcg.NewRandomised()
 
 	key, err := paillier.SampleSecretKey(keyLen, prng)
@@ -125,7 +124,7 @@ func BenchmarkDecrypting(b *testing.B) {
 
 func BenchmarkManyEncryptions(b *testing.B) {
 	for _, keyLen := range []uint{256, 1024, 2048} {
-		for _, count := range []int{2, 64, 128, 256} {
+		for _, count := range []uint{2, 64, 128, 256} {
 			benchmarkManyEncryptions(b, keyLen, count)
 		}
 	}
@@ -133,7 +132,7 @@ func BenchmarkManyEncryptions(b *testing.B) {
 
 func BenchmarkManyDecryptions(b *testing.B) {
 	for _, keyLen := range []uint{256, 1024, 2048} {
-		for _, count := range []int{2, 64, 128, 256} {
+		for _, count := range []uint{2, 64, 128, 256} {
 			benchmarkManyDecryptions(b, keyLen, count)
 		}
 	}

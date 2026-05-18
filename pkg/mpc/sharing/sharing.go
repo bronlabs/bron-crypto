@@ -29,7 +29,9 @@ type Share[S any] interface {
 // VerificationMaterial is public information that allows shareholders to verify
 // their shares without interaction. For Feldman/Pedersen VSS, this is the
 // verification vector of group element commitments.
-type VerificationMaterial any
+type VerificationMaterial[V VerificationMaterial[V]] interface {
+	Op(V) (V, error)
+}
 
 // DealerOutput contains the result of a dealing operation.
 type DealerOutput[S Share[S]] interface {
@@ -37,7 +39,7 @@ type DealerOutput[S Share[S]] interface {
 }
 
 // VerifiableDealerOutput extends DealerOutput with verification material.
-type VerifiableDealerOutput[S Share[S], V VerificationMaterial] DealerOutput[S]
+type VerifiableDealerOutput[S Share[S], V VerificationMaterial[V]] DealerOutput[S]
 
 // SSS (Secret Sharing Scheme) is the base interface for all secret sharing schemes.
 // It provides dealing (splitting a secret into shares) and reconstruction
@@ -54,7 +56,7 @@ type SSS[S Share[S], W Secret[W], DO DealerOutput[S]] interface {
 // VSSS (Verifiable Secret Sharing Scheme) extends SSS with the ability to verify
 // shares against public verification material. This allows shareholders to detect
 // a malicious dealer who distributes inconsistent shares.
-type VSSS[S Share[S], W Secret[W], V VerificationMaterial, DO VerifiableDealerOutput[S, V]] interface {
+type VSSS[S Share[S], W Secret[W], V VerificationMaterial[V], DO VerifiableDealerOutput[S, V]] interface {
 	SSS[S, W, DO]
 	Reconstruct(shares ...S) (secret W, err error)
 	ReconstructAndVerify(reference V, shares ...S) (secret W, err error)

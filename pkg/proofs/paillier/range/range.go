@@ -2,6 +2,7 @@ package paillierrange
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"maps"
 	"slices"
@@ -9,8 +10,10 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -18,20 +21,10 @@ import (
 // Name identifies the Paillier range proof protocol.
 const Name = "PaillierRange"
 
-var (
-	_ sigma.Witness                                                        = (*Witness)(nil)
-	_ sigma.Statement                                                      = (*Statement)(nil)
-	_ sigma.Commitment                                                     = (*Commitment)(nil)
-	_ sigma.State                                                          = (*State)(nil)
-	_ sigma.Response                                                       = (*Response)(nil)
-	_ sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response] = (*Protocol)(nil)
-)
-
 // Witness contains the secret inputs for the range proof.
 type Witness struct {
-	Sk *paillier.PrivateKey
-	X  *paillier.Plaintext
-	R  *paillier.Nonce
+	X *paillier.Plaintext
+	R *paillier.Nonce
 }
 
 // Bytes serialises the witness for transcript binding.
@@ -41,26 +34,25 @@ func (w *Witness) Bytes() []byte {
 	}
 
 	out := []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, w.Sk.Group().Modulus().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, w.X.Value().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, w.R.Value().Bytes())
 	return out
 }
 
 // NewWitness constructs a range-proof witness.
-func NewWitness(sk *paillier.PrivateKey, x *paillier.Plaintext, r *paillier.Nonce) *Witness {
-	return &Witness{
-		Sk: sk,
-		X:  x,
-		R:  r,
+func NewWitness(x *paillier.Plaintext, r *paillier.Nonce) (*Witness, error) {
+	if x == nil || r == nil {
+		return nil, ErrInvalidArgument.WithMessage("x and r must not be nil")
 	}
+	return &Witness{
+		X: x,
+		R: r,
+	}, nil
 }
 
 // Statement defines the public inputs for the range proof.
 type Statement struct {
-	Pk *paillier.PublicKey
-	C  *paillier.Ciphertext
-	L  *numct.Nat
+	C *paillier.Ciphertext
 }
 
 // Bytes serialises the statement for transcript binding.
@@ -70,19 +62,18 @@ func (s *Statement) Bytes() []byte {
 	}
 
 	out := []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, s.Pk.Group().Modulus().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, s.C.Value().Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, s.L.Bytes())
 	return out
 }
 
 // NewStatement constructs a range-proof statement.
-func NewStatement(pk *paillier.PublicKey, c *paillier.Ciphertext, l *numct.Nat) *Statement {
-	return &Statement{
-		Pk: pk,
-		C:  c,
-		L:  l,
+func NewStatement(c *paillier.Ciphertext) (*Statement, error) {
+	if c == nil {
+		return nil, ErrInvalidArgument.WithMessage("c must not be nil")
 	}
+	return &Statement{
+		C: c,
+	}, nil
 }
 
 // Commitment holds the prover commitment for the range proof.
@@ -172,72 +163,94 @@ func (r *Response) Bytes() []byte {
 }
 
 // Protocol implements the Paillier range proof.
-type Protocol struct {
-	t    uint
-	prng io.Reader
+type Protocol[EK paillier.EncryptionKey[EK]] struct {
+	name          sigma.Name
+	t             uint
+	lowBound      *num.Nat
+	highBound     *num.Nat
+	encryptionKey EK
+	prng          io.Reader
 }
 
 // NewPaillierRange constructs a Paillier range-proof protocol instance.
-func NewPaillierRange(t uint, prng io.Reader) (*Protocol, error) {
+func NewPaillierRange[EK paillier.EncryptionKey[EK]](
+	t uint, l *num.NatPlus, encryptionKey EK, prng io.Reader,
+) (*Protocol[EK], error) {
 	if t < base.StatisticalSecurityBits {
 		return nil, ErrValidationFailed.WithMessage("insufficient statistical security")
+	}
+	if l == nil {
+		return nil, ErrInvalidArgument.WithMessage("l must not be nil")
+	}
+	if utils.IsNil(encryptionKey) {
+		return nil, ErrInvalidArgument.WithMessage("encryptionKey must not be nil")
 	}
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil prng")
 	}
 
-	return &Protocol{
-		t:    t,
-		prng: prng,
+	lowBound := l.Nat()
+	highBound := lowBound.Add(lowBound)
+
+	name := sigma.Name(fmt.Sprintf("%s_L=%s_N=%s", Name, l.String(), encryptionKey.PlaintextGroup().Modulus().String()))
+
+	return &Protocol[EK]{
+		name:          name,
+		t:             t,
+		lowBound:      lowBound,
+		highBound:     highBound,
+		encryptionKey: encryptionKey,
+		prng:          prng,
 	}, nil
 }
 
 // Name returns the protocol identifier.
-func (*Protocol) Name() sigma.Name {
-	return Name
+func (p *Protocol[EK]) Name() sigma.Name {
+	return p.name
 }
 
 // ComputeProverCommitment generates the initial commitment and state.
-func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
-	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+func (p *Protocol[EK]) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
+	if statement == nil || statement.C == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
 	}
-	if witness == nil || witness.Sk == nil || witness.X == nil || witness.R == nil {
+	if witness == nil || witness.X == nil || witness.R == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid witness")
 	}
 
-	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.FromNat(statement.L)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create new plaintext")
-	}
-	highBound := lowBound.Add(lowBound)
 	swaps := make([]byte, (p.t+7)/8)
-	_, err = io.ReadFull(p.prng, swaps)
+	_, err := io.ReadFull(p.prng, swaps)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot generate randomness")
 	}
 
+	n := p.encryptionKey.PlaintextGroup().Modulus()
+
 	w := make([]*paillier.Plaintext, 2*p.t)
 	for i := range p.t {
-		w1i, err := ps.Sample(lowBound, highBound, p.prng)
+		w1i, err := num.N().Random(p.lowBound, p.highBound, p.prng)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
 		}
-		w2i := w1i.Sub(lowBound)
+		w2i, err := w1i.TrySub(p.lowBound)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot compute w2i")
+		}
 		swapBit := (swaps[i/8] >> (i % 8)) % 2
 		if swapBit != 0 {
 			w1i, w2i = w2i, w1i
 		}
 
-		w[i] = w1i
-		w[p.t+i] = w2i
+		w[i], err = paillier.NewPlaintextFromNat(w1i, n)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create plaintext w1i")
+		}
+		w[p.t+i], err = paillier.NewPlaintextFromNat(w2i, n)
+		if err != nil {
+			return nil, nil, errs.Wrap(err).WithMessage("cannot create plaintext w2i")
+		}
 	}
-	senc, err := paillier.NewScheme().SelfEncrypter(witness.Sk)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create self encrypter")
-	}
-	c, r, err := senc.SelfEncryptMany(w, p.prng)
+	c, r, err := encryption.EncryptMany(w, p.encryptionKey, p.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt state")
 	}
@@ -257,11 +270,11 @@ func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witnes
 }
 
 // ComputeProverResponse generates the response for a given challenge.
-func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
-	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+func (p *Protocol[EK]) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
+	if statement == nil || statement.C == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid statement")
 	}
-	if witness == nil || witness.Sk == nil || witness.X == nil || witness.R == nil {
+	if witness == nil || witness.X == nil || witness.R == nil {
 		return nil, ErrInvalidArgument.WithMessage("invalid witness")
 	}
 	if state == nil {
@@ -273,13 +286,6 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 	if len(state.W1) != int(p.t) || len(state.R1) != int(p.t) || len(state.W2) != int(p.t) || len(state.R2) != int(p.t) {
 		return nil, ErrInvalidArgument.WithMessage("inconsistent input")
 	}
-
-	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.FromNat(statement.L)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create new plaintext")
-	}
-	highBound := lowBound.Add(lowBound)
 
 	z := &Response{
 		W1: make(map[uint]*paillier.Plaintext),
@@ -301,15 +307,26 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 			z.R2[i] = state.R2[i]
 
 		case 1:
-			xPlusW1 := witness.X.Add(state.W1[i])
-			if isInRange(lowBound, highBound, xPlusW1) {
+			xPlusW1, err := p.encryptionKey.PlaintextOp(witness.X, state.W1[i])
+			if err != nil {
+				return nil, errs.Wrap(err).WithMessage("cannot compute xPlusW1")
+			}
+			if isInRange(p.lowBound, p.highBound, xPlusW1) {
 				z.Wj[i] = xPlusW1
-				z.Rj[i] = witness.R.Mul(state.R1[i])
+				z.Rj[i], err = p.encryptionKey.NonceOp(witness.R, (state.R1[i]))
+				if err != nil {
+					return nil, errs.Wrap(err).WithMessage("cannot compute Rj[%d]", i)
+				}
 				z.J[i] = 1
 			} else {
-				xPlusW2 := witness.X.Add(state.W2[i])
-				z.Wj[i] = xPlusW2
-				z.Rj[i] = witness.R.Mul(state.R2[i])
+				z.Wj[i], err = p.encryptionKey.PlaintextOp(witness.X, state.W2[i])
+				if err != nil {
+					return nil, errs.Wrap(err).WithMessage("cannot compute Wj[%d]", i)
+				}
+				z.Rj[i], err = p.encryptionKey.NonceOp(witness.R, (state.R2[i]))
+				if err != nil {
+					return nil, errs.Wrap(err).WithMessage("cannot compute Rj[%d]", i)
+				}
 				z.J[i] = 2
 			}
 
@@ -322,8 +339,8 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 }
 
 // Verify checks a prover response against the statement and commitment.
-func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
-	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+	if statement == nil || statement.C == nil {
 		return ErrInvalidArgument.WithMessage("invalid statement")
 	}
 	if commitment == nil || response == nil {
@@ -344,13 +361,6 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 		return ErrFailed.WithMessage("inconsistent input")
 	}
 
-	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.FromNat(statement.L)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create new plaintext")
-	}
-	highBound := lowBound.Add(lowBound)
-
 	var c []*paillier.Ciphertext
 	var w []*paillier.Plaintext
 	var r []*paillier.Nonce
@@ -366,8 +376,8 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}
 
-			if (!isInRange(lowBound, highBound, w1i) || !isInRange(ps.Zero(), lowBound, w2i)) &&
-				(!isInRange(lowBound, highBound, w2i) || !isInRange(ps.Zero(), lowBound, w1i)) {
+			if (!isInRange(p.lowBound, p.highBound, w1i) || !isInRange(num.N().Zero(), p.lowBound, w2i)) &&
+				(!isInRange(p.lowBound, p.highBound, w2i) || !isInRange(num.N().Zero(), p.lowBound, w1i)) {
 
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}
@@ -387,7 +397,7 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}
 
-			if !isInRange(lowBound, highBound, wi) {
+			if !isInRange(p.lowBound, p.highBound, wi) {
 				return ErrVerificationFailed.WithMessage("verification failed")
 			}
 
@@ -395,10 +405,16 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 			r = append(r, ri)
 			switch ji {
 			case 1:
-				ci := statement.C.HomAdd(commitment.C1[i])
+				ci, err := p.encryptionKey.CiphertextOp(statement.C, commitment.C1[i])
+				if err != nil {
+					return errs.Wrap(err).WithMessage("cannot compute ci")
+				}
 				c = append(c, ci)
 			case 2:
-				ci := statement.C.HomAdd(commitment.C2[i])
+				ci, err := p.encryptionKey.CiphertextOp(statement.C, commitment.C2[i])
+				if err != nil {
+					return errs.Wrap(err).WithMessage("cannot compute ci")
+				}
 				c = append(c, ci)
 			default:
 				return ErrVerificationFailed.WithMessage("verification failed")
@@ -408,11 +424,7 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 		}
 	}
 
-	enc, err := paillier.NewScheme().Encrypter()
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create encrypter")
-	}
-	cCheck, err := enc.EncryptManyWithNonces(w, statement.Pk, r)
+	cCheck, err := encryption.EncryptManyWithNonces(w, p.encryptionKey, r)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot compute encrypted ciphertext")
 	}
@@ -426,19 +438,13 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 }
 
 // RunSimulator creates a simulated transcript for a given challenge.
-func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
-	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
+	if statement == nil || statement.C == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
 	}
 	if len(challenge) != p.GetChallengeBytesLength() {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
-	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.FromNat(statement.L)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create new plaintext")
-	}
-	highBound := lowBound.Add(lowBound)
 
 	w1 := make(map[uint]*paillier.Plaintext)
 	r1 := make(map[uint]*paillier.Nonce)
@@ -450,9 +456,11 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 	rj := make(map[uint]*paillier.Nonce)
 	j := make(map[uint]uint)
 
-	enc, err := paillier.NewScheme().Encrypter()
+	n := p.encryptionKey.PlaintextGroup().Modulus()
+
+	zeroPlaintext, err := paillier.NewPlaintextFromNat(num.N().Zero(), n)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create encrypter")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create zero plaintext")
 	}
 
 	toBeEncrypted := make([]*paillier.Plaintext, p.t*2)
@@ -460,28 +468,48 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 		ei := (challenge[i/8] >> (i % 8)) % 2
 		switch ei {
 		case 0:
-			w1[i], err = ps.Sample(lowBound, highBound, p.prng)
+			w1i, err := num.N().Random(p.lowBound, p.highBound, p.prng)
 			if err != nil {
 				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
 			}
-			w2[i] = w1[i].Sub(lowBound)
+			w1[i], err = paillier.NewPlaintextFromNat(w1i, n)
+			if err != nil {
+				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
+			}
+			w2i, err := w1i.TrySub(p.lowBound)
+			if err != nil {
+				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w2i")
+			}
+			w2[i], err = paillier.NewPlaintextFromNat(w2i, n)
+			if err != nil {
+				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w2i")
+			}
 			toBeEncrypted[i] = w1[i]
 			toBeEncrypted[i+p.t] = w2[i]
 		case 1:
-			wj[i], err = ps.Sample(lowBound, highBound, p.prng)
+			wji, err := num.N().Random(p.lowBound, p.highBound, p.prng)
+			if err != nil {
+				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
+			}
+			wj[i], err = paillier.NewPlaintextFromNat(wji, n)
 			if err != nil {
 				return nil, nil, errs.Wrap(err).WithMessage("cannot compute w1i")
 			}
 			toBeEncrypted[i] = wj[i]
-			toBeEncrypted[i+p.t] = ps.Zero()
+			toBeEncrypted[i+p.t] = zeroPlaintext
 		default:
 			return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
-	ctxs, rs, err := enc.EncryptMany(toBeEncrypted, statement.Pk, p.prng)
+	ctxs, rs, err := encryption.EncryptMany(toBeEncrypted, p.encryptionKey, p.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt many")
+	}
+
+	cInv, err := p.encryptionKey.CiphertextOpInv(statement.C)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot compute ciphertext inverse")
 	}
 
 	for i := range p.t {
@@ -505,11 +533,17 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 			j[i] = uint(1 + (ji[0] % 2))
 			switch j[i] {
 			case 1:
-				c1[i] = cji.HomSub(statement.C)
+				c1[i], err = p.encryptionKey.CiphertextOp(cji, cInv)
+				if err != nil {
+					return nil, nil, errs.Wrap(err).WithMessage("cannot compute c1[i]")
+				}
 				c2[i] = cZero
 				rj[i] = rji
 			case 2:
-				c2[i] = cji.HomSub(statement.C)
+				c2[i], err = p.encryptionKey.CiphertextOp(cji, cInv)
+				if err != nil {
+					return nil, nil, errs.Wrap(err).WithMessage("cannot compute c2[i]")
+				}
 				c1[i] = cZero
 				rj[i] = rji
 			default:
@@ -537,45 +571,30 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 }
 
 // SpecialSoundness returns the protocol special soundness parameter.
-func (*Protocol) SpecialSoundness() uint {
+func (*Protocol[EK]) SpecialSoundness() uint {
 	return 2
 }
 
 // ValidateStatement checks the witness against the statement.
-func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error {
-	if statement == nil || statement.Pk == nil || statement.C == nil || statement.L == nil {
+func (p *Protocol[EK]) ValidateStatement(statement *Statement, witness *Witness) error {
+	if statement == nil || statement.C == nil {
 		return ErrInvalidArgument.WithMessage("invalid statement")
 	}
-	if witness == nil || witness.Sk == nil || witness.X == nil || witness.R == nil {
+	if witness == nil || witness.X == nil || witness.R == nil {
 		return ErrInvalidArgument.WithMessage("invalid witness")
 	}
-	if !statement.Pk.Equal(witness.Sk.PublicKey()) {
-		return ErrValidationFailed.WithMessage("paillier keys mismatch")
+	if !p.encryptionKey.PlaintextGroup().Contains(witness.X.Value()) {
+		return ErrValidationFailed.WithMessage("witness x is not a valid plaintext")
 	}
-	senc, err := paillier.NewScheme().SelfEncrypter(witness.Sk)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("failed to create self encrypter")
+	if !p.encryptionKey.NonceGroup().Contains(witness.R.Value()) {
+		return ErrValidationFailed.WithMessage("witness r is not a valid nonce")
 	}
-	cCheck, err := senc.SelfEncryptWithNonce(witness.X, witness.R)
+	cCheck, err := p.encryptionKey.EncryptWithNonce(witness.X, witness.R)
 	if err != nil || !statement.C.Equal(cCheck) {
 		return ErrValidationFailed.WithMessage("plaintext/ciphertext mismatch")
 	}
 
-	var negL, twoL, L numct.Int
-	L.SetNat(statement.L)
-	negL.Neg(&L)
-	twoL.Double(&L)
-
-	lowBound, err := statement.Pk.PlaintextSpace().FromInt(&negL)
-	if err != nil {
-		return ErrValidationFailed.WithMessage("cannot compute low bound")
-	}
-	highBound, err := statement.Pk.PlaintextSpace().FromInt(&twoL)
-	if err != nil {
-		return ErrValidationFailed.WithMessage("cannot compute high bound")
-	}
-
-	if !isInRange(lowBound, highBound, witness.X) {
+	if !isInRange(num.N().Zero(), p.lowBound, witness.X) {
 		return ErrValidationFailed.WithMessage("witness out of range")
 	}
 
@@ -583,15 +602,16 @@ func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error
 }
 
 // GetChallengeBytesLength returns the challenge size in bytes.
-func (p *Protocol) GetChallengeBytesLength() int {
+func (p *Protocol[EK]) GetChallengeBytesLength() int {
 	return int((p.t + 7) / 8)
 }
 
 // SoundnessError returns the protocol soundness error.
-func (p *Protocol) SoundnessError() uint {
+func (p *Protocol[EK]) SoundnessError() uint {
 	return p.t
 }
 
-func isInRange(lowInclusive, highExclusive, v *paillier.Plaintext) bool {
-	return lowInclusive.IsLessThanOrEqual(v) && v.IsLessThanOrEqual(highExclusive) && !highExclusive.Equal(v)
+func isInRange(lowInclusive, highExclusive *num.Nat, v *paillier.Plaintext) bool {
+	vv := v.Value().Nat()
+	return lowInclusive.IsLessThanOrEqual(vv) && vv.IsLessThanOrEqual(highExclusive) && !highExclusive.Equal(vv)
 }

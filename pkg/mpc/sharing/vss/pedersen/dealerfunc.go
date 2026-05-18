@@ -69,7 +69,7 @@ func (df *DealerFunc[FE]) H() *kw.DealerFunc[FE] {
 // V = [r_g]G + [r_h]H, i.e. the component-wise Pedersen commitment of the
 // secret and blinding random columns using the respective generators from the
 // commitment key.
-func LiftDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](df *DealerFunc[FE], key *pedcom.Key[E, FE]) (*LiftedDealerFunc[E, FE], error) {
+func LiftDealerFunc[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](df *DealerFunc[FE], key *pedcom.CommitmentKey[E, FE]) (*LiftedDealerFunc[E, FE], error) {
 	if df == nil {
 		return nil, sharing.ErrIsNil.WithMessage("dealer func is nil")
 	}

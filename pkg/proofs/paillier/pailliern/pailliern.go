@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -37,38 +38,33 @@ type Proof struct {
 // Prover generates a Paillier N proof.
 type Prover struct {
 	sid  network.SID
-	enc  *paillier.SelfEncrypter
+	sk   *paillier.SecretKey
 	tape transcripts.Transcript
 }
 
 // NewProver constructs a prover for the Paillier N proof.
-func NewProver(sessionID network.SID, enc *paillier.SelfEncrypter, tape transcripts.Transcript) (prover *Prover, err error) {
-	if enc == nil {
-		return nil, ErrInvalidArgument.WithMessage("encrypter is nil")
+func NewProver(sessionID network.SID, sk *paillier.SecretKey, tape transcripts.Transcript) (prover *Prover, err error) {
+	if sk == nil {
+		return nil, ErrInvalidArgument.WithMessage("sk is nil")
 	}
 	if tape == nil {
 		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
 	}
 	dst := fmt.Sprintf("%s-%d", appTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
-	tape.AppendBytes(nTranscriptLabel, enc.PrivateKey().PublicKey().Modulus().BytesBE())
+	tape.AppendBytes(nTranscriptLabel, sk.Group().Modulus().BytesBE())
 
 	return &Prover{
 		sid:  sessionID,
-		enc:  enc,
+		sk:   sk,
 		tape: tape,
 	}, nil
 }
 
-// PrivateKey returns the prover's Paillier secret key.
-func (p *Prover) PrivateKey() *paillier.PrivateKey {
-	return p.enc.PrivateKey()
-}
-
 // Prove generates a proof and returns the public statement.
 func (p *Prover) Prove() (proof *Proof, statement *paillier.PublicKey, err error) {
-	crtModN := p.PrivateKey().Arithmetic().CrtModN
-	rhos, err := extractRhos(p.tape, crtModN.N)
+	crtModN := p.sk.Group().Arithmetic().CrtModN
+	rhos, err := extractRhos(p.tape, p.sk.Group().N())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create a proof")
 	}
@@ -85,7 +81,7 @@ func (p *Prover) Prove() (proof *Proof, statement *paillier.PublicKey, err error
 	proof = &Proof{
 		Sigmas: sigmas,
 	}
-	return proof, p.PrivateKey().PublicKey(), nil
+	return proof, p.sk.Public(), nil
 }
 
 // Verify validates a Paillier N proof for the given statement.
@@ -101,15 +97,15 @@ func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paill
 	}
 	dst := fmt.Sprintf("%s-%d", appTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
-	tape.AppendBytes(nTranscriptLabel, statement.Modulus().BytesBE())
+	tape.AppendBytes(nTranscriptLabel, statement.Group().Modulus().BytesBE())
 
-	rhos, err := extractRhos(tape, statement.N())
+	rhos, err := extractRhos(tape, statement.Group().N())
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot verify a proof")
 	}
 
 	// (a) check that N is a positive integer and is not divisible by all the primes less than α.
-	if statement.N().Nat().IsZero() != ct.False || statement.N().Nat().Coprime(P) != 1 {
+	if statement.Group().N().Value().Coprime(P) != 1 {
 		return ErrVerificationFailed.WithMessage("verification failed")
 	}
 
@@ -128,7 +124,7 @@ func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paill
 	for i := range rhoChecks {
 		rhoChecks[i] = numct.NewNat(0)
 	}
-	statement.N().ModMultiBaseExp(rhoChecks, proof.Sigmas, statement.N().Nat())
+	statement.Group().N().ModulusCT().ModMultiBaseExp(rhoChecks, proof.Sigmas, statement.Group().N().Value())
 
 	allEq := ct.True
 	for i := range proof.Sigmas {
@@ -140,9 +136,9 @@ func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paill
 	return nil
 }
 
-func extractRhos(transcript transcripts.Transcript, n *numct.Modulus) ([]*numct.Nat, error) {
-	byteSize := uint((n.BitLen() + 7) / 8)
-	excessBits := n.BitLen() % 8
+func extractRhos(transcript transcripts.Transcript, n *num.NatPlus) ([]*numct.Nat, error) {
+	byteSize := uint((n.ModulusCT().BitLen() + 7) / 8)
+	excessBits := n.ModulusCT().BitLen() % 8
 
 	result := make([]*numct.Nat, M)
 	for i := range M {
@@ -161,8 +157,8 @@ func extractRhos(transcript transcripts.Transcript, n *numct.Modulus) ([]*numct.
 
 			// we are rejecting a candidate rho >= N,
 			// instead of rejecting we could just do rho mod N, but this would introduce a slightly biased value.
-			l, _, _ := candidateNat.Compare(n.Nat())
-			if candidateNat.Coprime(n.Nat()) == 1 && l == ct.True {
+			l, _, _ := candidateNat.Compare(n.Value())
+			if candidateNat.Coprime(n.Value()) == 1 && l == ct.True {
 				result[i] = candidateNat.Clone()
 				break
 			}

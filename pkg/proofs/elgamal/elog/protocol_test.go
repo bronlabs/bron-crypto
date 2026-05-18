@@ -51,7 +51,7 @@ func Test_WrongWitness(t *testing.T) {
 	prng := pcg.NewRandomised()
 	sf := k256.NewScalarField()
 
-	pk, comKey, committer, h := mustSetup(t, curve, prng)
+	pk, comKey, h := mustSetup(t, curve, prng)
 	g := curve.Generator()
 
 	// Honest (lambda, y) yields a valid statement S.
@@ -59,7 +59,7 @@ func Test_WrongWitness(t *testing.T) {
 	require.NoError(t, err)
 	y, err := sf.Random(prng)
 	require.NoError(t, err)
-	_, com := mustCommit(t, g, y, lambda, committer)
+	_, com := mustCommit(t, g, y, lambda, comKey)
 	bigY := h.ScalarMul(y)
 	statement := mustElogStatement(t, com, bigY)
 
@@ -69,7 +69,7 @@ func Test_WrongWitness(t *testing.T) {
 	require.NoError(t, err)
 	wrongY, err := sf.Random(prng)
 	require.NoError(t, err)
-	wrongWitness, _ := mustElogWitness(t, g, wrongY, wrongLambda, committer)
+	wrongWitness, _ := mustElogWitness(t, g, wrongY, wrongLambda, comKey)
 
 	protocol, err := elog.NewProtocol(curve, comKey, h, prng)
 	require.NoError(t, err)
@@ -98,14 +98,14 @@ func Test_NewWitness_Mismatch(t *testing.T) {
 	sf := k256.NewScalarField()
 	g := curve.Generator()
 
-	_, _, committer, _ := mustSetup(t, curve, prng)
+	_, comKey, _ := mustSetup(t, curve, prng)
 
 	// elcomop witness uses plaintext = g^y1 with nonce lambda.
 	y1, err := sf.Random(prng)
 	require.NoError(t, err)
 	lambda, err := sf.Random(prng)
 	require.NoError(t, err)
-	elcomopWit, _ := mustCommit(t, g, y1, lambda, committer)
+	elcomopWit, _ := mustCommit(t, g, y1, lambda, comKey)
 
 	// schnorr witness uses a different scalar y2 so g^y2 != plaintext.
 	y2, err := sf.Random(prng)
@@ -125,13 +125,13 @@ func Test_NewWitness_Nil(t *testing.T) {
 	sf := k256.NewScalarField()
 	g := curve.Generator()
 
-	_, _, committer, _ := mustSetup(t, curve, prng)
+	_, comKey, _ := mustSetup(t, curve, prng)
 
 	y, err := sf.Random(prng)
 	require.NoError(t, err)
 	lambda, err := sf.Random(prng)
 	require.NoError(t, err)
-	elcomopWit, _ := mustCommit(t, g, y, lambda, committer)
+	elcomopWit, _ := mustCommit(t, g, y, lambda, comKey)
 	schnorrWit := schnorrpok.NewWitness(y)
 
 	_, err = elog.NewWitness[*k256.Point, *k256.Scalar](nil, schnorrWit)
@@ -149,13 +149,13 @@ func Test_NewStatement_Nil(t *testing.T) {
 	sf := k256.NewScalarField()
 	g := curve.Generator()
 
-	_, _, committer, h := mustSetup(t, curve, prng)
+	_, comKey, h := mustSetup(t, curve, prng)
 
 	y, err := sf.Random(prng)
 	require.NoError(t, err)
 	lambda, err := sf.Random(prng)
 	require.NoError(t, err)
-	_, com := mustCommit(t, g, y, lambda, committer)
+	_, com := mustCommit(t, g, y, lambda, comKey)
 	elcomopStmt, err := elcomop.NewStatement(com)
 	require.NoError(t, err)
 	schnorrStmt := schnorrpok.NewStatement[*k256.Point, *k256.Scalar](h.ScalarMul(y))
@@ -175,14 +175,14 @@ func Test_ValidateStatement(t *testing.T) {
 	sf := k256.NewScalarField()
 	g := curve.Generator()
 
-	_, comKey, committer, h := mustSetup(t, curve, prng)
+	_, comKey, h := mustSetup(t, curve, prng)
 
 	// Honest witness for (L, M, Y).
 	lambda, err := sf.Random(prng)
 	require.NoError(t, err)
 	y, err := sf.Random(prng)
 	require.NoError(t, err)
-	witness, com := mustElogWitness(t, g, y, lambda, committer)
+	witness, com := mustElogWitness(t, g, y, lambda, comKey)
 	bigY := h.ScalarMul(y)
 	statement := mustElogStatement(t, com, bigY)
 
@@ -205,7 +205,7 @@ func Test_Name(t *testing.T) {
 
 	curve := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	_, comKey, _, h := mustSetup(t, curve, prng)
+	_, comKey, h := mustSetup(t, curve, prng)
 
 	protocol, err := elog.NewProtocol(curve, comKey, h, prng)
 	require.NoError(t, err)
@@ -218,7 +218,7 @@ func Test_ChallengeLengthAndSoundness(t *testing.T) {
 
 	curve := k256.NewCurve()
 	prng := pcg.NewRandomised()
-	_, comKey, _, h := mustSetup(t, curve, prng)
+	_, comKey, h := mustSetup(t, curve, prng)
 
 	protocol, err := elog.NewProtocol(curve, comKey, h, prng)
 	require.NoError(t, err)
@@ -236,30 +236,21 @@ func mustSetup[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pri
 	tb testing.TB, curve curves.Curve[P, F, S], prng io.Reader,
 ) (
 	*elgamal.PublicKey[P, S],
-	*indcpacom.Key[*elgamal.PublicKey[P, S]],
-	*indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
+	*indcpacom.CommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S]],
 	P,
 ) {
 	tb.Helper()
 
-	encScheme, err := elgamal.NewScheme(curve)
-	require.NoError(tb, err)
-	kg, err := encScheme.Keygen()
-	require.NoError(tb, err)
-	_, pk, err := kg.Generate(prng)
+	sk, err := elgamal.SampleSecretKey(curve, prng)
 	require.NoError(tb, err)
 
-	comKey, err := indcpacom.NewKey(pk)
-	require.NoError(tb, err)
-	comScheme, err := indcpacom.NewScheme(encScheme, comKey)
-	require.NoError(tb, err)
-	committer, err := comScheme.Committer()
+	comKey, err := indcpacom.NewCommitmentKey(sk.Public())
 	require.NoError(tb, err)
 
 	h, err := curve.Random(prng)
 	require.NoError(tb, err)
 
-	return pk, comKey, committer, h
+	return sk.Public(), comKey, h
 }
 
 // mustCommit commits to g^y with nonce lambda and returns (elcomopWitness, commitment).
@@ -267,10 +258,10 @@ func mustCommit[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 	tb testing.TB,
 	g P,
 	y, lambda S,
-	committer *indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
+	committer *indcpacom.CommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S]],
 ) (
 	*elcomop.Witness[P, S],
-	*indcpacom.Commitment[*elgamal.Ciphertext[P, S], *elgamal.Nonce[S], *elgamal.PublicKey[P, S]],
+	*indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 ) {
 	tb.Helper()
 
@@ -298,10 +289,10 @@ func mustElogWitness[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 	tb testing.TB,
 	g P,
 	y, lambda S,
-	committer *indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
+	committer *indcpacom.CommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S]],
 ) (
 	*elog.Witness[P, S],
-	*indcpacom.Commitment[*elgamal.Ciphertext[P, S], *elgamal.Nonce[S], *elgamal.PublicKey[P, S]],
+	*indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 ) {
 	tb.Helper()
 
@@ -315,7 +306,7 @@ func mustElogWitness[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 // mustElogStatement builds the elog statement (elcomop commitment, Schnorr Y).
 func mustElogStatement[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
-	com *indcpacom.Commitment[*elgamal.Ciphertext[P, S], *elgamal.Nonce[S], *elgamal.PublicKey[P, S]],
+	com *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 	bigY P,
 ) *elog.Statement[P, S] {
 	tb.Helper()
@@ -335,7 +326,7 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	prng := pcg.NewRandomised()
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	_, comKey, committer, h := mustSetup(tb, curve, prng)
+	_, comKey, h := mustSetup(tb, curve, prng)
 	g := curve.Generator()
 
 	lambda, err := sf.Random(prng)
@@ -343,7 +334,7 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	y, err := sf.Random(prng)
 	require.NoError(tb, err)
 
-	witness, com := mustElogWitness(tb, g, y, lambda, committer)
+	witness, com := mustElogWitness(tb, g, y, lambda, comKey)
 	bigY := h.ScalarMul(y)
 	statement := mustElogStatement(tb, com, bigY)
 
@@ -374,7 +365,7 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	prng := pcg.NewRandomised()
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	_, comKey, committer, h := mustSetup(tb, curve, prng)
+	_, comKey, h := mustSetup(tb, curve, prng)
 	g := curve.Generator()
 
 	// Build a statement from a real commitment. The simulator is zero-knowledge
@@ -384,7 +375,7 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 	y, err := sf.Random(prng)
 	require.NoError(tb, err)
-	_, com := mustCommit(tb, g, y, lambda, committer)
+	_, com := mustCommit(tb, g, y, lambda, comKey)
 	bigY := h.ScalarMul(y)
 	statement := mustElogStatement(tb, com, bigY)
 

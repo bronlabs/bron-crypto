@@ -17,7 +17,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (

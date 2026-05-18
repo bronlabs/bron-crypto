@@ -7,6 +7,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/encryption"
+	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
 // Round1 executes the verifier's first round.
@@ -25,26 +28,28 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output[P, B, S], err e
 		return nil, errs.Wrap(err).WithMessage("cannot generate random integer")
 	}
 
-	bAsPlaintext, err := verifier.pk.PlaintextSpace().FromNat(verifier.state.b.Value())
+	bAsPlaintext, err := paillier.NewPlaintext(verifier.state.b)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create plaintext from nat")
 	}
 
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
 	// acEnc, err := verifier.pk.CipherTextMul(verifier.c, new(saferith.Int).SetNat(verifier.state.a))
-	acEnc := verifier.c.ScalarMul(verifier.state.a.Nat())
-	bEnc, _, err := verifier.paillierEncrypter.Encrypt(bAsPlaintext, verifier.pk, verifier.prng)
+	acEnc, err := verifier.pk.CiphertextScalarOp(verifier.c, verifier.state.a.Lift())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute a (*) c")
+	}
+	bEnc, _, err := encryption.Encrypt(bAsPlaintext, verifier.pk, verifier.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot encrypt value")
 	}
-	cPrime := acEnc.HomAdd(bEnc)
+	cPrime, err := verifier.pk.CiphertextOp(acEnc, bEnc)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute a (*) c (+) Enc(b, r)")
+	}
 
 	// 1.ii. compute c'' = commit(a, b)
-	committer, err := verifier.commitmentScheme.Committer()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create committer")
-	}
-	cDoublePrimeCommitment, cDoublePrimeWitness, err := committer.Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
+	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(verifier.commitmentKey, slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot commit to a and b")
 	}
@@ -89,23 +94,19 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output[P, B, S]) (r2out *Roun
 	prover.state.cDoublePrimeCommitment = r1out.CDoublePrimeCommitment
 
 	// 2.i. decrypt c' to obtain alpha, compute Q^ = alpha * G
-	prover.state.alpha, err = prover.paillierDecrypter.Decrypt(r1out.CPrime)
+	prover.state.alpha, err = prover.sk.Decrypt(r1out.CPrime)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot decrypt cipher text")
 	}
 
-	alphaScalar, err := prover.state.curve.ScalarField().FromBytesBEReduce(prover.state.alpha.Normalise().BytesBE())
+	alphaScalar, err := prover.state.curve.ScalarField().FromBytesBEReduce(prover.state.alpha.Value().BytesBE())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert alpha to scalar")
 	}
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMul(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
-	committer, err := prover.commitmentScheme.Committer()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create committer")
-	}
-	bigQHatCommitment, bigQHatWitness, err := committer.Commit(prover.state.bigQHat.ToCompressed(), prover.prng)
+	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(prover.commitmentKey, prover.state.bigQHat.ToCompressed(), prover.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot commit to Q hat")
 	}
@@ -163,11 +164,7 @@ func (prover *Prover[P, B, S]) Round4(r4In *Round3Output[P, B, S]) (r4out *Round
 		return nil, errs.Wrap(err).WithMessage("invalid round 4 input")
 	}
 
-	verifier, err := prover.commitmentScheme.Verifier()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create verifier")
-	}
-	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, slices.Concat(r4In.A.Bytes(), r4In.B.Bytes()), r4In.CDoublePrimeWitness); err != nil {
+	if err := prover.commitmentKey.Open(prover.state.cDoublePrimeCommitment, slices.Concat(r4In.A.Bytes(), r4In.B.Bytes()), r4In.CDoublePrimeWitness); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot open R commitment")
 	}
 
@@ -176,7 +173,7 @@ func (prover *Prover[P, B, S]) Round4(r4In *Round3Output[P, B, S]) (r4out *Round
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert x to nat")
 	}
-	if !prover.state.alpha.Value().Equal(r4In.A.Lift().Mul(x).Add(r4In.B.Lift())) {
+	if !prover.state.alpha.Value().Lift().Equal(r4In.A.Lift().Mul(x).Add(r4In.B.Lift())) {
 		return nil, base.ErrAbort.WithMessage("verifier is misbehaving")
 	}
 
@@ -204,11 +201,7 @@ func (verifier *Verifier[P, B, S]) Round5(input *Round4Output[P, B, S]) (err err
 		return errs.Wrap(err).WithMessage("invalid round 5 input")
 	}
 
-	v, err := verifier.commitmentScheme.Verifier()
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create verifier")
-	}
-	if err := v.Verify(verifier.state.cHat, input.BigQHat.ToCompressed(), input.BigQHatWitness); err != nil {
+	if err := verifier.commitmentKey.Open(verifier.state.cHat, input.BigQHat.ToCompressed(), input.BigQHatWitness); err != nil {
 		return errs.Wrap(err).WithMessage("cannot decommit Q hat")
 	}
 

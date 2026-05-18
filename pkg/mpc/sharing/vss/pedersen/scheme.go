@@ -109,7 +109,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *kw.Secret[S], prng io.Rea
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create Pedersen dealer func")
 	}
-	liftedDealerFunc, err := LiftDealerFunc(dealerFunc, s.commitmentKey.Key())
+	liftedDealerFunc, err := LiftDealerFunc(dealerFunc, s.commitmentKey)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not lift Pedersen dealer func")
 	}
@@ -222,7 +222,7 @@ func (s *Scheme[E, S]) Verify(share *Share[S], vector *VerificationVector[E, S])
 		return errs.Wrap(err).WithMessage("could not get lifted share for share ID %d", share.ID())
 	}
 
-	manuallyLiftedShare, err := LiftShare(share, s.commitmentKey.Key())
+	manuallyLiftedShare, err := LiftShare(share, s.commitmentKey)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not manually lift share for share ID %d", share.ID())
 	}

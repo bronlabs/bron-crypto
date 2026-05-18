@@ -92,6 +92,20 @@ func (w *Witness[S]) Equal(other *Witness[S]) bool {
 	return w.r.Equal(other.r)
 }
 
+func (w *Witness[S]) Add(other *Witness[S]) *Witness[S] {
+	if other == nil {
+		panic("other witness must not be nil")
+	}
+	return &Witness[S]{r: w.r.Add(other.r)}
+}
+
+func (w *Witness[S]) Mul(other *Witness[S]) *Witness[S] {
+	if other == nil {
+		panic("other witness must not be nil")
+	}
+	return &Witness[S]{r: w.r.Mul(other.r)}
+}
+
 func (w *Witness[S]) HashCode() base.HashCode {
 	return w.r.HashCode()
 }
@@ -144,6 +158,20 @@ func (m *Message[S]) Equal(other *Message[S]) bool {
 		return m == other
 	}
 	return m.m.Equal(other.m)
+}
+
+func (m *Message[S]) Add(other *Message[S]) *Message[S] {
+	if other == nil {
+		panic("other message must not be nil")
+	}
+	return &Message[S]{m: m.m.Add(other.m)}
+}
+
+func (m *Message[S]) Mul(other *Message[S]) *Message[S] {
+	if other == nil {
+		panic("other message must not be nil")
+	}
+	return &Message[S]{m: m.m.Mul(other.m)}
 }
 
 func (m *Message[S]) HashCode() base.HashCode {

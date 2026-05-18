@@ -11,6 +11,21 @@ import (
 
 const Name encryption.Name = "Paillier"
 
+type EncryptionKey[EK encryption.GroupHomomorphicEncryptionKey[
+	EK,
+	*Plaintext, *num.ZMod, *num.Uint,
+	*Nonce, *znstar.RSAGroupUnknownOrder, *znstar.RSAGroupElementUnknownOrder,
+	*Ciphertext, *znstar.PaillierGroupUnknownOrder, *znstar.PaillierGroupElementUnknownOrder,
+	*num.Int,
+],
+] = encryption.GroupHomomorphicEncryptionKey[
+	EK,
+	*Plaintext, *num.ZMod, *num.Uint,
+	*Nonce, *znstar.RSAGroupUnknownOrder, *znstar.RSAGroupElementUnknownOrder,
+	*Ciphertext, *znstar.PaillierGroupUnknownOrder, *znstar.PaillierGroupElementUnknownOrder,
+	*num.Int,
+]
+
 func NewCiphertext[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], v *num.NatPlus) (*Ciphertext, error) {
 	if group == nil || v == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group and value must not be nil")
@@ -54,6 +69,10 @@ func (c *Ciphertext) Equal(other *Ciphertext) bool {
 
 func (c *Ciphertext) HashCode() base.HashCode {
 	return c.c.HashCode()
+}
+
+func (c *Ciphertext) Bytes() []byte {
+	return c.c.Bytes()
 }
 
 func (c *Ciphertext) MarshalCBOR() ([]byte, error) {
@@ -128,6 +147,10 @@ func (n *Nonce) HashCode() base.HashCode {
 	return n.r.HashCode()
 }
 
+func (n *Nonce) Bytes() []byte {
+	return n.r.Bytes()
+}
+
 func (n *Nonce) MarshalCBOR() ([]byte, error) {
 	dto := &nonceDTO{
 		R: n.r,
@@ -157,6 +180,26 @@ func NewPlaintext(p *num.Uint) (*Plaintext, error) {
 	}
 	return &Plaintext{
 		p: p,
+	}, nil
+}
+
+func NewPlaintextFromNat(p *num.Nat, modulus *num.NatPlus) (*Plaintext, error) {
+	if p == nil || modulus == nil {
+		return nil, encryption.ErrIsNil.WithMessage("plaintext and modulus must not be nil")
+	}
+	if !p.Compare(modulus.Nat()).IsLessThan() {
+		return nil, encryption.ErrOutOfRange.WithMessage("plaintext value must be in range [0, modulus)")
+	}
+	zMod, err := num.NewZMod(modulus)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create ZMod for modulus")
+	}
+	pModN, err := zMod.FromNat(p)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not reduce plaintext modulo modulus")
+	}
+	return &Plaintext{
+		p: pModN,
 	}, nil
 }
 
@@ -217,6 +260,10 @@ func (pt *Plaintext) Equal(other *Plaintext) bool {
 
 func (pt *Plaintext) HashCode() base.HashCode {
 	return pt.p.HashCode()
+}
+
+func (pt *Plaintext) Bytes() []byte {
+	return pt.p.Bytes()
 }
 
 func (pt *Plaintext) MarshalCBOR() ([]byte, error) {

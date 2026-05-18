@@ -10,15 +10,15 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/errs-go/errs"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -34,37 +34,28 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	prng := pcg.NewRandomised()
-	scheme := paillier.NewScheme()
-	keygen, err := scheme.Keygen()
-	require.NoError(t, err)
-
-	sk, pk, err := keygen.Generate(prng)
+	sk, err := paillier.SampleSecretKey(paillierGroupNLen, prng)
 	require.NoError(t, err)
 	curve := p256.NewCurve()
 	q := curve.Order()
 
-	xNat, err := randomIntInRange(q.Big(), prng)
-	require.NoError(t, err)
+	xNat := randomIntInRange(t, q.Big(), prng)
 
-	ps := pk.PlaintextSpace()
-	xMessage, err := ps.FromNat(xNat)
+	xMessage, err := paillier.NewPlaintextFromNat(xNat, sk.Group().N())
 	require.NoError(t, err)
 
 	sf := curve.ScalarField()
 
 	qSlice := make([]byte, sf.ElementSize())
 
-	x, err := sf.FromBytes(xNat.FillBytes(qSlice))
-	require.NoError(t, err)
-
-	senc, err := scheme.SelfEncrypter(sk)
+	x, err := sf.FromBytes(xNat.Value().FillBytes(qSlice))
 	require.NoError(t, err)
 
 	bigQ := curve.ScalarBaseMul(x)
-	xEncrypted, r, err := senc.SelfEncrypt(xMessage, prng)
+	xEncrypted, r, err := encryption.Encrypt(xMessage, sk, prng)
 	require.NoError(t, err)
 
-	err = doProof(t, x, bigQ, curve, xEncrypted, r, pk, sk, prng)
+	err = doProof(t, x, bigQ, curve, xEncrypted, r, sk.Public(), sk, prng)
 	require.NoError(t, err)
 }
 
@@ -73,38 +64,28 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	t.Parallel()
 
 	prng := pcg.NewRandomised()
-	scheme := paillier.NewScheme()
-	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillierGroupNLen))
-	require.NoError(t, err)
-
-	sk, pk, err := keygen.Generate(prng)
+	sk, err := paillier.SampleSecretKey(paillierGroupNLen, prng)
 	require.NoError(t, err)
 	curve := p256.NewCurve()
 	q := curve.Order()
 
-	x1Nat, err := randomIntInRange(q.Big(), prng)
-	require.NoError(t, err)
+	x1Nat := randomIntInRange(t, q.Big(), prng)
 
 	x1, err := curve.ScalarField().FromBytesBEReduce(x1Nat.BytesBE())
 	require.NoError(t, err)
 
-	ps := pk.PlaintextSpace()
-	x1Message, err := ps.FromNat(x1Nat)
+	x1Message, err := paillier.NewPlaintextFromNat(x1Nat, sk.Group().N())
 	require.NoError(t, err)
 
-	x2Nat, err := randomIntInRange(q.Big(), prng)
-	require.NoError(t, err)
+	x2Nat := randomIntInRange(t, q.Big(), prng)
 	x2, err := curve.ScalarField().FromBytesBEReduce(x2Nat.BytesBE())
 	require.NoError(t, err)
 
-	enc, err := scheme.Encrypter()
-	require.NoError(t, err)
-
 	bigQ2 := curve.ScalarBaseMul(x2)
-	x1Encrypted, r, err := enc.Encrypt(x1Message, pk, prng)
+	x1Encrypted, r, err := encryption.Encrypt(x1Message, sk.Public(), prng)
 	require.NoError(t, err)
 
-	err = doProof(t, x1, bigQ2, curve, x1Encrypted, r, pk, sk, prng)
+	err = doProof(t, x1, bigQ2, curve, x1Encrypted, r, sk.Public(), sk, prng)
 	require.Error(t, err)
 }
 
@@ -113,53 +94,46 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	t.Parallel()
 
 	prng := pcg.NewRandomised()
-	scheme := paillier.NewScheme()
-	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillierGroupNLen))
+	sk, err := paillier.SampleSecretKey(paillierGroupNLen, prng)
 	require.NoError(t, err)
 
-	sk, pk, err := keygen.Generate(prng)
-	require.NoError(t, err)
 	curve := p256.NewCurve()
 	q := curve.Order()
 
-	xNat, err := randomIntInRange(q.Big(), prng)
-	require.NoError(t, err)
+	xNat := randomIntInRange(t, q.Big(), prng)
 
 	x, err := curve.ScalarField().FromBytesBEReduce(xNat.Bytes())
 	require.NoError(t, err)
 	require.NoError(t, err)
 	bigQ := curve.ScalarBaseMul(x)
 
-	enc, err := scheme.Encrypter()
-	require.NoError(t, err)
-
-	ps := pk.PlaintextSpace()
 	x2Int, err := curve.ScalarField().Random(prng)
 	require.NoError(t, err)
-	x2IntNat := numct.NewNatFromBig(x2Int.Cardinal().Big(), -1)
+	x2IntNat, err := num.N().FromNatCT(numct.NewNatFromBig(x2Int.Cardinal().Big(), -1))
 	require.NoError(t, err)
-	x2Message, err := ps.FromNat(x2IntNat)
-	require.NoError(t, err)
-
-	x2Encrypted, r, err := enc.Encrypt(x2Message, pk, prng)
+	x2Message, err := paillier.NewPlaintextFromNat(x2IntNat, sk.Group().N())
 	require.NoError(t, err)
 
-	err = doProof(t, x, bigQ, curve, x2Encrypted, r, pk, sk, prng)
+	x2Encrypted, r, err := encryption.Encrypt(x2Message, sk.Public(), prng)
+	require.NoError(t, err)
+
+	err = doProof(t, x, bigQ, curve, x2Encrypted, r, sk.Public(), sk, prng)
 	require.Error(t, err)
 }
 
-func randomIntInRange(qBig *big.Int, prng io.Reader) (*numct.Nat, error) {
-	q := new(saferith.Nat).SetBig(qBig, 2048)
-	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 2048)
+func randomIntInRange(tb testing.TB, qBig *big.Int, prng io.Reader) *num.Nat {
+	tb.Helper()
+	q := new(saferith.Nat).SetBig(qBig, paillierGroupNLen)
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), paillierGroupNLen)
 	xInt, err := crand.Int(prng, l.Big())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot sample integer")
-	}
-	x := new(saferith.Nat).SetBig(xInt, 2048)
-	return (*numct.Nat)(new(saferith.Nat).Add(l, x, 2048)), nil
+	require.NoError(tb, err)
+	x := new(saferith.Nat).SetBig(xInt, paillierGroupNLen)
+	out, err := num.N().FromNatCT(numct.NewNatFromSaferith(new(saferith.Nat).Add(l, x, paillierGroupNLen)))
+	require.NoError(tb, err)
+	return out
 }
 
-func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, x S, bigQ P, curve curves.Curve[P, B, S], xEncrypted *paillier.Ciphertext, r *paillier.Nonce, pk *paillier.PublicKey, sk *paillier.PrivateKey, prng io.Reader) (err error) {
+func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, x S, bigQ P, curve curves.Curve[P, B, S], xEncrypted *paillier.Ciphertext, r *paillier.Nonce, pk *paillier.PublicKey, sk *paillier.SecretKey, prng io.Reader) (err error) {
 	tb.Helper()
 	const proverID = 1
 	const verifierID = 2

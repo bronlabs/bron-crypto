@@ -131,7 +131,9 @@ func (m *OddPrimeFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 
 // ModDiv computes out = (a / b) mod n.
 func (m *OddPrimeFactors) ModDiv(out, a, b *numct.Nat) ct.Bool {
-	return m.N.ModDiv(out, a, b)
+	ok := m.ModInv(out, b)
+	m.ModMul(out, a, out)
+	return ok
 }
 
 // MultiBaseExp computes out[i] = (bases[i] ^ exp) mod n for all i.
