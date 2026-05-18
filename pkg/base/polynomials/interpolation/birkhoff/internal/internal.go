@@ -64,6 +64,10 @@ func SortNodes[F algebra.PrimeFieldElement[F], G any](xs []F, js []uint64, ys []
 
 func Phi[F algebra.PrimeFieldElement[F]](t int, i F, j uint64) (F, error) {
 	field := algebra.StructureMustBeAs[algebra.PrimeField[F]](i.Structure())
+	if j > uint64(t) {
+		return field.Zero(), nil
+	}
+
 	coeffs := make([]F, t+1)
 	for c := range coeffs {
 		coeffs[c] = field.Zero()

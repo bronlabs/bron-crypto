@@ -183,6 +183,9 @@ func (s *Scheme[FE]) shareColumn(shares ...*Share[FE]) (*mat.Matrix[FE], error) 
 		if !exists {
 			return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", sh.id)
 		}
+		if rowsi.Cardinality() != len(sh.v) {
+			return nil, sharing.ErrVerification.WithMessage("shareholder %d has %d values, but expected %d", sh.id, len(sh.v), rowsi.Cardinality())
+		}
 		nRows += len(rowsi.List())
 	}
 	columnFactory, err := mat.NewMatrixModule(uint(nRows), 1, s.msp.BaseField())
