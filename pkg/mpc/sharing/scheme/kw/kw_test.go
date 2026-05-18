@@ -663,6 +663,27 @@ func TestReconstruct_NoShares(t *testing.T) {
 	require.ErrorIs(t, err, sharing.ErrValue)
 }
 
+func TestReconstruct_RejectsShareLengthMismatch(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	scheme := newKWScheme(t, field, cnfThreeClauseFixture(t).ac)
+	secret := kw.NewSecret(field.FromUint64(123456))
+	shares := dealAndCollect(t, scheme, secret)
+
+	shortShare, err := kw.NewShare(1, field.One())
+	require.NoError(t, err)
+	_, err = scheme.Reconstruct(shortShare, shares[3])
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrVerification)
+
+	longShare, err := kw.NewShare(1, field.One(), field.One(), field.One())
+	require.NoError(t, err)
+	_, err = scheme.Reconstruct(longShare, shares[3])
+	require.Error(t, err)
+	require.ErrorIs(t, err, sharing.ErrVerification)
+}
+
 // ---------------------------------------------------------------------------
 // Correctness: random secrets round-trip through deal/reconstruct
 // ---------------------------------------------------------------------------

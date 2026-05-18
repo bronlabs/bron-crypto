@@ -15,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/errs-go/errs"
 )
 
@@ -84,11 +83,7 @@ func NewParticipant[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, ctx.SessionID(), group.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	h, err := ts.Extract(ctx.Transcript(), secondPedersenGeneratorLabel, group)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
-	}
-	key, err := pedcom.NewCommitmentKey(group.Generator(), h)
+	key, err := pedcom.NewCommitmentKeyFromTranscript(ctx.Transcript(), secondPedersenGeneratorLabel, group)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create pedersen key")
 	}

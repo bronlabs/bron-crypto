@@ -138,6 +138,21 @@ func Test_BuildVandermondeMatrix_InputValidation(t *testing.T) {
 	})
 }
 
+func Test_BuildVandermondeMatrix_HugeDerivativeOrder(t *testing.T) {
+	t.Parallel()
+
+	field := k256.NewScalarField()
+	one := field.One()
+	m, err := birkhoff.BuildVandermondeMatrix([]*k256.Scalar{one}, []uint64{^uint64(0)}, 4)
+	require.NoError(t, err)
+
+	for c := range 4 {
+		got, err := m.Get(0, c)
+		require.NoError(t, err)
+		require.True(t, got.IsZero())
+	}
+}
+
 func Test_ShuffledNodes(t *testing.T) {
 	t.Parallel()
 

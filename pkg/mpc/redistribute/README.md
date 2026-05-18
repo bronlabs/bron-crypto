@@ -14,6 +14,12 @@ Note that the following protocols are special cases of this protocol:
 1. **Refresh** If `prevShareholders` is exactly equal the shareholders of the `nextAccessStructure`'s shareholder set (provided that `nextAccessStructure` is equal to the current access structure), then the resulting protocol is a refresh protocol.
 2. **Recovery Followed By Refresh** If `nextAccessStructure` is equal to the current access structure, but some shareholders are missing from `prevShareholders`, then the resulting protocol is a recovery+refresh protocol.
 
+## Secure Erasure Requirement
+
+Redistribution, refresh, and recovery do not erase, revoke, or otherwise invalidate previous shares. The protocol outputs fresh shares for the new access structure, but any old share that remains in memory, persistent storage, logs, backups, crash dumps, or external key stores may still be usable wherever the old access structure is accepted.
+
+Applications using this package must securely erase obsolete shares and related secret material after a successful protocol run. This includes shares held by removed shareholders, shares replaced during refresh, old verification metadata that can be paired with those shares, serialized copies, and application-level backups. Bron's MPC library is stateless and does not provide a secure-erasure guarantee.
+
 ## Protocol Overview
 
 1. **Qualified Previous Shareholders**: A qualified subset of holders under the previous access structure.
@@ -36,6 +42,11 @@ Note that the following protocols are special cases of this protocol:
   and the newly distributed subshares.
 - The session quorum must equal the union of the previous shareholders and shareholders of the next access structure.
 - `Participant` exposes `Round1`, `Round2`, and `Round3`; use a `network.Router` or equivalent transport to exchange broadcasts and unicasts.
+- `Round2Broadcast` is a single broadcast to the whole session quorum. It carries old-shareholder public-key material
+  for all previous shareholders, including the previous MSP and old verification vector commitments such as `[s_i]G`.
+  The current design therefore treats every new participant as a consumer of this public old-shareholder material,
+  even when a next-only participant has not configured a trusted anchor and will not use the material for identifiable
+  abort checks.
 
 ## Identifiable Abort
 

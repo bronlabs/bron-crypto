@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func TestBasicCommitment(t *testing.T) {
@@ -22,7 +23,7 @@ func TestBasicCommitment(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create commitment key
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err, "could not create key")
 
 	// Create scheme
@@ -75,7 +76,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 
 	t.Run("valid key creation", func(t *testing.T) {
 		t.Parallel()
-		key, err := pedersen.NewCommitmentKey(g, h)
+		key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 		require.NoError(t, err)
 		require.NotNil(t, key)
 		require.True(t, g.Equal(key.G()))
@@ -85,7 +86,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 	t.Run("g is identity", func(t *testing.T) {
 		t.Parallel()
 		identity := curve.OpIdentity()
-		_, err := pedersen.NewCommitmentKey(identity, h)
+		_, err := pedersen.NewCommitmentKeyUnchecked(identity, h)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "identity")
 	})
@@ -93,20 +94,30 @@ func TestCommitmentKeyCreation(t *testing.T) {
 	t.Run("h is identity", func(t *testing.T) {
 		t.Parallel()
 		identity := curve.OpIdentity()
-		_, err := pedersen.NewCommitmentKey(g, identity)
+		_, err := pedersen.NewCommitmentKeyUnchecked(g, identity)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "identity")
 	})
 
 	t.Run("g equals h", func(t *testing.T) {
 		t.Parallel()
-		_, err := pedersen.NewCommitmentKey(g, g)
+		_, err := pedersen.NewCommitmentKeyUnchecked(g, g)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot be equal")
 	})
 
+	t.Run("key from transcript", func(t *testing.T) {
+		t.Parallel()
+		tape := hagrid.NewTranscript("pedersen-test")
+		tape.AppendDomainSeparator("key-from-transcript")
+		key, err := pedersen.NewCommitmentKeyFromTranscript(tape, "h", curve)
+		require.NoError(t, err)
+		require.True(t, g.Equal(key.G()))
+		require.False(t, key.G().Equal(key.H()))
+	})
+
 	// t.Run("key serialisation", func(t *testing.T) {
-	// 	key, err := pedersen.NewCommitmentKey(g, h)
+	// 	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	// 	require.NoError(t, err)
 
 	// 	// Serialise
@@ -137,7 +148,7 @@ func TestCommitmentCreation(t *testing.T) {
 	h, err := curve.Hash([]byte("test-h-commitment"))
 	require.NoError(t, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
@@ -247,7 +258,7 @@ func TestWitnessCreation(t *testing.T) {
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("pedersen-test-zero-witness"))
 		require.NoError(t, err)
-		key, err := pedersen.NewCommitmentKey(g, h)
+		key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 		require.NoError(t, err)
 		scheme, err := pedersen.NewScheme(key)
 		require.NoError(t, err)
@@ -372,7 +383,7 @@ func TestHomomorphicProperties(t *testing.T) {
 	h, err := curve.Hash([]byte("test-h-homomorphic"))
 	require.NoError(t, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
@@ -492,7 +503,7 @@ func TestReRandomization(t *testing.T) {
 	h, err := curve.Hash([]byte("test-h-rerandom"))
 	require.NoError(t, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
@@ -624,7 +635,7 @@ func TestCommitmentOperations(t *testing.T) {
 	h, err := curve.Hash([]byte("test-h-ops"))
 	require.NoError(t, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
@@ -715,7 +726,7 @@ func TestEdgeCases(t *testing.T) {
 	h, err := curve.Hash([]byte("test-h-edge"))
 	require.NoError(t, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(t, err)
@@ -771,7 +782,7 @@ func TestMultipleCurves(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create key and scheme
-		key, err := pedersen.NewCommitmentKey(g, h)
+		key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 		require.NoError(t, err)
 		scheme, err := pedersen.NewScheme(key)
 		require.NoError(t, err)
@@ -801,7 +812,7 @@ func TestMultipleCurves(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create key and scheme
-		key, err := pedersen.NewCommitmentKey(g, h)
+		key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 		require.NoError(t, err)
 		scheme, err := pedersen.NewScheme(key)
 		require.NoError(t, err)
@@ -832,7 +843,7 @@ func BenchmarkCommit(b *testing.B) {
 	h, err := curve.Hash([]byte("bench-h"))
 	require.NoError(b, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
@@ -858,7 +869,7 @@ func BenchmarkVerify(b *testing.B) {
 	h, err := curve.Hash([]byte("bench-h-verify"))
 	require.NoError(b, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
@@ -888,7 +899,7 @@ func BenchmarkReRandomise(b *testing.B) {
 	h, err := curve.Hash([]byte("bench-h-rerandom"))
 	require.NoError(b, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
@@ -916,7 +927,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	h, err := curve.Hash([]byte("bench-h-homo"))
 	require.NoError(b, err)
 
-	key, err := pedersen.NewCommitmentKey(g, h)
+	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(b, err)
 	scheme, err := pedersen.NewScheme(key)
 	require.NoError(b, err)
