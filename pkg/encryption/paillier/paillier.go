@@ -17,13 +17,14 @@ const Name encryption.Name = "Paillier"
 // Paillier's plaintext (Z_N), nonce (Z*_N), and ciphertext (Z*_{N²}) types. Both
 // PublicKey and SecretKey satisfy it; use it as a constraint when writing code
 // generic over either.
-type EncryptionKey[EK encryption.GroupHomomorphicEncryptionKey[
-	EK,
-	*Plaintext, *num.ZMod, *num.Uint,
-	*Nonce, *znstar.RSAGroupUnknownOrder, *znstar.RSAGroupElementUnknownOrder,
-	*Ciphertext, *znstar.PaillierGroupUnknownOrder, *znstar.PaillierGroupElementUnknownOrder,
-	*num.Int,
-],
+type EncryptionKey[
+	EK encryption.GroupHomomorphicEncryptionKey[
+		EK,
+		*Plaintext, *num.ZMod, *num.Uint,
+		*Nonce, *znstar.RSAGroupUnknownOrder, *znstar.RSAGroupElementUnknownOrder,
+		*Ciphertext, *znstar.PaillierGroupUnknownOrder, *znstar.PaillierGroupElementUnknownOrder,
+		*num.Int,
+	],
 ] = encryption.GroupHomomorphicEncryptionKey[
 	EK,
 	*Plaintext, *num.ZMod, *num.Uint,
