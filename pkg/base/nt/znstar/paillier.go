@@ -254,7 +254,7 @@ func (g *PaillierGroup[X]) Representative(plaintext *num.Uint) (*PaillierGroupEl
 	if plaintext == nil {
 		return nil, ErrIsNil.WithMessage("plaintext")
 	}
-	if !g.n.Equal(plaintext.Modulus()) {
+	if !plaintext.Modulus().IsLessThanOrEqual(g.n) {
 		return nil, ErrValue.WithMessage("plaintext must be reduced modulo n")
 	}
 	var out numct.Nat
