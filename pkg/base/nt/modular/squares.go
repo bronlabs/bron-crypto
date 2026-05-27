@@ -286,6 +286,7 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	out.Set(m.CrtModN2.Recombine(&yp, &yq))
 }
 
+// FermatQuotient computes the Fermat quotients L_p(x) and L_q(x) for the given x.
 func (m *OddPrimeSquareFactors) FermatQuotient(outLp, outLq, x *numct.Nat) {
 	var wg sync.WaitGroup
 	wg.Add(2)

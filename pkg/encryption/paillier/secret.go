@@ -20,6 +20,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/internal/gift"
 )
 
+// SampleSecretKey generates a fresh Paillier key pair with a keyLen-bit modulus
+// N = p·q from two random primes. The factorisation (p, q) is the decryption
+// trapdoor and stays secret; prng must be a cryptographically secure source.
 func SampleSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SamplePaillierGroup(keyLen, prng)
 	if err != nil {
@@ -32,6 +35,9 @@ func SampleSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	return out, nil
 }
 
+// SampleBlumSecretKey is like SampleSecretKey but draws a Blum modulus (p ≡ q ≡ 3
+// mod 4), as required by several zero-knowledge proofs over a Paillier modulus
+// (e.g. Paillier-Blum modulus / square-freeness proofs).
 func SampleBlumSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SamplePaillierBlumGroup(keyLen, prng)
 	if err != nil {
@@ -44,6 +50,9 @@ func SampleBlumSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	return out, nil
 }
 
+// SampleSafeSecretKey is like SampleSecretKey but uses safe primes (p = 2p′+1,
+// q = 2q′+1), which some protocols require so that QR_N is cyclic of prime-ish
+// order for their soundness/setup assumptions.
 func SampleSafeSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SampleSafePaillierGroup(keyLen, prng)
 	if err != nil {
@@ -56,6 +65,9 @@ func SampleSafeSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	return out, nil
 }
 
+// NewSecretKey builds a secret key from a Paillier group with known factorisation,
+// precomputing the CRT decryption constants. The factorisation is the secret
+// trapdoor that enables Decrypt and Open.
 func NewSecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
 	if group == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group must not be nil")
@@ -70,6 +82,11 @@ func NewSecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
 	return sk, nil
 }
 
+// SecretKey is a Paillier private key. It embeds the PublicKey and additionally
+// holds the modulus factorisation (the known-order group) and precomputed CRT
+// constants. The factorisation is secret — it allows decryption of every ciphertext
+// and recovery of the encryption nonce (Open). Use Public to obtain the shareable
+// public key.
 type SecretKey struct {
 	PublicKey
 
@@ -86,12 +103,18 @@ type secretKeyDTO struct {
 	Group *znstar.PaillierGroupKnownOrder `cbor:"group"`
 }
 
+// Public returns the public key (the modulus N only), dropping the secret
+// factorisation so it can be shared.
 func (sk *SecretKey) Public() *PublicKey {
 	return &PublicKey{
 		group: sk.group.ForgetOrder(),
 	}
 }
 
+// Decrypt recovers the plaintext m ∈ Z_N from a ciphertext using the secret
+// factorisation, via the CRT / Fermat-quotient decryption (the Jost et al.
+// optimisation). It requires the decryption trapdoor and validates that the
+// ciphertext lies in Z*_{N²}.
 func (sk *SecretKey) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 	if ciphertext == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
@@ -115,6 +138,11 @@ func (sk *SecretKey) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 	return &Plaintext{p: m}, nil
 }
 
+// Open recovers BOTH the plaintext m and the encryption nonce r from a ciphertext
+// using the trapdoor: it decrypts m, computes r^N = c·(1+N)^{−m} mod N², then takes
+// the N-th root via CRT. This is the OpeningKey capability — possessing it lets the
+// holder fully de-randomise any ciphertext, which is exactly what makes
+// encryption-based commitments extractable.
 func (sk *SecretKey) Open(ciphertext *Ciphertext) (*Plaintext, *Nonce, error) {
 	// c = (1+N)^m * r^N mod N^2 =>
 	// r^N mod n^2 = c * (1+N)^(-m) mod N^2 = c * (1-mN) mod N^2 = r^pq mod N^2
@@ -168,6 +196,9 @@ func (sk *SecretKey) Open(ciphertext *Ciphertext) (*Plaintext, *Nonce, error) {
 	return m, nonce, nil
 }
 
+// EncryptWithNonce encrypts under the embedded public parameters; identical in
+// result to PublicKey.EncryptWithNonce, with the same fresh-secret-nonce
+// requirement.
 func (sk *SecretKey) EncryptWithNonce(p *Plaintext, n *Nonce) (*Ciphertext, error) {
 	if p == nil || n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext and nonce must not be nil")
@@ -185,6 +216,8 @@ func (sk *SecretKey) EncryptWithNonce(p *Plaintext, n *Nonce) (*Ciphertext, erro
 	return out, nil
 }
 
+// Representative encodes m as (1+N)^m mod N², the noiseless ciphertext; see
+// PublicKey.Representative.
 func (sk *SecretKey) Representative(p *Plaintext) (*Ciphertext, error) {
 	if p == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
@@ -199,6 +232,8 @@ func (sk *SecretKey) Representative(p *Plaintext) (*Ciphertext, error) {
 	return &Ciphertext{c: gm.ForgetOrder()}, nil
 }
 
+// IdentityNoise returns r^N mod N², an encryption of 0 with nonce r; see
+// PublicKey.IdentityNoise.
 func (sk *SecretKey) IdentityNoise(n *Nonce) (*Ciphertext, error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
@@ -217,6 +252,8 @@ func (sk *SecretKey) IdentityNoise(n *Nonce) (*Ciphertext, error) {
 	return &Ciphertext{c: rn.ForgetOrder()}, nil
 }
 
+// NonceOp multiplies nonces in Z*_N using the known group order for efficiency; the
+// result equals PublicKey.NonceOp.
 func (sk *SecretKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, error) { //nolint:dupl // similar to CiphertextOp. Helper would be too complicated.
 	if first == nil || second == nil {
 		return nil, encryption.ErrIsNil.WithMessage("first and second nonce cannot be nil")
@@ -249,6 +286,8 @@ func (sk *SecretKey) NonceOp(first, second *Nonce, rest ...*Nonce) (*Nonce, erro
 	return &Nonce{r: outValue.ForgetOrder()}, nil
 }
 
+// NonceOpInv inverts a nonce in Z*_N using the known group order; see
+// PublicKey.NonceOpInv.
 func (sk *SecretKey) NonceOpInv(n *Nonce) (*Nonce, error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
@@ -263,6 +302,8 @@ func (sk *SecretKey) NonceOpInv(n *Nonce) (*Nonce, error) {
 	return &Nonce{r: value.OpInv().ForgetOrder()}, nil
 }
 
+// NonceScalarOp raises a nonce to the integer scalar power in Z*_N using the known
+// group order; see PublicKey.NonceScalarOp.
 func (sk *SecretKey) NonceScalarOp(n *Nonce, scalar *num.Int) (*Nonce, error) {
 	if n == nil || scalar == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce and scalar must not be nil")
@@ -277,6 +318,8 @@ func (sk *SecretKey) NonceScalarOp(n *Nonce, scalar *num.Int) (*Nonce, error) {
 	return &Nonce{r: value.ScalarOp(scalar).ForgetOrder()}, nil
 }
 
+// CiphertextOp multiplies ciphertexts in Z*_{N²} using the known group order for
+// efficiency; the result equals PublicKey.CiphertextOp.
 func (sk *SecretKey) CiphertextOp(first, second *Ciphertext, rest ...*Ciphertext) (*Ciphertext, error) { //nolint:dupl // similar to NonceOp. Helper would be too complicated.
 	if first == nil || second == nil {
 		return nil, encryption.ErrIsNil.WithMessage("first and second ciphertext cannot be nil")
@@ -309,6 +352,8 @@ func (sk *SecretKey) CiphertextOp(first, second *Ciphertext, rest ...*Ciphertext
 	return &Ciphertext{c: outValue.ForgetOrder()}, nil
 }
 
+// CiphertextOpInv inverts a ciphertext in Z*_{N²} using the known group order; see
+// PublicKey.CiphertextOpInv.
 func (sk *SecretKey) CiphertextOpInv(c *Ciphertext) (*Ciphertext, error) {
 	if c == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
@@ -323,6 +368,8 @@ func (sk *SecretKey) CiphertextOpInv(c *Ciphertext) (*Ciphertext, error) {
 	return &Ciphertext{c: value.OpInv().ForgetOrder()}, nil
 }
 
+// CiphertextScalarOp raises a ciphertext to the integer scalar in Z*_{N²} using the
+// known group order; see PublicKey.CiphertextScalarOp.
 func (sk *SecretKey) CiphertextScalarOp(c *Ciphertext, scalar *num.Int) (*Ciphertext, error) {
 	if c == nil || scalar == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and scalar must not be nil")
@@ -337,6 +384,8 @@ func (sk *SecretKey) CiphertextScalarOp(c *Ciphertext, scalar *num.Int) (*Cipher
 	return &Ciphertext{c: value.ScalarOp(scalar).ForgetOrder()}, nil
 }
 
+// ReRandomise blinds a ciphertext into a fresh, unlinkable encryption of the same
+// plaintext using the secret-key fast path; see PublicKey.ReRandomise.
 func (sk *SecretKey) ReRandomise(c *Ciphertext, n *Nonce) (*Ciphertext, error) {
 	if c == nil || n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and nonce must not be nil")
@@ -354,6 +403,8 @@ func (sk *SecretKey) ReRandomise(c *Ciphertext, n *Nonce) (*Ciphertext, error) {
 	return out, nil
 }
 
+// Shift adds m to the encrypted plaintext via Representative(m); see
+// PublicKey.Shift. The randomness is unchanged.
 func (sk *SecretKey) Shift(c *Ciphertext, m *Plaintext) (*Ciphertext, error) {
 	if c == nil || m == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and plaintext must not be nil")
@@ -371,6 +422,8 @@ func (sk *SecretKey) Shift(c *Ciphertext, m *Plaintext) (*Ciphertext, error) {
 	return out, nil
 }
 
+// Group returns the known-order Paillier group, which encodes the secret
+// factorisation of N.
 func (sk *SecretKey) Group() *znstar.PaillierGroupKnownOrder {
 	return sk.group
 }
@@ -430,6 +483,8 @@ func (sk *SecretKey) precompute() error {
 	return nil
 }
 
+// Equal reports whether two secret keys share the same modulus and factorisation,
+// treating nil as equal only to nil.
 func (sk *SecretKey) Equal(other *SecretKey) bool {
 	if sk == nil || other == nil {
 		return sk == other
@@ -437,10 +492,13 @@ func (sk *SecretKey) Equal(other *SecretKey) bool {
 	return sk.group.Equal(other.group)
 }
 
+// HashCode returns a non-cryptographic hash of the key (of N) for use as a map key.
 func (sk *SecretKey) HashCode() base.HashCode {
 	return sk.group.Modulus().HashCode()
 }
 
+// MarshalCBOR encodes the known-order Paillier group, i.e. the factorisation. The
+// output contains the decryption trapdoor and must be protected as secret material.
 func (sk *SecretKey) MarshalCBOR() ([]byte, error) {
 	dto := &secretKeyDTO{
 		Group: sk.group,
@@ -452,6 +510,9 @@ func (sk *SecretKey) MarshalCBOR() ([]byte, error) {
 	return out, nil
 }
 
+// UnmarshalCBOR decodes a secret key (the factorised group) and re-validates it via
+// NewSecretKey, re-deriving the CRT constants. This is a deserialization trust
+// boundary handling secret material.
 func (sk *SecretKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*secretKeyDTO](data)
 	if err != nil {

@@ -11,8 +11,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
+// Name identifies the ElGamal encryption scheme.
 const Name encryption.Name = "ElGamal"
 
+// EncryptionKey is the group-homomorphic encryption-key interface specialised to
+// ElGamal's plaintext (group elements of G), nonce (scalars in Z/nZ), and
+// ciphertext (pairs in G²) types. Both PublicKey and SecretKey satisfy it; use it
+// as a constraint when writing code generic over either.
 type EncryptionKey[EK encryption.GroupHomomorphicEncryptionKey[
 	EK,
 	*Plaintext[E, S], FiniteCyclicGroup[E, S], E,
@@ -69,6 +74,10 @@ func NewCiphertext[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](c1, 
 	return &Ciphertext[E, S]{v: v}, nil
 }
 
+// NewCiphertextFromGroupElement wraps a G² module element as a ciphertext,
+// requiring exactly two components and applying the same torsion-free validation
+// as NewCiphertext. It is the constructor used by the homomorphic ciphertext
+// operations.
 func NewCiphertextFromGroupElement[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](v *constructions.FiniteDirectPowerModuleElement[E, S]) (*Ciphertext[E, S], error) {
 	if v == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext group element")
@@ -106,10 +115,12 @@ func (ct *Ciphertext[E, S]) Equal(x *Ciphertext[E, S]) bool {
 	return ct.v.Equal(x.v)
 }
 
+// HashCode returns a non-cryptographic hash of the ciphertext for use as a map key.
 func (ct *Ciphertext[E, S]) HashCode() base.HashCode {
 	return ct.v.HashCode()
 }
 
+// MarshalCBOR encodes the ciphertext's two group-element components.
 func (ct *Ciphertext[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &ciphertextDTO[E, S]{
 		V: ct.v,
@@ -121,6 +132,10 @@ func (ct *Ciphertext[E, S]) MarshalCBOR() ([]byte, error) {
 	return out, nil
 }
 
+// UnmarshalCBOR decodes a ciphertext and re-validates its components through
+// NewCiphertext (non-nil and torsion-free). This is a deserialization trust
+// boundary: it rejects components outside the prime-order subgroup, which would
+// otherwise enable small-subgroup attacks.
 func (ct *Ciphertext[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*ciphertextDTO[E, S]](data)
 	if err != nil {
@@ -174,10 +189,12 @@ func (n *Nonce[S]) Equal(x *Nonce[S]) bool {
 	return n.v.Equal(x.v)
 }
 
+// HashCode returns a non-cryptographic hash of the nonce for use as a map key.
 func (n *Nonce[S]) HashCode() base.HashCode {
 	return n.v.HashCode()
 }
 
+// MarshalCBOR encodes the nonce scalar. The output is secret material.
 func (n *Nonce[S]) MarshalCBOR() ([]byte, error) {
 	dto := &nonceDTO[S]{
 		V: n.v,
@@ -189,6 +206,7 @@ func (n *Nonce[S]) MarshalCBOR() ([]byte, error) {
 	return out, nil
 }
 
+// UnmarshalCBOR decodes a nonce scalar, re-applying NewNonce's non-zero check.
 func (n *Nonce[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*nonceDTO[S]](data)
 	if err != nil {
@@ -235,10 +253,12 @@ func (p *Plaintext[E, S]) Equal(x *Plaintext[E, S]) bool {
 	return p.v.Equal(x.v)
 }
 
+// HashCode returns a non-cryptographic hash of the plaintext for use as a map key.
 func (p *Plaintext[E, S]) HashCode() base.HashCode {
 	return p.v.HashCode()
 }
 
+// MarshalCBOR encodes the plaintext group element.
 func (p *Plaintext[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &plaintextDTO[E, S]{
 		V: p.v,
@@ -250,6 +270,7 @@ func (p *Plaintext[E, S]) MarshalCBOR() ([]byte, error) {
 	return out, nil
 }
 
+// UnmarshalCBOR decodes a plaintext group element, rejecting nil via NewPlaintext.
 func (p *Plaintext[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*plaintextDTO[E, S]](data)
 	if err != nil {

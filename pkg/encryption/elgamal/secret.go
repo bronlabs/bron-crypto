@@ -14,8 +14,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/internal/gift"
 )
 
-// Generate samples a fresh key pair using randomness from prng.
-// HAC 8.25: select random a ∈ [1, n−1], compute h = g^a.
+// SampleSecretKey generates a fresh ElGamal key pair from prng: it picks a uniform
+// secret scalar a ∈ [1, n−1] and sets the public key h = g^a (HAC 8.25). The secret
+// a is the decryption trapdoor; prng must be a cryptographically secure source.
 func SampleSecretKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](group FiniteCyclicGroup[E, S], prng io.Reader) (*SecretKey[E, S], error) {
 	// SUMMARY: each entity creates a public key and a corresponding private key.
 	// Each entity A should do the following:
@@ -40,6 +41,10 @@ func SampleSecretKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](gr
 	return out, nil
 }
 
+// NewSecretKey builds a secret key from generator g and secret scalar a, deriving
+// the public key h = g^a. It rejects an identity or torsioned g and a ∈ {0, 1}
+// (a = 0 gives h = identity; a = 1 gives h = g — both trivially breakable). a is
+// the decryption trapdoor and must be kept secret.
 func NewSecretKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](g E, a S) (*SecretKey[E, S], error) {
 	if utils.IsNil(g) || utils.IsNil(a) {
 		return nil, encryption.ErrIsNil.WithMessage("generator and secret key value cannot be nil")
@@ -63,6 +68,9 @@ func NewSecretKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]](g E, 
 	}, nil
 }
 
+// SecretKey is an ElGamal private key: the scalar a (the discrete log of h base g)
+// together with the embedded PublicKey. a is secret — holding it allows decryption
+// of every ciphertext under this key. Use Public to obtain the shareable public key.
 type SecretKey[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struct {
 	PublicKey[E, S]
 
@@ -74,10 +82,15 @@ type secretKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struc
 	A S `cbor:"a"`
 }
 
+// Public returns a copy of the public key, dropping the secret scalar a so it can
+// be shared safely.
 func (sk *SecretKey[E, S]) Public() *PublicKey[E, S] {
 	return sk.Clone()
 }
 
+// Decrypt recovers the plaintext m = δ · γ^{−a} from a ciphertext (γ, δ) using the
+// secret key a (HAC 8.26.2). It is the inverse of EncryptWithNonce and requires the
+// decryption trapdoor a.
 func (sk *SecretKey[E, S]) Decrypt(ciphertext *Ciphertext[E, S]) (*Plaintext[E, S], error) {
 	// SUMMARY: B encrypts a message m for A, which A decrypts
 	// 8.26.2: Decryption. A should do the following:
@@ -93,6 +106,9 @@ func (sk *SecretKey[E, S]) Decrypt(ciphertext *Ciphertext[E, S]) (*Plaintext[E, 
 	return &Plaintext[E, S]{m}, nil
 }
 
+// EncryptWithNonce encrypts under the embedded public key, identical in result to
+// PublicKey.EncryptWithNonce but available directly on the secret key (and able to
+// use the trapdoor fast path for IdentityNoise).
 func (sk *SecretKey[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], nonce *Nonce[S]) (*Ciphertext[E, S], error) {
 	if plaintext == nil || nonce == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext and nonce must not be nil")
@@ -104,6 +120,9 @@ func (sk *SecretKey[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], nonce *N
 	return out, nil
 }
 
+// IdentityNoise returns (g^r, g^{a·r}) = (g^r, h^r), the encryption of the identity
+// with nonce r. Knowing the trapdoor a, it computes the second component as
+// g^{a·r}, marginally faster than h^r on some curves (e.g. k256).
 func (sk *SecretKey[E, S]) IdentityNoise(nonce *Nonce[S]) (*Ciphertext[E, S], error) {
 	if nonce == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
@@ -118,6 +137,8 @@ func (sk *SecretKey[E, S]) IdentityNoise(nonce *Nonce[S]) (*Ciphertext[E, S], er
 	return &Ciphertext[E, S]{v: r}, nil
 }
 
+// ReRandomise blinds a ciphertext into a fresh encryption of the same plaintext,
+// using the secret-key fast path for IdentityNoise; see PublicKey.ReRandomise.
 func (sk *SecretKey[E, S]) ReRandomise(ciphertext *Ciphertext[E, S], nonce *Nonce[S]) (*Ciphertext[E, S], error) {
 	if ciphertext == nil || nonce == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and nonce must not be nil")
@@ -129,14 +150,18 @@ func (sk *SecretKey[E, S]) ReRandomise(ciphertext *Ciphertext[E, S], nonce *Nonc
 	return out, nil
 }
 
+// H returns the public-key element h = g^a.
 func (sk *SecretKey[E, S]) H() E {
 	return sk.h
 }
 
+// Value returns the secret scalar a, the decryption trapdoor. The result is secret.
 func (sk *SecretKey[E, S]) Value() S {
 	return sk.a
 }
 
+// Equal reports whether two secret keys have the same scalar and public key,
+// treating nil as equal only to nil.
 func (sk *SecretKey[E, S]) Equal(other *SecretKey[E, S]) bool {
 	if sk == nil || other == nil {
 		return sk == other
@@ -144,10 +169,14 @@ func (sk *SecretKey[E, S]) Equal(other *SecretKey[E, S]) bool {
 	return sk.a.Equal(other.a) && sk.PublicKey.Equal(&other.PublicKey)
 }
 
+// HashCode combines the secret scalar and public key for use as a map key.
 func (sk *SecretKey[E, S]) HashCode() base.HashCode {
 	return sk.a.HashCode().Combine(sk.PublicKey.HashCode())
 }
 
+// MarshalCBOR encodes the generator g and the secret scalar a (h is recomputed on
+// decode). The output contains the decryption trapdoor and must be protected as
+// secret material.
 func (sk *SecretKey[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &secretKeyDTO[E, S]{
 		G: sk.Generator(),
@@ -160,6 +189,9 @@ func (sk *SecretKey[E, S]) MarshalCBOR() ([]byte, error) {
 	return out, nil
 }
 
+// UnmarshalCBOR decodes a secret key (generator g and secret scalar a) and
+// re-validates it through NewSecretKey, recomputing h = g^a. This is a
+// deserialization trust boundary handling secret material.
 func (sk *SecretKey[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*secretKeyDTO[E, S]](data)
 	if err != nil {

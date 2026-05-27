@@ -41,10 +41,15 @@ type publicKeyDTO[E FiniteCyclicGroupElement[E, S], S algebra.UintLike[S]] struc
 	H E `cbor:"h"`
 }
 
+// Type returns the scheme identifier Name.
 func (*PublicKey[E, S]) Type() encryption.Name {
 	return Name
 }
 
+// SampleNonce draws a fresh encryption nonce r uniformly from [1, n−1] (HAC
+// 8.26.1.c). Freshness and secrecy of r are essential: reusing a nonce across two
+// encryptions leaks the ratio of the plaintexts, and IND-CPA relies on r being
+// uniform, so prng must be cryptographically secure.
 func (pk *PublicKey[E, S]) SampleNonce(prng io.Reader) (*Nonce[S], error) {
 	if prng == nil {
 		return nil, encryption.ErrIsNil.WithMessage("prng must not be nil")
@@ -61,6 +66,10 @@ func (pk *PublicKey[E, S]) SampleNonce(prng io.Reader) (*Nonce[S], error) {
 	return nonce, nil
 }
 
+// EncryptWithNonce deterministically encrypts plaintext under nonce, producing the
+// ElGamal ciphertext (g^r, m·h^r) (HAC 8.26.1). Determinism in the nonce lets
+// callers recompute the ciphertext (e.g. when opening a commitment); security still
+// requires nonce to be a fresh secret value.
 func (pk *PublicKey[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], nonce *Nonce[S]) (*Ciphertext[E, S], error) {
 	// SUMMARY: B encrypts a message m for A, which A decrypts.
 	// 8.26.1: Encryption. B should do the following:
@@ -80,6 +89,10 @@ func (pk *PublicKey[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], nonce *N
 	return out, nil
 }
 
+// Representative deterministically encodes a plaintext m as the noiseless
+// ciphertext (1, m). It carries no randomness and hides nothing on its own; it is
+// the homomorphic embedding of m, combined with IdentityNoise to form a full
+// encryption (and used directly by Shift).
 func (pk *PublicKey[E, S]) Representative(plaintext *Plaintext[E, S]) (*Ciphertext[E, S], error) {
 	if plaintext == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
@@ -94,6 +107,9 @@ func (pk *PublicKey[E, S]) Representative(plaintext *Plaintext[E, S]) (*Cipherte
 	return &Ciphertext[E, S]{v: phi}, nil
 }
 
+// IdentityNoise returns (g^r, h^r), an encryption of the group identity with nonce
+// r. Multiplying a representative by this blinds it into a full encryption, and it
+// is the building block of ReRandomise.
 func (pk *PublicKey[E, S]) IdentityNoise(nonce *Nonce[S]) (*Ciphertext[E, S], error) {
 	if nonce == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
@@ -108,6 +124,9 @@ func (pk *PublicKey[E, S]) IdentityNoise(nonce *Nonce[S]) (*Ciphertext[E, S], er
 	return &Ciphertext[E, S]{v: r}, nil
 }
 
+// NonceOp adds nonces in Z/nZ; the sum is the nonce of the CiphertextOp (product)
+// of the corresponding ciphertexts. It errors if the result is the zero scalar,
+// which NewNonce rejects.
 func (pk *PublicKey[E, S]) NonceOp(first, second *Nonce[S], rest ...*Nonce[S]) (*Nonce[S], error) {
 	out, err := algebrautils.Op(NewNonce, pk.NonceGroup(), first, second, rest...)
 	if err != nil {
@@ -116,6 +135,7 @@ func (pk *PublicKey[E, S]) NonceOp(first, second *Nonce[S], rest ...*Nonce[S]) (
 	return out, nil
 }
 
+// NonceOpInv negates a nonce in Z/nZ, matching the nonce of the inverse ciphertext.
 func (*PublicKey[E, S]) NonceOpInv(n *Nonce[S]) (*Nonce[S], error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
@@ -127,6 +147,8 @@ func (*PublicKey[E, S]) NonceOpInv(n *Nonce[S]) (*Nonce[S], error) {
 	return out, nil
 }
 
+// NonceScalarOp multiplies a nonce by scalar s in Z/nZ, matching the nonce of a
+// ciphertext raised to s. It errors if the result is the zero scalar (e.g. s = 0).
 func (*PublicKey[E, S]) NonceScalarOp(n *Nonce[S], s S) (*Nonce[S], error) {
 	if n == nil {
 		return nil, encryption.ErrIsNil.WithMessage("nonce must not be nil")
@@ -138,6 +160,9 @@ func (*PublicKey[E, S]) NonceScalarOp(n *Nonce[S], s S) (*Nonce[S], error) {
 	return out, nil
 }
 
+// PlaintextOp combines plaintexts with the group operation of G. A ciphertext of
+// the product equals the CiphertextOp of the individual ciphertexts — the
+// multiplicative homomorphism of ElGamal.
 func (pk *PublicKey[E, S]) PlaintextOp(first, second *Plaintext[E, S], rest ...*Plaintext[E, S]) (*Plaintext[E, S], error) {
 	out, err := algebrautils.Op(NewPlaintext, pk.PlaintextGroup(), first, second, rest...)
 	if err != nil {
@@ -146,6 +171,7 @@ func (pk *PublicKey[E, S]) PlaintextOp(first, second *Plaintext[E, S], rest ...*
 	return out, nil
 }
 
+// PlaintextOpInv returns the group inverse of a plaintext, matching CiphertextOpInv.
 func (*PublicKey[E, S]) PlaintextOpInv(p *Plaintext[E, S]) (*Plaintext[E, S], error) {
 	if p == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
@@ -157,6 +183,7 @@ func (*PublicKey[E, S]) PlaintextOpInv(p *Plaintext[E, S]) (*Plaintext[E, S], er
 	return out, nil
 }
 
+// PlaintextScalarOp raises a plaintext to scalar s in G, matching CiphertextScalarOp.
 func (*PublicKey[E, S]) PlaintextScalarOp(p *Plaintext[E, S], s S) (*Plaintext[E, S], error) {
 	if p == nil {
 		return nil, encryption.ErrIsNil.WithMessage("plaintext must not be nil")
@@ -168,6 +195,8 @@ func (*PublicKey[E, S]) PlaintextScalarOp(p *Plaintext[E, S], s S) (*Plaintext[E
 	return out, nil
 }
 
+// CiphertextOp multiplies ciphertexts component-wise in G². By the homomorphism the
+// result encrypts the product of the plaintexts under the sum of the nonces.
 func (pk *PublicKey[E, S]) CiphertextOp(c1, c2 *Ciphertext[E, S], rest ...*Ciphertext[E, S]) (*Ciphertext[E, S], error) {
 	out, err := algebrautils.Op(NewCiphertextFromGroupElement, pk.CiphertextGroup(), c1, c2, rest...)
 	if err != nil {
@@ -176,6 +205,8 @@ func (pk *PublicKey[E, S]) CiphertextOp(c1, c2 *Ciphertext[E, S], rest ...*Ciphe
 	return out, nil
 }
 
+// CiphertextOpInv returns the component-wise inverse ciphertext, encrypting the
+// inverse plaintext under the negated nonce.
 func (*PublicKey[E, S]) CiphertextOpInv(c *Ciphertext[E, S]) (*Ciphertext[E, S], error) {
 	if c == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
@@ -187,6 +218,8 @@ func (*PublicKey[E, S]) CiphertextOpInv(c *Ciphertext[E, S]) (*Ciphertext[E, S],
 	return out, nil
 }
 
+// CiphertextScalarOp raises a ciphertext to scalar s component-wise, scaling both
+// the encrypted plaintext and the nonce by s.
 func (*PublicKey[E, S]) CiphertextScalarOp(c *Ciphertext[E, S], s S) (*Ciphertext[E, S], error) {
 	if c == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext must not be nil")
@@ -198,6 +231,10 @@ func (*PublicKey[E, S]) CiphertextScalarOp(c *Ciphertext[E, S], s S) (*Ciphertex
 	return out, nil
 }
 
+// ReRandomise multiplies c by IdentityNoise(nonce) = (g^r, h^r), producing a fresh,
+// independent-looking encryption of the SAME plaintext. With a fresh nonce the
+// result is unlinkable to c; this underpins re-randomisable commitments built on
+// ElGamal.
 func (pk *PublicKey[E, S]) ReRandomise(c *Ciphertext[E, S], nonce *Nonce[S]) (*Ciphertext[E, S], error) {
 	if c == nil || nonce == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and nonce must not be nil")
@@ -209,6 +246,8 @@ func (pk *PublicKey[E, S]) ReRandomise(c *Ciphertext[E, S], nonce *Nonce[S]) (*C
 	return out, nil
 }
 
+// Shift multiplies c by Representative(delta) = (1, delta), yielding an encryption
+// of m·delta under the SAME nonce. The plaintext is shifted; the randomness is not.
 func (pk *PublicKey[E, S]) Shift(c *Ciphertext[E, S], delta *Plaintext[E, S]) (*Ciphertext[E, S], error) {
 	if c == nil || delta == nil {
 		return nil, encryption.ErrIsNil.WithMessage("ciphertext and delta must not be nil")
@@ -220,26 +259,33 @@ func (pk *PublicKey[E, S]) Shift(c *Ciphertext[E, S], delta *Plaintext[E, S]) (*
 	return out, nil
 }
 
+// Generator returns the group generator g, the base of h = g^a.
 func (pk *PublicKey[E, S]) Generator() E {
 	return pk.PlaintextGroup().Generator()
 }
 
+// PlaintextGroup returns the cyclic group G in which plaintexts (and the key) live.
 func (pk *PublicKey[E, S]) PlaintextGroup() FiniteCyclicGroup[E, S] {
 	return algebra.StructureMustBeAs[FiniteCyclicGroup[E, S]](pk.h.Structure())
 }
 
+// NonceGroup returns the scalar ring Z/nZ from which nonces are drawn.
 func (pk *PublicKey[E, S]) NonceGroup() algebra.ZModLike[S] {
 	return algebra.StructureMustBeAs[algebra.ZModLike[S]](pk.PlaintextGroup().ScalarStructure())
 }
 
+// CiphertextGroup returns the direct-power module G² in which ciphertexts live.
 func (pk *PublicKey[E, S]) CiphertextGroup() *constructions.FiniteDirectPowerModule[FiniteCyclicGroup[E, S], E, S] {
 	return errs.Must1(constructions.NewFiniteDirectPowerModule(pk.PlaintextGroup(), 2))
 }
 
+// Value returns the public-key group element h = g^a.
 func (pk *PublicKey[E, S]) Value() E {
 	return pk.h
 }
 
+// Equal reports whether two public keys are the same group element, treating nil as
+// equal only to nil. Public keys are public, so this need not be constant time.
 func (pk *PublicKey[E, S]) Equal(other *PublicKey[E, S]) bool {
 	if pk == nil || other == nil {
 		return pk == other
@@ -247,14 +293,17 @@ func (pk *PublicKey[E, S]) Equal(other *PublicKey[E, S]) bool {
 	return pk.h.Equal(other.h)
 }
 
+// Clone returns a deep copy of the public key.
 func (pk *PublicKey[E, S]) Clone() *PublicKey[E, S] {
 	return &PublicKey[E, S]{h: pk.h.Clone()}
 }
 
+// HashCode returns a non-cryptographic hash of the public key for use as a map key.
 func (pk *PublicKey[E, S]) HashCode() base.HashCode {
 	return pk.h.HashCode()
 }
 
+// MarshalCBOR encodes the public-key element h.
 func (pk *PublicKey[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[E, S]{
 		H: pk.h,
@@ -266,6 +315,9 @@ func (pk *PublicKey[E, S]) MarshalCBOR() ([]byte, error) {
 	return out, nil
 }
 
+// UnmarshalCBOR decodes a public key and re-validates h through NewPublicKey
+// (non-identity, torsion-free). This is a deserialization trust boundary that
+// rejects identity and small-subgroup keys.
 func (pk *PublicKey[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*publicKeyDTO[E, S]](data)
 	if err != nil {

@@ -136,6 +136,18 @@ func (ns *NaturalNumbers) FromBytesBE(input []byte) (*Nat, error) {
 	return ns.FromBytes(input)
 }
 
+// FromUnsignedNumeric creates a Nat from an algebra.UnsignedNumeric value, returning an error if the input is nil.
+func (ns *NaturalNumbers) FromUnsignedNumeric(value algebra.UnsignedNumeric) (*Nat, error) {
+	if value == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	out, err := ns.FromBytes(value.BytesBE())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert unsigned numeric to natural number")
+	}
+	return out, nil
+}
+
 // FromCardinal creates a Nat from a cardinal.Cardinal value, returning an error if the input is nil or infinite.
 func (ns *NaturalNumbers) FromCardinal(value cardinal.Cardinal) (*Nat, error) {
 	if value == nil {

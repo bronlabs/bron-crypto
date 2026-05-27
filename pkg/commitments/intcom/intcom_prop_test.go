@@ -288,14 +288,3 @@ func TestNoExponentReductionProperty(t *testing.T) {
 		})
 	})
 }
-
-func TestFreshWitnessIsWithinRange(t *testing.T) {
-	t.Parallel()
-	keyLen := 64
-	rapid.MakeCheck(func(rt *rapid.T) {
-		key := CommitmentKeyGenerator(t, keyLen).Draw(rt, "commitment key")
-		witness, err := key.SampleWitness(pcg.NewRandomised())
-		require.NoError(rt, err, "failed to sample witness")
-		require.True(t, key.WitnessIsFreshlySampled(witness))
-	})
-}

@@ -159,6 +159,18 @@ func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
 	return out, nil
 }
 
+// FromUnsignedNumeric creates a NatPlus from the given algebra.UnsignedNumeric, returning an error if the input is nil or represents zero.
+func (nps *PositiveNaturalNumbers) FromUnsignedNumeric(value algebra.UnsignedNumeric) (*NatPlus, error) {
+	if value == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	out, err := nps.FromBytes(value.BytesBE())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert UnsignedNumeric to NatPlus")
+	}
+	return out, nil
+}
+
 // Random generates a random NatPlus in the range [lowInclusive, highExclusive), returning an error if highExclusive is nil.
 func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, prng io.Reader) (*NatPlus, error) {
 	if lowInclusive == nil {
