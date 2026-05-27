@@ -34,7 +34,7 @@ func SampleCommitmentKey(prng io.Reader) (*CommitmentKey, error) {
 // the transcript that produced it.
 func ExtractCommitmentKey(transcript ts.Transcript, label string) (*CommitmentKey, error) {
 	if transcript == nil || label == "" {
-		return nil, commitments.ErrIsNil.WithMessage("transcript and label must not be nil")
+		return nil, commitments.ErrIsNil.WithMessage("transcript and label must not be nil/empty")
 	}
 	bs, err := transcript.ExtractBytes(label, KeySize)
 	if err != nil {

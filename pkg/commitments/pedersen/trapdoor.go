@@ -39,7 +39,7 @@ func SampleTrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 }
 
 // NewTrapdoorKey builds a trapdoor key from generator g and secret scalar lambda,
-// deriving h = g^lambda. It rejects a nil, identity, or torsion-bearing g, and
+// deriving h = g^lambda. It rejects a nil or identity g, and
 // rejects lambda ∈ {0, 1}: lambda = 0 would make h the identity and lambda = 1
 // would make h equal g, each of which collapses binding. lambda is the trapdoor
 // and must be kept secret.
@@ -47,8 +47,8 @@ func NewTrapdoorKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	if utils.IsNil(g) || utils.IsNil(lambda) {
 		return nil, ErrInvalidArgument.WithMessage("generator and trapdoor value cannot be nil")
 	}
-	if g.IsOpIdentity() || !g.IsTorsionFree() {
-		return nil, ErrInvalidArgument.WithMessage("generator cannot be the identity element or have torsion")
+	if g.IsOpIdentity() {
+		return nil, ErrInvalidArgument.WithMessage("generator cannot be the identity element")
 	}
 	if lambda.IsZero() {
 		return nil, ErrInvalidArgument.WithMessage("trapdoor value cannot be zero")

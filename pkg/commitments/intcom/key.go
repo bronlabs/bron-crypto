@@ -428,7 +428,7 @@ func (k *CommitmentKey) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a commitment key and revalidates it via newCommitmentKey
-// (torsion-free and generator checks). This is a deserialization trust boundary:
+// (torsion-free and generator checks). This is a deserialisation trust boundary:
 // because the group order is unknown, full QR(N̂) membership of s and t cannot be
 // verified here, so a key from an untrusted source must not be assumed binding
 // without an accompanying Π^{prm}-style proof.

@@ -69,7 +69,7 @@ func (c *Commitment[E, S]) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a commitment and rejects a nil element via NewCommitment.
-// This is a deserialization trust boundary: that the decoded element is on-curve
+// This is a deserialisation trust boundary: that the decoded element is on-curve
 // and in the prime-order subgroup is enforced by the element decoder, not here.
 func (c *Commitment[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[commitmentDTO[E, S]](data)
@@ -156,7 +156,7 @@ func (w *Witness[S]) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a witness scalar, rejecting a nil value via NewWitness.
-// This is a deserialization trust boundary for secret material.
+// This is a deserialisation trust boundary for secret material.
 func (w *Witness[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[witnessDTO[S]](data)
 	if err != nil {

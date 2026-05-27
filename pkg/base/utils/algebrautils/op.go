@@ -9,6 +9,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
+// Op performs a fold over the given group elements, applying the group operation.
+// It validates that all inputs are non-nil and belong to the group, and uses newFunc to construct the output object from the resulting group element.
+// It is used in internal implementations of commitment/encryption keys.
 func Op[
 	T base.Transparent[TV], TV algebra.GroupElement[TV],
 ](
@@ -42,6 +45,9 @@ func Op[
 	return out, nil
 }
 
+// OpValues performs a fold over the given group elements, applying the group operation.
+// It validates that all inputs are non-nil and belong to the group, and returns the resulting group element.
+// It is used in internal implementations of commitment/encryption keys.
 func OpValues[TV algebra.GroupElement[TV]](
 	group algebra.Group[TV],
 	first, second TV,
@@ -57,7 +63,7 @@ func OpValues[TV algebra.GroupElement[TV]](
 		return *new(TV), ErrIsNil.WithMessage("objects in rest must not be nil")
 	}
 	if len(rest) > 0 && !sliceutils.All(rest, group.Contains) {
-		return *new(TV), ErrIsNil.WithMessage("objects in rest must be in group")
+		return *new(TV), ErrInvalidArgument.WithMessage("objects in rest must be in group")
 	}
 	return Fold(first.Op(second), rest...), nil
 }

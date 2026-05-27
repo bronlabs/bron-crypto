@@ -65,7 +65,7 @@ func GeneratePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, p
 	if bits < 512 {
 		checks := MillerRabinChecks(bits)
 		for {
-			pBig, err := crand.Prime(prng, int(bits)-1)
+			pBig, err := crand.Prime(prng, int(bits))
 			if err != nil {
 				return *new(E), errs.Wrap(err).WithMessage("reading from crand")
 			}

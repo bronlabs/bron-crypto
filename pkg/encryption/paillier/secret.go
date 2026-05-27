@@ -2,6 +2,7 @@ package paillier
 
 import (
 	"io"
+	"testing"
 
 	"golang.org/x/sync/errgroup"
 
@@ -71,6 +72,9 @@ func SampleSafeSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 func NewSecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
 	if group == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group must not be nil")
+	}
+	if !testing.Testing() && group.N().TrueLen() < base.IFCKeyLength {
+		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", base.IFCKeyLength)
 	}
 	sk := &SecretKey{ //nolint:exhaustruct // other fields are lazily computed.
 		PublicKey: PublicKey{group: group.ForgetOrder()},

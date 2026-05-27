@@ -2,6 +2,7 @@ package paillier
 
 import (
 	"io"
+	"testing"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -23,6 +24,9 @@ import (
 func NewPublicKey(group *znstar.PaillierGroupUnknownOrder) (*PublicKey, error) {
 	if group == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group must not be nil")
+	}
+	if !testing.Testing() && group.N().TrueLen() < base.IFCKeyLength {
+		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", base.IFCKeyLength)
 	}
 	return &PublicKey{group: group}, nil
 }
