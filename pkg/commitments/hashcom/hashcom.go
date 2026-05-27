@@ -74,7 +74,7 @@ func SampleWitness(prng io.Reader) (Witness, error) {
 	return w, nil
 }
 
-func init() {
+func init() { //nolint:gochecknoinits // sanity check that the chosen parameters meet the security requirements
 	h, _ := hmacFunc(nil)
 	if DigestSize != h.Size() {
 		panic("DigestSize must match the output size of the hash function")
