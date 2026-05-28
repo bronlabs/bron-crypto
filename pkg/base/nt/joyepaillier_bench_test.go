@@ -2,6 +2,7 @@
 package nt
 
 import (
+	crand "crypto/rand"
 	"fmt"
 	"testing"
 )
@@ -14,7 +15,7 @@ func Benchmark_ComputeJoyeParams(b *testing.B) {
 		b.Run(fmt.Sprintf("%d-bit", bits), func(b *testing.B) {
 			var nPi int
 			for b.Loop() {
-				p, err := computeJoyeParams(bits)
+				p, err := computeJoyeParams(bits, crand.Reader)
 				if err != nil {
 					b.Fatalf("computeJoyeParams(%d): %v", bits, err)
 				}

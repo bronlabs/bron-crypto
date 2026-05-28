@@ -227,6 +227,9 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
 	}
+	if prng == nil {
+		return *new(E), ErrIsNil.WithMessage("nil prng")
+	}
 	if bits < 16 {
 		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 16-bits for Joye/Paillier")
 	}
@@ -237,7 +240,7 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	// All five are derived from `bits` and cached across calls; see
 	// joyepaillier.go (computeJoyeParams) for the full derivation and the
 	// mapping to Section 2 / Section 4.2 of the paper.
-	params, err := joyeParamsFor(bits)
+	params, err := joyeParamsFor(bits, prng)
 	if err != nil {
 		return *new(E), errs.Wrap(err).WithMessage("failed to derive Joye-Paillier parameters")
 	}
@@ -245,35 +248,7 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	u := params.u
 	l := params.l
 	mPrime := params.mPrime
-
-	// ──────────────────────────────────────────────────────────────────────
-	// Per-call constant a — Section 4.2, "the constant a is chosen in QR(m)".
-	// ──────────────────────────────────────────────────────────────────────
-	// We need a ∈ QR(m) AND a ≡ 1 (mod 4). Both are satisfied by sampling
-	// a random odd α coprime to m and squaring:
-	//   - α odd ⇒ α² ≡ 1 (mod 8) ⇒ a ≡ 1 (mod 4). ✓
-	//   - α ∈ Z*_m ⇒ α² ∈ Z*_m, and α² is automatically in QR(m). ✓
-	// We reject a = 1 (the orbit k_i = a^i · k_0 would be a fixed point —
-	// every iteration would test the same q).
-	var a *big.Int
-	for {
-		alpha, err := crand.Int(prng, m)
-		if err != nil {
-			return *new(E), errs.Wrap(err).WithMessage("failed to sample α")
-		}
-		if alpha.Sign() == 0 || alpha.Bit(0) == 0 {
-			continue // α = 0 or even — not in Z*_m (since 4 | m)
-		}
-		if new(big.Int).GCD(nil, nil, alpha, m).Cmp(one) != 0 {
-			continue // α shares a factor with Π or the odd part of w
-		}
-		a = new(big.Int).Mul(alpha, alpha)
-		a.Mod(a, m)
-		if a.Cmp(one) == 0 {
-			continue // degenerate: orbit would never move
-		}
-		break
-	}
+	a := params.a
 
 	// Miller-Rabin iteration counts (FIPS 186-derived): q has `bits` bits,
 	// (q−1)/2 has `bits-1`.

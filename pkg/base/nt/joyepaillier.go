@@ -1,6 +1,8 @@
 package nt
 
 import (
+	crand "crypto/rand"
+	"io"
 	"math/big"
 	"sync"
 
@@ -166,6 +168,7 @@ type joyeParams struct {
 	mPrime *big.Int // m' = m/4 (so m' is odd, m' ≡ 1 (mod 4), 3m' ≡ 3 (mod 4))
 	l      *big.Int // l = v·Π, with l ≥ 2^(bits-1), l+m ≤ 2^bits, and 4 | l
 	u      *big.Int // simultaneous QNR mod every p_i | Π, lifted to Z*_m
+	a      *big.Int // a ∈ QR(m) AND a ≡ 1 (mod 4)
 	nPi    int      // number of small primes used to build Π (diagnostic)
 }
 
@@ -177,7 +180,7 @@ type joyeParams struct {
 // product fits the geometric bound Π ≤ 2^(bits-5), maximising the
 // small-prime sieve (Property (P4) of Fig. 1) while leaving the headroom
 // the m and l construction needs.
-func joyeParamsFor(bits uint) (*joyeParams, error) {
+func joyeParamsFor(bits uint, prng io.Reader) (*joyeParams, error) {
 	// double-checked locking pattern
 	joyeParamsCacheMu.RLock()
 	if p, ok := joyeParamsCache[bits]; ok {
@@ -191,7 +194,7 @@ func joyeParamsFor(bits uint) (*joyeParams, error) {
 	if p, ok := joyeParamsCache[bits]; ok {
 		return p, nil
 	}
-	p, err := computeJoyeParams(bits)
+	p, err := computeJoyeParams(bits, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute Joye-Paillier parameters")
 	}
@@ -199,7 +202,7 @@ func joyeParamsFor(bits uint) (*joyeParams, error) {
 	return p, nil
 }
 
-func computeJoyeParams(bits uint) (*joyeParams, error) {
+func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 	if bits < 16 {
 		return nil, ErrInvalidArgument.WithMessage("safe prime size must be at least 16-bits for Joye/Paillier")
 	}
@@ -353,6 +356,35 @@ func computeJoyeParams(bits uint) (*joyeParams, error) {
 		}
 	}
 
+	// ──────────────────────────────────────────────────────────────────────
+	// constant a — Section 4.2, "the constant a is chosen in QR(m)".
+	// ──────────────────────────────────────────────────────────────────────
+	// We need a ∈ QR(m) AND a ≡ 1 (mod 4). Both are satisfied by sampling
+	// a random odd α coprime to m and squaring:
+	//   - α odd ⇒ α² ≡ 1 (mod 8) ⇒ a ≡ 1 (mod 4). ✓
+	//   - α ∈ Z*_m ⇒ α² ∈ Z*_m, and α² is automatically in QR(m). ✓
+	// We reject a = 1 (the orbit k_i = a^i · k_0 would be a fixed point —
+	// every iteration would test the same q).
+	var a *big.Int
+	for {
+		alpha, err := crand.Int(prng, m)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to sample α")
+		}
+		if alpha.Sign() == 0 || alpha.Bit(0) == 0 {
+			continue // α = 0 or even — not in Z*_m (since 4 | m)
+		}
+		if new(big.Int).GCD(nil, nil, alpha, m).Cmp(one) != 0 {
+			continue // α shares a factor with Π or the odd part of w
+		}
+		a = new(big.Int).Mul(alpha, alpha)
+		a.Mod(a, m)
+		if a.Cmp(one) == 0 {
+			continue // degenerate: orbit would never move
+		}
+		break
+	}
+
 	return &joyeParams{
 		pi:     pi,
 		m:      m,
@@ -360,6 +392,7 @@ func computeJoyeParams(bits uint) (*joyeParams, error) {
 		l:      l,
 		u:      u,
 		nPi:    nPi,
+		a:      a,
 	}, nil
 }
 
