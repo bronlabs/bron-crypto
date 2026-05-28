@@ -257,7 +257,7 @@ func (t *TrapdoorKey) Lambda() *num.Uint {
 // Export returns the public CommitmentKey, dropping λ and the factorisation so the
 // result can be shared as a binding key.
 func (t *TrapdoorKey) Export() *CommitmentKey {
-	return t.CommitmentKey.Clone()
+	return t.Clone()
 }
 
 // Equal reports whether two trapdoor keys share the same generator t and trapdoor

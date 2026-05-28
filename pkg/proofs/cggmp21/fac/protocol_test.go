@@ -9,11 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/fac"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
@@ -58,6 +60,90 @@ func TestNonInteractiveFiatShamirHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	err = verifier.Verify(statement, proof)
 	require.NoError(t, err)
+}
+
+func TestConstructorsRejectInvalidInputs(t *testing.T) {
+	t.Parallel()
+
+	statement, err := fac.NewStatement(nil)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	require.Nil(t, statement)
+
+	witness, err := fac.NewWitness(nil)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	require.Nil(t, witness)
+
+	commitment, err := fac.NewCommitment(nil, nil, nil, nil, nil)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	require.Nil(t, commitment)
+
+	state, err := fac.NewState(nil, nil, nil, nil, nil, nil, nil)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	require.Nil(t, state)
+
+	response, err := fac.NewResponse(nil, nil, nil, nil, nil)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	require.Nil(t, response)
+}
+
+func TestCBORRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	setupKey, statement, witness := sampleSetupStatementAndWitness(t, prng)
+	protocol, err := fac.NewProtocol(setupKey, testRangeBits, testSlackBits, prng)
+	require.NoError(t, err)
+
+	roundTrippedStatement := ntu.CBORRoundTrip(t, statement)
+	require.Equal(t, statement.Bytes(), roundTrippedStatement.Bytes())
+
+	commitment, state, err := protocol.ComputeProverCommitment(roundTrippedStatement, witness)
+	require.NoError(t, err)
+	roundTrippedCommitment := ntu.CBORRoundTrip(t, commitment)
+	require.Equal(t, commitment.Bytes(), roundTrippedCommitment.Bytes())
+
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+	response, err := protocol.ComputeProverResponse(
+		roundTrippedStatement,
+		witness,
+		roundTrippedCommitment,
+		state,
+		challenge,
+	)
+	require.NoError(t, err)
+
+	roundTrippedResponse := ntu.CBORRoundTrip(t, response)
+	require.Equal(t, response.Bytes(), roundTrippedResponse.Bytes())
+	require.NoError(t, protocol.Verify(roundTrippedStatement, roundTrippedCommitment, challenge, roundTrippedResponse))
+}
+
+func TestVerifyRejectsOutOfRangeResponse(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	setupKey, statement, _ := sampleSetupStatementAndWitness(t, prng)
+	protocol, err := fac.NewProtocol(setupKey, testRangeBits, testSlackBits, prng)
+	require.NoError(t, err)
+
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+
+	commitment, _, err := protocol.RunSimulator(statement, challenge)
+	require.NoError(t, err)
+	response, err := fac.NewResponse(
+		num.Z().FromInt64(1).Lsh(uint(testPaillierKeyBits+testRangeBits+testSlackBits)),
+		num.Z().Zero(),
+		num.Z().Zero(),
+		num.Z().Zero(),
+		num.Z().Zero(),
+	)
+	require.NoError(t, err)
+
+	err = protocol.Verify(statement, commitment, challenge, response)
+	require.ErrorIs(t, err, fac.ErrVerificationFailed)
 }
 
 func TestSimulator(t *testing.T) {

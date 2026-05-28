@@ -31,7 +31,7 @@ func intSampleRangeSymmetricBits(bitLen int, prngReader io.Reader) (*num.Int, er
 	}
 
 	buf := make([]byte, bitLen/8+1)
-	if _, err := io.ReadFull(prngReader, buf[:]); err != nil {
+	if _, err := io.ReadFull(prngReader, buf); err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample integer bytes")
 	}
 	buf[0] = byte(int8(buf[0]) >> 7)
@@ -50,15 +50,16 @@ func intInSignedBitRange(x *num.Int, bitLen int) bool {
 	return x.Abs().TrueLen() <= bitLen
 }
 
-func paillierKeyFactors(secretKey *paillier.SecretKey) (*num.Int, *num.Int, error) {
+func paillierKeyFactors(secretKey *paillier.SecretKey) (p, q *num.Int, err error) {
 	if secretKey == nil || secretKey.Group() == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("secret key and group must not be nil")
 	}
-	p, err := num.Z().FromNatCT(secretKey.Group().Arithmetic().P.Factor.Nat())
+
+	p, err = num.Z().FromNatCT(secretKey.Group().Arithmetic().P.Factor.Nat())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not convert p")
 	}
-	q, err := num.Z().FromNatCT(secretKey.Group().Arithmetic().Q.Factor.Nat())
+	q, err = num.Z().FromNatCT(secretKey.Group().Arithmetic().Q.Factor.Nat())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not convert q")
 	}

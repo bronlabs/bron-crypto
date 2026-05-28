@@ -41,17 +41,6 @@ type WitnessCartesian[W0, W1 sigma.Witness] struct {
 	W1 W1
 }
 
-func (w *WitnessCartesian[W0, W1]) Bytes() []byte {
-	if w == nil {
-		return nil
-	}
-
-	var out = []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, w.W0.Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, w.W1.Bytes())
-	return out
-}
-
 var _ sigma.Witness = (*WitnessCartesian[sigma.Witness, sigma.Witness])(nil)
 
 // CommitmentCartesian represents a binary AND-composed commitment.
