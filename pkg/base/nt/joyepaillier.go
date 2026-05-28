@@ -1,3 +1,26 @@
+// joyepaillier.go implements the setup phase for the Joye-Paillier fast
+// safe-prime generator from "Fast Generation of Prime Numbers on Portable
+// Devices: An Update" (Joye & Paillier, CHES 2006). This is the safe-prime
+// variant from Section 4.2 / Figure 6, built on top of the general
+// fast-prime framework of Section 2 / Figures 1–3.
+//
+// The setup derives the per-bit-length constants once and caches them; the
+// per-call cryptographic material (a, χ) is sampled in GenerateSafePrimeJoye
+// over in primes.go.
+//
+// Notation throughout matches the paper:
+//
+//	Π   product of a prefix of small odd primes p_i (excludes p_1 = 2)
+//	w   integer multiplier with w·Π ≈ q_max − q_min and w·Π ≡ 4 (mod 16)
+//	m   = w·Π; the candidate-orbit modulus
+//	m'  = m / 2^τ with τ = 2, so m' = m/4 and m' ≡ 1 (mod 4)
+//	v   integer multiplier with v·Π ≥ q_min = 2^(bits-1) and 4 | v
+//	l   = v·Π; lower-anchor offset of the candidate space
+//	u   element of (Z/mZ)* that is a quadratic non-residue mod every odd p_i | Π
+//
+// Output range: every safe prime produced lies in [l, l+m) ⊆ [2^(bits-1), 2^bits),
+// i.e. has exactly `bits` bits.
+
 package nt
 
 import (
@@ -10,7 +33,7 @@ import (
 )
 
 // https://github.com/entropyxyz/crypto-primes/blob/b8822950bb8d611e63d43602454f78613d5bd5c1/src/hazmat/precomputed.rs#L7
-var smallPrimes = []int64{
+var smallPrimes = [2047]int64{
 	3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109,
 	113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239,
 	241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379,
@@ -128,29 +151,6 @@ var smallPrimes = []int64{
 	17863,
 }
 
-// joyepaillier.go implements the setup phase for the Joye-Paillier fast
-// safe-prime generator from "Fast Generation of Prime Numbers on Portable
-// Devices: An Update" (Joye & Paillier, CHES 2006). This is the safe-prime
-// variant from Section 4.2 / Figure 6, built on top of the general
-// fast-prime framework of Section 2 / Figures 1–3.
-//
-// The setup derives the per-bit-length constants once and caches them; the
-// per-call cryptographic material (a, χ) is sampled in GenerateSafePrimeJoye
-// over in primes.go.
-//
-// Notation throughout matches the paper:
-//
-//	Π   product of a prefix of small odd primes p_i (excludes p_1 = 2)
-//	w   integer multiplier with w·Π ≈ q_max − q_min and w·Π ≡ 4 (mod 16)
-//	m   = w·Π; the candidate-orbit modulus
-//	m'  = m / 2^τ with τ = 2, so m' = m/4 and m' ≡ 1 (mod 4)
-//	v   integer multiplier with v·Π ≥ q_min = 2^(bits-1) and 4 | v
-//	l   = v·Π; lower-anchor offset of the candidate space
-//	u   element of (Z/mZ)* that is a quadratic non-residue mod every odd p_i | Π
-//
-// Output range: every safe prime produced lies in [l, l+m) ⊆ [2^(bits-1), 2^bits),
-// i.e. has exactly `bits` bits.
-
 var (
 	one     = big.NewInt(1)
 	three   = big.NewInt(3)
@@ -170,7 +170,7 @@ type joyeParams struct {
 	u      *big.Int // simultaneous QNR mod every p_i | Π, lifted to Z*_m
 	a      *big.Int // a ∈ QR(m) AND a ≡ 1 (mod 4)
 	bMax   uint64   // §2.1 random-b scheme: per call, sample b ∈ [0, bMax], set t = b·Π
-	nPi    int      // number of small primes used to build Π (diagnostic)
+	nPi    int      // number of small primes used to build Π
 }
 
 // joyeParamsFor returns the cached Joye-Paillier setup parameters for the
@@ -229,6 +229,7 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 	// Π ≤ 2^(bits−11) yields ε ≈ 2⁻¹⁰ ≈ 10⁻³ (matching the paper's
 	// recommendation) while still admitting nearly the full small-prime
 	// prefix at cryptographic bit lengths.
+	// Look at GenerateSafePrime's "Random-b shift"'s Derivation of ε for more info.
 	target := new(big.Int).Lsh(one, bits-11)
 	pi := big.NewInt(1)
 	nPi := 0

@@ -22,8 +22,8 @@ func Benchmark_GeneratePrime(b *testing.B) {
 	}
 }
 
-func Benchmark_GenerateBlumPrime(b *testing.B) {
-	for _, bits := range []uint{64, 256, 512, 1024} {
+func Benchmark_GenerateBlumPrimeLarge(b *testing.B) {
+	for _, bits := range []uint{1024} {
 		b.Run(fmt.Sprintf("%d-bit", bits), func(b *testing.B) {
 			for b.Loop() {
 				_, err := nt.GenerateBlumPrime(num.NPlus(), bits, crand.Reader)

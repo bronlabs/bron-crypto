@@ -143,12 +143,21 @@ func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	if bits < 3 {
 		return *new(E), ErrInvalidArgument.WithMessage("blum prime size must be at least 3-bits")
 	}
+	params, err := joyeParamsFor(bits, prng)
+	if err != nil {
+		return *new(E), errs.Wrap(err).WithMessage("failed to get Joye-Paillier parameters")
+	}
 	checks := MillerRabinChecks(bits)
 	numBytes := (bits + 7) / 8
 	topBits := max(bits%8, 8)
 	topByteMask := byte((1 << topBits) - 1)
 	topByteMSB := byte(1) << (topBits - 1)
 	buf := make([]byte, numBytes)
+
+	candidate := new(big.Int)
+	residue := new(big.Int)
+
+OUTER:
 	for {
 		if _, err := io.ReadFull(prng, buf); err != nil {
 			return *new(E), errs.Wrap(err).WithMessage("failed to read random bytes")
@@ -157,8 +166,14 @@ func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 		buf[0] |= topByteMSB    // force top bit → candidate has exactly `bits` bits
 		buf[numBytes-1] |= 0b11 // force ≡ 3 (mod 4); also implies odd
 
-		candidate := new(big.Int).SetBytes(buf)
-
+		candidate.SetBytes(buf)
+		residue.Mod(candidate, params.pi)
+		tmp := new(big.Int)
+		for _, p := range smallPrimes[:params.nPi] {
+			if tmp.Mod(residue, big.NewInt(p)).Sign() == 0 {
+				continue OUTER
+			}
+		}
 		if !candidate.ProbablyPrime(checks) {
 			continue
 		}
