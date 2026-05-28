@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/stretchr/testify/require"
 )
 
 func Benchmark_GeneratePrime(b *testing.B) {

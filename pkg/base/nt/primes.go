@@ -296,105 +296,133 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	results := make(chan E, 1)
 	defer close(results)
 
+	// Bound on the orbit walk per χ sample. Joye–Paillier (Section 4.2,
+	// "A note on efficiency") gives the expected number of primality tests
+	// for an n-bit safe prime as ≈ (n · ln 2 · φ(Π)/Π)². The paper's
+	// distribution analysis (Section 3.1, Theorem 1) is stated for n ≥ 256,
+	// at which point ord(a) ≤ λ(m) is huge and the expected count is
+	// orders of magnitude below this bound — so the bound is essentially
+	// never hit on cryptographic-sized inputs.
+	//
+	// For small n exercised by tests, however, the orbit is small enough
+	// that it may contain *no* safe prime at all (e.g. bits = 16 gives
+	// λ(m) ≤ 60). When the bound trips we drop back to the outer loop and
+	// resample χ, putting the worker into a different coset of ⟨a⟩.
+	const maxOrbitIter = 1 << 16
+
 	for range workers {
 		g.Go(func() error {
-			// ───────────────────────────────────────────────────────
-			// Step 1 (Figure 6): χ ←$ (Z/mZ)*.
-			// ───────────────────────────────────────────────────────
-			// Rejection sampling: draw uniformly from [0, m) and accept
-			// when the sample is a unit. Acceptance rate is φ(m)/m,
-			// dominated by φ(Π)/Π in our setup (≈ 0.16 for nPi ≈ 175).
-			var chi *big.Int
+			// Outer loop: keep drawing fresh χ until one yields a safe prime
+			// within maxOrbitIter recyclings, or until ctx is cancelled.
 			for {
-				c, err := crand.Int(prng, m)
-				if err != nil {
-					return errs.Wrap(err).WithMessage("failed to sample χ")
-				}
-				if c.Sign() == 0 {
-					continue
-				}
-				if new(big.Int).GCD(nil, nil, c, m).Cmp(one) != 0 {
-					continue
-				}
-				chi = c
-				break
-			}
-
-			// ───────────────────────────────────────────────────────
-			// Step 2 (Figure 6): k ← 4·u·χ² + 3m' (mod m).
-			// ───────────────────────────────────────────────────────
-			// Residue analysis of the resulting k:
-			//   • mod p_i (odd, p_i | Π):
-			//       4·u·χ² ≡ 4·(QNR)·(QR) ≡ QNR (mod p_i)  [4 is a QR mod any odd p]
-			//       3m'    ≡ 0           (since p_i | m and 4 | m, p_i | m', so p_i | 3m')
-			//     ⇒ k ≡ QNR (mod p_i) — the property that makes (q−1)/2
-			//       automatically coprime to Π.
-			//   • mod 4:
-			//       4·u·χ² ≡ 0
-			//       3m'    ≡ 3·1 = 3   (m' ≡ 1 mod 4 by setup)
-			//     ⇒ k ≡ 3 (mod 4) — the property that makes q ≡ 3 (mod 4)
-			//       once we add l ≡ 0 (mod 4) in Step 3.
-			k := new(big.Int).Mul(chi, chi)
-			k.Mul(k, u)
-			k.Lsh(k, 2) // ×4
-			k.Add(k, threeMPrime)
-			k.Mod(k, m)
-
-			// ───────────────────────────────────────────────────────
-			// Steps 3–4 (Figure 6): candidate construction, primality
-			// tests, and recycling. The paper imposes no iteration
-			// bound — the orbit of a in Z*_m is huge, and a safe prime
-			// is overwhelmingly likely to lie in it.
-			// ───────────────────────────────────────────────────────
-			for {
-				// Cooperative cancel: another worker may have already won.
+				// Cooperative cancel at the χ-resample boundary.
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
 				}
 
-				// Step 3: q ← [(k − t) mod m] + t + l.
-				// We use t = 0 (a valid choice — see Section 2 of the
-				// paper, where t = bΠ for b ∈ [b_min, b_max], and
-				// b_min = b_max = 0 is permitted). k is already in
-				// [0, m) from Step 2, so:
-				q := new(big.Int).Add(k, l)
-				// (q − 1)/2: the Sophie-Germain half. Odd by invariant (3).
-				qHalf := new(big.Int).Rsh(new(big.Int).Sub(q, one), 1)
-
-				// Step 4: T(q) and T((q−1)/2). The paper specifies an
-				// abstract primality test T — we use a two-stage:
-				//   (i)  ProbablyPrime(0) = BPSW (trial division on a
-				//        fixed small-prime list + base-2 Miller-Rabin +
-				//        Lucas test). Cheapest reliable filter.
-				//   (ii) ProbablyPrime(N) for the FIPS-derived count N,
-				//        for the formal 4^{-N} soundness bound.
-				if q.ProbablyPrime(0) && qHalf.ProbablyPrime(0) &&
-					q.ProbablyPrime(checks) && qHalf.ProbablyPrime(pChecks) {
-					// Step 5 (Figure 6): output q.
-					out, err := set.FromBytesBE(q.Bytes())
+				// ───────────────────────────────────────────────
+				// Step 1 (Figure 6): χ ←$ (Z/mZ)*.
+				// ───────────────────────────────────────────────
+				// Rejection sampling: draw uniformly from [0, m) and accept
+				// when the sample is a unit. Acceptance rate is φ(m)/m,
+				// dominated by φ(Π)/Π in our setup (≈ 0.16 for nPi ≈ 175).
+				var chi *big.Int
+				for {
+					c, err := crand.Int(prng, m)
 					if err != nil {
-						return errs.Wrap(err).WithMessage("cannot convert prime to structure")
+						return errs.Wrap(err).WithMessage("failed to sample χ")
 					}
-					// Race-safe single-result delivery.
-					select {
-					case <-ctx.Done():
-					case results <- out:
-						cancel()
+					if c.Sign() == 0 {
+						continue
 					}
-					return nil
+					if new(big.Int).GCD(nil, nil, c, m).Cmp(one) != 0 {
+						continue
+					}
+					chi = c
+					break
 				}
 
-				// Step 4(a): k ← a·k (mod m).
-				// Step 4(b): jump to Step 3 (top of this for-loop).
-				//
-				// Why this preserves the invariants:
-				//   • mod p_i: a ∈ QR(p_i), so multiplying preserves the
-				//     QNR-ness of k mod p_i.
-				//   • mod 4: a ≡ 1 (mod 4), so k stays ≡ 3 (mod 4).
-				k.Mul(k, a)
+				// ───────────────────────────────────────────────
+				// Step 2 (Figure 6): k ← 4·u·χ² + 3m' (mod m).
+				// ───────────────────────────────────────────────
+				// Residue analysis of the resulting k:
+				//   • mod p_i (odd, p_i | Π):
+				//       4·u·χ² ≡ 4·(QNR)·(QR) ≡ QNR (mod p_i)  [4 is a QR mod any odd p]
+				//       3m'    ≡ 0           (since p_i | m and 4 | m, p_i | m', so p_i | 3m')
+				//     ⇒ k ≡ QNR (mod p_i) — the property that makes (q−1)/2
+				//       automatically coprime to Π.
+				//   • mod 4:
+				//       4·u·χ² ≡ 0
+				//       3m'    ≡ 3·1 = 3   (m' ≡ 1 mod 4 by setup)
+				//     ⇒ k ≡ 3 (mod 4) — the property that makes q ≡ 3 (mod 4)
+				//       once we add l ≡ 0 (mod 4) in Step 3.
+				k := new(big.Int).Mul(chi, chi)
+				k.Mul(k, u)
+				k.Lsh(k, 2) // ×4
+				k.Add(k, threeMPrime)
 				k.Mod(k, m)
+
+				// ───────────────────────────────────────────────
+				// Steps 3–4 (Figure 6): candidate construction,
+				// primality tests, and recycling — bounded to
+				// maxOrbitIter for the small-bits liveness reason
+				// noted above. On bound-hit we fall through to the
+				// outer loop and resample χ.
+				// ───────────────────────────────────────────────
+				for range maxOrbitIter {
+					// Cooperative cancel: another worker may have already won.
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+
+					// Step 3: q ← [(k − t) mod m] + t + l.
+					// We use t = 0 (a valid choice — see Section 2 of the
+					// paper, where t = bΠ for b ∈ [b_min, b_max], and
+					// b_min = b_max = 0 is permitted). k is already in
+					// [0, m) from Step 2, so:
+					q := new(big.Int).Add(k, l)
+					// (q − 1)/2: the Sophie-Germain half. Odd by invariant (3).
+					qHalf := new(big.Int).Rsh(new(big.Int).Sub(q, one), 1)
+
+					// Step 4: T(q) and T((q−1)/2). The paper specifies an
+					// abstract primality test T — we use a two-stage:
+					//   (i)  ProbablyPrime(0) = BPSW (trial division on a
+					//        fixed small-prime list + base-2 Miller-Rabin +
+					//        Lucas test). Cheapest reliable filter.
+					//   (ii) ProbablyPrime(N) for the FIPS-derived count N,
+					//        for the formal 4^{-N} soundness bound.
+					if q.ProbablyPrime(0) && qHalf.ProbablyPrime(0) &&
+						q.ProbablyPrime(checks) && qHalf.ProbablyPrime(pChecks) {
+						// Step 5 (Figure 6): output q.
+						out, err := set.FromBytesBE(q.Bytes())
+						if err != nil {
+							return errs.Wrap(err).WithMessage("cannot convert prime to structure")
+						}
+						// Race-safe single-result delivery.
+						select {
+						case <-ctx.Done():
+						case results <- out:
+							cancel()
+						}
+						return nil
+					}
+
+					// Step 4(a): k ← a·k (mod m).
+					// Step 4(b): jump to Step 3 (top of this for-loop).
+					//
+					// Why this preserves the invariants:
+					//   • mod p_i: a ∈ QR(p_i), so multiplying preserves the
+					//     QNR-ness of k mod p_i.
+					//   • mod 4: a ≡ 1 (mod 4), so k stays ≡ 3 (mod 4).
+					k.Mul(k, a)
+					k.Mod(k, m)
+				}
+				// Bound hit — orbit of this χ did not yield a safe prime.
+				// Fall through to the outer loop to draw a fresh χ.
 			}
 		})
 	}

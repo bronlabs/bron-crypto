@@ -320,7 +320,7 @@ func computeJoyeParams(bits uint) (*joyeParams, error) {
 	// u with u ≡ n_i (mod p_i) for every i.
 	u := big.NewInt(0)
 	mod := big.NewInt(1) // running CRT modulus (= Π_{j<i} p_j)
-	for i := 0; i < nPi; i++ {
+	for i := range nPi {
 		p := big.NewInt(smallPrimes[i])
 		n := smallestQNRmod(smallPrimes[i])
 		if n == 0 {

@@ -1,3 +1,4 @@
+//nolint:testpackage // to access computeJoyeParams
 package nt
 
 import (
