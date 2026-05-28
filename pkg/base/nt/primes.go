@@ -249,11 +249,13 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	l := params.l
 	mPrime := params.mPrime
 	a := params.a
+	pi := params.pi
+	bMaxPlusOne := new(big.Int).SetUint64(params.bMax + 1)
 
 	// Miller-Rabin iteration counts (FIPS 186-derived): q has `bits` bits,
 	// (q−1)/2 has `bits-1`.
 	checks := MillerRabinChecks(bits)
-	pChecks := MillerRabinChecks(bits - 1)
+	halfChecks := MillerRabinChecks(bits - 1)
 
 	// 3·m' — additive constant used in Step 2 of Figure 6. Precomputed
 	// because it's identical for every worker and every χ.
@@ -340,11 +342,67 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 				k.Mod(k, m)
 
 				// ───────────────────────────────────────────────
+				// Random-b shift (§2.1): t ← b·Π, b ←$ [0, bMax].
+				// ───────────────────────────────────────────────
+				// §2.1 introduces a per-call random b ∈ {b_min, …, b_max}
+				// with t = b·Π. The union of all per-call output windows
+				// then covers ≈ (1 − ε) of [q_min, q_max], where ε is §2's
+				// quality parameter ("a typical value is 10⁻³").
+				//
+				// Derivation of ε. The coverage of [q_min, q_max] under the
+				// random-b scheme is
+				//
+				//   Coverage = (w + bMax)·Π.
+				//
+				// bMax = ⌊(2^bits − l − m) / Π⌋, so writing the floor
+				// remainder as r ∈ [0, Π) we get bMax·Π = 2^bits − l − m − r,
+				// hence
+				//
+				//   Coverage = m + bMax·Π = 2^bits − l − r.
+				//
+				// l overshoots q_min = 2^(bits-1) by δ_l ∈ [0, 4·Π) (v is
+				// rounded up to the next multiple of 4 in setup step (C);
+				// see joyepaillier.go). So writing l = 2^(bits-1) + δ_l:
+				//
+				//   ε = 1 − Coverage/(q_max − q_min)
+				//     = (δ_l + r) / 2^(bits-1)
+				//     < 5·Π / 2^(bits-1).
+				//
+				// Setup picks Π as the longest smallPrimes-prefix with
+				// Π ≤ 2^(bits−11). For large enough bits the prefix can
+				// pack close to the cap, so Π ≈ 2^(bits−11) and
+				//
+				//   ε ≲ 5 · 2^(bits−11) / 2^(bits-1) = 5·2⁻¹⁰ ≈ 5·10⁻³,
+				//
+				// in the order of magnitude of the paper's recommended 10⁻³.
+				// At very small bits the prefix can't fill the cap; Π and
+				// ε both shrink correspondingly.
+				//
+				// b is fixed for the entire recycling orbit below — same
+				// scoping as Fig. 3 of §2.1.
+				bRand, err := crand.Int(prng, bMaxPlusOne)
+				if err != nil {
+					return errs.Wrap(err).WithMessage("failed to sample b")
+				}
+				// t MUST be sampled per call (per outer χ-resample here),
+				// NOT precomputed once at setup. Setup-fixed t would pin
+				// every safe prime from this process into the same single
+				// m-wide window of size ≈ wResidue·Π ≈ 12·2^(bits−11), which
+				// is only ≈ 12·2⁻¹⁰ ≈ 1.2% of [q_min, q_max] — dropping ~10
+				// bits of position entropy and giving every output modulus
+				// an observable upper-bit fingerprint. §2.1's prose ("t
+				// varying as a random multiple of Π, instead of fixing it")
+				// and its modified (P1) numerator (b_max − b_min + 1)·Π
+				// both require per-call b for the algorithm's coverage
+				// analysis to hold.
+				t := new(big.Int).Mul(bRand, pi)
+
+				// ───────────────────────────────────────────────
 				// Steps 3–4 (Figure 6): candidate construction,
 				// primality tests, and recycling — bounded to
 				// maxOrbitIter for the small-bits liveness reason
 				// noted above. On bound-hit we fall through to the
-				// outer loop and resample χ.
+				// outer loop and resample (χ, b).
 				// ───────────────────────────────────────────────
 				for range maxOrbitIter {
 					// Cooperative cancel: another worker may have already won.
@@ -355,11 +413,16 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 					}
 
 					// Step 3: q ← [(k − t) mod m] + t + l.
-					// We use t = 0 (a valid choice — see Section 2 of the
-					// paper, where t = bΠ for b ∈ [b_min, b_max], and
-					// b_min = b_max = 0 is permitted). k is already in
-					// [0, m) from Step 2, so:
-					q := new(big.Int).Add(k, l)
+					// Writing it in the paper's form (rather than the
+					// equivalent k + t + l) keeps q mod 4 independent of t:
+					//   ((k − t) mod m + t + l) mod 4 = (k + l) mod 4
+					// since 4 | m. With k ≡ 3 (mod 4) and l ≡ 0 (mod 4),
+					// q ≡ 3 (mod 4) for every b — no constraint on b's
+					// residue needed.
+					q := new(big.Int).Sub(k, t)
+					q.Mod(q, m)
+					q.Add(q, t)
+					q.Add(q, l)
 					// (q − 1)/2: the Sophie-Germain half. Odd by invariant (3).
 					qHalf := new(big.Int).Rsh(new(big.Int).Sub(q, one), 1)
 
@@ -371,7 +434,7 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 					//   (ii) ProbablyPrime(N) for the FIPS-derived count N,
 					//        for the formal 4^{-N} soundness bound.
 					if q.ProbablyPrime(0) && qHalf.ProbablyPrime(0) &&
-						q.ProbablyPrime(checks) && qHalf.ProbablyPrime(pChecks) {
+						q.ProbablyPrime(checks) && qHalf.ProbablyPrime(halfChecks) {
 						// Step 5 (Figure 6): output q.
 						out, err := set.FromBytesBE(q.Bytes())
 						if err != nil {

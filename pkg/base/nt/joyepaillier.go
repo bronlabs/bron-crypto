@@ -164,11 +164,12 @@ var (
 // immutable once computed and may be shared across goroutines.
 type joyeParams struct {
 	pi     *big.Int // Π — product of the first nPi entries of smallPrimes
-	m      *big.Int // m = w·Π, with m ≡ 4 (mod 16)
+	m      *big.Int // m = w·Π, with m ≡ 4 (mod 16) and w = wResidue ∈ {4, 12}
 	mPrime *big.Int // m' = m/4 (so m' is odd, m' ≡ 1 (mod 4), 3m' ≡ 3 (mod 4))
-	l      *big.Int // l = v·Π, with l ≥ 2^(bits-1), l+m ≤ 2^bits, and 4 | l
+	l      *big.Int // l = v·Π, with l ≥ 2^(bits-1), l+m+bMax·Π ≤ 2^bits, and 4 | l
 	u      *big.Int // simultaneous QNR mod every p_i | Π, lifted to Z*_m
 	a      *big.Int // a ∈ QR(m) AND a ≡ 1 (mod 4)
+	bMax   uint64   // §2.1 random-b scheme: per call, sample b ∈ [0, bMax], set t = b·Π
 	nPi    int      // number of small primes used to build Π (diagnostic)
 }
 
@@ -208,15 +209,18 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 	}
 
 	// ──────────────────────────────────────────────────────────────────────
-	// (A) Pick Π — Section 2, Property (P4) of Fig. 1.
+	// (A) Pick Π — Section 2, Property (P4) of Fig. 1; quality parameter
+	// ε from §2 ("a typical value is 10⁻³").
 	// ──────────────────────────────────────────────────────────────────────
-	// (P4) asks for φ(Π)/Π to be as small as possible: every odd prime
-	// folded into Π eliminates one rejection class from the candidate
-	// stream. The hard cap is geometric — we need 2^(bits-1) ≥ 16·Π so
-	// that, after the mod-16 rounding of w below (residue ∈ {4, 12}),
-	// w remains positive. Π ≤ 2^(bits-5) gives that bound with a couple
-	// of bits of margin.
-	target := new(big.Int).Lsh(one, bits-5)
+	// (P4) asks for φ(Π)/Π to be as small as possible, which means folding
+	// in as many small odd primes as fit. The geometric bound on Π is set
+	// by the §2.1 random-b scheme: we want the per-Π granularity of the
+	// t = b·Π shift to be small enough that the union of shifted orbit
+	// windows covers ≈ (1 − ε) · (q_max − q_min) of [q_min, q_max].
+	// Π ≤ 2^(bits−11) yields ε ≈ 2⁻¹⁰ ≈ 10⁻³ (matching the paper's
+	// recommendation) while still admitting nearly the full small-prime
+	// prefix at cryptographic bit lengths.
+	target := new(big.Int).Lsh(one, bits-11)
 	pi := big.NewInt(1)
 	nPi := 0
 	for _, p := range smallPrimes {
@@ -235,49 +239,30 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 	fullRange := new(big.Int).Lsh(one, bits)   // q_max + 1 = 2^bits
 
 	// ──────────────────────────────────────────────────────────────────────
-	// (B) Pick w and derive m = w·Π — Section 2.1 + Section 4.2.
+	// (B) Pick w and derive m = w·Π — Section 4.2's m ≡ 4 (mod 16) trick.
 	// ──────────────────────────────────────────────────────────────────────
-	// Properties (P1) and (P3) of Fig. 1 jointly require w·Π + (l-overshoot)
-	// to fit inside (q_max - q_min). The l overshoot is bounded by 4·Π
-	// (from rounding v up to a multiple of 4 in step (C) below), so
+	// Section 4.2's safe-prime extension needs q ≡ 3 (mod 4) so that
+	// (q−1)/2 is odd. The Step 2 construction k = 4uχ² + 3m' achieves
+	// k ≡ 3 (mod 4) iff 3m' ≡ 3 (mod 4) iff m' ≡ 1 (mod 4) iff m ≡ 4 (mod 16).
+	// So we force w·Π ≡ 4 (mod 16); since Π is odd this fixes
+	// w ≡ 4·Π⁻¹ (mod 16). The smallest representative is wResidue ∈ {4, 12}
+	// — both have 2-adic valuation exactly 2 (τ = 2, the smallest
+	// acceptable choice in the paper's m' = m/2^τ).
 	//
-	//     m ≤ 2^(bits-1) − 4·Π.
-	//
-	// Section 4.2's safe-prime extension adds: q must satisfy q ≡ 3 (mod 4)
-	// so that (q−1)/2 is odd. The Step 2 construction k = 4uχ² + 3m' (Fig. 6)
-	// achieves k ≡ 3 (mod 4) iff 3m' ≡ 3 (mod 4) iff m' ≡ 1 (mod 4)
-	// iff m ≡ 4 (mod 16). So we force w·Π ≡ 4 (mod 16).
-	//
-	// Since Π is odd, this is solved by picking w ≡ 4·Π⁻¹ (mod 16). With
-	// Π odd, Π⁻¹ mod 16 is odd, hence 4·Π⁻¹ mod 16 ∈ {4, 12} — both have
-	// 2-adic valuation exactly 2, giving τ = 2 (the smallest acceptable
-	// choice in the paper's m' = m/2^τ).
-	mMax := new(big.Int).Sub(halfRange, new(big.Int).Lsh(pi, 2))
-	if mMax.Sign() <= 0 {
-		return nil, ErrFailed.WithMessage("internal: Π too large after selection (shouldn't happen)")
-	}
-	wTarget := new(big.Int).Div(mMax, pi)
-
+	// In the §2.1 random-b scheme we want m small (so the rest of
+	// [q_min, q_max] is reserved for t = b·Π shifts; cf. §2.1 modified (P1)
+	// where the random-b range substitutes for a large w). So we pick
+	// w = wResidue (the minimum) rather than maximising w.
 	piMod16 := new(big.Int).Mod(pi, sixteen).Int64()
 	piInv16 := modInverseSmall(piMod16, 16)
 	if piInv16 == 0 {
 		return nil, ErrFailed.WithMessage("Π is not coprime to 16 (impossible — Π is odd)")
 	}
-	wResidue := (4 * piInv16) % 16 // ∈ {4, 12}; encodes 4·Π⁻¹ mod 16
+	wResidue := (4 * piInv16) % 16 // ∈ {4, 12}
 
-	// Round wTarget DOWN to the largest integer ≤ wTarget that is
-	// ≡ wResidue (mod 16). This preserves w·Π ≡ 4 (mod 16).
-	w := new(big.Int).Set(wTarget)
-	w.Sub(w, new(big.Int).Mod(w, sixteen)) // largest multiple of 16 ≤ wTarget
-	w.Add(w, big.NewInt(wResidue))
-	if w.Cmp(wTarget) > 0 { // overshot — step down by one mod-16 period
-		w.Sub(w, sixteen)
-	}
-	if w.Sign() <= 0 {
-		return nil, ErrInvalidArgument.WithMessage("bits too small for selected Π")
-	}
+	w := big.NewInt(wResidue)
 	m := new(big.Int).Mul(w, pi)
-	mPrime := new(big.Int).Rsh(m, 2) // m' = m/4 (since m ≡ 4 mod 16, m is divisible by 4)
+	mPrime := new(big.Int).Rsh(m, 2) // m' = m/4
 
 	// Defensive sanity check on the τ = 2 invariant.
 	if new(big.Int).Mod(m, sixteen).Int64() != 4 {
@@ -285,18 +270,18 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 	}
 
 	// ──────────────────────────────────────────────────────────────────────
-	// (C) Pick v and derive l = v·Π — Section 2.1, Properties (P2)/(P3).
+	// (C) Pick v, derive l = v·Π, and compute bMax — Properties (P2)/(P3)
+	// modified for random b (cf. §2.1).
 	// ──────────────────────────────────────────────────────────────────────
-	// (P2): v·Π + t ≥ q_min. We use t = 0 throughout, so the constraint
-	//       reduces to l ≥ 2^(bits-1).
-	// (P3): (v+w)·Π + t − 1 ≤ q_max. With t = 0 and our m, this becomes
-	//       l + m ≤ 2^bits, which we ensured at step (B) by choosing
-	//       m ≤ 2^(bits-1) − 4Π.
+	// (P2) modified: v·Π + b_min·Π ≥ q_min. We take b_min = 0, so l ≥ q_min.
+	// (P3) modified: (v + w + b_max)·Π − 1 ≤ q_max. Equivalently,
+	//                l + m + bMax·Π ≤ 2^bits, giving the bMax derivation
+	//                below.
 	//
-	// Extra constraint (Section 4.2 corollary, not numbered in the paper):
-	// q = (k mod m) + l, and k ≡ 3 (mod 4) by construction. For
-	// q ≡ 3 (mod 4) we need l ≡ 0 (mod 4). Since Π is odd, this forces
-	// 4 | v.
+	// Step 4 of Fig. 6 yields q with q mod 4 = (k + l) mod 4 (the t
+	// contribution cancels in the (k − t) mod m + t form because 4 | m).
+	// k ≡ 3 (mod 4) by Step 2, so l ≡ 0 (mod 4) ⇒ q ≡ 3 (mod 4). With Π
+	// odd this forces 4 | v.
 	v := new(big.Int).Div(halfRange, pi)
 	if rem := new(big.Int).Mod(halfRange, pi); rem.Sign() != 0 {
 		v.Add(v, one) // ⌈q_min / Π⌉ — smallest v with v·Π ≥ q_min
@@ -305,9 +290,22 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 		v.Add(v, big.NewInt(4-vMod4)) // round v up to a multiple of 4
 	}
 	l := new(big.Int).Mul(v, pi)
-	if new(big.Int).Add(l, m).Cmp(fullRange) > 0 {
+
+	// bMax such that l + m + bMax·Π ≤ 2^bits (cf. modified (P3)). With
+	// l ≈ 2^(bits−1) and m = wResidue·Π ≈ 12·2^(bits−11), this gives
+	// bMax ≈ 2^10 = 1024 random-b values per call — i.e. the §2.1 random
+	// b-shift covers the rest of [q_min, q_max] down to ε ≈ Π/2^(bits−1)
+	// ≈ 10⁻³.
+	bMaxBig := new(big.Int).Sub(fullRange, l)
+	bMaxBig.Sub(bMaxBig, m)
+	bMaxBig.Div(bMaxBig, pi)
+	if bMaxBig.Sign() < 0 {
 		return nil, ErrFailed.WithMessage("internal: l + m exceeds 2^bits (shouldn't happen)")
 	}
+	if !bMaxBig.IsUint64() {
+		return nil, ErrFailed.WithMessage("internal: bMax overflows uint64")
+	}
+	bMax := bMaxBig.Uint64()
 
 	// ──────────────────────────────────────────────────────────────────────
 	// (D) Build u via CRT — Section 4.2, Equation (3).
@@ -393,6 +391,7 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 		u:      u,
 		nPi:    nPi,
 		a:      a,
+		bMax:   bMax,
 	}, nil
 }
 
