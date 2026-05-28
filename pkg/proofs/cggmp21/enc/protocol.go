@@ -9,118 +9,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
-
-const (
-	// Name identifies the CGGMP21 Paillier encryption-in-range sigma protocol.
-	Name sigma.Name = "CGGMP21_PAILLIER_ENCRYPTION_IN_RANGE"
-
-	// challengeBitsLength is a 128-bit challenge domain. This fixes the
-	// soundness target for this implementation rather than using the curve-order
-	// challenge domain from CGGMP21 Figure 11.
-	challengeBitsLength  = 1 << base.ComputationalSecurityLog2Ceil
-	challengeBytesLength = challengeBitsLength / 8
-	specialSoundness     = 2
-)
-
-// Statement is the common input K, a Paillier ciphertext whose plaintext is
-// claimed to be in the configured signed range.
-type Statement struct {
-	K *paillier.Ciphertext `cbor:"K"`
-}
-
-// NewStatement constructs a Paillier encryption-in-range statement.
-func NewStatement(k *paillier.Ciphertext) (*Statement, error) {
-	if k == nil {
-		return nil, ErrInvalidArgument.WithMessage("K must not be nil")
-	}
-	return &Statement{K: k}, nil
-}
-
-// Bytes serialises the statement for transcript binding.
-func (s *Statement) Bytes() []byte {
-	if s == nil || s.K == nil {
-		return nil
-	}
-	out := []byte{}
-	return sliceutils.AppendLengthPrefixed(out, s.K.Bytes())
-}
-
-// Witness is the prover's secret opening (k, rho) for K = Enc(k; rho).
-type Witness struct {
-	K   *paillier.Plaintext `cbor:"k"`
-	Rho *paillier.Nonce     `cbor:"rho"`
-}
-
-// NewWitness constructs a Paillier encryption-in-range witness.
-func NewWitness(k *paillier.Plaintext, rho *paillier.Nonce) (*Witness, error) {
-	if k == nil || rho == nil {
-		return nil, ErrInvalidArgument.WithMessage("k and rho must not be nil")
-	}
-	return &Witness{K: k, Rho: rho}, nil
-}
-
-// Bytes serialises the witness. Witness bytes are not appended to public
-// transcripts by the sigma runners, but the interface requires a stable encoding.
-func (w *Witness) Bytes() []byte {
-	if w == nil || w.K == nil || w.Rho == nil {
-		return nil
-	}
-	out := []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, w.K.Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, w.Rho.Bytes())
-	return out
-}
-
-// Commitment is the prover's first message (S, A, C) from CGGMP21 Figure 11.
-type Commitment struct {
-	S *intcom.Commitment   `cbor:"S"`
-	A *paillier.Ciphertext `cbor:"A"`
-	C *intcom.Commitment   `cbor:"C"`
-}
-
-// Bytes serialises the commitment for transcript binding.
-func (c *Commitment) Bytes() []byte {
-	if c == nil || c.S == nil || c.A == nil || c.C == nil {
-		return nil
-	}
-	out := []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, c.S.Value().Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, c.A.Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, c.C.Value().Bytes())
-	return out
-}
-
-// State stores the prover's sampled alpha, mu, r, and gamma between rounds.
-type State struct {
-	Alpha *paillier.Plaintext `cbor:"alpha"`
-	Mu    *intcom.Witness     `cbor:"mu"`
-	R     *paillier.Nonce     `cbor:"r"`
-	Gamma *intcom.Witness     `cbor:"gamma"`
-}
-
-// Response is the prover's final message (z1, z2, z3).
-type Response struct {
-	Z1 *paillier.Plaintext `cbor:"z1"`
-	Z2 *paillier.Nonce     `cbor:"z2"`
-	Z3 *intcom.Witness     `cbor:"z3"`
-}
-
-// Bytes serialises the response for transcript binding.
-func (r *Response) Bytes() []byte {
-	if r == nil || r.Z1 == nil || r.Z2 == nil || r.Z3 == nil {
-		return nil
-	}
-	out := []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, r.Z1.Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, r.Z2.Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, r.Z3.Value().Bytes())
-	return out
-}
 
 // Protocol implements CGGMP21 Figure 11, Paillier Encryption in Range ZK.
 type Protocol[EK paillier.EncryptionKey[EK]] struct {
@@ -210,7 +102,7 @@ func (p *Protocol[EK]) ComputeProverCommitment(statement *Statement, witness *Wi
 		return nil, nil, errs.Wrap(err).WithMessage("invalid statement or witness")
 	}
 
-	kMessage, err := intcom.NewMessage(witness.K.Normalise())
+	kMessage, err := intcom.NewMessage(witness.k.Normalise())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create k commitment message")
 	}
@@ -260,16 +152,13 @@ func (p *Protocol[EK]) ComputeProverCommitment(statement *Statement, witness *Wi
 		return nil, nil, errs.Wrap(err).WithMessage("could not compute C")
 	}
 
-	commitment := &Commitment{
-		S: s,
-		A: a,
-		C: c,
+	commitment, err := NewCommitment(s, a, c)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create commitment")
 	}
-	state := &State{
-		Alpha: alphaPlaintext,
-		Mu:    mu,
-		R:     r,
-		Gamma: gamma,
+	state, err := NewState(alphaPlaintext, mu, r, gamma)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create state")
 	}
 	return commitment, state, nil
 }
@@ -278,95 +167,80 @@ func (p *Protocol[EK]) ComputeProverCommitment(statement *Statement, witness *Wi
 func (p *Protocol[EK]) ComputeProverResponse(
 	statement *Statement,
 	witness *Witness,
-	commitment *Commitment,
+	_ *Commitment,
 	state *State,
 	challenge sigma.ChallengeBytes,
 ) (*Response, error) {
 	if err := p.ValidateStatement(statement, witness); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid statement or witness")
 	}
-	if commitment == nil || commitment.S == nil || commitment.A == nil || commitment.C == nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid commitment")
-	}
-	if state == nil || state.Alpha == nil || state.Mu == nil || state.R == nil || state.Gamma == nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid state")
-	}
 	eInt, err := p.mapChallenge(challenge)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid challenge")
 	}
 
-	z1 := state.Alpha.Normalise().Add(eInt.Mul(witness.K.Normalise()))
+	z1 := state.alpha.Normalise().Add(eInt.Mul(witness.k.Normalise()))
 	z1Plaintext, err := intToPlaintext(z1, p.paillierKey)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create z1 plaintext")
 	}
-	rhoE, err := p.paillierKey.NonceScalarOp(witness.Rho, eInt)
+	rhoE, err := p.paillierKey.NonceScalarOp(witness.rho, eInt)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute rho^e")
 	}
-	z2, err := p.paillierKey.NonceOp(state.R, rhoE)
+	z2, err := p.paillierKey.NonceOp(state.r, rhoE)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute z2")
 	}
-	z3, err := intcom.NewWitness(state.Gamma.Value().Add(eInt.Mul(state.Mu.Value())))
+	z3, err := intcom.NewWitness(state.gamma.Value().Add(eInt.Mul(state.mu.Value())))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create z3")
 	}
 
-	return &Response{
-		Z1: z1Plaintext,
-		Z2: z2,
-		Z3: z3,
-	}, nil
+	response, err := NewResponse(z1Plaintext, z2, z3)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create response")
+	}
+	return response, nil
 }
 
 // Verify checks the two Figure 11 equality checks and the widened response range.
 func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
-	if statement == nil || statement.K == nil || statement.K.Value() == nil {
-		return ErrInvalidArgument.WithMessage("invalid statement")
-	}
-	if commitment == nil || commitment.S == nil || commitment.A == nil || commitment.C == nil {
-		return ErrInvalidArgument.WithMessage("invalid commitment")
-	}
-	if response == nil || response.Z1 == nil || response.Z2 == nil || response.Z3 == nil {
-		return ErrInvalidArgument.WithMessage("invalid response")
-	}
 	e, err := p.mapChallenge(challenge)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("invalid challenge")
 	}
-	if !p.paillierKey.CiphertextGroup().Contains(statement.K.Value()) {
+	if !p.paillierKey.CiphertextGroup().Contains(statement.k.Value()) {
 		return ErrVerificationFailed.WithMessage("K is not in the ciphertext group")
 	}
-	if !p.paillierKey.CiphertextGroup().Contains(commitment.A.Value()) {
+	if !p.paillierKey.CiphertextGroup().Contains(commitment.a.Value()) {
 		return ErrVerificationFailed.WithMessage("A is not in the ciphertext group")
 	}
-	if !p.paillierKey.PlaintextGroup().Contains(response.Z1.Value()) {
+	if !p.paillierKey.PlaintextGroup().Contains(response.z1.Value()) {
 		return ErrVerificationFailed.WithMessage("z1 is not in the plaintext group")
 	}
-	if !p.paillierKey.NonceGroup().Contains(response.Z2.Value()) {
+	if !p.paillierKey.NonceGroup().Contains(response.z2.Value()) {
 		return ErrVerificationFailed.WithMessage("z2 is not in the nonce group")
 	}
-	if !p.ringPedersenKey.CommitmentGroup().Contains(commitment.S.Value()) ||
-		!p.ringPedersenKey.CommitmentGroup().Contains(commitment.C.Value()) {
+	if !p.ringPedersenKey.CommitmentGroup().Contains(commitment.s.Value()) ||
+		!p.ringPedersenKey.CommitmentGroup().Contains(commitment.c.Value()) {
 
 		return ErrVerificationFailed.WithMessage("Pedersen commitments are not in the commitment group")
 	}
 
-	z1 := response.Z1.Normalise()
+	z1 := response.z1.Normalise()
 	if !inSignedBitRange(z1, p.rangeBits+p.slackBits) {
 		return ErrVerificationFailed.WithMessage("z1 is out of range")
 	}
-	leftCiphertext, err := p.paillierKey.EncryptWithNonce(response.Z1, response.Z2)
+	leftCiphertext, err := p.paillierKey.EncryptWithNonce(response.z1, response.z2)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute Paillier equality left side")
 	}
-	ke, err := p.paillierKey.CiphertextScalarOp(statement.K, e)
+	ke, err := p.paillierKey.CiphertextScalarOp(statement.k, e)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute K^e")
 	}
-	rightCiphertext, err := p.paillierKey.CiphertextOp(commitment.A, ke)
+	rightCiphertext, err := p.paillierKey.CiphertextOp(commitment.a, ke)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute Paillier equality right side")
 	}
@@ -378,15 +252,15 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not create z1 commitment message")
 	}
-	leftCommitment, err := p.ringPedersenKey.CommitWithWitness(z1Message, response.Z3)
+	leftCommitment, err := p.ringPedersenKey.CommitWithWitness(z1Message, response.z3)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute Pedersen equality left side")
 	}
-	se, err := p.ringPedersenKey.CommitmentScalarOp(commitment.S, e)
+	se, err := p.ringPedersenKey.CommitmentScalarOp(commitment.s, e)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute S^e")
 	}
-	rightCommitment, err := p.ringPedersenKey.CommitmentOp(commitment.C, se)
+	rightCommitment, err := p.ringPedersenKey.CommitmentOp(commitment.c, se)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute Pedersen equality right side")
 	}
@@ -399,14 +273,11 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 
 // RunSimulator creates a simulated accepting transcript for the supplied challenge.
 func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
-	if statement == nil || statement.K == nil || statement.K.Value() == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
-	}
 	e, err := p.mapChallenge(challenge)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid challenge")
 	}
-	if !p.paillierKey.CiphertextGroup().Contains(statement.K.Value()) {
+	if !p.paillierKey.CiphertextGroup().Contains(statement.k.Value()) {
 		return nil, nil, ErrInvalidArgument.WithMessage("K is not in the ciphertext group")
 	}
 
@@ -452,7 +323,7 @@ func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.Challe
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not encrypt z1")
 	}
-	kNegE, err := p.paillierKey.CiphertextScalarOp(statement.K, e.Neg())
+	kNegE, err := p.paillierKey.CiphertextScalarOp(statement.k, e.Neg())
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not compute K^-e")
 	}
@@ -478,15 +349,15 @@ func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.Challe
 		return nil, nil, errs.Wrap(err).WithMessage("could not compute C")
 	}
 
-	return &Commitment{
-			S: s,
-			A: a,
-			C: c,
-		}, &Response{
-			Z1: z1Plaintext,
-			Z2: z2,
-			Z3: z3Witness,
-		}, nil
+	commitment, err := NewCommitment(s, a, c)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create commitment")
+	}
+	response, err := NewResponse(z1Plaintext, z2, z3Witness)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create response")
+	}
+	return commitment, response, nil
 }
 
 // SpecialSoundness returns the protocol special soundness parameter.
@@ -506,29 +377,23 @@ func (*Protocol[EK]) GetChallengeBytesLength() int {
 
 // ValidateStatement checks that witness opens the statement and lies in the configured range.
 func (p *Protocol[EK]) ValidateStatement(statement *Statement, witness *Witness) error {
-	if statement == nil || statement.K == nil || statement.K.Value() == nil {
-		return ErrInvalidArgument.WithMessage("invalid statement")
-	}
-	if witness == nil || witness.K == nil || witness.Rho == nil || witness.K.Value() == nil || witness.Rho.Value() == nil {
-		return ErrInvalidArgument.WithMessage("invalid witness")
-	}
-	if !p.paillierKey.CiphertextGroup().Contains(statement.K.Value()) {
+	if !p.paillierKey.CiphertextGroup().Contains(statement.k.Value()) {
 		return ErrValidationFailed.WithMessage("K is not in the ciphertext group")
 	}
-	if !p.paillierKey.PlaintextGroup().Contains(witness.K.Value()) {
+	if !p.paillierKey.PlaintextGroup().Contains(witness.k.Value()) {
 		return ErrValidationFailed.WithMessage("k is not in the plaintext group")
 	}
-	if !p.paillierKey.NonceGroup().Contains(witness.Rho.Value()) {
+	if !p.paillierKey.NonceGroup().Contains(witness.rho.Value()) {
 		return ErrValidationFailed.WithMessage("rho is not in the nonce group")
 	}
-	if !inSignedBitRange(witness.K.Normalise(), p.rangeBits) {
+	if !inSignedBitRange(witness.k.Normalise(), p.rangeBits) {
 		return ErrValidationFailed.WithMessage("k is out of range")
 	}
-	kCheck, err := p.paillierKey.EncryptWithNonce(witness.K, witness.Rho)
+	kCheck, err := p.paillierKey.EncryptWithNonce(witness.k, witness.rho)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not recompute K")
 	}
-	if !statement.K.Equal(kCheck) {
+	if !statement.k.Equal(kCheck) {
 		return ErrValidationFailed.WithMessage("witness does not open K")
 	}
 	return nil

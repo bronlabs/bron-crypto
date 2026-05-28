@@ -33,11 +33,6 @@ type Witness[W sigma.Witness] struct {
 	v W
 }
 
-// Bytes returns the canonical byte representation of the composed witness.
-func (w Witness[W]) Bytes() []byte {
-	return w.v.Bytes()
-}
-
 func NewWitness[W sigma.Witness](witness W) Witness[W] {
 	return Witness[W]{witness}
 }
