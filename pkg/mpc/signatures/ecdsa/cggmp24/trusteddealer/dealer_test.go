@@ -3,6 +3,7 @@ package trusteddealer_test
 import (
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp24/trusteddealer"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -10,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp24/trusteddealer"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 )
 
