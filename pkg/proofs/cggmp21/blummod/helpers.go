@@ -11,10 +11,7 @@ import (
 )
 
 func validateWitness(statement *Statement, witness *Witness) error {
-	if witness == nil || witness.SecretKey == nil {
-		return ErrInvalidArgument.WithMessage("witness secret key must not be nil")
-	}
-	if !witness.SecretKey.Group().N().Equal(statement.PublicKey.Group().N()) {
+	if !witness.secretKey.Group().N().Equal(statement.publicKey.Group().N()) {
 		return ErrValidationFailed.WithMessage("witness secret key does not match protocol Paillier modulus")
 	}
 	return nil
@@ -33,16 +30,6 @@ func minusOne(publicKey *paillier.PublicKey) (*paillier.Nonce, error) {
 		return nil, errs.Wrap(err).WithMessage("could not create -1 nonce")
 	}
 	return nonce, nil
-}
-
-func validateStatementPublicKey(statement *Statement) error {
-	if statement == nil || statement.PublicKey == nil {
-		return ErrInvalidArgument.WithMessage("statement public key must not be nil")
-	}
-	if err := validatePublicModulus(statement.PublicKey.Group().N()); err != nil {
-		return errs.Wrap(err).WithMessage("invalid Paillier modulus")
-	}
-	return nil
 }
 
 func validatePublicModulus(n *num.NatPlus) error {
@@ -66,10 +53,7 @@ func validatePublicModulus(n *num.NatPlus) error {
 }
 
 func rsaGroupFromWitness(witness *Witness) (*znstar.RSAGroupKnownOrder, error) {
-	if witness == nil || witness.SecretKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("witness secret key must not be nil")
-	}
-	arithmetic := witness.SecretKey.Group().Arithmetic().CrtModN
+	arithmetic := witness.secretKey.Group().Arithmetic().CrtModN
 	p, err := num.NPlus().FromNatCT(arithmetic.Params.PNat)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not convert p")

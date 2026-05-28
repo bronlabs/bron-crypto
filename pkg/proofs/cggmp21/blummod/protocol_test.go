@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/blummod"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
@@ -65,6 +66,74 @@ func TestNonInteractiveFiatShamirHappyPath(t *testing.T) {
 	verifierBytes, err := ctxs[verifierID].Transcript().ExtractBytes("sigma", 32)
 	require.NoError(t, err)
 	require.Equal(t, proverBytes, verifierBytes)
+}
+
+func TestConstructorsRejectNilInputs(t *testing.T) {
+	t.Parallel()
+
+	statement, err := blummod.NewStatement(nil)
+	require.Error(t, err)
+	require.Nil(t, statement)
+
+	witness, err := blummod.NewWitness(nil)
+	require.Error(t, err)
+	require.Nil(t, witness)
+
+	commitment, err := blummod.NewCommitment(nil)
+	require.Error(t, err)
+	require.Nil(t, commitment)
+
+	state, err := blummod.NewState(nil)
+	require.Error(t, err)
+	require.Nil(t, state)
+
+	item, err := blummod.NewResponseItem(nil, 0, 0, nil)
+	require.Error(t, err)
+	require.Nil(t, item)
+
+	response, err := blummod.NewResponse()
+	require.Error(t, err)
+	require.Nil(t, response)
+}
+
+func TestCBORRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	sk, err := paillier.SampleBlumSecretKey(testKeyLen, prng)
+	require.NoError(t, err)
+
+	statement, err := blummod.NewStatement(sk.Public())
+	require.NoError(t, err)
+	witness, err := blummod.NewWitness(sk)
+	require.NoError(t, err)
+	protocol, err := blummod.NewProtocol(prng)
+	require.NoError(t, err)
+
+	roundTrippedStatement := ntu.CBORRoundTrip(t, statement)
+	require.Equal(t, statement.Bytes(), roundTrippedStatement.Bytes())
+
+	commitment, state, err := protocol.ComputeProverCommitment(roundTrippedStatement, witness)
+	require.NoError(t, err)
+	roundTrippedCommitment := ntu.CBORRoundTrip(t, commitment)
+	require.Equal(t, commitment.Bytes(), roundTrippedCommitment.Bytes())
+	roundTrippedState := ntu.CBORRoundTrip(t, state)
+
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = prng.Read(challenge)
+	require.NoError(t, err)
+	response, err := protocol.ComputeProverResponse(
+		roundTrippedStatement,
+		witness,
+		roundTrippedCommitment,
+		roundTrippedState,
+		challenge,
+	)
+	require.NoError(t, err)
+
+	roundTrippedResponse := ntu.CBORRoundTrip(t, response)
+	require.Equal(t, response.Bytes(), roundTrippedResponse.Bytes())
+	require.NoError(t, protocol.Verify(roundTrippedStatement, roundTrippedCommitment, challenge, roundTrippedResponse))
 }
 
 func TestValidateStatementRejectsMismatchedWitnessKey(t *testing.T) {
