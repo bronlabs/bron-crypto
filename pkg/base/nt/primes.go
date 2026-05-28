@@ -190,97 +190,7 @@ func GenerateBlumPrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 	return p, q, nil
 }
 
-// GenerateSafePrime samples a safe prime p of the requested bit length, i.e.
-// p = 2p' + 1 with p' (the "Sophie Germain" prime) also prime. Safe primes
-// are the building block for RSA moduli with a strong algebraic structure:
-// when N = pq is a product of two safe primes, the subgroup of quadratic
-// residues QR_N has prime order p'q' (no small factors), which makes the
-// subgroup cyclic of prime order, rules out small-subgroup attacks, and
-// makes a random QR overwhelmingly a generator. The CGGMP21 ring-Pedersen
-// parameters (N̂, s, t) and the Π^{prm} soundness argument both rely on
-// this structural guarantee.
-//
-// Implementation: every safe prime p > 7 satisfies p ≡ 11 (mod 12), equivalently
-// the Sophie-Germain prime q = (p-1)/2 ≡ 5 (mod 6). Candidates are drawn
-// directly from that residue class — skipping the two most common trial-division
-// rejections (divisibility by 2 and 3) — and the primality checks on q and p
-// are interleaved via a cheap BPSW pass first so a candidate where q is prime
-// but p is composite (or vice versa) is rejected before paying the full
-// Miller-Rabin iteration count on either side.
-func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
-	if set == nil {
-		return *new(E), ErrIsNil.WithMessage("nil structure")
-	}
-	if bits < 4 {
-		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 4-bits")
-	}
-	// Sample k uniformly so that q = 6k+5 lies in [2^(bits-2), 2^(bits-1)),
-	// making p = 2q+1 fall in [2^(bits-1), 2^bits) — exactly `bits` bits.
-	one := big.NewInt(1)
-	five := big.NewInt(5)
-	six := big.NewInt(6)
-	lo := new(big.Int).Sub(new(big.Int).Lsh(one, bits-2), five)
-	hi := new(big.Int).Sub(new(big.Int).Lsh(one, bits-1), five)
-	kMin := new(big.Int).Add(new(big.Int).Sub(lo, one), six)
-	kMin.Div(kMin, six)
-	kMax := new(big.Int).Div(hi, six)
-	rangeLen := new(big.Int).Add(new(big.Int).Sub(kMax, kMin), one)
-	qChecks := MillerRabinChecks(bits - 1)
-	pChecks := MillerRabinChecks(bits)
-
-	workers := runtime.GOMAXPROCS(0)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	g, ctx := errgroup.WithContext(ctx)
-	results := make(chan E, 1)
-	defer close(results)
-
-	for range workers {
-		g.Go(func() error {
-			for {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				default:
-					k, err := crand.Int(prng, rangeLen)
-					if err != nil {
-						return errs.Wrap(err).WithMessage("failed to sample random element")
-					}
-					k.Add(k, kMin)
-					q := new(big.Int).Add(new(big.Int).Mul(k, six), five)
-					p := new(big.Int).Add(new(big.Int).Lsh(q, 1), one)
-					// Interleaved BPSW (trial division + 1 Miller-Rabin + Lucas) on each side
-					// before paying the full Miller-Rabin iteration count.
-					// This works because ~75% of composite candidates die after a single check.
-					if !q.ProbablyPrime(0) || !p.ProbablyPrime(0) {
-						continue
-					}
-					if !q.ProbablyPrime(qChecks) || !p.ProbablyPrime(pChecks) {
-						continue
-					}
-					out, err := set.FromBytesBE(p.Bytes())
-					if err != nil {
-						return errs.Wrap(err).WithMessage("cannot convert prime to structure")
-					}
-					select {
-					case <-ctx.Done():
-					case results <- out:
-						cancel()
-					}
-				}
-			}
-		})
-	}
-	// when channel is full, len(results) == cap(results).
-	// This happens when a worker succeeds, but another one fails during crand.Int or FromBytesBE.
-	// In this case, we'll ignore the error and return the successfully generated prime.
-	if err := g.Wait(); err != nil && !errs.Is(err, context.Canceled) && len(results) != cap(results) {
-		return *new(E), errs.Wrap(err).WithMessage("failed to generate safe prime")
-	}
-	return <-results, nil
-}
-
-// GenerateSafePrimeJoye implements the safe-prime generation algorithm of
+// GenerateSafePrime implements the safe-prime generation algorithm of
 // Joye and Paillier, "Fast Generation of Prime Numbers on Portable Devices:
 // An Update" (CHES 2006), Figure 6. The implementation here is a parallel
 // adaptation: GOMAXPROCS workers each draw an independent χ and walk
@@ -313,7 +223,7 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 // IMPORTANT: prng must be safe for concurrent use (e.g. crypto/rand.Reader).
 // Workers call crand.Int(prng, …) concurrently — a single-threaded PRNG
 // like *pcg.Pcg will race.
-func GenerateSafePrimeJoye[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
+func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
 	}
