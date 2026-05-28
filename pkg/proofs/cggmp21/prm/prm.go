@@ -2,13 +2,13 @@ package prm
 
 import (
 	"encoding/binary"
-	"io"
 
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -27,28 +27,54 @@ const (
 // The public input in Figure 13 is the Pedersen parameter tuple (N, s, t).
 // This implementation carries it as an intcom commitment key.
 type Statement struct {
-	CommitmentKey *intcom.CommitmentKey
+	commitmentKey *intcom.CommitmentKey
+}
+
+type statementDTO struct {
+	CommitmentKey *intcom.CommitmentKey `cbor:"commitmentKey"`
 }
 
 // NewStatement constructs a Pedersen parameters statement.
 func NewStatement(commitmentKey *intcom.CommitmentKey) (*Statement, error) {
-	statement := &Statement{CommitmentKey: commitmentKey}
-	if err := validateStatement(statement); err != nil {
+	if err := validateCommitmentKey(commitmentKey); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid statement")
 	}
-	return statement, nil
+	return &Statement{commitmentKey: commitmentKey}, nil
+}
+
+// MarshalCBOR serialises the statement to CBOR format.
+func (s *Statement) MarshalCBOR() ([]byte, error) {
+	dto := &statementDTO{
+		CommitmentKey: s.commitmentKey,
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal statement to CBOR")
+	}
+	return out, nil
+}
+
+// UnmarshalCBOR deserialises the statement from CBOR format.
+func (s *Statement) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*statementDTO](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal statement from CBOR")
+	}
+	if dto == nil {
+		return ErrInvalidArgument.WithMessage("statement DTO must not be nil")
+	}
+	statement, err := NewStatement(dto.CommitmentKey)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("invalid statement data")
+	}
+	*s = *statement
+	return nil
 }
 
 // Bytes serialises the statement for transcript binding.
 func (s *Statement) Bytes() []byte {
-	if s == nil || s.CommitmentKey == nil {
-		return nil
-	}
-	ss := s.CommitmentKey.S()
-	t := s.CommitmentKey.T()
-	if ss == nil || t == nil {
-		return nil
-	}
+	ss := s.commitmentKey.S()
+	t := s.commitmentKey.T()
 
 	out := []byte{}
 	out = sliceutils.AppendLengthPrefixed(out, ss.Group().Modulus().Bytes())
@@ -59,7 +85,7 @@ func (s *Statement) Bytes() []byte {
 
 // Witness contains the Pedersen parameters trapdoor.
 type Witness struct {
-	TrapdoorKey *intcom.TrapdoorKey
+	trapdoorKey *intcom.TrapdoorKey
 }
 
 // NewWitness constructs a Pedersen parameters witness.
@@ -67,280 +93,192 @@ func NewWitness(trapdoorKey *intcom.TrapdoorKey) (*Witness, error) {
 	if trapdoorKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("trapdoorKey must not be nil")
 	}
-	return &Witness{TrapdoorKey: trapdoorKey}, nil
-}
-
-// Bytes serialises the witness.
-func (w *Witness) Bytes() []byte {
-	if w == nil || w.TrapdoorKey == nil || w.TrapdoorKey.Lambda() == nil {
-		return nil
+	if trapdoorKey.Group() == nil {
+		return nil, ErrInvalidArgument.WithMessage("trapdoor group must not be nil")
 	}
-	group := w.TrapdoorKey.Group()
-	if group == nil {
-		return nil
+	if trapdoorKey.Lambda() == nil {
+		return nil, ErrInvalidArgument.WithMessage("lambda must not be nil")
 	}
-
-	out := []byte{}
-	out = sliceutils.AppendLengthPrefixed(out, group.Modulus().Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, w.TrapdoorKey.Lambda().Bytes())
-	return out
+	if trapdoorKey.S() == nil || trapdoorKey.T() == nil {
+		return nil, ErrInvalidArgument.WithMessage("trapdoor public parameters must not be nil")
+	}
+	return &Witness{trapdoorKey: trapdoorKey}, nil
 }
 
 // Commitment holds the prover's first-round values.
 type Commitment struct {
+	a [m]*znstar.RSAGroupElementUnknownOrder
+}
+
+type commitmentDTO struct {
 	A [m]*znstar.RSAGroupElementUnknownOrder `cbor:"a"`
+}
+
+// NewCommitment constructs a Pedersen parameters commitment.
+func NewCommitment(a ...*znstar.RSAGroupElementUnknownOrder) (*Commitment, error) {
+	if len(a) != m {
+		return nil, ErrInvalidArgument.WithMessage("commitment must contain %d elements", m)
+	}
+	out := &Commitment{}
+	for i, item := range a {
+		if item == nil {
+			return nil, ErrInvalidArgument.WithMessage("commitment element %d must not be nil", i)
+		}
+		out.a[i] = item
+	}
+	return out, nil
+}
+
+// MarshalCBOR serialises the commitment to CBOR format.
+func (c *Commitment) MarshalCBOR() ([]byte, error) {
+	dto := &commitmentDTO{
+		A: c.a,
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal commitment to CBOR")
+	}
+	return out, nil
+}
+
+// UnmarshalCBOR deserialises the commitment from CBOR format.
+func (c *Commitment) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*commitmentDTO](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal commitment from CBOR")
+	}
+	if dto == nil {
+		return ErrInvalidArgument.WithMessage("commitment DTO must not be nil")
+	}
+	commitment, err := NewCommitment(dto.A[:]...)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("invalid commitment data")
+	}
+	*c = *commitment
+	return nil
 }
 
 // Bytes serialises the commitment for transcript binding.
 func (c *Commitment) Bytes() []byte {
-	if c == nil {
-		return nil
-	}
-
-	out := binary.LittleEndian.AppendUint64(nil, uint64(len(c.A)))
-	for _, a := range &c.A {
-		var aBytes []byte
-		if a != nil {
-			aBytes = a.Bytes()
-		}
-		out = sliceutils.AppendLengthPrefixed(out, aBytes)
+	out := binary.LittleEndian.AppendUint64(nil, uint64(len(c.a)))
+	for _, a := range &c.a {
+		out = sliceutils.AppendLengthPrefixed(out, a.Bytes())
 	}
 	return out
 }
 
 // State stores the prover's internal randomness between rounds.
 type State struct {
-	Alpha [m]*num.Uint
+	alpha [m]*num.Uint
+}
+
+type stateDTO struct {
+	Alpha [m]*num.Uint `cbor:"alpha"`
+}
+
+// NewState constructs prover state retained between sigma rounds.
+func NewState(alpha ...*num.Uint) (*State, error) {
+	if len(alpha) != m {
+		return nil, ErrInvalidArgument.WithMessage("state must contain %d alpha values", m)
+	}
+	out := &State{}
+	for i, item := range alpha {
+		if item == nil {
+			return nil, ErrInvalidArgument.WithMessage("state alpha %d must not be nil", i)
+		}
+		out.alpha[i] = item
+	}
+	return out, nil
+}
+
+// MarshalCBOR serialises the state to CBOR format. The output contains prover
+// state and must not be sent to the verifier.
+func (s *State) MarshalCBOR() ([]byte, error) {
+	dto := &stateDTO{
+		Alpha: s.alpha,
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal state to CBOR")
+	}
+	return out, nil
+}
+
+// UnmarshalCBOR deserialises the state from CBOR format.
+func (s *State) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*stateDTO](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal state from CBOR")
+	}
+	if dto == nil {
+		return ErrInvalidArgument.WithMessage("state DTO must not be nil")
+	}
+	state, err := NewState(dto.Alpha[:]...)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("invalid state data")
+	}
+	*s = *state
+	return nil
 }
 
 // Response holds the prover responses.
 type Response struct {
+	z [m]*num.Int
+}
+
+type responseDTO struct {
 	Z [m]*num.Int `cbor:"z"`
+}
+
+// NewResponse constructs a Pedersen parameters response.
+func NewResponse(z ...*num.Int) (*Response, error) {
+	if len(z) != m {
+		return nil, ErrInvalidArgument.WithMessage("response must contain %d values", m)
+	}
+	out := &Response{}
+	for i, item := range z {
+		if item == nil {
+			return nil, ErrInvalidArgument.WithMessage("response z %d must not be nil", i)
+		}
+		out.z[i] = item
+	}
+	return out, nil
+}
+
+// MarshalCBOR serialises the response to CBOR format.
+func (r *Response) MarshalCBOR() ([]byte, error) {
+	dto := &responseDTO{
+		Z: r.z,
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal response to CBOR")
+	}
+	return out, nil
+}
+
+// UnmarshalCBOR deserialises the response from CBOR format.
+func (r *Response) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*responseDTO](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("could not unmarshal response from CBOR")
+	}
+	if dto == nil {
+		return ErrInvalidArgument.WithMessage("response DTO must not be nil")
+	}
+	response, err := NewResponse(dto.Z[:]...)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("invalid response data")
+	}
+	*r = *response
+	return nil
 }
 
 // Bytes serialises the response for transcript binding.
 func (r *Response) Bytes() []byte {
-	if r == nil {
-		return nil
-	}
-
-	out := binary.LittleEndian.AppendUint64(nil, uint64(len(r.Z)))
-	for _, z := range &r.Z {
-		var zBytes []byte
-		if z != nil {
-			zBytes = z.TwosComplementBytesBE()
-		}
-		out = sliceutils.AppendLengthPrefixed(out, zBytes)
+	out := binary.LittleEndian.AppendUint64(nil, uint64(len(r.z)))
+	for _, z := range &r.z {
+		out = sliceutils.AppendLengthPrefixed(out, z.TwosComplementBytesBE())
 	}
 	return out
-}
-
-// Protocol implements the CGGMP21 Pedersen parameters proof.
-type Protocol struct {
-	prng io.Reader
-}
-
-// NewProtocol constructs a CGGMP21 Pedersen parameters proof instance.
-func NewProtocol(prng io.Reader) (*Protocol, error) {
-	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("prng must not be nil")
-	}
-	return &Protocol{prng: prng}, nil
-}
-
-// Name returns the protocol identifier.
-func (*Protocol) Name() sigma.Name {
-	return Name
-}
-
-// ComputeProverCommitment generates the first prover message.
-func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
-	if err := p.ValidateStatement(statement, witness); err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("invalid statement or witness")
-	}
-
-	t, err := witness.TrapdoorKey.T().LearnOrder(witness.TrapdoorKey.Group())
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not learn t order")
-	}
-	phi, err := phiFromGroup(witness.TrapdoorKey.Group())
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not compute phi(N)")
-	}
-	zPhi, err := num.NewZMod(phi)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not create Z/phi(N)Z")
-	}
-
-	commitment := &Commitment{}
-	state := &State{}
-	for i := range &commitment.A {
-		alpha, err := zPhi.Random(p.prng)
-		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("could not sample alpha")
-		}
-		commitment.A[i] = t.Exp(alpha.Nat()).ForgetOrder()
-		state.Alpha[i] = alpha
-	}
-	return commitment, state, nil
-}
-
-// ComputeProverResponse generates the prover response for a fixed challenge.
-func (p *Protocol) ComputeProverResponse(
-	statement *Statement,
-	witness *Witness,
-	commitment *Commitment,
-	state *State,
-	challenge sigma.ChallengeBytes,
-) (*Response, error) {
-	if err := p.ValidateStatement(statement, witness); err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid statement or witness")
-	}
-	if err := validateCommitment(statement, commitment); err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid commitment")
-	}
-	if state == nil {
-		return nil, ErrInvalidArgument.WithMessage("state must not be nil")
-	}
-	if len(challenge) != challengeBytes {
-		return nil, ErrInvalidArgument.WithMessage("invalid challenge length")
-	}
-
-	t, err := witness.TrapdoorKey.T().LearnOrder(witness.TrapdoorKey.Group())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not learn t order")
-	}
-	phi, err := phiFromGroup(witness.TrapdoorKey.Group())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not compute phi(N)")
-	}
-	lambda := witness.TrapdoorKey.Lambda().Lift().Mod(phi)
-
-	response := &Response{}
-	for i := range &response.Z {
-		alpha := state.Alpha[i]
-		if alpha == nil {
-			return nil, ErrInvalidArgument.WithMessage("state alpha is nil")
-		}
-		if !alpha.Modulus().Equal(phi) {
-			return nil, ErrValidationFailed.WithMessage("state alpha has wrong modulus")
-		}
-		expected := t.Exp(alpha.Nat()).ForgetOrder()
-		if !expected.Equal(commitment.A[i]) {
-			return nil, ErrValidationFailed.WithMessage("commitment and state mismatch")
-		}
-
-		if challengeBit(challenge, i) != 0 {
-			response.Z[i] = alpha.Add(lambda).Lift()
-		} else {
-			response.Z[i] = alpha.Lift()
-		}
-	}
-	return response, nil
-}
-
-// Verify checks a prover response against the statement and commitment.
-func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
-	if err := validateStatement(statement); err != nil {
-		return errs.Wrap(err).WithMessage("invalid statement")
-	}
-	if err := validateCommitment(statement, commitment); err != nil {
-		return errs.Wrap(err).WithMessage("invalid commitment")
-	}
-	if response == nil {
-		return ErrInvalidArgument.WithMessage("response must not be nil")
-	}
-	if len(challenge) != challengeBytes {
-		return ErrInvalidArgument.WithMessage("invalid challenge length")
-	}
-
-	s := statement.CommitmentKey.S()
-	t := statement.CommitmentKey.T()
-	n := statement.CommitmentKey.Group().Modulus().Nat()
-	for i, z := range &response.Z {
-		if z == nil {
-			return ErrVerificationFailed.WithMessage("response z is nil")
-		}
-		// Honest responses satisfy z < phi(N) < N, and simulator responses are
-		// smaller; reject huge parsed exponents before modular exponentiation.
-		if !z.Abs().IsLessThanOrEqual(n) {
-			return ErrVerificationFailed.WithMessage("response z is out of range")
-		}
-
-		lhs := t.ExpI(z)
-		rhs := commitment.A[i]
-		if challengeBit(challenge, i) == 1 {
-			rhs = rhs.Mul(s)
-		}
-		if !lhs.Equal(rhs) {
-			return ErrVerificationFailed.WithMessage("response does not satisfy verification equation")
-		}
-	}
-	return nil
-}
-
-// RunSimulator creates an honest-verifier simulated transcript for a fixed challenge.
-func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
-	if err := validateStatement(statement); err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("invalid statement")
-	}
-	if len(challenge) != challengeBytes {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid challenge length")
-	}
-
-	sInv, err := statement.CommitmentKey.S().TryInv()
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("could not invert s")
-	}
-	t := statement.CommitmentKey.T()
-	n := statement.CommitmentKey.Group().Modulus()
-	low, high := symmetricModulusRange(n)
-
-	commitment := &Commitment{}
-	response := &Response{}
-	for i := range &commitment.A {
-		z, err := num.Z().Random(low, high, p.prng)
-		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("could not sample simulator response")
-		}
-		a := t.ExpI(z)
-		if challengeBit(challenge, i) == 1 {
-			a = a.Mul(sInv)
-		}
-
-		commitment.A[i] = a
-		response.Z[i] = z
-	}
-	return commitment, response, nil
-}
-
-// SpecialSoundness returns the protocol extraction parameter.
-func (*Protocol) SpecialSoundness() uint {
-	return 2
-}
-
-// SoundnessError returns the statistical soundness error in bits.
-func (*Protocol) SoundnessError() uint {
-	return m
-}
-
-// GetChallengeBytesLength returns the challenge size in bytes.
-func (*Protocol) GetChallengeBytesLength() int {
-	return challengeBytes
-}
-
-// ValidateStatement checks that the public parameters are well-formed and that
-// the witness trapdoor key matches them.
-func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error {
-	if err := validateStatement(statement); err != nil {
-		return errs.Wrap(err).WithMessage("invalid statement")
-	}
-	if err := validateWitness(statement, witness); err != nil {
-		return errs.Wrap(err).WithMessage("invalid witness")
-	}
-	return nil
-}
-
-func challengeBit(challenge sigma.ChallengeBytes, i int) uint8 {
-	return (challenge[i/8] >> uint(i%8)) & 1
 }

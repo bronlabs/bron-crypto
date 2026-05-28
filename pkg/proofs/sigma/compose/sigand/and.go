@@ -29,12 +29,6 @@ var _ sigma.Statement = (Statement[sigma.Statement])(nil)
 // Every witness must be valid for its corresponding statement in AND composition.
 type Witness[W sigma.Witness] []W
 
-func (w Witness[W]) Bytes() []byte {
-	ws := sliceutils.Map(w, func(in W) []byte { return in.Bytes() })
-	out := []byte{}
-	return sliceutils.AppendLengthPrefixedSlices(out, ws...)
-}
-
 var _ sigma.Witness = (Witness[sigma.Witness])(nil)
 
 // Commitment represents the prover's commitments for all branches in AND composition.

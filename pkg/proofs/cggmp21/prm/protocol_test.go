@@ -8,10 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/prm"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
@@ -59,6 +62,89 @@ func TestNonInteractiveFiatShamirHappyPath(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestConstructorsRejectInvalidInputs(t *testing.T) {
+	t.Parallel()
+
+	statement, err := prm.NewStatement(nil)
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, statement)
+
+	witness, err := prm.NewWitness(nil)
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, witness)
+
+	commitment, err := prm.NewCommitment()
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, commitment)
+
+	protocol, err := prm.NewProtocol(pcg.NewRandomised())
+	require.NoError(t, err)
+	itemCount := protocol.GetChallengeBytesLength() * 8
+
+	commitmentItems := make([]*znstar.RSAGroupElementUnknownOrder, itemCount)
+	commitment, err = prm.NewCommitment(commitmentItems...)
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, commitment)
+
+	state, err := prm.NewState()
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, state)
+
+	stateItems := make([]*num.Uint, itemCount)
+	state, err = prm.NewState(stateItems...)
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, state)
+
+	response, err := prm.NewResponse()
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, response)
+
+	responseItems := make([]*num.Int, itemCount)
+	response, err = prm.NewResponse(responseItems...)
+	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.Nil(t, response)
+}
+
+func TestCBORRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	trapdoorKey, err := intcom.SampleTrapdoorKey(testKeyLen, prng)
+	require.NoError(t, err)
+
+	statement, err := prm.NewStatement(trapdoorKey.Export())
+	require.NoError(t, err)
+	witness, err := prm.NewWitness(trapdoorKey)
+	require.NoError(t, err)
+	protocol, err := prm.NewProtocol(prng)
+	require.NoError(t, err)
+
+	roundTrippedStatement := ntu.CBORRoundTrip(t, statement)
+	require.Equal(t, statement.Bytes(), roundTrippedStatement.Bytes())
+
+	commitment, state, err := protocol.ComputeProverCommitment(roundTrippedStatement, witness)
+	require.NoError(t, err)
+	roundTrippedCommitment := ntu.CBORRoundTrip(t, commitment)
+	require.Equal(t, commitment.Bytes(), roundTrippedCommitment.Bytes())
+	roundTrippedState := ntu.CBORRoundTrip(t, state)
+
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+	response, err := protocol.ComputeProverResponse(
+		roundTrippedStatement,
+		witness,
+		roundTrippedCommitment,
+		roundTrippedState,
+		challenge,
+	)
+	require.NoError(t, err)
+
+	roundTrippedResponse := ntu.CBORRoundTrip(t, response)
+	require.Equal(t, response.Bytes(), roundTrippedResponse.Bytes())
+	require.NoError(t, protocol.Verify(roundTrippedStatement, roundTrippedCommitment, challenge, roundTrippedResponse))
+}
+
 func TestSimulator(t *testing.T) {
 	t.Parallel()
 
@@ -97,23 +183,20 @@ func TestVerifyRejectsOutOfRangeResponse(t *testing.T) {
 	_, err = io.ReadFull(prng, challenge)
 	require.NoError(t, err)
 
-	commitment, response, err := protocol.RunSimulator(statement, challenge)
+	commitment, _, err := protocol.RunSimulator(statement, challenge)
 	require.NoError(t, err)
-	response.Z[0] = statement.CommitmentKey.Group().Modulus().Lift().Increment()
+
+	itemCount := protocol.GetChallengeBytesLength() * 8
+	zs := make([]*num.Int, itemCount)
+	zs[0] = trapdoorKey.Group().Modulus().Lift().Increment()
+	for i := 1; i < len(zs); i++ {
+		zs[i] = num.Z().FromInt64(0)
+	}
+	response, err := prm.NewResponse(zs...)
+	require.NoError(t, err)
 
 	err = protocol.Verify(statement, commitment, challenge, response)
-	require.Error(t, err)
-}
-
-func TestBytesToleratesMalformedPublicStructs(t *testing.T) {
-	t.Parallel()
-
-	require.NotPanics(t, func() {
-		require.Nil(t, (&prm.Statement{CommitmentKey: &intcom.CommitmentKey{}}).Bytes())
-	})
-	require.NotPanics(t, func() {
-		require.Nil(t, (&prm.Witness{TrapdoorKey: &intcom.TrapdoorKey{}}).Bytes())
-	})
+	require.ErrorIs(t, err, prm.ErrVerificationFailed)
 }
 
 func TestValidateStatementRejectsMismatchedWitness(t *testing.T) {

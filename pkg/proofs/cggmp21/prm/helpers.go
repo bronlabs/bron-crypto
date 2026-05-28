@@ -5,18 +5,22 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 )
 
-func validateStatement(statement *Statement) error {
-	if statement == nil || statement.CommitmentKey == nil {
+func validateCommitmentKey(commitmentKey *intcom.CommitmentKey) error {
+	if commitmentKey == nil {
 		return ErrInvalidArgument.WithMessage("commitment key must not be nil")
 	}
-	s := statement.CommitmentKey.S()
-	t := statement.CommitmentKey.T()
+	s := commitmentKey.S()
+	t := commitmentKey.T()
 	if s == nil || t == nil {
 		return ErrInvalidArgument.WithMessage("s and t must not be nil")
 	}
 	group := s.Group()
+	if group == nil || t.Group() == nil {
+		return ErrInvalidArgument.WithMessage("s and t groups must not be nil")
+	}
 	if !group.Contains(t) {
 		return ErrValidationFailed.WithMessage("s and t must belong to the same RSA group")
 	}
@@ -39,47 +43,29 @@ func validateStatement(statement *Statement) error {
 }
 
 func validateWitness(statement *Statement, witness *Witness) error {
-	if witness == nil || witness.TrapdoorKey == nil {
-		return ErrInvalidArgument.WithMessage("trapdoor key must not be nil")
-	}
-	if witness.TrapdoorKey.Group() == nil {
-		return ErrInvalidArgument.WithMessage("trapdoor group must not be nil")
-	}
-	if witness.TrapdoorKey.Lambda() == nil {
-		return ErrInvalidArgument.WithMessage("lambda must not be nil")
-	}
-	if witness.TrapdoorKey.S() == nil || witness.TrapdoorKey.T() == nil {
-		return ErrInvalidArgument.WithMessage("trapdoor public parameters must not be nil")
-	}
-	if !witness.TrapdoorKey.S().Equal(statement.CommitmentKey.S()) ||
-		!witness.TrapdoorKey.T().Equal(statement.CommitmentKey.T()) {
+	if !witness.trapdoorKey.S().Equal(statement.commitmentKey.S()) ||
+		!witness.trapdoorKey.T().Equal(statement.commitmentKey.T()) {
 
 		return ErrValidationFailed.WithMessage("trapdoor key does not match statement")
 	}
-	if !witness.TrapdoorKey.Group().Modulus().Equal(statement.CommitmentKey.Group().Modulus()) {
+	if !witness.trapdoorKey.Group().Modulus().Equal(statement.commitmentKey.Group().Modulus()) {
 		return ErrValidationFailed.WithMessage("trapdoor group does not match statement")
 	}
 
-	t, err := statement.CommitmentKey.T().LearnOrder(witness.TrapdoorKey.Group())
+	t, err := statement.commitmentKey.T().LearnOrder(witness.trapdoorKey.Group())
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not learn order of t")
 	}
-	expectedS := t.Exp(witness.TrapdoorKey.Lambda().Nat()).ForgetOrder()
-	if !expectedS.Equal(statement.CommitmentKey.S()) {
+	expectedS := t.Exp(witness.trapdoorKey.Lambda().Nat()).ForgetOrder()
+	if !expectedS.Equal(statement.commitmentKey.S()) {
 		return ErrValidationFailed.WithMessage("lambda does not open s relative to t")
 	}
 	return nil
 }
 
 func validateCommitment(statement *Statement, commitment *Commitment) error {
-	if commitment == nil {
-		return ErrInvalidArgument.WithMessage("commitment must not be nil")
-	}
-	group := statement.CommitmentKey.Group()
-	for _, a := range &commitment.A {
-		if a == nil {
-			return ErrInvalidArgument.WithMessage("commitment element must not be nil")
-		}
+	group := statement.commitmentKey.Group()
+	for _, a := range &commitment.a {
 		if !group.Contains(a) {
 			return ErrValidationFailed.WithMessage("commitment element is not in the statement group")
 		}
