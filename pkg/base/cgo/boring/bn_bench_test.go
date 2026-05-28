@@ -6,16 +6,17 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/cgo/boring"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/require"
 )
 
-func Benchmark_DhGen1024(b *testing.B) {
+func Benchmark_GenSafePrime1024(b *testing.B) {
 	const bits = 1024
 
 	for b.Loop() {
-		dh, err := boring.NewDiffieHellmanGroup().GenerateParameters(bits)
-		require.NoError(b, err)
-		_, err = dh.GetP()
+		bn := boring.NewBigNum()
+
+		_, err := bn.GenPrime(bits, ct.True)
 		require.NoError(b, err)
 	}
 }

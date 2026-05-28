@@ -1,7 +1,9 @@
 package nt
 
 import (
+	crand "crypto/rand"
 	"io"
+	"math/big"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -15,12 +17,10 @@ import (
 func Random[
 	S interface {
 		algebra.HemiRing[E]
-		One() E
-		Random(lowInclusive, highExclusive E, prng io.Reader) (E, error)
+		FromBig(*big.Int) (E, error)
 	},
 	E interface {
 		algebra.HemiRingElement[E]
-		algebra.LeftBitwiseShiftable[E]
 		*num.NatPlus | *num.Nat | *num.Uint
 	},
 ](structure S, bitlen uint, prng io.Reader) (E, error) {
@@ -30,12 +30,20 @@ func Random[
 	if bitlen == 0 {
 		return *new(E), ErrInvalidArgument.WithMessage("bitlen must be at least 1")
 	}
-	one := structure.One()
-	low := one.Lsh(bitlen - 1)
-	high := one.Lsh(bitlen)
-	out, err := structure.Random(low, high, prng)
+	if bitlen == 1 {
+		// only exact-1-bit value is 1
+		return structure.FromBig(big.NewInt(1))
+	}
+	half := new(big.Int).Lsh(big.NewInt(1), bitlen-1)
+	q, err := crand.Int(prng, half) // [0, 2^(bitlen-1))
 	if err != nil {
 		return *new(E), errs.Wrap(err).WithMessage("failed to sample random element")
+	}
+	q.Add(q, half) // shift into [2^(bitlen-1), 2^bitlen)
+	q.SetBit(q, int(bitlen-1), 1)
+	out, err := structure.FromBig(q)
+	if err != nil {
+		return *new(E), errs.Wrap(err).WithMessage("failed to convert random big.Int to element")
 	}
 	return out, nil
 }

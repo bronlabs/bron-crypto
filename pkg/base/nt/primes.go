@@ -1,11 +1,13 @@
 package nt
 
 import (
+	"context"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"io"
 	"maps"
 	"math/big"
+	"runtime"
 	"slices"
 
 	"golang.org/x/sync/errgroup"
@@ -197,33 +199,85 @@ func GenerateBlumPrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 // makes a random QR overwhelmingly a generator. The CGGMP21 ring-Pedersen
 // parameters (N̂, s, t) and the Π^{prm} soundness argument both rely on
 // this structural guarantee.
+//
+// Implementation: every safe prime p > 7 satisfies p ≡ 11 (mod 12), equivalently
+// the Sophie-Germain prime q = (p-1)/2 ≡ 5 (mod 6). Candidates are drawn
+// directly from that residue class — skipping the two most common trial-division
+// rejections (divisibility by 2 and 3) — and the primality checks on q and p
+// are interleaved via a cheap BPSW pass first so a candidate where q is prime
+// but p is composite (or vice versa) is rejected before paying the full
+// Miller-Rabin iteration count on either side.
 func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
 	}
-	if bits < 3 {
-		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 3-bits")
+	if bits < 4 {
+		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 4-bits")
 	}
-	checks := MillerRabinChecks(bits)
-	for {
-		pBig, err := crand.Prime(prng, int(bits)-1)
-		if err != nil {
-			return *new(E), errs.Wrap(err).WithMessage("reading from crand")
-		}
-		p, err := num.NPlus().FromBig(pBig)
-		if err != nil {
-			return *new(E), errs.Wrap(err).WithMessage("cannot convert prime to NatPlus")
-		}
-		p = p.Lsh(1).Add(num.NPlus().One())
-		if !p.Big().ProbablyPrime(checks) {
-			continue
-		}
-		out, err := set.FromBytesBE(p.Big().Bytes())
-		if err != nil {
-			return *new(E), errs.Wrap(err).WithMessage("cannot convert prime to structure")
-		}
-		return out, nil
+	// Sample k uniformly so that q = 6k+5 lies in [2^(bits-2), 2^(bits-1)),
+	// making p = 2q+1 fall in [2^(bits-1), 2^bits) — exactly `bits` bits.
+	one := big.NewInt(1)
+	five := big.NewInt(5)
+	six := big.NewInt(6)
+	lo := new(big.Int).Sub(new(big.Int).Lsh(one, bits-2), five)
+	hi := new(big.Int).Sub(new(big.Int).Lsh(one, bits-1), five)
+	kMin := new(big.Int).Add(new(big.Int).Sub(lo, one), six)
+	kMin.Div(kMin, six)
+	kMax := new(big.Int).Div(hi, six)
+	rangeLen := new(big.Int).Add(new(big.Int).Sub(kMax, kMin), one)
+	qChecks := MillerRabinChecks(bits - 1)
+	pChecks := MillerRabinChecks(bits)
+
+	workers := runtime.GOMAXPROCS(0)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	g, ctx := errgroup.WithContext(ctx)
+	results := make(chan E, 1)
+	defer close(results)
+
+	for range workers {
+		g.Go(func() error {
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+					k, err := crand.Int(prng, rangeLen)
+					if err != nil {
+						return errs.Wrap(err).WithMessage("failed to sample random element")
+					}
+					k.Add(k, kMin)
+					q := new(big.Int).Add(new(big.Int).Mul(k, six), five)
+					p := new(big.Int).Add(new(big.Int).Lsh(q, 1), one)
+					// Interleaved BPSW (trial division + 1 Miller-Rabin + Lucas) on each side
+					// before paying the full Miller-Rabin iteration count.
+					// This works because ~75% of composite candidates die after a single check.
+					if !q.ProbablyPrime(0) || !p.ProbablyPrime(0) {
+						continue
+					}
+					if !q.ProbablyPrime(qChecks) || !p.ProbablyPrime(pChecks) {
+						continue
+					}
+					out, err := set.FromBytesBE(p.Bytes())
+					if err != nil {
+						return errs.Wrap(err).WithMessage("cannot convert prime to structure")
+					}
+					select {
+					case <-ctx.Done():
+					case results <- out:
+						cancel()
+					}
+				}
+			}
+		})
 	}
+	// when channel is full, len(results) == cap(results).
+	// This happens when a worker succeeds, but another one fails during crand.Int or FromBytesBE.
+	// In this case, we'll ignore the error and return the successfully generated prime.
+	if err := g.Wait(); err != nil && !errs.Is(err, context.Canceled) && len(results) != cap(results) {
+		return *new(E), errs.Wrap(err).WithMessage("failed to generate safe prime")
+	}
+	return <-results, nil
 }
 
 // GenerateSafePrimePair samples two independent safe primes p, q of half the
@@ -235,8 +289,8 @@ func GenerateSafePrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 	if set == nil {
 		return *new(E), *new(E), ErrIsNil.WithMessage("nil structure")
 	}
-	if keyLen < 6 {
-		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 6-bits")
+	if keyLen < 8 {
+		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 8-bits")
 	}
 	p, q, err = generatePrimePair(GenerateSafePrime, set, keyLen, prng)
 	if err != nil {
