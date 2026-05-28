@@ -140,8 +140,8 @@ func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
 	}
-	if bits < 3 {
-		return *new(E), ErrInvalidArgument.WithMessage("blum prime size must be at least 3-bits")
+	if bits < 16 {
+		return *new(E), ErrInvalidArgument.WithMessage("blum prime size must be at least 16-bits")
 	}
 	params, err := joyeParamsFor(bits, prng)
 	if err != nil {
@@ -169,7 +169,7 @@ OUTER:
 		candidate.SetBytes(buf)
 		residue.Mod(candidate, params.pi)
 		tmp := new(big.Int)
-		for _, p := range smallPrimes[:params.nPi] {
+		for _, p := range (&smallPrimes)[:params.nPi] { // &smallPrimes is to avoid copying the 16376 bytes (gocritic linter)
 			if tmp.Mod(residue, big.NewInt(p)).Sign() == 0 {
 				continue OUTER
 			}
@@ -195,8 +195,8 @@ func GenerateBlumPrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 	if set == nil {
 		return *new(E), *new(E), ErrIsNil.WithMessage("nil structure")
 	}
-	if keyLen < 6 {
-		return *new(E), *new(E), ErrInvalidArgument.WithMessage("blum prime pair size must be at least 6-bits")
+	if keyLen < 32 {
+		return *new(E), *new(E), ErrInvalidArgument.WithMessage("blum prime pair size must be at least 32-bits")
 	}
 	p, q, err = generatePrimePair(GenerateBlumPrime, set, keyLen, prng)
 	if err != nil {
