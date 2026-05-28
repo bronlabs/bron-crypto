@@ -200,8 +200,8 @@ func joyeParamsFor(bits uint) (*joyeParams, error) {
 }
 
 func computeJoyeParams(bits uint) (*joyeParams, error) {
-	if bits < 128 {
-		return nil, ErrInvalidArgument.WithMessage("safe prime size must be at least 128-bits for Joye/Paillier")
+	if bits < 16 {
+		return nil, ErrInvalidArgument.WithMessage("safe prime size must be at least 16-bits for Joye/Paillier")
 	}
 
 	// ──────────────────────────────────────────────────────────────────────

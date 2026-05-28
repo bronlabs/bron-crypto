@@ -33,7 +33,7 @@ func Benchmark_GenerateBlumPrime(b *testing.B) {
 }
 
 func Benchmark_GenerateSafePrime(b *testing.B) {
-	for _, bits := range []uint{1024} {
+	for _, bits := range []uint{128, 512, 1024} {
 		b.Run(fmt.Sprintf("%d-bit", bits), func(b *testing.B) {
 			for b.Loop() {
 				_, err := nt.GenerateSafePrime(num.NPlus(), bits, crand.Reader)
@@ -44,7 +44,7 @@ func Benchmark_GenerateSafePrime(b *testing.B) {
 }
 
 func Benchmark_GenerateSafePrimePair(b *testing.B) {
-	for _, bits := range []uint{128, 512, 1024, 2048} {
+	for _, bits := range []uint{256, 1024, 2048} {
 		b.Run(fmt.Sprintf("%d-bit", bits), func(b *testing.B) {
 			for b.Loop() {
 				_, _, err := nt.GenerateSafePrimePair(num.NPlus(), bits, crand.Reader)

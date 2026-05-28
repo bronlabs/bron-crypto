@@ -227,8 +227,8 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
 	}
-	if bits < 128 {
-		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 128-bits for Joye/Paillier")
+	if bits < 16 {
+		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 16-bits for Joye/Paillier")
 	}
 
 	// ──────────────────────────────────────────────────────────────────────
@@ -419,8 +419,8 @@ func GenerateSafePrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 	if set == nil {
 		return *new(E), *new(E), ErrIsNil.WithMessage("nil structure")
 	}
-	if keyLen < 256 {
-		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 256-bits")
+	if keyLen < 32 {
+		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 32-bits")
 	}
 	p, q, err = generatePrimePair(GenerateSafePrime, set, keyLen, prng)
 	if err != nil {
@@ -433,6 +433,9 @@ func generatePrimePair[N algebra.NatPlusLike[N]](gen PrimeSampler[N], set PrimeS
 	var nilN N
 	if gen == nil || set == nil || prng == nil {
 		return nilN, nilN, ErrIsNil.WithMessage("gen/set/prng must not be nil")
+	}
+	if keyLen%2 != 0 {
+		return nilN, nilN, ErrInvalidArgument.WithMessage("keyLen must be even")
 	}
 	for _, pred := range predicates {
 		if pred == nil {

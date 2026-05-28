@@ -27,6 +27,10 @@ This package exposes a family of prime and prime-pair generators, each producing
 
 `MillerRabinChecks(bits)` returns the number of Miller-Rabin rounds appropriate for the requested bit length, targeting the standard false-acceptance bound for cryptographic primes. It's used internally by the prime generators and exposed for callers that run additional probable-primality checks.
 
+### Safe-prime generation
+
+`GenerateSafePrime` and `GenerateSafePrimePair` implement the parallelised safe-prime variant of Joye and Paillier (CHES 2006, §4.2 / Figure 6). Candidates are constructed so that both `q` and `(q−1)/2` are simultaneously coprime to a smooth modulus `Π = ∏ pᵢ` of small odd primes, eliminating per-candidate trial division. On rejection, the next candidate is obtained by multiplying an internal seed `k` by a fixed quadratic-residue `a ∈ QR(m)` with `a ≡ 1 (mod 4)`, which preserves every sieve invariant without resampling. The bit-length-dependent setup constants `(Π, m, m', l, u)` are derived once and cached per bit length; `Π` is chosen as the longest prefix of `smallPrimes` (`joyepaillier.go`) that fits the algorithm's geometric bound `Π ≤ 2^(bits−5)`. Expected primality tests scale as `(n · ln 2 · φ(Π)/Π)²` for an `n`-bit safe prime.
+
 ## Usage
 
 ```go
