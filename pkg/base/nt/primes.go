@@ -280,6 +280,226 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 	return <-results, nil
 }
 
+// GenerateSafePrimeJoye implements the safe-prime generation algorithm of
+// Joye and Paillier, "Fast Generation of Prime Numbers on Portable Devices:
+// An Update" (CHES 2006), Figure 6. The implementation here is a parallel
+// adaptation: GOMAXPROCS workers each draw an independent χ and walk
+// independent recycling orbits; the first worker to produce a safe prime
+// wins and the rest are cancelled.
+//
+// Algorithmic core (per Section 4.2 of the paper). Candidates have the form
+//
+//	q = (k mod m) + l        with k = 4·u·χ² + 3m' (mod m) initially,
+//	                              k ← a·k (mod m) after each rejection.
+//
+// Three structural invariants on q hold for every iteration:
+//
+//  1. q is coprime to Π. Reason: k ≡ a^j · u · χ² (mod Π); a ∈ QR(m) and χ²
+//     is a square, so q mod p_i ≡ (QR)·(QR)·u (mod p_i) is a QNR — in
+//     particular ≢ 0 (mod p_i). And l = v·Π contributes 0 mod p_i.
+//
+//  2. (q−1)/2 is coprime to Π. From (1) q is a QNR mod every odd p_i | Π,
+//     hence q ≢ 1 (mod p_i), hence p_i ∤ (q−1), hence p_i ∤ (q−1)/2.
+//
+//  3. (q−1)/2 is odd. From the construction, k ≡ 3 (mod 4) initially
+//     (4uχ² ≡ 0; 3m' ≡ 3 because m' ≡ 1 mod 4 by setup). The recycling
+//     k ← a·k preserves this because a ≡ 1 (mod 4). l ≡ 0 (mod 4) by
+//     setup. So q ≡ 3 (mod 4) and (q−1)/2 is odd.
+//
+// Together (1)–(3) guarantee both q and (q−1)/2 are coprime to 2Π by
+// construction — no per-candidate trial division is needed. Expected
+// primality-test count is ≈ (n · ln 2 · φ(Π)/Π)² for an n-bit safe prime.
+//
+// IMPORTANT: prng must be safe for concurrent use (e.g. crypto/rand.Reader).
+// Workers call crand.Int(prng, …) concurrently — a single-threaded PRNG
+// like *pcg.Pcg will race.
+func GenerateSafePrimeJoye[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
+	if set == nil {
+		return *new(E), ErrIsNil.WithMessage("nil structure")
+	}
+	if bits < 128 {
+		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 128-bits for Joye/Paillier")
+	}
+
+	// ──────────────────────────────────────────────────────────────────────
+	// Setup: bit-length-dependent constants (Π, m, m', l, u).
+	// ──────────────────────────────────────────────────────────────────────
+	// All five are derived from `bits` and cached across calls; see
+	// joyepaillier.go (computeJoyeParams) for the full derivation and the
+	// mapping to Section 2 / Section 4.2 of the paper.
+	params, err := joyeParamsFor(bits)
+	if err != nil {
+		return *new(E), errs.Wrap(err).WithMessage("failed to derive Joye-Paillier parameters")
+	}
+	m := params.m
+	u := params.u
+	l := params.l
+	mPrime := params.mPrime
+
+	// ──────────────────────────────────────────────────────────────────────
+	// Per-call constant a — Section 4.2, "the constant a is chosen in QR(m)".
+	// ──────────────────────────────────────────────────────────────────────
+	// We need a ∈ QR(m) AND a ≡ 1 (mod 4). Both are satisfied by sampling
+	// a random odd α coprime to m and squaring:
+	//   - α odd ⇒ α² ≡ 1 (mod 8) ⇒ a ≡ 1 (mod 4). ✓
+	//   - α ∈ Z*_m ⇒ α² ∈ Z*_m, and α² is automatically in QR(m). ✓
+	// We reject a = 1 (the orbit k_i = a^i · k_0 would be a fixed point —
+	// every iteration would test the same q).
+	var a *big.Int
+	for {
+		alpha, err := crand.Int(prng, m)
+		if err != nil {
+			return *new(E), errs.Wrap(err).WithMessage("failed to sample α")
+		}
+		if alpha.Sign() == 0 || alpha.Bit(0) == 0 {
+			continue // α = 0 or even — not in Z*_m (since 4 | m)
+		}
+		if new(big.Int).GCD(nil, nil, alpha, m).Cmp(one) != 0 {
+			continue // α shares a factor with Π or the odd part of w
+		}
+		a = new(big.Int).Mul(alpha, alpha)
+		a.Mod(a, m)
+		if a.Cmp(one) == 0 {
+			continue // degenerate: orbit would never move
+		}
+		break
+	}
+
+	// Miller-Rabin iteration counts (FIPS 186-derived): q has `bits` bits,
+	// (q−1)/2 has `bits-1`.
+	checks := MillerRabinChecks(bits)
+	pChecks := MillerRabinChecks(bits - 1)
+
+	// 3·m' — additive constant used in Step 2 of Figure 6. Precomputed
+	// because it's identical for every worker and every χ.
+	threeMPrime := new(big.Int).Mul(three, mPrime)
+
+	// ──────────────────────────────────────────────────────────────────────
+	// Parallel scaffolding.
+	// ──────────────────────────────────────────────────────────────────────
+	// One worker per CPU. Each runs an independent (χ, orbit) per Fig. 6.
+	// First worker to find a safe prime wins; cancel() stops the rest.
+	workers := runtime.GOMAXPROCS(0)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	g, ctx := errgroup.WithContext(ctx)
+	results := make(chan E, 1)
+	defer close(results)
+
+	for range workers {
+		g.Go(func() error {
+			// ───────────────────────────────────────────────────────
+			// Step 1 (Figure 6): χ ←$ (Z/mZ)*.
+			// ───────────────────────────────────────────────────────
+			// Rejection sampling: draw uniformly from [0, m) and accept
+			// when the sample is a unit. Acceptance rate is φ(m)/m,
+			// dominated by φ(Π)/Π in our setup (≈ 0.16 for nPi ≈ 175).
+			var chi *big.Int
+			for {
+				c, err := crand.Int(prng, m)
+				if err != nil {
+					return errs.Wrap(err).WithMessage("failed to sample χ")
+				}
+				if c.Sign() == 0 {
+					continue
+				}
+				if new(big.Int).GCD(nil, nil, c, m).Cmp(one) != 0 {
+					continue
+				}
+				chi = c
+				break
+			}
+
+			// ───────────────────────────────────────────────────────
+			// Step 2 (Figure 6): k ← 4·u·χ² + 3m' (mod m).
+			// ───────────────────────────────────────────────────────
+			// Residue analysis of the resulting k:
+			//   • mod p_i (odd, p_i | Π):
+			//       4·u·χ² ≡ 4·(QNR)·(QR) ≡ QNR (mod p_i)  [4 is a QR mod any odd p]
+			//       3m'    ≡ 0           (since p_i | m and 4 | m, p_i | m', so p_i | 3m')
+			//     ⇒ k ≡ QNR (mod p_i) — the property that makes (q−1)/2
+			//       automatically coprime to Π.
+			//   • mod 4:
+			//       4·u·χ² ≡ 0
+			//       3m'    ≡ 3·1 = 3   (m' ≡ 1 mod 4 by setup)
+			//     ⇒ k ≡ 3 (mod 4) — the property that makes q ≡ 3 (mod 4)
+			//       once we add l ≡ 0 (mod 4) in Step 3.
+			k := new(big.Int).Mul(chi, chi)
+			k.Mul(k, u)
+			k.Lsh(k, 2) // ×4
+			k.Add(k, threeMPrime)
+			k.Mod(k, m)
+
+			// ───────────────────────────────────────────────────────
+			// Steps 3–4 (Figure 6): candidate construction, primality
+			// tests, and recycling. The paper imposes no iteration
+			// bound — the orbit of a in Z*_m is huge, and a safe prime
+			// is overwhelmingly likely to lie in it.
+			// ───────────────────────────────────────────────────────
+			for {
+				// Cooperative cancel: another worker may have already won.
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+				}
+
+				// Step 3: q ← [(k − t) mod m] + t + l.
+				// We use t = 0 (a valid choice — see Section 2 of the
+				// paper, where t = bΠ for b ∈ [b_min, b_max], and
+				// b_min = b_max = 0 is permitted). k is already in
+				// [0, m) from Step 2, so:
+				q := new(big.Int).Add(k, l)
+				// (q − 1)/2: the Sophie-Germain half. Odd by invariant (3).
+				qHalf := new(big.Int).Rsh(new(big.Int).Sub(q, one), 1)
+
+				// Step 4: T(q) and T((q−1)/2). The paper specifies an
+				// abstract primality test T — we use a two-stage:
+				//   (i)  ProbablyPrime(0) = BPSW (trial division on a
+				//        fixed small-prime list + base-2 Miller-Rabin +
+				//        Lucas test). Cheapest reliable filter.
+				//   (ii) ProbablyPrime(N) for the FIPS-derived count N,
+				//        for the formal 4^{-N} soundness bound.
+				if q.ProbablyPrime(0) && qHalf.ProbablyPrime(0) &&
+					q.ProbablyPrime(checks) && qHalf.ProbablyPrime(pChecks) {
+					// Step 5 (Figure 6): output q.
+					out, err := set.FromBytesBE(q.Bytes())
+					if err != nil {
+						return errs.Wrap(err).WithMessage("cannot convert prime to structure")
+					}
+					// Race-safe single-result delivery.
+					select {
+					case <-ctx.Done():
+					case results <- out:
+						cancel()
+					}
+					return nil
+				}
+
+				// Step 4(a): k ← a·k (mod m).
+				// Step 4(b): jump to Step 3 (top of this for-loop).
+				//
+				// Why this preserves the invariants:
+				//   • mod p_i: a ∈ QR(p_i), so multiplying preserves the
+				//     QNR-ness of k mod p_i.
+				//   • mod 4: a ≡ 1 (mod 4), so k stays ≡ 3 (mod 4).
+				k.Mul(k, a)
+				k.Mod(k, m)
+			}
+		})
+	}
+
+	// On success, the winning worker fills the cap-1 results channel and
+	// cancels the context; every worker (including the winner) then
+	// returns context.Canceled via the cooperative-cancel select. The
+	// salvage clause `len(results) != cap(results)` rescues a successful
+	// generation even if another worker happened to err in parallel.
+	if err := g.Wait(); err != nil && !errs.Is(err, context.Canceled) && len(results) != cap(results) {
+		return *new(E), errs.Wrap(err).WithMessage("failed to generate safe prime")
+	}
+	return <-results, nil
+}
+
 // GenerateSafePrimePair samples two independent safe primes p, q of half the
 // given keyLen each. The resulting modulus N = pq is used wherever a strong
 // RSA modulus is required: ring-Pedersen commitments, proofs over QR_N with
@@ -289,8 +509,8 @@ func GenerateSafePrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 	if set == nil {
 		return *new(E), *new(E), ErrIsNil.WithMessage("nil structure")
 	}
-	if keyLen < 8 {
-		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 8-bits")
+	if keyLen < 256 {
+		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 256-bits")
 	}
 	p, q, err = generatePrimePair(GenerateSafePrime, set, keyLen, prng)
 	if err != nil {

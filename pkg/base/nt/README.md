@@ -45,3 +45,8 @@ paillier, _ := znstar.NewPaillierGroup(p, q)
 ```
 
 All generators are parameterised over a target structure (`PrimeSamplable[E]`) so that the raw `big.Int` output is immediately lifted into a typed set (e.g. `*num.NatPlus`) where downstream modular arithmetic is defined.
+
+## Reference
+
+<!-- paper: docs/paper/JP06pgen.pdf -->
+- [Marc Joye, Pascal Paillier. Fast generation of prime numbers on portable devices: an update](https://dl.acm.org/doi/10.1007/11894063_13)

@@ -32,7 +32,11 @@ func Random[
 	}
 	if bitlen == 1 {
 		// only exact-1-bit value is 1
-		return structure.FromBig(big.NewInt(1))
+		out, err := structure.FromBig(big.NewInt(1))
+		if err != nil {
+			return *new(E), errs.Wrap(err).WithMessage("failed to convert 1 to element")
+		}
+		return out, nil
 	}
 	half := new(big.Int).Lsh(big.NewInt(1), bitlen-1)
 	q, err := crand.Int(prng, half) // [0, 2^(bitlen-1))
