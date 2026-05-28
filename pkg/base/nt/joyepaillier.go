@@ -181,6 +181,15 @@ type joyeParams struct {
 // product fits the geometric bound Π ≤ 2^(bits-5), maximising the
 // small-prime sieve (Property (P4) of Fig. 1) while leaving the headroom
 // the m and l construction needs.
+//
+// PRNG semantics. The setup samples the constant `a ∈ QR(m), a ≡ 1 (mod 4)`
+// (per Section 4.2) inside computeJoyeParams, consuming `prng` only on
+// the first call for a given `bits`. The resulting `a` is cached and reused
+// by every subsequent call for that `bits`, regardless of what `prng` they
+// pass — this matches the paper's "setup once and for all" semantic for
+// the algorithm's parameter list. The cached `a` is therefore determined
+// by the first caller's `prng`; later callers' prngs are used only for the
+// per-call χ (and b) sampling inside GenerateSafePrime.
 func joyeParamsFor(bits uint, prng io.Reader) (*joyeParams, error) {
 	// double-checked locking pattern
 	joyeParamsCacheMu.RLock()
@@ -340,13 +349,28 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 	// ──────────────────────────────────────────────────────────────────────
 	// (E) Lift u from Z*_Π into Z*_m.
 	// ──────────────────────────────────────────────────────────────────────
-	// After CRT, 0 ≤ u < Π and gcd(u, p_i) = 1 for every i (since u ≡ n_i ≠ 0).
-	// To make u ∈ Z*_m = Z*_{w·Π} we additionally need gcd(u, w) = 1, in
-	// particular u must be coprime to 2^τ = 4 (i.e. odd). If the lift fails,
-	// shift u by Π: this preserves u mod p_i (still QNR everywhere) while
-	// changing residues mod the prime factors of w. Termination follows
-	// because any prime factor q of w is coprime to Π, so the orbit of u
-	// under +Π mod q hits every residue class — including units.
+	// After CRT, 0 ≤ u < Π and gcd(u, p_i) = 1 for every p_i | Π (since
+	// u ≡ n_i ≠ 0 mod p_i, by Eq. (3)). To make u ∈ Z*_m = Z*_{w·Π} we also
+	// need gcd(u, w) = 1.
+	//
+	// The prime factorisation of w = wResidue ∈ {4, 12} is either 2² or
+	// 2²·3, so the only primes that can divide w are 2 and (when w = 12)
+	// 3. We handle them separately:
+	//
+	//   - 2 ∤ Π (Π is the product of odd primes), so 2 IS coprime to Π;
+	//     the orbit of u under +Π mod 2 hits both residues, and the loop
+	//     below makes u odd if it isn't already.
+	//   - 3 may or may not divide Π. In our setup 3 ∈ smallPrimes always,
+	//     so 3 | Π and 3 | w when w = 12 — i.e. 3 is NOT coprime to Π.
+	//     The "shift by Π" trick wouldn't move u mod 3 at all (Π ≡ 0 mod 3).
+	//     The CRT step in (D) saves us: it set u ≡ 2 (mod 3) (the smallest
+	//     QNR mod 3), so 3 ∤ u already, and a fortiori 9 ∤ u — i.e. u is
+	//     coprime to the 3-part of w (3² | m when w = 12) by construction,
+	//     before the lift loop runs.
+	//
+	// So the loop below only fixes the 2-part of w. Termination: each
+	// iteration flips parity of u (Π odd ⇒ u + Π has opposite parity),
+	// so at most one iteration is ever needed.
 	for new(big.Int).GCD(nil, nil, u, m).Cmp(one) != 0 {
 		u.Add(u, pi)
 		if u.Cmp(m) >= 0 {
