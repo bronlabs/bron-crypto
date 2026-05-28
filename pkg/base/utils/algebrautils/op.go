@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
@@ -66,4 +67,72 @@ func OpValues[TV algebra.GroupElement[TV]](
 		return *new(TV), ErrInvalidArgument.WithMessage("objects in rest must be in group")
 	}
 	return Fold(first.Op(second), rest...), nil
+}
+
+// ScalarOpUnsignedNumeric performs scalar multiplication of a group element by an unsigned numeric scalar using the double-and-add algorithm.
+// It is used in implementations of commitment/encryption keys' utility functions.
+func ScalarOpUnsignedNumeric[T any](
+	inv func(T) (T, error),
+	op func(T, T, ...T) (T, error),
+	x T,
+	scalar algebra.UnsignedNumeric,
+) (T, error) {
+	if utils.IsNil(x) || inv == nil || op == nil || scalar == nil {
+		return *new(T), ErrIsNil.WithMessage("x, inv, op, and scalar must not be nil")
+	}
+	xInv, err := inv(x)
+	if err != nil {
+		return *new(T), errs.Wrap(err).WithMessage("could not compute inverse of x")
+	}
+	result, err := op(x, xInv)
+	if err != nil {
+		return *new(T), errs.Wrap(err).WithMessage("could not compute identity element")
+	}
+
+	n, err := num.N().FromUnsignedNumeric(scalar)
+	if err != nil {
+		return *new(T), errs.Wrap(err).WithMessage("could not convert scalar to numeric")
+	}
+	cursor := x
+	for i := range uint(n.AnnouncedLen()) {
+		if n.Bit(i) == 1 {
+			result, err = op(result, cursor)
+			if err != nil {
+				return *new(T), errs.Wrap(err).WithMessage("could not compute result")
+			}
+		}
+		cursor, err = op(cursor, cursor)
+		if err != nil {
+			return *new(T), errs.Wrap(err).WithMessage("could not double cursor")
+		}
+	}
+	return result, nil
+}
+
+// ScalarOpSignedNumeric performs scalar multiplication of a group element by a signed numeric scalar using the double-and-add algorithm.
+// It is used in implementations of commitment/encryption keys' utility functions.
+func ScalarOpSignedNumeric[T any](
+	inv func(T) (T, error),
+	op func(T, T, ...T) (T, error),
+	x T,
+	scalar algebra.SignedNumeric,
+) (T, error) {
+	if utils.IsNil(x) || inv == nil || op == nil || scalar == nil {
+		return *new(T), ErrIsNil.WithMessage("x, inv, op, and scalar must not be nil")
+	}
+	z, err := num.Z().FromSignedNumeric(scalar)
+	if err != nil {
+		return *new(T), errs.Wrap(err).WithMessage("could not convert scalar to numeric")
+	}
+	out, err := ScalarOpUnsignedNumeric(inv, op, x, z.Abs())
+	if err != nil {
+		return *new(T), errs.Wrap(err).WithMessage("could not compute scalar multiplication")
+	}
+	if z.IsNegative() {
+		out, err = inv(out)
+		if err != nil {
+			return *new(T), errs.Wrap(err).WithMessage("could not compute inverse of result")
+		}
+	}
+	return out, nil
 }

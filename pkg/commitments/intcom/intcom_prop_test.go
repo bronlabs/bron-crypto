@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
@@ -132,6 +133,18 @@ func CommitmentKeyPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicComm
 		func(m1, m2 *intcom.Message) bool { return m1.Equal(m2) },
 		func(w1, w2 *intcom.Witness) bool { return w1.Equal(w2) },
 		ScalarGenerator,
+		func(tb testing.TB, n algebra.UnsignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromUnsignedNumeric(n)
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			return out
+		},
 		CommitmentGenerator,
 		intcom.NewMessage,
 		intcom.NewWitness,
@@ -167,6 +180,18 @@ func TrapdoorKeyPropertySuite(tb testing.TB, keyLen int) *GroupHomomorphicTrapdo
 		func(m1, m2 *intcom.Message) bool { return m1.Equal(m2) },
 		func(w1, w2 *intcom.Witness) bool { return w1.Equal(w2) },
 		ScalarGenerator,
+		func(tb testing.TB, n algebra.UnsignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromUnsignedNumeric(n)
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			return out
+		},
 		CommitmentGenerator,
 		intcom.NewMessage,
 		intcom.NewWitness,

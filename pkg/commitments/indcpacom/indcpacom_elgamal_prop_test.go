@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
@@ -227,6 +228,25 @@ func ElGamalCommitmentKeyPropertySuite[
 		func(m1, m2 *elgamalMessage[E, S]) bool { return m1.Value().Equal(m2.Value()) },
 		func(w1, w2 *elgamalWitness[S]) bool { return w1.Value().Equal(w2.Value()) },
 		ElGamalScalarGenerator[*elgamal.PublicKey[E, S]],
+		func(tb testing.TB, n algebra.UnsignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.ZModLike[S]](group.ScalarStructure())
+			out, err := sf.FromBytesBEReduce(n.BytesBE())
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.ZModLike[S]](group.ScalarStructure())
+			z, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			out, err := sf.FromBytesBEReduce(n.AbsBytesBE())
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			if z.IsNegative() {
+				out = out.Neg()
+			}
+			return out
+		},
 	)
 }
 
@@ -244,6 +264,25 @@ func ElGamalCommitmentKeyPropertySuite_SelfEncrypt[
 		func(m1, m2 *elgamalMessage[E, S]) bool { return m1.Value().Equal(m2.Value()) },
 		func(w1, w2 *elgamalWitness[S]) bool { return w1.Value().Equal(w2.Value()) },
 		ElGamalScalarGenerator[*elgamal.SecretKey[E, S]],
+		func(tb testing.TB, n algebra.UnsignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.ZModLike[S]](group.ScalarStructure())
+			out, err := sf.FromBytesBEReduce(n.BytesBE())
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.ZModLike[S]](group.ScalarStructure())
+			z, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			out, err := sf.FromBytesBEReduce(n.AbsBytesBE())
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			if z.IsNegative() {
+				out = out.Neg()
+			}
+			return out
+		},
 	)
 }
 

@@ -10,6 +10,7 @@ import (
 	algebra_prop "github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
@@ -157,6 +158,25 @@ func CommitmentKeyPropertySuite[
 			return w1.Equal(w2)
 		},
 		ScalarGenerator,
+		func(tb testing.TB, n algebra.UnsignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+			out, err := sf.FromBytesBEReduce(n.BytesBE())
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+			z, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			out, err := sf.FromBytesBEReduce(n.AbsBytesBE())
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			if z.IsNegative() {
+				out = out.Neg()
+			}
+			return out
+		},
 		CommitmentGenerator,
 		pedersen.NewMessage[S],
 		pedersen.NewWitness[S],
@@ -201,6 +221,26 @@ func TrapdoorKeyPropertySuite[
 			return w1.Equal(w2)
 		},
 		ScalarGenerator,
+
+		func(tb testing.TB, n algebra.UnsignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+			out, err := sf.FromBytesBEReduce(n.BytesBE())
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) S {
+			tb.Helper()
+			sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+			z, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			out, err := sf.FromBytesBEReduce(n.AbsBytesBE())
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			if z.IsNegative() {
+				out = out.Neg()
+			}
+			return out
+		},
 		CommitmentGenerator,
 		pedersen.NewMessage[S],
 		pedersen.NewWitness[S],

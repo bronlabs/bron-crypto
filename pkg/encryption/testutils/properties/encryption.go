@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	serdeprop "github.com/bronlabs/bron-crypto/pkg/base/serde/testutils/properties"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/testutils"
 )
@@ -419,13 +420,22 @@ func NewHomomorphicEncryptionProperties[
 	plaintextGenerator func(testing.TB, testutils.TypeErasedEncryptionKey[P, N, C]) *rapid.Generator[P],
 	plaintextsAreEqual func(P, P) bool,
 	noncesAreEqual func(N, N) bool,
+	ciphertextGenerator func(testing.TB, testutils.TypeErasedEncryptionKey[P, N, C]) *rapid.Generator[C],
 	scalarGenerator func(testing.TB, testutils.TypeErasedHomomorphicEncryptionKey[P, N, C, S]) *rapid.Generator[S],
+	unsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S,
+	signedNumericToScalar func(testing.TB, algebra.SignedNumeric) S,
 ) *HomomorphicEncryptionProperties[DK, EK, P, N, C, S] {
 	tb.Helper()
+	require.NotNil(tb, ciphertextGenerator, "ciphertextGenerator must not be nil")
 	require.NotNil(tb, scalarGenerator, "scalarGenerator must not be nil")
+	require.NotNil(tb, unsignedNumericToScalar, "unsignedNumericToScalar must not be nil")
+	require.NotNil(tb, signedNumericToScalar, "signedNumericToScalar must not be nil")
 	return &HomomorphicEncryptionProperties[DK, EK, P, N, C, S]{
-		EncryptionProperties: *NewEncryptionProperties(tb, prng, selfEncrypt, openable, decryptionKeyGenerator, plaintextGenerator, plaintextsAreEqual, noncesAreEqual),
-		ScalarGenerator:      scalarGenerator,
+		EncryptionProperties:    *NewEncryptionProperties(tb, prng, selfEncrypt, openable, decryptionKeyGenerator, plaintextGenerator, plaintextsAreEqual, noncesAreEqual),
+		CiphertextGenerator:     ciphertextGenerator,
+		ScalarGenerator:         scalarGenerator,
+		UnsignedNumericToScalar: unsignedNumericToScalar,
+		SignedNumericToScalar:   signedNumericToScalar,
 	}
 }
 
@@ -439,7 +449,10 @@ type HomomorphicEncryptionProperties[
 ] struct {
 	EncryptionProperties[DK, EK, P, N, C]
 
-	ScalarGenerator func(testing.TB, testutils.TypeErasedHomomorphicEncryptionKey[P, N, C, S]) *rapid.Generator[S]
+	CiphertextGenerator     func(testing.TB, testutils.TypeErasedEncryptionKey[P, N, C]) *rapid.Generator[C]
+	ScalarGenerator         func(testing.TB, testutils.TypeErasedHomomorphicEncryptionKey[P, N, C, S]) *rapid.Generator[S]
+	UnsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S
+	SignedNumericToScalar   func(testing.TB, algebra.SignedNumeric) S
 }
 
 func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) getEncryptionKey(tb testing.TB, dk DK) testutils.TypeErasedHomomorphicEncryptionKey[P, N, C, S] {
@@ -463,6 +476,12 @@ func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) CheckAll(t *testi
 	t.Run("CiphertextScalarOpIsPlaintextNonceScalarOp", pr.CiphertextScalarOpIsPlaintextNonceScalarOp)
 	t.Run("ReRandomiseShiftsNonce", pr.ReRandomiseShiftsNonce)
 	t.Run("CanShiftCiphertextByPlaintext", pr.CanShiftCiphertextByPlaintext)
+	t.Run("NonceScalarOpUnsignedNumericHelperWorks", pr.NonceScalarOpUnsignedNumericHelperWorks)
+	t.Run("NonceScalarOpSignedNumericHelperWorks", pr.NonceScalarOpSignedNumericHelperWorks)
+	t.Run("PlaintextScalarOpUnsignedNumericHelperWorks", pr.PlaintextScalarOpUnsignedNumericHelperWorks)
+	t.Run("PlaintextScalarOpSignedNumericHelperWorks", pr.PlaintextScalarOpSignedNumericHelperWorks)
+	t.Run("CiphertextScalarOpUnsignedNumericHelperWorks", pr.CiphertextScalarOpUnsignedNumericHelperWorks)
+	t.Run("CiphertextScalarOpSignedNumericHelperWorks", pr.CiphertextScalarOpSignedNumericHelperWorks)
 }
 
 func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) CiphertextHomOpIsPlaintextNonceOp(t *testing.T) {
@@ -622,6 +641,128 @@ func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) CanShiftCiphertex
 	})
 }
 
+func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) NonceScalarOpUnsignedNumericHelperWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		decryptionKey := pr.DecryptionKeyGenerator.Draw(rt, "decryption key")
+		key := pr.getEncryptionKey(t, decryptionKey)
+		nonce, err := key.SampleNonce(pr.PRNG())
+		require.NoError(rt, err)
+
+		unsignedNumeric := algebrautils.AsUnsignedNumeric(rapid.Uint64().Draw(rt, "unsigned numeric"))
+		scalar := pr.UnsignedNumericToScalar(t, unsignedNumeric)
+
+		expected, err := key.NonceScalarOp(nonce, scalar)
+		require.NoError(rt, err)
+
+		actual, err := encryption.NonceScalarOpUnsignedNumeric(key, nonce, unsignedNumeric)
+		require.NoError(rt, err)
+
+		require.True(rt, pr.NoncesAreEqual(expected, actual), "NonceScalarOpUnsignedNumeric should yield the same result as NonceScalarOp with the corresponding scalar")
+	})
+}
+
+func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) NonceScalarOpSignedNumericHelperWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		decryptionKey := pr.DecryptionKeyGenerator.Draw(rt, "decryption key")
+		key := pr.getEncryptionKey(t, decryptionKey)
+		nonce, err := key.SampleNonce(pr.PRNG())
+		require.NoError(rt, err)
+
+		signedNumeric := algebrautils.AsSignedNumeric(rapid.Int64().Draw(rt, "signed numeric"))
+		scalar := pr.SignedNumericToScalar(t, signedNumeric)
+
+		expected, err := key.NonceScalarOp(nonce, scalar)
+		require.NoError(rt, err)
+
+		actual, err := encryption.NonceScalarOpSignedNumeric(key, nonce, signedNumeric)
+		require.NoError(rt, err)
+
+		require.True(rt, pr.NoncesAreEqual(expected, actual), "NonceScalarOpSignedNumeric should yield the same result as NonceScalarOp with the corresponding scalar")
+	})
+}
+
+func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) PlaintextScalarOpUnsignedNumericHelperWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		decryptionKey := pr.DecryptionKeyGenerator.Draw(rt, "decryption key")
+		key := pr.getEncryptionKey(t, decryptionKey)
+		plaintext := pr.PlaintextGenerator(t, key).Draw(rt, "plaintext")
+
+		unsignedNumeric := algebrautils.AsUnsignedNumeric(rapid.Uint64().Draw(rt, "unsigned numeric"))
+		scalar := pr.UnsignedNumericToScalar(t, unsignedNumeric)
+
+		expected, err := key.PlaintextScalarOp(plaintext, scalar)
+		require.NoError(rt, err)
+
+		actual, err := encryption.PlaintextScalarOpUnsignedNumeric(key, plaintext, unsignedNumeric)
+		require.NoError(rt, err)
+
+		require.True(rt, pr.PlaintextsAreEqual(expected, actual), "PlaintextScalarOpUnsignedNumeric should yield the same result as PlaintextScalarOp with the corresponding scalar")
+	})
+}
+
+func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) PlaintextScalarOpSignedNumericHelperWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		decryptionKey := pr.DecryptionKeyGenerator.Draw(rt, "decryption key")
+		key := pr.getEncryptionKey(t, decryptionKey)
+		plaintext := pr.PlaintextGenerator(t, key).Draw(rt, "plaintext")
+
+		signedNumeric := algebrautils.AsSignedNumeric(rapid.Int64().Draw(rt, "signed numeric"))
+		scalar := pr.SignedNumericToScalar(t, signedNumeric)
+
+		expected, err := key.PlaintextScalarOp(plaintext, scalar)
+		require.NoError(rt, err)
+
+		actual, err := encryption.PlaintextScalarOpSignedNumeric(key, plaintext, signedNumeric)
+		require.NoError(rt, err)
+
+		require.True(rt, pr.PlaintextsAreEqual(expected, actual), "PlaintextScalarOpSignedNumeric should yield the same result as PlaintextScalarOp with the corresponding scalar")
+	})
+}
+
+func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) CiphertextScalarOpUnsignedNumericHelperWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		decryptionKey := pr.DecryptionKeyGenerator.Draw(rt, "decryption key")
+		key := pr.getEncryptionKey(t, decryptionKey)
+		ciphertext := pr.CiphertextGenerator(t, key).Draw(rt, "ciphertext")
+
+		unsignedNumeric := algebrautils.AsUnsignedNumeric(rapid.Uint64().Draw(rt, "unsigned numeric"))
+		scalar := pr.UnsignedNumericToScalar(t, unsignedNumeric)
+
+		expected, err := key.CiphertextScalarOp(ciphertext, scalar)
+		require.NoError(rt, err)
+
+		actual, err := encryption.CiphertextScalarOpUnsignedNumeric(key, ciphertext, unsignedNumeric)
+		require.NoError(rt, err)
+
+		require.True(rt, actual.Equal(expected), "CiphertextScalarOpUnsignedNumeric should yield the same result as CiphertextScalarOp with the corresponding scalar")
+	})
+}
+
+func (pr *HomomorphicEncryptionProperties[DK, EK, P, N, C, S]) CiphertextScalarOpSignedNumericHelperWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		decryptionKey := pr.DecryptionKeyGenerator.Draw(rt, "decryption key")
+		key := pr.getEncryptionKey(t, decryptionKey)
+		ciphertext := pr.CiphertextGenerator(t, key).Draw(rt, "ciphertext")
+
+		signedNumeric := algebrautils.AsSignedNumeric(rapid.Int64().Draw(rt, "signed numeric"))
+		scalar := pr.SignedNumericToScalar(t, signedNumeric)
+
+		expected, err := key.CiphertextScalarOp(ciphertext, scalar)
+		require.NoError(rt, err)
+
+		actual, err := encryption.CiphertextScalarOpSignedNumeric(key, ciphertext, signedNumeric)
+		require.NoError(rt, err)
+
+		require.True(rt, actual.Equal(expected), "CiphertextScalarOpSignedNumeric should yield the same result as CiphertextScalarOp with the corresponding scalar")
+	})
+}
+
 func NewGroupHomomorphicEncryptionProperties[
 	DK encryption.GroupHomomorphicDecryptionKey[EK, DK, P, PG, PV, N, NG, NV, C, CG, CV, S],
 	EK encryption.GroupHomomorphicEncryptionKey[EK, P, PG, PV, N, NG, NV, C, CG, CV, S],
@@ -648,8 +789,10 @@ func NewGroupHomomorphicEncryptionProperties[
 	plaintextGenerator func(testing.TB, testutils.TypeErasedEncryptionKey[P, N, C]) *rapid.Generator[P],
 	plaintextsAreEqual func(P, P) bool,
 	noncesAreEqual func(N, N) bool,
-	scalarGenerator func(testing.TB, testutils.TypeErasedHomomorphicEncryptionKey[P, N, C, S]) *rapid.Generator[S],
 	ciphertextGenerator func(testing.TB, testutils.TypeErasedEncryptionKey[P, N, C]) *rapid.Generator[C],
+	scalarGenerator func(testing.TB, testutils.TypeErasedHomomorphicEncryptionKey[P, N, C, S]) *rapid.Generator[S],
+	unsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S,
+	signedNumericToScalar func(testing.TB, algebra.SignedNumeric) S,
 	newPlaintext func(PV) (P, error),
 	newNonce func(NV) (N, error),
 	newCiphertext func(CV) (C, error),
@@ -658,7 +801,6 @@ func NewGroupHomomorphicEncryptionProperties[
 	ciphertextScalarOp func(testing.TB, C, S) C,
 ) *GroupHomomorphicEncryptionProperties[DK, EK, P, PG, PV, N, NG, NV, C, CG, CV, S] {
 	tb.Helper()
-	require.NotNil(tb, ciphertextGenerator, "ciphertextGenerator must not be nil")
 	require.NotNil(tb, newPlaintext, "newPlaintext must not be nil")
 	require.NotNil(tb, newNonce, "newNonce must not be nil")
 	require.NotNil(tb, newCiphertext, "newCiphertext must not be nil")
@@ -666,8 +808,7 @@ func NewGroupHomomorphicEncryptionProperties[
 	require.NotNil(tb, nonceScalarOp, "nonceScalarOp must not be nil")
 	require.NotNil(tb, ciphertextScalarOp, "ciphertextScalarOp must not be nil")
 	return &GroupHomomorphicEncryptionProperties[DK, EK, P, PG, PV, N, NG, NV, C, CG, CV, S]{
-		HomomorphicEncryptionProperties: *NewHomomorphicEncryptionProperties(tb, prng, selfEncrypt, openable, decryptionKeyGenerator, plaintextGenerator, plaintextsAreEqual, noncesAreEqual, scalarGenerator),
-		CiphertextGenerator:             ciphertextGenerator,
+		HomomorphicEncryptionProperties: *NewHomomorphicEncryptionProperties(tb, prng, selfEncrypt, openable, decryptionKeyGenerator, plaintextGenerator, plaintextsAreEqual, noncesAreEqual, ciphertextGenerator, scalarGenerator, unsignedNumericToScalar, signedNumericToScalar),
 		NewPlaintext:                    newPlaintext,
 		NewNonce:                        newNonce,
 		NewCiphertext:                   newCiphertext,
@@ -696,8 +837,6 @@ type GroupHomomorphicEncryptionProperties[
 	S any,
 ] struct {
 	HomomorphicEncryptionProperties[DK, EK, P, N, C, S]
-
-	CiphertextGenerator func(testing.TB, testutils.TypeErasedEncryptionKey[P, N, C]) *rapid.Generator[C]
 
 	NewPlaintext  func(PV) (P, error)
 	NewNonce      func(NV) (N, error)

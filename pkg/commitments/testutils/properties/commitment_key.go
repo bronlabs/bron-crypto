@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	serdeprop "github.com/bronlabs/bron-crypto/pkg/base/serde/testutils/properties"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 )
 
@@ -345,19 +346,27 @@ func NewHomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKe
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
 	scalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S],
+	unsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S,
+	signedNumericToScalar func(testing.TB, algebra.SignedNumeric) S,
 ) *HomomorphicCommitmentKeyProperties[K, M, W, C, S] {
 	tb.Helper()
 	require.NotNil(tb, scalarGenerator)
+	require.NotNil(tb, unsignedNumericToScalar)
+	require.NotNil(tb, signedNumericToScalar)
 	return &HomomorphicCommitmentKeyProperties[K, M, W, C, S]{
 		CommitmentKeyProperties: *NewCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual),
 		ScalarGenerator:         scalarGenerator,
+		UnsignedNumericToScalar: unsignedNumericToScalar,
+		SignedNumericToScalar:   signedNumericToScalar,
 	}
 }
 
 type HomomorphicCommitmentKeyProperties[K commitments.HomomorphicCommitmentKey[K, M, W, C, S], M commitments.Message, W commitments.Witness, C commitments.Commitment[C], S any] struct {
 	CommitmentKeyProperties[K, M, W, C]
 
-	ScalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S]
+	ScalarGenerator         func(testing.TB, commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S]
+	UnsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S
+	SignedNumericToScalar   func(testing.TB, algebra.SignedNumeric) S
 }
 
 func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CheckAll(t *testing.T) {
@@ -367,6 +376,12 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CheckAll(t *testing.
 	t.Run("CommitmentScalarOpIsMessageWitnessScalarOp", p.CommitmentScalarOpIsMessageWitnessScalarOp)
 	t.Run("ReRandomiseShiftsWitness", p.ReRandomiseShiftsWitness)
 	t.Run("CanShiftCommitmentByMessage", p.CanShiftCommitmentByMessage)
+	t.Run("WitnessScalarOpUnsignedNumericWorks", p.WitnessScalarOpUnsignedNumericWorks)
+	t.Run("WitnessScalarOpSignedNumericWorks", p.WitnessScalarOpSignedNumericWorks)
+	t.Run("MessageScalarOpUnsignedNumericWorks", p.MessageScalarOpUnsignedNumericWorks)
+	t.Run("MessageScalarOpSignedNumericWorks", p.MessageScalarOpSignedNumericWorks)
+	t.Run("CommitmentScalarOpUnsignedNumericWorks", p.CommitmentScalarOpUnsignedNumericWorks)
+	t.Run("CommitmentScalarOpSignedNumericWorks", p.CommitmentScalarOpSignedNumericWorks)
 }
 
 func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentHomOpIsMessageWitnessOp(t *testing.T) {
@@ -494,6 +509,134 @@ func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CanShiftCommitmentBy
 	})
 }
 
+func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) WitnessScalarOpUnsignedNumericWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		witness, err := key.SampleWitness(p.PRNG())
+		require.NoError(t, err)
+
+		unsignedNumeric := algebrautils.AsUnsignedNumeric(rapid.Uint64().Draw(rt, "unsigned numeric"))
+		scalar := p.UnsignedNumericToScalar(t, unsignedNumeric)
+
+		expected, err := key.WitnessScalarOp(witness, scalar)
+		require.NoError(t, err)
+
+		actual, err := commitments.WitnessScalarOpUnsignedNumeric(key, witness, unsignedNumeric)
+		require.NoError(t, err)
+
+		require.True(t, p.WitnessesAreEqual(expected, actual))
+	})
+}
+
+func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) WitnessScalarOpSignedNumericWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		witness, err := key.SampleWitness(p.PRNG())
+		require.NoError(t, err)
+
+		signedNumeric := algebrautils.AsSignedNumeric(rapid.Int64().Draw(rt, "signed numeric"))
+		scalar := p.SignedNumericToScalar(t, signedNumeric)
+
+		expected, err := key.WitnessScalarOp(witness, scalar)
+		require.NoError(t, err)
+
+		actual, err := commitments.WitnessScalarOpSignedNumeric(key, witness, signedNumeric)
+		require.NoError(t, err)
+
+		require.True(t, p.WitnessesAreEqual(expected, actual))
+	})
+}
+
+func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) MessageScalarOpUnsignedNumericWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+
+		unsignedNumeric := algebrautils.AsUnsignedNumeric(rapid.Uint64().Draw(rt, "unsigned numeric"))
+		scalar := p.UnsignedNumericToScalar(t, unsignedNumeric)
+
+		expected, err := key.MessageScalarOp(message, scalar)
+		require.NoError(t, err)
+
+		actual, err := commitments.MessageScalarOpUnsignedNumeric(key, message, unsignedNumeric)
+		require.NoError(t, err)
+
+		require.True(t, p.MessagesAreEqual(expected, actual))
+	})
+}
+
+func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) MessageScalarOpSignedNumericWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+
+		signedNumeric := algebrautils.AsSignedNumeric(rapid.Int64().Draw(rt, "signed numeric"))
+		scalar := p.SignedNumericToScalar(t, signedNumeric)
+
+		expected, err := key.MessageScalarOp(message, scalar)
+		require.NoError(t, err)
+
+		actual, err := commitments.MessageScalarOpSignedNumeric(key, message, signedNumeric)
+		require.NoError(t, err)
+
+		require.True(t, p.MessagesAreEqual(expected, actual))
+	})
+}
+
+func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentScalarOpUnsignedNumericWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+
+		witness, err := key.SampleWitness(p.PRNG())
+		require.NoError(t, err)
+
+		commitment, err := key.CommitWithWitness(message, witness)
+		require.NoError(t, err)
+
+		unsignedNumeric := algebrautils.AsUnsignedNumeric(rapid.Uint64().Draw(rt, "unsigned numeric"))
+		scalar := p.UnsignedNumericToScalar(t, unsignedNumeric)
+
+		expected, err := key.CommitmentScalarOp(commitment, scalar)
+		require.NoError(t, err)
+
+		actual, err := commitments.CommitmentScalarOpUnsignedNumeric(key, commitment, unsignedNumeric)
+		require.NoError(t, err)
+
+		require.True(t, expected.Equal(actual))
+	})
+}
+
+func (p *HomomorphicCommitmentKeyProperties[K, M, W, C, S]) CommitmentScalarOpSignedNumericWorks(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		key := p.KeyGenerator.Draw(rt, "commitment key")
+		message := p.MessageGenerator(t, key).Draw(rt, "message")
+
+		witness, err := key.SampleWitness(p.PRNG())
+		require.NoError(t, err)
+
+		commitment, err := key.CommitWithWitness(message, witness)
+		require.NoError(t, err)
+
+		signedNumeric := algebrautils.AsSignedNumeric(rapid.Int64().Draw(rt, "signed numeric"))
+		scalar := p.SignedNumericToScalar(t, signedNumeric)
+
+		expected, err := key.CommitmentScalarOp(commitment, scalar)
+		require.NoError(t, err)
+
+		actual, err := commitments.CommitmentScalarOpSignedNumeric(key, commitment, signedNumeric)
+		require.NoError(t, err)
+
+		require.True(t, expected.Equal(actual))
+	})
+}
+
 func NewGroupHomomorphicCommitmentKeyProperties[
 	K commitments.GroupHomomorphicCommitmentKey[K, M, MG, MV, W, WG, WV, C, CG, CV, S],
 	M interface {
@@ -517,6 +660,8 @@ func NewGroupHomomorphicCommitmentKeyProperties[
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
 	scalarGenerator func(tb testing.TB, key commitments.HomomorphicCommitmentKey[K, M, W, C, S]) *rapid.Generator[S],
+	unsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S,
+	signedNumericToScalar func(testing.TB, algebra.SignedNumeric) S,
 	commitmentGenerator func(tb testing.TB, key commitments.CommitmentKey[K, M, W, C]) *rapid.Generator[C],
 	newMessage func(MV) (M, error),
 	newWitness func(WV) (W, error),
@@ -534,7 +679,7 @@ func NewGroupHomomorphicCommitmentKeyProperties[
 	require.NotNil(tb, witnessScalarOp)
 	require.NotNil(tb, commitmentScalarOp)
 	return &GroupHomomorphicCommitmentKeyProperties[K, M, MG, MV, W, WG, WV, C, CG, CV, S]{
-		HomomorphicCommitmentKeyProperties: *NewHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator),
+		HomomorphicCommitmentKeyProperties: *NewHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, unsignedNumericToScalar, signedNumericToScalar),
 		CommitmentGenerator:                commitmentGenerator,
 		NewMessage:                         newMessage,
 		NewWitness:                         newWitness,

@@ -7,7 +7,9 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // Encrypt samples a fresh nonce from prng and encrypts plaintext under it,
@@ -186,4 +188,76 @@ func OpenMany[EK EncryptionKey[EK, P, N, C], OK OpeningKey[EK, OK, P, N, C], P P
 		return nil, nil, errs.Wrap(err).WithMessage("could not decrypt ciphertexts")
 	}
 	return plaintexts, nonces, nil
+}
+
+// NonceScalarOpUnsignedNumeric computes scalar times nonce, where scalar is an unsigned numeric. It does so by repeated application of the nonce operation, which is efficient for small scalars but may be inefficient for large scalars. If scalar is zero, it returns the nonce identity, which is the result of applying the nonce operation to a nonce and its inverse. If scalar is one, it returns the nonce itself.
+func NonceScalarOpUnsignedNumeric[P Plaintext, N Nonce, C Ciphertext[C], S any](key homomorphicEncryptionKey[P, N, C, S], nonce N, scalar algebra.UnsignedNumeric) (N, error) {
+	if key == nil || utils.IsNil(nonce) || scalar == nil {
+		return *new(N), ErrIsNil.WithMessage("key, nonce, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpUnsignedNumeric(key.NonceOpInv, key.NonceOp, nonce, scalar)
+	if err != nil {
+		return *new(N), errs.Wrap(err).WithMessage("could not compute scalar times nonce")
+	}
+	return out, nil
+}
+
+// NonceScalarOpSignedNumeric computes scalar times nonce, where scalar is a signed numeric. It does so by computing the absolute value of scalar and applying NonceScalarOpUnsignedNumeric to it, then inverting the result if scalar is negative. If scalar is zero, it returns the nonce identity, which is the result of applying the nonce operation to a nonce and its inverse. If scalar is one, it returns the nonce itself. If scalar is negative one, it returns the nonce inverse.
+func NonceScalarOpSignedNumeric[P Plaintext, N Nonce, C Ciphertext[C], S any](key homomorphicEncryptionKey[P, N, C, S], nonce N, scalar algebra.SignedNumeric) (N, error) {
+	if key == nil || utils.IsNil(nonce) || scalar == nil {
+		return *new(N), ErrIsNil.WithMessage("key, nonce, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpSignedNumeric(key.NonceOpInv, key.NonceOp, nonce, scalar)
+	if err != nil {
+		return *new(N), errs.Wrap(err).WithMessage("could not compute scalar times nonce")
+	}
+	return out, nil
+}
+
+// PlaintextScalarOpUnsignedNumeric performs scalar multiplication of a group element by an unsigned numeric scalar using the double-and-add algorithm. It is used in implementations of commitment/encryption keys' utility functions.
+func PlaintextScalarOpUnsignedNumeric[P Plaintext, N Nonce, C Ciphertext[C], S any](key homomorphicEncryptionKey[P, N, C, S], plaintext P, scalar algebra.UnsignedNumeric) (P, error) {
+	if key == nil || utils.IsNil(plaintext) || scalar == nil {
+		return *new(P), ErrIsNil.WithMessage("key, plaintext, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpUnsignedNumeric(key.PlaintextOpInv, key.PlaintextOp, plaintext, scalar)
+	if err != nil {
+		return *new(P), errs.Wrap(err).WithMessage("could not compute scalar times plaintext")
+	}
+	return out, nil
+}
+
+// PlaintextScalarOpSignedNumeric performs scalar multiplication of a group element by a signed numeric scalar using the double-and-add algorithm. It is used in implementations of commitment/encryption keys' utility functions.
+func PlaintextScalarOpSignedNumeric[P Plaintext, N Nonce, C Ciphertext[C], S any](key homomorphicEncryptionKey[P, N, C, S], plaintext P, scalar algebra.SignedNumeric) (P, error) {
+	if key == nil || utils.IsNil(plaintext) || scalar == nil {
+		return *new(P), ErrIsNil.WithMessage("key, plaintext, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpSignedNumeric(key.PlaintextOpInv, key.PlaintextOp, plaintext, scalar)
+	if err != nil {
+		return *new(P), errs.Wrap(err).WithMessage("could not compute scalar times plaintext")
+	}
+	return out, nil
+}
+
+// CiphertextScalarOpSignedNumeric performs scalar multiplication of a group element by a signed numeric scalar using the double-and-add algorithm. It is used in implementations of commitment/encryption keys' utility functions.
+func CiphertextScalarOpUnsignedNumeric[P Plaintext, N Nonce, C Ciphertext[C], S any](key homomorphicEncryptionKey[P, N, C, S], ciphertext C, scalar algebra.UnsignedNumeric) (C, error) {
+	if key == nil || utils.IsNil(ciphertext) || scalar == nil {
+		return *new(C), ErrIsNil.WithMessage("key, ciphertext, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpUnsignedNumeric(key.CiphertextOpInv, key.CiphertextOp, ciphertext, scalar)
+	if err != nil {
+		return *new(C), errs.Wrap(err).WithMessage("could not compute scalar times ciphertext")
+	}
+	return out, nil
+}
+
+// CiphertextScalarOpSignedNumeric performs scalar multiplication of a group element by a signed numeric scalar using the double-and-add algorithm. It is used in implementations of commitment/encryption keys' utility functions.
+func CiphertextScalarOpSignedNumeric[P Plaintext, N Nonce, C Ciphertext[C], S any](key homomorphicEncryptionKey[P, N, C, S], ciphertext C, scalar algebra.SignedNumeric) (C, error) {
+	if key == nil || utils.IsNil(ciphertext) || scalar == nil {
+		return *new(C), ErrIsNil.WithMessage("key, ciphertext, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpSignedNumeric(key.CiphertextOpInv, key.CiphertextOp, ciphertext, scalar)
+	if err != nil {
+		return *new(C), errs.Wrap(err).WithMessage("could not compute scalar times ciphertext")
+	}
+	return out, nil
 }

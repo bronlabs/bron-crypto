@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
@@ -141,8 +142,20 @@ func encryptionPropertySuite(
 		PlaintextGenerator,
 		func(p1, p2 *paillier.Plaintext) bool { return p1.Equal(p2) },
 		func(n1, n2 *paillier.Nonce) bool { return n1.Equal(n2) },
-		ScalarGenerator,
 		CiphertextGenerator,
+		ScalarGenerator,
+		func(tb testing.TB, scalar algebra.UnsignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromUnsignedNumeric(scalar)
+			require.NoError(tb, err)
+			return out
+		},
+		func(tb testing.TB, scalar algebra.SignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromSignedNumeric(scalar)
+			require.NoError(tb, err)
+			return out
+		},
 		paillier.NewPlaintext,
 		paillier.NewNonceFromGroupElement,
 		paillier.NewCiphertextFromGroupElement,

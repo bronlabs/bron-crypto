@@ -153,14 +153,9 @@ func (ct *Ciphertext[E, S]) UnmarshalCBOR(data []byte) error {
 }
 
 // NewNonce constructs an encryption nonce from a scalar r ∈ Z/nZ.
-// It rejects r = 0, which would produce the degenerate ciphertext (identity, m)
-// and leak the plaintext directly.
 func NewNonce[S algebra.UintLike[S]](v S) (*Nonce[S], error) {
 	if utils.IsNil(v) {
 		return nil, encryption.ErrIsNil.WithMessage("nonce value")
-	}
-	if v.IsOpIdentity() {
-		return nil, encryption.ErrFailed.WithMessage("nonce value cannot be the identity element")
 	}
 	return &Nonce[S]{v: v}, nil
 }

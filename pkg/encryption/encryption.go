@@ -140,10 +140,15 @@ type GroupHomomorphic[
 	CiphertextGroup() CG
 }
 
+type homomorphicEncryptionKey[P Plaintext, N Nonce, C Ciphertext[C], S any] interface {
+	encryptionKey[P, N, C]
+	Homomorphic[P, N, C, S]
+}
+
 // HomomorphicEncryptionKey is an EncryptionKey whose scheme is also Homomorphic.
 type HomomorphicEncryptionKey[EK HomomorphicEncryptionKey[EK, P, N, C, S], P Plaintext, N Nonce, C Ciphertext[C], S any] interface {
 	EncryptionKey[EK, P, N, C]
-	Homomorphic[P, N, C, S]
+	homomorphicEncryptionKey[P, N, C, S]
 }
 
 // HomomorphicDecryptionKey is a DecryptionKey whose scheme is also Homomorphic: it

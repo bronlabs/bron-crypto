@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
@@ -209,6 +210,18 @@ func PaillierCommitmentKeyPropertySuite(tb testing.TB, keyLen int) *PaillierHomo
 		func(m1, m2 *paillierMessage) bool { return m1.Value().Equal(m2.Value()) },
 		func(w1, w2 *paillierWitness) bool { return w1.Value().Equal(w2.Value()) },
 		PaillierScalarGenerator[*paillier.PublicKey],
+		func(tb testing.TB, n algebra.UnsignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromUnsignedNumeric(n)
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			return out
+		},
 	)
 }
 
@@ -222,6 +235,18 @@ func PaillierCommitmentKeyPropertySuite_SelfEncrypt(tb testing.TB, keyLen int) *
 		func(m1, m2 *paillierMessage) bool { return m1.Value().Equal(m2.Value()) },
 		func(w1, w2 *paillierWitness) bool { return w1.Value().Equal(w2.Value()) },
 		PaillierScalarGenerator[*paillier.SecretKey],
+		func(tb testing.TB, n algebra.UnsignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromUnsignedNumeric(n)
+			require.NoError(tb, err, "failed to convert unsigned numeric to scalar: %v", n.BytesBE())
+			return out
+		},
+		func(tb testing.TB, n algebra.SignedNumeric) *num.Int {
+			tb.Helper()
+			out, err := num.Z().FromSignedNumeric(n)
+			require.NoError(tb, err, "failed to convert signed numeric to scalar: %v", n.AbsBytesBE())
+			return out
+		},
 	)
 }
 

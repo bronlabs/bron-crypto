@@ -11,6 +11,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -73,6 +74,16 @@ func Random[S algebra.FiniteStructure[E], E algebra.Element[E]](s S, prng io.Rea
 			return out, nil
 		}
 	}
+}
+
+// AsUnsignedNumeric converts an unsigned integer to an UnsignedNumeric.
+func AsUnsignedNumeric[T constraints.Unsigned](n T) algebra.UnsignedNumeric {
+	return num.N().FromUint64(uint64(n))
+}
+
+// AsSignedNumeric converts a signed integer to a SignedNumeric.
+func AsSignedNumeric[T constraints.Signed](n T) algebra.SignedNumeric {
+	return num.Z().FromInt64(int64(n))
 }
 
 // Fold applies the binary operation of the given operand type to all provided elements, returning the final result.

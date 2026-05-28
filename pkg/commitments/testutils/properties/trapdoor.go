@@ -124,12 +124,16 @@ func NewHomomorphicTrapdoorKeyProperties[K commitments.HomomorphicCommitmentKey[
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
 	scalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[T, M, W, C, S]) *rapid.Generator[S],
+	unsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S,
+	signedNumericToScalar func(testing.TB, algebra.SignedNumeric) S,
 ) *HomomorphicTrapdoorKeyProperties[K, T, M, W, C, S] {
 	tb.Helper()
 	require.NotNil(tb, scalarGenerator)
+	require.NotNil(tb, unsignedNumericToScalar)
+	require.NotNil(tb, signedNumericToScalar)
 	return &HomomorphicTrapdoorKeyProperties[K, T, M, W, C, S]{
 		TrapdoorKeyProperties:              *NewTrapdoorKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual),
-		HomomorphicCommitmentKeyProperties: *NewHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator),
+		HomomorphicCommitmentKeyProperties: *NewHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, unsignedNumericToScalar, signedNumericToScalar),
 	}
 }
 
@@ -168,6 +172,8 @@ func NewGroupHomomorphicTrapdoorKeyProperties[
 	messagesAreEqual func(M, M) bool,
 	witnessesAreEqual func(W, W) bool,
 	scalarGenerator func(testing.TB, commitments.HomomorphicCommitmentKey[T, M, W, C, S]) *rapid.Generator[S],
+	unsignedNumericToScalar func(testing.TB, algebra.UnsignedNumeric) S,
+	signedNumericToScalar func(testing.TB, algebra.SignedNumeric) S,
 	commitmentGenerator func(testing.TB, commitments.CommitmentKey[T, M, W, C]) *rapid.Generator[C],
 	newMessage func(MV) (M, error),
 	newWitness func(WV) (W, error),
@@ -181,8 +187,8 @@ func NewGroupHomomorphicTrapdoorKeyProperties[
 	require.NotNil(tb, newWitness)
 	require.NotNil(tb, newCommitment)
 	return &GroupHomomorphicTrapdoorKeyProperties[K, T, M, MG, MV, W, WG, WV, C, CG, CV, S]{
-		HomomorphicTrapdoorKeyProperties:        *NewHomomorphicTrapdoorKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator),
-		GroupHomomorphicCommitmentKeyProperties: *NewGroupHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, commitmentGenerator, newMessage, newWitness, newCommitment, messageScalarOp, witnessScalarOp, commitmentScalarOp),
+		HomomorphicTrapdoorKeyProperties:        *NewHomomorphicTrapdoorKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, unsignedNumericToScalar, signedNumericToScalar),
+		GroupHomomorphicCommitmentKeyProperties: *NewGroupHomomorphicCommitmentKeyProperties(tb, prng, keyGenerator, messageGenerator, messagesAreEqual, witnessesAreEqual, scalarGenerator, unsignedNumericToScalar, signedNumericToScalar, commitmentGenerator, newMessage, newWitness, newCommitment, messageScalarOp, witnessScalarOp, commitmentScalarOp),
 	}
 }
 

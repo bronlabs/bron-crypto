@@ -5,7 +5,9 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // Commit samples a fresh witness from key and returns the commitment to message
@@ -46,4 +48,74 @@ func ReRandomise[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness
 		return *new(C), *new(W), errs.Wrap(err).WithMessage("could not compute commitment")
 	}
 	return newCommitment, witness, nil
+}
+
+// WitnessScalarOpUnsignedNumeric computes scalar times witness, where scalar is an unsigned numeric. It does so by repeated application of the witness operation, which is efficient for small scalars but may be inefficient for large scalars. If scalar is zero, it returns the witness identity, which is the result of applying the witness operation to a witness and its inverse. If scalar is one, it returns the witness itself.
+func WitnessScalarOpUnsignedNumeric[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, witness W, scalar algebra.UnsignedNumeric) (W, error) {
+	if utils.IsNil(key) || utils.IsNil(witness) || scalar == nil {
+		return *new(W), ErrIsNil.WithMessage("key, witness, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpUnsignedNumeric(key.WitnessOpInv, key.WitnessOp, witness, scalar)
+	if err != nil {
+		return *new(W), errs.Wrap(err).WithMessage("could not compute scalar times witness")
+	}
+	return out, nil
+}
+
+// WitnessScalarOpSignedNumeric computes scalar times witness, where scalar is a signed numeric. It does so by computing the absolute value of scalar and applying WitnessScalarOpUnsignedNumeric to it, then inverting the result if scalar is negative. If scalar is zero, it returns the witness identity, which is the result of applying the witness operation to a witness and its inverse. If scalar is one, it returns the witness itself. If scalar is negative one, it returns the witness inverse.
+func WitnessScalarOpSignedNumeric[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, witness W, scalar algebra.SignedNumeric) (W, error) {
+	if utils.IsNil(key) || utils.IsNil(witness) || scalar == nil {
+		return *new(W), ErrIsNil.WithMessage("key, witness, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpSignedNumeric(key.WitnessOpInv, key.WitnessOp, witness, scalar)
+	if err != nil {
+		return *new(W), errs.Wrap(err).WithMessage("could not compute scalar times witness")
+	}
+	return out, nil
+}
+
+func MessageScalarOpUnsignedNumeric[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, message M, scalar algebra.UnsignedNumeric) (M, error) {
+	if utils.IsNil(key) || utils.IsNil(message) || scalar == nil {
+		return *new(M), ErrIsNil.WithMessage("key, message, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpUnsignedNumeric(key.MessageOpInv, key.MessageOp, message, scalar)
+	if err != nil {
+		return *new(M), errs.Wrap(err).WithMessage("could not compute scalar times message")
+	}
+	return out, nil
+}
+
+func MessageScalarOpSignedNumeric[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, message M, scalar algebra.SignedNumeric) (M, error) {
+	if utils.IsNil(key) || utils.IsNil(message) || scalar == nil {
+		return *new(M), ErrIsNil.WithMessage("key, message, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpSignedNumeric(key.MessageOpInv, key.MessageOp, message, scalar)
+	if err != nil {
+		return *new(M), errs.Wrap(err).WithMessage("could not compute scalar times message")
+	}
+	return out, nil
+}
+
+// CommitmentScalarOpUnsignedNumeric computes scalar times commitment, where scalar is an unsigned numeric. It does so by repeated application of the commitment operation, which is efficient for small scalars but may be inefficient for large scalars. If scalar is zero, it returns the commitment identity, which is the result of applying the commitment operation to a commitment and its inverse. If scalar is one, it returns the commitment itself.
+func CommitmentScalarOpUnsignedNumeric[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, commitment C, scalar algebra.UnsignedNumeric) (C, error) {
+	if utils.IsNil(key) || utils.IsNil(commitment) || scalar == nil {
+		return *new(C), ErrIsNil.WithMessage("key, commitment, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpUnsignedNumeric(key.CommitmentOpInv, key.CommitmentOp, commitment, scalar)
+	if err != nil {
+		return *new(C), errs.Wrap(err).WithMessage("could not compute scalar times commitment")
+	}
+	return out, nil
+}
+
+// CommitmentScalarOpSignedNumeric computes scalar times commitment, where scalar is a signed numeric. It does so by computing the absolute value of scalar and applying CommitmentScalarOpUnsignedNumeric to it, then inverting the result if scalar is negative. If scalar is zero, it returns the commitment identity, which is the result of applying the commitment operation to a commitment and its inverse. If scalar is one, it returns the commitment itself. If scalar is negative one, it returns the commitment inverse.
+func CommitmentScalarOpSignedNumeric[K HomomorphicCommitmentKey[K, M, W, C, S], M Message, W Witness, C Commitment[C], S any](key K, commitment C, scalar algebra.SignedNumeric) (C, error) {
+	if utils.IsNil(key) || utils.IsNil(commitment) || scalar == nil {
+		return *new(C), ErrIsNil.WithMessage("key, commitment, and scalar must not be nil")
+	}
+	out, err := algebrautils.ScalarOpSignedNumeric(key.CommitmentOpInv, key.CommitmentOp, commitment, scalar)
+	if err != nil {
+		return *new(C), errs.Wrap(err).WithMessage("could not compute scalar times commitment")
+	}
+	return out, nil
 }

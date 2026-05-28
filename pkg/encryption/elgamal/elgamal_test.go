@@ -270,14 +270,6 @@ func TestNewNonce(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, nonce)
 	})
-
-	t.Run("returns an error for the additive identity (zero)", func(t *testing.T) {
-		t.Parallel()
-		// r = 0 produces (g^0, m·h^0) = (identity, m), which leaks m in c₂.
-		nonce, err := elgamal.NewNonce(scalarField.Zero())
-		require.Error(t, err)
-		require.Nil(t, nonce)
-	})
 }
 
 func TestNewPlaintext(t *testing.T) {
