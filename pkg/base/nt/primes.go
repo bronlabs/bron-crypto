@@ -448,8 +448,8 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 					//        Lucas test). Cheapest reliable filter.
 					//   (ii) ProbablyPrime(N) for the FIPS-derived count N,
 					//        for the formal 4^{-N} soundness bound.
-					if q.ProbablyPrime(0) && qHalf.ProbablyPrime(0) &&
-						q.ProbablyPrime(checks) && qHalf.ProbablyPrime(halfChecks) {
+					if qHalf.ProbablyPrime(0) && q.ProbablyPrime(0) &&
+						qHalf.ProbablyPrime(halfChecks) && q.ProbablyPrime(checks) {
 						// Step 5 (Figure 6): output q.
 						out, err := set.FromBytesBE(q.Bytes())
 						if err != nil {
