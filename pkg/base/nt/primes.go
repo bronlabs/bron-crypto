@@ -510,6 +510,8 @@ func GenerateSafePrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 	return p, q, nil
 }
 
+// generatePrimePair generates two primes p, q whose bitlen is keyLen/2 and whose product is keyLen bits.
+// The primes satisfy IFC Key generation requirements of FIPS 186-5 A.1.1.
 func generatePrimePair[N algebra.NatPlusLike[N]](gen PrimeSampler[N], set PrimeSamplable[N], keyLen uint, prng io.Reader, predicates ...func(N, N) bool) (p, q N, err error) {
 	var nilN N
 	if gen == nil || set == nil || prng == nil {
@@ -523,26 +525,50 @@ func generatePrimePair[N algebra.NatPlusLike[N]](gen PrimeSampler[N], set PrimeS
 			return nilN, nilN, ErrIsNil.WithMessage("predicates must not contain nil")
 		}
 	}
-	bits := keyLen / 2
+	primeBits := keyLen / 2
 
 	for {
 		var pCandidate, qCandidate N
+		var pCandidateNat, qCandidateNat *num.NatPlus
 		g := errgroup.Group{}
+		// We need to check FIPS 186-5 A.1.1 2(b) and 2(c). ie.
+		// sqrt(2)(2^(keyLen/2 - 1)) <= p, q <= 2^(keyLen/2) - 1
+		// The upper bound is guaranteed by the bit length of the generated primes, but the lower bound is not.
+		// So we loop until we get candidates that satisfy the lower bound, and then check the predicates on those candidates.
+		// To avoid doing a sqrt, we square and do log2.
+		// sqrt(2)(2^(keyLen/2 - 1)) <= p, q  ==>
+		// 2^(keyLen - 1) <= p^2, q^2
 		g.Go(func() error {
 			var err error
-			pCandidate, err = gen(set, bits, prng)
-			if err != nil {
-				return errs.Wrap(err).WithMessage("cannot generate prime")
+			for {
+				pCandidate, err = gen(set, primeBits, prng)
+				if err != nil {
+					return errs.Wrap(err).WithMessage("cannot generate prime")
+				}
+				pCandidateNat, err = num.NPlus().FromCardinal(pCandidate.Cardinal())
+				if err != nil {
+					return errs.Wrap(err).WithMessage("cannot convert p to NatPlus")
+				}
+				if pCandidateNat.Square().TrueLen() >= int(keyLen) { // TrueLen()/BitLen() gives the index of the highest set bit plus one, so it's int(keyLen) not int(keyLen-1)
+					return nil
+				}
 			}
-			return nil
 		})
 		g.Go(func() error {
 			var err error
-			qCandidate, err = gen(set, bits, prng)
-			if err != nil {
-				return errs.Wrap(err).WithMessage("cannot generate prime")
+			for {
+				qCandidate, err = gen(set, primeBits, prng)
+				if err != nil {
+					return errs.Wrap(err).WithMessage("cannot generate prime")
+				}
+				qCandidateNat, err = num.NPlus().FromCardinal(qCandidate.Cardinal())
+				if err != nil {
+					return errs.Wrap(err).WithMessage("cannot convert q to NatPlus")
+				}
+				if qCandidateNat.Square().TrueLen() >= int(keyLen) {
+					return nil
+				}
 			}
-			return nil
 		})
 		if err := g.Wait(); err != nil {
 			return nilN, nilN, errs.Wrap(err).WithMessage("cannot generate primes")
@@ -550,13 +576,18 @@ func generatePrimePair[N algebra.NatPlusLike[N]](gen PrimeSampler[N], set PrimeS
 		if pCandidate.Equal(qCandidate) {
 			continue
 		}
-		modulus, err := num.N().FromCardinal(pCandidate.Mul(qCandidate).Cardinal())
-		if err != nil {
-			return nilN, nilN, errs.Wrap(err).WithMessage("cannot compute modulus")
-		}
-		if modulus.AnnouncedLen() != int(keyLen) {
+		// ensuring the modulus has the correct bit length is a sanity check on the generated primes.
+		if pCandidateNat.Mul(qCandidateNat).TrueLen() != int(keyLen) {
 			continue
 		}
+
+		// We need to check FIPS 186-5 A.1.1 2(d) to prevent against Fermat factorization should the generated primes be too close.
+		// |p - q| > 2^(keyLen/2 - 100)
+		// Note that if keyLen/2 <= 100, then the distance bound is vacuous since p != q already implies |p-q| >= 2, so we only check the distance when keyLen/2 > 100.
+		if pCandidateNat.Lift().Sub(qCandidateNat.Lift()).Abs().TrueLen() <= int(primeBits-100) {
+			continue
+		}
+
 		if len(predicates) == 0 || sliceutils.All(predicates, func(pred func(N, N) bool) bool { return pred(pCandidate, qCandidate) }) {
 			return pCandidate, qCandidate, nil
 		}
