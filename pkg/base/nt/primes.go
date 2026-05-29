@@ -584,7 +584,7 @@ func generatePrimePair[N algebra.NatPlusLike[N]](gen PrimeSampler[N], set PrimeS
 		// We need to check FIPS 186-5 A.1.1 2(d) to prevent against Fermat factorization should the generated primes be too close.
 		// |p - q| > 2^(keyLen/2 - 100)
 		// Note that if keyLen/2 <= 100, then the distance bound is vacuous since p != q already implies |p-q| >= 2, so we only check the distance when keyLen/2 > 100.
-		if pCandidateNat.Lift().Sub(qCandidateNat.Lift()).Abs().TrueLen() <= int(primeBits-100) {
+		if pCandidateNat.Lift().Sub(qCandidateNat.Lift()).Abs().TrueLen() <= int(primeBits)-100 {
 			continue
 		}
 
