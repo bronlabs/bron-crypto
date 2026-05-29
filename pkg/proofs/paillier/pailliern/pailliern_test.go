@@ -48,8 +48,6 @@ func Test_HappyPath(t *testing.T) {
 	proverTranscript := hagrid.NewTranscript(label)
 	verifierTranscript := hagrid.NewTranscript(label)
 
-	scheme := paillier.NewScheme()
-
 	sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("%s-%s", label, sessionID))))
 
 	pInt, err := crand.Prime(prng, keyLen/2)
@@ -67,20 +65,17 @@ func Test_HappyPath(t *testing.T) {
 	group, err := znstar.NewPaillierGroup(p, q)
 	require.NoError(t, err)
 
-	sk, err := paillier.NewPrivateKey(group)
+	sk, err := paillier.NewSecretKey(group)
 	require.NoError(t, err)
 
-	senc, err := scheme.SelfEncrypter(sk)
-	require.NoError(t, err)
-
-	prover, err := pailliern.NewProver(sid, senc, proverTranscript)
+	prover, err := pailliern.NewProver(sid, sk, proverTranscript)
 	require.NoError(t, err)
 
 	proof, _, err := prover.Prove()
 	require.NoError(t, err)
 	require.NotNil(t, proof)
 
-	err = pailliern.Verify(sid, verifierTranscript, sk.PublicKey(), proof)
+	err = pailliern.Verify(sid, verifierTranscript, sk.Public(), proof)
 	require.NoError(t, err)
 
 	proverBytes, err := proverTranscript.ExtractBytes("test", 16)

@@ -236,12 +236,34 @@ func (m *OddPrimeSquareFactors) ModMul(out, a, b *numct.Nat) {
 
 // ModDiv computes out = (a / b) mod n^2.
 func (m *OddPrimeSquareFactors) ModDiv(out, a, b *numct.Nat) ct.Bool {
-	return m.N2.ModDiv(out, a, b)
+	ok := m.ModInv(out, b)
+	m.ModMul(out, a, out)
+	return ok
 }
 
 // ModInv computes out = (a^{-1}) mod n^2.
 func (m *OddPrimeSquareFactors) ModInv(out, a *numct.Nat) ct.Bool {
-	return m.N2.ModInv(out, a)
+	var ap, aq numct.Nat
+	var ip, iq numct.Nat
+	var okP, okQ ct.Bool
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		m.P.Squared.Mod(&ap, a)
+		okP = m.P.Squared.ModInv(&ip, &ap)
+	}()
+	go func() {
+		defer wg.Done()
+		m.Q.Squared.Mod(&aq, a)
+		okQ = m.Q.Squared.ModInv(&iq, &aq)
+	}()
+	wg.Wait()
+
+	ok := okP & okQ
+	out.Set(m.CrtModN2.Recombine(&ip, &iq))
+	return ok
 }
 
 // ExpToN computes out = (a ^ N) mod n^2 using direct CRT mod-exp.
@@ -262,4 +284,24 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 
 	// One-multiply CRT using precomputed (q^2)^{-1} mod p^2 inside m.CrtModN2
 	out.Set(m.CrtModN2.Recombine(&yp, &yq))
+}
+
+// FermatQuotient computes the Fermat quotients L_p(x) and L_q(x) for the given x.
+func (m *OddPrimeSquareFactors) FermatQuotient(outLp, outLq, x *numct.Nat) {
+	var wg sync.WaitGroup
+	wg.Add(2)
+	// L_p(x) = ((x^{p-1} - 1 mod p^2)) / p mod p
+	go func() {
+		defer wg.Done()
+		m.P.Squared.ModExp(outLp, x, m.P.PhiFactor.Nat())
+		m.P.Squared.ModSub(outLp, outLp, numct.NatOne())
+		m.P.Factor.Quo(outLp, outLp)
+	}()
+	go func() {
+		defer wg.Done()
+		m.Q.Squared.ModExp(outLq, x, m.Q.PhiFactor.Nat())
+		m.Q.Squared.ModSub(outLq, outLq, numct.NatOne())
+		m.Q.Factor.Quo(outLq, outLq)
+	}()
+	wg.Wait()
 }

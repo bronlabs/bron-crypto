@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 // LiftPolynomial lifts a scalar polynomial into a module-valued polynomial by
@@ -40,6 +41,14 @@ func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[
 		return nil, ErrValidation.WithMessage("nil module")
 	}
 	return &PolynomialModule[ME, S]{module: module}, nil
+}
+
+// Contains checks whether the given polynomial belongs to this polynomial module.
+func (m *PolynomialModule[ME, S]) Contains(p *ModuleValuedPolynomial[ME, S]) bool {
+	return p != nil && p.CoefficientStructure().Name() == m.module.Name() && p.ScalarStructure().Name() == m.module.ScalarStructure().Name() && sliceutils.All(
+		p.Coefficients(),
+		func(c ME) bool { return m.module.Contains(c) },
+	)
 }
 
 // New creates a module-valued polynomial from the given coefficients in

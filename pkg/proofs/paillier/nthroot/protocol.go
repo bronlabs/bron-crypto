@@ -61,7 +61,7 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 		if x == nil {
 			return nil, ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
 		}
-		y, err := group.NthResidue(x.ForgetOrder())
+		y, err := group.NthResidue(x)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot compute nth residue")
 		}

@@ -23,6 +23,7 @@ type unitWrapper[A modular.Arithmetic] interface {
 	Modulus() *num.NatPlus
 	IsUnknownOrder() bool
 	Jacobi() (int, error)
+	n_() *num.NatPlus
 	base.Transparent[*num.Uint]
 }
 
@@ -62,6 +63,11 @@ func (g *UnitGroupTrait[A, W, WT]) Name() string {
 	return fmt.Sprintf("U(Z/%sZ)*", g.Modulus().String())
 }
 
+// Contains checks whether the given element belongs to this group.
+func (g *UnitGroupTrait[A, W, WT]) Contains(e W) bool {
+	return e != nil && e.IsUnknownOrder() == g.IsUnknownOrder() && e.Modulus().Equal(g.Modulus()) && e.n_().Equal(g.n)
+}
+
 // Order returns the multiplicative order of the group. For the known-order
 // view this is φ(N) (or φ(N²) for Paillier, which equals N·φ(N)); for the
 // unknown-order view the returned Cardinal reports IsUnknown() == true so
@@ -69,6 +75,14 @@ func (g *UnitGroupTrait[A, W, WT]) Name() string {
 // techniques instead of computing modulo it.
 func (g *UnitGroupTrait[A, W, WT]) Order() cardinal.Cardinal {
 	return g.arith.MultiplicativeOrder()
+}
+
+// IsUnknownOrder reports whether this group is being viewed as one of unknown
+// order (i.e. with the SimpleModulus arithmetic) or known order (with
+// OddPrimeFactors / OddPrimeSquareFactors).
+func (g *UnitGroupTrait[A, W, WT]) IsUnknownOrder() bool {
+	_, ok := any(g.arith).(*modular.SimpleModulus)
+	return ok
 }
 
 // OpIdentity is the multiplicative identity (i.e. 1), exposed under the
@@ -259,6 +273,40 @@ func (g *UnitGroupTrait[A, W, WT]) FromUint(input *num.Uint) (W, error) {
 	return W(&out), nil
 }
 
+// FromNatPlus lifts a *num.NatPlus to a group element. The input must be a unit.
+func (g *UnitGroupTrait[A, W, WT]) FromNatPlus(input *num.NatPlus) (W, error) {
+	if input == nil {
+		return nil, ErrIsNil.WithMessage("input must not be nil")
+	}
+	v, err := g.zMod.FromNatPlus(input)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create element from nat plus")
+	}
+	var out WT
+	W(&out).set(v, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, ErrValue.WithMessage("input is not a unit")
+	}
+	return W(&out), nil
+}
+
+// FromNat lifts a *num.Nat to a group element. The input must be a unit.
+func (g *UnitGroupTrait[A, W, WT]) FromNat(input *num.Nat) (W, error) {
+	if input == nil {
+		return nil, ErrIsNil.WithMessage("input must not be nil")
+	}
+	v, err := g.zMod.FromNat(input)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create element from nat")
+	}
+	var out WT
+	W(&out).set(v, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, ErrValue.WithMessage("input is not a unit")
+	}
+	return W(&out), nil
+}
+
 // FromBytes decodes a group element from its canonical big-endian byte
 // encoding. The result is validated as a unit; any byte string that
 // encodes a value not coprime with N is rejected with ErrValue, so this
@@ -337,10 +385,10 @@ func (*UnitGroupTrait[A, W, WT]) ScalarStructure() algebra.Structure[*num.Int] {
 	return num.Z()
 }
 
-// Arithmetic returns the opaque modular-arithmetic backend. The concrete
+// Arithmetic returns the modular-arithmetic backend. The concrete
 // type (SimpleModulus vs OddPrimeFactors vs OddPrimeSquareFactors)
 // determines whether the trapdoor view is active and whether CRT
 // acceleration is available.
-func (g *UnitGroupTrait[A, W, WT]) Arithmetic() modular.Arithmetic {
+func (g *UnitGroupTrait[A, W, WT]) Arithmetic() A {
 	return g.arith
 }

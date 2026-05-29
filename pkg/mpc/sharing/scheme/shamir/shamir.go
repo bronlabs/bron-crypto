@@ -15,7 +15,7 @@ import (
 // DealerFunc is the polynomial used by the dealer to generate shares.
 // The secret is f(0) and each share i is f(i).
 type (
-	DealerFunc[FE algebra.PrimeFieldElement[FE]] = *polynomials.Polynomial[FE]
+	DealerFunc[FE algebra.PrimeFieldElement[FE]] = polynomials.Polynomial[FE]
 )
 
 // Name is the canonical name of this secret sharing scheme.

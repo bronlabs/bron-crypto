@@ -218,25 +218,21 @@ func (g *PaillierGroup[X]) EmbedRSA(u *RSAGroupElementUnknownOrder) (*PaillierGr
 // information about m; this method computes that residue factor. The
 // known-order specialisation of the arithmetic implements ExpToN with a
 // CRT-optimised fast path; otherwise we fall back to a generic ModExp by N.
-func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*PaillierGroupElement[X], error) {
+func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElement[X]) (*PaillierGroupElement[X], error) {
 	if u == nil {
 		return nil, ErrIsNil.WithMessage("argument must not be nil")
 	}
 	if !u.Modulus().Equal(g.Modulus()) {
 		return nil, ErrValue.WithMessage("argument must be in the paillier group with modulus equal to the Paillier modulus")
 	}
-	pu, err := g.FromNatCT(u.Value().Value())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to lift rsaUnit to Paillier group")
-	}
 	lift, ok := any(g.arith).(interface {
 		ExpToN(out, base *numct.Nat)
 	})
 	if !ok {
-		return pu.Exp(g.n.Nat()), nil
+		return u.Exp(g.n.Nat()), nil
 	}
 	var out numct.Nat
-	lift.ExpToN(&out, pu.Value().Value())
+	lift.ExpToN(&out, u.Value().Value())
 	v, err := num.NewUintGivenModulus(&out, g.ModulusCT())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to create unit from lifted value")
@@ -250,21 +246,20 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 	}, nil
 }
 
-// Representative maps a plaintext m ∈ (-N/2, N/2) to its canonical Paillier
+// Representative maps a plaintext m ∈ [0, N) to its canonical Paillier
 // encoding (1 + mN) mod N² — the deterministic, noise-free "core" of a
 // Paillier ciphertext. A full encryption is then Representative(m) · r^N
-// for a uniformly random r ∈ (Z/NZ)*. The plaintext is taken in the
-// symmetric representation so that small negative values encode naturally;
-// the call fails with ErrValue if |m| ≥ N/2.
-func (g *PaillierGroup[X]) Representative(plaintext *numct.Int) (*PaillierGroupElement[X], error) {
-	if g.N().ModulusCT().IsInRangeSymmetric(plaintext) == ct.False {
-		return nil, ErrValue.WithMessage("plaintext is out of range: |plaintext| >= n/2")
+// for a uniformly random r ∈ (Z/NZ)*.
+func (g *PaillierGroup[X]) Representative(plaintext *num.Uint) (*PaillierGroupElement[X], error) {
+	if plaintext == nil {
+		return nil, ErrIsNil.WithMessage("plaintext")
 	}
-	var shiftedPlaintext numct.Nat
-	g.N().ModulusCT().ModI(&shiftedPlaintext, plaintext)
+	if !plaintext.Modulus().IsLessThanOrEqual(g.n) {
+		return nil, ErrValue.WithMessage("the plaintext's modulus must be ≤ N")
+	}
 	var out numct.Nat
-	g.ModulusCT().ModMul(&out, &shiftedPlaintext, g.N().Value())
-	out.Increment()
+	g.arith.ModMul(&out, plaintext.Value(), g.N().Value())
+	g.arith.Modulus().ModAdd(&out, &out, numct.NatOne())
 	return g.FromNatCT(&out)
 }
 
@@ -320,6 +315,11 @@ func (u *PaillierGroupElement[X]) Clone() *PaillierGroupElement[X] {
 
 // Structure returns the Paillier group structure of the element.
 func (u *PaillierGroupElement[X]) Structure() algebra.Structure[*PaillierGroupElement[X]] {
+	return u.Group()
+}
+
+// Group returns the Paillier group this element belongs to.
+func (u *PaillierGroupElement[X]) Group() *PaillierGroup[X] {
 	return &PaillierGroup[X]{
 		UnitGroupTrait: UnitGroupTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
 			zMod:  u.v.Group(),

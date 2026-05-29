@@ -44,11 +44,20 @@ func TestMillerRabinChecks(t *testing.T) {
 
 func TestPrimeGenerator_Regular(t *testing.T) {
 	t.Parallel()
-	// bits >= 512 is required because the regular path internally calls
-	// rsa.GenerateKey(2*bits), which rejects keys smaller than 1024 bits.
-	prime, err := GeneratePrime(num.NPlus(), 512, pcg.NewRandomised())
-	require.NoError(t, err)
-	require.True(t, prime.IsProbablyPrime())
+	t.Run("1024-bit prime", func(t *testing.T) {
+		t.Parallel()
+		prime, err := GeneratePrime(num.NPlus(), 1024, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.True(t, prime.IsProbablyPrime())
+		require.Equal(t, 1024, prime.AnnouncedLen())
+	})
+	t.Run("64-bit prime", func(t *testing.T) {
+		t.Parallel()
+		prime, err := GeneratePrime(num.NPlus(), 64, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.True(t, prime.IsProbablyPrime())
+		require.Equal(t, 64, prime.AnnouncedLen())
+	})
 }
 
 func TestPrimeGenerator_Safe(t *testing.T) {
@@ -56,6 +65,7 @@ func TestPrimeGenerator_Safe(t *testing.T) {
 	prime, err := GenerateSafePrime(num.NPlus(), 128, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
+	require.Equal(t, 128, prime.AnnouncedLen())
 	sophieGermain := new(big.Int).Rsh(prime.Big(), 1)
 	require.True(t, sophieGermain.ProbablyPrime(40))
 }
@@ -68,7 +78,7 @@ func TestPrimeGenerator_Blum(t *testing.T) {
 	prime, err := GenerateBlumPrime(num.NPlus(), 128, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
-	require.Equal(t, 128, prime.Big().BitLen())
+	require.Equal(t, 128, prime.AnnouncedLen())
 	require.Equal(t, uint64(3), prime.Mod(four).Nat().Uint64())
 }
 
@@ -80,6 +90,7 @@ func TestPrimeGenerator_SafeBlum(t *testing.T) {
 	prime, err := GenerateSafePrime(num.NPlus(), 128, pcg.NewRandomised()) // Safe primes are also Blum primes
 	require.NoError(t, err)
 	require.True(t, prime.IsProbablyPrime())
+	require.Equal(t, 128, prime.AnnouncedLen())
 	require.Equal(t, uint64(3), prime.Mod(four).Nat().Uint64())
 	sophieGermain := new(big.Int).Rsh(prime.Big(), 1)
 	require.True(t, sophieGermain.ProbablyPrime(40))
@@ -87,11 +98,26 @@ func TestPrimeGenerator_SafeBlum(t *testing.T) {
 
 func TestPrimePairGenerator_Regular(t *testing.T) {
 	t.Parallel()
-	p, q, err := GeneratePrimePair(num.NPlus(), 2048, pcg.NewRandomised())
-	require.NoError(t, err)
-	require.False(t, p.Equal(q))
-	require.True(t, p.IsProbablyPrime())
-	require.True(t, q.IsProbablyPrime())
+	t.Run("2048-bit keys", func(t *testing.T) {
+		t.Parallel()
+		p, q, err := GeneratePrimePair(num.NPlus(), 2048, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.False(t, p.Equal(q))
+		require.True(t, p.IsProbablyPrime())
+		require.True(t, q.IsProbablyPrime())
+		require.Equal(t, 1024, p.AnnouncedLen())
+		require.Equal(t, 1024, q.AnnouncedLen())
+	})
+	t.Run("64-bit keys", func(t *testing.T) {
+		t.Parallel()
+		p, q, err := GeneratePrimePair(num.NPlus(), 64, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.False(t, p.Equal(q))
+		require.True(t, p.IsProbablyPrime())
+		require.True(t, q.IsProbablyPrime())
+		require.Equal(t, 32, p.AnnouncedLen())
+		require.Equal(t, 32, q.AnnouncedLen())
+	})
 }
 
 func TestPrimePairGenerator_Safe(t *testing.T) {

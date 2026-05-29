@@ -58,7 +58,6 @@ type Verifier struct {
 	Participant[*modular.SimpleModulus]
 
 	paillierPublicKey *paillier.PublicKey
-	enc               *paillier.Encrypter
 	state             *VerifierState
 }
 
@@ -78,7 +77,7 @@ type ProverState struct {
 type Prover struct {
 	Participant[*modular.OddPrimeSquareFactors]
 
-	paillierSecretKey *paillier.PrivateKey
+	paillierSecretKey *paillier.SecretKey
 	state             *ProverState
 }
 
@@ -101,11 +100,6 @@ func NewVerifier(ctx *session.Context, k int, pk *paillier.PublicKey, prng io.Re
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create multi Nth root protocol")
 	}
-	enc, err := paillier.NewScheme().Encrypter()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create paillier encrypter")
-	}
-
 	return &Verifier{
 		Participant: Participant[*modular.SimpleModulus]{
 			ctx:                   ctx,
@@ -116,7 +110,6 @@ func NewVerifier(ctx *session.Context, k int, pk *paillier.PublicKey, prng io.Re
 			multiNthRootsProtocol: multiNthRootsProtocol,
 		},
 		paillierPublicKey: pk,
-		enc:               enc,
 		state: &VerifierState{
 			rootsProver: nil,
 			x:           nil,
@@ -145,7 +138,7 @@ func validateVerifierInputs(ctx *session.Context, k int, pk *paillier.PublicKey,
 }
 
 // NewProver constructs a prover instance for the LP protocol.
-func NewProver(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Reader) (prover *Prover, err error) {
+func NewProver(ctx *session.Context, k int, sk *paillier.SecretKey, prng io.Reader) (prover *Prover, err error) {
 	if err := validateProverInputs(ctx, k, sk, prng); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
@@ -181,7 +174,7 @@ func NewProver(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Rea
 	}, nil
 }
 
-func validateProverInputs(ctx *session.Context, k int, sk *paillier.PrivateKey, prng io.Reader) error {
+func validateProverInputs(ctx *session.Context, k int, sk *paillier.SecretKey, prng io.Reader) error {
 	if ctx == nil {
 		return ErrInvalidArgument.WithMessage("ctx is nil")
 	}

@@ -27,6 +27,10 @@ type FieldUnitSubGroup[FE acrtp.FieldElement[FE]] struct {
 	f algebra.Field[FE]
 }
 
+func (g FieldUnitSubGroup[FE]) Contains(e *FieldUnitSubGroupElement[FE]) bool {
+	return e != nil && g.f.Contains(e.fe) && !e.fe.IsZero()
+}
+
 func (FieldUnitSubGroup[FE]) New(fe FE) (*FieldUnitSubGroupElement[FE], error) {
 	if fe.IsZero() {
 		return nil, ErrInvalidArgument.WithMessage("argument is zero")

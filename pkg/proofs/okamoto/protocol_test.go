@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/okamoto"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -469,10 +470,6 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 
 	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
-	scheme, err := pedersen.NewScheme(key)
-	require.NoError(t, err)
-	committer, err := scheme.Committer()
-	require.NoError(t, err)
 
 	// Commit to a random message.
 	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
@@ -482,7 +479,7 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	message, err := pedersen.NewMessage(msgScalar)
 	require.NoError(t, err)
 
-	commitment, pedersenWitness, err := committer.Commit(message, pcg.NewRandomised())
+	commitment, pedersenWitness, err := commitments.Commit(key, message, pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Prove knowledge of opening (m, r) such that C = g^m * h^r using Okamoto.

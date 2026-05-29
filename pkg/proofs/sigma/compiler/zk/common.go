@@ -8,8 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -21,11 +20,8 @@ const (
 	commitmentLabel          = "zkCompilerCommitment"
 	challengeLabel           = "zkCompilerChallenge"
 	responseLabel            = "zkCompilerResponse"
+	ckLabel                  = "zkCompilerCommitmentKey"
 )
-
-// CommitmentScheme is the type alias for the hash-based commitment scheme used
-// to commit to verifier challenges.
-type CommitmentScheme commitments.Scheme[hash_comm.Key, hash_comm.Witness, hash_comm.Message, hash_comm.Commitment, *hash_comm.Committer, *hash_comm.Verifier]
 
 type participant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	ctx *session.Context
@@ -34,7 +30,7 @@ type participant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 	statement  X
 	commitment A
 	response   Z
-	comm       *hash_comm.Scheme
+	ck         *hashcom.CommitmentKey
 
 	round uint
 }
@@ -56,17 +52,11 @@ func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S si
 	sessionID := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
-
 	ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
-	ck, err := hash_comm.NewKeyFromCRSBytes(sessionID, dst)
+	ck, err := hashcom.ExtractCommitmentKey(ctx.Transcript(), ckLabel)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't create hash commitment key")
-	}
-
-	comm, err := hash_comm.NewScheme(ck)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("couldn't create commitment scheme")
 	}
 
 	return &participant[X, W, A, S, Z]{
@@ -75,7 +65,7 @@ func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S si
 		statement:  statement,
 		commitment: *new(A),
 		response:   *new(Z),
-		comm:       comm,
+		ck:         ck,
 		round:      1,
 	}, nil
 }

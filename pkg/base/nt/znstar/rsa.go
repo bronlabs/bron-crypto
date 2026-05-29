@@ -242,10 +242,13 @@ func (u *RSAGroupElement[X]) Clone() *RSAGroupElement[X] {
 }
 
 // Structure reifies the ambient group the element belongs to as an
-// algebra.Structure. Useful for generic algorithms that operate on a
-// Structure handle (sampling, serialisation, equality) without having to
-// know whether the specific instantiation is RSA or Paillier.
+// algebra.Structure.
 func (u *RSAGroupElement[X]) Structure() algebra.Structure[*RSAGroupElement[X]] {
+	return u.Group()
+}
+
+// Group returns the RSAGroup the element belongs to.
+func (u *RSAGroupElement[X]) Group() *RSAGroup[X] {
 	return &RSAGroup[X]{
 		UnitGroupTrait: UnitGroupTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]{
 			zMod:  u.v.Group(),

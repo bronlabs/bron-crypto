@@ -70,6 +70,11 @@ func (zn *ZMod) Name() string {
 	return fmt.Sprintf("Z\\%sZ", zn.n.String())
 }
 
+// Contains checks if a given Uint element belongs to this ZMod structure.
+func (zn *ZMod) Contains(e *Uint) bool {
+	return e != nil && e.Modulus().Equal(zn.n)
+}
+
 // Order returns the order of the group.
 func (zn *ZMod) Order() cardinal.Cardinal {
 	return zn.n.Cardinal()

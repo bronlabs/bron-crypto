@@ -1,90 +1,59 @@
-# indcpacom
+# IND-CPA Commitments (commitment from encryption)
 
-IND-CPA commitment scheme constructed from encryption.
+A commitment to a message `m` with witness `r` is the ciphertext
 
-## Overview
-
-This package implements a commitment scheme based on any IND-CPA (indistinguishability under chosen-plaintext attack) secure encryption scheme. The construction is:
-
-- **Commit(m)** = Encrypt(m, r) using randomness r
-- **Commitment** = the resulting ciphertext
-- **Witness** = the encryption nonce/randomness r
-
-## Security Properties
-
-- **Hiding**: Inherited from the semantic security of the encryption scheme
-- **Binding**: Inherited from the correctness of decryption
-- **Re-randomizable**: Commitments can be re-randomized to produce new commitments to the same message
-
-## Usage
-
-```go
-import (
-    "crypto/rand"
-
-    "github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
-    "github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-)
-
-// Setup: create encryption scheme and generate keys
-paillierScheme := paillier.NewScheme()
-kg, _ := paillierScheme.Keygen()
-_, pk, _ := kg.Generate(rand.Reader)
-
-// Create commitment scheme
-key, _ := indcpacom.NewKey(pk)
-scheme, _ := indcpacom.NewScheme(paillierScheme, key)
-
-// Commit to a message
-plaintext, _ := pk.PlaintextSpace().Sample(nil, nil, rand.Reader)
-message, _ := indcpacom.NewMessage(plaintext)
-
-committer, _ := scheme.Committer()
-commitment, witness, _ := committer.Commit(message, rand.Reader)
-
-// Verify the commitment
-verifier, _ := scheme.Verifier()
-err := verifier.Verify(commitment, message, witness)
-// err == nil if verification succeeds
-
-// Re-randomize a commitment
-newCommitment, rerandWitness, _ := commitment.ReRandomise(key, rand.Reader)
-
-// Verify re-randomized commitment using combined witness
-combinedWitness := witness.Op(rerandWitness)
-err = verifier.Verify(newCommitment, message, combinedWitness)
+```text
+C = Enc_ek(m; r)
 ```
 
-## Deterministic Commitments
+produced by encrypting `m` under a public encryption key `ek` with nonce `r`. The
+commitment key is exactly that encryption key, so the scheme works for any
+IND-CPA encryption scheme implementing `pkg/encryption`.
 
-For protocols requiring deterministic commitment creation:
+- **Hiding** is computational, resting on the IND-CPA security of the encryption
+  scheme: a ciphertext reveals nothing about `m` to anyone without the decryption
+  key. It depends on `r` being a fresh, secret nonce.
+- **Binding** is on the message: a ciphertext decrypts to at most one plaintext, so
+  a commitment cannot be opened to two different messages. Binding is therefore as
+  strong as the encryption scheme's decryption correctness (perfect for
+  perfectly-correct schemes). This is the dual of Pedersen, which is perfectly
+  hiding and only computationally binding.
 
-```go
-// Create witness from a known nonce
-nonce, _ := pk.NonceSpace().Sample(rand.Reader)
-witness, _ := indcpacom.NewWitness(nonce)
+> **Trapdoor / extractability.** Whoever holds the matching **decryption key** can
+> decrypt the commitment and recover `m` (and, with an `OpeningKey`, also `r`),
+> defeating hiding. The decryption key therefore must remain unknown to verifiers.
+> This same property makes the construction a useful *extractable* commitment in
+> MPC: a simulator holding the decryption key can extract committed values.
 
-// Commit deterministically
-commitment, _ := committer.CommitWithWitness(message, witness)
-```
+## Types
 
-## Witness Combination
+- `CommitmentKey`: wraps a public `encryption.EncryptionKey`. Holds no secret.
+- `HomomorphicCommitmentKey`: wraps a `HomomorphicEncryptionKey` and additionally
+  exposes the induced homomorphism on messages, witnesses, and commitments.
+- `Message`: the plaintext `m`.
+- `Witness`: the secret encryption nonce `r`. Keep private until opening.
+- `Commitment`: the ciphertext `Enc_ek(m; r)`.
 
-When a commitment is re-randomized, verifying the new commitment requires combining the original witness with the re-randomization witness using the `Op` method:
+All types implement CBOR encoding; decoding routes through the constructors, with
+ciphertext/key well-formedness delegated to the underlying encryption types.
 
-```go
-// Original commitment with witness
-commitment, witness, _ := committer.Commit(message, rand.Reader)
+There is no `TrapdoorKey` type here — the encryption scheme's `DecryptionKey` /
+`OpeningKey` (in `pkg/encryption`) plays that role.
 
-// Re-randomize
-newCommitment, rerandWitness, _ := commitment.ReRandomise(key, rand.Reader)
+## Commit, Open, Re-randomise
 
-// Combine witnesses to verify re-randomized commitment
-combinedWitness := witness.Op(rerandWitness)
-verifier.Verify(newCommitment, message, combinedWitness)
+- `key.CommitWithWitness(message, witness)`: deterministic `Enc_ek(m; r)`.
+- `commitments.Commit(key, message, prng)`: samples a fresh nonce and returns
+  `(commitment, witness)`.
+- `key.Open(commitment, message, witness)`: re-encrypts and compares the
+  ciphertext, returning `commitments.ErrVerificationFailed` on mismatch.
 
-// Multiple re-randomizations chain the witness combinations
-commitment2, rerandWitness2, _ := newCommitment.ReRandomise(key, rand.Reader)
-combinedWitness2 := combinedWitness.Op(rerandWitness2)
-verifier.Verify(commitment2, message, combinedWitness2)
-```
+## Homomorphism
+
+With a homomorphic encryption scheme, `CommitmentOp` combines commitments via the
+ciphertext homomorphism, yielding a commitment to the combined message under the
+combined nonce; `MessageOp`/`WitnessOp` and the `…ScalarOp` / `…OpInv` variants
+apply the matching plaintext/nonce operations. `ReRandomise(commitment,
+witnessShift)` blinds a commitment to the same message, and `Shift(commitment,
+message)` adds to the committed value while keeping the witness. These make the
+scheme suitable for aggregation and linear proof systems.

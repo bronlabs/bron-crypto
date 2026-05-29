@@ -35,6 +35,11 @@ func (*PositiveNaturalNumbers) Name() string {
 	return "N\\{0}"
 }
 
+// Contains checks if the given element is a valid positive natural number (greater than zero).
+func (*PositiveNaturalNumbers) Contains(e *NatPlus) bool {
+	return e != nil
+}
+
 // Characteristic returns the characteristic of PositiveNaturalNumbers, which is 0.
 func (*PositiveNaturalNumbers) Characteristic() cardinal.Cardinal {
 	return cardinal.Zero()
@@ -150,6 +155,18 @@ func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
 	out, err := nps.FromBytes(input)
 	if err != nil {
 		return nil, errs.Wrap(err)
+	}
+	return out, nil
+}
+
+// FromUnsignedNumeric creates a NatPlus from the given algebra.UnsignedNumeric, returning an error if the input is nil or represents zero.
+func (nps *PositiveNaturalNumbers) FromUnsignedNumeric(value algebra.UnsignedNumeric) (*NatPlus, error) {
+	if value == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	out, err := nps.FromBytes(value.BytesBE())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert UnsignedNumeric to NatPlus")
 	}
 	return out, nil
 }

@@ -97,8 +97,8 @@ func (s *Share[S]) Op(other *Share[S]) *Share[S] {
 	secretsOut := make([]*pedcom.Message[S], len(s.secret))
 	blindingsOut := make([]*pedcom.Witness[S], len(s.blinding))
 	for i, si := range s.secret {
-		secretsOut[i] = si.Op(other.secret[i])
-		blindingsOut[i] = s.blinding[i].Op(other.blinding[i])
+		secretsOut[i] = si.Add(other.secret[i])
+		blindingsOut[i] = s.blinding[i].Add(other.blinding[i])
 	}
 	return &Share[S]{
 		id:       s.id,
@@ -246,24 +246,17 @@ func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 // commitment Com(secret_j, blinding_j) = [secret_j]G + [blinding_j]H for
 // each MSP row component. The result can be compared against the expected
 // lifted share M_i · V during verification.
-func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](share *Share[FE], key *pedcom.Key[E, FE]) (*LiftedShare[E, FE], error) {
+func LiftShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](share *Share[FE], key *pedcom.CommitmentKey[E, FE]) (*LiftedShare[E, FE], error) {
 	if share == nil {
 		return nil, sharing.ErrIsNil.WithMessage("share cannot be nil")
 	}
 	if key == nil {
 		return nil, sharing.ErrIsNil.WithMessage("pedersen commitment key cannot be nil")
 	}
-	comScheme, err := pedcom.NewScheme(key)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create Pedersen commitment scheme for lifting share")
-	}
-	committer, err := comScheme.Committer()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create Pedersen committer for lifting share")
-	}
 	v := make([]*pedcom.Commitment[E, FE], len(share.secret))
+	var err error
 	for i := range share.secret {
-		v[i], err = committer.CommitWithWitness(share.secret[i], share.blinding[i])
+		v[i], err = key.CommitWithWitness(share.secret[i], share.blinding[i])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create Pedersen commitment for share")
 		}

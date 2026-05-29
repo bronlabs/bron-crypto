@@ -9,7 +9,8 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -29,12 +30,8 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}
 
 	// step 1.2: commit your sample
-	p.state.rCommitments = make(map[sharing.ID]hash_comm.Commitment)
-	committer, err := p.commitmentScheme.Committer()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create committer")
-	}
-	p.state.rCommitments[p.id], p.state.rWitness, err = committer.Commit(p.state.r, p.prng)
+	p.state.rCommitments = make(map[sharing.ID]hashcom.Commitment)
+	p.state.rCommitments[p.id], p.state.rWitness, err = commitments.Commit(p.commitmentKey, p.state.r, p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not commit to the seed")
 	}
@@ -77,12 +74,8 @@ func (p *Participant) Round3(r2 network.RoundMessages[*Round2Broadcast, *Partici
 	}
 
 	r := p.state.r
-	verifier, err := p.commitmentScheme.Verifier()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create verifier")
-	}
 	for id, m := range incomingMessages {
-		if err := verifier.Verify(p.state.rCommitments[id], m.Message, m.Witness); err != nil {
+		if err := p.commitmentKey.Open(p.state.rCommitments[id], m.Message, m.Witness); err != nil {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("could not verify commitment")
 		}
 		subtle.XORBytes(r, r, m.Message)
@@ -94,6 +87,7 @@ func (p *Participant) Round3(r2 network.RoundMessages[*Round2Broadcast, *Partici
 
 func (p *Participant) writeCommitmentsToTranscript() {
 	for _, id := range slices.Sorted(p.quorum.Iter()) {
-		p.tape.AppendBytes(commitmentLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), p.state.rCommitments[id].Bytes())
+		cid := p.state.rCommitments[id]
+		p.tape.AppendBytes(commitmentLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), cid[:])
 	}
 }

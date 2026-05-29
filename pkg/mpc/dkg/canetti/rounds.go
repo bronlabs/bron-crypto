@@ -9,7 +9,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -50,7 +51,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 		X:         dealerOutput.VerificationMaterial(),
 		A:         bigA,
 	}
-	bigV, u, err := p.commit(msg)
+	bigV, u, err := commitments.Commit(p.commitmentKey, msg.Bytes(), p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create commitment")
 	}
@@ -81,7 +82,7 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		return nil, nil, errs.Wrap(err).WithMessage("invalid incoming messages")
 	}
 
-	vs := make(map[sharing.ID]hash_comm.Commitment)
+	vs := make(map[sharing.ID]hashcom.Commitment)
 	for id := range p.ctx.OtherPartiesOrdered() {
 		b, _ := r1b.Get(id)
 		vs[id] = b.V
@@ -128,7 +129,7 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 		u, _ := r2u.Get(id)
 
 		// step 1.i
-		if err := p.verify(b.Message, p.state.vs[id], b.U); err != nil {
+		if err := p.commitmentKey.Open(p.state.vs[id], b.Message.Bytes(), b.U); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment")
 		}
 		if err := p.sharingScheme.Verify(u.Share, b.Message.X); err != nil {

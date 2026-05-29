@@ -88,6 +88,14 @@ func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) FromBytes(input []byte) 
 	return W(&out), nil
 }
 
+func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) Contains(e W) bool {
+	if utils.IsNil(e) {
+		return false
+	}
+	e1, e2 := e.Components()
+	return d.s1.Contains(e1) && d.s2.Contains(e2)
+}
+
 func (*DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) New(e1 E1, e2 E2) (W, error) {
 	var out WT
 	if err := W(&out).set(e1, e2); err != nil {

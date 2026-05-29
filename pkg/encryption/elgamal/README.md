@@ -1,90 +1,42 @@
-# Generalized ElGamal Cryptosystem
+# Generalised ElGamal Cryptosystem
 
-This package implements the Generalized ElGamal cryptosystem over any finite abelian cyclic group G, following section 8.4 of the *Handbook of Applied Cryptography* (Menezes, van Oorschot, Vanstone).
+This package implements the Generalized ElGamal cryptosystem over any finite abelian cyclic group G, following section 8.4 of the Handbook of Applied Cryptography (Menezes, van Oorschot, Vanstone). Internally, we adapt the implementation to match ElGamal instantiation of GIFT.
 
-## Mathematical Foundation
+## Overview
 
-Security relies on the Decisional Diffie-Hellman (DDH) assumption in G. Typical instantiations use prime-order elliptic curve groups (secp256k1, P-256, Ed25519 prime subgroup).
+- Key pair: secret scalar `a`, public key `h = g^a` for a group generator `g`.
+- Encryption of `m ∈ G` with nonce `r ∈ [1, n−1]`: `c = (γ, δ) = (g^r, m·h^r)`.
+- Decryption with `a`: `m = δ · γ^{−a}`.
+- Security: **IND-CPA under the Decisional Diffie–Hellman assumption** in `G`.
+  Typical instantiations are prime-order elliptic-curve groups (k256, p256,
+  ed25519 prime subgroup). The nonce must be fresh, secret, and non-zero — a
+  zero nonce yields `(1, m)`, leaking the plaintext, and a reused nonce leaks the
+  ratio of two plaintexts.
+- The message space is the group `G` itself; encoding application data into group
+  elements is the caller's responsibility.
 
-### Key Structure
+## Types
 
-- **Private key**: scalar `a` sampled uniformly from `Z/nZ \ {0}`
-- **Public key**: group element `h = g^a`
-- **Plaintext space**: elements of `G`
-- **Ciphertext space**: pairs `(c1, c2) in G x G`
+- `PublicKey`: the element `h = g^a`; encrypts and runs the homomorphic operations.
+- `SecretKey`: embeds `PublicKey` and holds the secret scalar `a`, the decryption
+  trapdoor. `Public()` returns the public key with `a` stripped.
+- `Plaintext`: a group element `m ∈ G`.
+- `Nonce`: the encryption randomness `r ∈ Z/nZ \ {0}`.
+- `Ciphertext`: the pair `(γ, δ) ∈ G²`, validated to be torsion-free (in the
+  prime-order subgroup) to resist small-subgroup attacks.
 
-### Encryption
+## Homomorphism
 
-For plaintext `m in G` and random nonce `r in Z/nZ \ {0}`:
-
-```
-Enc(m, r) = (g^r,  m * h^r)
-```
-
-### Decryption
-
-```
-Dec(c1, c2) = c2 * (c1^a)^{-1} = m
-```
-
-### Homomorphic Properties
-
-The scheme is group-homomorphic over G:
-
-| Operation | Ciphertext Computation | Plaintext Effect |
-|-----------|------------------------|------------------|
-| `Op(c, c')` | `(c1 * c1', c2 * c2')` | `m * m'` |
-| `ScalarOp(c, k)` | `(c1^k, c2^k)` | `m^k` |
-| `Shift(c, m')` | `(c1, c2 * m')` | `m * m'` |
-| `ReRandomise(c, r')` | `(c1 * g^r', c2 * h^r')` | `m` (unchanged) |
-
-**Note**: `Shift` modifies only `c2` and does not re-randomise the ciphertext; an observer who sees both the original and shifted ciphertexts can detect the relationship. Use `ReRandomise` afterwards if unlinkability is needed.
-
-## Usage
-
-### Key Generation
-
-```go
-curve := k256.NewCurve()
-scheme, _ := elgamal.NewScheme(curve)
-kg, _ := scheme.Keygen()
-sk, pk, _ := kg.Generate(rand.Reader)
-```
-
-### Encryption and Decryption
-
-```go
-enc, _ := scheme.Encrypter()
-dec, _ := scheme.Decrypter(sk)
-
-pt, _ := elgamal.NewPlaintext(someGroupElement)
-ct, nonce, _ := enc.Encrypt(pt, pk, rand.Reader)
-recovered, _ := dec.Decrypt(ct)
-```
-
-### Homomorphic Addition
-
-```go
-ct1, _, _ := enc.Encrypt(pt1, pk, rand.Reader)
-ct2, _, _ := enc.Encrypt(pt2, pk, rand.Reader)
-
-ctProduct := ct1.Op(ct2)           // encrypts pt1 * pt2
-ctScaled := ct1.ScalarOp(scalar)   // encrypts pt1^scalar
-```
-
-### Re-randomisation
-
-```go
-ctNew, _, _ := ct.ReRandomise(pk, rand.Reader)  // same plaintext, unlinkable ciphertext
-```
-
-## Security Notes
-
-- **IND-CPA** under DDH. The scheme is probabilistic: encrypting the same message twice produces different ciphertexts.
-- **Not IND-CCA2**: ciphertexts are malleable by design (the homomorphic operations exploit this). Protocols requiring ciphertext integrity must add authentication (e.g. Cramer-Shoup, or a ZK proof of well-formedness).
-- **Nonce reuse** under the same key leaks the plaintext ratio `m1 * m2^{-1}`. Never reuse nonces; use `Encrypt` (which samples fresh randomness) rather than `EncryptWithNonce` unless your protocol requires determinism.
-- **Subgroup validation**: constructors reject identity elements and torsion points to prevent small-subgroup attacks on curves with cofactor > 1.
+ElGamal is multiplicatively homomorphic: `CiphertextOp` multiplies ciphertexts
+component-wise, encrypting the product of the plaintexts (`PlaintextOp`) under the
+sum of the nonces (`NonceOp`). `ReRandomise(c, r)` multiplies by `(g^r, h^r)` to
+produce a fresh, unlinkable encryption of the same message, and `Shift(c, δ)`
+multiplies by `(1, δ)` to turn an encryption of `m` into one of `m·δ` under the same
+nonce. These operations are implemented through the GIFT framework as
+`Representative(m) · IdentityNoise(r)`.
 
 ## Reference
-
+<!-- paper: docs/papers/Handbook_of_Applied_Cryptography.pdf  -->
 - Section 8.4 of [Handbook of Applied Cryptography, Chapter 8](https://cacr.uwaterloo.ca/hac/about/chap8.pdf) (Menezes, van Oorschot, Vanstone).
+<!-- paper: docs/papers/2010-501_20120106_104554.pdf -->
+- Section 5.1 of [2010/501](https://eprint.iacr.org/2010/501)

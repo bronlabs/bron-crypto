@@ -631,6 +631,13 @@ linters:
         linters:
           - gochecknoinits
           - wrapcheck
+      - path: _prop_test.go
+        linters:
+          - paralleltest # the linter doesn't recognize t.Parallel() inside of suite.CheckAll
+      - path: properties/
+        linters:
+          - thelper  # false positive, suite.CheckAll is run inside of t.Run in a test.
+        text: "test helper function should start from t.Helper()"
       # Exclude algebra package from wrapcheck - lots of interface method calls
       - path: pkg/base/algebra/
         linters:

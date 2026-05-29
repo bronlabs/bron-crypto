@@ -181,6 +181,11 @@ func (*Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
 	}
 }
 
+// Contains reports whether e is a valid field element (non-nil).
+func (*Field) Contains(e *FieldElement) bool {
+	return e != nil
+}
+
 // FieldElement represents an element of GF(2^128). Internally stored as two
 // uint64 limbs in little-endian limb order: el[0] holds bits 0–63 and el[1]
 // holds bits 64–127, where bit i is the coefficient of X^i in the polynomial

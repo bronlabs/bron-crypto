@@ -151,27 +151,6 @@ func (c *PrimeSubGroup) ScalarBaseMul(sc *Scalar) *PrimeSubGroupPoint {
 	return c.Generator().ScalarMul(sc)
 }
 
-// MultiScalarOp computes a multiscalar operation.
-func (c *PrimeSubGroup) MultiScalarOp(scalars []*Scalar, points []*PrimeSubGroupPoint) (*PrimeSubGroupPoint, error) {
-	return c.MultiScalarMul(scalars, points)
-}
-
-// MultiScalarMul computes a multiscalar multiplication.
-func (*PrimeSubGroup) MultiScalarMul(scalars []*Scalar, points []*PrimeSubGroupPoint) (*PrimeSubGroupPoint, error) {
-	if len(scalars) != len(points) {
-		return nil, curves.ErrInvalidLength.WithMessage("mismatched lengths of scalars and points")
-	}
-	var result PrimeSubGroupPoint
-	scs := make([][]byte, len(scalars))
-	pts := make([]*edwards25519Impl.Point, len(points))
-	for i := range points {
-		pts[i] = &points[i].V
-		scs[i] = scalars[i].V.Bytes()
-	}
-	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
-	return &result, nil
-}
-
 // PrimeSubGroupPoint represents a point in the prime-order subgroup.
 type PrimeSubGroupPoint struct {
 	traits.PrimePointTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *PrimeSubGroupPoint, PrimeSubGroupPoint]

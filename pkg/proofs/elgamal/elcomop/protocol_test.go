@@ -78,14 +78,14 @@ func Test_WrongWitness(t *testing.T) {
 	prng := pcg.NewRandomised()
 	sf := k256.NewScalarField()
 
-	pk, comKey, committer := mustSetup(t, curve, prng)
+	pk, comKey := mustSetup(t, curve, prng)
 
 	lambda, err := sf.Random(prng)
 	require.NoError(t, err)
 	y, err := sf.Random(prng)
 	require.NoError(t, err)
 
-	_, comStatement := mustCommit(t, curve.Generator(), y, lambda, committer)
+	_, comStatement := mustCommit(t, curve.Generator(), y, lambda, comKey)
 
 	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(t, err)
@@ -124,26 +124,17 @@ func mustSetup[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pri
 	tb testing.TB, curve curves.Curve[P, F, S], prng io.Reader,
 ) (
 	*elgamal.PublicKey[P, S],
-	*indcpacom.Key[*elgamal.PublicKey[P, S]],
-	*indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
+	*indcpacom.CommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S]],
 ) {
 	tb.Helper()
 
-	encScheme, err := elgamal.NewScheme(curve)
-	require.NoError(tb, err)
-	kg, err := encScheme.Keygen()
-	require.NoError(tb, err)
-	_, pk, err := kg.Generate(prng)
+	sk, err := elgamal.SampleSecretKey(curve, prng)
 	require.NoError(tb, err)
 
-	comKey, err := indcpacom.NewKey(pk)
-	require.NoError(tb, err)
-	comScheme, err := indcpacom.NewScheme(encScheme, comKey)
-	require.NoError(tb, err)
-	committer, err := comScheme.Committer()
+	comKey, err := indcpacom.NewCommitmentKey(sk.Public())
 	require.NoError(tb, err)
 
-	return pk, comKey, committer
+	return sk.Public(), comKey
 }
 
 // mustCommit builds an ElGamal/IND-CPA commitment of g^y with nonce lambda, and
@@ -152,10 +143,10 @@ func mustCommit[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 	tb testing.TB,
 	g P,
 	y, lambda S,
-	committer *indcpacom.Committer[*elgamal.Nonce[S], *elgamal.Plaintext[P, S], *elgamal.Ciphertext[P, S], *elgamal.PublicKey[P, S]],
+	key *indcpacom.CommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S]],
 ) (
 	*elcomop.Witness[P, S],
-	*indcpacom.Commitment[*elgamal.Ciphertext[P, S], *elgamal.Nonce[S], *elgamal.PublicKey[P, S]],
+	*indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 ) {
 	tb.Helper()
 
@@ -169,7 +160,7 @@ func mustCommit[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 	msg, err := indcpacom.NewMessage(plaintext)
 	require.NoError(tb, err)
 
-	com, err := committer.CommitWithWitness(msg, indcpaWit)
+	com, err := key.CommitWithWitness(msg, indcpaWit)
 	require.NoError(tb, err)
 
 	witness, err := elcomop.NewWitness(msg, indcpaWit)
@@ -205,14 +196,14 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	prng := pcg.NewRandomised()
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	_, comKey, committer := mustSetup(tb, curve, prng)
+	_, comKey := mustSetup(tb, curve, prng)
 
 	lambda, err := sf.Random(prng)
 	require.NoError(tb, err)
 	y, err := sf.Random(prng)
 	require.NoError(tb, err)
 
-	witness, com := mustCommit(tb, curve.Generator(), y, lambda, committer)
+	witness, com := mustCommit(tb, curve.Generator(), y, lambda, comKey)
 
 	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(tb, err)
@@ -244,7 +235,7 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	prng := pcg.NewRandomised()
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	_, comKey, committer := mustSetup(tb, curve, prng)
+	_, comKey := mustSetup(tb, curve, prng)
 	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(tb, err)
 
@@ -255,7 +246,7 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 	y, err := sf.Random(prng)
 	require.NoError(tb, err)
-	_, com := mustCommit(tb, curve.Generator(), y, lambda, committer)
+	_, com := mustCommit(tb, curve.Generator(), y, lambda, comKey)
 
 	statement, err := elcomop.NewStatement(com)
 	require.NoError(tb, err)
@@ -278,14 +269,14 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	prng := pcg.NewRandomised()
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 
-	_, comKey, committer := mustSetup(tb, curve, prng)
+	_, comKey := mustSetup(tb, curve, prng)
 
 	lambda, err := sf.Random(prng)
 	require.NoError(tb, err)
 	y, err := sf.Random(prng)
 	require.NoError(tb, err)
 
-	witness, com := mustCommit(tb, curve.Generator(), y, lambda, committer)
+	witness, com := mustCommit(tb, curve.Generator(), y, lambda, comKey)
 
 	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(tb, err)
@@ -322,7 +313,7 @@ func testAnchor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 	tb.Helper()
 	prng := pcg.NewRandomised()
 
-	_, comKey, _ := mustSetup(tb, curve, prng)
+	_, comKey := mustSetup(tb, curve, prng)
 
 	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
 	require.NoError(tb, err)

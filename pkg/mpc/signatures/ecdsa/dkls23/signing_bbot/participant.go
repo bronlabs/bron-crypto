@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/mpc/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -44,11 +44,11 @@ type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	bobMul   map[sharing.ID]*rvole_bbot.Bob[P, S]
 
 	round          network.Round
-	ck             *hash_comm.Scheme
+	ck             *hashcom.CommitmentKey
 	r              S
 	bigR           map[sharing.ID]P
-	bigRCommitment map[sharing.ID]hash_comm.Commitment
-	bigRWitness    hash_comm.Witness
+	bigRCommitment map[sharing.ID]hashcom.Commitment
+	bigRWitness    hashcom.Witness
 	phi            S
 	chi            map[sharing.ID]S
 	c              map[sharing.ID][]S

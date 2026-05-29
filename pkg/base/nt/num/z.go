@@ -41,6 +41,11 @@ func (*Integers) Order() cardinal.Cardinal {
 	return cardinal.Infinite()
 }
 
+// Contains checks if the given element is a valid integer.
+func (*Integers) Contains(e *Int) bool {
+	return e != nil
+}
+
 // Characteristic returns the characteristic of the integers, which is 0.
 func (*Integers) Characteristic() cardinal.Cardinal {
 	return cardinal.Zero()
@@ -145,6 +150,34 @@ func (*Integers) FromTwosComplementBytesBE(input []byte) (*Int, error) {
 		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Int{v: numct.NewIntFromTwosComplementBytesBE(input)}, nil
+}
+
+// FromUnsignedNumeric creates an integer from an algebra.UnsignedNumeric value.
+func (zs *Integers) FromUnsignedNumeric(input algebra.UnsignedNumeric) (*Int, error) {
+	if input == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	n, err := N().FromUnsignedNumeric(input)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert from unsigned numeric")
+	}
+	out, err := zs.FromNat(n)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert from nat")
+	}
+	return out, nil
+}
+
+// FromSignedNumeric creates an integer from an algebra.SignedNumeric value.
+func (zs *Integers) FromSignedNumeric(input algebra.SignedNumeric) (*Int, error) {
+	if input == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	out, err := zs.FromTwosComplementBytesBE(input.TwosComplementBytesBE())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert from signed numeric")
+	}
+	return out, nil
 }
 
 // FromUint creates an integer from a Uint value.

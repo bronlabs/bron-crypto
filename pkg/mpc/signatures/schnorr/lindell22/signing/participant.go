@@ -40,6 +40,7 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 	zeroParticipant *hjky.Participant[GE, S]
 	niDlogScheme    compiler.NonInteractiveProtocol[*schnorrpok.Statement[GE, S], *schnorrpok.Witness[S]]
 	lsss            *feldman.Scheme[GE, S]
+	cks             map[sharing.ID]*lindell22.CommitmentKey
 	state           *State[GE, S]
 }
 
@@ -148,6 +149,14 @@ func NewCosigner[
 		return nil, errs.Wrap(err).WithMessage("failed to create zero participant")
 	}
 
+	cks := make(map[sharing.ID]*lindell22.CommitmentKey, ctx.Quorum().Size())
+	for id := range ctx.Quorum().Iter() {
+		cks[id], err = lindell22.NewCommitmentKey(ctx, id, quorumBytes)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to create commitment key for party %d", id)
+		}
+	}
+
 	return &Cosigner[GE, S, M]{
 		ctx:             ctx,
 		shard:           shard,
@@ -158,6 +167,7 @@ func NewCosigner[
 		niDlogScheme:    niDlogScheme,
 		zeroParticipant: zeroParticipant,
 		variant:         variant,
+		cks:             cks,
 		round:           1,
 		state: &State[GE, S]{
 			quorumBytes:              quorumBytes,

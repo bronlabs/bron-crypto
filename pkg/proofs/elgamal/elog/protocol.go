@@ -86,7 +86,12 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 // ElGamal public key bigX, and second independent generator h. The elcomop
 // sub-protocol covers (L, M) with respect to bigX, and the Schnorr
 // sub-protocol covers Y = h^y with base h.
-func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], bigX *indcpacom.Key[*elgamal.PublicKey[G, S]], h G, prng io.Reader) (*Protocol[G, S], error) {
+func NewProtocol[EK elgamal.EncryptionKey[EK, G, S], G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](
+	group algebra.PrimeGroup[G, S],
+	bigX *indcpacom.CommitmentKey[EK, *elgamal.Plaintext[G, S], *elgamal.Nonce[S], *elgamal.Ciphertext[G, S]],
+	h G,
+	prng io.Reader,
+) (*Protocol[G, S], error) {
 	elcomopProtocol, err := elcomop.NewProtocol(group, bigX, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal commitment opening protocol")

@@ -294,17 +294,11 @@ func TestPaillierGroup_NthResidue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create Paillier group with known order
-	n := p.Mul(q)
-	n2 := n.Square()
 	paillierKnown, err := znstar.NewPaillierGroup(p, q)
 	require.NoError(t, err)
 
-	// Create Paillier group with unknown order (same modulus)
-	paillierUnknown, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
-	require.NoError(t, err)
-
 	// Sample element from unknown order group
-	u, err := paillierUnknown.Random(pcg.NewRandomised())
+	u, err := paillierKnown.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
 	// Lift to n-th residues using known order group
@@ -323,8 +317,11 @@ func TestPaillierGroup_Representative(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test Phi function
-	x := num.Z().FromInt64(42)
-	result, err := group.Representative(x.Value())
+	zModN, err := num.NewZMod(group.N())
+	require.NoError(t, err)
+	x, err := zModN.FromInt64(42)
+	require.NoError(t, err)
+	result, err := group.Representative(x)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 }
@@ -1044,18 +1041,10 @@ func BenchmarkPaillierGroup_NthResidue_KnownOrder(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	// Create Paillier group with unknown order (same modulus)
-	n := p.Mul(q)
-	n2 := n.Square()
-	paillierUnknown, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
-	if err != nil {
-		b.Fatal(err)
-	}
-
 	// Pre-generate random nonces to lift
-	nonces := make([]*znstar.PaillierGroupElementUnknownOrder, b.N)
+	nonces := make([]*znstar.PaillierGroupElementKnownOrder, b.N)
 	for i := range b.N {
-		nonces[i], err = paillierUnknown.Random(pcg.NewRandomised())
+		nonces[i], err = paillierKnown.Random(pcg.NewRandomised())
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1188,29 +1177,6 @@ func BenchmarkPaillierGroup_Exponentiation_KnownOrder(b *testing.B) {
 	b.ResetTimer()
 	for range b.N {
 		_ = u.Exp(exp)
-	}
-}
-
-// BenchmarkPaillierGroup_Phi benchmarks the Phi function.
-func BenchmarkPaillierGroup_Phi(b *testing.B) {
-	p, q, err := generateRSAPrimePair()
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	group, err := znstar.NewPaillierGroup(p, q)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	x := num.Z().FromInt64(42)
-
-	b.ResetTimer()
-	for range b.N {
-		_, err := group.Representative(x.Value())
-		if err != nil {
-			b.Fatal(err)
-		}
 	}
 }
 

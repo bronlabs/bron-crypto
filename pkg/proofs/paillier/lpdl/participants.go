@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -50,20 +50,19 @@ type State[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 type VerifierState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	State[P, B, S]
 
-	cDoublePrimeWitness hash_comm.Witness
+	cDoublePrimeWitness hashcom.Witness
 	bigQPrime           P
-	cHat                hash_comm.Commitment
+	cHat                hashcom.Commitment
 }
 
 // Verifier runs the LPDL verifier role.
 type Verifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Participant[P, B, S]
 
-	rangeVerifier     *zkcompiler.Verifier[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
-	paillierEncrypter *paillier.Encrypter
-	c                 *paillier.Ciphertext
-	state             *VerifierState[P, B, S]
-	commitmentScheme  *hash_comm.Scheme
+	rangeVerifier *zkcompiler.Verifier[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
+	c             *paillier.Ciphertext
+	state         *VerifierState[P, B, S]
+	commitmentKey *hashcom.CommitmentKey
 }
 
 // ProverState tracks the prover's internal state across rounds.
@@ -72,20 +71,19 @@ type ProverState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 
 	alpha                  *paillier.Plaintext
 	bigQHat                P
-	bigQHatWitness         hash_comm.Witness
-	cDoublePrimeCommitment hash_comm.Commitment
+	bigQHatWitness         hashcom.Witness
+	cDoublePrimeCommitment hashcom.Commitment
 }
 
 // Prover runs the LPDL prover role.
 type Prover[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Participant[P, B, S]
 
-	rangeProver       *zkcompiler.Prover[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
-	paillierDecrypter *paillier.Decrypter
-	sk                *paillier.PrivateKey
-	x                 S
-	state             *ProverState[P, B, S]
-	commitmentScheme  *hash_comm.Scheme
+	rangeProver   *zkcompiler.Prover[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
+	sk            *paillier.SecretKey
+	x             S
+	state         *ProverState[P, B, S]
+	commitmentKey *hashcom.CommitmentKey
 }
 
 // NewVerifier constructs a verifier instance for the LPDL protocol.
@@ -102,42 +100,47 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, prng)
+	rangeProtocol, q, q2, qThirdUint, err := initRangeProtocol(curve, publicKey, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
 	}
 
 	// Create Phi(q/3) for homomorphic division
-	var qThirdInt numct.Int
-	qThirdInt.SetNat(qThirdNat)
-	qThirdUnit, err := publicKey.Group().Representative(&qThirdInt)
+	qThirdUnit, err := publicKey.Group().Representative(qThirdUint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute Phi(q/3)")
 	}
-	qThird := paillier.NewCiphertextFromUnit(qThirdUnit)
+	qThird, err := paillier.NewCiphertextFromGroupElement(qThirdUnit)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create ciphertext for q/3")
+	}
 
 	// xEncrypted has known order, qThird has unknown order from Phi
 	// Need to forget order on xEncrypted for the division
-	xUnknown := paillier.NewCiphertextFromUnit(xEncrypted.Value().ForgetOrder())
-	rangeCiphertext := xUnknown.HomSub(qThird)
-	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
+	xUnknown, err := paillier.NewCiphertextFromGroupElement(xEncrypted.Value())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create ciphertext for xEncrypted")
+	}
+	qThirdInv, err := publicKey.CiphertextOpInv(qThird)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute inverse of qThird")
+	}
+	rangeCiphertext, err := publicKey.CiphertextOp(xUnknown, qThirdInv)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute range ciphertext")
+	}
+	rangeStatement, err := paillierrange.NewStatement(rangeCiphertext)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create range statement")
+	}
 	rangeVerifier, err := zkcompiler.NewVerifier(ctx, rangeProtocol, rangeStatement, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create Paillier range verifier")
 	}
 
-	ck, err := hash_comm.NewKeyFromCRSBytes(ctx.SessionID(), appTranscriptLabel)
+	ck, err := hashcom.ExtractCommitmentKey(ctx.Transcript(), appTranscriptLabel)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot instantiate committer")
-	}
-	commitmentScheme, err := hash_comm.NewScheme(ck)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot instantiate commitment scheme")
-	}
-
-	paillierEncrypter, err := paillier.NewScheme().Encrypter()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create paillier encrypter")
+		return nil, errs.Wrap(err).WithMessage("cannot extract commitment key")
 	}
 
 	return &Verifier[P, B, S]{
@@ -149,10 +152,9 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 			bigQ:      bigQ,
 			prng:      prng,
 		},
-		rangeVerifier:     rangeVerifier,
-		c:                 xEncrypted,
-		commitmentScheme:  commitmentScheme,
-		paillierEncrypter: paillierEncrypter,
+		rangeVerifier: rangeVerifier,
+		c:             xEncrypted,
+		commitmentKey: ck,
 		state: &VerifierState[P, B, S]{
 			State: State[P, B, S]{
 				curve:  curve,
@@ -161,9 +163,9 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 				a:      nil,
 				b:      nil,
 			},
-			cDoublePrimeWitness: hash_comm.Witness{},
+			cDoublePrimeWitness: hashcom.Witness{},
 			bigQPrime:           *new(P),
-			cHat:                hash_comm.Commitment{},
+			cHat:                hashcom.Commitment{},
 		},
 	}, nil
 }
@@ -191,7 +193,7 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 }
 
 // NewProver constructs a prover instance for the LPDL protocol.
-func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) (verifier *Prover[P, B, S], err error) {
+func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, curve curves.Curve[P, B, S], secretKey *paillier.SecretKey, x S, r *paillier.Nonce, prng io.Reader) (verifier *Prover[P, B, S], err error) {
 	if err = validateProverInputs(ctx, curve, secretKey, x, r, prng); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid input arguments")
 	}
@@ -201,51 +203,54 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	dst := fmt.Sprintf("%s-%s", sessionIDTranscriptLabel, hex.EncodeToString(sid[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, prng)
+	rangeProtocol, q, qSquared, qThirdUint, err := initRangeProtocol(curve, secretKey, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise range protocol")
 	}
 
-	qThirdAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().FromNat(qThirdNat)
+	qThirdAsPlaintext, err := paillier.NewPlaintext(qThirdUint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't convert q/3 to plaintext")
 	}
+	qThirdAsPlaintextInv, err := secretKey.PlaintextOpInv(qThirdAsPlaintext)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("couldn't compute inverse of q/3 plaintext")
+	}
 
 	xNat := numct.NewNatFromBytes(x.Bytes())
-	xAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().FromNat(xNat)
+	xUint, err := num.NewUintGivenModulus(xNat, secretKey.PlaintextGroup().ModulusCT())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("couldn't convert x to uint")
+	}
+	xAsPlaintext, err := paillier.NewPlaintext(xUint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't convert x to plaintext")
 	}
-	rangePlainText := xAsPlaintext.Sub(qThirdAsPlaintext)
-
-	ck, err := hash_comm.NewKeyFromCRSBytes(ctx.SessionID(), appTranscriptLabel)
+	rangePlainText, err := secretKey.PlaintextOp(xAsPlaintext, qThirdAsPlaintextInv)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot instantiate committer")
-	}
-	commitmentScheme, err := hash_comm.NewScheme(ck)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot instantiate commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("couldn't compute range plaintext")
 	}
 
-	senc, err := paillier.NewScheme().SelfEncrypter(secretKey)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("couldn't create self-encrypter")
-	}
-
-	rangeCipherText, err := senc.SelfEncryptWithNonce(rangePlainText, r)
+	rangeCipherText, err := secretKey.EncryptWithNonce(rangePlainText, r)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't create range statement")
 	}
-	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
-	rangeStatement := paillierrange.NewStatement(secretKey.PublicKey(), rangeCipherText, qThirdNat)
+	rangeWitness, err := paillierrange.NewWitness(rangePlainText, r)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("couldn't create range witness")
+	}
+	rangeStatement, err := paillierrange.NewStatement(rangeCipherText)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("couldn't create range statement")
+	}
 	rangeProver, err := zkcompiler.NewProver(ctx, rangeProtocol, rangeStatement, rangeWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("couldn't initialise prover")
 	}
 
-	dec, err := paillier.NewScheme().Decrypter(secretKey)
+	ck, err := hashcom.ExtractCommitmentKey(ctx.Transcript(), appTranscriptLabel)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create paillier decrypter")
+		return nil, errs.Wrap(err).WithMessage("cannot extract commitment key")
 	}
 
 	return &Prover[P, B, S]{
@@ -253,15 +258,14 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 			ctx:       ctx,
 			copartyID: copartyID,
 			round:     2,
-			pk:        secretKey.PublicKey(),
+			pk:        secretKey.Public(),
 			bigQ:      curve.ScalarBaseMul(x),
 			prng:      prng,
 		},
-		rangeProver:       rangeProver,
-		paillierDecrypter: dec,
-		commitmentScheme:  commitmentScheme,
-		sk:                secretKey,
-		x:                 x,
+		rangeProver:   rangeProver,
+		commitmentKey: ck,
+		sk:            secretKey,
+		x:             x,
 		state: &ProverState[P, B, S]{
 			State: State[P, B, S]{
 				curve:  curve,
@@ -272,13 +276,13 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 			},
 			alpha:                  nil,
 			bigQHat:                *new(P),
-			bigQHatWitness:         hash_comm.Witness{},
-			cDoublePrimeCommitment: hash_comm.Commitment{},
+			bigQHatWitness:         hashcom.Witness{},
+			cDoublePrimeCommitment: hashcom.Commitment{},
 		},
 	}, nil
 }
 
-func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) error {
+func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, curve curves.Curve[P, B, S], secretKey *paillier.SecretKey, x S, r *paillier.Nonce, prng io.Reader) error {
 	if ctx == nil {
 		return ErrInvalidArgument.WithMessage("ctx is empty")
 	}
@@ -307,7 +311,7 @@ func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[
 	return nil
 }
 
-func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], prng io.Reader) (rangeProtocol *paillierrange.Protocol, zModQ, zModQ2 *num.ZMod, qThird *numct.Nat, err error) {
+func initRangeProtocol[EK paillier.EncryptionKey[EK], P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], encryptionKey EK, prng io.Reader) (rangeProtocol *paillierrange.Protocol[EK], zModQ, zModQ2 *num.ZMod, qThird *num.Uint, err error) {
 	q := curve.Order()
 	q2 := q.Mul(q)
 
@@ -322,10 +326,20 @@ func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B],
 
 	three := numct.NewNat(3)
 	qNat := numct.NewNatFromBytes(q.Bytes())
-	qThird = numct.NewNat(0)
-	qThird.EuclideanDivVarTime(nil, qNat, three)
+	qThirdNat := numct.NewNat(0)
+	qThirdNat.EuclideanDivVarTime(nil, qNat, three)
 
-	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
+	qThird, err = num.NewUintGivenModulus(qThirdNat, encryptionKey.PlaintextGroup().ModulusCT())
+	if err != nil {
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot create NPlus from NatCT")
+	}
+
+	qThirdNatPlus, err := num.NPlus().FromNat(qThird.Nat())
+	if err != nil {
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot convert q/3 to NatPlus")
+	}
+
+	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, qThirdNatPlus, encryptionKey, prng)
 	if err != nil {
 		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("couldn't create range protocol")
 	}

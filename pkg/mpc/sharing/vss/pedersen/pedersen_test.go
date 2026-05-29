@@ -47,7 +47,7 @@ func formatIDs(ids []sharing.ID) string {
 func newPedersenKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
 	curve algebra.PrimeGroup[E, S],
-) *pedcom.Key[E, S] {
+) *pedcom.CommitmentKey[E, S] {
 	tb.Helper()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("meta-pedersen-test-h"))
@@ -59,7 +59,7 @@ func newPedersenKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 
 func newPedersenScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
-	key *pedcom.Key[E, S],
+	key *pedcom.CommitmentKey[E, S],
 	ac accessstructures.Monotone,
 ) *pedersen.Scheme[E, S] {
 	tb.Helper()

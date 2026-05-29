@@ -21,20 +21,24 @@ This package exposes a family of prime and prime-pair generators, each producing
 | `GeneratePrimePair` | (p, q) with `bitlen(pq) = keyLen` | equal-length primes | plain RSA / Paillier moduli |
 | `GenerateBlumPrime` | single Blum prime | `p ≡ 3 (mod 4)` | components of Blum integers |
 | `GenerateBlumPrimePair` | Blum pair (p, q) | both `≡ 3 (mod 4)` | Blum-integer moduli (canonical square roots, Rabin commitments) |
-| `GeneratePaillierBlumModulus` | (N, p, q) | Blum + `gcd(N, φ(N)) = 1` | CGGMP21 Paillier instances; required for `Π^{mod}` / `Π^{fac}` soundness |
 | `GenerateSafePrime` | single safe prime | `p = 2p' + 1` with `p'` prime | generators of prime-order subgroups |
 | `GenerateSafePrimePair` | safe pair (p, q) | both safe | strong RSA moduli (ring-Pedersen CRS, proofs over QR_N with prime-order structure) |
 
 `MillerRabinChecks(bits)` returns the number of Miller-Rabin rounds appropriate for the requested bit length, targeting the standard false-acceptance bound for cryptographic primes. It's used internally by the prime generators and exposed for callers that run additional probable-primality checks.
+
+### Safe-prime generation
+
+`GenerateSafePrime` and `GenerateSafePrimePair` implement the parallelised safe-prime variant of Joye and Paillier (CHES 2006, §4.2 / Figure 6). Candidates are constructed so that both `q` and `(q−1)/2` are simultaneously coprime to a smooth modulus `Π = ∏ pᵢ` of small odd primes, eliminating per-candidate trial division. On rejection, the next candidate is obtained by multiplying an internal seed `k` by a fixed quadratic-residue `a ∈ QR(m)` with `a ≡ 1 (mod 4)`, which preserves every sieve invariant without resampling. The bit-length-dependent setup constants `(Π, m, m', l, u)` are derived once and cached per bit length; `Π` is chosen as the longest prefix of `smallPrimes` (`joyepaillier.go`) that fits the algorithm's geometric bound `Π ≤ 2^(bits−5)`. Expected primality tests scale as `(n · ln 2 · φ(Π)/Π)²` for an `n`-bit safe prime.
+
+### Prime Pair generation
+
+Prime Pair generation algorithms satisfy the IFC Key requirements of FIPS 186-5 A.1.1 eg. They ensure generated primes are large and far enough from each other to prevent Fermat factorization and alike.
 
 ## Usage
 
 ```go
 // Generate a plain RSA prime pair
 p, q, _ := nt.GeneratePrimePair(num.NPlus(), 2048, rand.Reader)
-
-// Generate a CGGMP21-ready Paillier-Blum modulus
-N, p, q, _ := nt.GeneratePaillierBlumModulus(num.NPlus(), 2048, rand.Reader)
 
 // Generate a safe-prime RSA pair for ring-Pedersen
 p, q, _ := nt.GenerateSafePrimePair(num.NPlus(), 2048, rand.Reader)
@@ -45,3 +49,10 @@ paillier, _ := znstar.NewPaillierGroup(p, q)
 ```
 
 All generators are parameterised over a target structure (`PrimeSamplable[E]`) so that the raw `big.Int` output is immediately lifted into a typed set (e.g. `*num.NatPlus`) where downstream modular arithmetic is defined.
+
+## Reference
+
+<!-- paper: docs/papers/JP06pgen.pdf -->
+- [Marc Joye, Pascal Paillier. Fast generation of prime numbers on portable devices: an update](https://dl.acm.org/doi/10.1007/11894063_13)
+<!-- spec: docs/papers/NIST.FIPS.186-5.pdf -->
+- [NIST FIPS 186-5](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)

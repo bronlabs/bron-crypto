@@ -55,7 +55,7 @@ func NewWitness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S
 
 // NewStatement constructs an elcomop statement from an IND-CPA commitment
 // (i.e. an ElGamal ciphertext) (Gamma, Delta).
-func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](x *indcpacom.Commitment[*elgamal.Ciphertext[G, S], *elgamal.Nonce[S], *elgamal.PublicKey[G, S]]) (*Statement[G, S], error) {
+func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](x *indcpacom.Commitment[*elgamal.Ciphertext[G, S]]) (*Statement[G, S], error) {
 	if x == nil || x.Value() == nil || utils.IsNil(x.Value().Value()) {
 		return nil, ErrInvalidArgument.WithMessage("statement values cannot be nil")
 	}
@@ -73,7 +73,11 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 
 // NewProtocol constructs the elcomop protocol for the given prime-order group
 // and ElGamal public key.
-func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], key *indcpacom.Key[*elgamal.PublicKey[G, S]], prng io.Reader) (*Protocol[G, S], error) {
+func NewProtocol[EK elgamal.EncryptionKey[EK, G, S], G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](
+	group algebra.PrimeGroup[G, S],
+	key *indcpacom.CommitmentKey[EK, *elgamal.Plaintext[G, S], *elgamal.Nonce[S], *elgamal.Ciphertext[G, S]],
+	prng io.Reader,
+) (*Protocol[G, S], error) {
 	if group == nil || key == nil || prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("group, key, and prng cannot be nil")
 	}
@@ -87,19 +91,6 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	imageGroup, err := constructions.NewFiniteDirectPowerModule(group, 2)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create image group")
-	}
-
-	enc, err := elgamal.NewScheme(group)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal scheme")
-	}
-	comScheme, err := indcpacom.NewScheme(enc, key)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create IND-CPA commitment scheme")
-	}
-	committer, err := comScheme.Committer()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create commitment committer")
 	}
 
 	homomorphism := func(w *constructions.FiniteDirectProductGroupElement[G, S]) (*constructions.FiniteDirectPowerModuleElement[G, S], error) {
@@ -120,7 +111,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to create commitment message from homomorphism input")
 		}
-		commitment, err := committer.CommitWithWitness(message, witness)
+		commitment, err := key.CommitWithWitness(message, witness)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to compute commitment from homomorphism input")
 		}

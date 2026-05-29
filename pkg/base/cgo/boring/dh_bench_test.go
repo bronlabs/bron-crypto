@@ -6,19 +6,16 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/cgo/boring"
+	"github.com/stretchr/testify/require"
 )
 
 func Benchmark_DhGen1024(b *testing.B) {
 	const bits = 1024
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		dh, err := boring.NewDiffieHellmanGroup().GenerateParameters(bits)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 		_, err = dh.GetP()
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
 }

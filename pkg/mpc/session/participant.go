@@ -12,7 +12,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -23,7 +24,7 @@ const (
 )
 
 // It's ok to hardcode it for hash commitment, as there's no trapdoor key possible.
-var commonCommitmentKey = hash_comm.Key{
+var commonCommitmentKey = &hashcom.CommitmentKey{
 	'B', 'R', 'O', 'N', '_', 'C', 'R', 'Y', 'P', 'T', 'O', '_', 'N', 'O', 'T', 'H',
 	'I', 'N', 'G', '_', 'U', 'P', '_', 'M', 'Y', '_', 'S', 'L', 'E', 'E', 'V', 'E',
 }
@@ -35,16 +36,14 @@ type Participant struct {
 	prng         io.Reader
 	round        int
 
-	commonCommitter               *hash_comm.Committer
-	commonVerifier                *hash_comm.Verifier
-	commonContributionCommitments map[sharing.ID]hash_comm.Commitment
+	commonContributionCommitments map[sharing.ID]hashcom.Commitment
 	commonContributions           map[sharing.ID][base.CollisionResistanceBytesCeil]byte
-	commonContributionWitnesses   map[sharing.ID]hash_comm.Witness
+	commonContributionWitnesses   map[sharing.ID]hashcom.Witness
 
-	commitmentKeys                  map[sharing.ID]hash_comm.Key
-	pairwiseContributionCommitments map[sharing.ID]hash_comm.Commitment
+	commitmentKeys                  map[sharing.ID]*hashcom.CommitmentKey
+	pairwiseContributionCommitments map[sharing.ID]hashcom.Commitment
 	pairwiseContributions           map[sharing.ID][base.CollisionResistanceBytesCeil]byte
-	pairwiseContributionWitnesses   map[sharing.ID]hash_comm.Witness
+	pairwiseContributionWitnesses   map[sharing.ID]hashcom.Witness
 }
 
 // NewParticipant creates a participant bound to a quorum and PRNG.
@@ -68,35 +67,20 @@ func NewParticipant(id sharing.ID, quorum network.Quorum, prng io.Reader) (*Part
 	sortedQuorum := slices.Collect(quorum.Iter())
 	slices.Sort(sortedQuorum)
 
-	commonCommitmentScheme, err := hash_comm.NewScheme(commonCommitmentKey)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create common commitment scheme")
-	}
-	commonCommitter, err := commonCommitmentScheme.Committer()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create common committer")
-	}
-	commonVerifier, err := commonCommitmentScheme.Verifier()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create common verifier")
-	}
-
 	p := &Participant{
-		id:              id,
-		sortedQuorum:    sortedQuorum,
-		prng:            prng,
-		round:           1,
-		commonCommitter: commonCommitter,
-		commonVerifier:  commonVerifier,
+		id:           id,
+		sortedQuorum: sortedQuorum,
+		prng:         prng,
+		round:        1,
 
-		commonContributionCommitments: make(map[sharing.ID]hash_comm.Commitment),
+		commonContributionCommitments: make(map[sharing.ID]hashcom.Commitment),
 		commonContributions:           make(map[sharing.ID][base.CollisionResistanceBytesCeil]byte),
-		commonContributionWitnesses:   make(map[sharing.ID]hash_comm.Witness),
+		commonContributionWitnesses:   make(map[sharing.ID]hashcom.Witness),
 
-		commitmentKeys:                  make(map[sharing.ID]hash_comm.Key),
+		commitmentKeys:                  make(map[sharing.ID]*hashcom.CommitmentKey),
 		pairwiseContributions:           make(map[sharing.ID][base.CollisionResistanceBytesCeil]byte),
-		pairwiseContributionWitnesses:   make(map[sharing.ID]hash_comm.Witness),
-		pairwiseContributionCommitments: make(map[sharing.ID]hash_comm.Commitment),
+		pairwiseContributionWitnesses:   make(map[sharing.ID]hashcom.Witness),
+		pairwiseContributionCommitments: make(map[sharing.ID]hashcom.Commitment),
 	}
 	return p, nil
 }
@@ -112,8 +96,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 		return nil, ErrRound.WithMessage("invalid round")
 	}
 
-	var ck hash_comm.Key
-	_, err := io.ReadFull(p.prng, ck[:])
+	ck, err := hashcom.SampleCommitmentKey(p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to sample commitment key")
 	}
@@ -122,7 +105,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	if _, err = io.ReadFull(p.prng, commonContribution[:]); err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to sample common contribution")
 	}
-	commonContributionCommitment, commonContributionWitness, err := p.commonCommitter.Commit(commonContribution[:], p.prng)
+	commonContributionCommitment, commonContributionWitness, err := commitments.Commit(commonCommitmentKey, commonContribution[:], p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to commit common contribution")
 	}
@@ -175,15 +158,7 @@ func (p *Participant) Round2(inB network.RoundMessages[*Round1Broadcast, *Partic
 			return nil, nil, errs.Wrap(err).WithMessage("failed to sample contribution")
 		}
 		p.pairwiseContributions[id] = pairwiseContribution
-		scheme, err := hash_comm.NewScheme(ck)
-		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("failed to create commitment scheme")
-		}
-		committer, err := scheme.Committer()
-		if err != nil {
-			return nil, nil, errs.Wrap(err).WithMessage("failed to create committer")
-		}
-		pairwiseCommitment, pairwiseWitness, err := committer.Commit(pairwiseContribution[:], p.prng)
+		pairwiseCommitment, pairwiseWitness, err := commitments.Commit(ck, pairwiseContribution[:], p.prng)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("failed to commit contribution")
 		}
@@ -217,7 +192,7 @@ func (p *Participant) Round3(inB network.RoundMessages[*Round2Broadcast, *Partic
 			return nil, ErrInvalidArgument.WithMessage("missing unicast from %d", id)
 		}
 
-		if err := p.commonVerifier.Verify(p.commonContributionCommitments[id], b.CommonContribution[:], b.CommonContributionWitness); err != nil {
+		if err := commonCommitmentKey.Open(p.commonContributionCommitments[id], b.CommonContribution[:], b.CommonContributionWitness); err != nil {
 			return nil, errs.Wrap(err).
 				WithTag(base.IdentifiableAbortPartyIDTag, id).
 				WithMessage("invalid common seed from %d", id)
@@ -260,25 +235,16 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 	if !ok {
 		return nil, ErrInvalidArgument.WithMessage("missing local commitment key")
 	}
-	scheme, err := hash_comm.NewScheme(ck)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create commitment scheme")
-	}
-	verifier, err := scheme.Verifier()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to create verifier")
-	}
-
 	// collect all sources of entropy
 	commonSeed := []byte(sessionDomainSeparator)
 	commonSeed = binary.LittleEndian.AppendUint64(commonSeed, uint64(len(p.sortedQuorum)))
 	for _, id := range p.sortedQuorum {
 		commonSeed = binary.LittleEndian.AppendUint64(commonSeed, uint64(id))
-		ck, ok := p.commitmentKeys[id]
+		ckid, ok := p.commitmentKeys[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing commitment key for %d", id)
 		}
-		commonSeed = append(commonSeed, ck[:]...)
+		commonSeed = append(commonSeed, ckid[:]...)
 		c, ok := p.commonContributionCommitments[id]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing common commitment for %d", id)
@@ -306,7 +272,7 @@ func (p *Participant) Round4(uIn network.RoundMessages[*Round3P2P, *Participant]
 		if !ok {
 			return nil, ErrInvalidArgument.WithMessage("missing commitment from %d", id)
 		}
-		err := verifier.Verify(pairwiseCommitment, u.PairwiseContribution[:], u.PairwiseContributionWitness)
+		err := ck.Open(pairwiseCommitment, u.PairwiseContribution[:], u.PairwiseContributionWitness)
 		if err != nil {
 			return nil, errs.Wrap(err).
 				WithTag(base.IdentifiableAbortPartyIDTag, id).

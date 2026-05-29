@@ -8,10 +8,10 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 )
 
@@ -35,25 +35,23 @@ type (
 // Due to CF01, no such scheme can exist without a trusted setup/interaction. So we use a hash-based
 // commitment scheme to save some rounds. Implication is having to rely on RO.
 type (
-	// CommitmentScheme is the hash-based commitment scheme used in the protocol.
-	CommitmentScheme = hash_comm.Scheme
 	// Commitment is a hiding commitment to a value.
-	Commitment = hash_comm.Commitment
+	Commitment = hashcom.Commitment
 	// Opening contains the witness needed to open a commitment.
-	Opening = hash_comm.Witness
+	Opening = hashcom.Witness
 	// CommitmentKey is the public key for the commitment scheme.
-	CommitmentKey = hash_comm.Key
+	CommitmentKey = hashcom.CommitmentKey
 )
 
-// NewCommitmentScheme creates a new hash-based commitment scheme.
-var NewCommitmentScheme = hash_comm.NewScheme
-
-// NewCommitmentKey creates a commitment key from session ID, party ID, and quorum information.
-func NewCommitmentKey(sid network.SID, pid sharing.ID, quorumBytes [][]byte) (CommitmentKey, error) {
+// NewCommitmentKey creates a commitment key from session context, party ID, and QuorumBytes.
+func NewCommitmentKey(ctx *session.Context, pid sharing.ID, quorumBytes [][]byte) (*CommitmentKey, error) {
+	tape := ctx.Transcript().Clone()
 	pidBytes := binary.BigEndian.AppendUint64(nil, uint64(pid))
-	key, err := hash_comm.NewKeyFromCRSBytes(sid, commitmentDomainRLabel, append([][]byte{pidBytes}, quorumBytes...)...)
+	tape.AppendBytes("pid", pidBytes)
+	tape.AppendBytes("quorum", quorumBytes...)
+	key, err := hashcom.ExtractCommitmentKey(tape, commitmentDomainRLabel)
 	if err != nil {
-		return CommitmentKey{}, errs.Wrap(err).WithMessage("cannot create key for commitment scheme")
+		return nil, errs.Wrap(err).WithMessage("cannot create key for commitment scheme")
 	}
 	return key, nil
 }

@@ -40,14 +40,14 @@ func Test_HappyPath(t *testing.T) {
 	group, err := znstar.NewPaillierGroup(p, q)
 	require.NoError(t, err)
 
-	sk, err := paillier.NewPrivateKey(group)
+	sk, err := paillier.NewSecretKey(group)
 	require.NoError(t, err)
 
-	err = doProof(t, 40, sk.PublicKey(), sk)
+	err = doProof(t, 40, sk.Public(), sk)
 	require.NoError(t, err)
 }
 
-func doProof(tb testing.TB, k int, pk *paillier.PublicKey, sk *paillier.PrivateKey) (err error) {
+func doProof(tb testing.TB, k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) {
 	tb.Helper()
 
 	prng := pcg.NewRandomised()

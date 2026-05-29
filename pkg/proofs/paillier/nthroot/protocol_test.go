@@ -46,7 +46,7 @@ func Test_HappyPathInteractive(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, yBig.BitLen())
 	var xNatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
 
 	err = doInteractiveProof(t, &xNatCt, yNatCt, g, prng)
 	require.NoError(t, err)
@@ -74,13 +74,13 @@ func Test_InvalidRootInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y1NatCt := numct.NewNatFromBig(y1Big, primeLen*2)
 	var x1NatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1NatCt, y1NatCt)
+	g.Arithmetic().ExpToN(&x1NatCt, y1NatCt)
 
 	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
 	y2NatCt := numct.NewNatFromBig(y2Big, primeLen*2)
 	var x2NatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2NatCt, y2NatCt)
+	g.Arithmetic().ExpToN(&x2NatCt, y2NatCt)
 
 	err = doInteractiveProof(t, &x1NatCt, y2NatCt, g, prng)
 	require.Error(t, err)
@@ -117,7 +117,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, primeLen*2)
 	var xNatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
 
 	x, err := g.FromNatCT(&xNatCt)
 	require.NoError(t, err)
@@ -175,13 +175,13 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y1NatCt := numct.NewNatFromBig(y1Big, primeLen*2)
 	var x1NatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1NatCt, y1NatCt)
+	g.Arithmetic().ExpToN(&x1NatCt, y1NatCt)
 
 	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
 	y2NatCt := numct.NewNatFromBig(y2Big, primeLen*2)
 	var x2NatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2NatCt, y2NatCt)
+	g.Arithmetic().ExpToN(&x2NatCt, y2NatCt)
 
 	x1, err := g.FromNatCT(&x1NatCt)
 	require.NoError(t, err)
@@ -271,7 +271,7 @@ func Test_Simulator(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, primeLen*2)
 	var xNatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
 
 	xUnit, err := g.FromNatCT(&xNatCt)
 	require.NoError(t, err)
@@ -314,7 +314,7 @@ func Test_Extractor(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, primeLen*2)
 	var xNatCt numct.Nat
-	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
 
 	w, err := g.FromNatCT(yNatCt)
 	require.NoError(t, err)

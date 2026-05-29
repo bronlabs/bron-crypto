@@ -35,6 +35,11 @@ func (*NaturalNumbers) Name() string {
 	return "N"
 }
 
+// Contains checks if the given element is a valid natural number (non-negative integer).
+func (*NaturalNumbers) Contains(e *Nat) bool {
+	return e != nil
+}
+
 // Characteristic returns the characteristic of the NaturalNumbers structure, which is 0.
 func (*NaturalNumbers) Characteristic() cardinal.Cardinal {
 	return cardinal.Zero()
@@ -129,6 +134,18 @@ func (*NaturalNumbers) FromBytes(input []byte) (*Nat, error) {
 // FromBytesBE creates a Nat from a big-endian byte slice, returning an error if the input is nil.
 func (ns *NaturalNumbers) FromBytesBE(input []byte) (*Nat, error) {
 	return ns.FromBytes(input)
+}
+
+// FromUnsignedNumeric creates a Nat from an algebra.UnsignedNumeric value, returning an error if the input is nil.
+func (ns *NaturalNumbers) FromUnsignedNumeric(value algebra.UnsignedNumeric) (*Nat, error) {
+	if value == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	out, err := ns.FromBytes(value.BytesBE())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not convert unsigned numeric to natural number")
+	}
+	return out, nil
 }
 
 // FromCardinal creates a Nat from a cardinal.Cardinal value, returning an error if the input is nil or infinite.
