@@ -233,7 +233,7 @@ func computeJoyeParams(bits uint, prng io.Reader) (*joyeParams, error) {
 	target := new(big.Int).Lsh(one, bits-11)
 	pi := big.NewInt(1)
 	nPi := 0
-	for _, p := range smallPrimes {
+	for _, p := range &smallPrimes { // &smallPrimes is to avoid copying the 16376 bytes (gocritic linter)
 		next := new(big.Int).Mul(pi, big.NewInt(p))
 		if next.Cmp(target) > 0 {
 			break
