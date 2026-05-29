@@ -91,7 +91,12 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 
 	shift, err := crand.Int(prng, lBig)
 	require.NoError(t, err)
+	// x = -l - shift is below the range. saferith.Nat is unsigned and SetBig
+	// drops the sign, so reduce mod N first to obtain the true below-range
+	// representative N-l-shift; otherwise x collapses to |x| = l+shift, which
+	// lies inside the proven range [-l, 2l) and the proof legitimately accepts.
 	xBig := new(big.Int).Sub(lowBound, shift)
+	xBig.Mod(xBig, sk.PlaintextGroup().Modulus().Big())
 	xNat, err := num.N().FromNatCT(numct.NewNatFromSaferith((new(saferith.Nat).SetBig(xBig, xBig.BitLen()))))
 	require.NoError(t, err)
 	x, err := paillier.NewPlaintextFromNat(xNat, sk.PlaintextGroup().Modulus())
