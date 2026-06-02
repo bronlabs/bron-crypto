@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir/zkmodule"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
@@ -19,27 +20,14 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 // It computes the sigma protocol commitment, derives the challenge from the transcript
 // hash, computes the response, and returns the serialised proof.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
-	p.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
-
-	a, s, err := p.sigmaProtocol.ComputeProverCommitment(statement, witness)
+	a, s, err := zkmodule.Commit(p.sigmaProtocol, statement, witness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot generate commitment")
 	}
-	p.ctx.Transcript().AppendBytes(commitmentLabel, a.Bytes())
 
-	e, err := p.ctx.Transcript().ExtractBytes(challengeLabel, uint(p.sigmaProtocol.GetChallengeBytesLength()))
+	proof, err := zkmodule.Prove(p.ctx, p.sigmaProtocol, statement, witness, a, s)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot extract bytes from transcript")
-	}
-
-	z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, a, s, e)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot generate response")
-	}
-
-	proof := &Proof[A, Z]{
-		a: a,
-		z: z,
+		return nil, errs.Wrap(err).WithMessage("cannot generate proof")
 	}
 
 	proofBytes, err := serde.MarshalCBOR(proof)

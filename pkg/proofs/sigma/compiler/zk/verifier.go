@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
@@ -28,7 +29,7 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // rounds 1, 3, and 5 of the protocol.
 func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
 	if prng == nil {
-		return nil, ErrNil.WithMessage("prng")
+		return nil, proofs.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	p, err := newParticipant(ctx, sigmaProtocol, statement)
 	if err != nil {
@@ -46,7 +47,7 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 // This is the first round of the 5-round protocol.
 func (v *Verifier[X, W, A, S, Z]) Round1() (hashcom.Commitment, error) {
 	if v.round != 1 {
-		return hashcom.Commitment{}, ErrRound.WithMessage("r != 1 (%d)", v.round)
+		return hashcom.Commitment{}, proofs.ErrRound.WithMessage("r != 1 (%d)", v.round)
 	}
 
 	v.challengeBytes = make([]byte, v.protocol.GetChallengeBytesLength())
@@ -70,7 +71,7 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hashcom.Commitment, error) {
 // Returns the challenge message and witness for the prover to verify.
 func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hashcom.Message, hashcom.Witness, error) {
 	if v.round != 3 {
-		return hashcom.Message(nil), hashcom.Witness{}, ErrRound.WithMessage("r != 3 (%d)", v.round)
+		return hashcom.Message(nil), hashcom.Witness{}, proofs.ErrRound.WithMessage("r != 3 (%d)", v.round)
 	}
 	transcripts.Append(v.ctx.Transcript(), commitmentLabel, commitment)
 	v.ctx.Transcript().AppendBytes(challengeLabel, v.challengeBytes)
@@ -85,7 +86,7 @@ func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hashcom.Message, hashcom
 // Returns nil if verification succeeds, or an error if it fails.
 func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 	if v.round != 5 {
-		return ErrRound.WithMessage("r != 5 (%d)", v.round)
+		return proofs.ErrRound.WithMessage("r != 5 (%d)", v.round)
 	}
 
 	transcripts.Append(v.ctx.Transcript(), responseLabel, response)

@@ -66,3 +66,10 @@ while generalising the sharing layer beyond threshold access structures.
    2. Verify $\mathcal{M}(vrfy, \Pi^{sch}, (sid, j, \rho), X_j, \psi_j) = 1$.
 2. When passing above verification from all $\mathcal{P}_j$, output $X = \prod_jX_j$.
 3. Store $\vec{X} = (X_1, \dots, X_n)$ and $x_i$.
+
+
+## Reference
+
+<!-- paper: docs/papers/2021-060_20241021_172019.pdf [section 4.1 and figure 6] -->
+- [CGGMP21, Section 4.1 and Figure 6](https://eprint.iacr.org/2021/060.pdf)
+

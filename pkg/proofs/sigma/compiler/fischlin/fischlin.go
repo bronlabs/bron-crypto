@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
@@ -57,7 +58,7 @@ type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S
 // The prng is used for randomness during proof generation.
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil || prng == nil {
-		return nil, ErrNil.WithMessage("sigmaProtocol or prng")
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol or prng is nil")
 	}
 
 	rho := getRho(sigmaProtocol)
@@ -69,7 +70,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 		t = b + 6
 	}
 	if rho < 2 || b < 2 || t >= 64 {
-		return nil, ErrInvalid.WithMessage("invalid rho")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid rho")
 	}
 
 	return &simplifiedFischlin[X, W, A, S, Z]{
@@ -85,7 +86,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 // The sessionID and transcript are used for domain separation.
 func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 
 	sessionID := ctx.SessionID()
@@ -106,7 +107,7 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (com
 // The sessionID and transcript must match those used by the prover.
 func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 
 	sessionID := ctx.SessionID()

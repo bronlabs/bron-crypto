@@ -8,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
@@ -65,11 +66,11 @@ type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 // for randomness during proof generation.
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil || prng == nil {
-		return nil, ErrNil.WithMessage("sigmaProtocol or prng")
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol or prng is nil")
 	}
 
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-		return nil, ErrInvalid.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
 	}
 
@@ -83,7 +84,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 // The sessionID and transcript are used for domain separation.
 func (c *rf[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 
 	sessionID := ctx.SessionID()
@@ -101,7 +102,7 @@ func (c *rf[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X
 // The sessionID and transcript must match those used by the prover.
 func (c *rf[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 
 	sessionID := ctx.SessionID()

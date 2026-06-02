@@ -5,7 +5,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir/zkmodule"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
@@ -20,27 +22,15 @@ type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // and verifies the sigma protocol relation.
 func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if len(proofBytes) == 0 {
-		return ErrNil.WithMessage("proof")
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
-
 	fsProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot deserialize proof")
 	}
-	v.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
-	a := fsProof.a
-	v.ctx.Transcript().AppendBytes(commitmentLabel, a.Bytes())
-
-	e, err := v.ctx.Transcript().ExtractBytes(challengeLabel, uint(v.sigmaProtocol.GetChallengeBytesLength()))
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot extract bytes from transcript")
-	}
-
-	z := fsProof.z
-	if err := v.sigmaProtocol.Verify(statement, a, e, z); err != nil {
+	if err := zkmodule.Verify(v.ctx, v.sigmaProtocol, statement, fsProof); err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
-
 	return nil
 }

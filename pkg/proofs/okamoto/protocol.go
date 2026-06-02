@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -38,11 +39,11 @@ type (
 // At least one exponent must be provided.
 func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) (*Witness[S], error) {
 	if len(ws) == 0 {
-		return nil, ErrInvalidArgument.WithMessage("at least one witness value is required")
+		return nil, proofs.ErrInvalidArgument.WithMessage("at least one witness value is required")
 	}
 	for _, w := range ws {
 		if utils.IsNil(w) {
-			return nil, ErrInvalidArgument.WithMessage("witness values cannot be nil")
+			return nil, proofs.ErrInvalidArgument.WithMessage("witness values cannot be nil")
 		}
 	}
 	baseRing := algebra.StructureMustBeAs[algebra.PrimeField[S]](ws[0].Structure())
@@ -62,7 +63,7 @@ func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) (*Witness[S], error) {
 // For proving knowledge of a Pedersen opening, pass the commitment value directly.
 func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](g G) (*Statement[G, S], error) {
 	if utils.IsNil(g) {
-		return nil, ErrInvalidArgument.WithMessage("group element cannot be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("group element cannot be nil")
 	}
 	return &Statement[G, S]{X: g}, nil
 }
@@ -84,7 +85,7 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 // The number of generators m determines the dimension of the representation.
 func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generators []G, prng io.Reader) (*Protocol[G, S], error) {
 	if len(generators) == 0 {
-		return nil, ErrInvalidArgument.WithMessage("at least one generator is required")
+		return nil, proofs.ErrInvalidArgument.WithMessage("at least one generator is required")
 	}
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](generators[0].Structure())
 	baseScalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
@@ -107,7 +108,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 	homomorphism := func(s *constructions.FiniteDirectPowerRingElement[S]) (G, error) {
 		if s == nil {
-			return *new(G), ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
+			return *new(G), proofs.ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
 		}
 		return generatorsVector.ScalarDiagonal(s).CoDiagonal(), nil
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
@@ -28,7 +29,7 @@ type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // sigma protocol transcript is valid.
 func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) (err error) {
 	if proofBytes == nil {
-		return ErrNil.WithMessage("proof")
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	rfProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
@@ -37,7 +38,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 	}
 
 	if len(rfProof.A) != R || len(rfProof.E) != R || len(rfProof.Z) != R {
-		return ErrInvalid.WithMessage("invalid length")
+		return proofs.ErrInvalidArgument.WithMessage("invalid length")
 	}
 
 	sessionID := v.ctx.SessionID()
@@ -68,7 +69,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 			return errs.Wrap(err).WithMessage("cannot hash")
 		}
 		if !isAllZeros(digest) {
-			return ErrVerification.WithMessage("invalid challenge")
+			return proofs.ErrVerificationFailed.WithMessage("invalid challenge")
 		}
 		err = v.sigmaProtocol.Verify(statement, rfProof.A[i], rfProof.E[i], rfProof.Z[i])
 		if err != nil {

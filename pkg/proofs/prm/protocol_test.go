@@ -15,6 +15,7 @@ import (
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/prm"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
@@ -66,15 +67,15 @@ func TestConstructorsRejectInvalidInputs(t *testing.T) {
 	t.Parallel()
 
 	statement, err := prm.NewStatement(nil)
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, statement)
 
 	witness, err := prm.NewWitness(nil)
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, witness)
 
 	commitment, err := prm.NewCommitment()
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, commitment)
 
 	protocol, err := prm.NewProtocol(pcg.NewRandomised())
@@ -83,25 +84,25 @@ func TestConstructorsRejectInvalidInputs(t *testing.T) {
 
 	commitmentItems := make([]*znstar.RSAGroupElementUnknownOrder, itemCount)
 	commitment, err = prm.NewCommitment(commitmentItems...)
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, commitment)
 
 	state, err := prm.NewState()
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, state)
 
 	stateItems := make([]*num.Uint, itemCount)
 	state, err = prm.NewState(stateItems...)
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, state)
 
 	response, err := prm.NewResponse()
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, response)
 
 	responseItems := make([]*num.Int, itemCount)
 	response, err = prm.NewResponse(responseItems...)
-	require.ErrorIs(t, err, prm.ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	require.Nil(t, response)
 }
 
@@ -196,7 +197,7 @@ func TestVerifyRejectsOutOfRangeResponse(t *testing.T) {
 	require.NoError(t, err)
 
 	err = protocol.Verify(statement, commitment, challenge, response)
-	require.ErrorIs(t, err, prm.ErrVerificationFailed)
+	require.ErrorIs(t, err, proofs.ErrVerificationFailed)
 }
 
 func TestValidateStatementRejectsMismatchedWitness(t *testing.T) {

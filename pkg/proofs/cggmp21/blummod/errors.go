@@ -1,16 +1,20 @@
 package blummod
 
-import "github.com/bronlabs/errs-go/errs"
+import (
+	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
+)
 
 var (
 	// ErrInvalidArgument indicates missing or inconsistent protocol inputs.
-	ErrInvalidArgument = errs.New("invalid argument")
+	ErrInvalidArgument = proofs.ErrInvalidArgument
 	// ErrValidationFailed signals malformed or inconsistent protocol inputs.
-	ErrValidationFailed = errs.New("validation failed")
+	ErrValidationFailed = proofs.ErrValidationFailed
 	// ErrVerificationFailed signals failed proof verification.
-	ErrVerificationFailed = errs.New("verification failed")
+	ErrVerificationFailed = proofs.ErrVerificationFailed
 	// ErrUnsupported signals protocol functionality that this implementation cannot expose.
 	ErrUnsupported = errs.New("unsupported")
 	// ErrFailed indicates a general failure during protocol execution.
-	ErrFailed = errs.New("failed")
+	ErrFailed = proofs.ErrFailed
 )

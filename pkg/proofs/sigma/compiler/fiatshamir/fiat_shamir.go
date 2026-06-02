@@ -4,13 +4,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/bronlabs/errs-go/errs"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir/zkmodule"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
@@ -25,46 +23,8 @@ const (
 )
 
 // Proof represents a Fiat-Shamir non-interactive proof containing
-// the prover's commitment (a) and response (z).
-type Proof[A sigma.Commitment, Z sigma.Response] struct {
-	a A
-	z Z
-}
-
-type proofDTO[A sigma.Commitment, Z sigma.Response] struct {
-	A A `cbor:"A"`
-	Z Z `cbor:"Z"`
-}
-
-// MarshalCBOR serialises the proof to CBOR format.
-func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
-	dto := &proofDTO[A, Z]{
-		A: p.a,
-		Z: p.z,
-	}
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal Fiat-Shamir proof")
-	}
-	return data, nil
-}
-
-// UnmarshalCBOR deserializes the proof from CBOR format.
-func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*proofDTO[A, Z]](data)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot unmarshal Fiat-Shamir proof")
-	}
-	if utils.IsNil(dto.A) {
-		return ErrNil.WithMessage("commitment (A) cannot be nil")
-	}
-	if utils.IsNil(dto.Z) {
-		return ErrNil.WithMessage("response (Z) cannot be nil")
-	}
-	p.a = dto.A
-	p.z = dto.Z
-	return nil
-}
+// the prover's commitment (a), challenge (e), and response (z).
+type Proof[A sigma.Commitment, Z sigma.Response] = zkmodule.Proof[A, Z]
 
 type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
@@ -77,10 +37,10 @@ func NewCompiler[
 	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
 ](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil {
-		return nil, ErrNil.WithMessage("sigmaProtocol")
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol is nil")
 	}
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-		return nil, ErrInvalid.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
 	}
 	return &fs[X, W, A, S, Z]{
@@ -92,7 +52,7 @@ func NewCompiler[
 // The sessionID and transcript are used for domain separation.
 func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())
@@ -108,7 +68,7 @@ func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X
 // The sessionID and transcript must match those used by the prover.
 func (c *fs[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())

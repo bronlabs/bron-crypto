@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
 )
 
@@ -94,14 +95,14 @@ func doProof(tb testing.TB, k int, pk *paillier.PublicKey, sk *paillier.SecretKe
 	label := "gimme, gimme"
 	proverBytes, err := ctxs[proverID].Transcript().ExtractBytes(label, base.ComputationalSecurityBytesCeil)
 	if err != nil {
-		return lp.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
+		return proofs.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
 	}
 	verifierBytes, err := ctxs[verifierID].Transcript().ExtractBytes(label, base.ComputationalSecurityBytesCeil)
 	if err != nil {
-		return lp.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
+		return proofs.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
 	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
-		return lp.ErrFailed.WithMessage("transcript record different data")
+		return proofs.ErrFailed.WithMessage("transcript record different data")
 	}
 
 	return nil

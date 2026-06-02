@@ -1,12 +1,14 @@
 package enc
 
-import "github.com/bronlabs/errs-go/errs"
+import (
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
+)
 
 var (
 	// ErrInvalidArgument indicates missing or inconsistent protocol inputs.
-	ErrInvalidArgument = errs.New("invalid argument")
+	ErrInvalidArgument = proofs.ErrInvalidArgument
 	// ErrValidationFailed indicates that a statement/witness pair is malformed or inconsistent.
-	ErrValidationFailed = errs.New("validation failed")
+	ErrValidationFailed = proofs.ErrValidationFailed
 	// ErrVerificationFailed indicates a failed sigma-protocol verification.
-	ErrVerificationFailed = errs.New("verification failed")
+	ErrVerificationFailed = proofs.ErrVerificationFailed
 )

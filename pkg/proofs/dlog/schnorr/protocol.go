@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -54,7 +55,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	soundnessError := uint(challengeByteLen * 8)
 	homomorphism := func(s S) (G, error) {
 		if utils.IsNil(s) {
-			return *new(G), ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
+			return *new(G), proofs.ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
 		}
 		return generator.ScalarOp(s), nil
 	}
