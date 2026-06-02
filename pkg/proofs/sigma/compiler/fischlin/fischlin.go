@@ -42,11 +42,8 @@ type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	Z []Z      `cbor:"z"`
 }
 
-var _ compiler.NonInteractiveProtocol[sigma.Statement, sigma.Witness] = (*simplifiedFischlin[
-	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
-])(nil)
-
-type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+// Protocol implements the NonInteractiveProtocol interface for Fischlin proofs.
+type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	rho           uint64
 	b             uint64
 	t             uint64
@@ -56,7 +53,7 @@ type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S
 
 // NewCompiler creates a new Fischlin compiler for the given sigma protocol.
 // The prng is used for randomness during proof generation.
-func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
+func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (*Protocol[X, W, A, S, Z], error) {
 	if sigmaProtocol == nil || prng == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol or prng is nil")
 	}
@@ -73,7 +70,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 		return nil, proofs.ErrInvalidArgument.WithMessage("invalid rho")
 	}
 
-	return &simplifiedFischlin[X, W, A, S, Z]{
+	return &Protocol[X, W, A, S, Z]{
 		rho:           rho,
 		b:             b,
 		t:             t,
@@ -84,7 +81,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 
 // NewProver creates a new non-interactive prover for generating Fischlin proofs.
 // The sessionID and transcript are used for domain separation.
-func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+func (c *Protocol[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
@@ -93,7 +90,7 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (com
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &prover[X, W, A, S, Z]{
+	return &Prover[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 		prng:          c.prng,
@@ -105,7 +102,7 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(ctx *session.Context) (com
 
 // NewVerifier creates a new non-interactive verifier for checking Fischlin proofs.
 // The sessionID and transcript must match those used by the prover.
-func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
+func (c *Protocol[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
@@ -114,7 +111,7 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (c
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &verifier[X, W, A, S, Z]{
+	return &Verifier[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 		b:             c.b,
@@ -124,11 +121,11 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (c
 }
 
 // Name returns the compiler name ("Fischlin").
-func (*simplifiedFischlin[_, _, _, _, _]) Name() compiler.Name {
+func (*Protocol[_, _, _, _, _]) Name() compiler.Name {
 	return Name
 }
 
 // SigmaProtocolName returns the name of the underlying sigma protocol.
-func (c *simplifiedFischlin[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
+func (c *Protocol[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
 	return c.sigmaProtocol.Name()
 }

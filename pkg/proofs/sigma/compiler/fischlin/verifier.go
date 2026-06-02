@@ -13,12 +13,8 @@ import (
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
-var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
-	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
-])(nil)
-
-// verifier implements the NIVerifier interface for Fischlin proofs.
-type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+// Verifier implements the NIVerifier interface for Fischlin proofs.
+type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	rho           uint64
@@ -29,7 +25,7 @@ type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // Verify checks that a Fischlin proof is valid for the given statement.
 // It verifies that all rho challenge/response pairs hash to zero and that
 // each sigma protocol transcript is valid.
-func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
+func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if proofBytes == nil {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}

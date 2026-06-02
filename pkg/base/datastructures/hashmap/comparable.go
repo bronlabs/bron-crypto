@@ -214,6 +214,13 @@ func (m ImmutableComparableMap[K, V]) Enumerate() iter.Seq2[int, ds.MapEntry[K, 
 	return m.inner.Enumerate()
 }
 
+// ToNative returns a copy of the map data as a native Go map.
+func (m ImmutableComparableMap[K, V]) ToNative() map[K]V {
+	out := make(map[K]V)
+	maps.Copy(out, m.inner)
+	return out
+}
+
 // NewComparable creates a new mutable map from the given entries.
 func NewComparable[K comparable, V any](xs ...ds.MapEntry[K, V]) *MutableComparableMap[K, V] {
 	out := make(NativeMap[K, V])
@@ -297,8 +304,6 @@ func (m MutableComparableMap[K, V]) Retain(keys ...K) ds.MutableMap[K, V] {
 // ToNative returns a copy of the map data as a native Go map.
 func (m *MutableComparableMap[K, V]) ToNative() map[K]V {
 	out := make(map[K]V)
-	for k, v := range m.NativeMap {
-		out[k] = v
-	}
+	maps.Copy(out, m.NativeMap)
 	return out
 }

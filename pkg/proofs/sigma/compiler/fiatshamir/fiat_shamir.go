@@ -29,7 +29,8 @@ const (
 // (de)serialise identically to that type.
 type Proof[A sigma.Commitment, Z sigma.Response] = zkmodule.Proof[A, Z]
 
-type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+// Protocol implements the NonInteractiveProtocol interface for Fiat-Shamir proofs.
+type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
@@ -38,7 +39,7 @@ type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 // computational security of the resulting non-interactive proof.
 func NewCompiler[
 	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
-](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NonInteractiveProtocol[X, W], error) {
+](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (*Protocol[X, W, A, S, Z], error) {
 	if sigmaProtocol == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol is nil")
 	}
@@ -46,7 +47,7 @@ func NewCompiler[
 		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
 	}
-	return &fs[X, W, A, S, Z]{
+	return &Protocol[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 	}, nil
 }
@@ -55,7 +56,7 @@ func NewCompiler[
 // the underlying sigma-protocol name are folded into a transcript domain
 // separator so that proofs from different sessions or protocols cannot be
 // cross-replayed.
-func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+func (c *Protocol[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
@@ -63,7 +64,7 @@ func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &prover[X, W, A, S, Z]{
+	return &Prover[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
@@ -73,7 +74,7 @@ func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X
 // same domain separator as NewProver; the verifier's session must match the
 // prover's, otherwise the challenge recomputed from the transcript will not
 // agree with the one in the proof.
-func (c *fs[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
+func (c *Protocol[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
@@ -81,18 +82,18 @@ func (c *fs[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifi
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &verifier[X, W, A, S, Z]{
+	return &Verifier[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }
 
 // Name returns the compiler name ("FiatShamir").
-func (*fs[_, _, _, _, _]) Name() compiler.Name {
+func (*Protocol[_, _, _, _, _]) Name() compiler.Name {
 	return Name
 }
 
 // SigmaProtocolName returns the name of the underlying sigma protocol.
-func (c *fs[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
+func (c *Protocol[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
 	return c.sigmaProtocol.Name()
 }

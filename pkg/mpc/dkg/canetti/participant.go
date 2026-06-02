@@ -106,6 +106,26 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	return p, nil
 }
 
+// SharingScheme returns the underlying Feldman sharing scheme used by the DKG protocol.
+func (p *Participant[G, S]) SharingScheme() *feldman.Scheme[G, S] {
+	return p.sharingScheme
+}
+
+// PRNG returns the randomness source of the participant.
+func (p *Participant[G, S]) PRNG() io.Reader {
+	return p.prng
+}
+
+// Group returns the group used by the DKG protocol.
+func (p *Participant[G, S]) Group() algebra.PrimeGroup[G, S] {
+	return p.group
+}
+
+// Ctx returns the session context of the participant.
+func (p *Participant[G, S]) Ctx() *session.Context {
+	return p.ctx
+}
+
 // SharingID returns the sharing identifier of the local participant.
 func (p *Participant[G, S]) SharingID() sharing.ID {
 	return p.ctx.HolderID()

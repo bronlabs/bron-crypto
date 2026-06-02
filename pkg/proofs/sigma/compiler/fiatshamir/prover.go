@@ -10,8 +10,8 @@ import (
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
-// prover implements the NIProver interface for Fiat-Shamir proofs.
-type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+// Prover implements the NIProver interface for Fiat-Shamir proofs.
+type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
@@ -20,7 +20,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 // It delegates the transform to the zkmodule engine — commit, then derive the
 // challenge from the transcript hash and compute the response — and returns the
 // CBOR-serialised proof.
-func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
+func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	a, s, err := zkmodule.Commit(p.sigmaProtocol, statement, witness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot generate commitment")

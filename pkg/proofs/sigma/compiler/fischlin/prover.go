@@ -14,12 +14,8 @@ import (
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
-var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
-	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
-])(nil)
-
-// prover implements the NIProver interface for Fischlin proofs.
-type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+// Prover implements the NIProver interface for Fischlin proofs.
+type Prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
@@ -31,7 +27,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 // Prove generates a non-interactive Fischlin proof for the given statement and witness.
 // It runs rho parallel executions of the sigma protocol, searching for challenge/response
 // pairs that hash to zero. Returns the serialised proof containing all rho transcripts.
-func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
+func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.ctx.Transcript().AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
 	p.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 	commonHKey, err := p.ctx.Transcript().ExtractBytes(commonHLabel, base.CollisionResistanceBytesCeil)
@@ -128,7 +124,7 @@ redo:
 	return proofBytes, nil
 }
 
-func (p *prover[X, W, A, S, Z]) challengeBytesAndResponse(t uint64, statement X, witness W, commitment A, state S) (e []byte, response Z, err error) {
+func (p *Prover[X, W, A, S, Z]) challengeBytesAndResponse(t uint64, statement X, witness W, commitment A, state S) (e []byte, response Z, err error) {
 	e = make([]byte, 8)
 	binary.BigEndian.PutUint64(e, t)
 	eBytes := make([]byte, p.sigmaProtocol.GetChallengeBytesLength())
