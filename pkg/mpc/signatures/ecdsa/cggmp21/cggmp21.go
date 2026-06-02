@@ -1,8 +1,10 @@
 package cggmp21
 
 import (
+	"bytes"
 	"maps"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
@@ -78,6 +80,15 @@ func (info *AuxInfo) PaillierPublicKeys() map[sharing.ID]*paillier.PublicKey {
 	return maps.Clone(info.paillierPublicKeys)
 }
 
+// PaillierPublicKey returns the Paillier public key for id.
+func (info *AuxInfo) PaillierPublicKey(id sharing.ID) (*paillier.PublicKey, bool) {
+	if info == nil {
+		return nil, false
+	}
+	key, ok := info.paillierPublicKeys[id]
+	return key, ok
+}
+
 // RingPedersenSecretKey returns the local ring-Pedersen trapdoor key.
 func (info *AuxInfo) RingPedersenSecretKey() *intcom.TrapdoorKey {
 	if info == nil {
@@ -92,6 +103,15 @@ func (info *AuxInfo) RingPedersenPublicKeys() map[sharing.ID]*intcom.CommitmentK
 		return nil
 	}
 	return maps.Clone(info.ringPedersenPublicKeys)
+}
+
+// RingPedersenPublicKey returns the ring-Pedersen public key for id.
+func (info *AuxInfo) RingPedersenPublicKey(id sharing.ID) (*intcom.CommitmentKey, bool) {
+	if info == nil {
+		return nil, false
+	}
+	key, ok := info.ringPedersenPublicKeys[id]
+	return key, ok
 }
 
 // Equal reports whether two AuxInfo values contain the same keys.
@@ -116,18 +136,18 @@ type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	mpc.BaseShard[P, S]
 
 	auxInfo   *AuxInfo
-	refreshID [32]byte
+	refreshID []byte
 }
 
 // NewShard returns a new shard.
-func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo, refreshID [32]byte) (*Shard[P, B, S], error) {
+func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo, refreshID []byte) (*Shard[P, B, S], error) {
 	if baseShard == nil {
 		return nil, ErrNil.WithMessage("base shard")
 	}
 	if info == nil {
 		return nil, ErrNil.WithMessage("auxiliary information")
 	}
-	if refreshID == [32]byte{} {
+	if len(refreshID) < base.CollisionResistanceBytesCeil {
 		return nil, ErrNil.WithMessage("empty refresh ID")
 	}
 	shareholders := baseShard.MSP().Shareholders()
@@ -172,7 +192,7 @@ func (sh *Shard[P, B, S]) AuxInfo() *AuxInfo {
 	return sh.auxInfo
 }
 
-func (sh *Shard[P, B, S]) RefreshID() [32]byte {
+func (sh *Shard[P, B, S]) RefreshID() []byte {
 	return sh.refreshID
 }
 
@@ -181,7 +201,7 @@ func (sh *Shard[P, B, S]) Equal(rhs *Shard[P, B, S]) bool {
 	if sh == nil || rhs == nil {
 		return sh == rhs
 	}
-	return sh.refreshID == rhs.refreshID && sh.BaseShard.Equal(&rhs.BaseShard) && sh.auxInfo.Equal(rhs.auxInfo)
+	return bytes.Equal(sh.refreshID, rhs.refreshID) && sh.BaseShard.Equal(&rhs.BaseShard) && sh.auxInfo.Equal(rhs.auxInfo)
 }
 
 func equalPaillierPublicKeys(lhs, rhs map[sharing.ID]*paillier.PublicKey) bool {

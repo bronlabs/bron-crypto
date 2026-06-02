@@ -30,7 +30,7 @@ func ValidateIncomingMessages[M Message[P], P any](p P, senders iter.Seq[sharing
 	for id := range senders {
 		m, ok := messages.Get(id)
 		if !ok {
-			return ErrMissing.WithMessage("from %d", id)
+			return ErrMissing.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("from %d", id)
 		}
 		if err := m.Validate(p, id); err != nil {
 			return errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage(

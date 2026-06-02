@@ -36,12 +36,16 @@ func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 		}
 	}
 
+	params, err := cggmp21.NewParameters(curve, keyLen)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create parameters")
+	}
 	baseShards, err := baseDealer.Deal(curve, as, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot deal base shards")
 	}
-	var refreshID [32]byte
-	if _, err = io.ReadFull(prng, refreshID[:]); err != nil {
+	refreshID := make([]byte, params.Kappa()/8)
+	if _, err = io.ReadFull(prng, refreshID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot read refresh ID")
 	}
 

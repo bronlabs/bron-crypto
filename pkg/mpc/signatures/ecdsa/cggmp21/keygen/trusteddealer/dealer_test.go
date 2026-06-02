@@ -18,7 +18,7 @@ import (
 	sigecdsa "github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
-const testKeyLen = 512
+const testKeyLen = 2048
 
 func TestDealShards_Threshold2Of3(t *testing.T) {
 	t.Parallel()
