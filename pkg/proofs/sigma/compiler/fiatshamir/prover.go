@@ -17,8 +17,9 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 }
 
 // Prove generates a non-interactive proof for the given statement and witness.
-// It computes the sigma protocol commitment, derives the challenge from the transcript
-// hash, computes the response, and returns the serialised proof.
+// It delegates the transform to the zkmodule engine — commit, then derive the
+// challenge from the transcript hash and compute the response — and returns the
+// CBOR-serialised proof.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	a, s, err := zkmodule.Commit(p.sigmaProtocol, statement, witness)
 	if err != nil {

@@ -16,14 +16,17 @@ const (
 	// Name is the identifier for the Fiat-Shamir compiler.
 	Name compiler.Name = "FiatShamir"
 
+	// transcriptLabel domain-separates this compiler's transcript from other
+	// protocols sharing the session. The per-message labels (statement,
+	// commitment, challenge, response) are owned by the zkmodule engine, which
+	// performs the actual absorption and challenge derivation.
 	transcriptLabel = "BRON_CRYPTO_NIZKP_FIATSHAMIR-"
-	statementLabel  = "statementLabel-"
-	commitmentLabel = "commitmentLabel-"
-	challengeLabel  = "challengeLabel-"
 )
 
-// Proof represents a Fiat-Shamir non-interactive proof containing
-// the prover's commitment (a), challenge (e), and response (z).
+// Proof is a Fiat-Shamir non-interactive proof: the prover's commitment (a),
+// the challenge (e) derived from the transcript hash, and the response (z). It
+// is an alias for the engine type zkmodule.Proof, so proofs produced here
+// (de)serialise identically to that type.
 type Proof[A sigma.Commitment, Z sigma.Response] = zkmodule.Proof[A, Z]
 
 type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
@@ -48,8 +51,10 @@ func NewCompiler[
 	}, nil
 }
 
-// NewProver creates a new non-interactive prover for generating Fiat-Shamir proofs.
-// The sessionID and transcript are used for domain separation.
+// NewProver returns a non-interactive prover bound to ctx. The session ID and
+// the underlying sigma-protocol name are folded into a transcript domain
+// separator so that proofs from different sessions or protocols cannot be
+// cross-replayed.
 func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
@@ -64,8 +69,10 @@ func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X
 	}, nil
 }
 
-// NewVerifier creates a new non-interactive verifier for checking Fiat-Shamir proofs.
-// The sessionID and transcript must match those used by the prover.
+// NewVerifier returns a non-interactive verifier bound to ctx. It applies the
+// same domain separator as NewProver; the verifier's session must match the
+// prover's, otherwise the challenge recomputed from the transcript will not
+// agree with the one in the proof.
 func (c *fs[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")

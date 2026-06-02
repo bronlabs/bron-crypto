@@ -20,7 +20,7 @@ proof, _ := prover.Prove(statement, witness)
 
 ## Proof Structure
 
-Contains the prover's commitment (a) and response (z). The verifier recomputes the challenge from the transcript hash.
+Carries the prover's commitment (a), the challenge (e), and the response (z). On verification the challenge is recomputed from the transcript hash and checked against the e in the proof before the sigma relation is verified.
 
 ## Reference
 

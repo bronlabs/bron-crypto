@@ -17,9 +17,10 @@ type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
-// Verify checks that a Fiat-Shamir proof is valid for the given statement.
-// It deserializes the proof, recomputes the challenge from the transcript,
-// and verifies the sigma protocol relation.
+// Verify checks that a Fiat-Shamir proof is valid for the given statement. It
+// deserialises the proof and hands it to the zkmodule engine, which recomputes
+// the challenge from the transcript, checks it against the challenge carried in
+// the proof, and verifies the sigma relation.
 func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if len(proofBytes) == 0 {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
