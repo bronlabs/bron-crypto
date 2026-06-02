@@ -104,4 +104,5 @@ honest-verifier zero-knowledge simulator shape for sigma protocols.
 
 ## Reference
 
+<!-- paper: docs/papers/2021-060_20241021_172019.pdf [Figure 11] -->
 [CGGMP21](https://eprint.iacr.org/2021/060.pdf), Figure 11, "Paillier Encryption in Range ZK".

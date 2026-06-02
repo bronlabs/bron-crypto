@@ -32,4 +32,5 @@ The paper gives an honest-verifier simulator that samples `w` and the challenge 
 
 ## Reference
 
+<!-- paper: docs/papers/2021-060_20241021_172019.pdf [section 5.2 and figure 12] -->
 * [CGGMP21, Section 5.2 and Figure 12](https://eprint.iacr.org/2021/060.pdf)

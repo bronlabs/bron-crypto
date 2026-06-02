@@ -74,6 +74,7 @@ $Q^{z_1}t^v=TR^e$. It also verifies the Figure 26 range checks for $z_1,z_2$.
 
 ## Reference
 
+<!-- paper: docs/papers/2021-060_20241021_172019.pdf [Appendix A.4, Figure 26]-->
 - Canetti, Gennaro, Goldfeder, Makriyannis, Peled. 
   [UC Non-Interactive, Proactive, Threshold ECDSA with Identifiable Aborts](https://eprint.iacr.org/2021/060),
   Appendix A.4, Figure 26.

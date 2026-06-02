@@ -50,4 +50,5 @@ and setting $A_i = t^{z_i}s^{-e_i}$.
 
 ## Reference
 
+<!-- paper: docs/papers/2021-060_20241021_172019.pdf [section 5.3 and Figure 13] -->
 * [CGGMP21, Section 5.3 and Figure 13](https://eprint.iacr.org/2021/060.pdf)
