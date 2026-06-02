@@ -15,7 +15,7 @@ import (
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/prm"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/prm"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
 

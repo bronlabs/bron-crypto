@@ -1,7 +1,7 @@
 package prm_test
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/prm"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/prm"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
