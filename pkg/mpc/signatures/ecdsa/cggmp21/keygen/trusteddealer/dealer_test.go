@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
@@ -83,6 +84,13 @@ func testDealShardsThreshold2Of3[P curves.Point[P, B, S], B algebra.PrimeFieldEl
 	t.Run("auxiliary public keys match secret keys", func(t *testing.T) {
 		t.Parallel()
 
+		refAux := ref.AuxInfo()
+		require.NotNil(t, refAux)
+		refPaillierPublicKeys := refAux.PaillierPublicKeys()
+		refRingPedersenPublicKeys := refAux.RingPedersenPublicKeys()
+		require.Len(t, refPaillierPublicKeys, 3)
+		require.Len(t, refRingPedersenPublicKeys, 3)
+
 		for id := range shareholders.Iter() {
 			shard := shards[id]
 			require.NotNil(t, shard)
@@ -93,6 +101,14 @@ func testDealShardsThreshold2Of3[P curves.Point[P, B, S], B algebra.PrimeFieldEl
 			ringPedersenSecretKey := shard.AuxInfo().RingPedersenSecretKey()
 			require.NotNil(t, ringPedersenSecretKey)
 
+			ringPedersenPublicKey, ok := refRingPedersenPublicKeys[id]
+			require.True(t, ok)
+			require.True(t, auxInfo.RingPedersenSecretKey().Export().Equal(ringPedersenPublicKey), "ring pedersen key mismatch for %d", id)
+
+			paillierPublicKeys := auxInfo.PaillierPublicKeys()
+			ringPedersenPublicKeys := auxInfo.RingPedersenPublicKeys()
+			require.Len(t, paillierPublicKeys, 3)
+			require.Len(t, ringPedersenPublicKeys, 3)
 			for otherID := range shareholders.Iter() {
 				if otherID == id {
 					continue
