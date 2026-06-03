@@ -3,6 +3,7 @@ package trusteddealer_test
 import (
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -13,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21/trusteddealer"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21/keygen/trusteddealer"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	sigecdsa "github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
@@ -37,12 +38,14 @@ func TestDealShards_Threshold2Of3(t *testing.T) {
 func testDealShardsThreshold2Of3[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve sigecdsa.Curve[P, B, S]) {
 	t.Helper()
 
-	prng := pcg.NewRandomised()
+	prng, err := csprng.NewThreadSafeReader(pcg.NewRandomised())
+	require.NoError(t, err)
 	shareholders := ntu.MakeRandomQuorum(t, prng, 3)
 	accessStructure, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
-	shards := trusteddealer.DealShardsWithKeyLen(t, curve, prng, accessStructure, testKeyLen)
+	shards, err := trusteddealer.Deal(curve, accessStructure, testKeyLen, prng)
+	require.NoError(t, err)
 	require.Len(t, shards, 3)
 
 	ref := shards[shareholders.List()[0]]
