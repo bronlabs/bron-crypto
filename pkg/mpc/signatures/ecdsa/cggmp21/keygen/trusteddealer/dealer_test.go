@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"

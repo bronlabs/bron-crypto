@@ -2,13 +2,9 @@ package trusteddealer
 
 import (
 	"io"
-	"maps"
 	"sync"
+	"maps"
 	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -39,7 +35,6 @@ func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 		}
 	}
 
-func dealShards[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], prng io.Reader, as accessstructures.Monotone, keyLen int) (map[sharing.ID]*cggmp21.Shard[P, B, S], error) {
 	baseShards, err := baseDealer.Deal(curve, as, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot deal base shards")
