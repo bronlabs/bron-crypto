@@ -210,6 +210,16 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r3u); errU != nil {
 		return nil, errs.Wrap(errU).WithMessage("invalid incoming unicast messages")
 	}
+
+	facInteractiveProtocol, err := fac.NewProtocol(p.state.ringPedersenSecretKey.Export(), p.Ell(), p.Epislon(), p.prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create FAC interactive protocol")
+	}
+	facfs, err := fiatshamir.NewCompiler(facInteractiveProtocol)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create Fiat-Shamir compiler for FAC protocol")
+	}
+
 	// step 1(b)
 	for id := range p.ctx.OtherPartiesOrdered() {
 		u, _ := r3u.Get(id)
@@ -232,14 +242,6 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 		}
 
 		// step 1(b).ii
-		facInteractiveProtocol, err := fac.NewProtocol(p.state.ringPedersenSecretKey.Export(), p.Ell(), p.Epislon(), p.prng)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot create FAC interactive protocol")
-		}
-		facfs, err := fiatshamir.NewCompiler(facInteractiveProtocol)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot create Fiat-Shamir compiler for FAC protocol")
-		}
 		facVerifier, err := facfs.NewVerifier(verifierCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create FAC verifier")
