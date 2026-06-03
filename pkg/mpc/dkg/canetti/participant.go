@@ -21,6 +21,7 @@ const (
 	domainSeparator = "BRON_CRYPTO_DKG_CANETTI-"
 	ckLabel         = "BRON_CRYPTO_DKG_CANETTI_CK-"
 	proverIDLabel   = "BRON_CRYPTO_DKG_CANETTI_PROVER_ID-"
+	iLabel          = "BRON_CRYPTO_DKG_CANETTI_i-"
 	rhoLabel        = "BRON_CRYPTO_DKG_CANETTI_RHO-"
 )
 

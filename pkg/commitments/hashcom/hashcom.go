@@ -2,6 +2,7 @@ package hashcom
 
 import (
 	"bytes"
+	"hash"
 	"io"
 
 	"golang.org/x/crypto/blake2b"
@@ -21,6 +22,12 @@ var (
 	// secret witness is what makes the scheme hiding.
 	hmacFunc = blake2b.New256
 )
+
+// HashFunc is the unkeyed variant of the internal hmac used in commitments.
+func HashFunc() hash.Hash {
+	h, _ := hmacFunc(nil) // there won't be an error if key is nil.
+	return h
+}
 
 const (
 	// KeySize is the length in bytes of a CommitmentKey, used directly as the

@@ -117,19 +117,24 @@ func SampleExtendedPrivateKey[S algebra.PrimeFieldElement[S]](sf algebra.PrimeFi
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("nil prng")
 	}
-	skBytes := make([]byte, sf.ElementSize())
-	if _, err := io.ReadFull(prng, skBytes); err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot sample private key")
+	for {
+		skBytes := make([]byte, sf.ElementSize())
+		if _, err := io.ReadFull(prng, skBytes); err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot sample private key")
+		}
+		privateKey, err := NewPrivateKey(skBytes)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create private key")
+		}
+		out, err := ExtendPrivateKey(privateKey, sf)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot extend private key")
+		}
+		if out.Value().IsZero() {
+			continue
+		}
+		return out, nil
 	}
-	privateKey, err := NewPrivateKey(skBytes)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create private key")
-	}
-	out, err := ExtendPrivateKey(privateKey, sf)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot extend private key")
-	}
-	return out, nil
 }
 
 // NewPrivateKey creates a new PrivateKey instance.
