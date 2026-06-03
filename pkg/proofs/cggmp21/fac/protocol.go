@@ -96,6 +96,12 @@ func (p *Protocol) ComputeProverResponse(
 	if err := p.ValidateStatement(statement, witness); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid statement or witness")
 	}
+	if commitment == nil {
+		return nil, ErrInvalidArgument.WithMessage("commitment must not be nil")
+	}
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("state must not be nil")
+	}
 	if err := p.validateCommitment(commitment); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid commitment")
 	}
@@ -130,6 +136,15 @@ func (p *Protocol) ComputeProverResponse(
 
 // Verify checks a prover response against the statement and commitment.
 func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if commitment == nil {
+		return ErrInvalidArgument.WithMessage("commitment must not be nil")
+	}
+	if response == nil {
+		return ErrInvalidArgument.WithMessage("response must not be nil")
+	}
 	if err := p.validateStatement(statement); err != nil {
 		return errs.Wrap(err).WithMessage("invalid statement")
 	}
@@ -141,9 +156,19 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 		return errs.Wrap(err).WithMessage("invalid challenge")
 	}
 
-	zBitLenBound := statement.publicKey.PlaintextGroup().Modulus().TrueLen()/2 + p.l + p.epsilon
+	n0BitLen := statement.publicKey.PlaintextGroup().Modulus().TrueLen()
+	nDashBitLen := p.ringPedersenKey.Group().Modulus().TrueLen()
+	zBitLenBound := n0BitLen/2 + p.l + p.epsilon
 	if !intInSignedBitRange(response.z1, zBitLenBound) || !intInSignedBitRange(response.z2, zBitLenBound) {
 		return ErrVerificationFailed.WithMessage("factor responses are out of range")
+	}
+	wBitLenBound := nDashBitLen + p.l + p.epsilon + 1
+	vBitLenBound := n0BitLen + nDashBitLen + p.l + p.epsilon + 1
+	if !intInSignedBitRange(response.w1, wBitLenBound) ||
+		!intInSignedBitRange(response.w2, wBitLenBound) ||
+		!intInSignedBitRange(response.v, vBitLenBound) {
+
+		return ErrVerificationFailed.WithMessage("randomness responses are out of range")
 	}
 
 	pe, err := p.ringPedersenKey.CommitmentScalarOp(commitment.p, e)
@@ -223,6 +248,9 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 
 // RunSimulator creates an honest-verifier simulated transcript for a fixed challenge.
 func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
+	if statement == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
 	if err := p.validateStatement(statement); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid statement")
 	}
@@ -351,6 +379,12 @@ func (p *Protocol) GetChallengeBytesLength() int {
 
 // ValidateStatement checks that the public modulus and witness factors match.
 func (p *Protocol) ValidateStatement(statement *Statement, witness *Witness) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if witness == nil {
+		return ErrInvalidArgument.WithMessage("witness must not be nil")
+	}
 	if err := p.validateStatement(statement); err != nil {
 		return errs.Wrap(err).WithMessage("invalid statement")
 	}
@@ -514,10 +548,10 @@ func validateCommitmentKey(commitmentKey *intcom.CommitmentKey) error {
 		return ErrValidationFailed.WithMessage("s and t must be torsion-free")
 	}
 	if !s.Value().Decrement().Nat().Coprime(s.Modulus().Nat()) {
-		return ErrValidationFailed.WithMessage("s cannot be a generator of QR(N)")
+		return ErrValidationFailed.WithMessage("s - 1 must be coprime to Nhat")
 	}
 	if !t.Value().Decrement().Nat().Coprime(t.Modulus().Nat()) {
-		return ErrValidationFailed.WithMessage("t cannot be a generator of QR(N)")
+		return ErrValidationFailed.WithMessage("t - 1 must be coprime to Nhat")
 	}
 	return nil
 }

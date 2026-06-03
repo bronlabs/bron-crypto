@@ -167,12 +167,18 @@ func (p *Protocol[EK]) ComputeProverCommitment(statement *Statement, witness *Wi
 func (p *Protocol[EK]) ComputeProverResponse(
 	statement *Statement,
 	witness *Witness,
-	_ *Commitment,
+	commitment *Commitment,
 	state *State,
 	challenge sigma.ChallengeBytes,
 ) (*Response, error) {
 	if err := p.ValidateStatement(statement, witness); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid statement or witness")
+	}
+	if commitment == nil {
+		return nil, ErrInvalidArgument.WithMessage("commitment must not be nil")
+	}
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("state must not be nil")
 	}
 	eInt, err := p.mapChallenge(challenge)
 	if err != nil {
@@ -206,6 +212,15 @@ func (p *Protocol[EK]) ComputeProverResponse(
 
 // Verify checks the two Figure 11 equality checks and the widened response range.
 func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if commitment == nil {
+		return ErrInvalidArgument.WithMessage("commitment must not be nil")
+	}
+	if response == nil {
+		return ErrInvalidArgument.WithMessage("response must not be nil")
+	}
 	e, err := p.mapChallenge(challenge)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("invalid challenge")
@@ -273,6 +288,9 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 
 // RunSimulator creates a simulated accepting transcript for the supplied challenge.
 func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
+	if statement == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
 	e, err := p.mapChallenge(challenge)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid challenge")
@@ -377,6 +395,12 @@ func (*Protocol[EK]) GetChallengeBytesLength() int {
 
 // ValidateStatement checks that witness opens the statement and lies in the configured range.
 func (p *Protocol[EK]) ValidateStatement(statement *Statement, witness *Witness) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if witness == nil {
+		return ErrInvalidArgument.WithMessage("witness must not be nil")
+	}
 	if !p.paillierKey.CiphertextGroup().Contains(statement.k.Value()) {
 		return ErrValidationFailed.WithMessage("K is not in the ciphertext group")
 	}
