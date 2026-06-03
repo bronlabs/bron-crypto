@@ -33,16 +33,24 @@ func validateCommitmentKey(commitmentKey *intcom.CommitmentKey) error {
 	if !s.IsTorsionFree() || !t.IsTorsionFree() {
 		return ErrValidationFailed.WithMessage("s and t must be torsion-free")
 	}
+	// For QR elements modulo a safe-prime RSA modulus, gcd(x-1, N) = 1
+	// rules out the identity in either CRT component, so x generates QR(N).
 	if !s.Value().Decrement().Nat().Coprime(s.Modulus().Nat()) {
-		return ErrValidationFailed.WithMessage("s cannot be a generator of QR(N)")
+		return ErrValidationFailed.WithMessage("s is not a generator of QR(NHat)")
 	}
 	if !t.Value().Decrement().Nat().Coprime(t.Modulus().Nat()) {
-		return ErrValidationFailed.WithMessage("t cannot be a generator of QR(N)")
+		return ErrValidationFailed.WithMessage("t is not a generator of QR(NHat)")
 	}
 	return nil
 }
 
 func validateWitness(statement *Statement, witness *Witness) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if witness == nil {
+		return ErrInvalidArgument.WithMessage("witness must not be nil")
+	}
 	if !witness.trapdoorKey.S().Equal(statement.commitmentKey.S()) ||
 		!witness.trapdoorKey.T().Equal(statement.commitmentKey.T()) {
 
@@ -64,6 +72,12 @@ func validateWitness(statement *Statement, witness *Witness) error {
 }
 
 func validateCommitment(statement *Statement, commitment *Commitment) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if commitment == nil {
+		return ErrInvalidArgument.WithMessage("commitment must not be nil")
+	}
 	group := statement.commitmentKey.Group()
 	for _, a := range &commitment.a {
 		if !group.Contains(a) {
@@ -82,9 +96,4 @@ func phiFromGroup(group *znstar.RSAGroupKnownOrder) (*num.NatPlus, error) {
 		return nil, errs.Wrap(err).WithMessage("could not convert phi(N)")
 	}
 	return phi, nil
-}
-
-func symmetricModulusRange(modulus *num.NatPlus) (low, high *num.Int) {
-	half := modulus.Rsh(1).Lift()
-	return half.Neg(), half.Increment()
 }
