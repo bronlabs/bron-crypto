@@ -60,7 +60,7 @@ func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], error) {
 		if err != nil {
 			return errs.Wrap(err).WithMessage("cannot create PRM witness")
 		}
-		p.state.psi_i, err = prmProver.Prove(prmStatement, prmWitness)
+		p.state.psiI, err = prmProver.Prove(prmStatement, prmWitness)
 		if err != nil {
 			return errs.Wrap(err).WithMessage("cannot generate PRM proof")
 		}
@@ -81,10 +81,10 @@ func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], error) {
 		SharingID:                 p.ctx.HolderID(),
 		PaillierPublicKey:         p.state.paillierSecretKey.Public(),
 		RingPedersenCommitmentKey: p.state.ringPedersenSecretKey.Export(),
-		Psi:                       p.state.psi_i,
+		Psi:                       p.state.psiI,
 		Rid:                       p.state.rid,
 	}
-	r1b.V, p.state.u_i, err = commitments.Commit(p.state.commitmentKey, p.state.comMsg.Bytes(), p.prng)
+	r1b.V, p.state.uI, err = commitments.Commit(p.state.commitmentKey, p.state.comMsg.Bytes(), p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create commitment for round 1 message")
 	}
@@ -109,7 +109,7 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 	// step 2
 	r2b := &Round2Broadcast[P, B, S]{
 		Message: p.state.comMsg,
-		U:       p.state.u_i,
+		U:       p.state.uI,
 	}
 	p.round.IncrementBy(1)
 	return r2b, nil

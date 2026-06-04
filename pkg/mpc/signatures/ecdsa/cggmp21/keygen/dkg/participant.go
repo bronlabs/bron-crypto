@@ -57,10 +57,10 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	prmfs     *fiatshamir.Protocol[*prm.Statement, *prm.Witness, *prm.Commitment, *prm.State, *prm.Response]
 	blummodfs *fiatshamir.Protocol[*blummod.Statement, *blummod.Witness, *blummod.Commitment, *blummod.State, *blummod.Response]
 
-	psi_i  compiler.NIZKPoKProof
+	psiI   compiler.NIZKPoKProof
 	rid    []byte
 	comMsg *CommitmentMessage[P, B, S]
-	u_i    hashcom.Witness
+	uI     hashcom.Witness
 
 	receivedVjs map[sharing.ID]hashcom.Commitment
 
@@ -131,7 +131,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		baseShard: baseShard,
 		prng:      prng,
 		round:     1,
-		state: state[P, B, S]{
+		state: state[P, B, S]{ //nolint:exhaustruct // state is lazy initialised
 			proverCtx:     proverCtx,
 			verifierCtxs:  verifierCtxs,
 			prmfs:         prmfs,
