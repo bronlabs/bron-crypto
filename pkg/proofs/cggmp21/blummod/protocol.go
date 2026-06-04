@@ -74,6 +74,12 @@ func (p *Protocol) ComputeProverResponse(
 	if err := p.ValidateStatement(statement, witness); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid statement or witness")
 	}
+	if commitment == nil {
+		return nil, ErrInvalidArgument.WithMessage("commitment must not be nil")
+	}
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("state must not be nil")
+	}
 	if len(challenge) != p.GetChallengeBytesLength() {
 		return nil, ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
@@ -181,6 +187,15 @@ func (p *Protocol) ComputeProverResponse(
 
 // Verify checks a prover response against the statement and commitment.
 func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if commitment == nil {
+		return ErrInvalidArgument.WithMessage("commitment must not be nil")
+	}
+	if response == nil {
+		return ErrInvalidArgument.WithMessage("response must not be nil")
+	}
 	if len(challenge) != p.GetChallengeBytesLength() {
 		return ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
@@ -237,6 +252,9 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 // transcript for an arbitrary fixed challenge would require extracting roots
 // without the factorisation.
 func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
+	if statement == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
 	if len(challenge) != p.GetChallengeBytesLength() {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid challenge length")
 	}

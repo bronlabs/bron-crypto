@@ -83,6 +83,9 @@ func (p *Protocol) ComputeProverResponse(
 	if err := validateCommitment(statement, commitment); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid commitment")
 	}
+	if state == nil {
+		return nil, ErrInvalidArgument.WithMessage("state must not be nil")
+	}
 	if len(challenge) != challengeBytes {
 		return nil, proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
@@ -123,6 +126,9 @@ func (p *Protocol) ComputeProverResponse(
 
 // Verify checks a prover response against the statement and commitment.
 func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+	if response == nil {
+		return ErrInvalidArgument.WithMessage("response must not be nil")
+	}
 	if err := validateCommitment(statement, commitment); err != nil {
 		return errs.Wrap(err).WithMessage("invalid commitment")
 	}
@@ -135,7 +141,7 @@ func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge 
 	n := statement.commitmentKey.Group().Modulus().Nat()
 	for i, z := range &response.z {
 		// Honest responses satisfy z < phi(N) < N, and simulator responses are
-		// smaller; reject huge parsed exponents before modular exponentiation.
+		// sampled below N; reject huge parsed exponents before modular exponentiation.
 		if !z.Abs().IsLessThanOrEqual(n) {
 			return proofs.ErrVerificationFailed.WithMessage("response z is out of range")
 		}
@@ -154,6 +160,9 @@ func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge 
 
 // RunSimulator creates an honest-verifier simulated transcript for a fixed challenge.
 func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
+	if statement == nil {
+		return nil, nil, ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
 	if len(challenge) != challengeBytes {
 		return nil, nil, proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
@@ -164,7 +173,8 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 	}
 	t := statement.commitmentKey.T()
 	n := statement.commitmentKey.Group().Modulus()
-	low, high := symmetricModulusRange(n)
+	low := num.Z().Zero()
+	high := n.Lift()
 
 	var a [m]*znstar.RSAGroupElementUnknownOrder
 	var zs [m]*num.Int

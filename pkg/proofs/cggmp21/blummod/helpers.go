@@ -11,6 +11,12 @@ import (
 )
 
 func validateWitness(statement *Statement, witness *Witness) error {
+	if statement == nil {
+		return ErrInvalidArgument.WithMessage("statement must not be nil")
+	}
+	if witness == nil {
+		return ErrInvalidArgument.WithMessage("witness must not be nil")
+	}
 	if !witness.secretKey.Group().N().Equal(statement.publicKey.Group().N()) {
 		return ErrValidationFailed.WithMessage("witness secret key does not match protocol Paillier modulus")
 	}
@@ -75,7 +81,7 @@ func minusOneKnown(group *znstar.RSAGroupKnownOrder) (*znstar.RSAGroupElementKno
 	}
 	elem, err := group.FromNatCT(minusOneNat(group.Modulus()))
 	if err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("could not create known-order -1")
 	}
 	return elem, nil
 }
@@ -86,7 +92,7 @@ func minusOneUnknown(group *znstar.RSAGroupUnknownOrder) (*znstar.RSAGroupElemen
 	}
 	elem, err := group.FromNatCT(minusOneNat(group.Modulus()))
 	if err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("could not create unknown-order -1")
 	}
 	return elem, nil
 }
@@ -108,7 +114,7 @@ func nInverseModPhi(secretKey *paillier.SecretKey) (*num.Nat, error) {
 	}
 	out, err := num.N().FromNatCT(&inv)
 	if err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("could not convert N inverse mod phi(N)")
 	}
 	return out, nil
 }
@@ -133,7 +139,7 @@ func fourthRootExponent(secretKey *paillier.SecretKey) (*num.Nat, error) {
 
 	out, err := num.N().FromNatCT(&fourthRootExp)
 	if err != nil {
-		return nil, errs.Wrap(err)
+		return nil, errs.Wrap(err).WithMessage("could not convert fourth-root exponent")
 	}
 	return out, nil
 }

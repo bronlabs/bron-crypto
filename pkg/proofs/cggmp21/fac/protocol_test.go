@@ -86,6 +86,47 @@ func TestConstructorsRejectInvalidInputs(t *testing.T) {
 	require.Nil(t, response)
 }
 
+func TestProtocolMethodsRejectNilInputs(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	setupKey, statement, witness := sampleSetupStatementAndWitness(t, prng)
+	protocol, err := fac.NewProtocol(setupKey, testRangeBits, testSlackBits, prng)
+	require.NoError(t, err)
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+
+	_, _, err = protocol.ComputeProverCommitment(nil, witness)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	_, _, err = protocol.ComputeProverCommitment(statement, nil)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.ValidateStatement(nil, witness), fac.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.ValidateStatement(statement, nil), fac.ErrInvalidArgument)
+
+	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+	require.NoError(t, err)
+
+	_, err = protocol.ComputeProverResponse(nil, witness, commitment, state, challenge)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	_, err = protocol.ComputeProverResponse(statement, nil, commitment, state, challenge)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	_, err = protocol.ComputeProverResponse(statement, witness, nil, state, challenge)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+	_, err = protocol.ComputeProverResponse(statement, witness, commitment, nil, challenge)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+
+	response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+	require.NoError(t, err)
+
+	require.ErrorIs(t, protocol.Verify(nil, commitment, challenge, response), fac.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.Verify(statement, nil, challenge, response), fac.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.Verify(statement, commitment, challenge, nil), fac.ErrInvalidArgument)
+
+	_, _, err = protocol.RunSimulator(nil, challenge)
+	require.ErrorIs(t, err, fac.ErrInvalidArgument)
+}
+
 func TestCBORRoundTrip(t *testing.T) {
 	t.Parallel()
 
@@ -144,6 +185,46 @@ func TestVerifyRejectsOutOfRangeResponse(t *testing.T) {
 
 	err = protocol.Verify(statement, commitment, challenge, response)
 	require.ErrorIs(t, err, fac.ErrVerificationFailed)
+}
+
+func TestVerifyRejectsOversizedRandomnessResponses(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	setupKey, statement, _ := sampleSetupStatementAndWitness(t, prng)
+	protocol, err := fac.NewProtocol(setupKey, testRangeBits, testSlackBits, prng)
+	require.NoError(t, err)
+
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+
+	commitment, _, err := protocol.RunSimulator(statement, challenge)
+	require.NoError(t, err)
+	zero := num.Z().Zero()
+	oversizedW := num.Z().FromInt64(1).Lsh(uint(testSetupKeyBits + testRangeBits + testSlackBits + 1))
+	oversizedV := num.Z().FromInt64(1).Lsh(uint(testPaillierKeyBits + testSetupKeyBits + testRangeBits + testSlackBits + 1))
+
+	for _, tc := range []struct {
+		name string
+		w1   *num.Int
+		w2   *num.Int
+		v    *num.Int
+	}{
+		{name: "w1", w1: oversizedW, w2: zero, v: zero},
+		{name: "w2", w1: zero, w2: oversizedW, v: zero},
+		{name: "v", w1: zero, w2: zero, v: oversizedV},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			response, err := fac.NewResponse(zero, zero, tc.w1, tc.w2, tc.v)
+			require.NoError(t, err)
+
+			err = protocol.Verify(statement, commitment, challenge, response)
+			require.ErrorIs(t, err, fac.ErrVerificationFailed)
+		})
+	}
 }
 
 func TestSimulator(t *testing.T) {
