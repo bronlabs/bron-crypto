@@ -171,7 +171,10 @@ func TestNewParticipantValidation(t *testing.T) {
 	ctxs := session_testutils.MakeRandomContexts(t, as.Shareholders(), prng)
 	dealt, err := trusteddealer.Deal(group, as, prng)
 	require.NoError(t, err)
-	id := shareholders.List()[0]
+	// Snapshot the order once: List() is hashset-backed and non-deterministic,
+	// so id and otherID below must come from the same slice to stay distinct.
+	ids := shareholders.List()
+	id := ids[0]
 	bs, ok := dealt.Get(id)
 	require.True(t, ok)
 
@@ -195,19 +198,21 @@ func TestNewParticipantValidation(t *testing.T) {
 
 	t.Run("holder id not matching the base shard", func(t *testing.T) {
 		t.Parallel()
-		otherID := shareholders.List()[1]
+		otherID := ids[1] // distinct from id (same snapshot)
 		_, err := dkg.NewParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](ctxs[otherID], bs, prng)
 		require.True(t, errs.Is(err, cggmp21.ErrValidationFailed))
 	})
 
 	t.Run("quorum not matching the base shard shareholders", func(t *testing.T) {
 		t.Parallel()
-		smaller := sharing.NewOrdinalShareholderSet(2)
-		smallAS, err := threshold.NewThresholdAccessStructure(2, smaller)
+		// A larger quorum {1,2,3,4} still contains id, so the holder check passes
+		// and the quorum-mismatch check ({1,2,3,4} != base shard's {1,2,3}) is the
+		// one that fires — regardless of which id was picked from the set.
+		otherQuorum := sharing.NewOrdinalShareholderSet(4)
+		otherAS, err := threshold.NewThresholdAccessStructure(2, otherQuorum)
 		require.NoError(t, err)
-		smallCtxs := session_testutils.MakeRandomContexts(t, smallAS.Shareholders(), pcg.NewRandomised())
-		// bs is shared over {1,2,3}; this context's quorum is {1,2}.
-		_, err = dkg.NewParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](smallCtxs[id], bs, prng)
+		otherCtxs := session_testutils.MakeRandomContexts(t, otherAS.Shareholders(), pcg.NewRandomised())
+		_, err = dkg.NewParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](otherCtxs[id], bs, prng)
 		require.True(t, errs.Is(err, cggmp21.ErrValidationFailed))
 	})
 }
