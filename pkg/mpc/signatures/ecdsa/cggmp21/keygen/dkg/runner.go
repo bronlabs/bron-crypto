@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	// ProtocolName identifies this protocol in round-completion notifications.
 	ProtocolName = "ECDSA_CGGMP21_DKG"
 
 	r1CorrelationID = "BRON_CRYPTO_DKG_CGGMP21_R1"
@@ -30,6 +31,10 @@ type runner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 	p *Participant[P, B, S]
 }
 
+// NewRunner wraps a Participant as a network.Runner that drives the four rounds
+// over a router — broadcasting rounds 1 and 2 and unicasting the per-verifier
+// round-3 proofs — and returns the resulting auxiliary-info shard. See
+// NewParticipant for the argument requirements.
 func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader) (network.Runner[*cggmp21.Shard[P, B, S]], error) {
 	p, err := NewParticipant(ctx, baseShard, prng)
 	if err != nil {
@@ -42,6 +47,9 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	return r, nil
 }
 
+// Run executes the four rounds in order over the router, exchanging each round's
+// messages and emitting a round-completion notification after each, and returns
+// the final shard. Any round error is returned wrapped and aborts the run.
 func (r *runner[P, B, S]) Run(ctx context.Context, rt *network.Router, callback network.NotificationCallback) (*cggmp21.Shard[P, B, S], error) {
 	// r1
 	r1bOut, err := r.p.Round1()

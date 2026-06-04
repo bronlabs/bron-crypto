@@ -4,6 +4,10 @@ import (
 	"crypto/subtle"
 	"io"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
@@ -16,10 +20,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/fac"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/prm"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/errs-go/errs"
-	"golang.org/x/sync/errgroup"
 )
 
+// Round1 samples this party's Paillier secret key and ring-Pedersen trapdoor,
+// proves the ring-Pedersen parameters well-formed (Π_prm), draws this party's
+// rid share, and broadcasts a single hash commitment binding all of it. The
+// commit-before-reveal structure prevents a rushing adversary from choosing its
+// contribution after seeing the honest parties'. Must be called in round 1.
 func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], error) {
 	if p.round != 1 {
 		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 1)
@@ -85,6 +92,9 @@ func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], error) {
 	return r1b, nil
 }
 
+// Round2 records the other parties' round-1 commitments and broadcasts the
+// opening of this party's own commitment — the CommitmentMessage and its
+// hash-commitment witness. Must be called in round 2.
 func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[P, B, S], *Participant[P, B, S]]) (*Round2Broadcast[P, B, S], error) {
 	if p.round != 2 {
 		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 2)
@@ -105,6 +115,14 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 	return r2b, nil
 }
 
+// Round3 opens and checks every party's commitment: it re-derives each digest
+// and matches it against the round-1 V_j, checks the announced Paillier and
+// ring-Pedersen modulus lengths, and verifies the Π_prm proofs. It then folds
+// all rid shares into the shared rid = ⊕_j rid_j (bound into the proof contexts)
+// and produces this party's proofs: one verifier-independent Paillier-Blum proof
+// (Π_mod) and one no-small-factor proof (Π_fac) per other party, each computed
+// against that verifier's ring-Pedersen setup. Any failed check aborts
+// identifiably, tagging the culprit. Must be called in round 3.
 func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P, B, S], *Participant[P, B, S]]) (network.OutgoingUnicasts[*Round3P2P[P, B, S], *Participant[P, B, S]], error) {
 	if p.round != 3 {
 		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 3)
@@ -138,7 +156,7 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid PRM proof")
 		}
 		// step 3.1(b)
-		if p.state.commitmentKey.Open(p.state.receivedVjs[id], b.Message.Bytes(), b.U) != nil {
+		if err := p.state.commitmentKey.Open(p.state.receivedVjs[id], b.Message.Bytes(), b.U); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid commitment opening")
 		}
 		// step 3.2
@@ -185,7 +203,12 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create Fiat-Shamir compiler for FAC protocol")
 		}
-		facProver, err := facfs.NewProver(p.state.proverCtx)
+		// Each verifier checks this proof on its own independent context
+		// (post-blummod), so prove on a fresh clone per verifier rather than the
+		// shared proverCtx; otherwise every proof after the first is bound to a
+		// transcript polluted by the preceding verifiers' FAC proofs.
+		facProverCtx := p.state.proverCtx.Clone()
+		facProver, err := facfs.NewProver(facProverCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create FAC prover")
 		}
@@ -196,13 +219,19 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 
 		r3u.Put(id, &Round3P2P[P, B, S]{
 			PsiJI:     psiJI,
-			PsiIPrime: psiIPrime, // PsiIPrime is the same for all parties, but, following the paper, we include it in each P2P message to lower the bandwitdh of broadcast messages.
+			PsiIPrime: psiIPrime, // PsiIPrime is the same for all parties, but, following the paper, we include it in each P2P message to lower the bandwidth of broadcast messages.
 		})
 	}
 	p.round.IncrementBy(1)
 	return r3u.Freeze(), nil
 }
 
+// Round4 verifies every other party's Paillier-Blum (Π_mod) and no-small-factor
+// (Π_fac) proofs against the shared rid — aborting identifiably on any failure —
+// then assembles the auxiliary information (all parties' Paillier and
+// ring-Pedersen public keys plus this party's own secret keys) and returns the
+// input base shard augmented with it as a cggmp21.Shard. Must be called in
+// round 4.
 func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B, S], *Participant[P, B, S]]) (*cggmp21.Shard[P, B, S], error) {
 	if p.round != 4 {
 		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 4)
@@ -220,7 +249,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 		return nil, errs.Wrap(err).WithMessage("cannot create Fiat-Shamir compiler for FAC protocol")
 	}
 
-	// step 1(b)
+	// step Output.1(b)
 	for id := range p.ctx.OtherPartiesOrdered() {
 		u, _ := r3u.Get(id)
 
@@ -228,7 +257,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 		verifierCtx := p.state.verifierCtxs[id]
 		verifierCtx.Transcript().AppendBytes(ridLabel, p.state.rid)
 
-		// step 1(b).i
+		// step Output.1(b).i
 		blummodVerifier, err := p.state.blummodfs.NewVerifier(verifierCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create BlumMod verifier")
@@ -241,7 +270,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid BlumMod proof")
 		}
 
-		// step 1(b).ii
+		// step Output.1(b).ii
 		facVerifier, err := facfs.NewVerifier(verifierCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create FAC verifier")
@@ -254,6 +283,11 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid FAC proof")
 		}
 	}
+
+	// The auxiliary info must cover every shareholder, including this party, so
+	// include the local public keys alongside the ones received from others.
+	p.state.receivedPaillierPublicKeys[p.ctx.HolderID()] = p.state.paillierSecretKey.Public()
+	p.state.receivedRingPedersenCommitmentKeys[p.ctx.HolderID()] = p.state.ringPedersenSecretKey.Export()
 
 	auxInfo, err := cggmp21.NewAuxInfo(p.state.paillierSecretKey, p.state.receivedPaillierPublicKeys, p.state.ringPedersenSecretKey, p.state.receivedRingPedersenCommitmentKeys)
 	if err != nil {

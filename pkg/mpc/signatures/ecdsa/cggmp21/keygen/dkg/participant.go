@@ -3,6 +3,8 @@ package dkg
 import (
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
@@ -18,7 +20,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/errs-go/errs"
 )
 
 const (
@@ -28,6 +29,13 @@ const (
 	ridLabel        = "BRON_CRYPTO_DKG_CGGMP21_RID-"
 )
 
+// Participant runs one party's side of CGGMP21 auxiliary-information generation
+// (Figure 7, with the key-refresh part omitted). Over four rounds it samples
+// this party's Paillier and ring-Pedersen keys, proves them well-formed,
+// verifies every other party's keys and proofs, and attaches the agreed
+// auxiliary information to the supplied base shard. It is single-use, holds
+// secret key material in its state, and its round methods are not safe for
+// concurrent use.
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ctx       *session.Context
 	curve     ecdsa.Curve[P, B, S]
@@ -60,6 +68,14 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	receivedRingPedersenCommitmentKeys map[sharing.ID]*intcom.CommitmentKey
 }
 
+// NewParticipant binds a participant to a session context, the party's existing
+// secret-share base shard, and an explicit randomness source. It checks that the
+// context's holder identity and quorum match the base shard, derives the
+// hash-commitment key from the session transcript (domain-separated per this
+// protocol), and instantiates the Fiat-Shamir compilers for the Π_prm and Π_mod
+// proofs. The base shard's public key must live over an ECDSA curve. prng must
+// be a cryptographically secure source; the Paillier/ring-Pedersen key
+// generation in Round1 draws from it.
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader) (*Participant[P, B, S], error) {
 	if ctx == nil || baseShard == nil || prng == nil {
 		return nil, cggmp21.ErrNil.WithMessage("ctx/baseShard/prng is nil")
@@ -131,14 +147,22 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	}, nil
 }
 
+// Kappa returns the CGGMP21 §C.1 computational security parameter κ, in bits,
+// from which the no-small-factor proof's range parameters are derived. It is
+// taken here as the bit-length of an encoded curve element (ElementSize·8); note
+// §C.1 defines κ as log(q), which for secp256k1 differs from the encoded size.
 func (p *Participant[P, B, S]) Kappa() int {
-	return p.curve.ElementSize()
+	return p.curve.ElementSize() * 8
 }
 
+// Ell returns the range parameter ℓ (= κ) of the no-small-factor proof Π_fac
+// (CGGMP21 §C.1): the bound within which the Paillier factors are proven to lie.
 func (p *Participant[P, B, S]) Ell() int {
 	return p.Kappa()
 }
 
+// Epislon returns the slack parameter ε (= 2κ) of the no-small-factor proof
+// Π_fac (CGGMP21 §C.1), sized so honest responses stay within the proven range.
 func (p *Participant[P, B, S]) Epislon() int {
 	return 2 * p.Kappa()
 }
