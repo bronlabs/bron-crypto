@@ -45,8 +45,10 @@ The repository's `intcom.TrapdoorKey` stores $\lambda$ modulo $|\mathrm{QR}_{\ha
 because `intcom` samples $s$ and $t$ inside the quadratic-residue subgroup. The proof response is still computed
 modulo $\varphi(\hat N)$, as in Figure 13; the QR trapdoor representative is lifted into $\mathbb{Z}_{\varphi(\hat N)}$.
 
-`RunSimulator` implements the honest-verifier simulator from Figure 13 by sampling $z_i \leftarrow \pm \hat N$
-and setting $A_i = t^{z_i}s^{-e_i}$.
+`RunSimulator` implements the honest-verifier simulator from Figure 13 by sampling $z_i \leftarrow [0, \hat N)$
+and setting $A_i = t^{z_i}s^{-e_i}$. The honest distribution of $z_i = a_i + e_i \lambda \pmod{\varphi(\hat N)}$
+lies in $[0, \varphi(\hat N))$, so the one-sided simulator range is statistically $(1 - \varphi(\hat N)/\hat N)$-close
+to the honest distribution per challenge bit.
 
 ## Reference
 
