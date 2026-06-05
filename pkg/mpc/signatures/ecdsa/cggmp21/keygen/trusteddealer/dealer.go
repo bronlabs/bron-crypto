@@ -2,6 +2,7 @@ package trusteddealer
 
 import (
 	"io"
+	"maps"
 	"sync"
 	"testing"
 
@@ -37,6 +38,10 @@ func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 	baseShards, err := baseDealer.Deal(curve, as, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot deal base shards")
+	}
+	var refreshID [32]byte
+	if _, err = io.ReadFull(prng, refreshID[:]); err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot read refresh ID")
 	}
 
 	lock := new(sync.Mutex)
@@ -79,12 +84,17 @@ func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 
 	shards := make(map[sharing.ID]*cggmp21.Shard[P, B, S])
 	for id := range as.Shareholders().Iter() {
-		auxInfo, err := cggmp21.NewAuxInfo(paillierSecretKeys[id], paillierPublicKeys, ringPedersenSecretKeys[id], ringPedersenPublicKeys)
+		paillierKeys := maps.Clone(paillierPublicKeys)
+		delete(paillierKeys, id)
+		ringPedersenKeys := maps.Clone(ringPedersenPublicKeys)
+		delete(ringPedersenKeys, id)
+
+		auxInfo, err := cggmp21.NewAuxInfo(paillierSecretKeys[id], paillierKeys, ringPedersenSecretKeys[id], ringPedersenKeys)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create auxiliary information")
 		}
 		baseShard, _ := baseShards.Get(id)
-		shard, err := cggmp21.NewShard(baseShard, auxInfo)
+		shard, err := cggmp21.NewShard(baseShard, auxInfo, refreshID)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create shard")
 		}

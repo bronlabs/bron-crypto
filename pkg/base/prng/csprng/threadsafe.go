@@ -1,40 +1,12 @@
 package csprng
 
 import (
-	"io"
 	"sync"
 
 	"github.com/bronlabs/errs-go/errs"
 )
 
 var ErrNil = errs.New("nil")
-
-type threadSafeReader struct {
-	mu    sync.Mutex
-	inner io.Reader
-}
-
-// NewThreadSafeReader returns a thread-safe version of the provided reader.
-func NewThreadSafeReader(inner io.Reader) (io.Reader, error) {
-	if inner == nil {
-		return nil, ErrNil.WithMessage("inner reader cannot be nil")
-	}
-	return &threadSafeReader{
-		mu:    sync.Mutex{},
-		inner: inner,
-	}, nil
-}
-
-// Read reads bytes from the inner reader.
-func (t *threadSafeReader) Read(p []byte) (n int, err error) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	n, err = t.inner.Read(p)
-	if err != nil {
-		return n, errs.Wrap(err).WithMessage("failed to read from inner reader")
-	}
-	return n, nil
-}
 
 // ThreadSafePrng provides a thread-safe version for PRNGs.
 type ThreadSafePrng struct {

@@ -3,8 +3,6 @@ package cggmp21
 import (
 	"maps"
 
-	"github.com/bronlabs/errs-go/errs"
-
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
@@ -30,15 +28,38 @@ func NewAuxInfo(
 	ringPedersenSecretKey *intcom.TrapdoorKey,
 	ringPedersenPublicKeys map[sharing.ID]*intcom.CommitmentKey,
 ) (*AuxInfo, error) {
-	if err := validateAuxInfoShape(paillierSecretKey, paillierPublicKeys, ringPedersenSecretKey, ringPedersenPublicKeys); err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid auxiliary information")
+	if paillierSecretKey == nil {
+		return nil, ErrNil.WithMessage("paillier secret key")
 	}
-	return &AuxInfo{
+	if ringPedersenSecretKey == nil {
+		return nil, ErrNil.WithMessage("ring pedersen trapdoor key")
+	}
+	if len(paillierPublicKeys) == 0 {
+		return nil, ErrNil.WithMessage("paillier public keys")
+	}
+	if len(ringPedersenPublicKeys) == 0 {
+		return nil, ErrNil.WithMessage("ring pedersen public keys")
+	}
+	if len(paillierPublicKeys) != len(ringPedersenPublicKeys) {
+		return nil, ErrValidationFailed.WithMessage("public key maps must have the same size")
+	}
+	for id, publicKey := range paillierPublicKeys {
+		if publicKey == nil {
+			return nil, ErrNil.WithMessage("paillier public key for %d", id)
+		}
+		ringPedersenPublicKey, ok := ringPedersenPublicKeys[id]
+		if !ok || ringPedersenPublicKey == nil {
+			return nil, ErrNil.WithMessage("missing ring pedersen public key for %d", id)
+		}
+	}
+
+	info := &AuxInfo{
 		paillierSecretKey:      paillierSecretKey,
 		paillierPublicKeys:     maps.Clone(paillierPublicKeys),
 		ringPedersenSecretKey:  ringPedersenSecretKey,
 		ringPedersenPublicKeys: maps.Clone(ringPedersenPublicKeys),
-	}, nil
+	}
+	return info, nil
 }
 
 // PaillierSecretKey returns the local Paillier secret key.
@@ -94,24 +115,44 @@ func (info *AuxInfo) Equal(other *AuxInfo) bool {
 type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	mpc.BaseShard[P, S]
 
-	auxInfo *AuxInfo
+	auxInfo   *AuxInfo
+	refreshID [32]byte
 }
 
 // NewShard returns a new shard.
-func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo) (*Shard[P, B, S], error) {
+func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo, refreshID [32]byte) (*Shard[P, B, S], error) {
 	if baseShard == nil {
 		return nil, ErrNil.WithMessage("base shard")
 	}
-	if baseShard.Share() == nil {
-		return nil, ErrNil.WithMessage("base shard share")
+	if info == nil {
+		return nil, ErrNil.WithMessage("auxiliary information")
 	}
-	if err := validateAuxInfoForShard(baseShard, info); err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid auxiliary information")
+	if refreshID == [32]byte{} {
+		return nil, ErrNil.WithMessage("empty refresh ID")
+	}
+	shareholders := baseShard.MSP().Shareholders()
+	if len(info.paillierPublicKeys) != shareholders.Size()-1 {
+		return nil, ErrValidationFailed.WithMessage("paillier public key count does not match shareholders")
+	}
+	if len(info.ringPedersenPublicKeys) != shareholders.Size()-1 {
+		return nil, ErrValidationFailed.WithMessage("ring pedersen public key count does not match shareholders")
+	}
+	for id := range shareholders.Iter() {
+		if id == baseShard.Share().ID() {
+			continue
+		}
+		if _, ok := info.paillierPublicKeys[id]; !ok {
+			return nil, ErrValidationFailed.WithMessage("missing paillier public key for %d", id)
+		}
+		if _, ok := info.ringPedersenPublicKeys[id]; !ok {
+			return nil, ErrValidationFailed.WithMessage("missing ring pedersen public key for %d", id)
+		}
 	}
 
 	sh := &Shard[P, B, S]{
 		BaseShard: *baseShard,
 		auxInfo:   info,
+		refreshID: refreshID,
 	}
 	return sh, nil
 }
@@ -131,101 +172,16 @@ func (sh *Shard[P, B, S]) AuxInfo() *AuxInfo {
 	return sh.auxInfo
 }
 
+func (sh *Shard[P, B, S]) RefreshID() [32]byte {
+	return sh.refreshID
+}
+
 // Equal returns true if the two shards are equal.
 func (sh *Shard[P, B, S]) Equal(rhs *Shard[P, B, S]) bool {
 	if sh == nil || rhs == nil {
 		return sh == rhs
 	}
-	return sh.BaseShard.Equal(&rhs.BaseShard) && sh.auxInfo.Equal(rhs.auxInfo)
-}
-
-func validateAuxInfoShape(
-	paillierSecretKey *paillier.SecretKey,
-	paillierPublicKeys map[sharing.ID]*paillier.PublicKey,
-	ringPedersenSecretKey *intcom.TrapdoorKey,
-	ringPedersenPublicKeys map[sharing.ID]*intcom.CommitmentKey,
-) error {
-	if paillierSecretKey == nil || paillierSecretKey.Group() == nil {
-		return ErrNil.WithMessage("paillier secret key")
-	}
-	if ringPedersenSecretKey == nil ||
-		ringPedersenSecretKey.Group() == nil ||
-		ringPedersenSecretKey.Lambda() == nil ||
-		ringPedersenSecretKey.S() == nil ||
-		ringPedersenSecretKey.T() == nil {
-
-		return ErrNil.WithMessage("ring pedersen trapdoor key")
-	}
-	if len(paillierPublicKeys) == 0 {
-		return ErrNil.WithMessage("paillier public keys")
-	}
-	if len(ringPedersenPublicKeys) == 0 {
-		return ErrNil.WithMessage("ring pedersen public keys")
-	}
-	if len(paillierPublicKeys) != len(ringPedersenPublicKeys) {
-		return ErrValidationFailed.WithMessage("public key maps must have the same size")
-	}
-	for id, publicKey := range paillierPublicKeys {
-		if publicKey == nil || publicKey.Group() == nil {
-			return ErrNil.WithMessage("paillier public key for %d", id)
-		}
-		ringPedersenPublicKey, ok := ringPedersenPublicKeys[id]
-		if !ok {
-			return ErrValidationFailed.WithMessage("missing ring pedersen public key for %d", id)
-		}
-		if err := validateRingPedersenPublicKey(id, ringPedersenPublicKey); err != nil {
-			return errs.Wrap(err)
-		}
-	}
-	return nil
-}
-
-func validateAuxInfoForShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo) error {
-	if info == nil {
-		return ErrNil.WithMessage("auxiliary information")
-	}
-	shareholders := baseShard.MSP().Shareholders()
-	if len(info.paillierPublicKeys) != shareholders.Size() {
-		return ErrValidationFailed.WithMessage("paillier public key count does not match shareholders")
-	}
-	if len(info.ringPedersenPublicKeys) != shareholders.Size() {
-		return ErrValidationFailed.WithMessage("ring pedersen public key count does not match shareholders")
-	}
-	for id := range shareholders.Iter() {
-		if _, ok := info.paillierPublicKeys[id]; !ok {
-			return ErrValidationFailed.WithMessage("missing paillier public key for %d", id)
-		}
-		if _, ok := info.ringPedersenPublicKeys[id]; !ok {
-			return ErrValidationFailed.WithMessage("missing ring pedersen public key for %d", id)
-		}
-	}
-
-	id := baseShard.Share().ID()
-	paillierPublicKey, ok := info.paillierPublicKeys[id]
-	if !ok {
-		return ErrValidationFailed.WithMessage("missing local paillier public key")
-	}
-	if !info.paillierSecretKey.Public().Equal(paillierPublicKey) {
-		return ErrValidationFailed.WithMessage("local paillier secret key does not match public key")
-	}
-	ringPedersenPublicKey, ok := info.ringPedersenPublicKeys[id]
-	if !ok {
-		return ErrValidationFailed.WithMessage("missing local ring pedersen public key")
-	}
-	if !info.ringPedersenSecretKey.Export().Equal(ringPedersenPublicKey) {
-		return ErrValidationFailed.WithMessage("local ring pedersen trapdoor key does not match public key")
-	}
-	return nil
-}
-
-func validateRingPedersenPublicKey(id sharing.ID, publicKey *intcom.CommitmentKey) error {
-	if publicKey == nil || publicKey.S() == nil || publicKey.T() == nil {
-		return ErrNil.WithMessage("ring pedersen public key for %d", id)
-	}
-	if publicKey.Group() == nil {
-		return ErrNil.WithMessage("ring pedersen public key group for %d", id)
-	}
-	return nil
+	return sh.refreshID == rhs.refreshID && sh.BaseShard.Equal(&rhs.BaseShard) && sh.auxInfo.Equal(rhs.auxInfo)
 }
 
 func equalPaillierPublicKeys(lhs, rhs map[sharing.ID]*paillier.PublicKey) bool {

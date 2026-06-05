@@ -1,16 +1,15 @@
 package trusteddealer_test
 
 import (
+	crand "crypto/rand"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
@@ -38,8 +37,7 @@ func TestDealShards_Threshold2Of3(t *testing.T) {
 func testDealShardsThreshold2Of3[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve sigecdsa.Curve[P, B, S]) {
 	t.Helper()
 
-	prng, err := csprng.NewThreadSafeReader(pcg.NewRandomised())
-	require.NoError(t, err)
+	prng := crand.Reader
 	shareholders := ntu.MakeRandomQuorum(t, prng, 3)
 	accessStructure, err := threshold.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
@@ -85,45 +83,41 @@ func testDealShardsThreshold2Of3[P curves.Point[P, B, S], B algebra.PrimeFieldEl
 	t.Run("auxiliary public keys match secret keys", func(t *testing.T) {
 		t.Parallel()
 
-		refAux := ref.AuxInfo()
-		require.NotNil(t, refAux)
-		refPaillierPublicKeys := refAux.PaillierPublicKeys()
-		refRingPedersenPublicKeys := refAux.RingPedersenPublicKeys()
-		require.Len(t, refPaillierPublicKeys, 3)
-		require.Len(t, refRingPedersenPublicKeys, 3)
-
 		for id := range shareholders.Iter() {
 			shard := shards[id]
 			require.NotNil(t, shard)
 			auxInfo := shard.AuxInfo()
 			require.NotNil(t, auxInfo)
-			require.NotNil(t, auxInfo.PaillierSecretKey())
-			require.NotNil(t, auxInfo.RingPedersenSecretKey())
+			paillierSecretKey := shard.AuxInfo().PaillierSecretKey()
+			require.NotNil(t, paillierSecretKey)
+			ringPedersenSecretKey := shard.AuxInfo().RingPedersenSecretKey()
+			require.NotNil(t, ringPedersenSecretKey)
 
-			paillierPublicKey, ok := refPaillierPublicKeys[id]
-			require.True(t, ok)
-			require.True(t, auxInfo.PaillierSecretKey().Public().Equal(paillierPublicKey), "paillier key mismatch for %d", id)
-
-			ringPedersenPublicKey, ok := refRingPedersenPublicKeys[id]
-			require.True(t, ok)
-			require.True(t, auxInfo.RingPedersenSecretKey().Export().Equal(ringPedersenPublicKey), "ring pedersen key mismatch for %d", id)
-
-			paillierPublicKeys := auxInfo.PaillierPublicKeys()
-			ringPedersenPublicKeys := auxInfo.RingPedersenPublicKeys()
-			require.Len(t, paillierPublicKeys, 3)
-			require.Len(t, ringPedersenPublicKeys, 3)
 			for otherID := range shareholders.Iter() {
-				actualPaillierPublicKey, ok := paillierPublicKeys[otherID]
-				require.True(t, ok)
-				expectedPaillierPublicKey, ok := refPaillierPublicKeys[otherID]
-				require.True(t, ok)
+				if otherID == id {
+					continue
+				}
+
+				require.Len(t, shards[otherID].AuxInfo().PaillierPublicKeys(), shareholders.Size()-1)
+				require.Len(t, shards[otherID].AuxInfo().RingPedersenPublicKeys(), shareholders.Size()-1)
+
+				actualPaillierPublicKey := shards[otherID].AuxInfo().PaillierPublicKeys()[id]
+				expectedPaillierPublicKey := paillierSecretKey.Public()
 				require.True(t, actualPaillierPublicKey.Equal(expectedPaillierPublicKey))
 
-				actualRingPedersenPublicKey, ok := ringPedersenPublicKeys[otherID]
-				require.True(t, ok)
-				expectedRingPedersenPublicKey, ok := refRingPedersenPublicKeys[otherID]
-				require.True(t, ok)
+				actualRingPedersenPublicKey := shards[otherID].AuxInfo().RingPedersenPublicKeys()[id]
+				expectedRingPedersenPublicKey := ringPedersenSecretKey.Export()
 				require.True(t, actualRingPedersenPublicKey.Equal(expectedRingPedersenPublicKey))
+			}
+		}
+	})
+
+	t.Run("refresh id matches", func(t *testing.T) {
+		t.Parallel()
+
+		for id := range shareholders.Iter() {
+			for otherID := range shareholders.Iter() {
+				require.Equal(t, shards[id].RefreshID(), shards[otherID].RefreshID())
 			}
 		}
 	})
