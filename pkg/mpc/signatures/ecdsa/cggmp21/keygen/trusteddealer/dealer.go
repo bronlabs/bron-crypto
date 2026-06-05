@@ -2,6 +2,7 @@ package trusteddealer
 
 import (
 	"io"
+	"maps"
 	"sync"
 	"maps"
 	"testing"
