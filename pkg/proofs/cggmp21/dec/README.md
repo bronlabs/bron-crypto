@@ -66,7 +66,7 @@ $$
 
 - `Statement` stores `N0`, `K`, `X`, `D`, and `S`.
 - `Witness` stores `x` and `y` as `*num.Int`, and the Paillier nonce `rho`.
-- The challenge is `base.ComputationalSecurityBytesCeil` bytes interpreted as `base.ComputationalSecurityBits` challenge bits.
+- The challenge is `base.ComputationalSecurityBytesCeil` bytes interpreted as `base.ComputationalSecurityBits` challenge bits. This intentionally fixes the repetition count to 128 bits rather than exposing `kappa` as a separate protocol parameter.
 - Signed integer samples use byte-aligned two's-complement sampling over exactly the requested byte length.
 - The repeated Paillier encryptions use `encryption.EncryptManyWithNonces`.
 - `ValidateStatement` checks that the witness opens `X`, `S`, and the Paillier relation, and that `x` and `y` satisfy the configured narrow ranges.

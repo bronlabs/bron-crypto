@@ -104,7 +104,7 @@ $$
 - Signed integer samples use byte-aligned two's-complement sampling over the requested bit length, so `±q` is interpreted as `[-q/2, q/2)`. A sample from `2^t * N` is implemented as a signed sample with bit length `t + bitlen(N)`.
 - `ValidateStatement` checks that the witness opens `X`, `Y`, and `D`, and that `x` and `y` satisfy the configured narrow ranges.
 - Statement validation checks that both Paillier moduli can encode the widened `z2` range `lPrime + epsilon` in their symmetric plaintext intervals.
-- The challenge is interpreted as signed two's-complement big-endian bytes with computational-security length.
+- The challenge is interpreted as signed two's-complement big-endian bytes with `base.ComputationalSecurityBytesCeil` length. This intentionally fixes the Fiat-Shamir challenge domain to 128 bits rather than the paper's curve-order-sized challenge.
 
 ## Reference
 

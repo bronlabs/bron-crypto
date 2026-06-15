@@ -79,8 +79,8 @@ $$
 
 `NewProtocol` checks that the Paillier modulus bit length, the Ring-Pedersen
 modulus bit length, `rangeBits`, and `slackBits` are all multiples of 8. The
-samplers use byte-aligned two's-complement encodings and then prepend a random
-sign-extension byte, producing values in $[-2^b, 2^b)$.
+samplers read exactly `b/8` random bytes and decode them as two's-complement
+big-endian, producing values in $[-2^{b-1}, 2^{b-1})$.
 
 The implementation uses a 128-bit two's-complement challenge, exposed by
 `challengeBitsLength`, rather than the curve-order challenge domain used in
@@ -88,9 +88,9 @@ CGGMP21 Figure 11. `SoundnessError` therefore reports 128 bits. The constructor
 requires `slackBits` to cover both this challenge length and the configured
 witness range with an additional computational-security margin.
 
-`inSignedBitRange` intentionally rejects the lower endpoint $-2^b$ by checking
-`abs(x).TrueLen() <= b`. This is a conservative choice: the sampler reaches
-that endpoint with probability $2^{-(b+1)}$, which is negligible for the
+`inSignedBitRange` intentionally rejects the lower endpoint $-2^{b-1}$ by
+checking `abs(x).TrueLen() < b`. This is a conservative choice: the sampler
+reaches that endpoint with probability $2^{-b}$, which is negligible for the
 parameter sizes accepted by the constructor.
 
 The Paillier modulus check requires the widened response bound $2^{l+\epsilon}$

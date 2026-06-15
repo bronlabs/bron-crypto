@@ -25,7 +25,7 @@ func intSampleRangeSymmetricBits(bitLen int, prngReader io.Reader) (*num.Int, er
 }
 
 func intInSignedBitRange(v *num.Int, bitLen int) bool {
-	return v.Abs().TrueLen() <= bitLen
+	return v.Abs().TrueLen() < bitLen
 }
 
 func intToPlaintext(v *num.Int, paillierKey *paillier.PublicKey) (*paillier.Plaintext, error) {

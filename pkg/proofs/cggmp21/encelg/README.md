@@ -80,7 +80,7 @@ $$
 - `Statement` stores `N0`, `C`, `A` as an ElGamal public key, and `(B, X)` as an ElGamal ciphertext named `bx`.
 - `Witness` stores `x` as `*num.Int`, `rho` as a Paillier nonce, `a` as an ElGamal secret key, and the `(B, X)` nonce as `bx`.
 - `Commitment` stores `(Z, Y)` as an ElGamal ciphertext named `yz` under `A`.
-- The challenge is interpreted as a signed integer from exactly `base.ComputationalSecurityBytesCeil` bytes.
+- The challenge is interpreted as a signed integer from exactly `base.ComputationalSecurityBytesCeil` bytes. This intentionally fixes the Fiat-Shamir challenge domain to 128 bits rather than the paper's curve-order-sized challenge.
 - Signed integer samples use byte-aligned two's-complement sampling over exactly the requested byte length.
 - `ValidateStatement` checks that the witness opens `C`, `A`, and the ElGamal ciphertext `(B, X)`, and that `x` satisfies the configured narrow range.
 - Statement validation checks that the Paillier modulus can encode the widened `z1` range `l + epsilon` in its symmetric plaintext interval.

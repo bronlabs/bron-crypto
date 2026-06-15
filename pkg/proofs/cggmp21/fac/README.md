@@ -70,7 +70,8 @@ $Q^{z_1}t^v=TR^e$. It also verifies the Figure 26 range checks for $z_1,z_2$.
 - `paillier.SecretKey` carries equal-bit-length Paillier factors. After checking $N_0=pq$,
   this balanced factor shape satisfies Figure 26's $p,q \in \pm\sqrt{N_0}\cdot 2^\ell$ witness bound.
 - The Fiat-Shamir challenge bytes are interpreted directly as two's-complement big-endian;
-  for byte-aligned $\ell$, the challenge length is exactly $\ell/8$ bytes.
+  for byte-aligned $\ell$, the challenge length is exactly $\ell/8$ bytes. `NewProtocol`
+  requires $\ell \geq$ `base.ComputationalSecurityBits`.
 
 ## Reference
 
