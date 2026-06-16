@@ -21,11 +21,11 @@ func intRandomBitsSymmetric(bits int, prng io.Reader) (*num.Int, error) {
 	if bits%8 != 0 {
 		return nil, ErrInvalidArgument.WithMessage("bits must be a multiple of 8")
 	}
-	outBytes := make([]byte, bits/8+1)
+	outBytes := make([]byte, bits/8)
 	if _, err := io.ReadFull(prng, outBytes); err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not read random bytes")
 	}
-	outBytes[0] = byte(int8(outBytes[0]) >> 7)
+
 	out, err := num.Z().FromTwosComplementBytesBE(outBytes)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not parse signed integer")
@@ -34,9 +34,9 @@ func intRandomBitsSymmetric(bits int, prng io.Reader) (*num.Int, error) {
 }
 
 func inSignedBitRange(v *num.Int, bits int) bool {
-	// Conservatively reject -2^bits even though intRandomBitsSymmetric can
-	// sample it with probability 2^-(bits+1), which is negligible here.
-	return v.Abs().TrueLen() <= bits
+	// Conservatively reject -2^(bits-1), the lower endpoint sampled by
+	// intRandomBitsSymmetric with probability 2^-bits.
+	return v.Abs().TrueLen() < bits
 }
 
 func signedBoundFitsPaillier[EK paillier.EncryptionKey[EK]](bits int, paillierKey EK) error {

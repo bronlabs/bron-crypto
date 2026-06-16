@@ -224,6 +224,9 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 	}
 	n := statement.publicKey.PlaintextGroup().Modulus()
 	for i, item := range &response.items {
+		if !nonceGroup.Contains(ys[i].Value()) {
+			return ErrVerificationFailed.WithMessage("challenge element is not in the nonce group")
+		}
 		if !nonceGroup.Contains(item.x.Value()) || !nonceGroup.Contains(item.z.Value()) {
 			return ErrVerificationFailed.WithMessage("response values are not in the nonce group")
 		}
