@@ -123,10 +123,9 @@ func sampleInternalTestInputs(
 }
 
 func randomInternalSignedBits(bits int, prng io.Reader) (*num.Int, error) {
-	outBytes := make([]byte, bits/8+1)
+	outBytes := make([]byte, bits/8)
 	if _, err := io.ReadFull(prng, outBytes); err != nil {
 		return nil, err
 	}
-	outBytes[0] = byte(int8(outBytes[0]) >> 7)
 	return num.Z().FromTwosComplementBytesBE(outBytes)
 }
