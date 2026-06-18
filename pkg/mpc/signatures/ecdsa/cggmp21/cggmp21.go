@@ -192,6 +192,7 @@ func (sh *Shard[P, B, S]) AuxInfo() *AuxInfo {
 	return sh.auxInfo
 }
 
+// RefreshID returns the refresh identifier bound into signing transcripts.
 func (sh *Shard[P, B, S]) RefreshID() []byte {
 	return sh.refreshID
 }

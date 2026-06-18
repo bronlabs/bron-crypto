@@ -6,11 +6,10 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/exchange"
@@ -21,10 +20,10 @@ const (
 	// ProtocolName identifies the CGGMP21 signing runner in notifications.
 	ProtocolName = "CGGMP21_Signing"
 
-	r1CorrelationID = "CGGMP21SignRound1"
-	r2CorrelationID = "CGGMP21SignRound2"
-	r3CorrelationID = "CGGMP21SignRound3"
-	r4CorrelationID = "CGGMP21SignRound4"
+	r1CorrelationID       = "CGGMP21SignRound1"
+	r2CorrelationID       = "CGGMP21SignRound2"
+	r3CorrelationID       = "CGGMP21SignRound3"
+	redAlertCorrelationID = "CGGMP21SignRedAlert"
 )
 
 type signRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -32,13 +31,30 @@ type signRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	message []byte
 }
 
+// SignResult is the output of the online signing runner.
+type SignResult[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	aggregator       PartialSignatureAggregator[P, B, S]
+	partialSignature *cggmp21.PartialSignature[P, B, S]
+}
+
+// PartialSignatureOnlineAggregator returns the signer-backed aggregator for this signing session.
+func (r *SignResult[P, B, S]) PartialSignatureOnlineAggregator() PartialSignatureAggregator[P, B, S] {
+	return r.aggregator
+}
+
+// PartialSignature returns this party's partial signature.
+func (r *SignResult[P, B, S]) PartialSignature() *cggmp21.PartialSignature[P, B, S] {
+	return r.partialSignature
+}
+
+// NewRunner constructs a CGGMP21 signing runner.
 func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	ctx *session.Context,
 	suite *sigecdsa.Suite[P, B, S],
 	shard *cggmp21.Shard[P, B, S],
 	message []byte,
 	prng io.Reader,
-) (network.Runner[*sigecdsa.Signature[S]], error) {
+) (network.Runner[*SignResult[P, B, S]], error) {
 	signer, err := NewSigner(ctx, suite, shard, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create signer")
@@ -49,7 +65,7 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	}, nil
 }
 
-func (r *signRunner[P, B, S]) Run(ctx context.Context, rt *network.Router, notificationCallback network.NotificationCallback) (*sigecdsa.Signature[S], error) {
+func (r *signRunner[P, B, S]) Run(ctx context.Context, rt *network.Router, notificationCallback network.NotificationCallback) (*SignResult[P, B, S], error) {
 	// r1
 	r1bOut, r1uOut, err := r.signer.Round1()
 	if err != nil {
@@ -84,35 +100,28 @@ func (r *signRunner[P, B, S]) Run(ctx context.Context, rt *network.Router, notif
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange round 3 messages")
 	}
-	psig, err := r.signer.Round4(r4bIn, r.message)
+	psig, redAlertParticipant, err := r.signer.Round4(r4bIn, r.message)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot run round 4")
 	}
+	if redAlertParticipant != nil {
+		redAlertOut, err := redAlertParticipant.Round1()
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot run red alert round 1")
+		}
+		redAlertIn, err := exchange.BroadcastExchange(ctx, rt, redAlertCorrelationID, r.signer.ctx.Quorum(), redAlertOut)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot exchange red alert broadcasts")
+		}
+		if err := redAlertParticipant.Round2(redAlertIn); err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot verify red alert broadcasts")
+		}
+		return nil, base.ErrAbort.WithMessage("red alert completed without identifying a culprit")
+	}
 	network.NotifyRoundCompleted(notificationCallback, ProtocolName, 4)
 
-	psigOut := hashmap.NewComparable[sharing.ID, *Round4P2P[P, B, S]]()
-	for id := range r.signer.ctx.OtherPartiesOrdered() {
-		psigOut.Put(id, &Round4P2P[P, B, S]{
-			PartialSignature: psig,
-		})
-	}
-	psigIn, err := exchange.UnicastExchange(ctx, rt, r4CorrelationID, psigOut.Freeze())
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot exchange partial signatures")
-	}
-	if err := network.ValidateIncomingMessages(r.signer, r.signer.ctx.OtherPartiesOrdered(), psigIn); err != nil {
-		return nil, errs.Wrap(err).WithMessage("invalid partial signatures")
-	}
-	partialSignatures := map[sharing.ID]*cggmp21.PartialSignature[P, B, S]{
-		r.signer.ctx.HolderID(): psig,
-	}
-	for id, msg := range psigIn.Iter() {
-		partialSignatures[id] = msg.PartialSignature
-	}
-
-	signature, err := r.signer.Aggregate(partialSignatures)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot aggregate signature")
-	}
-	return signature, nil
+	return &SignResult[P, B, S]{
+		aggregator:       &onlineAggregator[P, B, S]{signer: r.signer},
+		partialSignature: psig,
+	}, nil
 }

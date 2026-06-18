@@ -3,6 +3,7 @@ package signing
 import (
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -13,9 +14,10 @@ import (
 )
 
 const (
-	round1BroadcastTranscriptLabel = "CGGMP21SignRound1Broadcast"
-	round2BroadcastTranscriptLabel = "CGGMP21SignRound2Broadcast"
-	round3BroadcastTranscriptLabel = "CGGMP21SignRound3Broadcast"
+	round1BroadcastTranscriptLabel   = "CGGMP21SignRound1Broadcast"
+	round2BroadcastTranscriptLabel   = "CGGMP21SignRound2Broadcast"
+	round3BroadcastTranscriptLabel   = "CGGMP21SignRound3Broadcast"
+	redAlertBroadcastTranscriptLabel = "CGGMP21SignRedAlertBroadcast"
 )
 
 func collectAndAppendBroadcastMessages[
@@ -34,7 +36,7 @@ func collectAndAppendBroadcastMessages[
 	for id := range signer.ctx.OtherPartiesOrdered() {
 		message, ok := incoming.Get(id)
 		if !ok {
-			return nil, network.ErrMissing.WithMessage("broadcast from %d", id)
+			return nil, network.ErrMissing.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("broadcast from %d", id)
 		}
 		messages[id] = message
 	}
@@ -42,11 +44,11 @@ func collectAndAppendBroadcastMessages[
 	for id := range signer.ctx.AllPartiesOrdered() {
 		message, ok := messages[id]
 		if !ok || utils.IsNil(message) {
-			return nil, cggmp21.ErrNil.WithMessage("broadcast message from %d", id)
+			return nil, cggmp21.ErrNil.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("broadcast message from %d", id)
 		}
 		data, err := serde.MarshalCBOR(message)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("cannot serialise broadcast message from %d", id)
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot serialise broadcast message from %d", id)
 		}
 		signer.ctx.Transcript().AppendBytes(label, id.Bytes(), data)
 	}

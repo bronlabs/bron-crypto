@@ -30,6 +30,7 @@ const (
 	proverID            = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PROVER-ID"
 )
 
+// Signer holds the local state for one CGGMP21 online signing session.
 type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	zeroParty *hjky.Participant[P, S]
 
@@ -48,6 +49,7 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	x                 S
 	k                 S
 	rho               *paillier.Nonce
+	bigKJ             map[sharing.ID]*paillier.Ciphertext
 	gamma             S
 	nu                *paillier.Nonce
 	bigYJ             map[sharing.ID]*elgamal.PublicKey[P, S]
@@ -57,9 +59,25 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	bigBJ             map[sharing.ID]*elgamal.Ciphertext[P, S]
 	betaJ             map[sharing.ID]*num.Int
 	betaHatJ          map[sharing.ID]*num.Int
+	rJ                map[sharing.ID]*paillier.Nonce
+	sJ                map[sharing.ID]*paillier.Nonce
+	rHatJ             map[sharing.ID]*paillier.Nonce
+	sHatJ             map[sharing.ID]*paillier.Nonce
+	bigDSentJ         map[sharing.ID]*paillier.Ciphertext
+	bigFSentJ         map[sharing.ID]*paillier.Ciphertext
+	bigDHatSentJ      map[sharing.ID]*paillier.Ciphertext
+	bigFHatSentJ      map[sharing.ID]*paillier.Ciphertext
+	bigDReceivedJ     map[sharing.ID]*paillier.Ciphertext
+	bigFReceivedJ     map[sharing.ID]*paillier.Ciphertext
+	bigDHatReceivedJ  map[sharing.ID]*paillier.Ciphertext
+	bigFHatReceivedJ  map[sharing.ID]*paillier.Ciphertext
 	delta             S
+	deltaJ            map[sharing.ID]S
+	deltaInt          *num.Int
 	chi               S
+	chiInt            *num.Int
 	bigGamma          P
+	bigGammaJ         map[sharing.ID]P
 	bigDeltaJ         map[sharing.ID]P
 	bigSJ             map[sharing.ID]P
 	bigDeltaTildeJ    map[sharing.ID]P
@@ -72,6 +90,7 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	round3Broadcasts map[sharing.ID]*Round3Broadcast[P, B, S]
 }
 
+// NewSigner constructs a CGGMP21 online signer for one session participant.
 func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, ecdsaSuite *sigecdsa.Suite[P, B, S], shard *cggmp21.Shard[P, B, S], prng io.Reader) (*Signer[P, B, S], error) {
 	if ctx == nil {
 		return nil, cggmp21.ErrNil.WithMessage("session context")

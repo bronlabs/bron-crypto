@@ -63,9 +63,6 @@ func sampleProtocolStatementAndWitness(
 	n0 := secretKey.Public()
 
 	curve := k256.NewCurve()
-	protocol, err := dec.NewProtocol(testL, testLPrime, testEpsilon, curve, prng)
-	require.NoError(t, err)
-
 	xInt := num.Z().FromInt64(42)
 	xScalar, err := curve.ScalarField().FromBytesBEReduce(xInt.Big().Bytes())
 	require.NoError(t, err)
@@ -76,6 +73,8 @@ func sampleProtocolStatementAndWitness(
 	yScalar, err := curve.ScalarField().FromBytesBEReduce(yReduced.Bytes())
 	require.NoError(t, err)
 	sPoint := curve.ScalarBaseMul(yScalar)
+	protocol, err := dec.NewProtocol(testL, testLPrime, testEpsilon, curve.Generator(), prng)
+	require.NoError(t, err)
 
 	kPlaintext, err := paillier.NewPlaintextSymmetric(num.Z().FromInt64(123), n0.PlaintextGroup().Modulus())
 	require.NoError(t, err)

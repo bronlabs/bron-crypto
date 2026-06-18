@@ -6,9 +6,12 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21"
 )
 
 func paillierEncryptScalar[K paillier.EncryptionKey[K], S algebra.PrimeFieldElement[S]](key K, scalar S, prng io.Reader) (*paillier.Ciphertext, *paillier.Nonce, error) {
@@ -32,30 +35,31 @@ func paillierEncryptInt[K paillier.EncryptionKey[K]](key K, i *num.Int, prng io.
 }
 
 func paillierMaskedProduct[S algebra.PrimeFieldElement[S]](
-	key *paillier.PublicKey,
+	productKey *paillier.PublicKey,
+	maskKey *paillier.PublicKey,
 	ciphertext *paillier.Ciphertext,
 	scalar S,
 	mask *num.Int,
 	prng io.Reader,
-) (bigD, bigF *paillier.Ciphertext, r, s *paillier.Nonce, err error) {
+) (bigD, bigF *paillier.Ciphertext, s, r *paillier.Nonce, err error) {
 	affineMask := mask.Neg()
-	bigF, s, err = paillierEncryptInt(key, mask, prng)
+	bigF, r, err = paillierEncryptInt(maskKey, mask, prng)
 	if err != nil {
 		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot encrypt mask")
 	}
-	t0, r, err := paillierEncryptInt(key, affineMask, prng)
+	t0, s, err := paillierEncryptInt(productKey, affineMask, prng)
 	if err != nil {
 		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot encrypt negated mask")
 	}
-	t1, err := encryption.CiphertextScalarOpUnsignedNumeric(key, ciphertext, scalar)
+	t1, err := encryption.CiphertextScalarOpUnsignedNumeric(productKey, ciphertext, scalar)
 	if err != nil {
 		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot multiply Paillier ciphertext by scalar")
 	}
-	bigD, err = key.CiphertextOp(t0, t1)
+	bigD, err = productKey.CiphertextOp(t0, t1)
 	if err != nil {
 		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot combine masked Paillier product")
 	}
-	return bigD, bigF, r, s, nil
+	return bigD, bigF, s, r, nil
 }
 
 func sampleMask(lPrime int, prng io.Reader) (*num.Int, error) {
@@ -96,4 +100,18 @@ func intToScalar[S algebra.PrimeFieldElement[S]](i *num.Int, scalarField algebra
 	} else {
 		return scalar, nil
 	}
+}
+
+func paillierPublicKeyFor[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
+	signer *Signer[P, B, S],
+	id sharing.ID,
+) (*paillier.PublicKey, error) {
+	if id == signer.ctx.HolderID() {
+		return signer.shard.AuxInfo().PaillierSecretKey().Public(), nil
+	}
+	publicKey, ok := signer.shard.AuxInfo().PaillierPublicKey(id)
+	if !ok {
+		return nil, cggmp21.ErrValidationFailed.WithMessage("missing Paillier public key for %d", id)
+	}
+	return publicKey, nil
 }

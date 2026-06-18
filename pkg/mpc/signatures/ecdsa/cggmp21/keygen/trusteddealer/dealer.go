@@ -24,7 +24,7 @@ import (
 // Note: this function requires a thread-safe PRNG.
 func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], as accessstructures.Monotone, keyLen int, prng io.Reader) (map[sharing.ID]*cggmp21.Shard[P, B, S], error) {
 	if curve == nil || as == nil || prng == nil {
-		return nil, cggmp21.ErrIsNil.WithMessage("argument")
+		return nil, cggmp21.ErrNil.WithMessage("argument")
 	}
 	if keyLen < 8 || (keyLen%8) != 0 {
 		return nil, cggmp21.ErrFailed.WithMessage("key length too short or unaligned")
