@@ -401,6 +401,10 @@ func (s *Signer[P, B, S]) Round3(
 		chiInt = chiInt.Add(alphaHatJ.Normalise()).Add(s.state.betaHatJ[j])
 	}
 
+	if bigGamma.IsZero() {
+		return nil, cggmp21.ErrFailed.WithMessage("aggregate Gamma is the identity element; signing must be retried")
+	}
+
 	round2Broadcasts, err := collectAndAppendBroadcastMessages(s, round2BroadcastTranscriptLabel, s.state.round2Broadcasts[s.ctx.HolderID()], r2b)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot append round 2 broadcasts to transcript")

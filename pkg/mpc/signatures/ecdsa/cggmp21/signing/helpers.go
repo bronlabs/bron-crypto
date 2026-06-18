@@ -63,11 +63,11 @@ func paillierMaskedProduct[S algebra.PrimeFieldElement[S]](
 }
 
 func sampleMask(lPrime int, prng io.Reader) (*num.Int, error) {
-	buf := make([]byte, lPrime/8+1)
+	buf := make([]byte, lPrime/8)
 	if _, err := io.ReadFull(prng, buf); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot sample mask")
 	}
-	buf[0] = byte(int8(buf[0]) >> 7)
+
 	out, err := num.Z().FromTwosComplementBytesBE(buf)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot parse sampled mask")

@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21"
 	sigecdsa "github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -26,15 +27,20 @@ func (a *onlineAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.Partial
 	return a.signer.aggregate(ps)
 }
 
-type offlineAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct{}
+type offlineAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	curve sigecdsa.Curve[P, B, S]
+}
 
 // NewOfflineAggregator constructs a stateless aggregator for CGGMP21 partial signatures.
-func NewOfflineAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](_ sigecdsa.Curve[P, B, S]) PartialSignatureAggregator[P, B, S] {
-	return &offlineAggregator[P, B, S]{}
+func NewOfflineAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve sigecdsa.Curve[P, B, S]) (PartialSignatureAggregator[P, B, S], error) {
+	if utils.IsNil(curve) {
+		return nil, cggmp21.ErrNil.WithMessage("curve")
+	}
+	return &offlineAggregator[P, B, S]{curve: curve}, nil
 }
 
 // Aggregate combines partial signatures without online signing session state.
-func (*offlineAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
+func (a *offlineAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
 	if len(ps) == 0 {
 		return nil, cggmp21.ErrNil.WithMessage("partial signatures")
 	}
@@ -51,6 +57,9 @@ func (*offlineAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.PartialS
 		}
 		if err := validatePoint(psig.Gamma, "Gamma", false); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid Gamma in partial signature from %d", id)
+		}
+		if !a.curve.Contains(psig.Gamma) {
+			return nil, cggmp21.ErrValidationFailed.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("Gamma in partial signature from %d does not belong to the configured curve", id)
 		}
 		if err := validateScalar(psig.Sigma, "Sigma", true); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid Sigma in partial signature from %d", id)

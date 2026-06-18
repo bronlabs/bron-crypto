@@ -164,7 +164,9 @@ func TestAggregateOffline_Threshold2Of3(t *testing.T) {
 		1: ntu.CBORRoundTrip(t, partialSignatures[1]),
 		2: ntu.CBORRoundTrip(t, partialSignatures[2]),
 	}
-	signature, err := signing.NewOfflineAggregator(curve).Aggregate(partialSignatures)
+	aggregator, err := signing.NewOfflineAggregator(curve)
+	require.NoError(t, err)
+	signature, err := aggregator.Aggregate(partialSignatures)
 	require.NoError(t, err)
 
 	verifier, err := sigecdsa.NewVerifier(suite)
