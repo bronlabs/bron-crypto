@@ -10,15 +10,17 @@ import (
 	sigecdsa "github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
-type Parameters struct {
-	kappa   int
-	l       int
-	epsilon int
-	lPrime  int
-	logN    int
+type Parameters[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	curve       sigecdsa.Curve[P, B, S]
+	scalarField algebra.PrimeField[S]
+	kappa       int
+	l           int
+	epsilon     int
+	lPrime      int
+	logN        int
 }
 
-func NewParameters[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve sigecdsa.Curve[P, B, S], paillierKeyLen int) (*Parameters, error) {
+func NewParameters[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve sigecdsa.Curve[P, B, S], paillierKeyLen int) (*Parameters[P, B, S], error) {
 	if utils.IsNil(curve) {
 		return nil, ErrNil.WithMessage("curve")
 	}
@@ -31,7 +33,8 @@ func NewParameters[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 		}
 	}
 
-	kappa := nextMultipleOf8(curve.ScalarField().BitLen())
+	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
+	kappa := nextMultipleOf8(scalarField.BitLen())
 	l := kappa
 	epsilon := l + kappa
 	lPrime := l + epsilon + 2*l
@@ -40,7 +43,9 @@ func NewParameters[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 		return nil, ErrFailed.WithMessage("key length too short")
 	}
 
-	params := &Parameters{
+	params := &Parameters[P, B, S]{
+		curve,
+		scalarField,
 		kappa,
 		l,
 		epsilon,
@@ -50,23 +55,31 @@ func NewParameters[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	return params, nil
 }
 
-func (p *Parameters) Kappa() int {
+func (p *Parameters[P, B, S]) CurveGroup() sigecdsa.Curve[P, B, S] {
+	return p.curve
+}
+
+func (p *Parameters[P, B, S]) ScalarField() algebra.PrimeField[S] {
+	return p.scalarField
+}
+
+func (p *Parameters[P, B, S]) Kappa() int {
 	return p.kappa
 }
 
-func (p *Parameters) L() int {
+func (p *Parameters[P, B, S]) L() int {
 	return p.l
 }
 
-func (p *Parameters) Epsilon() int {
+func (p *Parameters[P, B, S]) Epsilon() int {
 	return p.epsilon
 }
 
-func (p *Parameters) LPrime() int {
+func (p *Parameters[P, B, S]) LPrime() int {
 	return p.lPrime
 }
 
-func (p *Parameters) LogN() int {
+func (p *Parameters[P, B, S]) LogN() int {
 	return p.logN
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
 type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -52,6 +53,8 @@ func (r1b *Round1Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], senderID 
 
 type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ZeroR1 *hjky.Round1P2P[P, S] `cbor:"zeroR1"`
+	Psi0   compiler.NIZKPoKProof `cbor:"psi0"`
+	Psi1   compiler.NIZKPoKProof `cbor:"psi1"`
 }
 
 func (r1u *Round1P2P[P, B, S]) Validate(signer *Signer[P, B, S], senderID sharing.ID) error {
@@ -65,7 +68,8 @@ func (r1u *Round1P2P[P, B, S]) Validate(signer *Signer[P, B, S], senderID sharin
 }
 
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigGamma P `cbor:"bigGamma"`
+	BigGamma P                     `cbor:"bigGamma"`
+	Psi      compiler.NIZKPoKProof `cbor:"psi"`
 }
 
 func (r2b *Round2Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], _ sharing.ID) error {
@@ -76,10 +80,12 @@ func (r2b *Round2Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], _ sharing
 }
 
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigD    *paillier.Ciphertext `cbor:"bigD"`
-	BigF    *paillier.Ciphertext `cbor:"bigF"`
-	BigDHat *paillier.Ciphertext `cbor:"bigDHat"`
-	BigFHat *paillier.Ciphertext `cbor:"bigFHat"`
+	BigD    *paillier.Ciphertext  `cbor:"bigD"`
+	BigF    *paillier.Ciphertext  `cbor:"bigF"`
+	BigDHat *paillier.Ciphertext  `cbor:"bigDHat"`
+	BigFHat *paillier.Ciphertext  `cbor:"bigFHat"`
+	Psi     compiler.NIZKPoKProof `cbor:"psi"`
+	PsiHat  compiler.NIZKPoKProof `cbor:"psiHat"`
 }
 
 func (r2u *Round2P2P[P, B, S]) Validate(signer *Signer[P, B, S], senderID sharing.ID) error {
@@ -100,9 +106,10 @@ func (r2u *Round2P2P[P, B, S]) Validate(signer *Signer[P, B, S], senderID sharin
 }
 
 type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Delta    S `cbor:"delta"`
-	BigS     P `cbor:"bigS"`
-	BigDelta P `cbor:"bigDelta"`
+	Delta    S                     `cbor:"delta"`
+	BigS     P                     `cbor:"bigS"`
+	BigDelta P                     `cbor:"bigDelta"`
+	Psi      compiler.NIZKPoKProof `cbor:"psi"`
 }
 
 func (r3b *Round3Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], sender sharing.ID) error {

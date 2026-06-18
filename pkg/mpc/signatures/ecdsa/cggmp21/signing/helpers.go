@@ -37,24 +37,25 @@ func paillierMaskedProduct[S algebra.PrimeFieldElement[S]](
 	scalar S,
 	mask *num.Int,
 	prng io.Reader,
-) (bigD, bigF *paillier.Ciphertext, err error) {
-	bigF, _, err = paillierEncryptInt(key, mask, prng)
+) (bigD, bigF *paillier.Ciphertext, r, s *paillier.Nonce, err error) {
+	affineMask := mask.Neg()
+	bigF, s, err = paillierEncryptInt(key, mask, prng)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt mask")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot encrypt mask")
 	}
-	t0, _, err := paillierEncryptInt(key, mask.Neg(), prng)
+	t0, r, err := paillierEncryptInt(key, affineMask, prng)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt negated mask")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot encrypt negated mask")
 	}
 	t1, err := encryption.CiphertextScalarOpUnsignedNumeric(key, ciphertext, scalar)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot multiply Paillier ciphertext by scalar")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot multiply Paillier ciphertext by scalar")
 	}
 	bigD, err = key.CiphertextOp(t0, t1)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot combine masked Paillier product")
+		return nil, nil, nil, nil, errs.Wrap(err).WithMessage("cannot combine masked Paillier product")
 	}
-	return bigD, bigF, nil
+	return bigD, bigF, r, s, nil
 }
 
 func sampleMask(lPrime int, prng io.Reader) (*num.Int, error) {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -14,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/unanimity"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -22,41 +24,48 @@ import (
 
 const (
 	protocolDomainSeparator = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN"
+
+	publicKeyValueLabel = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PK"
+	ridLabel            = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_RID"
+	proverID            = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PROVER-ID"
 )
 
 type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	zeroParty *hjky.Participant[P, S]
 
-	ctx         *session.Context
-	ecdsaSuite  *sigecdsa.Suite[P, B, S]
-	params      *cggmp21.Parameters
-	shard       *cggmp21.Shard[P, B, S]
-	curveGroup  sigecdsa.Curve[P, B, S]
-	scalarField algebra.PrimeField[S]
-	prng        io.Reader
-	state       state[P, B, S]
+	ctx                 *session.Context
+	ecdsaSuite          *sigecdsa.Suite[P, B, S]
+	params              *cggmp21.Parameters[P, B, S]
+	shard               *cggmp21.Shard[P, B, S]
+	zeroAccessStructure *unanimity.Unanimity
+	sharingScheme       *feldman.Scheme[P, S]
+	prng                io.Reader
+	state               state[P, B, S]
 }
 
 type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	round          network.Round
-	x              S
-	k              S
-	rho            *paillier.Nonce
-	gamma          S
-	nu             *paillier.Nonce
-	bigYJ          map[sharing.ID]*elgamal.PublicKey[P, S]
-	a              *elgamal.Nonce[S]
-	b              *elgamal.Nonce[S]
-	betaJ          map[sharing.ID]*num.Int
-	betaHatJ       map[sharing.ID]*num.Int
-	delta          S
-	chi            S
-	bigGamma       P
-	bigDeltaJ      map[sharing.ID]P
-	bigSJ          map[sharing.ID]P
-	bigDeltaTildeJ map[sharing.ID]P
-	bigSTildeJ     map[sharing.ID]P
-	m              S
+	round             network.Round
+	x                 S
+	k                 S
+	rho               *paillier.Nonce
+	gamma             S
+	nu                *paillier.Nonce
+	bigYJ             map[sharing.ID]*elgamal.PublicKey[P, S]
+	a                 *elgamal.Nonce[S]
+	b                 *elgamal.Nonce[S]
+	bigAJ             map[sharing.ID]*elgamal.Ciphertext[P, S]
+	bigBJ             map[sharing.ID]*elgamal.Ciphertext[P, S]
+	betaJ             map[sharing.ID]*num.Int
+	betaHatJ          map[sharing.ID]*num.Int
+	delta             S
+	chi               S
+	bigGamma          P
+	bigDeltaJ         map[sharing.ID]P
+	bigSJ             map[sharing.ID]P
+	bigDeltaTildeJ    map[sharing.ID]P
+	bigSTildeJ        map[sharing.ID]P
+	m                 S
+	partialPublicKeys map[sharing.ID]P
 
 	round1Broadcasts map[sharing.ID]*Round1Broadcast[P, B, S]
 	round2Broadcasts map[sharing.ID]*Round2Broadcast[P, B, S]
@@ -90,7 +99,11 @@ func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create induced sharing scheme")
 	}
-	xShare, err := scheme.ConvertShareToAdditive(shard.Share(), unanimityAccessStructure)
+	sharingScheme, err := feldman.NewSchemeFromKW(ecdsaSuite.Curve(), scheme)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create Feldman sharing scheme")
+	}
+	xShare, err := sharingScheme.ConvertShareToAdditive(shard.Share(), unanimityAccessStructure)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert share to additive share")
 	}
@@ -103,13 +116,13 @@ func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	signer := &Signer[P, B, S]{
 		zeroParty: zeroParty,
 
-		ctx:         ctx,
-		ecdsaSuite:  ecdsaSuite,
-		params:      params,
-		shard:       shard,
-		curveGroup:  ecdsaSuite.Curve(),
-		scalarField: ecdsaSuite.ScalarField(),
-		prng:        prng,
+		ctx:                 ctx,
+		ecdsaSuite:          ecdsaSuite,
+		params:              params,
+		shard:               shard,
+		zeroAccessStructure: unanimityAccessStructure,
+		sharingScheme:       sharingScheme,
+		prng:                prng,
 		//nolint:exhaustruct // lazy initialisation
 		state: state[P, B, S]{
 			round: 1,
@@ -123,4 +136,51 @@ func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 // SharingID returns the signer party identifier.
 func (s *Signer[P, B, S]) SharingID() sharing.ID {
 	return s.ctx.HolderID()
+}
+
+func (s *Signer[P, B, S]) computeEffectivePartialPublicKeys(
+	zeroShare *feldman.Share[S],
+	zeroVerificationVector *feldman.VerificationVector[P, S],
+) (effectivePublicKeys map[sharing.ID]P, offset S, err error) {
+	var zero S
+	zeroSharingScheme, err := feldman.NewScheme(s.params.CurveGroup(), s.zeroAccessStructure)
+	if err != nil {
+		return nil, zero, errs.Wrap(err).WithMessage("cannot create zero-sharing Feldman scheme")
+	}
+	zeroAdditiveShare, err := zeroSharingScheme.ConvertShareToAdditive(zeroShare, s.zeroAccessStructure)
+	if err != nil {
+		return nil, zero, errs.Wrap(err).WithMessage("cannot convert zero share to additive share")
+	}
+	zeroLiftedDealerFunc, err := feldman.NewLiftedDealerFunc(zeroVerificationVector, zeroSharingScheme.MSP())
+	if err != nil {
+		return nil, zero, errs.Wrap(err).WithMessage("cannot create zero-share lifted dealer function")
+	}
+
+	out := make(map[sharing.ID]P)
+	publicKeyShares := s.shard.PublicKeyShares()
+	for id := range s.ctx.AllPartiesOrdered() {
+		publicKeyShare, ok := publicKeyShares.Get(id)
+		if !ok {
+			return nil, zero, cggmp21.ErrValidationFailed.WithMessage("missing public key share for %d", id)
+		}
+		additivePublicKeyShare, err := s.sharingScheme.ConvertLiftedShareToAdditive(publicKeyShare, s.zeroAccessStructure)
+		if err != nil {
+			return nil, zero, errs.Wrap(err).WithMessage("cannot convert public key share for %d to additive share", id)
+		}
+		zeroLiftedShare, err := zeroLiftedDealerFunc.ShareOf(id)
+		if err != nil {
+			return nil, zero, errs.Wrap(err).WithMessage("cannot compute zero public share for %d", id)
+		}
+		zeroPublicKeyShare, err := zeroSharingScheme.ConvertLiftedShareToAdditive(zeroLiftedShare, s.zeroAccessStructure)
+		if err != nil {
+			return nil, zero, errs.Wrap(err).WithMessage("cannot convert zero public share for %d to additive share", id)
+		}
+
+		effectivePublicKey := additivePublicKeyShare.Value().Add(zeroPublicKeyShare.Value())
+		if effectivePublicKey.IsZero() {
+			return nil, zero, base.ErrAbort.WithMessage("effective partial public key for shareholder %d is the identity element after zero-shift; zero sharing must be retried", id)
+		}
+		out[id] = effectivePublicKey
+	}
+	return out, zeroAdditiveShare.Value(), nil
 }
