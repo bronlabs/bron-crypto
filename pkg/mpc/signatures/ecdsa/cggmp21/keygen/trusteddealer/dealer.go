@@ -24,7 +24,7 @@ import (
 // Note: this function requires a thread-safe PRNG.
 func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], as accessstructures.Monotone, keyLen int, prng io.Reader) (map[sharing.ID]*cggmp21.Shard[P, B, S], error) {
 	if curve == nil || as == nil || prng == nil {
-		return nil, cggmp21.ErrIsNil.WithMessage("argument")
+		return nil, cggmp21.ErrNil.WithMessage("argument")
 	}
 	if keyLen < 8 || (keyLen%8) != 0 {
 		return nil, cggmp21.ErrFailed.WithMessage("key length too short or unaligned")
@@ -35,12 +35,16 @@ func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 		}
 	}
 
+	params, err := cggmp21.NewParameters(curve, keyLen)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create parameters")
+	}
 	baseShards, err := baseDealer.Deal(curve, as, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot deal base shards")
 	}
-	var refreshID [32]byte
-	if _, err = io.ReadFull(prng, refreshID[:]); err != nil {
+	refreshID := make([]byte, params.Kappa()/8)
+	if _, err = io.ReadFull(prng, refreshID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot read refresh ID")
 	}
 

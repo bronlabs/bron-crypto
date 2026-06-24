@@ -1,4 +1,4 @@
-package pedersen_test
+package pedersencom_test
 
 import (
 	"testing"
@@ -15,108 +15,108 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersencom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/testutils/properties"
 )
 
-func CommitmentKeyGenerator[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *rapid.Generator[*pedersen.CommitmentKey[E, S]] {
+func CommitmentKeyGenerator[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *rapid.Generator[*pedersencom.CommitmentKey[E, S]] {
 	tb.Helper()
-	return rapid.Custom(func(t *rapid.T) *pedersen.CommitmentKey[E, S] {
+	return rapid.Custom(func(t *rapid.T) *pedersencom.CommitmentKey[E, S] {
 		gen := algebra_prop.NonOpIdentityDomainGenerator(tb, group)
 		g := gen.Draw(t, "generator g")
 		h := gen.Filter(func(e E) bool { return !e.Equal(g) }).Draw(t, "generator h")
-		out, err := pedersen.NewCommitmentKeyUnchecked(g, h)
+		out, err := pedersencom.NewCommitmentKeyUnchecked(g, h)
 		require.NoError(t, err, "failed to create Pedersen commitment key")
 		return out
 	})
 }
 
-func TrapdoorKeyGenerator[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *rapid.Generator[*pedersen.TrapdoorKey[E, S]] {
+func TrapdoorKeyGenerator[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *rapid.Generator[*pedersencom.TrapdoorKey[E, S]] {
 	tb.Helper()
-	return rapid.Custom(func(t *rapid.T) *pedersen.TrapdoorKey[E, S] {
+	return rapid.Custom(func(t *rapid.T) *pedersencom.TrapdoorKey[E, S] {
 		gen := algebra_prop.NonOpIdentityDomainGenerator(tb, group)
 		g := gen.Draw(t, "generator g")
 		sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 		lambda, err := algebrautils.RandomNonIdentity(sf, pcg.NewRandomised())
 		require.NoError(t, err, "failed to sample trapdoor value")
-		out, err := pedersen.NewTrapdoorKey(g, lambda)
+		out, err := pedersencom.NewTrapdoorKey(g, lambda)
 		require.NoError(t, err, "failed to create Pedersen trapdoor key")
 		return out
 	})
 }
 
-func CommitmentGenerator[K commitments.CommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S]], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
-	tb testing.TB, key commitments.CommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S]],
-) *rapid.Generator[*pedersen.Commitment[E, S]] {
+func CommitmentGenerator[K commitments.CommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S]], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, key commitments.CommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S]],
+) *rapid.Generator[*pedersencom.Commitment[E, S]] {
 	tb.Helper()
 	var group algebra.PrimeGroup[E, S]
 	switch k := any(key).(type) {
-	case *pedersen.CommitmentKey[E, S]:
+	case *pedersencom.CommitmentKey[E, S]:
 		group = k.CommitmentGroup()
-	case *pedersen.TrapdoorKey[E, S]:
+	case *pedersencom.TrapdoorKey[E, S]:
 		group = k.CommitmentGroup()
 	default:
 		require.Fail(tb, "unexpected key type")
 		return nil
 	}
-	return rapid.Map(algebra_prop.NonOpIdentityDomainGenerator(tb, group), func(c E) *pedersen.Commitment[E, S] {
-		out, err := pedersen.NewCommitment(c)
+	return rapid.Map(algebra_prop.NonOpIdentityDomainGenerator(tb, group), func(c E) *pedersencom.Commitment[E, S] {
+		out, err := pedersencom.NewCommitment(c)
 		require.NoError(tb, err, "failed to create Pedersen commitment")
 		return out
 	})
 }
 
-func WitnessGenerator[K commitments.CommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S]], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
-	tb testing.TB, key commitments.CommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S]],
-) *rapid.Generator[*pedersen.Witness[S]] {
+func WitnessGenerator[K commitments.CommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S]], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, key commitments.CommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S]],
+) *rapid.Generator[*pedersencom.Witness[S]] {
 	tb.Helper()
 	var sf algebra.PrimeField[S]
 	switch k := any(key).(type) {
-	case *pedersen.CommitmentKey[E, S]:
+	case *pedersencom.CommitmentKey[E, S]:
 		sf = k.WitnessGroup()
-	case *pedersen.TrapdoorKey[E, S]:
+	case *pedersencom.TrapdoorKey[E, S]:
 		sf = k.WitnessGroup()
 	default:
 		require.Fail(tb, "unexpected key type")
 		return nil
 	}
-	return rapid.Map(algebra_prop.UniformDomainGenerator(tb, sf), func(w S) *pedersen.Witness[S] {
-		out, err := pedersen.NewWitness(w)
+	return rapid.Map(algebra_prop.UniformDomainGenerator(tb, sf), func(w S) *pedersencom.Witness[S] {
+		out, err := pedersencom.NewWitness(w)
 		require.NoError(tb, err, "failed to create Pedersen witness")
 		return out
 	})
 }
 
-func MessageGenerator[K commitments.CommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S]], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
-	tb testing.TB, key commitments.CommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S]],
-) *rapid.Generator[*pedersen.Message[S]] {
+func MessageGenerator[K commitments.CommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S]], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, key commitments.CommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S]],
+) *rapid.Generator[*pedersencom.Message[S]] {
 	tb.Helper()
 	var sf algebra.PrimeField[S]
 	switch k := any(key).(type) {
-	case *pedersen.CommitmentKey[E, S]:
+	case *pedersencom.CommitmentKey[E, S]:
 		sf = k.MessageGroup()
-	case *pedersen.TrapdoorKey[E, S]:
+	case *pedersencom.TrapdoorKey[E, S]:
 		sf = k.MessageGroup()
 	default:
 		require.Fail(tb, "unexpected key type")
 		return nil
 	}
-	return rapid.Map(algebra_prop.UniformDomainGenerator(tb, sf), func(m S) *pedersen.Message[S] {
-		out, err := pedersen.NewMessage(m)
+	return rapid.Map(algebra_prop.UniformDomainGenerator(tb, sf), func(m S) *pedersencom.Message[S] {
+		out, err := pedersencom.NewMessage(m)
 		require.NoError(tb, err, "failed to create Pedersen message")
 		return out
 	})
 }
 
-func ScalarGenerator[K commitments.HomomorphicCommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S], S], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
-	tb testing.TB, key commitments.HomomorphicCommitmentKey[K, *pedersen.Message[S], *pedersen.Witness[S], *pedersen.Commitment[E, S], S],
+func ScalarGenerator[K commitments.HomomorphicCommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S], S], E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, key commitments.HomomorphicCommitmentKey[K, *pedersencom.Message[S], *pedersencom.Witness[S], *pedersencom.Commitment[E, S], S],
 ) *rapid.Generator[S] {
 	tb.Helper()
 	var sf algebra.PrimeField[S]
 	switch k := any(key).(type) {
-	case *pedersen.CommitmentKey[E, S]:
+	case *pedersencom.CommitmentKey[E, S]:
 		sf = k.WitnessGroup()
-	case *pedersen.TrapdoorKey[E, S]:
+	case *pedersencom.TrapdoorKey[E, S]:
 		sf = k.WitnessGroup()
 	default:
 		require.Fail(tb, "unexpected key type")
@@ -126,19 +126,19 @@ func ScalarGenerator[K commitments.HomomorphicCommitmentKey[K, *pedersen.Message
 }
 
 type GroupHomomorphicCommitmentKeyProperties[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] = properties.GroupHomomorphicCommitmentKeyProperties[
-	*pedersen.CommitmentKey[E, S],
-	*pedersen.Message[S], algebra.PrimeField[S], S,
-	*pedersen.Witness[S], algebra.PrimeField[S], S,
-	*pedersen.Commitment[E, S], algebra.PrimeGroup[E, S], E,
+	*pedersencom.CommitmentKey[E, S],
+	*pedersencom.Message[S], algebra.PrimeField[S], S,
+	*pedersencom.Witness[S], algebra.PrimeField[S], S,
+	*pedersencom.Commitment[E, S], algebra.PrimeGroup[E, S], E,
 	S,
 ]
 
 type GroupHomomorphicTrapdoorKeyProperties[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] = properties.GroupHomomorphicTrapdoorKeyProperties[
-	*pedersen.CommitmentKey[E, S],
-	*pedersen.TrapdoorKey[E, S],
-	*pedersen.Message[S], algebra.PrimeField[S], S,
-	*pedersen.Witness[S], algebra.PrimeField[S], S,
-	*pedersen.Commitment[E, S], algebra.PrimeGroup[E, S], E,
+	*pedersencom.CommitmentKey[E, S],
+	*pedersencom.TrapdoorKey[E, S],
+	*pedersencom.Message[S], algebra.PrimeField[S], S,
+	*pedersencom.Witness[S], algebra.PrimeField[S], S,
+	*pedersencom.Commitment[E, S], algebra.PrimeGroup[E, S], E,
 	S,
 ]
 
@@ -151,10 +151,10 @@ func CommitmentKeyPropertySuite[
 		prng.FuncTypeErase(pcg.NewRandomised),
 		CommitmentKeyGenerator(tb, group),
 		MessageGenerator,
-		func(m1, m2 *pedersen.Message[S]) bool {
+		func(m1, m2 *pedersencom.Message[S]) bool {
 			return m1.Equal(m2)
 		},
-		func(w1, w2 *pedersen.Witness[S]) bool {
+		func(w1, w2 *pedersencom.Witness[S]) bool {
 			return w1.Equal(w2)
 		},
 		ScalarGenerator,
@@ -178,27 +178,27 @@ func CommitmentKeyPropertySuite[
 			return out
 		},
 		CommitmentGenerator,
-		pedersen.NewMessage[S],
-		pedersen.NewWitness[S],
-		pedersen.NewCommitment[E, S],
-		func(tb testing.TB, m *pedersen.Message[S], sc S) *pedersen.Message[S] {
+		pedersencom.NewMessage[S],
+		pedersencom.NewWitness[S],
+		pedersencom.NewCommitment[E, S],
+		func(tb testing.TB, m *pedersencom.Message[S], sc S) *pedersencom.Message[S] {
 			tb.Helper()
 			expectedValue := m.Value().Mul(sc)
-			out, err := pedersen.NewMessage(expectedValue)
+			out, err := pedersencom.NewMessage(expectedValue)
 			require.NoError(tb, err)
 			return out
 		},
-		func(tb testing.TB, w *pedersen.Witness[S], sc S) *pedersen.Witness[S] {
+		func(tb testing.TB, w *pedersencom.Witness[S], sc S) *pedersencom.Witness[S] {
 			tb.Helper()
 			expectedValue := w.Value().Mul(sc)
-			out, err := pedersen.NewWitness(expectedValue)
+			out, err := pedersencom.NewWitness(expectedValue)
 			require.NoError(tb, err)
 			return out
 		},
-		func(tb testing.TB, c *pedersen.Commitment[E, S], sc S) *pedersen.Commitment[E, S] {
+		func(tb testing.TB, c *pedersencom.Commitment[E, S], sc S) *pedersencom.Commitment[E, S] {
 			tb.Helper()
 			expectedValue := c.Value().ScalarOp(sc)
-			out, err := pedersen.NewCommitment(expectedValue)
+			out, err := pedersencom.NewCommitment(expectedValue)
 			require.NoError(tb, err)
 			return out
 		},
@@ -214,10 +214,10 @@ func TrapdoorKeyPropertySuite[
 		prng.FuncTypeErase(pcg.NewRandomised),
 		TrapdoorKeyGenerator(tb, group),
 		MessageGenerator,
-		func(m1, m2 *pedersen.Message[S]) bool {
+		func(m1, m2 *pedersencom.Message[S]) bool {
 			return m1.Equal(m2)
 		},
-		func(w1, w2 *pedersen.Witness[S]) bool {
+		func(w1, w2 *pedersencom.Witness[S]) bool {
 			return w1.Equal(w2)
 		},
 		ScalarGenerator,
@@ -242,64 +242,64 @@ func TrapdoorKeyPropertySuite[
 			return out
 		},
 		CommitmentGenerator,
-		pedersen.NewMessage[S],
-		pedersen.NewWitness[S],
-		pedersen.NewCommitment[E, S],
-		func(tb testing.TB, m *pedersen.Message[S], sc S) *pedersen.Message[S] {
+		pedersencom.NewMessage[S],
+		pedersencom.NewWitness[S],
+		pedersencom.NewCommitment[E, S],
+		func(tb testing.TB, m *pedersencom.Message[S], sc S) *pedersencom.Message[S] {
 			tb.Helper()
 			expectedValue := m.Value().Mul(sc)
-			out, err := pedersen.NewMessage(expectedValue)
+			out, err := pedersencom.NewMessage(expectedValue)
 			require.NoError(tb, err)
 			return out
 		},
-		func(tb testing.TB, w *pedersen.Witness[S], sc S) *pedersen.Witness[S] {
+		func(tb testing.TB, w *pedersencom.Witness[S], sc S) *pedersencom.Witness[S] {
 			tb.Helper()
 			expectedValue := w.Value().Mul(sc)
-			out, err := pedersen.NewWitness(expectedValue)
+			out, err := pedersencom.NewWitness(expectedValue)
 			require.NoError(tb, err)
 			return out
 		},
-		func(tb testing.TB, c *pedersen.Commitment[E, S], sc S) *pedersen.Commitment[E, S] {
+		func(tb testing.TB, c *pedersencom.Commitment[E, S], sc S) *pedersencom.Commitment[E, S] {
 			tb.Helper()
 			expectedValue := c.Value().ScalarOp(sc)
-			out, err := pedersen.NewCommitment(expectedValue)
+			out, err := pedersencom.NewCommitment(expectedValue)
 			require.NoError(tb, err)
 			return out
 		},
 	)
 }
 
-func WitnessPropertySuite[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *properties.WitnessProperties[*pedersen.Witness[S]] {
+func WitnessPropertySuite[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *properties.WitnessProperties[*pedersencom.Witness[S]] {
 	tb.Helper()
-	key, err := pedersen.SampleCommitmentKey(group, pcg.NewRandomised())
+	key, err := pedersencom.SampleCommitmentKey(group, pcg.NewRandomised())
 	require.NoError(tb, err, "failed to sample Pedersen commitment key")
-	return &properties.WitnessProperties[*pedersen.Witness[S]]{
+	return &properties.WitnessProperties[*pedersencom.Witness[S]]{
 		WitnessGenerator: WitnessGenerator(tb, key),
-		WitnessesAreEqual: func(w1, w2 *pedersen.Witness[S]) bool {
+		WitnessesAreEqual: func(w1, w2 *pedersencom.Witness[S]) bool {
 			return w1.Equal(w2)
 		},
 	}
 }
 
-func MessagePropertySuite[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *properties.MessageProperties[*pedersen.Message[S]] {
+func MessagePropertySuite[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *properties.MessageProperties[*pedersencom.Message[S]] {
 	tb.Helper()
-	key, err := pedersen.SampleCommitmentKey(group, pcg.NewRandomised())
+	key, err := pedersencom.SampleCommitmentKey(group, pcg.NewRandomised())
 	require.NoError(tb, err, "failed to sample Pedersen commitment key")
-	return &properties.MessageProperties[*pedersen.Message[S]]{
+	return &properties.MessageProperties[*pedersencom.Message[S]]{
 		MessageGenerator: MessageGenerator(tb, key),
-		MessagesAreEqual: func(m1, m2 *pedersen.Message[S]) bool {
+		MessagesAreEqual: func(m1, m2 *pedersencom.Message[S]) bool {
 			return m1.Equal(m2)
 		},
 	}
 }
 
-func CommitmentPropertySuite[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *properties.CommitmentProperties[*pedersen.Commitment[E, S]] {
+func CommitmentPropertySuite[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](tb testing.TB, group algebra.PrimeGroup[E, S]) *properties.CommitmentProperties[*pedersencom.Commitment[E, S]] {
 	tb.Helper()
-	key, err := pedersen.SampleCommitmentKey(group, pcg.NewRandomised())
+	key, err := pedersencom.SampleCommitmentKey(group, pcg.NewRandomised())
 	require.NoError(tb, err, "failed to sample Pedersen commitment key")
-	return &properties.CommitmentProperties[*pedersen.Commitment[E, S]]{
+	return &properties.CommitmentProperties[*pedersencom.Commitment[E, S]]{
 		CommitmentGenerator: CommitmentGenerator(tb, key),
-		CommitmentsAreEqual: func(c1, c2 *pedersen.Commitment[E, S]) bool {
+		CommitmentsAreEqual: func(c1, c2 *pedersencom.Commitment[E, S]) bool {
 			return c1.Equal(c2)
 		},
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
+	basepkg "github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -14,31 +14,44 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
 const (
-	challengeBitsLength  = base.ComputationalSecurityBits
-	challengeBytesLength = base.ComputationalSecurityBytesCeil
+	challengeBitsLength  = basepkg.ComputationalSecurityBits
+	challengeBytesLength = basepkg.ComputationalSecurityBytesCeil
 )
 
 // Protocol implements the CGGMP21 Paillier special decryption in the exponent proof from Figure 28.
 type Protocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	name    sigma.Name
-	l       int
-	lPrime  int
-	epsilon int
-	curve   ecdsa.Curve[G, B, S]
-	prng    io.Reader
+	name        sigma.Name
+	l           int
+	lPrime      int
+	epsilon     int
+	group       algebra.AdditivePrimeGroup[G, S]
+	scalarField algebra.PrimeField[S]
+	base        G
+	prng        io.Reader
 }
 
 // NewProtocol constructs the CGGMP21 Figure 28 Paillier special decryption sigma protocol.
-func NewProtocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](l, lPrime, epsilon int, curve ecdsa.Curve[G, B, S], prng io.Reader) (*Protocol[G, B, S], error) {
+func NewProtocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
+	l, lPrime, epsilon int,
+	base G,
+	prng io.Reader,
+) (*Protocol[G, B, S], error) {
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng is required")
 	}
-	if utils.IsNil(curve) {
-		return nil, ErrInvalidArgument.WithMessage("curve is required")
+	if utils.IsNil(base) {
+		return nil, ErrInvalidArgument.WithMessage("base is required")
+	}
+	group, err := algebra.StructureAs[algebra.AdditivePrimeGroup[G, S]](base.Structure())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid base group")
+	}
+	scalarField, err := algebra.StructureAs[algebra.PrimeField[S]](group.ScalarStructure())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid base scalar field")
 	}
 	if (l <= 0) || (l%8 != 0) {
 		return nil, ErrInvalidArgument.WithMessage("l must be a multiple of 8")
@@ -50,9 +63,9 @@ func NewProtocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, ErrInvalidArgument.WithMessage("epsilon must be a multiple of 8")
 	}
 
-	k := curve.ScalarField().BitLen()
-	if k < base.ComputationalSecurityBits {
-		return nil, ErrInvalidArgument.WithMessage("invalid curve")
+	k := scalarField.BitLen()
+	if k < basepkg.ComputationalSecurityBits {
+		return nil, ErrInvalidArgument.WithMessage("invalid scalar field")
 	}
 	if l < k {
 		return nil, ErrInvalidArgument.WithMessage("invalid l")
@@ -63,23 +76,29 @@ func NewProtocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S alge
 	if lPrime < l+epsilon+2*l {
 		return nil, ErrInvalidArgument.WithMessage("invalid lPrime")
 	}
+	if !group.Contains(base) || base.IsZero() {
+		return nil, ErrInvalidArgument.WithMessage("invalid base")
+	}
 
 	name := sigma.Name(fmt.Sprintf(
-		"%s_L=%d_LPRIME=%d_EPS=%d_CURVE=%s_KAPPA=%d",
+		"%s_L=%d_LPRIME=%d_EPS=%d_GROUP=%s_BASE=%x_KAPPA=%d",
 		Name,
 		l,
 		lPrime,
 		epsilon,
-		curve.Name(),
+		group.Name(),
+		base.Bytes(),
 		challengeBitsLength,
 	))
 	p := &Protocol[G, B, S]{
-		name:    name,
-		l:       l,
-		lPrime:  lPrime,
-		epsilon: epsilon,
-		curve:   curve,
-		prng:    prng,
+		name:        name,
+		l:           l,
+		lPrime:      lPrime,
+		epsilon:     epsilon,
+		group:       group,
+		scalarField: scalarField,
+		base:        base,
+		prng:        prng,
 	}
 	return p, nil
 }
@@ -346,16 +365,16 @@ func (p *Protocol[G, B, S]) computeCommitment(statement *Statement[G, B, S], sta
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not compute A at index %d", i)
 		}
-		betaScalar, err := intToScalar(state.beta[i], p.curve.ScalarField())
+		betaScalar, err := intToScalar(state.beta[i], p.scalarField)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not convert beta to scalar at index %d", i)
 		}
-		b[i] = p.curve.ScalarBaseMul(betaScalar)
-		alphaScalar, err := intToScalar(state.alpha[i], p.curve.ScalarField())
+		b[i] = p.base.ScalarMul(betaScalar)
+		alphaScalar, err := intToScalar(state.alpha[i], p.scalarField)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not convert alpha to scalar at index %d", i)
 		}
-		c[i] = p.curve.ScalarBaseMul(alphaScalar)
+		c[i] = p.group.ScalarBaseMul(alphaScalar)
 	}
 
 	commitment, err := NewCommitment(a, b, c)
@@ -388,16 +407,16 @@ func (*Protocol[G, B, S]) verifyPaillier(statement *Statement[G, B, S], commitme
 }
 
 func (p *Protocol[G, B, S]) verifyCurve(statement *Statement[G, B, S], commitment *Commitment[G, B, S], response *Response, bit byte, index int) error {
-	zScalar, err := intToScalar(response.z[index], p.curve.ScalarField())
+	zScalar, err := intToScalar(response.z[index], p.scalarField)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not convert z to scalar")
 	}
-	wScalar, err := intToScalar(response.w[index], p.curve.ScalarField())
+	wScalar, err := intToScalar(response.w[index], p.scalarField)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not convert w to scalar")
 	}
 
-	leftX := p.curve.ScalarBaseMul(zScalar)
+	leftX := p.group.ScalarBaseMul(zScalar)
 	rightX := commitment.c[index]
 	if bit == 1 {
 		rightX = rightX.Op(statement.x)
@@ -406,7 +425,7 @@ func (p *Protocol[G, B, S]) verifyCurve(statement *Statement[G, B, S], commitmen
 		return ErrVerificationFailed.WithMessage("X equality check failed")
 	}
 
-	leftS := p.curve.ScalarBaseMul(wScalar)
+	leftS := p.base.ScalarMul(wScalar)
 	rightS := commitment.b[index]
 	if bit == 1 {
 		rightS = rightS.Op(statement.s)
@@ -455,11 +474,11 @@ func (p *Protocol[G, B, S]) simulateB(statement *Statement[G, B, S], response *R
 	out := make([]G, challengeBitsLength)
 	sInv := statement.s.OpInv()
 	for i, bit := range bits {
-		wScalar, err := intToScalar(response.w[i], p.curve.ScalarField())
+		wScalar, err := intToScalar(response.w[i], p.scalarField)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not convert w to scalar at index %d", i)
 		}
-		out[i] = p.curve.ScalarBaseMul(wScalar)
+		out[i] = p.base.ScalarMul(wScalar)
 		if bit == 1 {
 			out[i] = out[i].Op(sInv)
 		}
@@ -471,11 +490,11 @@ func (p *Protocol[G, B, S]) simulateC(statement *Statement[G, B, S], response *R
 	out := make([]G, challengeBitsLength)
 	xInv := statement.x.OpInv()
 	for i, bit := range bits {
-		zScalar, err := intToScalar(response.z[i], p.curve.ScalarField())
+		zScalar, err := intToScalar(response.z[i], p.scalarField)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("could not convert z to scalar at index %d", i)
 		}
-		out[i] = p.curve.ScalarBaseMul(zScalar)
+		out[i] = p.group.ScalarBaseMul(zScalar)
 		if bit == 1 {
 			out[i] = out[i].Op(xInv)
 		}
@@ -506,7 +525,7 @@ func (p *Protocol[G, B, S]) validateStatement(statement *Statement[G, B, S]) err
 
 		return ErrValidationFailed.WithMessage("K and D must be in the N0 ciphertext group")
 	}
-	if !p.curve.Contains(statement.x) || !p.curve.Contains(statement.s) {
+	if !p.group.Contains(statement.x) || !p.group.Contains(statement.s) {
 		return ErrValidationFailed.WithMessage("X and S must be in the curve group")
 	}
 	return nil
@@ -523,18 +542,18 @@ func (p *Protocol[G, B, S]) validateWitness(statement *Statement[G, B, S], witne
 		return ErrValidationFailed.WithMessage("rho is not in the N0 nonce group")
 	}
 
-	xScalar, err := intToScalar(witness.x, p.curve.ScalarField())
+	xScalar, err := intToScalar(witness.x, p.scalarField)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not convert x to scalar")
 	}
-	if !p.curve.ScalarBaseMul(xScalar).Equal(statement.x) {
+	if !p.group.ScalarBaseMul(xScalar).Equal(statement.x) {
 		return ErrValidationFailed.WithMessage("x does not open X")
 	}
-	yScalar, err := intToScalar(witness.y, p.curve.ScalarField())
+	yScalar, err := intToScalar(witness.y, p.scalarField)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not convert y to scalar")
 	}
-	if !p.curve.ScalarBaseMul(yScalar).Equal(statement.s) {
+	if !p.base.ScalarMul(yScalar).Equal(statement.s) {
 		return ErrValidationFailed.WithMessage("y does not open S")
 	}
 
@@ -565,10 +584,10 @@ func (p *Protocol[G, B, S]) validateCommitment(statement *Statement[G, B, S], co
 		if !statement.n0.CiphertextGroup().Contains(commitment.a[i].Value()) {
 			return ErrValidationFailed.WithMessage("A must be in the N0 ciphertext group at index %d", i)
 		}
-		if !p.curve.Contains(commitment.b[i]) {
+		if !p.group.Contains(commitment.b[i]) {
 			return ErrValidationFailed.WithMessage("B must be in the curve group at index %d", i)
 		}
-		if !p.curve.Contains(commitment.c[i]) {
+		if !p.group.Contains(commitment.c[i]) {
 			return ErrValidationFailed.WithMessage("C must be in the curve group at index %d", i)
 		}
 	}

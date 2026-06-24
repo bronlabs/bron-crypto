@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersencom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/boolexpr"

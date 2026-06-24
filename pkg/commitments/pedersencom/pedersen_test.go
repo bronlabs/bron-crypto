@@ -1,4 +1,4 @@
-package pedersen_test
+package pedersencom_test
 
 import (
 	"io"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersencom"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
@@ -26,21 +26,21 @@ func TestNewCommitmentKeyUnchecked(t *testing.T) {
 
 	t.Run("nil g rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.NewCommitmentKeyUnchecked(nil, h)
+		k, err := pedersencom.NewCommitmentKeyUnchecked(nil, h)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("nil h rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.NewCommitmentKeyUnchecked(g, nil)
+		k, err := pedersencom.NewCommitmentKeyUnchecked(g, nil)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("g == h rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.NewCommitmentKeyUnchecked(g, g)
+		k, err := pedersencom.NewCommitmentKeyUnchecked(g, g)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
@@ -48,7 +48,7 @@ func TestNewCommitmentKeyUnchecked(t *testing.T) {
 	t.Run("identity g rejected", func(t *testing.T) {
 		t.Parallel()
 		identity := curve.OpIdentity()
-		k, err := pedersen.NewCommitmentKeyUnchecked(identity, h)
+		k, err := pedersencom.NewCommitmentKeyUnchecked(identity, h)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
@@ -56,14 +56,14 @@ func TestNewCommitmentKeyUnchecked(t *testing.T) {
 	t.Run("identity h rejected", func(t *testing.T) {
 		t.Parallel()
 		identity := curve.OpIdentity()
-		k, err := pedersen.NewCommitmentKeyUnchecked(g, identity)
+		k, err := pedersencom.NewCommitmentKeyUnchecked(g, identity)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("valid generators succeed", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.NewCommitmentKeyUnchecked(g, h)
+		k, err := pedersencom.NewCommitmentKeyUnchecked(g, h)
 		require.NoError(t, err)
 		require.NotNil(t, k)
 		require.True(t, k.G().Equal(g))
@@ -78,35 +78,35 @@ func TestSampleCommitmentKey(t *testing.T) {
 
 	t.Run("nil group rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.SampleCommitmentKey[*k256.Point, *k256.Scalar](nil, pcg.NewRandomised()) //nolint:infertypeargs // nil arg blocks inference
+		k, err := pedersencom.SampleCommitmentKey[*k256.Point, *k256.Scalar](nil, pcg.NewRandomised()) //nolint:infertypeargs // nil arg blocks inference
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("nil prng rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.SampleCommitmentKey(curve, nil)
+		k, err := pedersencom.SampleCommitmentKey(curve, nil)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("failing reader propagates error", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.SampleCommitmentKey(curve, badReader{})
+		k, err := pedersencom.SampleCommitmentKey(curve, badReader{})
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("g equals group generator", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.SampleCommitmentKey(curve, pcg.NewRandomised())
+		k, err := pedersencom.SampleCommitmentKey(curve, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.True(t, k.G().Equal(curve.Generator()))
 	})
 
 	t.Run("h is non-identity and distinct from g", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.SampleCommitmentKey(curve, pcg.NewRandomised())
+		k, err := pedersencom.SampleCommitmentKey(curve, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.False(t, k.H().IsOpIdentity())
 		require.False(t, k.H().Equal(k.G()))
@@ -115,9 +115,9 @@ func TestSampleCommitmentKey(t *testing.T) {
 	t.Run("successive samples produce distinct h", func(t *testing.T) {
 		t.Parallel()
 		prng := pcg.NewRandomised()
-		k1, err := pedersen.SampleCommitmentKey(curve, prng)
+		k1, err := pedersencom.SampleCommitmentKey(curve, prng)
 		require.NoError(t, err)
-		k2, err := pedersen.SampleCommitmentKey(curve, prng)
+		k2, err := pedersencom.SampleCommitmentKey(curve, prng)
 		require.NoError(t, err)
 		require.False(t, k1.H().Equal(k2.H()))
 	})
@@ -131,35 +131,35 @@ func TestExtractCommitmentKey(t *testing.T) {
 
 	t.Run("nil base point rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.ExtractCommitmentKey[*k256.Point, *k256.Scalar](hagrid.NewTranscript("test"), "label", nil) //nolint:infertypeargs // nil arg blocks inference
+		k, err := pedersencom.ExtractCommitmentKey[*k256.Point, *k256.Scalar](hagrid.NewTranscript("test"), "label", nil) //nolint:infertypeargs // nil arg blocks inference
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("nil transcript rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.ExtractCommitmentKey(nil, "label", g)
+		k, err := pedersencom.ExtractCommitmentKey(nil, "label", g)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("empty label rejected", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.ExtractCommitmentKey(hagrid.NewTranscript("test"), "", g)
+		k, err := pedersencom.ExtractCommitmentKey(hagrid.NewTranscript("test"), "", g)
 		require.Error(t, err)
 		require.Nil(t, k)
 	})
 
 	t.Run("g equals supplied base point", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label", g)
+		k, err := pedersencom.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label", g)
 		require.NoError(t, err)
 		require.True(t, k.G().Equal(g))
 	})
 
 	t.Run("h is non-identity and distinct from base point", func(t *testing.T) {
 		t.Parallel()
-		k, err := pedersen.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label", g)
+		k, err := pedersencom.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label", g)
 		require.NoError(t, err)
 		require.False(t, k.H().IsOpIdentity())
 		require.False(t, k.H().Equal(g))
@@ -172,18 +172,18 @@ func TestExtractCommitmentKey(t *testing.T) {
 		t1.AppendBytes("ctx", []byte("payload"))
 		t2.AppendBytes("ctx", []byte("payload"))
 
-		k1, err := pedersen.ExtractCommitmentKey(t1, "label", g)
+		k1, err := pedersencom.ExtractCommitmentKey(t1, "label", g)
 		require.NoError(t, err)
-		k2, err := pedersen.ExtractCommitmentKey(t2, "label", g)
+		k2, err := pedersencom.ExtractCommitmentKey(t2, "label", g)
 		require.NoError(t, err)
 		require.True(t, k1.Equal(k2))
 	})
 
 	t.Run("different labels yield different h", func(t *testing.T) {
 		t.Parallel()
-		k1, err := pedersen.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label-a", g)
+		k1, err := pedersencom.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label-a", g)
 		require.NoError(t, err)
-		k2, err := pedersen.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label-b", g)
+		k2, err := pedersencom.ExtractCommitmentKey(hagrid.NewTranscript("test"), "label-b", g)
 		require.NoError(t, err)
 		require.False(t, k1.H().Equal(k2.H()))
 	})
@@ -195,9 +195,9 @@ func TestExtractCommitmentKey(t *testing.T) {
 		t1.AppendBytes("ctx", []byte("payload-a"))
 		t2.AppendBytes("ctx", []byte("payload-b"))
 
-		k1, err := pedersen.ExtractCommitmentKey(t1, "label", g)
+		k1, err := pedersencom.ExtractCommitmentKey(t1, "label", g)
 		require.NoError(t, err)
-		k2, err := pedersen.ExtractCommitmentKey(t2, "label", g)
+		k2, err := pedersencom.ExtractCommitmentKey(t2, "label", g)
 		require.NoError(t, err)
 		require.False(t, k1.H().Equal(k2.H()))
 	})
@@ -213,42 +213,42 @@ func TestNewTrapdoorKey(t *testing.T) {
 
 	t.Run("nil g rejected", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.NewTrapdoorKey[*k256.Point, *k256.Scalar](nil, lambda) //nolint:infertypeargs // nil arg blocks inference
+		tk, err := pedersencom.NewTrapdoorKey[*k256.Point, *k256.Scalar](nil, lambda) //nolint:infertypeargs // nil arg blocks inference
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("nil lambda rejected", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.NewTrapdoorKey[*k256.Point, *k256.Scalar](g, nil) //nolint:infertypeargs // nil arg blocks inference
+		tk, err := pedersencom.NewTrapdoorKey[*k256.Point, *k256.Scalar](g, nil) //nolint:infertypeargs // nil arg blocks inference
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("identity g rejected", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.NewTrapdoorKey(curve.OpIdentity(), lambda)
+		tk, err := pedersencom.NewTrapdoorKey(curve.OpIdentity(), lambda)
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("zero lambda rejected", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.NewTrapdoorKey(g, field.Zero())
+		tk, err := pedersencom.NewTrapdoorKey(g, field.Zero())
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("one lambda rejected", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.NewTrapdoorKey(g, field.One())
+		tk, err := pedersencom.NewTrapdoorKey(g, field.One())
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("h equals g raised to lambda", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.NewTrapdoorKey(g, lambda)
+		tk, err := pedersencom.NewTrapdoorKey(g, lambda)
 		require.NoError(t, err)
 		require.True(t, tk.Lambda().Equal(lambda))
 		require.True(t, tk.G().Equal(g))
@@ -265,28 +265,28 @@ func TestSampleTrapdoorKey(t *testing.T) {
 
 	t.Run("nil group rejected", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.SampleTrapdoorKey[*k256.Point, *k256.Scalar](nil, pcg.NewRandomised()) //nolint:infertypeargs // nil arg blocks inference
+		tk, err := pedersencom.SampleTrapdoorKey[*k256.Point, *k256.Scalar](nil, pcg.NewRandomised()) //nolint:infertypeargs // nil arg blocks inference
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("nil prng rejected", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.SampleTrapdoorKey(curve, nil)
+		tk, err := pedersencom.SampleTrapdoorKey(curve, nil)
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("failing reader propagates error", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.SampleTrapdoorKey(curve, badReader{})
+		tk, err := pedersencom.SampleTrapdoorKey(curve, badReader{})
 		require.Error(t, err)
 		require.Nil(t, tk)
 	})
 
 	t.Run("g equals group generator and h equals g^lambda", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.SampleTrapdoorKey(curve, pcg.NewRandomised())
+		tk, err := pedersencom.SampleTrapdoorKey(curve, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.True(t, tk.G().Equal(curve.Generator()))
 		require.True(t, tk.H().Equal(tk.G().ScalarOp(tk.Lambda())),
@@ -295,7 +295,7 @@ func TestSampleTrapdoorKey(t *testing.T) {
 
 	t.Run("lambda is neither zero nor one", func(t *testing.T) {
 		t.Parallel()
-		tk, err := pedersen.SampleTrapdoorKey(curve, pcg.NewRandomised())
+		tk, err := pedersencom.SampleTrapdoorKey(curve, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.False(t, tk.Lambda().Equal(field.Zero()))
 		require.False(t, tk.Lambda().Equal(field.One()))
@@ -304,9 +304,9 @@ func TestSampleTrapdoorKey(t *testing.T) {
 	t.Run("successive samples produce distinct trapdoors", func(t *testing.T) {
 		t.Parallel()
 		prng := pcg.NewRandomised()
-		tk1, err := pedersen.SampleTrapdoorKey(curve, prng)
+		tk1, err := pedersencom.SampleTrapdoorKey(curve, prng)
 		require.NoError(t, err)
-		tk2, err := pedersen.SampleTrapdoorKey(curve, prng)
+		tk2, err := pedersencom.SampleTrapdoorKey(curve, prng)
 		require.NoError(t, err)
 		require.False(t, tk1.Lambda().Equal(tk2.Lambda()))
 	})
@@ -322,14 +322,14 @@ func TestTrapdoorCommitMatchesCommitmentKeyCommit(t *testing.T) {
 	curve := k256.NewCurve()
 	prng := pcg.NewRandomised()
 
-	tk, err := pedersen.SampleTrapdoorKey(curve, prng)
+	tk, err := pedersencom.SampleTrapdoorKey(curve, prng)
 	require.NoError(t, err)
 	ck := tk.Export()
 
 	field := k256.NewScalarField()
 	mScalar, err := field.Random(prng)
 	require.NoError(t, err)
-	message, err := pedersen.NewMessage(mScalar)
+	message, err := pedersencom.NewMessage(mScalar)
 	require.NoError(t, err)
 
 	witness, err := tk.SampleWitness(prng)
@@ -356,7 +356,7 @@ func TestHomomorphicMethodsRejectNilArguments(t *testing.T) {
 	prng := pcg.NewRandomised()
 	field := k256.NewScalarField()
 
-	key, err := pedersen.SampleCommitmentKey(curve, prng)
+	key, err := pedersencom.SampleCommitmentKey(curve, prng)
 	require.NoError(t, err)
 
 	witness, err := key.SampleWitness(prng)
@@ -364,7 +364,7 @@ func TestHomomorphicMethodsRejectNilArguments(t *testing.T) {
 
 	mScalar, err := field.Random(prng)
 	require.NoError(t, err)
-	message, err := pedersen.NewMessage(mScalar)
+	message, err := pedersencom.NewMessage(mScalar)
 	require.NoError(t, err)
 
 	commitment, err := key.CommitWithWitness(message, witness)
