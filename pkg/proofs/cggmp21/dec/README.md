@@ -2,10 +2,10 @@
 
 This package implements the sigma protocol Pi dec from Appendix A.6, Figure 28 of CGGMP21.
 
-The statement is `(G, g, N0, K, X, D, S)`. The witness is `(x, y, rho)` such that:
+The protocol instance is parameterized by the curve group and an explicit base point used for the `S` equation. The serialized statement is `(N0, K, X, D, S)`. The witness is `(x, y, rho)` such that:
 
 $$
-x \in \pm 2^\ell,\quad y \in \pm 2^{\ell'},\quad X = g^x,\quad S = g^y,
+x \in \pm 2^\ell,\quad y \in \pm 2^{\ell'},\quad X = g^x,\quad S = \text{base}^y,
 $$
 
 and
@@ -33,7 +33,7 @@ A_j = K^{-\alpha_j}(1+N_0)^{\beta_j}r_j^{N_0} \bmod N_0^2,
 $$
 
 $$
-B_j = g^{\beta_j},\quad C_j = g^{\alpha_j}.
+B_j = \text{base}^{\beta_j},\quad C_j = g^{\alpha_j}.
 $$
 
 The verifier replies with challenge bits `e_j in {0,1}`. The response is:
@@ -53,7 +53,7 @@ $$
 $$
 
 $$
-g^{z_j} = C_jX^{e_j},\quad g^{w_j} = B_jS^{e_j},
+g^{z_j} = C_jX^{e_j},\quad \text{base}^{w_j} = B_jS^{e_j},
 $$
 
 and the widened ranges:
@@ -64,7 +64,8 @@ $$
 
 ## Implementation Notes
 
-- `Statement` stores `N0`, `K`, `X`, `D`, and `S`.
+- `NewProtocol` takes the base point used in the `S` equation and binds it into the Fiat-Shamir protocol name together with the range parameters.
+- `Statement` stores `N0`, `K`, `X`, `D`, and `S`; the curve group and `S` base are protocol parameters.
 - `Witness` stores `x` and `y` as `*num.Int`, and the Paillier nonce `rho`.
 - The challenge is `base.ComputationalSecurityBytesCeil` bytes interpreted as `base.ComputationalSecurityBits` challenge bits. This intentionally fixes the repetition count to 128 bits rather than exposing `kappa` as a separate protocol parameter.
 - Signed integer samples use byte-aligned two's-complement sampling over exactly the requested byte length.

@@ -6,4 +6,4 @@
 // simulation-based proofs but breaks binding for its holder.
 //
 // See README.md for details.
-package pedersen
+package pedersencom

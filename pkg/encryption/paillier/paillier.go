@@ -58,6 +58,9 @@ func NewCiphertextFromGroupElement[A znstar.ArithmeticPaillier](v *znstar.Pailli
 // Ciphertext is a Paillier ciphertext (1+N)^m · r^N mod N², an element of Z*_{N²}.
 // It is public: under the Decisional Composite Residuosity assumption it
 // computationally hides m while the nonce r remains secret.
+// Instances are immutable; homomorphic operations on Ciphertext values return
+// fresh instances and never mutate their inputs. Consumers may safely share or
+// alias *Ciphertext references without defensive copying.
 type Ciphertext struct {
 	c *znstar.PaillierGroupElementUnknownOrder
 }
