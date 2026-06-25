@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -22,35 +23,32 @@ const (
 	Name sigma.Name = "CGGMP21_RANGE_PROOF_WITH_ELGAMAL_COMMITMENT"
 )
 
-// Statement is the public input (N0, C, A, (B, X)) for CGGMP21 Figure 24.
+// Statement is the public input (N0, C, (B, X)) for CGGMP21 Figure 24.
+// The ElGamal public key A is carried by the protocol's commitment key.
 type Statement[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	n0 *paillier.PublicKey
 	c  *paillier.Ciphertext
-	a  *elgamal.PublicKey[G, S]
-	bx *elgamal.Ciphertext[G, S]
+	bx *indcpacom.Commitment[*elgamal.Ciphertext[G, S]]
 }
 
 type statementDTO[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	N0 *paillier.PublicKey       `cbor:"n0"`
-	C  *paillier.Ciphertext      `cbor:"c"`
-	A  *elgamal.PublicKey[G, S]  `cbor:"a"`
-	BX *elgamal.Ciphertext[G, S] `cbor:"bx"`
+	N0 *paillier.PublicKey                              `cbor:"n0"`
+	C  *paillier.Ciphertext                             `cbor:"c"`
+	BX *indcpacom.Commitment[*elgamal.Ciphertext[G, S]] `cbor:"bx"`
 }
 
 // NewStatement constructs an enc-elg statement.
 func NewStatement[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	n0 *paillier.PublicKey,
 	c *paillier.Ciphertext,
-	a *elgamal.PublicKey[G, S],
-	bx *elgamal.Ciphertext[G, S],
+	bx *indcpacom.Commitment[*elgamal.Ciphertext[G, S]],
 ) (*Statement[G, B, S], error) {
-	if n0 == nil || c == nil || a == nil || bx == nil {
+	if n0 == nil || c == nil || bx == nil {
 		return nil, ErrInvalidArgument.WithMessage("statement values must not be nil")
 	}
 	return &Statement[G, B, S]{
 		n0: n0,
 		c:  c,
-		a:  a,
 		bx: bx,
 	}, nil
 }
@@ -60,7 +58,6 @@ func (s *Statement[G, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &statementDTO[G, B, S]{
 		N0: s.n0,
 		C:  s.c,
-		A:  s.a,
 		BX: s.bx,
 	}
 	out, err := serde.MarshalCBOR(dto)
@@ -79,7 +76,7 @@ func (s *Statement[G, B, S]) UnmarshalCBOR(data []byte) error {
 	if dto == nil {
 		return ErrInvalidArgument.WithMessage("statement DTO must not be nil")
 	}
-	statement, err := NewStatement(dto.N0, dto.C, dto.A, dto.BX)
+	statement, err := NewStatement(dto.N0, dto.C, dto.BX)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("invalid statement data")
 	}
@@ -89,38 +86,34 @@ func (s *Statement[G, B, S]) UnmarshalCBOR(data []byte) error {
 
 // Bytes serialises the statement for transcript binding.
 func (s *Statement[G, B, S]) Bytes() []byte {
-	out := binary.LittleEndian.AppendUint64(nil, 4)
+	out := binary.LittleEndian.AppendUint64(nil, 3)
 	out = sliceutils.AppendLengthPrefixed(out, s.n0.Group().N().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, s.c.Bytes())
-	out = sliceutils.AppendLengthPrefixed(out, s.a.Value().Bytes())
-	for _, component := range s.bx.Value().Components() {
+	for _, component := range s.bx.Value().Value().Components() {
 		out = sliceutils.AppendLengthPrefixed(out, component.Bytes())
 	}
 	return out
 }
 
-// Witness is the secret input (x, rho, a, bx) for CGGMP21 Figure 24.
-type Witness[G elgamal.FiniteCyclicGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+// Witness is the secret input (x, rho, bx) for CGGMP21 Figure 24.
+type Witness[S algebra.PrimeFieldElement[S]] struct {
 	x   *num.Int
 	rho *paillier.Nonce
-	a   *elgamal.SecretKey[G, S]
-	bx  *elgamal.Nonce[S]
+	bx  *indcpacom.Witness[*elgamal.Nonce[S]]
 }
 
 // NewWitness constructs an enc-elg witness.
-func NewWitness[G elgamal.FiniteCyclicGroupElement[G, S], S algebra.PrimeFieldElement[S]](
+func NewWitness[S algebra.PrimeFieldElement[S]](
 	x *num.Int,
 	rho *paillier.Nonce,
-	a *elgamal.SecretKey[G, S],
-	bx *elgamal.Nonce[S],
-) (*Witness[G, S], error) {
-	if x == nil || rho == nil || a == nil || bx == nil {
+	bx *indcpacom.Witness[*elgamal.Nonce[S]],
+) (*Witness[S], error) {
+	if x == nil || rho == nil || bx == nil {
 		return nil, ErrInvalidArgument.WithMessage("witness values must not be nil")
 	}
-	return &Witness[G, S]{
+	return &Witness[S]{
 		x:   x.Clone(),
 		rho: rho,
-		a:   a,
 		bx:  bx,
 	}, nil
 }
@@ -153,14 +146,14 @@ type Commitment[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algeb
 	s  *intcom.Commitment
 	t  *intcom.Commitment
 	d  *paillier.Ciphertext
-	yz *elgamal.Ciphertext[G, S]
+	yz *indcpacom.Commitment[*elgamal.Ciphertext[G, S]]
 }
 
 type commitmentDTO[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	S  *intcom.Commitment        `cbor:"s"`
-	T  *intcom.Commitment        `cbor:"t"`
-	D  *paillier.Ciphertext      `cbor:"d"`
-	YZ *elgamal.Ciphertext[G, S] `cbor:"yz"`
+	S  *intcom.Commitment                               `cbor:"s"`
+	T  *intcom.Commitment                               `cbor:"t"`
+	D  *paillier.Ciphertext                             `cbor:"d"`
+	YZ *indcpacom.Commitment[*elgamal.Ciphertext[G, S]] `cbor:"yz"`
 }
 
 // NewCommitment constructs an enc-elg commitment.
@@ -168,7 +161,7 @@ func NewCommitment[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S al
 	s *intcom.Commitment,
 	t *intcom.Commitment,
 	d *paillier.Ciphertext,
-	yz *elgamal.Ciphertext[G, S],
+	yz *indcpacom.Commitment[*elgamal.Ciphertext[G, S]],
 ) (*Commitment[G, B, S], error) {
 	if s == nil || t == nil || d == nil || yz == nil {
 		return nil, ErrInvalidArgument.WithMessage("commitment values must not be nil")
@@ -219,7 +212,7 @@ func (c *Commitment[G, B, S]) Bytes() []byte {
 	out = sliceutils.AppendLengthPrefixed(out, c.s.Value().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, c.t.Value().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, c.d.Bytes())
-	for _, component := range c.yz.Value().Components() {
+	for _, component := range c.yz.Value().Value().Components() {
 		out = sliceutils.AppendLengthPrefixed(out, component.Bytes())
 	}
 	return out
