@@ -3,10 +3,12 @@ package mina //nolint:testpackage // to test unexported identifiers
 import (
 	"bytes"
 	"io"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
@@ -50,6 +52,51 @@ func TestNewRandomisedVariant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.False(t, v.IsDeterministic())
+	})
+}
+
+func TestNewModernDeterministicVariant(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil private key", func(t *testing.T) {
+		t.Parallel()
+		v, err := NewModernDeterministicVariant(TestNet, nil)
+		require.Nil(t, v)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "nil")
+	})
+
+	t.Run("valid private key", func(t *testing.T) {
+		t.Parallel()
+		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
+		require.NoError(t, err)
+
+		v, err := NewModernDeterministicVariant(TestNet, privateKey)
+		require.NoError(t, err)
+		require.NotNil(t, v)
+		require.True(t, v.IsDeterministic())
+		require.Equal(t, signatureFlavorModern, v.flavor)
+	})
+}
+
+func TestNewModernRandomisedVariant(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
+		v, err := NewModernRandomisedVariant(TestNet, nil)
+		require.Nil(t, v)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "nil")
+	})
+
+	t.Run("valid prng", func(t *testing.T) {
+		t.Parallel()
+		v, err := NewModernRandomisedVariant(TestNet, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.NotNil(t, v)
+		require.False(t, v.IsDeterministic())
+		require.Equal(t, signatureFlavorModern, v.flavor)
 	})
 }
 
@@ -166,6 +213,38 @@ func TestBitsToBytes(t *testing.T) {
 		require.Len(t, result, 2)
 		require.Equal(t, byte(0xFF), result[0])
 		require.Equal(t, byte(0x00), result[1])
+	})
+}
+
+func TestPackToFieldsModern(t *testing.T) {
+	t.Parallel()
+
+	t.Run("packs bits in o1js order", func(t *testing.T) {
+		t.Parallel()
+		input := new(ROInput).Init()
+		// The bit sequence 101 represents the packed field value 5
+		input.AddBits(true, false, true)
+
+		packed, err := packToFieldsModern(input)
+		require.NoError(t, err)
+		require.Len(t, packed, 1)
+		require.Equal(t, "5", new(big.Int).SetBytes(packed[0].Bytes()).String())
+	})
+
+	t.Run("does not split network tuple at chunk boundary", func(t *testing.T) {
+		t.Parallel()
+		input := new(ROInput).Init()
+		for range 254 {
+			input.AddBits(true)
+		}
+
+		// The complete 8-bit network ID must start a new packed field
+		packed, err := packToFieldsModern(input, packedInput{value: big.NewInt(0), bitLen: 8})
+		require.NoError(t, err)
+		require.Len(t, packed, 2)
+		expected := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 254), big.NewInt(1))
+		require.Equal(t, expected.String(), new(big.Int).SetBytes(packed[0].Bytes()).String())
+		require.True(t, packed[1].Equal(pasta.NewPallasBaseField().Zero()))
 	})
 }
 
