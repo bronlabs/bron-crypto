@@ -36,9 +36,10 @@ type (
 )
 
 var (
-	hashFunc = hashing.HashFuncTypeErase(poseidon.NewLegacy)
-	group    = pasta.NewPallasCurve()
-	sf       = pasta.NewPallasScalarField()
+	hashFunc       = hashing.HashFuncTypeErase(poseidon.NewLegacy)
+	modernHashFunc = hashing.HashFuncTypeErase(poseidon.NewKimchi)
+	group          = pasta.NewPallasCurve()
+	sf             = pasta.NewPallasScalarField()
 
 	// SignatureSize is the size of a serialised Mina signature (64 bytes).
 	SignatureSize = group.ElementSize() + sf.ElementSize()
@@ -94,6 +95,19 @@ func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 	}, nil
 }
 
+// NewModernScheme creates a Mina signature scheme with deterministic nonce derivation.
+// The scheme uses modern chunked input packing and Kimchi Poseidon parameters,
+// making its signatures compatible with o1js's modern sign and verify functions.
+func NewModernScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
+	vr, err := NewModernDeterministicVariant(nid, privateKey)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create modern variant")
+	}
+	return &Scheme{
+		vr: vr,
+	}, nil
+}
+
 // NewRandomisedScheme creates a Mina signature scheme with random nonce generation.
 // This is typically used for MPC/threshold signing where nonces are generated
 // collaboratively rather than deterministically.
@@ -101,6 +115,19 @@ func NewRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
 	vr, err := NewRandomisedVariant(nid, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create variant")
+	}
+	return &Scheme{
+		vr: vr,
+	}, nil
+}
+
+// NewModernRandomisedScheme creates a Mina signature scheme with random nonce generation.
+// The scheme uses modern chunked input packing and Kimchi Poseidon parameters
+// for compatibility with o1js's modern verification.
+func NewModernRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
+	vr, err := NewModernRandomisedVariant(nid, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create modern variant")
 	}
 	return &Scheme{
 		vr: vr,
