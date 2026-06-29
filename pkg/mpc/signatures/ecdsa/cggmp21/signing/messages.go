@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -19,11 +20,17 @@ import (
 type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ZeroR1 *hjky.Round1Broadcast[P, S] `cbor:"zeroR1"`
 
-	BigK *paillier.Ciphertext      `cbor:"bigK"`
-	BigG *paillier.Ciphertext      `cbor:"bigG"`
-	BigY *elgamal.PublicKey[P, S]  `cbor:"bigY"`
-	BigA *elgamal.Ciphertext[P, S] `cbor:"bigA"`
-	BigB *elgamal.Ciphertext[P, S] `cbor:"bigB"`
+	BigK *paillier.Ciphertext `cbor:"bigK"`
+	BigG *paillier.Ciphertext `cbor:"bigG"`
+	BigY *indcpacom.HomomorphicCommitmentKey[
+		*elgamal.PublicKey[P, S],
+		*elgamal.Plaintext[P, S],
+		*elgamal.Nonce[S],
+		*elgamal.Ciphertext[P, S],
+		S,
+	] `cbor:"bigY"`
+	BigA *indcpacom.Commitment[*elgamal.Ciphertext[P, S]] `cbor:"bigA"`
+	BigB *indcpacom.Commitment[*elgamal.Ciphertext[P, S]] `cbor:"bigB"`
 }
 
 // Validate checks a round 1 broadcast against the sender's public parameters.
@@ -48,7 +55,7 @@ func (r1b *Round1Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], senderID 
 	if err := validatePaillierCiphertext(senderPaillierPublicKey, r1b.BigG, "BigG"); err != nil {
 		return err
 	}
-	if err := validateElGamalPublicKey(r1b.BigY, "BigY"); err != nil {
+	if err := validateElGamalCommitmentKey(r1b.BigY, "BigY"); err != nil {
 		return err
 	}
 	if err := validateElGamalCiphertext(r1b.BigY, r1b.BigA, "BigA"); err != nil {
@@ -245,10 +252,10 @@ func (a *RedAlertBroadcast[P, B, S]) Validate(p *RedAlertParticipant[P, B, S], s
 }
 
 func validatePaillierCiphertext(publicKey *paillier.PublicKey, ciphertext *paillier.Ciphertext, name string) error {
-	if publicKey == nil || publicKey.Group() == nil {
+	if publicKey == nil {
 		return cggmp21.ErrNil.WithMessage("Paillier public key for %s", name)
 	}
-	if ciphertext == nil || ciphertext.Value() == nil {
+	if ciphertext == nil {
 		return cggmp21.ErrNil.WithMessage("%s", name)
 	}
 	if !publicKey.CiphertextGroup().Contains(ciphertext.Value()) {
@@ -257,31 +264,49 @@ func validatePaillierCiphertext(publicKey *paillier.PublicKey, ciphertext *paill
 	return nil
 }
 
-func validateElGamalPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](publicKey *elgamal.PublicKey[P, S], name string) error {
-	if publicKey == nil || utils.IsNil(publicKey.Value()) {
+func validateElGamalCommitmentKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
+	commitmentKey *indcpacom.HomomorphicCommitmentKey[
+		*elgamal.PublicKey[P, S],
+		*elgamal.Plaintext[P, S],
+		*elgamal.Nonce[S],
+		*elgamal.Ciphertext[P, S],
+		S,
+	],
+	name string,
+) error {
+	if commitmentKey == nil {
 		return cggmp21.ErrNil.WithMessage("%s", name)
 	}
-	return validatePoint(publicKey.Value(), name, false)
+	value := commitmentKey.EncryptionKey().Value()
+	if value.IsZero() || !value.IsTorsionFree() {
+		return cggmp21.ErrValidationFailed.WithMessage("invalid %s", name)
+	}
+	return nil
 }
 
 func validateElGamalCiphertext[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
-	publicKey *elgamal.PublicKey[P, S],
-	ciphertext *elgamal.Ciphertext[P, S],
+	commitmentKey *indcpacom.HomomorphicCommitmentKey[
+		*elgamal.PublicKey[P, S],
+		*elgamal.Plaintext[P, S],
+		*elgamal.Nonce[S],
+		*elgamal.Ciphertext[P, S],
+		S,
+	],
+	commitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 	name string,
 ) error {
-	if publicKey == nil || utils.IsNil(publicKey.Value()) {
-		return cggmp21.ErrNil.WithMessage("ElGamal public key for %s", name)
+	if commitmentKey == nil {
+		return cggmp21.ErrNil.WithMessage("ElGamal commitment key for %s", name)
 	}
-	if ciphertext == nil || ciphertext.Value() == nil {
+	if commitment == nil {
 		return cggmp21.ErrNil.WithMessage("%s", name)
 	}
+	publicKey := commitmentKey.EncryptionKey()
+	ciphertext := commitment.Value()
 	if !publicKey.CiphertextGroup().Contains(ciphertext.Value()) {
 		return cggmp21.ErrValidationFailed.WithMessage("%s is not in the expected ElGamal ciphertext group", name)
 	}
 	for _, component := range ciphertext.Value().Components() {
-		if utils.IsNil(component) {
-			return cggmp21.ErrNil.WithMessage("%s component", name)
-		}
 		if !component.IsTorsionFree() {
 			return cggmp21.ErrValidationFailed.WithMessage("%s component is not torsion free", name)
 		}

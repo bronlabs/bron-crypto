@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
@@ -52,11 +53,11 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	bigKJ             map[sharing.ID]*paillier.Ciphertext
 	gamma             S
 	nu                *paillier.Nonce
-	bigYJ             map[sharing.ID]*elgamal.PublicKey[P, S]
-	a                 *elgamal.Nonce[S]
-	b                 *elgamal.Nonce[S]
-	bigAJ             map[sharing.ID]*elgamal.Ciphertext[P, S]
-	bigBJ             map[sharing.ID]*elgamal.Ciphertext[P, S]
+	bigYJ             map[sharing.ID]*indcpacom.HomomorphicCommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S], S]
+	a                 *indcpacom.Witness[*elgamal.Nonce[S]]
+	b                 *indcpacom.Witness[*elgamal.Nonce[S]]
+	bigAJ             map[sharing.ID]*indcpacom.Commitment[*elgamal.Ciphertext[P, S]]
+	bigBJ             map[sharing.ID]*indcpacom.Commitment[*elgamal.Ciphertext[P, S]]
 	betaJ             map[sharing.ID]*num.Int
 	betaHatJ          map[sharing.ID]*num.Int
 	rJ                map[sharing.ID]*paillier.Nonce

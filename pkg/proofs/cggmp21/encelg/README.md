@@ -2,7 +2,7 @@
 
 This package implements the sigma protocol Pi enc-elg from Appendix A.2, Figure 24 of CGGMP21.
 
-The statement is `(G, g, N0, C, A, (B, X))`. The witness is `(x, rho, a, b)` such that:
+The protocol is parameterised by an ElGamal commitment key `A`. The statement is `(G, g, N0, C, (B, X))`. The witness is `(x, rho, b)` such that:
 
 $$
 x \in \pm 2^\ell,\quad C = (1+N_0)^x\rho^{N_0} \bmod N_0^2,
@@ -11,7 +11,7 @@ $$
 and
 
 $$
-A = g^a,\quad (B, X) = (g^b, A^b g^x).
+(B, X) = (g^b, A^b g^x).
 $$
 
 The implementation exposes `ell` as `l` and the statistical slack as `epsilon`.
@@ -77,12 +77,13 @@ $$
 
 ## Implementation Notes
 
-- `Statement` stores `N0`, `C`, `A` as an ElGamal public key, and `(B, X)` as an ElGamal ciphertext named `bx`.
-- `Witness` stores `x` as `*num.Int`, `rho` as a Paillier nonce, `a` as an ElGamal secret key, and the `(B, X)` nonce as `bx`.
-- `Commitment` stores `(Z, Y)` as an ElGamal ciphertext named `yz` under `A`.
+- `Protocol` stores `A` as an `indcpacom.HomomorphicCommitmentKey` backed by the ElGamal encryption key.
+- `Statement` stores `N0`, `C`, and `(B, X)` as an `indcpacom.Commitment` named `bx`.
+- `Witness` stores `x` as `*num.Int`, `rho` as a Paillier nonce, and the `(B, X)` opening nonce as an `indcpacom.Witness` named `bx`.
+- `Commitment` stores `(Z, Y)` as an `indcpacom.Commitment` named `yz` under `A`.
 - The challenge is interpreted as a signed integer from exactly `base.ComputationalSecurityBytesCeil` bytes. This intentionally fixes the Fiat-Shamir challenge domain to 128 bits rather than the paper's curve-order-sized challenge.
 - Signed integer samples use byte-aligned two's-complement sampling over exactly the requested byte length.
-- `ValidateStatement` checks that the witness opens `C`, `A`, and the ElGamal ciphertext `(B, X)`, and that `x` satisfies the configured narrow range.
+- `ValidateStatement` checks that the witness opens `C` and the ElGamal commitment `(B, X)`, and that `x` satisfies the configured narrow range.
 - Statement validation checks that the Paillier modulus can encode the widened `z1` range `l + epsilon` in its symmetric plaintext interval.
 
 ## Reference

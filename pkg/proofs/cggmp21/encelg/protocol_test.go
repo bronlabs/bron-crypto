@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -58,7 +59,7 @@ func TestProtocolHappyPathAndSimulator(t *testing.T) {
 func sampleProtocolStatementAndWitness(
 	t *testing.T,
 	prng io.Reader,
-) (*encelg.Protocol[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *encelg.Statement[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *encelg.Witness[*k256.Point, *k256.Scalar]) {
+) (*encelg.Protocol[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *encelg.Statement[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *encelg.Witness[*k256.Scalar]) {
 	t.Helper()
 
 	ringPedersenKey, err := intcom.SampleCommitmentKey(testKeyBits, prng)
@@ -68,7 +69,13 @@ func sampleProtocolStatementAndWitness(
 	n0 := secretKey.Public()
 
 	curve := k256.NewCurve()
-	protocol, err := encelg.NewProtocol(ringPedersenKey, testL, testEpsilon, curve, prng)
+	aSecretKey, err := elgamal.SampleSecretKey[*k256.Point, *k256.Scalar](curve, prng)
+	require.NoError(t, err)
+	aPublicKey := aSecretKey.Public()
+	elgamalCommitmentKey, err := indcpacom.NewHomomorphicCommitmentKey(aPublicKey)
+	require.NoError(t, err)
+
+	protocol, err := encelg.NewProtocol(ringPedersenKey, elgamalCommitmentKey, testL, testEpsilon, prng)
 	require.NoError(t, err)
 
 	xInt := num.Z().FromInt64(42)
@@ -77,14 +84,15 @@ func sampleProtocolStatementAndWitness(
 	bxScalar, err := curve.ScalarField().Random(prng)
 	require.NoError(t, err)
 
-	aSecretKey, err := elgamal.SampleSecretKey[*k256.Point, *k256.Scalar](curve, prng)
-	require.NoError(t, err)
-	aPublicKey := aSecretKey.Public()
 	bxNonce, err := elgamal.NewNonce[*k256.Scalar](bxScalar)
+	require.NoError(t, err)
+	bxWitness, err := indcpacom.NewWitness(bxNonce)
 	require.NoError(t, err)
 	bxPlaintext, err := elgamal.NewPlaintext[*k256.Point, *k256.Scalar](curve.ScalarBaseMul(xScalar))
 	require.NoError(t, err)
-	bxCiphertext, err := aPublicKey.EncryptWithNonce(bxPlaintext, bxNonce)
+	bxMessage, err := indcpacom.NewMessage(bxPlaintext)
+	require.NoError(t, err)
+	bxCommitment, err := elgamalCommitmentKey.CommitWithWitness(bxMessage, bxWitness)
 	require.NoError(t, err)
 
 	xPlaintext, err := paillier.NewPlaintextSymmetric(xInt, n0.PlaintextGroup().Modulus())
@@ -94,9 +102,9 @@ func sampleProtocolStatementAndWitness(
 	c, err := n0.EncryptWithNonce(xPlaintext, rho)
 	require.NoError(t, err)
 
-	statement, err := encelg.NewStatement(n0, c, aPublicKey, bxCiphertext)
+	statement, err := encelg.NewStatement(n0, c, bxCommitment)
 	require.NoError(t, err)
-	witness, err := encelg.NewWitness(xInt, rho, aSecretKey, bxNonce)
+	witness, err := encelg.NewWitness[*k256.Scalar](xInt, rho, bxWitness)
 	require.NoError(t, err)
 	return protocol, statement, witness
 }

@@ -11,34 +11,47 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
 // Protocol implements the CGGMP21 range proof with ElGamal commitment from Figure 24.
-type Protocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	name            sigma.Name
-	ringPedersenKey *intcom.CommitmentKey
-	l               int
-	epsilon         int
-	curve           ecdsa.Curve[G, B, S]
-	prng            io.Reader
+type Protocol[
+	G curves.Point[G, B, S],
+	B algebra.PrimeFieldElement[B],
+	S algebra.PrimeFieldElement[S],
+] struct {
+	name                 sigma.Name
+	ringPedersenKey      *intcom.CommitmentKey
+	elgamalCommitmentKey *indcpacom.HomomorphicCommitmentKey[*elgamal.PublicKey[G, S], *elgamal.Plaintext[G, S], *elgamal.Nonce[S], *elgamal.Ciphertext[G, S], S]
+	l                    int
+	epsilon              int
+	scalarField          algebra.PrimeField[S]
+	prng                 io.Reader
 }
 
 // NewProtocol constructs the CGGMP21 Figure 24 range proof with ElGamal commitment.
-func NewProtocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ringPedersenKey *intcom.CommitmentKey, l, epsilon int, curve ecdsa.Curve[G, B, S], prng io.Reader) (*Protocol[G, B, S], error) {
+func NewProtocol[
+	G curves.Point[G, B, S],
+	B algebra.PrimeFieldElement[B],
+	S algebra.PrimeFieldElement[S],
+](
+	ringPedersenKey *intcom.CommitmentKey,
+	elgamalCommitmentKey *indcpacom.HomomorphicCommitmentKey[*elgamal.PublicKey[G, S], *elgamal.Plaintext[G, S], *elgamal.Nonce[S], *elgamal.Ciphertext[G, S], S],
+	l, epsilon int,
+	prng io.Reader,
+) (*Protocol[G, B, S], error) {
 	if ringPedersenKey == nil || ringPedersenKey.Group().Modulus().TrueLen()%8 != 0 {
 		return nil, ErrInvalidArgument.WithMessage("ringPedersenKey is required")
 	}
+	if elgamalCommitmentKey == nil {
+		return nil, ErrInvalidArgument.WithMessage("elgamalCommitmentKey is required")
+	}
 	if prng == nil {
 		return nil, ErrInvalidArgument.WithMessage("prng is required")
-	}
-	if utils.IsNil(curve) {
-		return nil, ErrInvalidArgument.WithMessage("curve is required")
 	}
 	if (l <= 0) || (l%8 != 0) {
 		return nil, ErrInvalidArgument.WithMessage("l must be a multiple of 8")
@@ -47,7 +60,11 @@ func NewProtocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, ErrInvalidArgument.WithMessage("epsilon must be a multiple of 8")
 	}
 
-	k := curve.ScalarField().BitLen()
+	scalarField, err := algebra.StructureAs[algebra.PrimeField[S]](elgamalCommitmentKey.EncryptionKey().NonceGroup())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("invalid ElGamal scalar field")
+	}
+	k := scalarField.BitLen()
 	if k < base.ComputationalSecurityBits {
 		return nil, ErrInvalidArgument.WithMessage("invalid curve")
 	}
@@ -64,24 +81,30 @@ func NewProtocol[G curves.Point[G, B, S], B algebra.PrimeFieldElement[B], S alge
 	if !testing.Testing() && logN < base.IFCKeyLength {
 		return nil, ErrInvalidArgument.WithMessage("invalid ring pedersen key len")
 	}
+	elgamalCommitmentKeyBytes, err := elgamalCommitmentKey.MarshalCBOR()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not marshal ElGamal commitment key")
+	}
 
 	name := sigma.Name(fmt.Sprintf(
-		"%s_L=%d_EPS=%d_CURVE=%s_NHAT=%s_S=%x_T=%x",
+		"%s_L=%d_EPS=%d_GROUP=%s_NHAT=%s_S=%x_T=%x_ELGAMAL=%x",
 		Name,
 		l,
 		epsilon,
-		curve.Name(),
+		elgamalCommitmentKey.EncryptionKey().PlaintextGroup().Name(),
 		ringPedersenKey.Group().Modulus().String(),
 		ringPedersenKey.S().Bytes(),
 		ringPedersenKey.T().Bytes(),
+		elgamalCommitmentKeyBytes,
 	))
 	p := &Protocol[G, B, S]{
-		name:            name,
-		ringPedersenKey: ringPedersenKey,
-		l:               l,
-		epsilon:         epsilon,
-		curve:           curve,
-		prng:            prng,
+		name:                 name,
+		ringPedersenKey:      ringPedersenKey,
+		elgamalCommitmentKey: elgamalCommitmentKey,
+		l:                    l,
+		epsilon:              epsilon,
+		scalarField:          scalarField,
+		prng:                 prng,
 	}
 	return p, nil
 }
@@ -92,7 +115,7 @@ func (p *Protocol[G, B, S]) Name() sigma.Name {
 }
 
 // ComputeProverCommitment generates the prover's first message.
-func (p *Protocol[G, B, S]) ComputeProverCommitment(statement *Statement[G, B, S], witness *Witness[G, S]) (*Commitment[G, B, S], *State[S], error) {
+func (p *Protocol[G, B, S]) ComputeProverCommitment(statement *Statement[G, B, S], witness *Witness[S]) (*Commitment[G, B, S], *State[S], error) {
 	if statement == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("statement must not be nil")
 	}
@@ -115,7 +138,7 @@ func (p *Protocol[G, B, S]) ComputeProverCommitment(statement *Statement[G, B, S
 }
 
 // ComputeProverResponse generates the prover response for a fixed challenge.
-func (p *Protocol[G, B, S]) ComputeProverResponse(statement *Statement[G, B, S], witness *Witness[G, S], commitment *Commitment[G, B, S], state *State[S], challenge sigma.ChallengeBytes) (*Response[S], error) {
+func (p *Protocol[G, B, S]) ComputeProverResponse(statement *Statement[G, B, S], witness *Witness[S], commitment *Commitment[G, B, S], state *State[S], challenge sigma.ChallengeBytes) (*Response[S], error) {
 	if statement == nil {
 		return nil, ErrInvalidArgument.WithMessage("statement must not be nil")
 	}
@@ -146,7 +169,7 @@ func (p *Protocol[G, B, S]) ComputeProverResponse(statement *Statement[G, B, S],
 		return nil, errs.Wrap(err).WithMessage("could not compute z2")
 	}
 	z3 := state.gamma.Add(e.Mul(state.mu))
-	w := state.beta.Add(eScalar.Mul(witness.bx.Value()))
+	w := state.beta.Add(eScalar.Mul(witness.bx.Value().Value()))
 
 	response, err := NewResponse(z1, z2, z3, w)
 	if err != nil {
@@ -220,7 +243,7 @@ func (p *Protocol[G, B, S]) RunSimulator(statement *Statement[G, B, S], challeng
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not sample z3")
 	}
-	w, err := p.curve.ScalarField().Random(p.prng)
+	w, err := p.scalarField.Random(p.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not sample w")
 	}
@@ -273,7 +296,7 @@ func (*Protocol[G, B, S]) GetChallengeBytesLength() int {
 }
 
 // ValidateStatement checks that the witness opens the public statement and lies in the configured range.
-func (p *Protocol[G, B, S]) ValidateStatement(statement *Statement[G, B, S], witness *Witness[G, S]) error {
+func (p *Protocol[G, B, S]) ValidateStatement(statement *Statement[G, B, S], witness *Witness[S]) error {
 	if statement == nil {
 		return ErrInvalidArgument.WithMessage("statement must not be nil")
 	}
@@ -296,7 +319,7 @@ func (p *Protocol[G, B, S]) sampleState(statement *Statement[G, B, S]) (*State[S
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample alpha")
 	}
-	beta, err := p.curve.ScalarField().Random(p.prng)
+	beta, err := p.scalarField.Random(p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample beta")
 	}
@@ -320,7 +343,7 @@ func (p *Protocol[G, B, S]) sampleState(statement *Statement[G, B, S]) (*State[S
 	return state, nil
 }
 
-func (p *Protocol[G, B, S]) computeCommitment(statement *Statement[G, B, S], witness *Witness[G, S], state *State[S]) (*Commitment[G, B, S], error) {
+func (p *Protocol[G, B, S]) computeCommitment(statement *Statement[G, B, S], witness *Witness[S], state *State[S]) (*Commitment[G, B, S], error) {
 	sCommitment, err := p.commit(witness.x, state.mu)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute S")
@@ -333,7 +356,7 @@ func (p *Protocol[G, B, S]) computeCommitment(statement *Statement[G, B, S], wit
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute D")
 	}
-	yz, err := p.encryptElGamal(statement, state.alpha, state.beta)
+	yz, err := p.commitElGamal(state.alpha, state.beta)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute YZ")
 	}
@@ -372,36 +395,44 @@ func (*Protocol[G, B, S]) verifyPaillier(statement *Statement[G, B, S], commitme
 	return nil
 }
 
-func (p *Protocol[G, B, S]) encryptElGamal(statement *Statement[G, B, S], message *num.Int, nonceValue S) (*elgamal.Ciphertext[G, S], error) {
-	messageScalar, err := intToScalar(message, p.curve.ScalarField())
+func (p *Protocol[G, B, S]) commitElGamal(message *num.Int, nonceValue S) (*indcpacom.Commitment[*elgamal.Ciphertext[G, S]], error) {
+	messageScalar, err := intToScalar(message, p.scalarField)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not convert message to scalar")
 	}
-	plaintext, err := elgamal.NewPlaintext[G, S](p.curve.ScalarBaseMul(messageScalar))
+	plaintext, err := elgamal.NewPlaintext[G, S](p.elgamalCommitmentKey.EncryptionKey().PlaintextGroup().Generator().ScalarOp(messageScalar))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create ElGamal plaintext")
+	}
+	commitmentMessage, err := indcpacom.NewMessage(plaintext)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not create ElGamal commitment message")
 	}
 	nonce, err := elgamal.NewNonce[S](nonceValue)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create ElGamal nonce")
 	}
-	out, err := statement.a.EncryptWithNonce(plaintext, nonce)
+	witness, err := indcpacom.NewWitness(nonce)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not encrypt ElGamal plaintext")
+		return nil, errs.Wrap(err).WithMessage("could not create ElGamal commitment witness")
+	}
+	out, err := p.elgamalCommitmentKey.CommitWithWitness(commitmentMessage, witness)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("could not compute ElGamal commitment")
 	}
 	return out, nil
 }
 
 func (p *Protocol[G, B, S]) verifyElGamal(statement *Statement[G, B, S], commitment *Commitment[G, B, S], response *Response[S], e S) error {
-	left, err := p.encryptElGamal(statement, response.z1, response.w)
+	left, err := p.commitElGamal(response.z1, response.w)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute ElGamal left side")
 	}
-	bxE, err := statement.a.CiphertextScalarOp(statement.bx, e)
+	bxE, err := p.elgamalCommitmentKey.CommitmentScalarOp(statement.bx, e)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute BX^e")
 	}
-	right, err := statement.a.CiphertextOp(commitment.yz, bxE)
+	right, err := p.elgamalCommitmentKey.CommitmentOp(commitment.yz, bxE)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not compute ElGamal right side")
 	}
@@ -450,20 +481,20 @@ func (*Protocol[G, B, S]) simulateD(statement *Statement[G, B, S], response *Res
 	return out, nil
 }
 
-func (p *Protocol[G, B, S]) simulateElGamal(statement *Statement[G, B, S], response *Response[S], e S) (*elgamal.Ciphertext[G, S], error) {
-	left, err := p.encryptElGamal(statement, response.z1, response.w)
+func (p *Protocol[G, B, S]) simulateElGamal(statement *Statement[G, B, S], response *Response[S], e S) (*indcpacom.Commitment[*elgamal.Ciphertext[G, S]], error) {
+	left, err := p.commitElGamal(response.z1, response.w)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute ElGamal left side")
 	}
-	bxE, err := statement.a.CiphertextScalarOp(statement.bx, e)
+	bxE, err := p.elgamalCommitmentKey.CommitmentScalarOp(statement.bx, e)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute BX^e")
 	}
-	bxNegE, err := statement.a.CiphertextOpInv(bxE)
+	bxNegE, err := p.elgamalCommitmentKey.CommitmentOpInv(bxE)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute BX^-e")
 	}
-	out, err := statement.a.CiphertextOp(left, bxNegE)
+	out, err := p.elgamalCommitmentKey.CommitmentOp(left, bxNegE)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute simulated ElGamal commitment")
 	}
@@ -511,7 +542,7 @@ func (p *Protocol[G, B, S]) mapChallenge(challenge sigma.ChallengeBytes) (*num.I
 	if err != nil {
 		return nil, nilS, errs.Wrap(err).WithMessage("could not parse challenge")
 	}
-	eScalar, err := intToScalar(e, p.curve.ScalarField())
+	eScalar, err := intToScalar(e, p.scalarField)
 	if err != nil {
 		return nil, nilS, errs.Wrap(err).WithMessage("could not convert challenge to scalar")
 	}
@@ -528,16 +559,13 @@ func (p *Protocol[G, B, S]) validateStatement(statement *Statement[G, B, S]) err
 	if !statement.n0.CiphertextGroup().Contains(statement.c.Value()) {
 		return ErrValidationFailed.WithMessage("C must be in the N0 ciphertext group")
 	}
-	if !p.curve.Contains(statement.a.Value()) {
-		return ErrValidationFailed.WithMessage("A must be in the curve group")
-	}
-	if !statement.a.CiphertextGroup().Contains(statement.bx.Value()) {
+	if !p.elgamalCommitmentKey.EncryptionKey().CiphertextGroup().Contains(statement.bx.Value().Value()) {
 		return ErrValidationFailed.WithMessage("BX must be in the ElGamal ciphertext group")
 	}
 	return nil
 }
 
-func (p *Protocol[G, B, S]) validateWitness(statement *Statement[G, B, S], witness *Witness[G, S]) error {
+func (p *Protocol[G, B, S]) validateWitness(statement *Statement[G, B, S], witness *Witness[S]) error {
 	if !intInSignedBitRange(witness.x, p.l) {
 		return ErrValidationFailed.WithMessage("x is out of range")
 	}
@@ -556,23 +584,20 @@ func (p *Protocol[G, B, S]) validateWitness(statement *Statement[G, B, S], witne
 	if !statement.c.Equal(cCheck) {
 		return ErrValidationFailed.WithMessage("witness does not open C")
 	}
-	if !witness.a.Public().Equal(statement.a) {
-		return ErrValidationFailed.WithMessage("a does not open A")
-	}
-	xScalar, err := intToScalar(witness.x, p.curve.ScalarField())
+	xScalar, err := intToScalar(witness.x, p.scalarField)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not convert x to scalar")
 	}
-	elgamalPlaintext, err := elgamal.NewPlaintext[G, S](p.curve.ScalarBaseMul(xScalar))
+	elgamalPlaintext, err := elgamal.NewPlaintext[G, S](p.elgamalCommitmentKey.EncryptionKey().PlaintextGroup().Generator().ScalarOp(xScalar))
 	if err != nil {
 		return errs.Wrap(err).WithMessage("could not create ElGamal plaintext")
 	}
-	bxCheck, err := statement.a.EncryptWithNonce(elgamalPlaintext, witness.bx)
+	elgamalMessage, err := indcpacom.NewMessage(elgamalPlaintext)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("could not recompute BX")
+		return errs.Wrap(err).WithMessage("could not create ElGamal commitment message")
 	}
-	if !statement.bx.Equal(bxCheck) {
-		return ErrValidationFailed.WithMessage("witness does not open BX")
+	if err := p.elgamalCommitmentKey.Open(statement.bx, elgamalMessage, witness.bx); err != nil {
+		return errs.Wrap(err).WithMessage("witness does not open BX")
 	}
 	return nil
 }
@@ -585,7 +610,7 @@ func (p *Protocol[G, B, S]) validateCommitment(statement *Statement[G, B, S], co
 	if !statement.n0.CiphertextGroup().Contains(commitment.d.Value()) {
 		return ErrValidationFailed.WithMessage("D must be in the N0 ciphertext group")
 	}
-	if !statement.a.CiphertextGroup().Contains(commitment.yz.Value()) {
+	if !p.elgamalCommitmentKey.EncryptionKey().CiphertextGroup().Contains(commitment.yz.Value().Value()) {
 		return ErrValidationFailed.WithMessage("YZ must be in the ElGamal ciphertext group")
 	}
 	return nil
