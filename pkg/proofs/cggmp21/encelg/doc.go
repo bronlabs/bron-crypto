@@ -1,5 +1,5 @@
 // Package encelg implements CGGMP21 Figure 24, the Paillier range proof with
-// ElGamal-style group commitment.
+// an ElGamal encryption-backed commitment.
 //
 // CBOR unmarshalling validates local structure and nested type constructors.
 // Contextual checks that depend on protocol parameters or statement/witness

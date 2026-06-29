@@ -9,7 +9,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
-	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -62,32 +61,51 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample ElGamal secret key")
 	}
-	bigY := elgamalSecretKey.Public()
+	bigY, err := indcpacom.NewHomomorphicCommitmentKey(elgamalSecretKey.Public())
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create ElGamal commitment key")
+	}
 	kElgamalPlaintext, err := elgamal.NewPlaintext(s.params.CurveGroup().ScalarBaseMul(k))
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create ElGamal plaintext for k")
 	}
-	bigA, a, err := encryption.Encrypt(kElgamalPlaintext, bigY, s.prng)
+	kElgamalMessage, err := indcpacom.NewMessage(kElgamalPlaintext)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt ElGamal plaintext for k")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create ElGamal commitment message for k")
+	}
+	a, err := bigY.SampleWitness(s.prng)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample ElGamal commitment witness for k")
+	}
+	bigA, err := bigY.CommitWithWitness(kElgamalMessage, a)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot commit ElGamal plaintext for k")
 	}
 	gammaElgamalPlaintext, err := elgamal.NewPlaintext(s.params.CurveGroup().ScalarBaseMul(gamma))
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot create ElGamal plaintext for gamma")
 	}
-	bigB, b, err := encryption.Encrypt(gammaElgamalPlaintext, bigY, s.prng)
+	gammaElgamalMessage, err := indcpacom.NewMessage(gammaElgamalPlaintext)
 	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt ElGamal plaintext for gamma")
+		return nil, nil, errs.Wrap(err).WithMessage("cannot create ElGamal commitment message for gamma")
+	}
+	b, err := bigY.SampleWitness(s.prng)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot sample ElGamal commitment witness for gamma")
+	}
+	bigB, err := bigY.CommitWithWitness(gammaElgamalMessage, b)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot commit ElGamal plaintext for gamma")
 	}
 
 	psi0 := make(map[sharing.ID]compiler.NIZKPoKProof)
 	psi1 := make(map[sharing.ID]compiler.NIZKPoKProof)
 	for j := range s.ctx.OtherPartiesOrdered() {
-		proof0, err := s.proveEncElg(j, k, bigK, rho, elgamalSecretKey, a, bigY, bigA)
+		proof0, err := s.proveEncElg(j, k, bigK, rho, a, bigY, bigA)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove enc-elg for k to %d", j)
 		}
-		proof1, err := s.proveEncElg(j, gamma, bigG, nu, elgamalSecretKey, b, bigY, bigB)
+		proof1, err := s.proveEncElg(j, gamma, bigG, nu, b, bigY, bigB)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove enc-elg for gamma to %d", j)
 		}
@@ -103,15 +121,15 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 	s.state.gamma = gamma
 	s.state.rho = rho
 	s.state.nu = nu
-	s.state.bigYJ = map[sharing.ID]*elgamal.PublicKey[P, S]{
+	s.state.bigYJ = map[sharing.ID]*indcpacom.HomomorphicCommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S], S]{
 		s.ctx.HolderID(): bigY,
 	}
 	s.state.a = a
 	s.state.b = b
-	s.state.bigAJ = map[sharing.ID]*elgamal.Ciphertext[P, S]{
+	s.state.bigAJ = map[sharing.ID]*indcpacom.Commitment[*elgamal.Ciphertext[P, S]]{
 		s.ctx.HolderID(): bigA,
 	}
-	s.state.bigBJ = map[sharing.ID]*elgamal.Ciphertext[P, S]{
+	s.state.bigBJ = map[sharing.ID]*indcpacom.Commitment[*elgamal.Ciphertext[P, S]]{
 		s.ctx.HolderID(): bigB,
 	}
 	r1b := &Round1Broadcast[P, B, S]{
@@ -208,7 +226,7 @@ func (s *Signer[P, B, S]) Round2(
 		Psi:      psi,
 	}
 
-	bigYJ := make(map[sharing.ID]*elgamal.PublicKey[P, S])
+	bigYJ := make(map[sharing.ID]*indcpacom.HomomorphicCommitmentKey[*elgamal.PublicKey[P, S], *elgamal.Plaintext[P, S], *elgamal.Nonce[S], *elgamal.Ciphertext[P, S], S])
 	for id, bigY := range s.state.bigYJ {
 		bigYJ[id] = bigY
 	}
@@ -543,12 +561,17 @@ func (s *Signer[P, B, S]) proveEncElg(
 	value S,
 	paillierCiphertext *paillier.Ciphertext,
 	paillierNonce *paillier.Nonce,
-	elgamalSecretKey *elgamal.SecretKey[P, S],
-	elgamalNonce *elgamal.Nonce[S],
-	elgamalPublicKey *elgamal.PublicKey[P, S],
-	elgamalCiphertext *elgamal.Ciphertext[P, S],
+	elgamalWitness *indcpacom.Witness[*elgamal.Nonce[S]],
+	elgamalCommitmentKey *indcpacom.HomomorphicCommitmentKey[
+		*elgamal.PublicKey[P, S],
+		*elgamal.Plaintext[P, S],
+		*elgamal.Nonce[S],
+		*elgamal.Ciphertext[P, S],
+		S,
+	],
+	elgamalCommitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 ) (compiler.NIZKPoKProof, error) {
-	encElgSigma, err := encelg.NewProtocol(s.shard.AuxInfo().RingPedersenPublicKeys()[recipient], s.params.L(), s.params.Epsilon(), s.params.CurveGroup(), s.prng)
+	encElgSigma, err := encelg.NewProtocol(s.shard.AuxInfo().RingPedersenPublicKeys()[recipient], elgamalCommitmentKey, s.params.L(), s.params.Epsilon(), s.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create enc-elg protocol")
 	}
@@ -570,11 +593,11 @@ func (s *Signer[P, B, S]) proveEncElg(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert scalar to integer")
 	}
-	witness, err := encelg.NewWitness(valueInt, paillierNonce, elgamalSecretKey, elgamalNonce)
+	witness, err := encelg.NewWitness[S](valueInt, paillierNonce, elgamalWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create enc-elg witness")
 	}
-	statement, err := encelg.NewStatement(s.shard.AuxInfo().PaillierSecretKey().Public(), paillierCiphertext, elgamalPublicKey, elgamalCiphertext)
+	statement, err := encelg.NewStatement(s.shard.AuxInfo().PaillierSecretKey().Public(), paillierCiphertext, elgamalCommitment)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create enc-elg statement")
 	}
@@ -588,11 +611,17 @@ func (s *Signer[P, B, S]) proveEncElg(
 func (s *Signer[P, B, S]) verifyEncElg(
 	sender sharing.ID,
 	paillierCiphertext *paillier.Ciphertext,
-	elgamalPublicKey *elgamal.PublicKey[P, S],
-	elgamalCiphertext *elgamal.Ciphertext[P, S],
+	elgamalCommitmentKey *indcpacom.HomomorphicCommitmentKey[
+		*elgamal.PublicKey[P, S],
+		*elgamal.Plaintext[P, S],
+		*elgamal.Nonce[S],
+		*elgamal.Ciphertext[P, S],
+		S,
+	],
+	elgamalCommitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 	proof compiler.NIZKPoKProof,
 ) error {
-	encElgSigma, err := encelg.NewProtocol(s.shard.AuxInfo().RingPedersenSecretKey().Export(), s.params.L(), s.params.Epsilon(), s.params.CurveGroup(), s.prng)
+	encElgSigma, err := encelg.NewProtocol(s.shard.AuxInfo().RingPedersenSecretKey().Export(), elgamalCommitmentKey, s.params.L(), s.params.Epsilon(), s.prng)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create enc-elg protocol")
 	}
@@ -613,7 +642,7 @@ func (s *Signer[P, B, S]) verifyEncElg(
 	if err != nil {
 		return err
 	}
-	statement, err := encelg.NewStatement(paillierPublicKey, paillierCiphertext, elgamalPublicKey, elgamalCiphertext)
+	statement, err := encelg.NewStatement(paillierPublicKey, paillierCiphertext, elgamalCommitment)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create enc-elg statement")
 	}
@@ -627,14 +656,15 @@ func (s *Signer[P, B, S]) proveElog(
 	basePoint P,
 	witnessScalar S,
 	elgamalPlaintextPoint P,
-	elgamalNonce *elgamal.Nonce[S],
-	elgamalCiphertext *elgamal.Ciphertext[P, S],
+	elgamalWitness *indcpacom.Witness[*elgamal.Nonce[S]],
+	elgamalCommitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 	statementPoint P,
 ) (compiler.NIZKPoKProof, error) {
-	elogCk, err := indcpacom.NewCommitmentKey(s.state.bigYJ[s.ctx.HolderID()])
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create commitment key")
+	elgamalCommitmentKey := s.state.bigYJ[s.ctx.HolderID()]
+	if elgamalCommitmentKey == nil {
+		return nil, cggmp21.ErrNil.WithMessage("local ElGamal commitment key")
 	}
+	elogCk := &elgamalCommitmentKey.CommitmentKey
 	elogSigma, err := elog.NewProtocol(s.params.CurveGroup(), elogCk, basePoint, s.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create elog protocol")
@@ -651,10 +681,6 @@ func (s *Signer[P, B, S]) proveElog(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal message")
 	}
-	elgamalWitness, err := indcpacom.NewWitness(elgamalNonce)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal witness")
-	}
 	elcomopWitness, err := elcomop.NewWitness(elgamalMessage, elgamalWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create elcomop witness")
@@ -663,10 +689,6 @@ func (s *Signer[P, B, S]) proveElog(
 	elogWitness, err := elog.NewWitness(elcomopWitness, schWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create elog witness")
-	}
-	elgamalCommitment, err := indcpacom.NewCommitment(elgamalCiphertext)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal commitment")
 	}
 	elcomopStatement, err := elcomop.NewStatement(elgamalCommitment)
 	if err != nil {
@@ -693,14 +715,15 @@ func (s *Signer[P, B, S]) proveElog(
 func (s *Signer[P, B, S]) verifyElog(
 	sender sharing.ID,
 	basePoint P,
-	elgamalCiphertext *elgamal.Ciphertext[P, S],
+	elgamalCommitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 	statementPoint P,
 	proof compiler.NIZKPoKProof,
 ) error {
-	elogCk, err := indcpacom.NewCommitmentKey(s.state.bigYJ[sender])
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create commitment key")
+	elgamalCommitmentKey := s.state.bigYJ[sender]
+	if elgamalCommitmentKey == nil {
+		return cggmp21.ErrNil.WithMessage("ElGamal commitment key for %d", sender)
 	}
+	elogCk := &elgamalCommitmentKey.CommitmentKey
 	elogSigma, err := elog.NewProtocol(s.params.CurveGroup(), elogCk, basePoint, s.prng)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create elog protocol")
@@ -708,10 +731,6 @@ func (s *Signer[P, B, S]) verifyElog(
 	elogNI, err := fiatshamir.NewCompiler(elogSigma)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create NI elog protocol")
-	}
-	elgamalCommitment, err := indcpacom.NewCommitment(elgamalCiphertext)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create ElGamal commitment")
 	}
 	elcomopStatement, err := elcomop.NewStatement(elgamalCommitment)
 	if err != nil {
