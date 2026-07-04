@@ -142,8 +142,8 @@ func (info *AuxInfo) Equal(other *AuxInfo) bool {
 }
 
 // RefreshID returns the refresh identifier bound into signing transcripts.
-func (sh *AuxInfo) RefreshID() []byte {
-	return sh.refreshID
+func (info *AuxInfo) RefreshID() []byte {
+	return info.refreshID
 }
 
 // Shard holds a CGGMP21 ECDSA key share and its auxiliary information.
