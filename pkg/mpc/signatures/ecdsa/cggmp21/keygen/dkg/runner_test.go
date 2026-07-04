@@ -60,20 +60,35 @@ func TestHappyPathRunner(t *testing.T) {
 
 	t.Run("aux info agrees across parties", func(t *testing.T) {
 		t.Parallel()
-		refPaillier := shards[ids[0]].AuxInfo().PaillierPublicKeys()
-		refPedersen := shards[ids[0]].AuxInfo().RingPedersenPublicKeys()
+		// Each party's auxiliary info excludes its own keys, so every map covers
+		// only the other len(ids)-1 shareholders.
 		for _, id := range ids {
 			pail := shards[id].AuxInfo().PaillierPublicKeys()
 			ped := shards[id].AuxInfo().RingPedersenPublicKeys()
-			require.Len(t, pail, len(ids))
-			require.Len(t, ped, len(ids))
-			for _, k := range ids {
-				require.True(t, refPaillier[k].Equal(pail[k]))
-				require.True(t, refPedersen[k].Equal(ped[k]))
+			require.Len(t, pail, len(ids)-1)
+			require.Len(t, ped, len(ids)-1)
+			_, okPail := pail[id]
+			_, okPed := ped[id]
+			require.False(t, okPail)
+			require.False(t, okPed)
+		}
+		// No single party holds a complete map, so the binding invariant is that
+		// party k's own secret key matches the public key every other party
+		// recorded for k.
+		for _, k := range ids {
+			refPaillier := shards[k].AuxInfo().PaillierSecretKey().Public()
+			refPedersen := shards[k].AuxInfo().RingPedersenSecretKey().Export()
+			for _, id := range ids {
+				if id == k {
+					continue
+				}
+				pail, okPail := shards[id].AuxInfo().PaillierPublicKey(k)
+				ped, okPed := shards[id].AuxInfo().RingPedersenPublicKey(k)
+				require.True(t, okPail)
+				require.True(t, okPed)
+				require.True(t, refPaillier.Equal(pail))
+				require.True(t, refPedersen.Equal(ped))
 			}
-			// the local secret material must match the agreed-upon public keys
-			require.True(t, shards[id].AuxInfo().PaillierSecretKey().Public().Equal(pail[id]))
-			require.True(t, shards[id].AuxInfo().RingPedersenSecretKey().Export().Equal(ped[id]))
 		}
 	})
 

@@ -228,7 +228,7 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 
 // Round4 verifies every other party's Paillier-Blum (Π_mod) and no-small-factor
 // (Π_fac) proofs against the shared rid — aborting identifiably on any failure —
-// then assembles the auxiliary information (all parties' Paillier and
+// then assembles the auxiliary information (the other parties' Paillier and
 // ring-Pedersen public keys plus this party's own secret keys) and returns the
 // input base shard augmented with it as a cggmp21.Shard. Must be called in
 // round 4.
@@ -283,11 +283,6 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid FAC proof")
 		}
 	}
-
-	// The auxiliary info must cover every shareholder, including this party, so
-	// include the local public keys alongside the ones received from others.
-	p.state.receivedPaillierPublicKeys[p.ctx.HolderID()] = p.state.paillierSecretKey.Public()
-	p.state.receivedRingPedersenCommitmentKeys[p.ctx.HolderID()] = p.state.ringPedersenSecretKey.Export()
 
 	auxInfo, err := cggmp21.NewAuxInfo(p.state.paillierSecretKey, p.state.receivedPaillierPublicKeys, p.state.ringPedersenSecretKey, p.state.receivedRingPedersenCommitmentKeys)
 	if err != nil {

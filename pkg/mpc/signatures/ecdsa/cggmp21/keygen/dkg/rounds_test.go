@@ -62,28 +62,35 @@ func TestHappyPath(t *testing.T) {
 
 	t.Run("aux info public keys agree across parties", func(t *testing.T) {
 		t.Parallel()
-		// Every party must hold the same map of per-party public Paillier and
-		// ring-Pedersen keys; this is what binds the auxiliary info to the quorum.
-		refPaillier := shards[ids[0]].AuxInfo().PaillierPublicKeys()
-		refPedersen := shards[ids[0]].AuxInfo().RingPedersenPublicKeys()
-		require.Len(t, refPaillier, len(ids))
-		require.Len(t, refPedersen, len(ids))
+		// Each party's auxiliary info excludes its own keys, so every map covers
+		// only the other len(ids)-1 shareholders.
 		for _, id := range ids {
 			pail := shards[id].AuxInfo().PaillierPublicKeys()
 			ped := shards[id].AuxInfo().RingPedersenPublicKeys()
-			for _, k := range ids {
-				require.True(t, refPaillier[k].Equal(pail[k]))
-				require.True(t, refPedersen[k].Equal(ped[k]))
-			}
+			require.Len(t, pail, len(ids)-1)
+			require.Len(t, ped, len(ids)-1)
+			_, okPail := pail[id]
+			_, okPed := ped[id]
+			require.False(t, okPail)
+			require.False(t, okPed)
 		}
-	})
-
-	t.Run("local secret keys match published public keys", func(t *testing.T) {
-		t.Parallel()
-		for _, id := range ids {
-			info := shards[id].AuxInfo()
-			require.True(t, info.PaillierSecretKey().Public().Equal(info.PaillierPublicKeys()[id]))
-			require.True(t, info.RingPedersenSecretKey().Export().Equal(info.RingPedersenPublicKeys()[id]))
+		// No single party holds a complete map, so the binding invariant is that
+		// party k's own secret key matches the public key every other party
+		// recorded for k.
+		for _, k := range ids {
+			refPaillier := shards[k].AuxInfo().PaillierSecretKey().Public()
+			refPedersen := shards[k].AuxInfo().RingPedersenSecretKey().Export()
+			for _, id := range ids {
+				if id == k {
+					continue
+				}
+				pail, okPail := shards[id].AuxInfo().PaillierPublicKey(k)
+				ped, okPed := shards[id].AuxInfo().RingPedersenPublicKey(k)
+				require.True(t, okPail)
+				require.True(t, okPed)
+				require.True(t, refPaillier.Equal(pail))
+				require.True(t, refPedersen.Equal(ped))
+			}
 		}
 	})
 
