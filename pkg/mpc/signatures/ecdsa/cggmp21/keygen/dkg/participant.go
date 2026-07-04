@@ -48,16 +48,17 @@ type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 }
 
 type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	proverCtx    *session.Context
-	verifierCtxs map[sharing.ID]*session.Context
-
 	paillierSecretKey     *paillier.SecretKey
 	ringPedersenSecretKey *intcom.TrapdoorKey
 
 	commitmentKey *hashcom.CommitmentKey
 
-	prmfs     *fiatshamir.Protocol[*prm.Statement, *prm.Witness, *prm.Commitment, *prm.State, *prm.Response]
-	blummodfs *fiatshamir.Protocol[*blummod.Statement, *blummod.Witness, *blummod.Commitment, *blummod.State, *blummod.Response]
+	prmfs              *fiatshamir.Protocol[*prm.Statement, *prm.Witness, *prm.Commitment, *prm.State, *prm.Response]
+	prmVerifierCtx     map[sharing.ID]*session.Context
+	blummodfs          *fiatshamir.Protocol[*blummod.Statement, *blummod.Witness, *blummod.Commitment, *blummod.State, *blummod.Response]
+	blummodVerifierCtx map[sharing.ID]*session.Context
+
+	facVerifierCtx map[sharing.ID]*session.Context
 
 	psiI   compiler.NIZKPoKProof
 	rid    []byte
@@ -118,14 +119,14 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		return nil, errs.Wrap(err).WithMessage("cannot create Fiat-Shamir compiler for BlumMod protocol")
 	}
 
-	proverCtx := ctx.Clone()
-	proverCtx.Transcript().AppendBytes(proverIDLabel, ctx.HolderID().Bytes())
-	verifierCtxs := make(map[sharing.ID]*session.Context)
-	for id := range ctx.OtherPartiesOrdered() {
-		verifierCtx := ctx.Clone()
-		verifierCtx.Transcript().AppendBytes(proverIDLabel, id.Bytes())
-		verifierCtxs[id] = verifierCtx
-	}
+	// proverCtx := ctx.Clone()
+	// proverCtx.Transcript().AppendBytes(proverIDLabel, ctx.HolderID().Bytes())
+	// verifierCtxs := make(map[sharing.ID]*session.Context)
+	// for id := range ctx.OtherPartiesOrdered() {
+	// 	verifierCtx := ctx.Clone()
+	// 	verifierCtx.Transcript().AppendBytes(proverIDLabel, id.Bytes())
+	// 	verifierCtxs[id] = verifierCtx
+	// }
 
 	params, err := cggmp21.NewParameters(curve, base.IFCKeyLength)
 	if err != nil {
@@ -140,11 +141,12 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		prng:      prng,
 		round:     1,
 		state: state[P, B, S]{ //nolint:exhaustruct // state is lazy initialised
-			proverCtx:     proverCtx,
-			verifierCtxs:  verifierCtxs,
-			prmfs:         prmfs,
-			commitmentKey: commitmentKey,
-			blummodfs:     blummodfs,
+			prmfs:              prmfs,
+			prmVerifierCtx:     make(map[sharing.ID]*session.Context, ctx.Quorum().Size()-1),
+			commitmentKey:      commitmentKey,
+			blummodfs:          blummodfs,
+			blummodVerifierCtx: make(map[sharing.ID]*session.Context, ctx.Quorum().Size()-1),
+			facVerifierCtx:     make(map[sharing.ID]*session.Context, ctx.Quorum().Size()-1),
 
 			rid: make([]byte, params.Kappa()/8),
 

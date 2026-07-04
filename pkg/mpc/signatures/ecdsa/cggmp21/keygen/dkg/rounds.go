@@ -10,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -48,7 +49,16 @@ func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], error) {
 		if err != nil {
 			return errs.Wrap(err).WithMessage("cannot sample ring-Pedersen trapdoor key")
 		}
-		prmProver, err := p.state.prmfs.NewProver(p.state.proverCtx)
+		proverCtx := p.ctx.Clone()
+		proverCtx.Transcript().AppendBytes(proverIDLabel, p.ctx.HolderID().Bytes())
+
+		for id := range p.ctx.OtherPartiesOrdered() {
+			verifierCtx := p.ctx.Clone()
+			verifierCtx.Transcript().AppendBytes(proverIDLabel, id.Bytes())
+			p.state.prmVerifierCtx[id] = verifierCtx
+		}
+
+		prmProver, err := p.state.prmfs.NewProver(proverCtx)
 		if err != nil {
 			return errs.Wrap(err).WithMessage("cannot create PRM prover")
 		}
@@ -144,7 +154,7 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 		if b.Message.RingPedersenCommitmentKey.Group().Modulus().TrueLen() < base.IFCKeyLength {
 			return nil, cggmp21.ErrValidationFailed.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid ring-Pedersen modulus length")
 		}
-		prmVerifier, err := p.state.prmfs.NewVerifier(p.state.verifierCtxs[id])
+		prmVerifier, err := p.state.prmfs.NewVerifier(p.state.prmVerifierCtx[id])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create PRM verifier")
 		}
@@ -164,10 +174,17 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 	}
 
 	// "rid" is a shared aux for the proofs, so we append to the transcript once to be shared.
-	p.state.proverCtx.Transcript().AppendBytes(ridLabel, p.state.rid)
+	p.ctx.Transcript().AppendBytes(ridLabel, p.state.rid)
 
 	// step 3.2(a)
-	blummodProver, err := p.state.blummodfs.NewProver(p.state.proverCtx)
+	blummodProverCtx := p.ctx.Clone()
+	blummodProverCtx.Transcript().AppendBytes(proverIDLabel, p.ctx.HolderID().Bytes())
+	for id := range p.ctx.OtherPartiesOrdered() {
+		blummodVerifierCtx := p.ctx.Clone()
+		blummodVerifierCtx.Transcript().AppendBytes(proverIDLabel, id.Bytes())
+		p.state.blummodVerifierCtx[id] = blummodVerifierCtx
+	}
+	blummodProver, err := p.state.blummodfs.NewProver(blummodProverCtx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create BlumMod prover")
 	}
@@ -203,11 +220,14 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create Fiat-Shamir compiler for FAC protocol")
 		}
-		// Each verifier checks this proof on its own independent context
-		// (post-blummod), so prove on a fresh clone per verifier rather than the
-		// shared proverCtx; otherwise every proof after the first is bound to a
-		// transcript polluted by the preceding verifiers' FAC proofs.
-		facProverCtx := p.state.proverCtx.Clone()
+		facProverCtx, err := p.ctx.SubContext(hashset.NewComparable(p.ctx.HolderID(), id).Freeze())
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create FAC prover context")
+		}
+		verifierCtx := facProverCtx.Clone()
+		verifierCtx.Transcript().AppendBytes(proverIDLabel, id.Bytes())
+		p.state.facVerifierCtx[id] = verifierCtx
+		facProverCtx.Transcript().AppendBytes(proverIDLabel, p.ctx.HolderID().Bytes())
 		facProver, err := facfs.NewProver(facProverCtx)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create FAC prover")
@@ -253,12 +273,8 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 	for id := range p.ctx.OtherPartiesOrdered() {
 		u, _ := r3u.Get(id)
 
-		// rid is the common aux for the proofs, so we append to the transcript once to be shared.
-		verifierCtx := p.state.verifierCtxs[id]
-		verifierCtx.Transcript().AppendBytes(ridLabel, p.state.rid)
-
 		// step Output.1(b).i
-		blummodVerifier, err := p.state.blummodfs.NewVerifier(verifierCtx)
+		blummodVerifier, err := p.state.blummodfs.NewVerifier(p.state.blummodVerifierCtx[id])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create BlumMod verifier")
 		}
@@ -271,7 +287,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 		}
 
 		// step Output.1(b).ii
-		facVerifier, err := facfs.NewVerifier(verifierCtx)
+		facVerifier, err := facfs.NewVerifier(p.state.facVerifierCtx[id])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create FAC verifier")
 		}
