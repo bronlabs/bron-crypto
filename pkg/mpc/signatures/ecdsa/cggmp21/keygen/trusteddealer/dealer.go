@@ -93,12 +93,12 @@ func Deal[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 		ringPedersenKeys := maps.Clone(ringPedersenPublicKeys)
 		delete(ringPedersenKeys, id)
 
-		auxInfo, err := cggmp21.NewAuxInfo(paillierSecretKeys[id], paillierKeys, ringPedersenSecretKeys[id], ringPedersenKeys)
+		auxInfo, err := cggmp21.NewAuxInfo(paillierSecretKeys[id], paillierKeys, ringPedersenSecretKeys[id], ringPedersenKeys, refreshID)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create auxiliary information")
 		}
 		baseShard, _ := baseShards.Get(id)
-		shard, err := cggmp21.NewShard(baseShard, auxInfo, refreshID)
+		shard, err := cggmp21.NewShard(baseShard, auxInfo)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create shard")
 		}

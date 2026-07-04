@@ -21,6 +21,8 @@ type AuxInfo struct {
 
 	ringPedersenSecretKey  *intcom.TrapdoorKey
 	ringPedersenPublicKeys map[sharing.ID]*intcom.CommitmentKey
+
+	refreshID []byte
 }
 
 // NewAuxInfo constructs CGGMP21 auxiliary information.
@@ -29,6 +31,7 @@ func NewAuxInfo(
 	paillierPublicKeys map[sharing.ID]*paillier.PublicKey,
 	ringPedersenSecretKey *intcom.TrapdoorKey,
 	ringPedersenPublicKeys map[sharing.ID]*intcom.CommitmentKey,
+	refreshID []byte,
 ) (*AuxInfo, error) {
 	if paillierSecretKey == nil {
 		return nil, ErrNil.WithMessage("paillier secret key")
@@ -54,12 +57,16 @@ func NewAuxInfo(
 			return nil, ErrNil.WithMessage("missing ring pedersen public key for %d", id)
 		}
 	}
+	if len(refreshID) < base.CollisionResistanceBytesCeil {
+		return nil, ErrNil.WithMessage("empty refresh ID")
+	}
 
 	info := &AuxInfo{
 		paillierSecretKey:      paillierSecretKey,
 		paillierPublicKeys:     maps.Clone(paillierPublicKeys),
 		ringPedersenSecretKey:  ringPedersenSecretKey,
 		ringPedersenPublicKeys: maps.Clone(ringPedersenPublicKeys),
+		refreshID:              refreshID,
 	}
 	return info, nil
 }
@@ -125,30 +132,34 @@ func (info *AuxInfo) Equal(other *AuxInfo) bool {
 	if !info.ringPedersenSecretKey.Equal(other.ringPedersenSecretKey) {
 		return false
 	}
+	if !bytes.Equal(info.refreshID, other.refreshID) {
+		return false
+	}
 	if !equalPaillierPublicKeys(info.paillierPublicKeys, other.paillierPublicKeys) {
 		return false
 	}
 	return equalRingPedersenPublicKeys(info.ringPedersenPublicKeys, other.ringPedersenPublicKeys)
 }
 
+// RefreshID returns the refresh identifier bound into signing transcripts.
+func (sh *AuxInfo) RefreshID() []byte {
+	return sh.refreshID
+}
+
 // Shard holds a CGGMP21 ECDSA key share and its auxiliary information.
 type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	mpc.BaseShard[P, S]
 
-	auxInfo   *AuxInfo
-	refreshID []byte
+	auxInfo *AuxInfo
 }
 
 // NewShard returns a new shard.
-func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo, refreshID []byte) (*Shard[P, B, S], error) {
+func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo) (*Shard[P, B, S], error) {
 	if baseShard == nil {
 		return nil, ErrNil.WithMessage("base shard")
 	}
 	if info == nil {
 		return nil, ErrNil.WithMessage("auxiliary information")
-	}
-	if len(refreshID) < base.CollisionResistanceBytesCeil {
-		return nil, ErrNil.WithMessage("empty refresh ID")
 	}
 	shareholders := baseShard.MSP().Shareholders()
 	if len(info.paillierPublicKeys) != shareholders.Size()-1 {
@@ -172,7 +183,6 @@ func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	sh := &Shard[P, B, S]{
 		BaseShard: *baseShard,
 		auxInfo:   info,
-		refreshID: refreshID,
 	}
 	return sh, nil
 }
@@ -192,17 +202,12 @@ func (sh *Shard[P, B, S]) AuxInfo() *AuxInfo {
 	return sh.auxInfo
 }
 
-// RefreshID returns the refresh identifier bound into signing transcripts.
-func (sh *Shard[P, B, S]) RefreshID() []byte {
-	return sh.refreshID
-}
-
 // Equal returns true if the two shards are equal.
 func (sh *Shard[P, B, S]) Equal(rhs *Shard[P, B, S]) bool {
 	if sh == nil || rhs == nil {
 		return sh == rhs
 	}
-	return bytes.Equal(sh.refreshID, rhs.refreshID) && sh.BaseShard.Equal(&rhs.BaseShard) && sh.auxInfo.Equal(rhs.auxInfo)
+	return sh.BaseShard.Equal(&rhs.BaseShard) && sh.auxInfo.Equal(rhs.auxInfo)
 }
 
 func equalPaillierPublicKeys(lhs, rhs map[sharing.ID]*paillier.PublicKey) bool {

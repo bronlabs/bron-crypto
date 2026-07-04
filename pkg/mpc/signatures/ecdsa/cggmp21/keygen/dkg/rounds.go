@@ -300,11 +300,11 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 		}
 	}
 
-	auxInfo, err := cggmp21.NewAuxInfo(p.state.paillierSecretKey, p.state.receivedPaillierPublicKeys, p.state.ringPedersenSecretKey, p.state.receivedRingPedersenCommitmentKeys)
+	auxInfo, err := cggmp21.NewAuxInfo(p.state.paillierSecretKey, p.state.receivedPaillierPublicKeys, p.state.ringPedersenSecretKey, p.state.receivedRingPedersenCommitmentKeys, p.state.rid)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create auxiliary info for shard generation")
 	}
-	shard, err := cggmp21.NewShard(p.baseShard, auxInfo, p.state.rid)
+	shard, err := cggmp21.NewShard(p.baseShard, auxInfo)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create shard")
 	}
