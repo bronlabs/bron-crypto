@@ -112,11 +112,6 @@ func (p *Participant[G, S]) SharingScheme() *feldman.Scheme[G, S] {
 	return p.sharingScheme
 }
 
-// PRNG returns the randomness source of the participant.
-func (p *Participant[G, S]) PRNG() io.Reader {
-	return p.prng
-}
-
 // Group returns the group used by the DKG protocol.
 func (p *Participant[G, S]) Group() algebra.PrimeGroup[G, S] {
 	return p.group

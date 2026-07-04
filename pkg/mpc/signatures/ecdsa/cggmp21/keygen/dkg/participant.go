@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
@@ -40,6 +41,7 @@ type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	ctx       *session.Context
 	curve     ecdsa.Curve[P, B, S]
 	baseShard *mpc.BaseShard[P, S]
+	params    *cggmp21.Parameters[P, B, S]
 	prng      io.Reader
 	round     network.Round
 	state     state[P, B, S]
@@ -125,10 +127,16 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		verifierCtxs[id] = verifierCtx
 	}
 
+	params, err := cggmp21.NewParameters(curve, base.IFCKeyLength)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create CGGMP21 parameters")
+	}
+
 	return &Participant[P, B, S]{
 		ctx:       ctx,
 		curve:     curve,
 		baseShard: baseShard,
+		params:    params,
 		prng:      prng,
 		round:     1,
 		state: state[P, B, S]{ //nolint:exhaustruct // state is lazy initialised
@@ -138,33 +146,13 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 			commitmentKey: commitmentKey,
 			blummodfs:     blummodfs,
 
-			rid: make([]byte, curve.ElementSize()),
+			rid: make([]byte, params.Kappa()/8),
 
 			receivedVjs:                        make(map[sharing.ID]hashcom.Commitment, ctx.Quorum().Size()-1),
 			receivedPaillierPublicKeys:         make(map[sharing.ID]*paillier.PublicKey, ctx.Quorum().Size()-1),
 			receivedRingPedersenCommitmentKeys: make(map[sharing.ID]*intcom.CommitmentKey, ctx.Quorum().Size()-1),
 		},
 	}, nil
-}
-
-// Kappa returns the CGGMP21 §C.1 computational security parameter κ, in bits,
-// from which the no-small-factor proof's range parameters are derived. It is
-// taken here as the bit-length of an encoded curve element (ElementSize·8); note
-// §C.1 defines κ as log(q), which for secp256k1 differs from the encoded size.
-func (p *Participant[P, B, S]) Kappa() int {
-	return p.curve.ElementSize() * 8
-}
-
-// Ell returns the range parameter ℓ (= κ) of the no-small-factor proof Π_fac
-// (CGGMP21 §C.1): the bound within which the Paillier factors are proven to lie.
-func (p *Participant[P, B, S]) Ell() int {
-	return p.Kappa()
-}
-
-// Epislon returns the slack parameter ε (= 2κ) of the no-small-factor proof
-// Π_fac (CGGMP21 §C.1), sized so honest responses stay within the proven range.
-func (p *Participant[P, B, S]) Epislon() int {
-	return 2 * p.Kappa()
 }
 
 // SharingID returns the sharing identifier of the local participant.

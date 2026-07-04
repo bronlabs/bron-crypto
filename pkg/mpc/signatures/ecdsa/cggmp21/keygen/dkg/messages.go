@@ -110,8 +110,8 @@ func (m *Round2Broadcast[P, B, S]) Validate(p *Participant[P, B, S], senderID sh
 	if len(m.Message.Psi) == 0 || ct.SliceIsZero(m.Message.Psi) == ct.True {
 		return cggmp21.ErrValidationFailed.WithMessage("psi proof is empty")
 	}
-	if len(m.Message.Rid) != p.Kappa()/8 {
-		return cggmp21.ErrValidationFailed.WithMessage("rid length is %d != kappaBytes = %d", len(m.Message.Rid), p.Kappa()/8)
+	if len(m.Message.Rid) != p.params.Kappa()/8 {
+		return cggmp21.ErrValidationFailed.WithMessage("rid length is %d != kappaBytes = %d", len(m.Message.Rid), p.params.Kappa()/8)
 	}
 	return nil
 }

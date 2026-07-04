@@ -195,7 +195,7 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 	}
 	for id := range p.ctx.OtherPartiesOrdered() {
 		// step 3.2(b)
-		facInteractiveProtocol, err := fac.NewProtocol(p.state.receivedRingPedersenCommitmentKeys[id], p.Ell(), p.Epislon(), p.prng)
+		facInteractiveProtocol, err := fac.NewProtocol(p.state.receivedRingPedersenCommitmentKeys[id], p.params.L(), p.params.Epsilon(), p.prng)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot create FAC interactive protocol")
 		}
@@ -240,7 +240,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 		return nil, errs.Wrap(errU).WithMessage("invalid incoming unicast messages")
 	}
 
-	facInteractiveProtocol, err := fac.NewProtocol(p.state.ringPedersenSecretKey.Export(), p.Ell(), p.Epislon(), p.prng)
+	facInteractiveProtocol, err := fac.NewProtocol(p.state.ringPedersenSecretKey.Export(), p.params.L(), p.params.Epsilon(), p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create FAC interactive protocol")
 	}
