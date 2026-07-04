@@ -138,10 +138,10 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 		p.state.receivedRingPedersenCommitmentKeys[id] = b.Message.RingPedersenCommitmentKey
 
 		// step 3.1(a)
-		if b.Message.PaillierPublicKey.Group().N().TrueLen() != base.IFCKeyLength {
+		if b.Message.PaillierPublicKey.Group().N().TrueLen() < base.IFCKeyLength {
 			return nil, cggmp21.ErrValidationFailed.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid modulus length")
 		}
-		if b.Message.RingPedersenCommitmentKey.Group().Modulus().TrueLen() != base.IFCKeyLength {
+		if b.Message.RingPedersenCommitmentKey.Group().Modulus().TrueLen() < base.IFCKeyLength {
 			return nil, cggmp21.ErrValidationFailed.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid ring-Pedersen modulus length")
 		}
 		prmVerifier, err := p.state.prmfs.NewVerifier(p.state.verifierCtxs[id])
