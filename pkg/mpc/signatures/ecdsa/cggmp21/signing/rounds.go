@@ -39,12 +39,13 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run HJKY round 1")
 	}
+	auxInfo := s.shard.AuxInfo()
 
+	// step 1.a
 	k, err := algebrautils.RandomNonIdentity(s.params.ScalarField(), s.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample k")
 	}
-	auxInfo := s.shard.AuxInfo()
 	bigK, rho, err := paillierEncryptScalar(auxInfo.PaillierSecretKey(), k, s.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt k")
@@ -57,6 +58,8 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot encrypt gamma")
 	}
+
+	// step 1.b
 	elgamalSecretKey, err := elgamal.SampleSecretKey(s.params.CurveGroup(), s.prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot sample ElGamal secret key")
@@ -98,6 +101,7 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 		return nil, nil, errs.Wrap(err).WithMessage("cannot commit ElGamal plaintext for gamma")
 	}
 
+	// step 1.c
 	psi0 := make(map[sharing.ID]compiler.NIZKPoKProof)
 	psi1 := make(map[sharing.ID]compiler.NIZKPoKProof)
 	for j := range s.ctx.OtherPartiesOrdered() {
@@ -132,6 +136,8 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 	s.state.bigBJ = map[sharing.ID]*indcpacom.Commitment[*elgamal.Ciphertext[P, S]]{
 		s.ctx.HolderID(): bigB,
 	}
+
+	// step 2
 	r1b := &Round1Broadcast[P, B, S]{
 		ZeroR1: zeroR1b,
 		BigK:   bigK,
@@ -186,9 +192,12 @@ func (s *Signer[P, B, S]) Round2(
 		zeroR1u.Put(j, u.ZeroR1)
 		bigKJ[j] = b.BigK
 
+		// step 1.a
 		if err := s.verifyEncElg(j, b.BigK, b.BigY, b.BigA, u.Psi0); err != nil {
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify enc-elg statement")
 		}
+
+		// step 1.b
 		if err := s.verifyEncElg(j, b.BigG, b.BigY, b.BigB, u.Psi1); err != nil {
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify enc-elg statement")
 		}
@@ -214,8 +223,9 @@ func (s *Signer[P, B, S]) Round2(
 		return nil, nil, cggmp21.ErrFailed.WithMessage("missing local effective partial public key")
 	}
 	x := s.state.x.Add(zeroShift)
-	bigGamma := s.params.CurveGroup().ScalarBaseMul(s.state.gamma)
 
+	// step 2.a
+	bigGamma := s.params.CurveGroup().ScalarBaseMul(s.state.gamma)
 	psi, err := s.proveElog(s.params.CurveGroup().Generator(), s.state.gamma, bigGamma, s.state.b, s.state.bigBJ[s.ctx.HolderID()], bigGamma)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot prove gamma elog statement")
@@ -247,6 +257,7 @@ func (s *Signer[P, B, S]) Round2(
 		bigYJ[j] = b.BigY
 		bigKj := bigKJ[j]
 
+		// step 2.b
 		paillierPublicKey, ok := s.shard.AuxInfo().PaillierPublicKey(j)
 		if !ok {
 			return nil, nil, cggmp21.ErrValidationFailed.WithMessage("missing Paillier public key for %d", j)
@@ -265,16 +276,20 @@ func (s *Signer[P, B, S]) Round2(
 			return nil, nil, errs.Wrap(err).WithMessage("cannot sample beta-hat for %d", j)
 		}
 		betaHatJ[j] = betaHat
+
+		// step 2.b.i, 2.b.ii
 		bigDHatJ, bigFHatJ, sHatNonce, rHatNonce, err := paillierMaskedProduct(paillierPublicKey, localPaillierPublicKey, bigKj, x, betaHat, s.prng)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot compute masked x product for %d", j)
 		}
 
+		// step 2.b.iii
 		affgPsi, err := s.proveAffG(j, s.state.gamma, beta, sNonce, rNonce, bigKj, bigDJ, bigFJ, bigGamma)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove affg statement for %d", j)
 		}
 
+		// step 2.b.iv
 		affgPsiHat, err := s.proveAffG(j, x, betaHat, sHatNonce, rHatNonce, bigKj, bigDHatJ, bigFHatJ, bigX)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove affg-hat statement for %d", j)
@@ -372,11 +387,7 @@ func (s *Signer[P, B, S]) Round3(
 		s.state.bigFHatReceivedJ[j] = u.BigFHat
 		bigGammaJ[j] = b.BigGamma
 
-		if err := s.verifyElog(j, s.params.CurveGroup().Generator(), s.state.bigBJ[j], b.BigGamma, b.Psi); err != nil {
-			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify gamma elog statement")
-		}
-		bigGamma = bigGamma.Add(b.BigGamma)
-
+		// step 1.a
 		if err := s.verifyAffG(j, u.BigD, u.BigF, b.BigGamma, u.Psi); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify affg statement")
 		}
@@ -384,10 +395,19 @@ func (s *Signer[P, B, S]) Round3(
 		if !ok {
 			return nil, cggmp21.ErrFailed.WithMessage("missing effective partial public key for %d", j)
 		}
+
+		// step 1.b
 		if err := s.verifyAffG(j, u.BigDHat, u.BigFHat, bigXJ, u.PsiHat); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify affg-hat statement")
 		}
 
+		// step 1.c
+		if err := s.verifyElog(j, s.params.CurveGroup().Generator(), s.state.bigBJ[j], b.BigGamma, b.Psi); err != nil {
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify gamma elog statement")
+		}
+		bigGamma = bigGamma.Add(b.BigGamma)
+
+		// step 2.a
 		alphaJ, err := s.shard.AuxInfo().PaillierSecretKey().Decrypt(u.BigD)
 		if err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot decrypt BigD from %d", j)
@@ -402,7 +422,6 @@ func (s *Signer[P, B, S]) Round3(
 		}
 		delta = delta.Add(alphaScalar).Add(betaScalar)
 		deltaInt = deltaInt.Add(alphaJ.Normalise()).Add(s.state.betaJ[j])
-
 		alphaHatJ, err := s.shard.AuxInfo().PaillierSecretKey().Decrypt(u.BigDHat)
 		if err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot decrypt BigDHat from %d", j)
@@ -431,6 +450,7 @@ func (s *Signer[P, B, S]) Round3(
 	bigDelta := bigGamma.ScalarMul(s.state.k)
 	bigS := bigGamma.ScalarMul(chi)
 
+	// step 2.b
 	psiPrime, err := s.proveElog(bigGamma, s.state.k, s.params.CurveGroup().ScalarBaseMul(s.state.k), s.state.a, s.state.bigAJ[s.ctx.HolderID()], bigDelta)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove k elog statement")
@@ -491,6 +511,7 @@ func (s *Signer[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P, B
 		deltaJ[id] = b.Delta
 		bigSJ[id] = b.BigS
 
+		// step 1.a
 		if err := s.verifyElog(id, s.state.bigGamma, s.state.bigAJ[id], b.BigDelta, b.Psi); err != nil {
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify elog statement")
 		}
@@ -501,11 +522,12 @@ func (s *Signer[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P, B
 		return nil, nil, errs.Wrap(err).WithMessage("cannot append round 3 broadcasts to transcript")
 	}
 
-	// verification
 	s.state.bigDeltaJ = bigDeltaJ
 	s.state.deltaJ = deltaJ
 	s.state.bigSJ = bigSJ
 	s.state.round3Broadcasts = round3Broadcasts
+
+	// step 2.a
 	if !s.params.CurveGroup().ScalarBaseMul(delta).Equal(bigDeltaSum) {
 		return nil, newRedAlertNonce(s), nil
 	}
