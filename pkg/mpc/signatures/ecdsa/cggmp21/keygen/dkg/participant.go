@@ -119,15 +119,6 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		return nil, errs.Wrap(err).WithMessage("cannot create Fiat-Shamir compiler for BlumMod protocol")
 	}
 
-	// proverCtx := ctx.Clone()
-	// proverCtx.Transcript().AppendBytes(proverIDLabel, ctx.HolderID().Bytes())
-	// verifierCtxs := make(map[sharing.ID]*session.Context)
-	// for id := range ctx.OtherPartiesOrdered() {
-	// 	verifierCtx := ctx.Clone()
-	// 	verifierCtx.Transcript().AppendBytes(proverIDLabel, id.Bytes())
-	// 	verifierCtxs[id] = verifierCtx
-	// }
-
 	params, err := cggmp21.NewParameters(curve, base.IFCKeyLength)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create CGGMP21 parameters")
