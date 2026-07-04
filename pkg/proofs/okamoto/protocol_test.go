@@ -16,7 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
-	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersencom"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/okamoto"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -468,7 +468,7 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	h, err := curve.Random(pcg.NewRandomised())
 	require.NoError(t, err)
 
-	key, err := pedersen.NewCommitmentKeyUnchecked(g, h)
+	key, err := pedersencom.NewCommitmentKeyUnchecked(g, h)
 	require.NoError(t, err)
 
 	// Commit to a random message.
@@ -476,7 +476,7 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	require.True(t, ok)
 	msgScalar, err := sf.Random(pcg.NewRandomised())
 	require.NoError(t, err)
-	message, err := pedersen.NewMessage(msgScalar)
+	message, err := pedersencom.NewMessage(msgScalar)
 	require.NoError(t, err)
 
 	commitment, pedersenWitness, err := commitments.Commit(key, message, pcg.NewRandomised())

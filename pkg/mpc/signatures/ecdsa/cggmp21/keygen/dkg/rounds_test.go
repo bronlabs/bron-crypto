@@ -243,18 +243,18 @@ func TestRoundOrderEnforcement(t *testing.T) {
 	t.Run("round 2 before round 1", func(t *testing.T) {
 		t.Parallel()
 		_, err := newParticipant().Round2(nil)
-		require.True(t, errs.Is(err, cggmp21.ErrRound))
+		require.True(t, errs.Is(err, cggmp21.ErrInvalidRound))
 	})
 
 	t.Run("round 3 before round 1", func(t *testing.T) {
 		t.Parallel()
 		_, err := newParticipant().Round3(nil)
-		require.True(t, errs.Is(err, cggmp21.ErrRound))
+		require.True(t, errs.Is(err, cggmp21.ErrInvalidRound))
 	})
 
 	t.Run("round 4 before round 1", func(t *testing.T) {
 		t.Parallel()
 		_, err := newParticipant().Round4(nil)
-		require.True(t, errs.Is(err, cggmp21.ErrRound))
+		require.True(t, errs.Is(err, cggmp21.ErrInvalidRound))
 	})
 }

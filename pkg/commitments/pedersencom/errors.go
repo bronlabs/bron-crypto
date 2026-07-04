@@ -1,4 +1,4 @@
-package pedersen
+package pedersencom
 
 import (
 	"github.com/bronlabs/errs-go/errs"

@@ -136,6 +136,9 @@ func (p *Protocol) ComputeProverResponse(
 			return nil, errs.Wrap(err).WithMessage("could not compute Jacobi symbol")
 		}
 
+		// Multiplying by w (Jacobi -1, validated above) flips the Jacobi sign
+		// of yPrime when needed, so after this switch yPrime has Jacobi +1 and
+		// is therefore either a QR or its negation in QR_N (for Blum N).
 		b := uint8(0)
 		switch j {
 		case 1:
@@ -221,6 +224,9 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 	}
 	n := statement.publicKey.PlaintextGroup().Modulus()
 	for i, item := range &response.items {
+		if !nonceGroup.Contains(ys[i].Value()) {
+			return ErrVerificationFailed.WithMessage("challenge element is not in the nonce group")
+		}
 		if !nonceGroup.Contains(item.x.Value()) || !nonceGroup.Contains(item.z.Value()) {
 			return ErrVerificationFailed.WithMessage("response values are not in the nonce group")
 		}

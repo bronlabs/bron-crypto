@@ -19,7 +19,7 @@ func commitmentKeyDigest(commitmentKey *intcom.CommitmentKey) string {
 	out = sliceutils.AppendLengthPrefixed(out, commitmentKey.S().Bytes())
 	out = sliceutils.AppendLengthPrefixed(out, commitmentKey.T().Bytes())
 	sum := sha256.Sum256(out)
-	return hex.EncodeToString(sum[:8])
+	return hex.EncodeToString(sum[:])
 }
 
 func intSampleRangeSymmetricBits(bitLen int, prngReader io.Reader) (*num.Int, error) {

@@ -162,6 +162,10 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 	if !intInSignedBitRange(response.z1, zBitLenBound) || !intInSignedBitRange(response.z2, zBitLenBound) {
 		return ErrVerificationFailed.WithMessage("factor responses are out of range")
 	}
+	// Figure 26 only range-checks z1, z2. w1, w2, v are bounded here as a
+	// defensive sanity guard against pathologically large parsed exponents;
+	// the +1 admits one bit of carry from honest sums like w1 = x + e*mu
+	// where |x| < 2^(l+eps+|Nhat|) and |e*mu| can reach 2^(l-1) * 2^(l+|Nhat|).
 	wBitLenBound := nDashBitLen + p.l + p.epsilon + 1
 	vBitLenBound := n0BitLen + nDashBitLen + p.l + p.epsilon + 1
 	if !intInSignedBitRange(response.w1, wBitLenBound) ||

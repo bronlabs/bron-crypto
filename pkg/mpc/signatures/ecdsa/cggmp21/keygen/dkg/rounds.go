@@ -29,7 +29,7 @@ import (
 // contribution after seeing the honest parties'. Must be called in round 1.
 func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], error) {
 	if p.round != 1 {
-		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 1)
+		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d, expected=%d", p.round, 1)
 	}
 	eg := errgroup.Group{}
 	// step 1(a)
@@ -97,7 +97,7 @@ func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], error) {
 // hash-commitment witness. Must be called in round 2.
 func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[P, B, S], *Participant[P, B, S]]) (*Round2Broadcast[P, B, S], error) {
 	if p.round != 2 {
-		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 2)
+		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d, expected=%d", p.round, 2)
 	}
 	if err := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r1b); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid incoming messages")
@@ -125,7 +125,7 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 // identifiably, tagging the culprit. Must be called in round 3.
 func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P, B, S], *Participant[P, B, S]]) (network.OutgoingUnicasts[*Round3P2P[P, B, S], *Participant[P, B, S]], error) {
 	if p.round != 3 {
-		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 3)
+		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d, expected=%d", p.round, 3)
 	}
 	if errB := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r2b); errB != nil {
 		return nil, errs.Wrap(errB).WithMessage("invalid incoming broadcast messages")
@@ -234,7 +234,7 @@ func (p *Participant[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast
 // round 4.
 func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B, S], *Participant[P, B, S]]) (*cggmp21.Shard[P, B, S], error) {
 	if p.round != 4 {
-		return nil, cggmp21.ErrRound.WithMessage("actual=%d, expected=%d", p.round, 4)
+		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d, expected=%d", p.round, 4)
 	}
 	if errU := network.ValidateIncomingMessages(p, p.ctx.OtherPartiesOrdered(), r3u); errU != nil {
 		return nil, errs.Wrap(errU).WithMessage("invalid incoming unicast messages")
@@ -293,7 +293,7 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create auxiliary info for shard generation")
 	}
-	shard, err := cggmp21.NewShard(p.baseShard, auxInfo)
+	shard, err := cggmp21.NewShard(p.baseShard, auxInfo, p.state.rid)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create shard")
 	}

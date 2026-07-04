@@ -47,10 +47,10 @@ func validateCommitmentKey(commitmentKey *intcom.CommitmentKey) error {
 
 func validateWitness(statement *Statement, witness *Witness) error {
 	if statement == nil {
-		return ErrInvalidArgument.WithMessage("statement must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("statement must not be nil")
 	}
 	if witness == nil {
-		return ErrInvalidArgument.WithMessage("witness must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("witness must not be nil")
 	}
 	if !witness.trapdoorKey.S().Equal(statement.commitmentKey.S()) ||
 		!witness.trapdoorKey.T().Equal(statement.commitmentKey.T()) {
@@ -74,10 +74,10 @@ func validateWitness(statement *Statement, witness *Witness) error {
 
 func validateCommitment(statement *Statement, commitment *Commitment) error {
 	if statement == nil {
-		return ErrInvalidArgument.WithMessage("statement must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("statement must not be nil")
 	}
 	if commitment == nil {
-		return ErrInvalidArgument.WithMessage("commitment must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("commitment must not be nil")
 	}
 	group := statement.commitmentKey.Group()
 	for _, a := range &commitment.a {
