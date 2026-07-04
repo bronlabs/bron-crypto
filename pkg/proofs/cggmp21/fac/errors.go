@@ -1,12 +1,12 @@
 package fac
 
-import "github.com/bronlabs/errs-go/errs"
+import "github.com/bronlabs/bron-crypto/pkg/proofs"
 
 var (
 	// ErrInvalidArgument indicates that an input is nil or malformed.
-	ErrInvalidArgument = errs.New("invalid argument")
+	ErrInvalidArgument = proofs.ErrInvalidArgument
 	// ErrValidationFailed indicates that the statement or witness is invalid.
-	ErrValidationFailed = errs.New("validation failed")
+	ErrValidationFailed = proofs.ErrValidationFailed
 	// ErrVerificationFailed indicates that a transcript failed verification.
-	ErrVerificationFailed = errs.New("verification failed")
+	ErrVerificationFailed = proofs.ErrVerificationFailed
 )

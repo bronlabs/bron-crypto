@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -45,10 +46,10 @@ type Prover struct {
 // NewProver constructs a prover for the Paillier N proof.
 func NewProver(sessionID network.SID, sk *paillier.SecretKey, tape transcripts.Transcript) (prover *Prover, err error) {
 	if sk == nil {
-		return nil, ErrInvalidArgument.WithMessage("sk is nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("sk is nil")
 	}
 	if tape == nil {
-		return nil, ErrInvalidArgument.WithMessage("transcript is nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("transcript is nil")
 	}
 	dst := fmt.Sprintf("%s-%d", appTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
@@ -71,7 +72,7 @@ func (p *Prover) Prove() (proof *Proof, statement *paillier.PublicKey, err error
 
 	var nInv numct.Nat
 	if ok := crtModN.Phi.ModInv(&nInv, crtModN.N.Nat()); ok == ct.False {
-		return nil, nil, ErrFailed.WithMessage("cannot invert N")
+		return nil, nil, proofs.ErrFailed.WithMessage("cannot invert N")
 	}
 	sigmas := make([]*numct.Nat, M)
 	for i := range sigmas {
@@ -87,13 +88,13 @@ func (p *Prover) Prove() (proof *Proof, statement *paillier.PublicKey, err error
 // Verify validates a Paillier N proof for the given statement.
 func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paillier.PublicKey, proof *Proof) error {
 	if statement == nil {
-		return ErrInvalidArgument.WithMessage("statement is nil")
+		return proofs.ErrInvalidArgument.WithMessage("statement is nil")
 	}
 	if proof == nil {
-		return ErrInvalidArgument.WithMessage("proof is nil")
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 	if tape == nil {
-		return ErrInvalidArgument.WithMessage("transcript is nil")
+		return proofs.ErrInvalidArgument.WithMessage("transcript is nil")
 	}
 	dst := fmt.Sprintf("%s-%d", appTranscriptLabel, sessionID)
 	tape.AppendDomainSeparator(dst)
@@ -106,16 +107,16 @@ func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paill
 
 	// (a) check that N is a positive integer and is not divisible by all the primes less than α.
 	if statement.Group().N().Value().Coprime(P) != 1 {
-		return ErrVerificationFailed.WithMessage("verification failed")
+		return proofs.ErrVerificationFailed.WithMessage("verification failed")
 	}
 
 	// (b) check that σ_i is a positive integer for i = 1...m.
 	if len(proof.Sigmas) != M {
-		return ErrVerificationFailed.WithMessage("verification failed")
+		return proofs.ErrVerificationFailed.WithMessage("verification failed")
 	}
 	for _, sigma := range proof.Sigmas {
 		if sigma.IsZero() != ct.False {
-			return ErrVerificationFailed.WithMessage("verification failed")
+			return proofs.ErrVerificationFailed.WithMessage("verification failed")
 		}
 	}
 
@@ -131,7 +132,7 @@ func Verify(sessionID network.SID, tape transcripts.Transcript, statement *paill
 		allEq &= rhoChecks[i].Equal(rhos[i])
 	}
 	if allEq == ct.False {
-		return ErrVerificationFailed.WithMessage("verification failed")
+		return proofs.ErrVerificationFailed.WithMessage("verification failed")
 	}
 	return nil
 }
@@ -152,7 +153,7 @@ func extractRhos(transcript transcripts.Transcript, n *num.NatPlus) ([]*numct.Na
 			candidateBytes[0] &= (1 << excessBits) - 1 // candidateBytes[0] is the highest byte (big endian)
 			var candidateNat numct.Nat
 			if ok := candidateNat.SetBytes(candidateBytes); ok == ct.False {
-				return nil, ErrFailed.WithMessage("cannot set bytes")
+				return nil, proofs.ErrFailed.WithMessage("cannot set bytes")
 			}
 
 			// we are rejecting a candidate rho >= N,
@@ -166,7 +167,7 @@ func extractRhos(transcript transcripts.Transcript, n *num.NatPlus) ([]*numct.Na
 
 		// the probability of this happening is very low (< 2^(-128))
 		if result[i] == nil {
-			return nil, ErrFailed.WithMessage("cannot find suitable rho")
+			return nil, proofs.ErrFailed.WithMessage("cannot find suitable rho")
 		}
 	}
 

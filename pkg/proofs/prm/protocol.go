@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -18,7 +19,7 @@ type Protocol struct {
 // NewProtocol constructs a CGGMP21 Pedersen parameters proof instance.
 func NewProtocol(prng io.Reader) (*Protocol, error) {
 	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("prng must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("prng must not be nil")
 	}
 	return &Protocol{prng: prng}, nil
 }
@@ -83,10 +84,10 @@ func (p *Protocol) ComputeProverResponse(
 		return nil, errs.Wrap(err).WithMessage("invalid commitment")
 	}
 	if state == nil {
-		return nil, ErrInvalidArgument.WithMessage("state must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("state must not be nil")
 	}
 	if len(challenge) != challengeBytes {
-		return nil, ErrInvalidArgument.WithMessage("invalid challenge length")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
 
 	t, err := witness.trapdoorKey.T().LearnOrder(witness.trapdoorKey.Group())
@@ -103,11 +104,11 @@ func (p *Protocol) ComputeProverResponse(
 	for i := range &z {
 		alpha := state.alpha[i]
 		if !alpha.Modulus().Equal(phi) {
-			return nil, ErrValidationFailed.WithMessage("state alpha has wrong modulus")
+			return nil, proofs.ErrValidationFailed.WithMessage("state alpha has wrong modulus")
 		}
 		expected := t.Exp(alpha.Nat()).ForgetOrder()
 		if !expected.Equal(commitment.a[i]) {
-			return nil, ErrValidationFailed.WithMessage("commitment and state mismatch")
+			return nil, proofs.ErrValidationFailed.WithMessage("commitment and state mismatch")
 		}
 
 		if challengeBit(challenge, i) != 0 {
@@ -126,13 +127,13 @@ func (p *Protocol) ComputeProverResponse(
 // Verify checks a prover response against the statement and commitment.
 func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
 	if response == nil {
-		return ErrInvalidArgument.WithMessage("response must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("response must not be nil")
 	}
 	if err := validateCommitment(statement, commitment); err != nil {
 		return errs.Wrap(err).WithMessage("invalid commitment")
 	}
 	if len(challenge) != challengeBytes {
-		return ErrInvalidArgument.WithMessage("invalid challenge length")
+		return proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
 
 	s := statement.commitmentKey.S()
@@ -142,7 +143,7 @@ func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge 
 		// Honest responses satisfy z < phi(N) < N, and simulator responses are
 		// sampled below N; reject huge parsed exponents before modular exponentiation.
 		if !z.Abs().IsLessThanOrEqual(n) {
-			return ErrVerificationFailed.WithMessage("response z is out of range")
+			return proofs.ErrVerificationFailed.WithMessage("response z is out of range")
 		}
 
 		lhs := t.ExpI(z)
@@ -151,7 +152,7 @@ func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge 
 			rhs = rhs.Mul(s)
 		}
 		if !lhs.Equal(rhs) {
-			return ErrVerificationFailed.WithMessage("response does not satisfy verification equation")
+			return proofs.ErrVerificationFailed.WithMessage("response does not satisfy verification equation")
 		}
 	}
 	return nil
@@ -160,10 +161,10 @@ func (*Protocol) Verify(statement *Statement, commitment *Commitment, challenge 
 // RunSimulator creates an honest-verifier simulated transcript for a fixed challenge.
 func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
 	if statement == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("statement must not be nil")
+		return nil, nil, proofs.ErrInvalidArgument.WithMessage("statement must not be nil")
 	}
 	if len(challenge) != challengeBytes {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid challenge length")
+		return nil, nil, proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
 
 	sInv, err := statement.commitmentKey.S().TryInv()

@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elcomop"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -42,12 +43,12 @@ type (
 // that the resulting elcomop ciphertext (L, M) satisfies M = g^y * X^lambda.
 func NewWitness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](w1 *elcomop.Witness[G, S], w2 *schnorrpok.Witness[S]) (*Witness[G, S], error) {
 	if w1 == nil || w2 == nil {
-		return nil, ErrInvalidArgument.WithMessage("witnesses cannot be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("witnesses cannot be nil")
 	}
 	message, _ := w1.Value().Components()
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](message.Structure())
 	if !message.Equal(group.ScalarBaseOp(w2.W)) {
-		return nil, ErrInvalidArgument.WithMessage("invalid witness: Schnorr witness does not match ElGamal commitment witness")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid witness: Schnorr witness does not match ElGamal commitment witness")
 	}
 	out, err := sigand.CartesianComposeWitnesses(w1, w2)
 	if err != nil {
@@ -60,7 +61,7 @@ func NewWitness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S
 // with a Schnorr statement (the public element Y) into an elog statement.
 func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](x1 *elcomop.Statement[G, S], x2 *schnorrpok.Statement[G, S]) (*Statement[G, S], error) {
 	if x1 == nil || x2 == nil {
-		return nil, ErrInvalidArgument.WithMessage("statements cannot be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("statements cannot be nil")
 	}
 	out, err := sigand.CartesianComposeStatements(x1, x2)
 	if err != nil {

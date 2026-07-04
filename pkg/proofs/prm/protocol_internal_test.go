@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 )
 
 const internalTestKeyLen = 64
@@ -92,27 +93,27 @@ func TestProtocolMethodsRejectNilInputs(t *testing.T) {
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
 
 	_, _, err = protocol.ComputeProverCommitment(nil, witness)
-	require.ErrorIs(t, err, ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	_, _, err = protocol.ComputeProverCommitment(statement, nil)
-	require.ErrorIs(t, err, ErrInvalidArgument)
-	require.ErrorIs(t, protocol.ValidateStatement(nil, witness), ErrInvalidArgument)
-	require.ErrorIs(t, protocol.ValidateStatement(statement, nil), ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.ValidateStatement(nil, witness), proofs.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.ValidateStatement(statement, nil), proofs.ErrInvalidArgument)
 
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
 	require.NoError(t, err)
 
 	_, err = protocol.ComputeProverResponse(statement, witness, nil, state, challenge)
-	require.ErrorIs(t, err, ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 	_, err = protocol.ComputeProverResponse(statement, witness, commitment, nil, challenge)
-	require.ErrorIs(t, err, ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 
 	response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
 	require.NoError(t, err)
 
-	require.ErrorIs(t, protocol.Verify(nil, commitment, challenge, response), ErrInvalidArgument)
-	require.ErrorIs(t, protocol.Verify(statement, nil, challenge, response), ErrInvalidArgument)
-	require.ErrorIs(t, protocol.Verify(statement, commitment, challenge, nil), ErrInvalidArgument)
+	require.ErrorIs(t, protocol.Verify(nil, commitment, challenge, response), proofs.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.Verify(statement, nil, challenge, response), proofs.ErrInvalidArgument)
+	require.ErrorIs(t, protocol.Verify(statement, commitment, challenge, nil), proofs.ErrInvalidArgument)
 
 	_, _, err = protocol.RunSimulator(nil, challenge)
-	require.ErrorIs(t, err, ErrInvalidArgument)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 }

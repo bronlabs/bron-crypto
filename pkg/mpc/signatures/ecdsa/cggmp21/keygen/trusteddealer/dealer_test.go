@@ -117,7 +117,7 @@ func testDealShardsThreshold2Of3[P curves.Point[P, B, S], B algebra.PrimeFieldEl
 
 		for id := range shareholders.Iter() {
 			for otherID := range shareholders.Iter() {
-				require.Equal(t, shards[id].RefreshID(), shards[otherID].RefreshID())
+				require.Equal(t, shards[id].AuxInfo().RefreshID(), shards[otherID].AuxInfo().RefreshID())
 			}
 		}
 	})

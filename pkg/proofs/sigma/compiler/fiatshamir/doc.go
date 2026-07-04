@@ -7,4 +7,9 @@
 //
 // The transform requires that the underlying sigma protocol has soundness error
 // at least 2^(-128) to ensure computational security of the resulting NIZK proof.
+//
+// The transform itself is performed by the internal zkmodule engine (CGGMP21
+// Figure 3): the prover commits first and only then derives the challenge from
+// the transcript hash. This package wraps that engine with session-level
+// transcript domain separation and the soundness-parameter check above.
 package fiatshamir

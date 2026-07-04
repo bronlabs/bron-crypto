@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -38,7 +39,7 @@ type (
 // commitment nonce lambda.
 func NewWitness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](message *indcpacom.Message[*elgamal.Plaintext[G, S]], nonce *indcpacom.Witness[*elgamal.Nonce[S]]) (*Witness[G, S], error) {
 	if nonce == nil || nonce.Value() == nil || utils.IsNil(nonce.Value().Value()) || message == nil || message.Value() == nil || utils.IsNil(message.Value().Value()) {
-		return nil, ErrInvalidArgument.WithMessage("witness values cannot be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("witness values cannot be nil")
 	}
 	g1 := algebra.StructureMustBeAs[algebra.PrimeGroup[G, S]](message.Value().Value().Structure())
 	g2 := algebra.StructureMustBeAs[algebra.PrimeField[S]](nonce.Value().Value().Structure())
@@ -57,7 +58,7 @@ func NewWitness[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S
 // (i.e. an ElGamal ciphertext) (Gamma, Delta).
 func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](x *indcpacom.Commitment[*elgamal.Ciphertext[G, S]]) (*Statement[G, S], error) {
 	if x == nil || x.Value() == nil || utils.IsNil(x.Value().Value()) {
-		return nil, ErrInvalidArgument.WithMessage("statement values cannot be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("statement values cannot be nil")
 	}
 	return &Statement[G, S]{X: x.Value().Value()}, nil
 }
@@ -79,7 +80,7 @@ func NewProtocol[EK elgamal.EncryptionKey[EK, G, S], G algebra.PrimeGroupElement
 	prng io.Reader,
 ) (*Protocol[G, S], error) {
 	if group == nil || key == nil || prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("group, key, and prng cannot be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("group, key, and prng cannot be nil")
 	}
 	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 

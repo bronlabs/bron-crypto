@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -61,7 +62,7 @@ func (s *Statement) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("could not unmarshal statement from CBOR")
 	}
 	if dto == nil {
-		return ErrInvalidArgument.WithMessage("statement DTO must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("statement DTO must not be nil")
 	}
 	statement, err := NewStatement(dto.CommitmentKey)
 	if err != nil {
@@ -91,16 +92,16 @@ type Witness struct {
 // NewWitness constructs a Pedersen parameters witness.
 func NewWitness(trapdoorKey *intcom.TrapdoorKey) (*Witness, error) {
 	if trapdoorKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("trapdoorKey must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("trapdoorKey must not be nil")
 	}
 	if trapdoorKey.Group() == nil {
-		return nil, ErrInvalidArgument.WithMessage("trapdoor group must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("trapdoor group must not be nil")
 	}
 	if trapdoorKey.Lambda() == nil {
-		return nil, ErrInvalidArgument.WithMessage("lambda must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("lambda must not be nil")
 	}
 	if trapdoorKey.S() == nil || trapdoorKey.T() == nil {
-		return nil, ErrInvalidArgument.WithMessage("trapdoor public parameters must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("trapdoor public parameters must not be nil")
 	}
 	return &Witness{trapdoorKey: trapdoorKey}, nil
 }
@@ -117,12 +118,12 @@ type commitmentDTO struct {
 // NewCommitment constructs a Pedersen parameters commitment.
 func NewCommitment(a ...*znstar.RSAGroupElementUnknownOrder) (*Commitment, error) {
 	if len(a) != m {
-		return nil, ErrInvalidArgument.WithMessage("commitment must contain %d elements", m)
+		return nil, proofs.ErrInvalidArgument.WithMessage("commitment must contain %d elements", m)
 	}
 	out := &Commitment{}
 	for i, item := range a {
 		if item == nil {
-			return nil, ErrInvalidArgument.WithMessage("commitment element %d must not be nil", i)
+			return nil, proofs.ErrInvalidArgument.WithMessage("commitment element %d must not be nil", i)
 		}
 		out.a[i] = item
 	}
@@ -148,7 +149,7 @@ func (c *Commitment) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("could not unmarshal commitment from CBOR")
 	}
 	if dto == nil {
-		return ErrInvalidArgument.WithMessage("commitment DTO must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("commitment DTO must not be nil")
 	}
 	commitment, err := NewCommitment(dto.A[:]...)
 	if err != nil {
@@ -179,12 +180,12 @@ type stateDTO struct {
 // NewState constructs prover state retained between sigma rounds.
 func NewState(alpha ...*num.Uint) (*State, error) {
 	if len(alpha) != m {
-		return nil, ErrInvalidArgument.WithMessage("state must contain %d alpha values", m)
+		return nil, proofs.ErrInvalidArgument.WithMessage("state must contain %d alpha values", m)
 	}
 	out := &State{}
 	for i, item := range alpha {
 		if item == nil {
-			return nil, ErrInvalidArgument.WithMessage("state alpha %d must not be nil", i)
+			return nil, proofs.ErrInvalidArgument.WithMessage("state alpha %d must not be nil", i)
 		}
 		out.alpha[i] = item
 	}
@@ -211,7 +212,7 @@ func (s *State) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("could not unmarshal state from CBOR")
 	}
 	if dto == nil {
-		return ErrInvalidArgument.WithMessage("state DTO must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("state DTO must not be nil")
 	}
 	state, err := NewState(dto.Alpha[:]...)
 	if err != nil {
@@ -233,12 +234,12 @@ type responseDTO struct {
 // NewResponse constructs a Pedersen parameters response.
 func NewResponse(z ...*num.Int) (*Response, error) {
 	if len(z) != m {
-		return nil, ErrInvalidArgument.WithMessage("response must contain %d values", m)
+		return nil, proofs.ErrInvalidArgument.WithMessage("response must contain %d values", m)
 	}
 	out := &Response{}
 	for i, item := range z {
 		if item == nil {
-			return nil, ErrInvalidArgument.WithMessage("response z %d must not be nil", i)
+			return nil, proofs.ErrInvalidArgument.WithMessage("response z %d must not be nil", i)
 		}
 		out.z[i] = item
 	}
@@ -264,7 +265,7 @@ func (r *Response) UnmarshalCBOR(data []byte) error {
 		return errs.Wrap(err).WithMessage("could not unmarshal response from CBOR")
 	}
 	if dto == nil {
-		return ErrInvalidArgument.WithMessage("response DTO must not be nil")
+		return proofs.ErrInvalidArgument.WithMessage("response DTO must not be nil")
 	}
 	response, err := NewResponse(dto.Z[:]...)
 	if err != nil {

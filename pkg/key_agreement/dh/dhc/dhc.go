@@ -1,6 +1,7 @@
 package dhc
 
 import (
+	"io"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -108,6 +109,34 @@ func SerialiseSharedKey[B algebra.FiniteFieldElement[B]](k *SharedKey[B]) ([]byt
 	return k.Bytes(), nil
 }
 
+// SampleExtendedPrivateKey samples a new extended private key using the provided scalar field and randomness source.
+func SampleExtendedPrivateKey[S algebra.PrimeFieldElement[S]](sf algebra.PrimeField[S], prng io.Reader) (*ExtendedPrivateKey[S], error) {
+	if sf == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil sf")
+	}
+	if prng == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil prng")
+	}
+	for {
+		skBytes := make([]byte, sf.ElementSize())
+		if _, err := io.ReadFull(prng, skBytes); err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot sample private key")
+		}
+		privateKey, err := NewPrivateKey(skBytes)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot create private key")
+		}
+		out, err := ExtendPrivateKey(privateKey, sf)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot extend private key")
+		}
+		if out.Value().IsZero() {
+			continue
+		}
+		return out, nil
+	}
+}
+
 // NewPrivateKey creates a new PrivateKey instance.
 func NewPrivateKey(v []byte) (*PrivateKey, error) {
 	if ct.SliceIsZero(v) == ct.True {
@@ -179,6 +208,21 @@ func (esk *ExtendedPrivateKey[S]) Equal(other *ExtendedPrivateKey[S]) bool {
 		return esk == other
 	}
 	return ct.SliceEqual(esk.v, other.v) != ct.False && esk.s.Equal(other.s)
+}
+
+// PublicKeyOf derives the public key corresponding to the given extended private key and curve.
+func PublicKeyOf[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], esk *ExtendedPrivateKey[S]) (*PublicKey[P, B, S], error) {
+	if curve == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil curve")
+	}
+	if esk == nil {
+		return nil, ErrInvalidArgument.WithMessage("nil extended private key")
+	}
+	out, err := NewPublicKey(curve.ScalarBaseMul(esk.Value()))
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create public key")
+	}
+	return out, nil
 }
 
 // NewPublicKey creates a new PublicKey instance.

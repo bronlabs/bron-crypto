@@ -69,7 +69,10 @@ func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *Secret[E], er
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not sample group element")
 	}
-	secret := NewSecret(value)
+	secret, err := NewSecret(value)
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("could not create secret")
+	}
 	shares, err := d.Deal(secret, prng)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("could not create shares")
@@ -170,8 +173,11 @@ func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *unanimity.Unanimity) (*
 }
 
 // NewSecret creates a new secret from a group element.
-func NewSecret[E GroupElement[E]](v E) *Secret[E] {
-	return &Secret[E]{v: v}
+func NewSecret[E GroupElement[E]](v E) (*Secret[E], error) {
+	if utils.IsNil(v) {
+		return nil, sharing.ErrIsNil.WithMessage("group element is nil")
+	}
+	return &Secret[E]{v: v}, nil
 }
 
 // Secret wraps a group element that is being shared.

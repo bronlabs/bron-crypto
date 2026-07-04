@@ -33,7 +33,7 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 	}
 
 	s.ctx.Transcript().AppendBytes(publicKeyValueLabel, s.shard.PublicKey().Value().Bytes())
-	s.ctx.Transcript().AppendBytes(ridLabel, s.shard.RefreshID())
+	s.ctx.Transcript().AppendBytes(ridLabel, s.shard.AuxInfo().RefreshID())
 
 	zeroR1b, zeroR1u, err := s.zeroParty.Round1()
 	if err != nil {

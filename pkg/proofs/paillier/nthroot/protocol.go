@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -30,7 +31,7 @@ type (
 // NewStatement builds a new nth-root statement.
 func NewStatement[X znstar.ArithmeticPaillier](x *znstar.PaillierGroupElement[X]) (*Statement[X], error) {
 	if x == nil {
-		return nil, ErrInvalidArgument.WithMessage("statement element must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("statement element must not be nil")
 	}
 	return &Statement[X]{
 		X: x,
@@ -40,7 +41,7 @@ func NewStatement[X znstar.ArithmeticPaillier](x *znstar.PaillierGroupElement[X]
 // NewWitness builds a new nth-root witness.
 func NewWitness[X znstar.ArithmeticPaillier](w *znstar.PaillierGroupElement[X]) (*Witness[X], error) {
 	if w == nil {
-		return nil, ErrInvalidArgument.WithMessage("witness element must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("witness element must not be nil")
 	}
 	return &Witness[X]{
 		W: w,
@@ -55,11 +56,11 @@ type Protocol[A znstar.ArithmeticPaillier] struct {
 // NewProtocol constructs a Paillier nth-root protocol instance.
 func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], prng io.Reader) (*Protocol[A], error) {
 	if group == nil || prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("group or prng must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("group or prng must not be nil")
 	}
 	oneWayHomomorphism := func(x *znstar.PaillierGroupElement[A]) (*znstar.PaillierGroupElement[A], error) {
 		if x == nil {
-			return nil, ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
+			return nil, proofs.ErrInvalidArgument.WithMessage("homomorphism input cannot be nil")
 		}
 		y, err := group.NthResidue(x)
 		if err != nil {

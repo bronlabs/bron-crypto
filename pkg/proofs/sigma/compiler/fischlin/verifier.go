@@ -8,16 +8,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
-var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
-	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
-])(nil)
-
-// verifier implements the NIVerifier interface for Fischlin proofs.
-type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+// Verifier implements the NIVerifier interface for Fischlin proofs.
+type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	rho           uint64
@@ -28,9 +25,9 @@ type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // Verify checks that a Fischlin proof is valid for the given statement.
 // It verifies that all rho challenge/response pairs hash to zero and that
 // each sigma protocol transcript is valid.
-func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
+func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if proofBytes == nil {
-		return ErrNil.WithMessage("proof")
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	fischlinProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
@@ -40,7 +37,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	// 2. If m, e, and z do not each have ρ elements, then output 'reject'
 	if uint64(len(fischlinProof.A)) != v.rho || uint64(len(fischlinProof.E)) != v.rho || uint64(len(fischlinProof.Z)) != v.rho {
-		return ErrInvalid.WithMessage("invalid length")
+		return proofs.ErrInvalidArgument.WithMessage("invalid length")
 	}
 
 	v.ctx.Transcript().AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, v.rho))
@@ -73,7 +70,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	eByteLen := (v.t + 7) / 8
 	for i := range v.rho {
 		if len(fischlinProof.E[i]) != int(eByteLen) {
-			return ErrVerification.WithMessage("invalid proof")
+			return proofs.ErrInvalidArgument.WithMessage("invalid proof")
 		}
 		digest, err := hash(v.b, commonH, i, fischlinProof.E[i], fischlinProof.Z[i].Bytes())
 		if err != nil {
@@ -82,13 +79,13 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 		// 4.b. Halt and output 'reject' if Hb(common-h, i, e_i, z_i) != 0
 		if !isAllZeros(digest) {
-			return ErrVerification.WithMessage("invalid challenge")
+			return proofs.ErrVerificationFailed.WithMessage("invalid challenge")
 		}
 
 		// 4.a. Halt and output 'reject' if VerifyProof(x, m_i, e_i, z_i) == 0
 		eBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
 		if (len(eBytes) - len(fischlinProof.E[i])) < 0 {
-			return ErrVerification.WithMessage("invalid challenge")
+			return proofs.ErrInvalidArgument.WithMessage("invalid challenge")
 		}
 
 		copy(eBytes[len(eBytes)-len(fischlinProof.E[i]):], fischlinProof.E[i])
