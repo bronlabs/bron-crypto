@@ -176,15 +176,19 @@ func (p *RedAlertParticipant[P, B, S]) Round1() (*RedAlertBroadcast[P, B, S], er
 		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", p.signer().state.round, 4)
 	}
 
+	// step 1
 	aggregateD, err := p.aggregateLocalD()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute local aggregate D")
 	}
+
+	// step 2
 	phi, err := p.proveDec(aggregateD)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove red-alert dec statement")
 	}
 
+	// step 3
 	phiJ := make(map[sharing.ID]compiler.NIZKPoKProof)
 	for recipient := range p.signer().ctx.OtherPartiesOrdered() {
 		proof, err := p.proveAffGStar(recipient)
@@ -224,6 +228,8 @@ func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAler
 		if err != nil {
 			return errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot compute aggregate D for %d", id)
 		}
+
+		// step 1
 		if err := p.verifyDec(id, aggregateD, messages[id].Phi); err != nil {
 			return errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify red-alert dec proof for %d", id)
 		}
@@ -235,6 +241,8 @@ func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAler
 				continue
 			}
 			msg := messages[sender]
+
+			// step 2
 			if err := p.verifyAffGStar(sender, recipient, msg.BigD[recipient], msg.BigF[recipient], msg.PhiJ[recipient]); err != nil {
 				return errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage(
 					"cannot verify red-alert aff-g* proof from %d to %d",
