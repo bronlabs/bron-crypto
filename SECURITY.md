@@ -84,6 +84,9 @@ The bug bounty program covers security vulnerabilities in:
 **Important:** Everything that is not a direct or indirect dependency of threshold signature schemes is considered
 experimental and is **not part of the bug bounty program**.
 
+**CGGMP21 is experimental and out of scope.** This includes the CGGMP21 threshold ECDSA protocol,
+its CGGMP21 zero-knowledge proof packages, and CGGMP21-specific supporting protocol code.
+
 We will introduce a more explicit way of handling experimental features in the future. For now, this policy serves
 to clearly define the scope of our bug bounty program.
 
@@ -97,6 +100,7 @@ to clearly define the scope of our bug bounty program.
 - Any denial-of-service attacks that do not compromise security
 - Test, benchmark, example code, and documentation
 - Vulnerabilities in applications using `bron-crypto` (report to those projects instead)
+- CGGMP21 related code
 
 ## Security Best Practices
 
