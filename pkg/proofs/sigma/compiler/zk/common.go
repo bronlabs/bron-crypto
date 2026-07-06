@@ -10,6 +10,7 @@ import (
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -37,16 +38,16 @@ type participant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 
 func newParticipant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X) (*participant[X, W, A, S, Z], error) {
 	if ctx == nil {
-		return nil, ErrInvalid.WithMessage("ctx is empty")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is empty")
 	}
 	if sigmaProtocol == nil {
-		return nil, ErrNil.WithMessage("protocol")
+		return nil, proofs.ErrInvalidArgument.WithMessage("protocol is nil")
 	}
 	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurityBits {
-		return nil, ErrInvalid.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
+		return nil, proofs.ErrInvalidArgument.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
 	}
 	if sigmaProtocol.GetChallengeBytesLength() > k256Impl.FqBytes {
-		return nil, ErrFailed.WithMessage("challengeBytes is too long for the compiler")
+		return nil, proofs.ErrInvalidArgument.WithMessage("challengeBytes is too long for the compiler")
 	}
 
 	sessionID := ctx.SessionID()

@@ -20,7 +20,7 @@ type (
 	// Statement is the public statement type.
 	Statement base.BytesLike
 	// Witness is the witness type.
-	Witness base.BytesLike
+	Witness any
 	// Commitment is the commitment type.
 	Commitment base.BytesLike
 	// State is the prover's internal state type.

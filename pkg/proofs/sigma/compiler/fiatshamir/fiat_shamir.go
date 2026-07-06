@@ -4,13 +4,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/bronlabs/errs-go/errs"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir/zkmodule"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
@@ -18,55 +16,21 @@ const (
 	// Name is the identifier for the Fiat-Shamir compiler.
 	Name compiler.Name = "FiatShamir"
 
+	// transcriptLabel domain-separates this compiler's transcript from other
+	// protocols sharing the session. The per-message labels (statement,
+	// commitment, challenge, response) are owned by the zkmodule engine, which
+	// performs the actual absorption and challenge derivation.
 	transcriptLabel = "BRON_CRYPTO_NIZKP_FIATSHAMIR-"
-	statementLabel  = "statementLabel-"
-	commitmentLabel = "commitmentLabel-"
-	challengeLabel  = "challengeLabel-"
 )
 
-// Proof represents a Fiat-Shamir non-interactive proof containing
-// the prover's commitment (a) and response (z).
-type Proof[A sigma.Commitment, Z sigma.Response] struct {
-	a A
-	z Z
-}
+// Proof is a Fiat-Shamir non-interactive proof: the prover's commitment (a),
+// the challenge (e) derived from the transcript hash, and the response (z). It
+// is an alias for the engine type zkmodule.Proof, so proofs produced here
+// (de)serialise identically to that type.
+type Proof[A sigma.Commitment, Z sigma.Response] = zkmodule.Proof[A, Z]
 
-type proofDTO[A sigma.Commitment, Z sigma.Response] struct {
-	A A `cbor:"A"`
-	Z Z `cbor:"Z"`
-}
-
-// MarshalCBOR serialises the proof to CBOR format.
-func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
-	dto := &proofDTO[A, Z]{
-		A: p.a,
-		Z: p.z,
-	}
-	data, err := serde.MarshalCBOR(dto)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to marshal Fiat-Shamir proof")
-	}
-	return data, nil
-}
-
-// UnmarshalCBOR deserializes the proof from CBOR format.
-func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*proofDTO[A, Z]](data)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot unmarshal Fiat-Shamir proof")
-	}
-	if utils.IsNil(dto.A) {
-		return ErrNil.WithMessage("commitment (A) cannot be nil")
-	}
-	if utils.IsNil(dto.Z) {
-		return ErrNil.WithMessage("response (Z) cannot be nil")
-	}
-	p.a = dto.A
-	p.z = dto.Z
-	return nil
-}
-
-type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+// Protocol implements the NonInteractiveProtocol interface for Fiat-Shamir proofs.
+type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
@@ -75,57 +39,61 @@ type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 // computational security of the resulting non-interactive proof.
 func NewCompiler[
 	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
-](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NonInteractiveProtocol[X, W], error) {
+](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (*Protocol[X, W, A, S, Z], error) {
 	if sigmaProtocol == nil {
-		return nil, ErrNil.WithMessage("sigmaProtocol")
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol is nil")
 	}
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-		return nil, ErrInvalid.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
 	}
-	return &fs[X, W, A, S, Z]{
+	return &Protocol[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 	}, nil
 }
 
-// NewProver creates a new non-interactive prover for generating Fiat-Shamir proofs.
-// The sessionID and transcript are used for domain separation.
-func (c *fs[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+// NewProver returns a non-interactive prover bound to ctx. The session ID and
+// the underlying sigma-protocol name are folded into a transcript domain
+// separator so that proofs from different sessions or protocols cannot be
+// cross-replayed.
+func (c *Protocol[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &prover[X, W, A, S, Z]{
+	return &Prover[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }
 
-// NewVerifier creates a new non-interactive verifier for checking Fiat-Shamir proofs.
-// The sessionID and transcript must match those used by the prover.
-func (c *fs[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
+// NewVerifier returns a non-interactive verifier bound to ctx. It applies the
+// same domain separator as NewProver; the verifier's session must match the
+// prover's, otherwise the challenge recomputed from the transcript will not
+// agree with the one in the proof.
+func (c *Protocol[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	sid := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sid[:]), transcriptLabel, c.sigmaProtocol.Name())
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &verifier[X, W, A, S, Z]{
+	return &Verifier[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }
 
 // Name returns the compiler name ("FiatShamir").
-func (*fs[_, _, _, _, _]) Name() compiler.Name {
+func (*Protocol[_, _, _, _, _]) Name() compiler.Name {
 	return Name
 }
 
 // SigmaProtocolName returns the name of the underlying sigma protocol.
-func (c *fs[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
+func (c *Protocol[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
 	return c.sigmaProtocol.Name()
 }

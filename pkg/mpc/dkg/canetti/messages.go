@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir/zkmodule"
 )
 
 // Round1Broadcast carries the dealer's commitment digest for round 1.
@@ -118,7 +119,7 @@ func (m *Round2P2P[G, S]) Validate(p *Participant[G, S], _ sharing.ID) error {
 
 // Round3Broadcast carries the sender's batch Schnorr response.
 type Round3Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	Psi *ZKResponse[*batch_schnorr.Commitment[G, S], *batch_schnorr.Response[S]]
+	Psi *zkmodule.Proof[*batch_schnorr.Commitment[G, S], *batch_schnorr.Response[S]]
 }
 
 // Validate checks whether the round 3 broadcast is well formed.

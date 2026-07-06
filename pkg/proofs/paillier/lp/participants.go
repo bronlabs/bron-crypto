@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
@@ -120,19 +121,19 @@ func NewVerifier(ctx *session.Context, k int, pk *paillier.PublicKey, prng io.Re
 
 func validateVerifierInputs(ctx *session.Context, k int, pk *paillier.PublicKey, prng io.Reader) error {
 	if ctx == nil {
-		return ErrInvalidArgument.WithMessage("ctx is nil")
+		return proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	if ctx.Quorum().Size() != 2 {
-		return ErrInvalidArgument.WithMessage("invalid quorum size")
+		return proofs.ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if pk == nil {
-		return ErrInvalidArgument.WithMessage("paillier public key is nil")
+		return proofs.ErrInvalidArgument.WithMessage("paillier public key is nil")
 	}
 	if k < 1 {
-		return ErrInvalidArgument.WithMessage("invalid k: %d (must be positive)", k)
+		return proofs.ErrInvalidArgument.WithMessage("invalid k: %d (must be positive)", k)
 	}
 	if prng == nil {
-		return ErrInvalidArgument.WithMessage("prng is nil")
+		return proofs.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return nil
 }
@@ -176,19 +177,19 @@ func NewProver(ctx *session.Context, k int, sk *paillier.SecretKey, prng io.Read
 
 func validateProverInputs(ctx *session.Context, k int, sk *paillier.SecretKey, prng io.Reader) error {
 	if ctx == nil {
-		return ErrInvalidArgument.WithMessage("ctx is nil")
+		return proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 	if ctx.Quorum().Size() != 2 {
-		return ErrInvalidArgument.WithMessage("invalid quorum size")
+		return proofs.ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if sk == nil {
-		return ErrInvalidArgument.WithMessage("paillier secret key is nil")
+		return proofs.ErrInvalidArgument.WithMessage("paillier secret key is nil")
 	}
 	if k < 1 {
-		return ErrInvalidArgument.WithMessage("invalid k: %d (must be positive)", k)
+		return proofs.ErrInvalidArgument.WithMessage("invalid k: %d (must be positive)", k)
 	}
 	if prng == nil {
-		return ErrInvalidArgument.WithMessage("prng is nil")
+		return proofs.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return nil
 }

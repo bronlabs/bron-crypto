@@ -18,6 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
 )
@@ -172,22 +173,22 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 
 func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, prng io.Reader) error {
 	if ctx == nil {
-		return ErrInvalidArgument.WithMessage("context is nil")
+		return proofs.ErrInvalidArgument.WithMessage("context is nil")
 	}
 	if ctx.Quorum().Size() != 2 {
-		return ErrInvalidArgument.WithMessage("invalid quorum size")
+		return proofs.ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if publicKey == nil {
-		return ErrInvalidArgument.WithMessage("public key is nil")
+		return proofs.ErrInvalidArgument.WithMessage("public key is nil")
 	}
 	if xEncrypted == nil {
-		return ErrInvalidArgument.WithMessage("xEncrypted is nil")
+		return proofs.ErrInvalidArgument.WithMessage("xEncrypted is nil")
 	}
 	if utils.IsNil(bigQ) {
-		return ErrInvalidArgument.WithMessage("bigQ is nil")
+		return proofs.ErrInvalidArgument.WithMessage("bigQ is nil")
 	}
 	if prng == nil {
-		return ErrInvalidArgument.WithMessage("prng is nil")
+		return proofs.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return nil
 }
@@ -284,29 +285,29 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 
 func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, curve curves.Curve[P, B, S], secretKey *paillier.SecretKey, x S, r *paillier.Nonce, prng io.Reader) error {
 	if ctx == nil {
-		return ErrInvalidArgument.WithMessage("ctx is empty")
+		return proofs.ErrInvalidArgument.WithMessage("ctx is empty")
 	}
 	if ctx.Quorum().Size() != 2 {
-		return ErrInvalidArgument.WithMessage("invalid quorum size")
+		return proofs.ErrInvalidArgument.WithMessage("invalid quorum size")
 	}
 	if secretKey == nil {
-		return ErrInvalidArgument.WithMessage("secret key is nil")
+		return proofs.ErrInvalidArgument.WithMessage("secret key is nil")
 	}
 	if curve == nil {
-		return ErrInvalidArgument.WithMessage("curve is nil")
+		return proofs.ErrInvalidArgument.WithMessage("curve is nil")
 	}
 	if utils.IsNil(x) {
-		return ErrInvalidArgument.WithMessage("x is nil")
+		return proofs.ErrInvalidArgument.WithMessage("x is nil")
 	}
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](x.Structure())
 	if curve.ScalarField().Name() != sf.Name() {
-		return ErrInvalidArgument.WithMessage("x is not an element of the scalar field of the curve")
+		return proofs.ErrInvalidArgument.WithMessage("x is not an element of the scalar field of the curve")
 	}
 	if r == nil {
-		return ErrInvalidArgument.WithMessage("r is nil")
+		return proofs.ErrInvalidArgument.WithMessage("r is nil")
 	}
 	if prng == nil {
-		return ErrInvalidArgument.WithMessage("prng is nil")
+		return proofs.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return nil
 }

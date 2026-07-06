@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -42,7 +43,7 @@ func (w *Witness) Bytes() []byte {
 // NewWitness constructs a range-proof witness.
 func NewWitness(x *paillier.Plaintext, r *paillier.Nonce) (*Witness, error) {
 	if x == nil || r == nil {
-		return nil, ErrInvalidArgument.WithMessage("x and r must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("x and r must not be nil")
 	}
 	return &Witness{
 		X: x,
@@ -69,7 +70,7 @@ func (s *Statement) Bytes() []byte {
 // NewStatement constructs a range-proof statement.
 func NewStatement(c *paillier.Ciphertext) (*Statement, error) {
 	if c == nil {
-		return nil, ErrInvalidArgument.WithMessage("c must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("c must not be nil")
 	}
 	return &Statement{
 		C: c,
@@ -177,16 +178,16 @@ func NewPaillierRange[EK paillier.EncryptionKey[EK]](
 	t uint, l *num.NatPlus, encryptionKey EK, prng io.Reader,
 ) (*Protocol[EK], error) {
 	if t < base.StatisticalSecurityBits {
-		return nil, ErrValidationFailed.WithMessage("insufficient statistical security")
+		return nil, proofs.ErrValidationFailed.WithMessage("insufficient statistical security")
 	}
 	if l == nil {
-		return nil, ErrInvalidArgument.WithMessage("l must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("l must not be nil")
 	}
 	if utils.IsNil(encryptionKey) {
-		return nil, ErrInvalidArgument.WithMessage("encryptionKey must not be nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("encryptionKey must not be nil")
 	}
 	if prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("nil prng")
+		return nil, proofs.ErrInvalidArgument.WithMessage("nil prng")
 	}
 
 	lowBound := l.Nat()
@@ -212,10 +213,10 @@ func (p *Protocol[EK]) Name() sigma.Name {
 // ComputeProverCommitment generates the initial commitment and state.
 func (p *Protocol[EK]) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
 	if statement == nil || statement.C == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
+		return nil, nil, proofs.ErrInvalidArgument.WithMessage("invalid statement")
 	}
 	if witness == nil || witness.X == nil || witness.R == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid witness")
+		return nil, nil, proofs.ErrInvalidArgument.WithMessage("invalid witness")
 	}
 
 	swaps := make([]byte, (p.t+7)/8)
@@ -272,19 +273,19 @@ func (p *Protocol[EK]) ComputeProverCommitment(statement *Statement, witness *Wi
 // ComputeProverResponse generates the response for a given challenge.
 func (p *Protocol[EK]) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
 	if statement == nil || statement.C == nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid statement")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid statement")
 	}
 	if witness == nil || witness.X == nil || witness.R == nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid witness")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid witness")
 	}
 	if state == nil {
-		return nil, ErrInvalidArgument.WithMessage("state is nil")
+		return nil, proofs.ErrInvalidArgument.WithMessage("state is nil")
 	}
 	if len(challenge) != p.GetChallengeBytesLength() {
-		return nil, ErrInvalidArgument.WithMessage("invalid challenge length")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
 	if len(state.W1) != int(p.t) || len(state.R1) != int(p.t) || len(state.W2) != int(p.t) || len(state.R2) != int(p.t) {
-		return nil, ErrInvalidArgument.WithMessage("inconsistent input")
+		return nil, proofs.ErrInvalidArgument.WithMessage("inconsistent input")
 	}
 
 	z := &Response{
@@ -331,7 +332,7 @@ func (p *Protocol[EK]) ComputeProverResponse(statement *Statement, witness *Witn
 			}
 
 		default:
-			return nil, ErrFailed.WithMessage("unexpected challenge bit value")
+			return nil, proofs.ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -341,16 +342,16 @@ func (p *Protocol[EK]) ComputeProverResponse(statement *Statement, witness *Witn
 // Verify checks a prover response against the statement and commitment.
 func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
 	if statement == nil || statement.C == nil {
-		return ErrInvalidArgument.WithMessage("invalid statement")
+		return proofs.ErrInvalidArgument.WithMessage("invalid statement")
 	}
 	if commitment == nil || response == nil {
-		return ErrInvalidArgument.WithMessage("invalid commitment or response")
+		return proofs.ErrInvalidArgument.WithMessage("invalid commitment or response")
 	}
 	if len(challenge) != p.GetChallengeBytesLength() {
-		return ErrInvalidArgument.WithMessage("invalid challenge length")
+		return proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
 	if len(commitment.C1) != int(p.t) || len(commitment.C2) != int(p.t) {
-		return ErrFailed.WithMessage("inconsistent input")
+		return proofs.ErrFailed.WithMessage("inconsistent input")
 	}
 
 	l1 := len(response.W1)
@@ -358,7 +359,7 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 	if len(response.W2) != l1 || len(response.W1) != l1 || len(response.R1) != l1 || len(response.R2) != l1 ||
 		len(response.Rj) != l2 || len(response.J) != l2 || l1+l2 != int(p.t) {
 
-		return ErrFailed.WithMessage("inconsistent input")
+		return proofs.ErrFailed.WithMessage("inconsistent input")
 	}
 
 	var c []*paillier.Ciphertext
@@ -373,13 +374,13 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 			r1i, okr1i := response.R1[i]
 			r2i, okr2i := response.R2[i]
 			if !okw1i || !okw2i || !okr1i || !okr2i {
-				return ErrVerificationFailed.WithMessage("verification failed")
+				return proofs.ErrVerificationFailed.WithMessage("verification failed")
 			}
 
 			if (!isInRange(p.lowBound, p.highBound, w1i) || !isInRange(num.N().Zero(), p.lowBound, w2i)) &&
 				(!isInRange(p.lowBound, p.highBound, w2i) || !isInRange(num.N().Zero(), p.lowBound, w1i)) {
 
-				return ErrVerificationFailed.WithMessage("verification failed")
+				return proofs.ErrVerificationFailed.WithMessage("verification failed")
 			}
 
 			w = append(w, w1i)
@@ -394,11 +395,11 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 			ri, okri := response.Rj[i]
 			ji, okji := response.J[i]
 			if !okwi || !okri || !okji {
-				return ErrVerificationFailed.WithMessage("verification failed")
+				return proofs.ErrVerificationFailed.WithMessage("verification failed")
 			}
 
 			if !isInRange(p.lowBound, p.highBound, wi) {
-				return ErrVerificationFailed.WithMessage("verification failed")
+				return proofs.ErrVerificationFailed.WithMessage("verification failed")
 			}
 
 			w = append(w, wi)
@@ -417,10 +418,10 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 				}
 				c = append(c, ci)
 			default:
-				return ErrVerificationFailed.WithMessage("verification failed")
+				return proofs.ErrVerificationFailed.WithMessage("verification failed")
 			}
 		default:
-			return ErrFailed.WithMessage("unexpected challenge bit value")
+			return proofs.ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -430,7 +431,7 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 	}
 	for i, ci := range c {
 		if !cCheck[i].Equal(ci) {
-			return ErrVerificationFailed.WithMessage("verification failed")
+			return proofs.ErrVerificationFailed.WithMessage("verification failed")
 		}
 	}
 
@@ -440,10 +441,10 @@ func (p *Protocol[EK]) Verify(statement *Statement, commitment *Commitment, chal
 // RunSimulator creates a simulated transcript for a given challenge.
 func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
 	if statement == nil || statement.C == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid statement")
+		return nil, nil, proofs.ErrInvalidArgument.WithMessage("invalid statement")
 	}
 	if len(challenge) != p.GetChallengeBytesLength() {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid challenge length")
+		return nil, nil, proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
 
 	w1 := make(map[uint]*paillier.Plaintext)
@@ -498,7 +499,7 @@ func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.Challe
 			toBeEncrypted[i] = wj[i]
 			toBeEncrypted[i+p.t] = zeroPlaintext
 		default:
-			return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
+			return nil, nil, proofs.ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -547,10 +548,10 @@ func (p *Protocol[EK]) RunSimulator(statement *Statement, challenge sigma.Challe
 				c1[i] = cZero
 				rj[i] = rji
 			default:
-				return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
+				return nil, nil, proofs.ErrFailed.WithMessage("unexpected challenge bit value")
 			}
 		default:
-			return nil, nil, ErrFailed.WithMessage("unexpected challenge bit value")
+			return nil, nil, proofs.ErrFailed.WithMessage("unexpected challenge bit value")
 		}
 	}
 
@@ -578,24 +579,24 @@ func (*Protocol[EK]) SpecialSoundness() uint {
 // ValidateStatement checks the witness against the statement.
 func (p *Protocol[EK]) ValidateStatement(statement *Statement, witness *Witness) error {
 	if statement == nil || statement.C == nil {
-		return ErrInvalidArgument.WithMessage("invalid statement")
+		return proofs.ErrInvalidArgument.WithMessage("invalid statement")
 	}
 	if witness == nil || witness.X == nil || witness.R == nil {
-		return ErrInvalidArgument.WithMessage("invalid witness")
+		return proofs.ErrInvalidArgument.WithMessage("invalid witness")
 	}
 	if !p.encryptionKey.PlaintextGroup().Contains(witness.X.Value()) {
-		return ErrValidationFailed.WithMessage("witness x is not a valid plaintext")
+		return proofs.ErrValidationFailed.WithMessage("witness x is not a valid plaintext")
 	}
 	if !p.encryptionKey.NonceGroup().Contains(witness.R.Value()) {
-		return ErrValidationFailed.WithMessage("witness r is not a valid nonce")
+		return proofs.ErrValidationFailed.WithMessage("witness r is not a valid nonce")
 	}
 	cCheck, err := p.encryptionKey.EncryptWithNonce(witness.X, witness.R)
 	if err != nil || !statement.C.Equal(cCheck) {
-		return ErrValidationFailed.WithMessage("plaintext/ciphertext mismatch")
+		return proofs.ErrValidationFailed.WithMessage("plaintext/ciphertext mismatch")
 	}
 
 	if !isInRange(num.N().Zero(), p.lowBound, witness.X) {
-		return ErrValidationFailed.WithMessage("witness out of range")
+		return proofs.ErrValidationFailed.WithMessage("witness out of range")
 	}
 
 	return nil

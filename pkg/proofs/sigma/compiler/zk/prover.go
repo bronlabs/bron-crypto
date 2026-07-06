@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
@@ -25,7 +26,7 @@ type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 // The prover will execute rounds 2 and 4 of the protocol.
 func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](ctx *session.Context, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
 	if utils.IsNil(witness) {
-		return nil, ErrNil.WithMessage("witness")
+		return nil, proofs.ErrInvalidArgument.WithMessage("witness is nil")
 	}
 	p, err := newParticipant(ctx, sigmaProtocol, statement)
 	if err != nil {
@@ -45,7 +46,7 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hashcom.Commitment) (A, error) {
 	var zero A
 	if p.round != 2 {
-		return zero, ErrRound.WithMessage("r != 2 (%d)", p.round)
+		return zero, proofs.ErrRound.WithMessage("r != 2 (%d)", p.round)
 	}
 
 	p.ctx.Transcript().AppendBytes(challengeCommitmentLabel, eCommitment[:])
@@ -71,7 +72,7 @@ func (p *Prover[X, W, A, S, Z]) Round4(challenge hashcom.Message, witness hashco
 	p.ctx.Transcript().AppendBytes(challengeLabel, challenge)
 
 	if p.round != 4 {
-		return zero, ErrRound.WithMessage("r != 4 (%d)", p.round)
+		return zero, proofs.ErrRound.WithMessage("r != 4 (%d)", p.round)
 	}
 	if err := p.ck.Open(p.challengeCommitment, challenge, witness); err != nil {
 		return zero, errs.Wrap(err).WithMessage("invalid challenge")

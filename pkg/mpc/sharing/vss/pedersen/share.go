@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersencom"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
 )
