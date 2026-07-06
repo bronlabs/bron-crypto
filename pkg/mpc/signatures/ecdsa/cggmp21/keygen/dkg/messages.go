@@ -52,20 +52,20 @@ type CommitmentMessage[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 
 // Bytes is the canonical encoding hashed by the round-1 commitment and
 // re-derived by the verifier when opening it in round 3; the commitment's
-// binding rests on it being injective. Every field is fixed-width — SessionID,
-// SharingID, and the saferith-padded N_i, N̂_i, s_i, t_i (each the announced IFC
-// modulus length) and the fixed-length Rid — except Psi, which is bracketed by
-// the fixed prefix and the fixed-length Rid suffix, so the field boundaries are
-// unambiguous. It assumes the keys have been length-validated (see Round3).
+// binding rests on it being injective.
 func (m *CommitmentMessage[P, B, S]) Bytes() []byte {
 	var data []byte
 	data = append(data, m.SessionID[:]...)
 	data = binary.LittleEndian.AppendUint64(data, uint64(m.SharingID))
+	data = binary.LittleEndian.AppendUint64(data, uint64(m.PaillierPublicKey.Group().N().TrueLen()))
 	data = append(data, m.PaillierPublicKey.Group().N().BytesBE()...)
+	data = binary.LittleEndian.AppendUint64(data, uint64(m.RingPedersenCommitmentKey.Group().Modulus().TrueLen()))
 	data = append(data, m.RingPedersenCommitmentKey.Group().Modulus().BytesBE()...)
 	data = append(data, m.RingPedersenCommitmentKey.S().Value().BytesBE()...)
 	data = append(data, m.RingPedersenCommitmentKey.T().Value().BytesBE()...)
+	data = binary.LittleEndian.AppendUint64(data, uint64(len(m.Psi)))
 	data = append(data, m.Psi...)
+	data = binary.LittleEndian.AppendUint64(data, uint64(len(m.Rid)))
 	data = append(data, m.Rid...)
 	return data
 }
