@@ -36,7 +36,7 @@ func TestRedAlertProofsManual_Threshold2Of3(t *testing.T) {
 
 func testRedAlertProofsManual(
 	t *testing.T,
-	newParticipant func(*Signer[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]) *RedAlertParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar],
+	newParticipant func(*Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]) *RedAlertParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar],
 ) {
 	t.Helper()
 
@@ -57,27 +57,27 @@ func testRedAlertProofsManual(
 	signingQuorum := hashset.NewComparable(signingIDs...).Freeze()
 	ctxs := session_testutils.MakeRandomContexts(t, signingQuorum, prng)
 
-	signers := make(map[sharing.ID]*Signer[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	cosigners := make(map[sharing.ID]*Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
 	for _, id := range signingIDs {
-		signer, err := NewSigner(ctxs[id], suite, shards[id], pcg.NewRandomised())
+		cosigner, err := NewCosigner(ctxs[id], suite, shards[id], pcg.NewRandomised())
 		require.NoError(t, err)
-		signers[id] = signer
+		cosigners[id] = cosigner
 	}
-	participants := slices.Collect(maps.Values(signers))
+	participants := slices.Collect(maps.Values(cosigners))
 
 	r1bOut := make(map[sharing.ID]*Round1Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
-	r1uOut := make(map[sharing.ID]network.OutgoingUnicasts[*Round1P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *Signer[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
+	r1uOut := make(map[sharing.ID]network.OutgoingUnicasts[*Round1P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
 	for _, id := range signingIDs {
-		r1bOut[id], r1uOut[id], err = signers[id].Round1()
+		r1bOut[id], r1uOut[id], err = cosigners[id].Round1()
 		require.NoError(t, err)
 	}
 
 	r2bIn := ntu.MapBroadcastO2I(t, participants, r1bOut)
 	r2uIn := ntu.MapUnicastO2I(t, participants, r1uOut)
 	r2bOut := make(map[sharing.ID]*Round2Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
-	r2uOut := make(map[sharing.ID]network.OutgoingUnicasts[*Round2P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *Signer[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
+	r2uOut := make(map[sharing.ID]network.OutgoingUnicasts[*Round2P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
 	for _, id := range signingIDs {
-		r2bOut[id], r2uOut[id], err = signers[id].Round2(r2bIn[id], r2uIn[id])
+		r2bOut[id], r2uOut[id], err = cosigners[id].Round2(r2bIn[id], r2uIn[id])
 		require.NoError(t, err)
 	}
 
@@ -85,21 +85,21 @@ func testRedAlertProofsManual(
 	r3uIn := ntu.MapUnicastO2I(t, participants, r2uOut)
 	r3bOut := make(map[sharing.ID]*Round3Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
 	for _, id := range signingIDs {
-		r3bOut[id], err = signers[id].Round3(r3bIn[id], r3uIn[id])
+		r3bOut[id], err = cosigners[id].Round3(r3bIn[id], r3uIn[id])
 		require.NoError(t, err)
 	}
 
 	r4bIn := ntu.MapBroadcastO2I(t, participants, r3bOut)
 	for _, id := range signingIDs {
-		_, redAlert, err := signers[id].Round4(r4bIn[id], message)
+		_, redAlert, err := cosigners[id].Round4(r4bIn[id], message)
 		require.NoError(t, err)
 		require.Nil(t, redAlert)
-		signers[id].state.round = 4
+		cosigners[id].state.round = 4
 	}
 
 	redAlerts := map[sharing.ID]*RedAlertParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]{
-		1: newParticipant(signers[1]),
-		2: newParticipant(signers[2]),
+		1: newParticipant(cosigners[1]),
+		2: newParticipant(cosigners[2]),
 	}
 	redAlertParticipants := slices.Collect(maps.Values(redAlerts))
 	redAlertOut := make(map[sharing.ID]*RedAlertBroadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
@@ -114,7 +114,7 @@ func testRedAlertProofsManual(
 		Phi:  redAlertOut[1].Phi,
 		PhiJ: maps.Clone(redAlertOut[1].PhiJ),
 	}
-	tampered.BigD[2], _, err = paillierEncryptInt(signers[2].shard.AuxInfo().PaillierSecretKey().Public(), num.Z().FromInt64(1), prng)
+	tampered.BigD[2], _, err = paillierEncryptInt(cosigners[2].shard.AuxInfo().PaillierSecretKey().Public(), num.Z().FromInt64(1), prng)
 	require.NoError(t, err)
 	require.ErrorContains(t, tampered.Validate(redAlerts[2], 1), "differs from round 2")
 

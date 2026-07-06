@@ -103,13 +103,13 @@ func intToScalar[S algebra.PrimeFieldElement[S]](i *num.Int, scalarField algebra
 }
 
 func paillierPublicKeyFor[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
-	signer *Signer[P, B, S],
+	cosigner *Cosigner[P, B, S],
 	id sharing.ID,
 ) (*paillier.PublicKey, error) {
-	if id == signer.ctx.HolderID() {
-		return signer.shard.AuxInfo().PaillierSecretKey().Public(), nil
+	if id == cosigner.ctx.HolderID() {
+		return cosigner.shard.AuxInfo().PaillierSecretKey().Public(), nil
 	}
-	publicKey, ok := signer.shard.AuxInfo().PaillierPublicKey(id)
+	publicKey, ok := cosigner.shard.AuxInfo().PaillierPublicKey(id)
 	if !ok {
 		return nil, cggmp21.ErrValidationFailed.WithMessage("missing Paillier public key for %d", id)
 	}

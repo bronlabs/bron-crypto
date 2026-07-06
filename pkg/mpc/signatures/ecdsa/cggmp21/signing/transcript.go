@@ -24,16 +24,16 @@ func collectAndAppendBroadcastMessages[
 	P curves.Point[P, B, S],
 	B algebra.PrimeFieldElement[B],
 	S algebra.PrimeFieldElement[S],
-	M network.Message[*Signer[P, B, S]],
+	M network.Message[*Cosigner[P, B, S]],
 ](
-	signer *Signer[P, B, S],
+	cosigner *Cosigner[P, B, S],
 	label string,
 	local M,
-	incoming network.RoundMessages[M, *Signer[P, B, S]],
+	incoming network.RoundMessages[M, *Cosigner[P, B, S]],
 ) (map[sharing.ID]M, error) {
 	messages := make(map[sharing.ID]M)
-	messages[signer.ctx.HolderID()] = local
-	for id := range signer.ctx.OtherPartiesOrdered() {
+	messages[cosigner.ctx.HolderID()] = local
+	for id := range cosigner.ctx.OtherPartiesOrdered() {
 		message, ok := incoming.Get(id)
 		if !ok {
 			return nil, network.ErrMissing.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("broadcast from %d", id)
@@ -41,7 +41,7 @@ func collectAndAppendBroadcastMessages[
 		messages[id] = message
 	}
 
-	for id := range signer.ctx.AllPartiesOrdered() {
+	for id := range cosigner.ctx.AllPartiesOrdered() {
 		message, ok := messages[id]
 		if !ok || utils.IsNil(message) {
 			return nil, cggmp21.ErrNil.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("broadcast message from %d", id)
@@ -50,7 +50,7 @@ func collectAndAppendBroadcastMessages[
 		if err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot serialise broadcast message from %d", id)
 		}
-		signer.ctx.Transcript().AppendBytes(label, id.Bytes(), data)
+		cosigner.ctx.Transcript().AppendBytes(label, id.Bytes(), data)
 	}
 	return messages, nil
 }

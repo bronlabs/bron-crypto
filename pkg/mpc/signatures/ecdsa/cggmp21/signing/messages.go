@@ -34,17 +34,17 @@ type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 }
 
 // Validate checks a round 1 broadcast against the sender's public parameters.
-func (r1b *Round1Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], senderID sharing.ID) error {
+func (r1b *Round1Broadcast[P, B, S]) Validate(cosigner *Cosigner[P, B, S], senderID sharing.ID) error {
 	if r1b == nil {
 		return cggmp21.ErrNil.WithMessage("round 1 broadcast")
 	}
 	if r1b.ZeroR1 == nil {
 		return cggmp21.ErrNil.WithMessage("round 1 zero broadcast")
 	}
-	if err := r1b.ZeroR1.Validate(signer.zeroParty, senderID); err != nil {
+	if err := r1b.ZeroR1.Validate(cosigner.zeroParty, senderID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid zero r1 message")
 	}
-	auxInfo := signer.shard.AuxInfo()
+	auxInfo := cosigner.shard.AuxInfo()
 	senderPaillierPublicKey, ok := auxInfo.PaillierPublicKey(senderID)
 	if !ok {
 		return cggmp21.ErrValidationFailed.WithMessage("missing Paillier public key for sender %d", senderID)
@@ -72,14 +72,14 @@ type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 }
 
 // Validate checks a round 1 private message before proof verification.
-func (r1u *Round1P2P[P, B, S]) Validate(signer *Signer[P, B, S], senderID sharing.ID) error {
+func (r1u *Round1P2P[P, B, S]) Validate(cosigner *Cosigner[P, B, S], senderID sharing.ID) error {
 	if r1u == nil {
 		return cggmp21.ErrNil.WithMessage("round 1 P2P")
 	}
 	if r1u.ZeroR1 == nil {
 		return cggmp21.ErrNil.WithMessage("round 1 zero P2P")
 	}
-	if err := r1u.ZeroR1.Validate(signer.zeroParty, senderID); err != nil {
+	if err := r1u.ZeroR1.Validate(cosigner.zeroParty, senderID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid zero r1 message")
 	}
 	if err := validateProof(r1u.Psi0, "Psi0"); err != nil {
@@ -95,7 +95,7 @@ type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 }
 
 // Validate checks a round 2 broadcast before proof verification.
-func (r2b *Round2Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], _ sharing.ID) error {
+func (r2b *Round2Broadcast[P, B, S]) Validate(cosigner *Cosigner[P, B, S], _ sharing.ID) error {
 	if r2b == nil {
 		return cggmp21.ErrNil.WithMessage("round 2 broadcast")
 	}
@@ -116,7 +116,7 @@ type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 }
 
 // Validate checks a round 2 private message before proof verification.
-func (r2u *Round2P2P[P, B, S]) Validate(signer *Signer[P, B, S], senderID sharing.ID) error {
+func (r2u *Round2P2P[P, B, S]) Validate(signer *Cosigner[P, B, S], senderID sharing.ID) error {
 	if r2u == nil {
 		return cggmp21.ErrNil.WithMessage("round 2 P2P")
 	}
@@ -152,7 +152,7 @@ type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 }
 
 // Validate checks a round 3 broadcast before proof verification.
-func (r3b *Round3Broadcast[P, B, S]) Validate(signer *Signer[P, B, S], sender sharing.ID) error {
+func (r3b *Round3Broadcast[P, B, S]) Validate(signer *Cosigner[P, B, S], sender sharing.ID) error {
 	if r3b == nil {
 		return cggmp21.ErrNil.WithMessage("round 3 broadcast")
 	}
@@ -174,7 +174,7 @@ type Round4P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 }
 
 // Validate checks a round 4 private partial-signature message.
-func (r4u *Round4P2P[P, B, S]) Validate(signer *Signer[P, B, S], sender sharing.ID) error {
+func (r4u *Round4P2P[P, B, S]) Validate(signer *Cosigner[P, B, S], sender sharing.ID) error {
 	if r4u == nil || r4u.PartialSignature == nil {
 		return cggmp21.ErrNil.WithMessage("round 4 P2P")
 	}
@@ -203,7 +203,7 @@ func (a *RedAlertBroadcast[P, B, S]) Validate(p *RedAlertParticipant[P, B, S], s
 	if len(a.Phi) == 0 {
 		return cggmp21.ErrNil.WithMessage("red alert dec proof")
 	}
-	signer := p.signer()
+	signer := p.cosigner()
 	senderPaillierPublicKey, err := paillierPublicKeyFor(signer, sender)
 	if err != nil {
 		return err

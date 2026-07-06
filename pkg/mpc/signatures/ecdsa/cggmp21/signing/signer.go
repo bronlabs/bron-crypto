@@ -26,13 +26,17 @@ import (
 const (
 	protocolDomainSeparator = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN"
 
-	publicKeyValueLabel = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PK"
-	ridLabel            = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_RID"
-	proverID            = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PROVER-ID"
+	publicKeyValueLabel        = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PK"
+	ridLabel                   = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_RID"
+	paillierPublicKeyLabel     = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_N"
+	ringPedersenPublicKeyLabel = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_N_HAT"
+	sLabel                     = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_S"
+	tLabel                     = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_T"
+	proverID                   = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PROVER-ID"
 )
 
-// Signer holds the local state for one CGGMP21 online signing session.
-type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+// Cosigner holds the local state for one CGGMP21 online signing session.
+type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	zeroParty *hjky.Participant[P, S]
 
 	ctx                 *session.Context
@@ -91,8 +95,8 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	round3Broadcasts map[sharing.ID]*Round3Broadcast[P, B, S]
 }
 
-// NewSigner constructs a CGGMP21 online signer for one session participant.
-func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, ecdsaSuite *sigecdsa.Suite[P, B, S], shard *cggmp21.Shard[P, B, S], prng io.Reader) (*Signer[P, B, S], error) {
+// NewCosigner constructs a CGGMP21 online cosigner for one session participant.
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, ecdsaSuite *sigecdsa.Suite[P, B, S], shard *cggmp21.Shard[P, B, S], prng io.Reader) (*Cosigner[P, B, S], error) {
 	if ctx == nil {
 		return nil, cggmp21.ErrNil.WithMessage("session context")
 	}
@@ -133,7 +137,7 @@ func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 		return nil, errs.Wrap(err).WithMessage("cannot create CGGMP21 parameters")
 	}
 
-	signer := &Signer[P, B, S]{
+	cosigner := &Cosigner[P, B, S]{
 		zeroParty: zeroParty,
 
 		ctx:                 ctx,
@@ -150,15 +154,15 @@ func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 		},
 	}
 
-	return signer, nil
+	return cosigner, nil
 }
 
-// SharingID returns the signer party identifier.
-func (s *Signer[P, B, S]) SharingID() sharing.ID {
+// SharingID returns the cosigner party identifier.
+func (s *Cosigner[P, B, S]) SharingID() sharing.ID {
 	return s.ctx.HolderID()
 }
 
-func (s *Signer[P, B, S]) computeEffectivePartialPublicKeys(
+func (s *Cosigner[P, B, S]) computeEffectivePartialPublicKeys(
 	zeroShare *feldman.Share[S],
 	zeroVerificationVector *feldman.VerificationVector[P, S],
 ) (effectivePublicKeys map[sharing.ID]P, offset S, err error) {

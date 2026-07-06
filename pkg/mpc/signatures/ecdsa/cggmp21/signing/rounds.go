@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
+	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -27,13 +28,13 @@ import (
 )
 
 // Round1 samples the local nonces and publishes the first signing commitments.
-func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingUnicasts[*Round1P2P[P, B, S], *Signer[P, B, S]], error) {
+func (s *Cosigner[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingUnicasts[*Round1P2P[P, B, S], *Cosigner[P, B, S]], error) {
 	if s.state.round != 1 {
 		return nil, nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", s.state.round, 1)
 	}
-
-	s.ctx.Transcript().AppendBytes(publicKeyValueLabel, s.shard.PublicKey().Value().Bytes())
-	s.ctx.Transcript().AppendBytes(ridLabel, s.shard.AuxInfo().RefreshID())
+	if err := s.appendEpidToTranscript(); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot append epid to transcript")
+	}
 
 	zeroR1b, zeroR1u, err := s.zeroParty.Round1()
 	if err != nil {
@@ -168,10 +169,10 @@ func (s *Signer[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.OutgoingU
 }
 
 // Round2 verifies round 1 messages and sends the Paillier affine-product messages.
-func (s *Signer[P, B, S]) Round2(
-	r1b network.RoundMessages[*Round1Broadcast[P, B, S], *Signer[P, B, S]],
-	r1u network.RoundMessages[*Round1P2P[P, B, S], *Signer[P, B, S]],
-) (*Round2Broadcast[P, B, S], network.OutgoingUnicasts[*Round2P2P[P, B, S], *Signer[P, B, S]], error) {
+func (s *Cosigner[P, B, S]) Round2(
+	r1b network.RoundMessages[*Round1Broadcast[P, B, S], *Cosigner[P, B, S]],
+	r1u network.RoundMessages[*Round1P2P[P, B, S], *Cosigner[P, B, S]],
+) (*Round2Broadcast[P, B, S], network.OutgoingUnicasts[*Round2P2P[P, B, S], *Cosigner[P, B, S]], error) {
 	if s.state.round != 2 {
 		return nil, nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", s.state.round, 2)
 	}
@@ -344,9 +345,9 @@ func (s *Signer[P, B, S]) Round2(
 }
 
 // Round3 verifies round 2 messages and publishes this party's delta contribution.
-func (s *Signer[P, B, S]) Round3(
-	r2b network.RoundMessages[*Round2Broadcast[P, B, S], *Signer[P, B, S]],
-	r2u network.RoundMessages[*Round2P2P[P, B, S], *Signer[P, B, S]],
+func (s *Cosigner[P, B, S]) Round3(
+	r2b network.RoundMessages[*Round2Broadcast[P, B, S], *Cosigner[P, B, S]],
+	r2u network.RoundMessages[*Round2P2P[P, B, S], *Cosigner[P, B, S]],
 ) (*Round3Broadcast[P, B, S], error) {
 	if s.state.round != 3 {
 		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", s.state.round, 3)
@@ -485,7 +486,7 @@ func (s *Signer[P, B, S]) Round3(
 }
 
 // Round4 verifies round 3 messages and returns either a partial signature or a red-alert participant.
-func (s *Signer[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P, B, S], *Signer[P, B, S]], message []byte) (*cggmp21.PartialSignature[P, B, S], *RedAlertParticipant[P, B, S], error) {
+func (s *Cosigner[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P, B, S], *Cosigner[P, B, S]], message []byte) (*cggmp21.PartialSignature[P, B, S], *RedAlertParticipant[P, B, S], error) {
 	if s.state.round != 4 {
 		return nil, nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", s.state.round, 4)
 	}
@@ -578,7 +579,38 @@ func (s *Signer[P, B, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[P, B
 	return partialSignature, nil, nil
 }
 
-func (s *Signer[P, B, S]) proveEncElg(
+func (s *Cosigner[P, B, S]) appendEpidToTranscript() error {
+	s.ctx.Transcript().AppendBytes(publicKeyValueLabel, s.shard.PublicKey().Value().Bytes())
+	s.ctx.Transcript().AppendBytes(ridLabel, s.shard.AuxInfo().RefreshID())
+
+	var paillierPk *paillier.PublicKey
+	var ringPedersenPk *intcom.CommitmentKey
+	for id := range s.ctx.AllPartiesOrdered() {
+		if id == s.ctx.HolderID() {
+			paillierPk = s.shard.AuxInfo().PaillierSecretKey().Public()
+			ringPedersenPk = s.shard.AuxInfo().RingPedersenSecretKey().Export()
+		} else {
+			var ok bool
+			paillierPk, ok = s.shard.AuxInfo().PaillierPublicKeys()[id]
+			if !ok {
+				return cggmp21.ErrFailed.WithMessage("internal error: missing Paillier key")
+			}
+			ringPedersenPk, ok = s.shard.AuxInfo().RingPedersenPublicKeys()[id]
+			if !ok {
+				return cggmp21.ErrFailed.WithMessage("internal error: missing RingPedersen key")
+			}
+		}
+
+		s.ctx.Transcript().AppendBytes(paillierPublicKeyLabel, id.Bytes(), paillierPk.PlaintextGroup().Modulus().Bytes())
+		s.ctx.Transcript().AppendBytes(ringPedersenPublicKeyLabel, id.Bytes(), ringPedersenPk.Group().Modulus().Bytes())
+		s.ctx.Transcript().AppendBytes(sLabel, id.Bytes(), ringPedersenPk.S().Bytes())
+		s.ctx.Transcript().AppendBytes(tLabel, id.Bytes(), ringPedersenPk.T().Bytes())
+	}
+
+	return nil
+}
+
+func (s *Cosigner[P, B, S]) proveEncElg(
 	recipient sharing.ID,
 	value S,
 	paillierCiphertext *paillier.Ciphertext,
@@ -630,7 +662,7 @@ func (s *Signer[P, B, S]) proveEncElg(
 	return proof, nil
 }
 
-func (s *Signer[P, B, S]) verifyEncElg(
+func (s *Cosigner[P, B, S]) verifyEncElg(
 	sender sharing.ID,
 	paillierCiphertext *paillier.Ciphertext,
 	elgamalCommitmentKey *indcpacom.HomomorphicCommitmentKey[
@@ -674,7 +706,7 @@ func (s *Signer[P, B, S]) verifyEncElg(
 	return nil
 }
 
-func (s *Signer[P, B, S]) proveElog(
+func (s *Cosigner[P, B, S]) proveElog(
 	basePoint P,
 	witnessScalar S,
 	elgamalPlaintextPoint P,
@@ -734,7 +766,7 @@ func (s *Signer[P, B, S]) proveElog(
 	return proof, nil
 }
 
-func (s *Signer[P, B, S]) verifyElog(
+func (s *Cosigner[P, B, S]) verifyElog(
 	sender sharing.ID,
 	basePoint P,
 	elgamalCommitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
@@ -775,7 +807,7 @@ func (s *Signer[P, B, S]) verifyElog(
 	return nil
 }
 
-func (s *Signer[P, B, S]) proveAffG(
+func (s *Cosigner[P, B, S]) proveAffG(
 	recipient sharing.ID,
 	x S,
 	beta *num.Int,
@@ -840,7 +872,7 @@ func (s *Signer[P, B, S]) proveAffG(
 	return proof, nil
 }
 
-func (s *Signer[P, B, S]) verifyAffG(
+func (s *Cosigner[P, B, S]) verifyAffG(
 	sender sharing.ID,
 	d *paillier.Ciphertext,
 	y *paillier.Ciphertext,
@@ -884,7 +916,7 @@ func (s *Signer[P, B, S]) verifyAffG(
 	return nil
 }
 
-func (s *Signer[P, B, S]) aggregate(partialSignatures map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
+func (s *Cosigner[P, B, S]) aggregate(partialSignatures map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
 	if s.state.round != 5 {
 		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", s.state.round, 5)
 	}

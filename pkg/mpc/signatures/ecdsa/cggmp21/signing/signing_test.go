@@ -66,7 +66,7 @@ func TestSigning_Threshold2Of3(t *testing.T) {
 	for id, result := range results {
 		require.NotNil(t, result)
 		require.NotNil(t, result.PartialSignature())
-		require.NotNil(t, result.PartialSignatureOnlineAggregator())
+		require.NotNil(t, result.PartialSignatureCosigningAggregator())
 		partialSignatures[id] = result.PartialSignature()
 	}
 
@@ -74,7 +74,7 @@ func TestSigning_Threshold2Of3(t *testing.T) {
 	for id := range signingQuorum.Iter() {
 		result, ok := results[id]
 		require.True(t, ok)
-		signature, err := result.PartialSignatureOnlineAggregator().Aggregate(partialSignatures)
+		signature, err := result.PartialSignatureCosigningAggregator().Aggregate(partialSignatures)
 		require.NoError(t, err)
 		require.NoError(t, verifier.Verify(signature, shards[1].PublicKey(), message))
 		if expected == nil {
@@ -117,29 +117,29 @@ func TestAggregateOffline_Threshold2Of3(t *testing.T) {
 	signingQuorum := hashset.NewComparable(signingIDs...).Freeze()
 	ctxs := session_testutils.MakeRandomContexts(t, signingQuorum, prng)
 
-	signers := make(map[sharing.ID]*signing.Signer[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	cosigners := make(map[sharing.ID]*signing.Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
 	for _, id := range signingIDs {
 		shard, ok := shards[id]
 		require.True(t, ok)
-		signer, err := signing.NewSigner(ctxs[id], suite, shard, pcg.NewRandomised())
+		cosigner, err := signing.NewCosigner(ctxs[id], suite, shard, pcg.NewRandomised())
 		require.NoError(t, err)
-		signers[id] = signer
+		cosigners[id] = cosigner
 	}
-	participants := slices.Collect(maps.Values(signers))
+	participants := slices.Collect(maps.Values(cosigners))
 
 	r1bOut := make(map[sharing.ID]*signing.Round1Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
-	r1uOut := make(map[sharing.ID]network.OutgoingUnicasts[*signing.Round1P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *signing.Signer[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
+	r1uOut := make(map[sharing.ID]network.OutgoingUnicasts[*signing.Round1P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *signing.Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
 	for _, id := range signingIDs {
-		r1bOut[id], r1uOut[id], err = signers[id].Round1()
+		r1bOut[id], r1uOut[id], err = cosigners[id].Round1()
 		require.NoError(t, err)
 	}
 
 	r2bIn := ntu.MapBroadcastO2I(t, participants, r1bOut)
 	r2uIn := ntu.MapUnicastO2I(t, participants, r1uOut)
 	r2bOut := make(map[sharing.ID]*signing.Round2Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
-	r2uOut := make(map[sharing.ID]network.OutgoingUnicasts[*signing.Round2P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *signing.Signer[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
+	r2uOut := make(map[sharing.ID]network.OutgoingUnicasts[*signing.Round2P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *signing.Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
 	for _, id := range signingIDs {
-		r2bOut[id], r2uOut[id], err = signers[id].Round2(r2bIn[id], r2uIn[id])
+		r2bOut[id], r2uOut[id], err = cosigners[id].Round2(r2bIn[id], r2uIn[id])
 		require.NoError(t, err)
 	}
 
@@ -147,7 +147,7 @@ func TestAggregateOffline_Threshold2Of3(t *testing.T) {
 	r3uIn := ntu.MapUnicastO2I(t, participants, r2uOut)
 	r3bOut := make(map[sharing.ID]*signing.Round3Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
 	for _, id := range signingIDs {
-		r3bOut[id], err = signers[id].Round3(r3bIn[id], r3uIn[id])
+		r3bOut[id], err = cosigners[id].Round3(r3bIn[id], r3uIn[id])
 		require.NoError(t, err)
 	}
 
@@ -155,7 +155,7 @@ func TestAggregateOffline_Threshold2Of3(t *testing.T) {
 	partialSignatures := make(map[sharing.ID]*cggmp21.PartialSignature[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
 	for _, id := range signingIDs {
 		var redAlert *signing.RedAlertParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
-		partialSignatures[id], redAlert, err = signers[id].Round4(r4bIn[id], message)
+		partialSignatures[id], redAlert, err = cosigners[id].Round4(r4bIn[id], message)
 		require.NoError(t, err)
 		require.Nil(t, redAlert)
 	}
@@ -164,7 +164,7 @@ func TestAggregateOffline_Threshold2Of3(t *testing.T) {
 		1: ntu.CBORRoundTrip(t, partialSignatures[1]),
 		2: ntu.CBORRoundTrip(t, partialSignatures[2]),
 	}
-	aggregator, err := signing.NewOfflineAggregator(curve)
+	aggregator, err := signing.NewNonCosigningAggregator(curve)
 	require.NoError(t, err)
 	signature, err := aggregator.Aggregate(partialSignatures)
 	require.NoError(t, err)
@@ -191,19 +191,19 @@ func TestSignerErrorHandling(t *testing.T) {
 	signingQuorum := hashset.NewComparable[sharing.ID](1, 2).Freeze()
 	ctxs := session_testutils.MakeRandomContexts(t, signingQuorum, prng)
 
-	signer, err := signing.NewSigner(ctxs[1], suite, shards[1], pcg.NewRandomised())
+	cosigner, err := signing.NewCosigner(ctxs[1], suite, shards[1], pcg.NewRandomised())
 	require.NoError(t, err)
 
-	_, _, err = signer.Round2(
+	_, _, err = cosigner.Round2(
 		hashmap.NewComparable[sharing.ID, *signing.Round1Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]]().Freeze(),
 		hashmap.NewComparable[sharing.ID, *signing.Round1P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]]().Freeze(),
 	)
 	require.ErrorIs(t, err, cggmp21.ErrInvalidRound)
 
-	_, _, err = signer.Round1()
+	_, _, err = cosigner.Round1()
 	require.NoError(t, err)
 
-	_, _, err = signer.Round2(
+	_, _, err = cosigner.Round2(
 		hashmap.NewComparable[sharing.ID, *signing.Round1Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]]().Freeze(),
 		hashmap.NewComparable[sharing.ID, *signing.Round1P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]]().Freeze(),
 	)

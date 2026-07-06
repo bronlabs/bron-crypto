@@ -24,7 +24,7 @@ const (
 )
 
 type redAlertBase[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] interface {
-	signer() *Signer[P, B, S]
+	cosigner() *Cosigner[P, B, S]
 	decBase() P
 	decWitness() (x, y *num.Int, xPoint, sPoint P, err error)
 	decStatementPoints(party sharing.ID) (xPoint, sPoint P)
@@ -36,10 +36,10 @@ type redAlertBase[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 }
 
 type redAlertBaseNonce[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	s *Signer[P, B, S]
+	s *Cosigner[P, B, S]
 }
 
-func newRedAlertNonce[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](s *Signer[P, B, S]) *RedAlertParticipant[P, B, S] {
+func newRedAlertNonce[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](s *Cosigner[P, B, S]) *RedAlertParticipant[P, B, S] {
 	return &RedAlertParticipant[P, B, S]{
 		base:           &redAlertBaseNonce[P, B, S]{s: s},
 		localBroadcast: nil,
@@ -47,7 +47,7 @@ func newRedAlertNonce[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 }
 
 //nolint:unused // false positive
-func (n *redAlertBaseNonce[P, B, S]) signer() *Signer[P, B, S] {
+func (n *redAlertBaseNonce[P, B, S]) cosigner() *Cosigner[P, B, S] {
 	return n.s
 }
 
@@ -96,10 +96,10 @@ func (n *redAlertBaseNonce[P, B, S]) receivedCiphertexts() (d, f map[sharing.ID]
 }
 
 type redAlertBaseChi[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	s *Signer[P, B, S]
+	s *Cosigner[P, B, S]
 }
 
-func newRedAlertChi[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](s *Signer[P, B, S]) *RedAlertParticipant[P, B, S] {
+func newRedAlertChi[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](s *Cosigner[P, B, S]) *RedAlertParticipant[P, B, S] {
 	return &RedAlertParticipant[P, B, S]{
 		base:           &redAlertBaseChi[P, B, S]{s: s},
 		localBroadcast: nil,
@@ -107,7 +107,7 @@ func newRedAlertChi[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 }
 
 //nolint:unused // false positive
-func (c *redAlertBaseChi[P, B, S]) signer() *Signer[P, B, S] {
+func (c *redAlertBaseChi[P, B, S]) cosigner() *Cosigner[P, B, S] {
 	return c.s
 }
 
@@ -163,17 +163,17 @@ type RedAlertParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B]
 
 // SharingID returns the red-alert participant party identifier.
 func (p *RedAlertParticipant[P, B, S]) SharingID() sharing.ID {
-	return p.signer().ctx.HolderID()
+	return p.cosigner().ctx.HolderID()
 }
 
-func (p *RedAlertParticipant[P, B, S]) signer() *Signer[P, B, S] {
-	return p.base.signer()
+func (p *RedAlertParticipant[P, B, S]) cosigner() *Cosigner[P, B, S] {
+	return p.base.cosigner()
 }
 
 // Round1 broadcasts the local red-alert openings and their NIZK proofs.
 func (p *RedAlertParticipant[P, B, S]) Round1() (*RedAlertBroadcast[P, B, S], error) {
-	if p.signer().state.round != 4 {
-		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", p.signer().state.round, 4)
+	if p.cosigner().state.round != 4 {
+		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", p.cosigner().state.round, 4)
 	}
 
 	// step 1
@@ -190,7 +190,7 @@ func (p *RedAlertParticipant[P, B, S]) Round1() (*RedAlertBroadcast[P, B, S], er
 
 	// step 3
 	phiJ := make(map[sharing.ID]compiler.NIZKPoKProof)
-	for recipient := range p.signer().ctx.OtherPartiesOrdered() {
+	for recipient := range p.cosigner().ctx.OtherPartiesOrdered() {
 		proof, err := p.proveAffGStar(recipient)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot prove red-alert aff-g* statement for %d", recipient)
@@ -211,19 +211,19 @@ func (p *RedAlertParticipant[P, B, S]) Round1() (*RedAlertBroadcast[P, B, S], er
 
 // Round2 verifies all red-alert broadcasts and returns an identifiable abort on the first bad proof.
 func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAlertBroadcast[P, B, S], *RedAlertParticipant[P, B, S]]) error {
-	if err := network.ValidateIncomingMessages(p, p.signer().ctx.OtherPartiesOrdered(), r1b); err != nil {
+	if err := network.ValidateIncomingMessages(p, p.cosigner().ctx.OtherPartiesOrdered(), r1b); err != nil {
 		return errs.Wrap(err).WithMessage("invalid red alert broadcasts")
 	}
 
 	messages := map[sharing.ID]*RedAlertBroadcast[P, B, S]{
-		p.signer().ctx.HolderID(): p.localBroadcast,
+		p.cosigner().ctx.HolderID(): p.localBroadcast,
 	}
-	for id := range p.signer().ctx.OtherPartiesOrdered() {
+	for id := range p.cosigner().ctx.OtherPartiesOrdered() {
 		msg, _ := r1b.Get(id)
 		messages[id] = msg
 	}
 
-	for id := range p.signer().ctx.AllPartiesOrdered() {
+	for id := range p.cosigner().ctx.AllPartiesOrdered() {
 		aggregateD, err := p.aggregateBroadcastD(id, messages)
 		if err != nil {
 			return errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot compute aggregate D for %d", id)
@@ -235,8 +235,8 @@ func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAler
 		}
 	}
 
-	for sender := range p.signer().ctx.AllPartiesOrdered() {
-		for recipient := range p.signer().ctx.AllPartiesOrdered() {
+	for sender := range p.cosigner().ctx.AllPartiesOrdered() {
+		for recipient := range p.cosigner().ctx.AllPartiesOrdered() {
 			if recipient == sender {
 				continue
 			}
@@ -253,12 +253,12 @@ func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAler
 		}
 	}
 
-	for id := range p.signer().ctx.AllPartiesOrdered() {
+	for id := range p.cosigner().ctx.AllPartiesOrdered() {
 		data, err := serde.MarshalCBOR(messages[id])
 		if err != nil {
 			return errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot serialise red alert broadcast from %d", id)
 		}
-		p.signer().ctx.Transcript().AppendBytes(redAlertBroadcastTranscriptLabel, id.Bytes(), data)
+		p.cosigner().ctx.Transcript().AppendBytes(redAlertBroadcastTranscriptLabel, id.Bytes(), data)
 	}
 	return nil
 }
@@ -266,10 +266,10 @@ func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAler
 func (p *RedAlertParticipant[P, B, S]) aggregateLocalD() (*paillier.Ciphertext, error) {
 	receivedD, _ := p.base.receivedCiphertexts()
 	_, sentF := p.base.sentCiphertexts()
-	localPaillierPublicKey := p.signer().shard.AuxInfo().PaillierSecretKey().Public()
+	localPaillierPublicKey := p.cosigner().shard.AuxInfo().PaillierSecretKey().Public()
 
 	var out *paillier.Ciphertext
-	for id := range p.signer().ctx.OtherPartiesOrdered() {
+	for id := range p.cosigner().ctx.OtherPartiesOrdered() {
 		pair, err := localPaillierPublicKey.CiphertextOp(receivedD[id], sentF[id])
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot combine local D/F for %d", id)
@@ -293,13 +293,13 @@ func (p *RedAlertParticipant[P, B, S]) aggregateBroadcastD(
 	recipient sharing.ID,
 	messages map[sharing.ID]*RedAlertBroadcast[P, B, S],
 ) (*paillier.Ciphertext, error) {
-	recipientPaillierPublicKey, err := paillierPublicKeyFor(p.signer(), recipient)
+	recipientPaillierPublicKey, err := paillierPublicKeyFor(p.cosigner(), recipient)
 	if err != nil {
 		return nil, err
 	}
 	recipientMessage := messages[recipient]
 	var out *paillier.Ciphertext
-	for sender := range p.signer().ctx.AllPartiesOrdered() {
+	for sender := range p.cosigner().ctx.AllPartiesOrdered() {
 		if sender == recipient {
 			continue
 		}
@@ -327,8 +327,8 @@ func (p *RedAlertParticipant[P, B, S]) proveDec(aggregateD *paillier.Ciphertext)
 	if err != nil {
 		return nil, err
 	}
-	sk := p.signer().shard.AuxInfo().PaillierSecretKey()
-	kX, err := sk.CiphertextScalarOp(p.signer().state.bigKJ[p.signer().ctx.HolderID()], x)
+	sk := p.cosigner().shard.AuxInfo().PaillierSecretKey()
+	kX, err := sk.CiphertextScalarOp(p.cosigner().state.bigKJ[p.cosigner().ctx.HolderID()], x)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute K^x")
 	}
@@ -341,11 +341,11 @@ func (p *RedAlertParticipant[P, B, S]) proveDec(aggregateD *paillier.Ciphertext)
 		return nil, errs.Wrap(err).WithMessage("cannot open dec ciphertext randomizer")
 	}
 
-	decSigma, err := dec.NewProtocol(p.signer().params.L(), p.signer().params.LPrime(), p.signer().params.Epsilon(), p.base.decBase(), p.signer().prng)
+	decSigma, err := dec.NewProtocol(p.cosigner().params.L(), p.cosigner().params.LPrime(), p.cosigner().params.Epsilon(), p.base.decBase(), p.cosigner().prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dec protocol")
 	}
-	statement, err := dec.NewStatement(sk.Public(), p.signer().state.bigKJ[p.signer().ctx.HolderID()], xPoint, aggregateD, sPoint)
+	statement, err := dec.NewStatement(sk.Public(), p.cosigner().state.bigKJ[p.cosigner().ctx.HolderID()], xPoint, aggregateD, sPoint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dec statement")
 	}
@@ -357,8 +357,8 @@ func (p *RedAlertParticipant[P, B, S]) proveDec(aggregateD *paillier.Ciphertext)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create NI dec compiler")
 	}
-	proverCtx := p.signer().ctx.Clone()
-	proverCtx.Transcript().AppendBytes(redAlertDecProofLabel, p.signer().ctx.HolderID().Bytes())
+	proverCtx := p.cosigner().ctx.Clone()
+	proverCtx.Transcript().AppendBytes(redAlertDecProofLabel, p.cosigner().ctx.HolderID().Bytes())
 	prover, err := decNI.NewProver(proverCtx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create dec prover")
@@ -371,11 +371,11 @@ func (p *RedAlertParticipant[P, B, S]) proveDec(aggregateD *paillier.Ciphertext)
 }
 
 func (p *RedAlertParticipant[P, B, S]) proveAffGStar(recipient sharing.ID) (compiler.NIZKPoKProof, error) {
-	recipientPaillierPublicKey, err := paillierPublicKeyFor(p.signer(), recipient)
+	recipientPaillierPublicKey, err := paillierPublicKeyFor(p.cosigner(), recipient)
 	if err != nil {
 		return nil, err
 	}
-	localPaillierPublicKey := p.signer().shard.AuxInfo().PaillierSecretKey().Public()
+	localPaillierPublicKey := p.cosigner().shard.AuxInfo().PaillierSecretKey().Public()
 	xScalar, xPoint := p.base.affGStarWitness()
 	x, err := num.Z().FromUnsignedNumeric(xScalar)
 	if err != nil {
@@ -397,11 +397,11 @@ func (p *RedAlertParticipant[P, B, S]) proveAffGStar(recipient sharing.ID) (comp
 		return nil, errs.Wrap(err).WithMessage("cannot invert F ciphertext")
 	}
 
-	affgSigma, err := affgstar.NewProtocol(p.signer().params.L(), p.signer().params.LPrime(), p.signer().params.Epsilon(), p.signer().params.CurveGroup(), p.signer().prng)
+	affgSigma, err := affgstar.NewProtocol(p.cosigner().params.L(), p.cosigner().params.LPrime(), p.cosigner().params.Epsilon(), p.cosigner().params.CurveGroup(), p.cosigner().prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create aff-g* protocol")
 	}
-	statement, err := affgstar.NewStatement(recipientPaillierPublicKey, localPaillierPublicKey, p.signer().state.bigKJ[recipient], sentD[recipient], bigFInv, xPoint)
+	statement, err := affgstar.NewStatement(recipientPaillierPublicKey, localPaillierPublicKey, p.cosigner().state.bigKJ[recipient], sentD[recipient], bigFInv, xPoint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create aff-g* statement")
 	}
@@ -413,8 +413,8 @@ func (p *RedAlertParticipant[P, B, S]) proveAffGStar(recipient sharing.ID) (comp
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create NI aff-g* compiler")
 	}
-	proverCtx := p.signer().ctx.Clone()
-	proverCtx.Transcript().AppendBytes(redAlertAffGStarProofLabel, p.signer().ctx.HolderID().Bytes(), recipient.Bytes())
+	proverCtx := p.cosigner().ctx.Clone()
+	proverCtx.Transcript().AppendBytes(redAlertAffGStarProofLabel, p.cosigner().ctx.HolderID().Bytes(), recipient.Bytes())
 	prover, err := affgNI.NewProver(proverCtx)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create aff-g* prover")
@@ -427,16 +427,16 @@ func (p *RedAlertParticipant[P, B, S]) proveAffGStar(recipient sharing.ID) (comp
 }
 
 func (p *RedAlertParticipant[P, B, S]) verifyDec(party sharing.ID, aggregateD *paillier.Ciphertext, proof compiler.NIZKPoKProof) error {
-	paillierPublicKey, err := paillierPublicKeyFor(p.signer(), party)
+	paillierPublicKey, err := paillierPublicKeyFor(p.cosigner(), party)
 	if err != nil {
 		return err
 	}
 	xPoint, sPoint := p.base.decStatementPoints(party)
-	decSigma, err := dec.NewProtocol(p.signer().params.L(), p.signer().params.LPrime(), p.signer().params.Epsilon(), p.base.decBase(), p.signer().prng)
+	decSigma, err := dec.NewProtocol(p.cosigner().params.L(), p.cosigner().params.LPrime(), p.cosigner().params.Epsilon(), p.base.decBase(), p.cosigner().prng)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create dec protocol")
 	}
-	statement, err := dec.NewStatement(paillierPublicKey, p.signer().state.bigKJ[party], xPoint, aggregateD, sPoint)
+	statement, err := dec.NewStatement(paillierPublicKey, p.cosigner().state.bigKJ[party], xPoint, aggregateD, sPoint)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create dec statement")
 	}
@@ -444,7 +444,7 @@ func (p *RedAlertParticipant[P, B, S]) verifyDec(party sharing.ID, aggregateD *p
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create NI dec compiler")
 	}
-	verifierCtx := p.signer().ctx.Clone()
+	verifierCtx := p.cosigner().ctx.Clone()
 	verifierCtx.Transcript().AppendBytes(redAlertDecProofLabel, party.Bytes())
 	verifier, err := decNI.NewVerifier(verifierCtx)
 	if err != nil {
@@ -463,11 +463,11 @@ func (p *RedAlertParticipant[P, B, S]) verifyAffGStar(
 	bigF *paillier.Ciphertext,
 	proof compiler.NIZKPoKProof,
 ) error {
-	recipientPaillierPublicKey, err := paillierPublicKeyFor(p.signer(), recipient)
+	recipientPaillierPublicKey, err := paillierPublicKeyFor(p.cosigner(), recipient)
 	if err != nil {
 		return err
 	}
-	senderPaillierPublicKey, err := paillierPublicKeyFor(p.signer(), sender)
+	senderPaillierPublicKey, err := paillierPublicKeyFor(p.cosigner(), sender)
 	if err != nil {
 		return err
 	}
@@ -476,11 +476,11 @@ func (p *RedAlertParticipant[P, B, S]) verifyAffGStar(
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot invert F ciphertext")
 	}
-	affgSigma, err := affgstar.NewProtocol(p.signer().params.L(), p.signer().params.LPrime(), p.signer().params.Epsilon(), p.signer().params.CurveGroup(), p.signer().prng)
+	affgSigma, err := affgstar.NewProtocol(p.cosigner().params.L(), p.cosigner().params.LPrime(), p.cosigner().params.Epsilon(), p.cosigner().params.CurveGroup(), p.cosigner().prng)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create aff-g* protocol")
 	}
-	statement, err := affgstar.NewStatement(recipientPaillierPublicKey, senderPaillierPublicKey, p.signer().state.bigKJ[recipient], bigD, bigFInv, xPoint)
+	statement, err := affgstar.NewStatement(recipientPaillierPublicKey, senderPaillierPublicKey, p.cosigner().state.bigKJ[recipient], bigD, bigFInv, xPoint)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create aff-g* statement")
 	}
@@ -488,7 +488,7 @@ func (p *RedAlertParticipant[P, B, S]) verifyAffGStar(
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create NI aff-g* compiler")
 	}
-	verifierCtx := p.signer().ctx.Clone()
+	verifierCtx := p.cosigner().ctx.Clone()
 	verifierCtx.Transcript().AppendBytes(redAlertAffGStarProofLabel, sender.Bytes(), recipient.Bytes())
 	verifier, err := affgNI.NewVerifier(verifierCtx)
 	if err != nil {

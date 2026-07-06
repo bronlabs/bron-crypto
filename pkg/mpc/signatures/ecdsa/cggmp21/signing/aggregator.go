@@ -14,33 +14,33 @@ import (
 
 // PartialSignatureAggregator combines CGGMP21 partial signatures into an ECDSA signature.
 type PartialSignatureAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] interface {
-	// Aggregate combines partial signatures keyed by signer ID.
+	// Aggregate combines partial signatures keyed by cosigner ID.
 	Aggregate(map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error)
 }
 
-type onlineAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	signer *Signer[P, B, S]
+type cosigningAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	cosigner *Cosigner[P, B, S]
 }
 
 // Aggregate combines partial signatures using the online signing session state.
-func (a *onlineAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
-	return a.signer.aggregate(ps)
+func (a *cosigningAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
+	return a.cosigner.aggregate(ps)
 }
 
-type offlineAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type nonCosigningAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	curve sigecdsa.Curve[P, B, S]
 }
 
-// NewOfflineAggregator constructs a stateless aggregator for CGGMP21 partial signatures.
-func NewOfflineAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve sigecdsa.Curve[P, B, S]) (PartialSignatureAggregator[P, B, S], error) {
+// NewNonCosigningAggregator constructs a stateless aggregator for CGGMP21 partial signatures.
+func NewNonCosigningAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve sigecdsa.Curve[P, B, S]) (PartialSignatureAggregator[P, B, S], error) {
 	if utils.IsNil(curve) {
 		return nil, cggmp21.ErrNil.WithMessage("curve")
 	}
-	return &offlineAggregator[P, B, S]{curve: curve}, nil
+	return &nonCosigningAggregator[P, B, S]{curve: curve}, nil
 }
 
 // Aggregate combines partial signatures without online signing session state.
-func (a *offlineAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
+func (a *nonCosigningAggregator[P, B, S]) Aggregate(ps map[sharing.ID]*cggmp21.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
 	if len(ps) == 0 {
 		return nil, cggmp21.ErrNil.WithMessage("partial signatures")
 	}
