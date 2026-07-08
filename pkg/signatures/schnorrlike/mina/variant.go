@@ -22,12 +22,12 @@ import (
 const VariantType schnorrlike.VariantType = "mina"
 
 // signatureFlavor selects the nonce derivation and Poseidon parameters used by
-// a Mina signature variant. Its zero value preserves the legacy behaviour.
+// a Mina signature variant. Its zero value is the default o1js-compatible behaviour.
 type signatureFlavor uint8
 
 const (
-	signatureFlavorLegacy signatureFlavor = iota
-	signatureFlavorModern
+	signatureFlavorDefault signatureFlavor = iota
+	signatureFlavorLegacy
 )
 
 // packedInput represents one value in o1js's [value, bitLength] packed input.
@@ -43,7 +43,7 @@ var (
 
 // NewDeterministicVariant creates a Mina variant with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using Blake2b,
-// following the legacy Mina/o1js implementation.
+// following the default Mina/o1js implementation.
 func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
@@ -53,14 +53,14 @@ func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, e
 		sk:     privateKey,
 		prng:   nil,
 		msg:    nil,
-		flavor: signatureFlavorLegacy,
+		flavor: signatureFlavorDefault,
 	}, nil
 }
 
-// NewModernDeterministicVariant creates a Mina variant with deterministic nonce derivation.
+// NewLegacyDeterministicVariant creates a Mina variant with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using Blake2b,
-// following the modern Mina/o1js implementation.
-func NewModernDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
+// following the legacy Mina/o1js implementation.
+func NewLegacyDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
@@ -69,7 +69,7 @@ func NewModernDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Vari
 		sk:     privateKey,
 		prng:   nil,
 		msg:    nil,
-		flavor: signatureFlavorModern,
+		flavor: signatureFlavorLegacy,
 	}, nil
 }
 
@@ -84,13 +84,13 @@ func NewRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
 		sk:     nil,
 		prng:   prng,
 		msg:    nil,
-		flavor: signatureFlavorLegacy,
+		flavor: signatureFlavorDefault,
 	}, nil
 }
 
-// NewModernRandomisedVariant creates a Mina variant with random nonce generation.
-// The variant uses the modern Mina/o1js Poseidon parameters for challenge computation.
-func NewModernRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
+// NewLegacyRandomisedVariant creates a Mina variant with random nonce generation.
+// The variant uses legacy Mina/o1js Poseidon parameters for challenge computation.
+func NewLegacyRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
 	if prng == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
@@ -99,7 +99,7 @@ func NewModernRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error)
 		sk:     nil,
 		prng:   prng,
 		msg:    nil,
-		flavor: signatureFlavorModern,
+		flavor: signatureFlavorLegacy,
 	}, nil
 }
 
@@ -122,18 +122,18 @@ func (*Variant) Type() schnorrlike.VariantType {
 
 // HashFunc returns the Poseidon hash function constructor for challenge computation.
 func (v *Variant) HashFunc() func() hash.Hash {
-	if v.flavor == signatureFlavorModern {
-		return modernHashFunc
+	if v.flavor == signatureFlavorLegacy {
+		return legacyHashFunc
 	}
 	return hashFunc
 }
 
 // newPoseidon creates the Poseidon instance selected by the signature flavor.
 func (v *Variant) newPoseidon() *poseidon.Poseidon {
-	if v.flavor == signatureFlavorModern {
-		return poseidon.NewKimchi()
+	if v.flavor == signatureFlavorLegacy {
+		return poseidon.NewLegacy()
 	}
-	return poseidon.NewLegacy()
+	return poseidon.NewKimchi()
 }
 
 // IsDeterministic returns true if this variant uses deterministic nonce derivation.
@@ -257,7 +257,7 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	return k, nil
 }
 
-// packToFieldsModern converts an ROInput to field elements using o1js's modern
+// packToFields converts an ROInput to field elements using o1js's current
 // chunked HashInput packing. Existing message bits are represented as one-bit
 // packed values, while extraPacked contains complete values such as network ID.
 //
@@ -268,7 +268,7 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 //  4. Append the final packed field, including a zero-valued field when packed input exists.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/cda4bce423960d877fe4f6c04feb32036a2e34b5/src/mina-signer/src/poseidon-bigint.ts
-func packToFieldsModern(input *ROInput, extraPacked ...packedInput) ([]*pasta.PallasBaseFieldElement, error) {
+func packToFields(input *ROInput, extraPacked ...packedInput) ([]*pasta.PallasBaseFieldElement, error) {
 	if input == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("input is nil")
 	}
@@ -340,16 +340,16 @@ func packToFieldsModern(input *ROInput, extraPacked ...packedInput) ([]*pasta.Pa
 	return fields, nil
 }
 
-// deriveNonceModern computes a deterministic nonce using the modern Mina/o1js algorithm.
+// deriveNonce computes a deterministic nonce using the default Mina/o1js algorithm.
 // The nonce is derived as:
 //  1. Build HashInput with message fields + [pk.x, pk.y, Field(privateKey)] and packed network ID.
-//  2. Convert the input to fields using modern chunked packing.
+//  2. Convert the input to fields using chunked packing.
 //  3. Convert every packed field to 255 bits in LSB-first order.
 //  4. Convert the bits to bytes and hash them with Blake2b-256.
 //  5. Clear the top 2 bits of the last byte to obtain a scalar field element.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/cda4bce423960d877fe4f6c04feb32036a2e34b5/src/mina-signer/src/signature.ts
-func (v *Variant) deriveNonceModern() (*Scalar, error) {
+func (v *Variant) deriveNonce() (*Scalar, error) {
 	if v.msg == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("message is nil for deterministic nonce derivation")
 	}
@@ -369,12 +369,12 @@ func (v *Variant) deriveNonceModern() (*Scalar, error) {
 		return nil, errs.Wrap(err).WithMessage("failed to reinterpret private key as base field")
 	}
 
-	// Build the modern HashInput:
+	// Build the HashInput:
 	// HashInput.append(message, { fields: [x, y, d], packed: [id] })
 	input := v.msg.Clone()
 	input.AddFields(pkx, pky, d)
 	id, idBitLen := getNetworkIDHashInput(v.nid)
-	packed, err := packToFieldsModern(input, packedInput{value: id, bitLen: idBitLen})
+	packed, err := packToFields(input, packedInput{value: id, bitLen: idBitLen})
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot pack nonce input")
 	}
@@ -419,10 +419,10 @@ func scalarTo255Bits(scalar *Scalar) []bool {
 // The nonce is adjusted to ensure R has an even y-coordinate.
 func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.IsDeterministic() {
-		if v.flavor == signatureFlavorModern {
-			k, err = v.deriveNonceModern()
-		} else {
+		if v.flavor == signatureFlavorLegacy {
 			k, err = v.deriveNonceLegacy()
+		} else {
+			k, err = v.deriveNonce()
 		}
 	} else {
 		k, err = algebrautils.RandomNonIdentity(sf, v.prng)
@@ -471,10 +471,10 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	input.AddFields(pkx, pky, ncx)
 	prefix := SignaturePrefix(v.nid)
 	var packed []*pasta.PallasBaseFieldElement
-	if v.flavor == signatureFlavorModern {
-		packed, err = packToFieldsModern(input)
-	} else {
+	if v.flavor == signatureFlavorLegacy {
 		packed, err = input.PackToFields()
+	} else {
+		packed, err = packToFields(input)
 	}
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot pack fields")

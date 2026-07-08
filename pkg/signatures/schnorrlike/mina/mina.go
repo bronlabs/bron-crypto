@@ -36,8 +36,8 @@ type (
 )
 
 var (
-	hashFunc       = hashing.HashFuncTypeErase(poseidon.NewLegacy)
-	modernHashFunc = hashing.HashFuncTypeErase(poseidon.NewKimchi)
+	hashFunc       = hashing.HashFuncTypeErase(poseidon.NewKimchi)
+	legacyHashFunc = hashing.HashFuncTypeErase(poseidon.NewLegacy)
 	group          = pasta.NewPallasCurve()
 	sf             = pasta.NewPallasScalarField()
 
@@ -83,8 +83,7 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 }
 
 // NewScheme creates a Mina signature scheme with deterministic nonce derivation.
-// The nonce is derived from the private key, public key, and network ID using
-// Blake2b, following the legacy Mina/o1js implementation.
+// The scheme uses o1js-compatible chunked input packing and Kimchi Poseidon parameters.
 func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 	vr, err := NewDeterministicVariant(nid, privateKey)
 	if err != nil {
@@ -95,13 +94,13 @@ func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 	}, nil
 }
 
-// NewModernScheme creates a Mina signature scheme with deterministic nonce derivation.
-// The scheme uses modern chunked input packing and Kimchi Poseidon parameters,
-// making its signatures compatible with o1js's modern sign and verify functions.
-func NewModernScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
-	vr, err := NewModernDeterministicVariant(nid, privateKey)
+// NewLegacyScheme creates a Mina signature scheme with deterministic nonce derivation.
+// The nonce is derived from the private key, public key, and network ID using
+// Blake2b, following the legacy Mina/o1js implementation.
+func NewLegacyScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
+	vr, err := NewLegacyDeterministicVariant(nid, privateKey)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create modern variant")
+		return nil, errs.Wrap(err).WithMessage("cannot create legacy variant")
 	}
 	return &Scheme{
 		vr: vr,
@@ -121,13 +120,12 @@ func NewRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
 	}, nil
 }
 
-// NewModernRandomisedScheme creates a Mina signature scheme with random nonce generation.
-// The scheme uses modern chunked input packing and Kimchi Poseidon parameters
-// for compatibility with o1js's modern verification.
-func NewModernRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
-	vr, err := NewModernRandomisedVariant(nid, prng)
+// NewLegacyRandomisedScheme creates a Mina signature scheme with random nonce generation.
+// The scheme preserves legacy Mina/o1js challenge computation.
+func NewLegacyRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
+	vr, err := NewLegacyRandomisedVariant(nid, prng)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create modern variant")
+		return nil, errs.Wrap(err).WithMessage("cannot create legacy variant")
 	}
 	return &Scheme{
 		vr: vr,

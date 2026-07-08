@@ -32,6 +32,7 @@ func TestNewDeterministicVariant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.True(t, v.IsDeterministic())
+		require.Equal(t, signatureFlavorDefault, v.flavor)
 	})
 }
 
@@ -52,15 +53,16 @@ func TestNewRandomisedVariant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.False(t, v.IsDeterministic())
+		require.Equal(t, signatureFlavorDefault, v.flavor)
 	})
 }
 
-func TestNewModernDeterministicVariant(t *testing.T) {
+func TestNewLegacyDeterministicVariant(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil private key", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewModernDeterministicVariant(TestNet, nil)
+		v, err := NewLegacyDeterministicVariant(TestNet, nil)
 		require.Nil(t, v)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "nil")
@@ -71,20 +73,20 @@ func TestNewModernDeterministicVariant(t *testing.T) {
 		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
-		v, err := NewModernDeterministicVariant(TestNet, privateKey)
+		v, err := NewLegacyDeterministicVariant(TestNet, privateKey)
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.True(t, v.IsDeterministic())
-		require.Equal(t, signatureFlavorModern, v.flavor)
+		require.Equal(t, signatureFlavorLegacy, v.flavor)
 	})
 }
 
-func TestNewModernRandomisedVariant(t *testing.T) {
+func TestNewLegacyRandomisedVariant(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil prng", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewModernRandomisedVariant(TestNet, nil)
+		v, err := NewLegacyRandomisedVariant(TestNet, nil)
 		require.Nil(t, v)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "nil")
@@ -92,11 +94,11 @@ func TestNewModernRandomisedVariant(t *testing.T) {
 
 	t.Run("valid prng", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewModernRandomisedVariant(TestNet, pcg.NewRandomised())
+		v, err := NewLegacyRandomisedVariant(TestNet, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.False(t, v.IsDeterministic())
-		require.Equal(t, signatureFlavorModern, v.flavor)
+		require.Equal(t, signatureFlavorLegacy, v.flavor)
 	})
 }
 
@@ -216,7 +218,7 @@ func TestBitsToBytes(t *testing.T) {
 	})
 }
 
-func TestPackToFieldsModern(t *testing.T) {
+func TestPackToFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("packs bits in o1js order", func(t *testing.T) {
@@ -225,7 +227,7 @@ func TestPackToFieldsModern(t *testing.T) {
 		// The bit sequence 101 represents the packed field value 5
 		input.AddBits(true, false, true)
 
-		packed, err := packToFieldsModern(input)
+		packed, err := packToFields(input)
 		require.NoError(t, err)
 		require.Len(t, packed, 1)
 		require.Equal(t, "5", new(big.Int).SetBytes(packed[0].Bytes()).String())
@@ -239,7 +241,7 @@ func TestPackToFieldsModern(t *testing.T) {
 		}
 
 		// The complete 8-bit network ID must start a new packed field
-		packed, err := packToFieldsModern(input, packedInput{value: big.NewInt(0), bitLen: 8})
+		packed, err := packToFields(input, packedInput{value: big.NewInt(0), bitLen: 8})
 		require.NoError(t, err)
 		require.Len(t, packed, 2)
 		expected := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 254), big.NewInt(1))
