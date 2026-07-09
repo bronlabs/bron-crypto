@@ -1,9 +1,18 @@
 package echo
 
 import (
+	"crypto/sha3"
+
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
+
+const echoHashLen = 32
+
+func echoHash(payload []byte) []byte {
+	digest := sha3.Sum256(payload)
+	return digest[:]
+}
 
 // Round1P2P carries the original broadcast payload.
 type Round1P2P[B network.Message[BP], BP any] struct {
@@ -17,14 +26,19 @@ func (r *Round1P2P[B, BP]) Validate(*Participant[B, BP], sharing.ID) error {
 	return nil
 }
 
-// Round2P2P carries echoed payloads from each sender.
+// Round2P2P carries a SHA3-256 digest of every round 1 payload, keyed by sender.
 type Round2P2P[B network.Message[BP], BP any] struct {
-	Echo map[sharing.ID][]byte `cbor:"echo"`
+	EchoHashes map[sharing.ID][]byte `cbor:"echoHashes"`
 }
 
 func (r *Round2P2P[B, BP]) Validate(*Participant[B, BP], sharing.ID) error {
 	if r == nil {
 		return ErrInvalidArgument.WithMessage("missing message")
+	}
+	for _, digest := range r.EchoHashes {
+		if len(digest) != echoHashLen {
+			return ErrInvalidArgument.WithMessage("invalid echo hash length")
+		}
 	}
 	return nil
 }
