@@ -31,9 +31,9 @@ func (p *Participant[B, BP]) Round1(message B) (network.OutgoingUnicasts[*Round1
 	return r1.Freeze(), nil
 }
 
-// Round2 echoes every received payload back to all parties.
+// Round2 echoes a SHA3-256 digest of every received payload back to all parties.
 func (p *Participant[B, BP]) Round2(r1 network.RoundMessages[*Round1P2P[B, BP], *Participant[B, BP]]) (network.OutgoingUnicasts[*Round2P2P[B, BP], *Participant[B, BP]], error) {
-	receivedMessages := make(map[sharing.ID][]byte)
+	receivedHashes := make(map[sharing.ID][32]byte)
 	for id := range p.quorum.Iter() {
 		if id == p.sharingID {
 			continue
@@ -45,7 +45,7 @@ func (p *Participant[B, BP]) Round2(r1 network.RoundMessages[*Round1P2P[B, BP], 
 		if err := m.Validate(p, id); err != nil {
 			return nil, errs.Wrap(err).WithMessage("failed to validate round 1 message")
 		}
-		receivedMessages[id] = m.Payload
+		receivedHashes[id] = echoHash(m.Payload)
 		p.state.messages[id] = m.Payload
 	}
 
@@ -55,14 +55,14 @@ func (p *Participant[B, BP]) Round2(r1 network.RoundMessages[*Round1P2P[B, BP], 
 			continue
 		}
 		r2.Put(id, &Round2P2P[B, BP]{
-			Echo: receivedMessages,
+			EchoHashes: receivedHashes,
 		})
 	}
 
 	return r2.Freeze(), nil
 }
 
-// Round3 validates echo consistency and outputs the agreed messages.
+// Round3 validates echo digest consistency and outputs the agreed messages.
 func (p *Participant[B, BP]) Round3(r2 network.RoundMessages[*Round2P2P[B, BP], *Participant[B, BP]]) (network.RoundMessages[B, BP], error) {
 	received := make(map[sharing.ID][]byte)
 	for id := range p.quorum.Iter() {
@@ -71,6 +71,7 @@ func (p *Participant[B, BP]) Round3(r2 network.RoundMessages[*Round2P2P[B, BP], 
 		}
 
 		message := p.state.messages[id]
+		messageHash := echoHash(message)
 		for echoID := range p.quorum.Iter() {
 			if echoID == p.sharingID || echoID == id {
 				continue
@@ -82,8 +83,8 @@ func (p *Participant[B, BP]) Round3(r2 network.RoundMessages[*Round2P2P[B, BP], 
 			if err := echo.Validate(p, echoID); err != nil {
 				return nil, errs.Wrap(err).WithMessage("failed to validate round 2 message")
 			}
-			echoMessage := echo.Echo[id]
-			_, isEq, _ := ct.CompareBytes(message, echoMessage)
+			echoedHash := echo.EchoHashes[id]
+			_, isEq, _ := ct.CompareBytes(messageHash[:], echoedHash[:])
 			if isEq != ct.True {
 				return nil, ErrFailed.WithMessage("mismatched echo")
 			}
