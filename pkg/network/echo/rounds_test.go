@@ -94,11 +94,3 @@ func TestEquivocationDetected(t *testing.T) {
 		require.ErrorContains(t, err, "mismatched echo")
 	}
 }
-
-func TestRound2ValidateRejectsBadHashLength(t *testing.T) {
-	t.Parallel()
-	m := &echo.Round2P2P[dummyMessage, *dummyParticipant]{
-		EchoHashes: map[sharing.ID][]byte{1: make([]byte, 16)},
-	}
-	require.ErrorContains(t, m.Validate(nil, 1), "invalid echo hash length")
-}

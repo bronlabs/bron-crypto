@@ -3,7 +3,6 @@ package echo
 import (
 	"github.com/bronlabs/errs-go/errs"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -33,7 +32,7 @@ func (p *Participant[B, BP]) Round1(message B) (network.OutgoingUnicasts[*Round1
 
 // Round2 echoes a SHA3-256 digest of every received payload back to all parties.
 func (p *Participant[B, BP]) Round2(r1 network.RoundMessages[*Round1P2P[B, BP], *Participant[B, BP]]) (network.OutgoingUnicasts[*Round2P2P[B, BP], *Participant[B, BP]], error) {
-	receivedHashes := make(map[sharing.ID][]byte)
+	receivedHashes := make(map[sharing.ID][32]byte)
 	for id := range p.quorum.Iter() {
 		if id == p.sharingID {
 			continue
@@ -83,9 +82,8 @@ func (p *Participant[B, BP]) Round3(r2 network.RoundMessages[*Round2P2P[B, BP], 
 			if err := echo.Validate(p, echoID); err != nil {
 				return nil, errs.Wrap(err).WithMessage("failed to validate round 2 message")
 			}
-			echoedHash := echo.EchoHashes[id]
-			_, isEq, _ := ct.CompareBytes(messageHash, echoedHash)
-			if isEq != ct.True {
+			// Digests of quorum-visible payloads are public; equality need not be constant time.
+			if echo.EchoHashes[id] != messageHash {
 				return nil, ErrFailed.WithMessage("mismatched echo")
 			}
 		}
