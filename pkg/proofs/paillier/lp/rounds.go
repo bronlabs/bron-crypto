@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
@@ -17,7 +18,7 @@ import (
 // Round1 executes the verifier's first round.
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	if verifier.round != 1 {
-		return nil, ErrRound.WithMessage("%d != 1", verifier.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 1", verifier.round)
 	}
 
 	zero, err := paillier.NewPlaintext(verifier.paillierPublicKey.PlaintextGroup().Zero())
@@ -77,7 +78,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 // Round2 executes the prover's second round.
 func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if prover.round != 2 {
-		return nil, ErrRound.WithMessage("%d != 2", prover.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 2", prover.round)
 	}
 	if err := input.Validate(prover, prover.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 2 input")
@@ -117,7 +118,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 // Round3 executes the verifier's third round.
 func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if verifier.round != 3 {
-		return nil, ErrRound.WithMessage("%d != 3", verifier.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 3", verifier.round)
 	}
 	if err := input.Validate(verifier, verifier.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 3 input")
@@ -137,7 +138,7 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 // Round4 executes the prover's fourth round.
 func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
 	if prover.round != 4 {
-		return nil, ErrRound.WithMessage("%d != 4", prover.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 4", prover.round)
 	}
 	if err := input.Validate(prover, prover.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 4 input")
@@ -182,7 +183,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	// Validation
 	if verifier.round != 5 {
-		return ErrRound.WithMessage("%d != 5", verifier.round)
+		return proofs.ErrRound.WithMessage("%d != 5", verifier.round)
 	}
 	if err := input.Validate(verifier, verifier.copartyID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid round 5 input")
@@ -196,7 +197,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		ok &= input.YPrime[i].Equal(&yModN)
 	}
 	if ok == ct.False {
-		return ErrVerificationFailed.WithMessage("failed to verify Paillier public key")
+		return proofs.ErrVerificationFailed.WithMessage("failed to verify Paillier public key")
 	}
 
 	// V accepts if every y_i == y'_i

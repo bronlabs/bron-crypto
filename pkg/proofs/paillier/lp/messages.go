@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
@@ -20,23 +21,23 @@ type Round1Output struct {
 // Validate checks the Round1Output shape.
 func (m *Round1Output) Validate(p *Prover, _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalid.WithMessage("round 1 output is nil")
+		return proofs.ErrValidationFailed.WithMessage("round 1 output is nil")
 	}
 	if len(m.X) != p.k {
-		return ErrInvalid.WithMessage("X length (%d) != %d", len(m.X), p.k)
+		return proofs.ErrValidationFailed.WithMessage("X length (%d) != %d", len(m.X), p.k)
 	}
 	if sliceutils.ContainsNil(m.X) {
-		return ErrInvalid.WithMessage("X contains nil")
+		return proofs.ErrValidationFailed.WithMessage("X contains nil")
 	}
 	if len(m.NthRootsProverOutput) != p.k {
-		return ErrInvalid.WithMessage("NthRootsProverOutput length (%d) != %d", len(m.NthRootsProverOutput), p.k)
+		return proofs.ErrValidationFailed.WithMessage("NthRootsProverOutput length (%d) != %d", len(m.NthRootsProverOutput), p.k)
 	}
 	if sliceutils.ContainsNil(m.NthRootsProverOutput) {
-		return ErrInvalid.WithMessage("NthRootsProverOutput contains nil")
+		return proofs.ErrValidationFailed.WithMessage("NthRootsProverOutput contains nil")
 	}
 	for _, x := range m.X {
 		if x == nil {
-			return ErrInvalid.WithMessage("X contains nil")
+			return proofs.ErrValidationFailed.WithMessage("X contains nil")
 		}
 	}
 	return nil
@@ -49,10 +50,10 @@ type Round2Output struct {
 
 func (m *Round2Output) Validate(_ *Verifier, _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalid.WithMessage("round 2 output is nil")
+		return proofs.ErrValidationFailed.WithMessage("round 2 output is nil")
 	}
 	if len(m.NthRootsVerifierOutput) < base.StatisticalSecurityBytesCeil {
-		return ErrInvalid.WithMessage("NthRootsVerifierOutput length (%d) < %d", len(m.NthRootsVerifierOutput), base.ComputationalSecurityBytesCeil)
+		return proofs.ErrValidationFailed.WithMessage("NthRootsVerifierOutput length (%d) < %d", len(m.NthRootsVerifierOutput), base.ComputationalSecurityBytesCeil)
 	}
 	return nil
 }
@@ -64,13 +65,13 @@ type Round3Output struct {
 
 func (m *Round3Output) Validate(p *Prover, _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalid.WithMessage("round 3 output is nil")
+		return proofs.ErrValidationFailed.WithMessage("round 3 output is nil")
 	}
 	if len(m.NthRootsProverOutput) != p.k {
-		return ErrInvalid.WithMessage("NthRootsProverOutput length (%d) != %d", len(m.NthRootsProverOutput), p.k)
+		return proofs.ErrValidationFailed.WithMessage("NthRootsProverOutput length (%d) != %d", len(m.NthRootsProverOutput), p.k)
 	}
 	if sliceutils.ContainsNil(m.NthRootsProverOutput) {
-		return ErrInvalid.WithMessage("NthRootsProverOutput contains nil")
+		return proofs.ErrValidationFailed.WithMessage("NthRootsProverOutput contains nil")
 	}
 	return nil
 }
@@ -83,13 +84,13 @@ type Round4Output struct {
 // Validate checks the Round4Output shape.
 func (m *Round4Output) Validate(p *Verifier, _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalidArgument.WithMessage("round 4 output is nil")
+		return proofs.ErrInvalidArgument.WithMessage("round 4 output is nil")
 	}
 	if len(m.YPrime) != p.k {
-		return ErrInvalidArgument.WithMessage("YPrime length (%d) != %d", len(m.YPrime), p.k)
+		return proofs.ErrInvalidArgument.WithMessage("YPrime length (%d) != %d", len(m.YPrime), p.k)
 	}
 	if sliceutils.ContainsNil(m.YPrime) {
-		return ErrInvalidArgument.WithMessage("YPrime contains nil")
+		return proofs.ErrInvalidArgument.WithMessage("YPrime contains nil")
 	}
 	return nil
 }

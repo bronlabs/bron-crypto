@@ -22,6 +22,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
 )
 
@@ -185,7 +186,7 @@ func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra
 		return err
 	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
-		return lpdl.ErrFailed.WithMessage("transcript record different data")
+		return proofs.ErrFailed.WithMessage("transcript record different data")
 	}
 
 	return nil

@@ -14,12 +14,8 @@ import (
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
 
-var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
-	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
-])(nil)
-
-// prover implements the NIProver interface for randomised Fischlin proofs.
-type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+// Prover implements the NIProver interface for randomised Fischlin proofs.
+type Prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
@@ -28,7 +24,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 // Prove generates a non-interactive randomised Fischlin proof for the given statement
 // and witness. It runs R parallel executions, randomly sampling challenges until
 // finding ones that hash to zero. Returns the serialised proof containing all R transcripts.
-func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
+func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
 	sessionID := p.ctx.SessionID()
 	p.ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
 	crs, err := p.ctx.Transcript().ExtractBytes(crsLabel, 32)

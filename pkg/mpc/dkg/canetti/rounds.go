@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir/zkmodule"
 )
 
 // Round1 samples the local dealer contribution, commits to its opening
@@ -38,7 +39,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], error) {
 	}
 	schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(dealerOutput.VerificationMaterial().Value().Iter())...)
 	schWitness := batch_schnorr.NewWitness(slices.Collect(dealerFunc.RandomColumn().Iter())...)
-	bigA, tau, err := zkCom(p.schScheme, schStatement, schWitness)
+	bigA, tau, err := zkmodule.Commit(p.schScheme, schStatement, schWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("prove commitment failed")
 	}
@@ -151,7 +152,7 @@ func (p *Participant[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G,
 	schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(p.state.msg[p.ctx.HolderID()].X.Value().Iter())...)
 	schWitness := batch_schnorr.NewWitness(slices.Collect(p.state.dealerFunc.RandomColumn().Iter())...)
 	p.state.proverCtx.Transcript().AppendBytes(rhoLabel, p.state.rho)
-	psi, err := zkProve(p.state.proverCtx, p.schScheme, schStatement, schWitness, p.state.msg[p.ctx.HolderID()].A, p.state.tau)
+	psi, err := zkmodule.Prove(p.state.proverCtx, p.schScheme, schStatement, schWitness, p.state.msg[p.ctx.HolderID()].A, p.state.tau)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove")
 	}
@@ -180,14 +181,14 @@ func (p *Participant[G, S]) Round4(r3b network.RoundMessages[*Round3Broadcast[G,
 		b, _ := r3b.Get(id)
 
 		// step 1.i
-		if !b.Psi.A.A.Equal(p.state.msg[id].A.A) {
+		if !b.Psi.Commitment().A.Equal(p.state.msg[id].A.A) {
 			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid proof")
 		}
 
 		// step 1.ii
 		schStatement := batch_schnorr.NewStatement(p.group.Generator(), slices.Collect(p.state.msg[id].X.Value().Iter())...)
 		p.state.verifierCtxs[id].Transcript().AppendBytes(rhoLabel, p.state.rho)
-		if err := zkVrfy(p.state.verifierCtxs[id], p.schScheme, schStatement, b.Psi); err != nil {
+		if err := zkmodule.Verify(p.state.verifierCtxs[id], p.schScheme, schStatement, b.Psi); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid proof")
 		}
 	}

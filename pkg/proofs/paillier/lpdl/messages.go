@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments/hashcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 )
 
@@ -22,16 +23,16 @@ type Round1Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S al
 // Validate checks the Round1Output shape.
 func (m *Round1Output[P, B, S]) Validate(p *Prover[P, B, S], _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalidArgument.WithMessage("round 1 output is nil")
+		return proofs.ErrValidationFailed.WithMessage("round 1 output is nil")
 	}
 	if m.RangeVerifierOutput == [hashcom.DigestSize]byte{} {
-		return ErrInvalid.WithMessage("range verifier output is empty")
+		return proofs.ErrValidationFailed.WithMessage("range verifier output is empty")
 	}
 	if m.CPrime == nil {
-		return ErrInvalidArgument.WithMessage("CPrime is nil")
+		return proofs.ErrValidationFailed.WithMessage("CPrime is nil")
 	}
 	if m.CDoublePrimeCommitment == [hashcom.DigestSize]byte{} {
-		return ErrInvalid.WithMessage("CDoublePrimeCommitment is empty")
+		return proofs.ErrValidationFailed.WithMessage("CDoublePrimeCommitment is empty")
 	}
 
 	return nil
@@ -46,10 +47,10 @@ type Round2Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S al
 // Validate checks the Round2Output shape.
 func (m *Round2Output[P, B, S]) Validate(_ *Verifier[P, B, S], _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalidArgument.WithMessage("round 2 output is nil")
+		return proofs.ErrValidationFailed.WithMessage("round 2 output is nil")
 	}
 	if m.RangeProverOutput == nil {
-		return ErrInvalidArgument.WithMessage("range prover output is nil")
+		return proofs.ErrValidationFailed.WithMessage("range prover output is nil")
 	}
 
 	return nil
@@ -67,19 +68,19 @@ type Round3Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S al
 // Validate checks the Round3Output shape.
 func (m *Round3Output[P, B, S]) Validate(_ *Prover[P, B, S], _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalidArgument.WithMessage("round 3 output is nil")
+		return proofs.ErrValidationFailed.WithMessage("round 3 output is nil")
 	}
 	if m.RangeVerifierMessage == nil {
-		return ErrInvalidArgument.WithMessage("range verifier message")
+		return proofs.ErrValidationFailed.WithMessage("range verifier message")
 	}
 	if ct.SliceIsZero(m.RangeVerifierWitness[:]) == ct.True {
-		return ErrInvalidArgument.WithMessage("range verifier witness is empty")
+		return proofs.ErrValidationFailed.WithMessage("range verifier witness is empty")
 	}
 	if m.A == nil {
-		return ErrInvalidArgument.WithMessage("A is nil")
+		return proofs.ErrValidationFailed.WithMessage("A is nil")
 	}
 	if m.B == nil {
-		return ErrInvalidArgument.WithMessage("B is nil")
+		return proofs.ErrValidationFailed.WithMessage("B is nil")
 	}
 
 	return nil
@@ -95,16 +96,16 @@ type Round4Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S al
 // Validate checks the Round4Output shape.
 func (m *Round4Output[P, B, S]) Validate(p *Verifier[P, B, S], _ sharing.ID) error {
 	if m == nil {
-		return ErrInvalidArgument.WithMessage("round 4 output is nil")
+		return proofs.ErrValidationFailed.WithMessage("round 4 output is nil")
 	}
 	if m.RangeProverOutput == nil {
-		return ErrInvalidArgument.WithMessage("range prover output is nil")
+		return proofs.ErrValidationFailed.WithMessage("range prover output is nil")
 	}
 	if utils.IsNil(m.BigQHat) {
-		return ErrInvalidArgument.WithMessage("BigQHat is nil")
+		return proofs.ErrValidationFailed.WithMessage("BigQHat is nil")
 	}
 	if m.BigQHat.IsOpIdentity() {
-		return ErrInvalidArgument.WithMessage("BigQHat is identity")
+		return proofs.ErrValidationFailed.WithMessage("BigQHat is identity")
 	}
 
 	return nil

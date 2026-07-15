@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -135,7 +136,7 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 	options ...MaurerOption[I, P],
 ) (*Protocol[I, P], error) {
 	if challengeByteLen <= 0 || soundnessError < 1 || imageGroup == nil || preImageGroup == nil || oneWayHomomorphism == nil || anchor == nil || prng == nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 
 	p := &Protocol[I, P]{
@@ -173,7 +174,7 @@ func (p *Protocol[I, P]) ComputeProverCommitment(_ *Statement[I], _ *Witness[P])
 // ComputeProverResponse computes the Maurer09 response.
 func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness[P], _ *Commitment[I], state *State[P], challengeBytes sigma.ChallengeBytes) (*Response[P], error) {
 	if witness == nil || state == nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 	cw, err := p.preImageScalarMul(witness.W, challengeBytes)
 	if err != nil {
@@ -186,7 +187,7 @@ func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness
 // Verify checks a Maurer09 proof response.
 func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[I], challengeBytes sigma.ChallengeBytes, response *Response[P]) error {
 	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
-		return ErrInvalidArgument.WithMessage("invalid arguments")
+		return proofs.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 	cx, err := p.imageScalarMul(statement.X, challengeBytes)
 	if err != nil {
@@ -197,7 +198,7 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 		return errs.Wrap(err).WithMessage("failed to compute homomorphism")
 	}
 	if !phiZ.Equal(commitment.A.Op(cx)) {
-		return ErrVerificationFailed.WithMessage("invalid response")
+		return proofs.ErrVerificationFailed.WithMessage("invalid response")
 	}
 
 	return nil
@@ -206,7 +207,7 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 // RunSimulator simulates a Maurer09 transcript for a given challenge.
 func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes sigma.ChallengeBytes) (*Commitment[I], *Response[P], error) {
 	if statement == nil || challengeBytes == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("invalid arguments")
+		return nil, nil, proofs.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 	z, err := p.preImageGroup.Random(p.prng)
 	if err != nil {
@@ -228,10 +229,10 @@ func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes si
 // Extract derives the witness from two valid transcripts.
 func (p *Protocol[I, P]) Extract(x *Statement[I], a *Commitment[I], ei []sigma.ChallengeBytes, zi []*Response[P]) (*Witness[P], error) {
 	if x == nil || a == nil || ei == nil || zi == nil {
-		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 	if uint(len(ei)) != specialSoundness || uint(len(zi)) != specialSoundness {
-		return nil, ErrInvalidArgument.WithMessage("invalid number of challenge bytes")
+		return nil, proofs.ErrInvalidArgument.WithMessage("invalid number of challenge bytes")
 	}
 	if err := p.Verify(x, a, ei[0], zi[0]); err != nil {
 		return nil, errs.Wrap(err).WithMessage("verification failed")
@@ -249,7 +250,7 @@ func (p *Protocol[I, P]) Extract(x *Statement[I], a *Commitment[I], ei []sigma.C
 	var g, alpha, beta big.Int
 	g.GCD(&alpha, &beta, p.anchor.L().Big(), eDiff)
 	if g.Cmp(big.NewInt(1)) != 0 {
-		return nil, ErrFailed.WithMessage("BUG: this should never happen")
+		return nil, proofs.ErrFailed.WithMessage("BUG: this should never happen")
 	}
 
 	uAlpha, err := p.preImageScalarMulI(u, &alpha)
@@ -272,14 +273,14 @@ func (*Protocol[I, P]) SpecialSoundness() uint {
 // ValidateStatement checks statement/witness consistency.
 func (p *Protocol[I, P]) ValidateStatement(statement *Statement[I], witness *Witness[P]) error {
 	if statement == nil || witness == nil {
-		return ErrInvalidArgument.WithMessage("invalid arguments")
+		return proofs.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 	phiW, err := p.oneWayHomomorphism(witness.W)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to compute homomorphism")
 	}
 	if !phiW.Equal(statement.X) {
-		return ErrValidationFails.WithMessage("invalid statement")
+		return proofs.ErrValidationFailed.WithMessage("invalid statement")
 	}
 
 	return nil

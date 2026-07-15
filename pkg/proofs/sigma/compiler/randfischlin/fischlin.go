@@ -8,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 )
@@ -51,11 +52,8 @@ type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	Z []Z      `cbor:"z"`
 }
 
-var _ compiler.NonInteractiveProtocol[sigma.Statement, sigma.Witness] = (*rf[
-	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
-])(nil)
-
-type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+// Protocol implements the NonInteractiveProtocol interface for randomised Fischlin proofs.
+type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 }
@@ -63,17 +61,17 @@ type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 // NewCompiler creates a new randomised Fischlin compiler for the given sigma protocol.
 // The sigma protocol must have soundness error at least 2^(-128). The prng is used
 // for randomness during proof generation.
-func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
+func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (*Protocol[X, W, A, S, Z], error) {
 	if sigmaProtocol == nil || prng == nil {
-		return nil, ErrNil.WithMessage("sigmaProtocol or prng")
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol or prng is nil")
 	}
 
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-		return nil, ErrInvalid.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
 	}
 
-	return &rf[X, W, A, S, Z]{
+	return &Protocol[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 		prng:          prng,
 	}, nil
@@ -81,16 +79,16 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 
 // NewProver creates a new non-interactive prover for generating randomised Fischlin proofs.
 // The sessionID and transcript are used for domain separation.
-func (c *rf[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
+func (c *Protocol[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X, W], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 
 	sessionID := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &prover[X, W, A, S, Z]{
+	return &Prover[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 		prng:          c.prng,
@@ -99,27 +97,27 @@ func (c *rf[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIProver[X
 
 // NewVerifier creates a new non-interactive verifier for checking randomised Fischlin proofs.
 // The sessionID and transcript must match those used by the prover.
-func (c *rf[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
+func (c *Protocol[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NIVerifier[X], error) {
 	if ctx == nil {
-		return nil, ErrNil.WithMessage("ctx")
+		return nil, proofs.ErrInvalidArgument.WithMessage("ctx is nil")
 	}
 
 	sessionID := ctx.SessionID()
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionID[:]))
 	ctx.Transcript().AppendDomainSeparator(dst)
 
-	return &verifier[X, W, A, S, Z]{
+	return &Verifier[X, W, A, S, Z]{
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }
 
 // Name returns the compiler name ("RandomisedFischlin").
-func (*rf[_, _, _, _, _]) Name() compiler.Name {
+func (*Protocol[_, _, _, _, _]) Name() compiler.Name {
 	return Name
 }
 
 // SigmaProtocolName returns the name of the underlying sigma protocol.
-func (c *rf[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
+func (c *Protocol[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
 	return c.sigmaProtocol.Name()
 }

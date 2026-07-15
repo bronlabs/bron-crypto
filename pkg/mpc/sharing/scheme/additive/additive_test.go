@@ -36,7 +36,8 @@ func TestSanity(t *testing.T) {
 	scheme, err := newAdditiveScheme(field, identities)
 	require.NoError(t, err, "could not create scheme")
 
-	secret := additive.NewSecret(field.FromUint64(42))
+	secret, err := additive.NewSecret(field.FromUint64(42))
+	require.NoError(t, err, "could not create secret")
 	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err, "could not create shares")
 	require.Equal(t, int(total), shares.Shares().Size(), "number of shares should match total")
@@ -55,12 +56,16 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 	t.Helper()
 
 	// Create test secrets
-	zeroSecret := additive.NewSecret(field.OpIdentity())
-	oneSecret := additive.NewSecret(field.One())
-	fortyTwoSecret := additive.NewSecret(field.FromUint64(42))
+	zeroSecret, err := additive.NewSecret(field.OpIdentity())
+	require.NoError(t, err, "could not create zero secret")
+	oneSecret, err := additive.NewSecret(field.One())
+	require.NoError(t, err, "could not create one secret")
+	fortyTwoSecret, err := additive.NewSecret(field.FromUint64(42))
+	require.NoError(t, err, "could not create forty-two secret")
 	randomValue, err := field.Random(pcg.NewRandomised())
 	require.NoError(t, err)
-	randomSecret := additive.NewSecret(randomValue)
+	randomSecret, err := additive.NewSecret(randomValue)
+	require.NoError(t, err, "could not create random secret")
 
 	// Get scheme parameters
 	total := uint(scheme.AccessStructure().Shareholders().Size())
@@ -298,7 +303,8 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 	t.Helper()
 
 	// Deal shares for testing
-	secret := additive.NewSecret(field.FromUint64(100))
+	secret, err := additive.NewSecret(field.FromUint64(100))
+	require.NoError(t, err, "could not create secret")
 	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 
@@ -416,8 +422,10 @@ func homomorphicOpsCases[E additive.GroupElement[E]](t *testing.T, scheme *addit
 	t.Helper()
 
 	// Create two secrets and their shares
-	secret1 := additive.NewSecret(field.FromUint64(10))
-	secret2 := additive.NewSecret(field.FromUint64(20))
+	secret1, err := additive.NewSecret(field.FromUint64(10))
+	require.NoError(t, err, "could not create secret1")
+	secret2, err := additive.NewSecret(field.FromUint64(20))
+	require.NoError(t, err, "could not create secret2")
 
 	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
 	require.NoError(t, err)
@@ -501,7 +509,8 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 	t.Helper()
 
 	// Create a valid share for testing
-	secret := additive.NewSecret(field.FromUint64(50))
+	secret, err := additive.NewSecret(field.FromUint64(50))
+	require.NoError(t, err, "could not create secret")
 	shares, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 	validShare, _ := shares.Shares().Get(1)
@@ -806,7 +815,8 @@ func TestDealDeterministic(t *testing.T) {
 	scheme, err := newAdditiveScheme(field, identities)
 	require.NoError(t, err)
 
-	secret := additive.NewSecret(field.FromUint64(42))
+	secret, err := additive.NewSecret(field.FromUint64(42))
+	require.NoError(t, err, "could not create secret")
 
 	// Use PCG for deterministic randomness that produces non-zero values
 	prng1 := pcg.New(12345, 67890)
@@ -853,7 +863,8 @@ func BenchmarkDeal(b *testing.B) {
 			scheme, err := newAdditiveScheme(field, identities)
 			require.NoError(b, err)
 
-			secret := additive.NewSecret(field.FromUint64(42))
+			secret, err := additive.NewSecret(field.FromUint64(42))
+			require.NoError(b, err, "could not create secret")
 
 			b.ResetTimer()
 			for range b.N {
@@ -917,7 +928,8 @@ func BenchmarkReconstruct(b *testing.B) {
 			scheme, err := newAdditiveScheme(field, identities)
 			require.NoError(b, err)
 
-			secret := additive.NewSecret(field.FromUint64(42))
+			secret, err := additive.NewSecret(field.FromUint64(42))
+			require.NoError(b, err, "could not create secret")
 			shares, err := scheme.Deal(secret, pcg.NewRandomised())
 			require.NoError(b, err)
 			shareSlice := shares.Shares().Values()
@@ -960,7 +972,8 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 	}
 
 	// Test dealing with arbitrary IDs
-	secret := additive.NewSecret(field.FromUint64(54321))
+	secret, err := additive.NewSecret(field.FromUint64(54321))
+	require.NoError(t, err, "could not create secret")
 	out, err := scheme.Deal(secret, pcg.NewRandomised())
 	require.NoError(t, err)
 	require.NotNil(t, out)
@@ -1009,8 +1022,10 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 	require.True(t, randomSecret.Equal(reconstructedRandom))
 
 	// Test homomorphic operations with arbitrary IDs
-	secret1 := additive.NewSecret(field.FromUint64(100))
-	secret2 := additive.NewSecret(field.FromUint64(200))
+	secret1, err := additive.NewSecret(field.FromUint64(100))
+	require.NoError(t, err, "could not create secret1")
+	secret2, err := additive.NewSecret(field.FromUint64(200))
+	require.NoError(t, err, "could not create secret2")
 
 	shares1, err := scheme.Deal(secret1, pcg.NewRandomised())
 	require.NoError(t, err)
@@ -1044,7 +1059,8 @@ func TestArbitraryShareholderIDs(t *testing.T) {
 }
 func sumToSecret_HappyPaths[E algebra.PrimeFieldElement[E]](t *testing.T, group algebra.PrimeField[E], secret uint64, numberOfShares int) (sum E) {
 	t.Helper()
-	s := additive.NewSecret(group.FromUint64(secret))
+	s, err := additive.NewSecret(group.FromUint64(secret))
+	require.NoError(t, err, "could not create secret")
 	shares, err := additive.SumToSecret(s.Value(), group.Random, pcg.NewRandomised(), numberOfShares)
 	require.NoError(t, err)
 	require.Len(t, shares, numberOfShares)
@@ -1099,7 +1115,8 @@ func TestSumToSecret_Randomness(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewScalarField()
-	secret := additive.NewSecret(group.FromUint64(777))
+	secret, err := additive.NewSecret(group.FromUint64(777))
+	require.NoError(t, err, "could not create secret")
 
 	t.Run("different outputs for different prng states", func(t *testing.T) {
 		t.Parallel()
@@ -1164,7 +1181,8 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewScalarField()
-	secret := additive.NewSecret(group.FromUint64(42))
+	secret, err := additive.NewSecret(group.FromUint64(42))
+	require.NoError(t, err, "could not create secret")
 
 	t.Run("nil secret", func(t *testing.T) {
 		t.Parallel()
@@ -1210,7 +1228,8 @@ func TestSumToSecret_ErrorCases(t *testing.T) {
 
 func sumToSecret_DifferentGroups[E algebra.PrimeFieldElement[E]](t *testing.T, group algebra.PrimeField[E]) {
 	t.Helper()
-	secret := additive.NewSecret(group.FromUint64(888))
+	secret, err := additive.NewSecret(group.FromUint64(888))
+	require.NoError(t, err, "could not create secret")
 
 	shares, err := additive.SumToSecret(secret.Value(), group.Random, pcg.NewRandomised(), 6)
 	require.NoError(t, err)
@@ -1249,7 +1268,8 @@ func TestSumToSecret_Properties(t *testing.T) {
 		testSecrets := []uint64{0, 1, 42, 100, 999, 0xFFFF}
 
 		for _, val := range testSecrets {
-			secret := additive.NewSecret(group.FromUint64(val))
+			secret, err := additive.NewSecret(group.FromUint64(val))
+			require.NoError(t, err, "could not create secret")
 			shares, err := additive.SumToSecret(secret.Value(), group.Random, pcg.NewRandomised(), 5)
 			require.NoError(t, err)
 
@@ -1264,7 +1284,8 @@ func TestSumToSecret_Properties(t *testing.T) {
 
 	t.Run("varying l produces valid sharings", func(t *testing.T) {
 		t.Parallel()
-		secret := additive.NewSecret(group.FromUint64(777))
+		secret, err := additive.NewSecret(group.FromUint64(777))
+		require.NoError(t, err, "could not create secret")
 
 		// Test various values of l
 		for l := 1; l <= 20; l++ {
@@ -1290,8 +1311,10 @@ func TestSumToSecret_AdditiveHomomorphism(t *testing.T) {
 
 	t.Run("sum of sharings equals sharing of sum", func(t *testing.T) {
 		t.Parallel()
-		secret1 := additive.NewSecret(group.FromUint64(100))
-		secret2 := additive.NewSecret(group.FromUint64(200))
+		secret1, err := additive.NewSecret(group.FromUint64(100))
+		require.NoError(t, err, "could not create secret1")
+		secret2, err := additive.NewSecret(group.FromUint64(200))
+		require.NoError(t, err, "could not create secret2")
 
 		seed1, seed2 := uint64(42), uint64(1337)
 
@@ -1326,7 +1349,8 @@ func TestSumToSecret_EdgeCaseValues(t *testing.T) {
 
 	t.Run("one element", func(t *testing.T) {
 		t.Parallel()
-		secret := additive.NewSecret(group.One())
+		secret, err := additive.NewSecret(group.One())
+		require.NoError(t, err, "could not create secret")
 		shares, err := additive.SumToSecret(secret.Value(), group.Random, pcg.NewRandomised(), 3)
 		require.NoError(t, err)
 
@@ -1341,7 +1365,8 @@ func TestSumToSecret_EdgeCaseValues(t *testing.T) {
 		t.Parallel()
 		// -1 in the field
 		minusOne := group.Zero().Sub(group.One())
-		secret := additive.NewSecret(minusOne)
+		secret, err := additive.NewSecret(minusOne)
+		require.NoError(t, err, "could not create secret")
 		shares, err := additive.SumToSecret(secret.Value(), group.Random, pcg.NewRandomised(), 4)
 		require.NoError(t, err)
 

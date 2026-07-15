@@ -1,7 +1,9 @@
 package maputils
 
 import (
+	"cmp"
 	"maps"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 )
@@ -22,6 +24,16 @@ func MapValues[K comparable, VIn, VOut any](input map[K]VIn, f func(K, VIn) VOut
 		out[k] = f(k, v)
 	}
 	return out
+}
+
+// SortedValues returns a slice of the map's values sorted by their corresponding keys.
+func SortedValues[K cmp.Ordered, V any](input map[K]V) []V {
+	keys := slices.Sorted(maps.Keys(input))
+	values := make([]V, len(keys))
+	for i, k := range keys {
+		values[i] = input[k]
+	}
+	return values
 }
 
 // JoinOrError merges two maps into one. If a key exists in both maps, the provided duplication function is called to resolve the conflict.

@@ -7,10 +7,10 @@ require (
 	github.com/cronokirby/saferith v0.33.0
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/crypto v0.48.0
+	golang.org/x/crypto v0.51.0
 	golang.org/x/exp v0.0.0-20260209203927-2842357ff358
-	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.41.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/sys v0.45.0
 	pgregory.net/rapid v1.2.0
 )
 

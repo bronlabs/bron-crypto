@@ -21,6 +21,7 @@ const (
 	domainSeparator = "BRON_CRYPTO_DKG_CANETTI-"
 	ckLabel         = "BRON_CRYPTO_DKG_CANETTI_CK-"
 	proverIDLabel   = "BRON_CRYPTO_DKG_CANETTI_PROVER_ID-"
+	iLabel          = "BRON_CRYPTO_DKG_CANETTI_i-"
 	rhoLabel        = "BRON_CRYPTO_DKG_CANETTI_RHO-"
 )
 
@@ -104,6 +105,21 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 		},
 	}
 	return p, nil
+}
+
+// SharingScheme returns the underlying Feldman sharing scheme used by the DKG protocol.
+func (p *Participant[G, S]) SharingScheme() *feldman.Scheme[G, S] {
+	return p.sharingScheme
+}
+
+// Group returns the group used by the DKG protocol.
+func (p *Participant[G, S]) Group() algebra.PrimeGroup[G, S] {
+	return p.group
+}
+
+// Ctx returns the session context of the participant.
+func (p *Participant[G, S]) Ctx() *session.Context {
+	return p.ctx
 }
 
 // SharingID returns the sharing identifier of the local participant.

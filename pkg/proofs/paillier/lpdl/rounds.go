@@ -10,13 +10,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 )
 
 // Round1 executes the verifier's first round.
 func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output[P, B, S], err error) {
 	// Validation
 	if verifier.round != 1 {
-		return nil, ErrRound.WithMessage("%d != 1", verifier.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 1", verifier.round)
 	}
 
 	verifier.state.a, err = verifier.state.zModQ.Random(verifier.prng)
@@ -85,7 +86,7 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output[P, B, S], err e
 func (prover *Prover[P, B, S]) Round2(r1out *Round1Output[P, B, S]) (r2out *Round2Output[P, B, S], err error) {
 	// Validation; RangeVerifierOutput deferred to `rangeProver.Round2`, CPrime deferred to `decryptor.Decrypt`
 	if prover.round != 2 {
-		return nil, ErrRound.WithMessage("%d != 2", prover.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 2", prover.round)
 	}
 	if err := r1out.Validate(prover, prover.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 2 input")
@@ -129,7 +130,7 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output[P, B, S]) (r2out *Roun
 func (verifier *Verifier[P, B, S]) Round3(r2out *Round2Output[P, B, S]) (r3out *Round3Output[P, B, S], err error) {
 	// Validation; RangeProverOutput deferred to `rangeVerifier.Round3`
 	if verifier.round != 3 {
-		return nil, ErrRound.WithMessage("%d != 3", verifier.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 3", verifier.round)
 	}
 	if err := r2out.Validate(verifier, verifier.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 3 input")
@@ -158,7 +159,7 @@ func (verifier *Verifier[P, B, S]) Round3(r2out *Round2Output[P, B, S]) (r3out *
 func (prover *Prover[P, B, S]) Round4(r4In *Round3Output[P, B, S]) (r4out *Round4Output[P, B, S], err error) {
 	// Validation; RangeVerifierOutput deferred to `rangeProver.Round4`
 	if prover.round != 4 {
-		return nil, ErrRound.WithMessage("%d != 4", prover.round)
+		return nil, proofs.ErrRound.WithMessage("%d != 4", prover.round)
 	}
 	if err := r4In.Validate(prover, prover.copartyID); err != nil {
 		return nil, errs.Wrap(err).WithMessage("invalid round 4 input")
@@ -195,7 +196,7 @@ func (prover *Prover[P, B, S]) Round4(r4In *Round3Output[P, B, S]) (r4out *Round
 func (verifier *Verifier[P, B, S]) Round5(input *Round4Output[P, B, S]) (err error) {
 	// Validation; RangeProverOutput deferred to `rangeVerifier.Round5`
 	if verifier.round != 5 {
-		return ErrRound.WithMessage("%d != 5", verifier.round)
+		return proofs.ErrRound.WithMessage("%d != 5", verifier.round)
 	}
 	if err := input.Validate(verifier, verifier.copartyID); err != nil {
 		return errs.Wrap(err).WithMessage("invalid round 5 input")
@@ -207,7 +208,7 @@ func (verifier *Verifier[P, B, S]) Round5(input *Round4Output[P, B, S]) (err err
 
 	// 5. accepts if and only if it accepts the range proof and Q^ == Q'
 	if !input.BigQHat.Equal(verifier.state.bigQPrime) {
-		return ErrVerificationFailed.WithMessage("invalid proof")
+		return proofs.ErrVerificationFailed.WithMessage("invalid proof")
 	}
 	err = verifier.rangeVerifier.Verify(input.RangeProverOutput)
 	if err != nil {
