@@ -21,13 +21,22 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // deserialises the proof and hands it to the zkmodule engine, which recomputes
 // the challenge from the transcript, checks it against the challenge carried in
 // the proof, and verifies the sigma relation.
-func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
+func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) (err error) {
+	defer func() {
+		if recover() != nil {
+			err = proofs.ErrInvalidArgument.WithMessage("malformed proof")
+		}
+	}()
+
 	if len(proofBytes) == 0 {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 	fsProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot deserialize proof")
+		return errs.Join(proofs.ErrInvalidArgument, errs.Wrap(err)).WithMessage("cannot deserialize proof")
+	}
+	if fsProof == nil {
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	if err := zkmodule.Verify(v.ctx, v.sigmaProtocol, statement, fsProof); err != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs"
@@ -25,19 +26,33 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // Verify checks that a Fischlin proof is valid for the given statement.
 // It verifies that all rho challenge/response pairs hash to zero and that
 // each sigma protocol transcript is valid.
-func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
-	if proofBytes == nil {
+func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) (err error) {
+	defer func() {
+		if recover() != nil {
+			err = proofs.ErrInvalidArgument.WithMessage("malformed proof")
+		}
+	}()
+
+	if len(proofBytes) == 0 {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	fischlinProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot deserialize proof")
+		return errs.Join(proofs.ErrInvalidArgument, errs.Wrap(err)).WithMessage("cannot deserialize proof")
+	}
+	if fischlinProof == nil {
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	// 2. If m, e, and z do not each have ρ elements, then output 'reject'
 	if uint64(len(fischlinProof.A)) != v.rho || uint64(len(fischlinProof.E)) != v.rho || uint64(len(fischlinProof.Z)) != v.rho {
 		return proofs.ErrInvalidArgument.WithMessage("invalid length")
+	}
+	for i := range v.rho {
+		if utils.IsNil(fischlinProof.A[i]) || len(fischlinProof.E[i]) == 0 || utils.IsNil(fischlinProof.Z[i]) {
+			return proofs.ErrInvalidArgument.WithMessage("proof contains a nil component")
+		}
 	}
 
 	v.ctx.Transcript().AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, v.rho))

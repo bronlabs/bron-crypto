@@ -258,50 +258,18 @@ func (s *Scheme[E, FE]) ConvertLiftedShareToAdditive(share *LiftedShare[E, FE], 
 		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the unanimity quorum", share.ID())
 	}
 
-	quorumIDs := quorum.Shareholders().List()
-	reconVec, err := s.lsss.MSP().ReconstructionVector(quorumIDs...)
+	coefficients, err := s.lsss.MSP().ReconstructionCoefficients(share.ID(), quorum.Shareholders().List()...)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector for unanimity quorum")
+		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction coefficients for unanimity quorum")
+	}
+	if len(share.Value()) != len(coefficients) {
+		return nil, sharing.ErrValue.WithMessage("shareholder %d has %d lifted values but MSP row count is %d", share.ID(), len(share.Value()), len(coefficients))
 	}
 
-	// reconVec is indexed 0..len(allQuorumRows)-1, with entries ordered by
-	// ascending absolute MSP row index across all quorum members. Map this
-	// shareholder's absolute row indices to their positions in reconVec.
-	htr := s.lsss.MSP().HoldersToRows()
-	var allQuorumRows []int
-	for _, id := range quorumIDs {
-		rows, ok := htr.Get(id)
-		if !ok {
-			return nil, sharing.ErrMembership.WithMessage("quorum shareholder %d is not in the MSP holders mapping", id)
-		}
-		allQuorumRows = append(allQuorumRows, rows.List()...)
-	}
-	slices.Sort(allQuorumRows)
-
-	shareholderRowsSet, ok := htr.Get(share.ID())
-	if !ok {
-		return nil, sharing.ErrMembership.WithMessage("shareholder %d is not in the MSP holders mapping", share.ID())
-	}
-	sortedShareholderRows := slices.Sorted(slices.Values(shareholderRowsSet.List()))
-	if len(share.Value()) != len(sortedShareholderRows) {
-		return nil, sharing.ErrValue.WithMessage("shareholder %d has %d lifted values but MSP row count is %d", share.ID(), len(share.Value()), len(sortedShareholderRows))
-	}
-
-	// For each of this shareholder's MSP rows, find its position in the
-	// sorted all-quorum-rows list and extract the corresponding reconstruction
-	// coefficient, then accumulate coeff · liftedValue into the result.
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](share.Value()[0].Structure())
 	result := group.OpIdentity()
-	for i, absRow := range sortedShareholderRows {
-		pos, found := slices.BinarySearch(allQuorumRows, absRow)
-		if !found {
-			return nil, sharing.ErrFailed.WithMessage("shareholder row %d not found in quorum rows", absRow)
-		}
-		coeff, err := reconVec.Get(pos, 0)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to get reconstruction coefficient at position %d", pos)
-		}
-		result = result.Op(share.Value()[i].ScalarOp(coeff))
+	for i, coefficient := range coefficients {
+		result = result.Op(share.Value()[i].ScalarOp(coefficient))
 	}
 
 	out, err := additive.NewShare(share.ID(), result, quorum)
