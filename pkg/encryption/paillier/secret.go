@@ -70,11 +70,22 @@ func SampleSafeSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 // precomputing the CRT decryption constants. The factorisation is the secret
 // trapdoor that enables Decrypt and Open.
 func NewSecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
+	return newSecretKey(group, base.IFCKeyLength)
+}
+
+// NewLegacySecretKey builds a secret key like NewSecretKey but accepts moduli down
+// to base.LegacyIFCKeyLength. It exists solely for deserialising keys stored before
+// IFCKeyLength became the generation floor and must never be used for fresh keys.
+func NewLegacySecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
+	return newSecretKey(group, base.LegacyIFCKeyLength)
+}
+
+func newSecretKey(group *znstar.PaillierGroupKnownOrder, minKeyLen int) (*SecretKey, error) {
 	if group == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group must not be nil")
 	}
-	if !testing.Testing() && group.N().TrueLen() < base.IFCKeyLength {
-		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", base.IFCKeyLength)
+	if !testing.Testing() && group.N().TrueLen() < minKeyLen {
+		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", minKeyLen)
 	}
 	sk := &SecretKey{ //nolint:exhaustruct // other fields are lazily computed.
 		PublicKey: PublicKey{group: group.ForgetOrder()},
