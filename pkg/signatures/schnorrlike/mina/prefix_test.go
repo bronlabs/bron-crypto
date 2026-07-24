@@ -24,6 +24,13 @@ func TestSignaturePrefix(t *testing.T) {
 		assert.Len(t, prefix, 20)
 	})
 
+	t.Run("devnet", func(t *testing.T) {
+		t.Parallel()
+		prefix := SignaturePrefix(DevNet)
+		assert.Equal(t, Prefix("CodaSignature*******"), prefix)
+		assert.Len(t, prefix, 20)
+	})
+
 	t.Run("custom network", func(t *testing.T) {
 		t.Parallel()
 		prefix := SignaturePrefix(NetworkID("custom"))
@@ -100,6 +107,13 @@ func TestGetNetworkIDHashInput(t *testing.T) {
 	t.Run("testnet", func(t *testing.T) {
 		t.Parallel()
 		val, bits := getNetworkIDHashInput(TestNet)
+		assert.Equal(t, uint64(0), val.Uint64())
+		assert.Equal(t, 8, bits)
+	})
+
+	t.Run("devnet", func(t *testing.T) {
+		t.Parallel()
+		val, bits := getNetworkIDHashInput(DevNet)
 		assert.Equal(t, uint64(0), val.Uint64())
 		assert.Equal(t, 8, bits)
 	})
