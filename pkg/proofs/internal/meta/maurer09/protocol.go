@@ -8,6 +8,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -20,6 +22,23 @@ const (
 // Witness holds the Maurer09 witness.
 type Witness[P algebra.GroupElement[P]] struct {
 	W P `cbor:"w"`
+}
+
+type witnessDTO[P algebra.GroupElement[P]] struct {
+	W P `cbor:"w"`
+}
+
+// UnmarshalCBOR deserialises and validates a witness.
+func (w *Witness[P]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*witnessDTO[P]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot unmarshal witness")
+	}
+	if dto == nil || utils.IsNil(dto.W) {
+		return proofs.ErrInvalidArgument.WithMessage("witness group element is nil")
+	}
+	w.W = dto.W
+	return nil
 }
 
 // Bytes encodes the witness.
@@ -37,6 +56,23 @@ type Statement[I algebra.GroupElement[I]] struct {
 	X I `cbor:"x"`
 }
 
+type statementDTO[I algebra.GroupElement[I]] struct {
+	X I `cbor:"x"`
+}
+
+// UnmarshalCBOR deserialises and validates a statement.
+func (x *Statement[I]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*statementDTO[I]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot unmarshal statement")
+	}
+	if dto == nil || utils.IsNil(dto.X) {
+		return proofs.ErrInvalidArgument.WithMessage("statement group element is nil")
+	}
+	x.X = dto.X
+	return nil
+}
+
 // Bytes encodes the statement.
 func (x *Statement[I]) Bytes() []byte {
 	return x.X.Bytes()
@@ -50,6 +86,23 @@ func (x *Statement[I]) Value() I {
 // State stores the prover's internal state.
 type State[P algebra.GroupElement[P]] struct {
 	S P `cbor:"s"`
+}
+
+type stateDTO[P algebra.GroupElement[P]] struct {
+	S P `cbor:"s"`
+}
+
+// UnmarshalCBOR deserialises and validates prover state.
+func (s *State[P]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*stateDTO[P]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot unmarshal state")
+	}
+	if dto == nil || utils.IsNil(dto.S) {
+		return proofs.ErrInvalidArgument.WithMessage("state group element is nil")
+	}
+	s.S = dto.S
+	return nil
 }
 
 // Bytes encodes the state.
@@ -67,6 +120,23 @@ type Commitment[I algebra.GroupElement[I]] struct {
 	A I `cbor:"a"`
 }
 
+type commitmentDTO[I algebra.GroupElement[I]] struct {
+	A I `cbor:"a"`
+}
+
+// UnmarshalCBOR deserialises and validates a commitment.
+func (c *Commitment[I]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*commitmentDTO[I]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot unmarshal commitment")
+	}
+	if dto == nil || utils.IsNil(dto.A) {
+		return proofs.ErrInvalidArgument.WithMessage("commitment group element is nil")
+	}
+	c.A = dto.A
+	return nil
+}
+
 // Bytes encodes the commitment.
 func (c *Commitment[I]) Bytes() []byte {
 	return c.A.Bytes()
@@ -80,6 +150,23 @@ func (c *Commitment[I]) Value() I {
 // Response holds the prover response.
 type Response[P algebra.GroupElement[P]] struct {
 	Z P `cbor:"z"`
+}
+
+type responseDTO[P algebra.GroupElement[P]] struct {
+	Z P `cbor:"z"`
+}
+
+// UnmarshalCBOR deserialises and validates a response.
+func (c *Response[P]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*responseDTO[P]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot unmarshal response")
+	}
+	if dto == nil || utils.IsNil(dto.Z) {
+		return proofs.ErrInvalidArgument.WithMessage("response group element is nil")
+	}
+	c.Z = dto.Z
+	return nil
 }
 
 // Bytes encodes the response.

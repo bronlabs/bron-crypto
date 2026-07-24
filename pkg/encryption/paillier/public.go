@@ -22,11 +22,22 @@ import (
 // from an untrusted party that must be established by a separate proof (e.g. a
 // Paillier-Blum modulus proof).
 func NewPublicKey(group *znstar.PaillierGroupUnknownOrder) (*PublicKey, error) {
+	return newPublicKey(group, base.IFCKeyLength)
+}
+
+// NewLegacyPublicKey builds a public key like NewPublicKey but accepts moduli down
+// to base.LegacyIFCKeyLength. It exists solely for deserialising keys stored before
+// IFCKeyLength became the generation floor and must never be used for fresh keys.
+func NewLegacyPublicKey(group *znstar.PaillierGroupUnknownOrder) (*PublicKey, error) {
+	return newPublicKey(group, base.LegacyIFCKeyLength)
+}
+
+func newPublicKey(group *znstar.PaillierGroupUnknownOrder, minKeyLen int) (*PublicKey, error) {
 	if group == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group must not be nil")
 	}
-	if !testing.Testing() && group.N().TrueLen() < base.IFCKeyLength {
-		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", base.IFCKeyLength)
+	if !testing.Testing() && group.N().TrueLen() < minKeyLen {
+		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", minKeyLen)
 	}
 	return &PublicKey{group: group}, nil
 }

@@ -255,6 +255,34 @@ func TestMSP_ReconstructionVector_InsufficientRows(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestMSP_ReconstructionCoefficients_MultiRowHolder(t *testing.T) {
+	t.Parallel()
+
+	// The reconstruction vector for both holders is [0, 1, 0]. Holder 1 owns
+	// non-leading rows 1 and 2, so its ordered coefficient slice must be [1, 0].
+	m := newMatrix(t, [][]uint64{
+		{0, 1, 0},
+		{1, 0, 0},
+		{0, 0, 1},
+	})
+	sp, err := msp.NewMSP(m, map[int]msp.ID{0: 2, 1: 1, 2: 1})
+	require.NoError(t, err)
+
+	coefficients, err := sp.ReconstructionCoefficients(1, 1, 2)
+	require.NoError(t, err)
+	require.Len(t, coefficients, 2)
+	require.True(t, coefficients[0].IsOne())
+	require.True(t, coefficients[1].IsZero())
+}
+
+func TestMSP_ReconstructionCoefficients_HolderMustBeSelected(t *testing.T) {
+	t.Parallel()
+	sp := new2of3MSP(t)
+
+	_, err := sp.ReconstructionCoefficients(1, 2, 3)
+	require.ErrorIs(t, err, msp.ErrValue)
+}
+
 // --- Multi-row holder tests ---
 
 func TestMSP_MultiRowHolder(t *testing.T) {

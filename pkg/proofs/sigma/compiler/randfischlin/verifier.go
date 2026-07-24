@@ -23,14 +23,17 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // Verify checks that a randomised Fischlin proof is valid for the given statement.
 // It verifies that all R challenge/response pairs hash to zero and that each
 // sigma protocol transcript is valid.
-func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) (err error) {
-	if proofBytes == nil {
+func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
+	if len(proofBytes) == 0 {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	rfProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("input proof")
+		return errs.Join(proofs.ErrInvalidArgument, errs.Wrap(err)).WithMessage("input proof")
+	}
+	if rfProof == nil {
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	if len(rfProof.A) != R || len(rfProof.E) != R || len(rfProof.Z) != R {
