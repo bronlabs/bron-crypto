@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/trusteddealer"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -18,6 +19,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/lindell17/keygen/dkg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
@@ -94,12 +96,8 @@ func TestLindell17DKGRejectsMalformedNestedProofFields(t *testing.T) {
 		statement.X = nil
 		lpOutput.X[0] = &statement
 		tampered.LpRound1Output = &lpOutput
-		wireMessage := ntu.CBORRoundTrip(t, &tampered)
 
-		requireNestedProofValidationError(t, func() error {
-			_, err := participants[victim].Round5(singletonNestedProofMessage(sender, wireMessage))
-			return err
-		})
+		requireNestedProofDeserializationError(t, &tampered)
 	})
 
 	t.Run("LP commitment with nil group element", func(t *testing.T) {
@@ -110,12 +108,8 @@ func TestLindell17DKGRejectsMalformedNestedProofFields(t *testing.T) {
 		commitment.A = nil
 		lpOutput.NthRootsProverOutput[0] = &commitment
 		tampered.LpRound1Output = &lpOutput
-		wireMessage := ntu.CBORRoundTrip(t, &tampered)
 
-		requireNestedProofValidationError(t, func() error {
-			_, err := participants[victim].Round5(singletonNestedProofMessage(sender, wireMessage))
-			return err
-		})
+		requireNestedProofDeserializationError(t, &tampered)
 	})
 
 	t.Run("LPDL ciphertext from wrong Paillier group", func(t *testing.T) {
@@ -192,12 +186,8 @@ func TestLindell17DKGRejectsMalformedNestedProofFields(t *testing.T) {
 		response.Z = nil
 		lpOutput.NthRootsProverOutput[0] = &response
 		tampered.LpRound3Output = &lpOutput
-		wireMessage := ntu.CBORRoundTrip(t, &tampered)
 
-		requireNestedProofValidationError(t, func() error {
-			_, err := participants[victim].Round7(singletonNestedProofMessage(sender, wireMessage))
-			return err
-		})
+		requireNestedProofDeserializationError(t, &tampered)
 	})
 
 	round7Outputs := make(map[sharing.ID]network.OutgoingUnicasts[*dkg.Round7P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *nestedProofParticipant], len(ids))
@@ -322,6 +312,15 @@ func requireNestedProofValidationError(t *testing.T, run func() error) {
 	})
 	require.Error(t, err)
 	require.True(t, errs.Is(err, dkg.ErrValidation), "expected wrapped DKG validation error, got: %v", err)
+}
+
+func requireNestedProofDeserializationError[T any](t *testing.T, message T) {
+	t.Helper()
+
+	data, err := serde.MarshalCBOR(message)
+	require.NoError(t, err)
+	_, err = serde.UnmarshalCBOR[T](data)
+	require.True(t, errs.Is(err, proofs.ErrInvalidArgument), "expected invalid proof deserialisation error, got: %v", err)
 }
 
 func cloneRangeResponse(response *paillierrange.Response) *paillierrange.Response {

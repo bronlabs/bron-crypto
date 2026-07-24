@@ -241,6 +241,26 @@ func TestZKModule_MarshalRoundTrip(t *testing.T) {
 	require.NoError(t, zkmodule.Verify(verifierCtx, protocol, statement, decoded))
 }
 
+func TestZKModuleProofUnmarshalRejectsNull(t *testing.T) {
+	t.Parallel()
+
+	for name, data := range map[string][]byte{
+		"null":      {0xf6},
+		"undefined": {0xf7},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var proof zkmodule.Proof[
+				*schnorr.Commitment[*k256.Point, *k256.Scalar],
+				*schnorr.Response[*k256.Scalar],
+			]
+			err := proof.UnmarshalCBOR(data)
+			require.True(t, errs.Is(err, proofs.ErrInvalidArgument), "unexpected error: %+v", err)
+		})
+	}
+}
+
 // TestZKModule_TamperedProofBytes flips a byte in a serialised proof. Decoding
 // must either fail outright or yield a proof that no longer verifies; a
 // tampered proof must never be accepted.

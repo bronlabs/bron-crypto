@@ -78,17 +78,17 @@ func TestVerifierRejectsMalformedProof(t *testing.T) {
 
 			for name, malformedProof := range malformedProofs {
 				t.Run(name, func(t *testing.T) {
+					t.Parallel()
+
 					verifier, err := nizk.NewVerifier(contexts[2].Clone())
 					require.NoError(t, err)
 
-					var verificationErr error
-					require.NotPanics(t, func() {
-						verificationErr = verifier.Verify(statement, malformedProof)
-					})
-					require.True(t,
-						errs.Is(verificationErr, proofs.ErrInvalidArgument) || errs.Is(verificationErr, proofs.ErrVerificationFailed),
-						"malformed proof returned an unexpected error: %+v", verificationErr,
-					)
+					err = verifier.Verify(statement, malformedProof)
+					require.True(t, errs.Is(err, proofs.ErrInvalidArgument), "malformed proof returned an unexpected error: %+v", err)
+
+					// Deserialisation must reject malformed data before the
+					// verifier transcript is changed.
+					require.NoError(t, verifier.Verify(statement, proof))
 				})
 			}
 		})

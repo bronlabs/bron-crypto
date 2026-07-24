@@ -126,6 +126,40 @@ func TestHappyPathWithDKG_NonIdealCNF2Of3(t *testing.T) {
 	testAllQualifiedPairs(t, suite, accessStructure, shards, publicKey)
 }
 
+func TestHappyPathNonIdealNonThresholdCNF(t *testing.T) {
+	t.Parallel()
+
+	// These are maximal unqualified sets. The resulting policy is genuinely
+	// non-threshold: {1,4} is qualified, while the equally sized {1,2} is not.
+	accessStructure, err := cnf.NewCNFAccessStructure(
+		hashset.NewComparable[sharing.ID](1, 2).Freeze(),
+		hashset.NewComparable[sharing.ID](2, 3).Freeze(),
+		hashset.NewComparable[sharing.ID](3, 4).Freeze(),
+	)
+	require.NoError(t, err)
+	require.True(t, accessStructure.IsQualified(1, 4))
+	require.False(t, accessStructure.IsQualified(1, 2))
+
+	curve := k256.NewCurve()
+	suite, err := ecdsa.NewSuite(curve, crypto.SHA256.New)
+	require.NoError(t, err)
+	dealtShards, publicKey, err := trusted_dealer.DealRandom(curve, accessStructure, 1024, pcg.NewRandomised())
+	require.NoError(t, err)
+
+	shards := make(map[sharing.ID]*lindell17.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], dealtShards.Size())
+	for id, shard := range dealtShards.Iter() {
+		shards[id] = shard
+	}
+	require.False(t, shards[1].MSP().IsIdeal())
+	require.Len(t, shards[1].Share().Value(), 2)
+	require.Len(t, shards[4].Share().Value(), 2)
+
+	// Both cosigners hold multiple MSP components, so this one signing flow
+	// exercises local conversion on both sides and encrypted conversion for the
+	// primary share.
+	runSigning(t, suite, shards, publicKey, 1, 4)
+}
+
 func TestNewCosignerRejectsInexactTwoPartyContext(t *testing.T) {
 	t.Parallel()
 

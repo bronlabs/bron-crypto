@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -24,13 +23,7 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // Verify checks that a randomised Fischlin proof is valid for the given statement.
 // It verifies that all R challenge/response pairs hash to zero and that each
 // sigma protocol transcript is valid.
-func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) (err error) {
-	defer func() {
-		if recover() != nil {
-			err = proofs.ErrInvalidArgument.WithMessage("malformed proof")
-		}
-	}()
-
+func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if len(proofBytes) == 0 {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
@@ -45,11 +38,6 @@ func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	if len(rfProof.A) != R || len(rfProof.E) != R || len(rfProof.Z) != R {
 		return proofs.ErrInvalidArgument.WithMessage("invalid length")
-	}
-	for i := range R {
-		if utils.IsNil(rfProof.A[i]) || len(rfProof.E[i]) == 0 || utils.IsNil(rfProof.Z[i]) {
-			return proofs.ErrInvalidArgument.WithMessage("proof contains a nil component")
-		}
 	}
 
 	sessionID := v.ctx.SessionID()
