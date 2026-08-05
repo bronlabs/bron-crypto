@@ -27,7 +27,10 @@ func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 	fsProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot deserialize proof")
+		return errs.Join(proofs.ErrInvalidArgument, errs.Wrap(err)).WithMessage("cannot deserialize proof")
+	}
+	if fsProof == nil {
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	if err := zkmodule.Verify(v.ctx, v.sigmaProtocol, statement, fsProof); err != nil {

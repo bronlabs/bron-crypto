@@ -13,7 +13,7 @@ This library provides implementations of state-of-the-art cryptographic protocol
 The primary focus of this library is MPC (Multi-Party Computation), specifically MPC signing over arbitrary monotone access structures (threshold, unanimity, CNF, hierarchical conjunctive, boolean-expression, …). We support the following protocols:
 
 - **MPC Schnorr**: [Lindell22](./pkg/mpc/signatures/schnorr/lindell22/) ([Reference](https://eprint.iacr.org/2022/374))
-- **MPC ECDSA**: [DKLs23](./pkg/mpc/signatures/ecdsa/dkls23/) ([Reference](https://eprint.iacr.org/2023/765)). We provide two variants of DKLs23: [one](./pkg/mpc/signatures/ecdsa/dkls23/signing_softspoken/) using OT extensions, and [one](./pkg/mpc/signatures/ecdsa/dkls23/signing_bbot/) without OT extensions.
+- **MPC ECDSA**: [DKLs23](./pkg/mpc/signatures/ecdsa/dkls23/) ([Reference](https://eprint.iacr.org/2023/765)) and [Lindell17](./pkg/mpc/signatures/ecdsa/lindell17/) for qualified two-party MSP quorums ([Reference](https://eprint.iacr.org/2017/552)). We provide two variants of DKLs23: [one](./pkg/mpc/signatures/ecdsa/dkls23/signing_softspoken/) using OT extensions, and [one](./pkg/mpc/signatures/ecdsa/dkls23/signing_bbot/) without OT extensions.
 - **MPC BLS**: [Boldyreva02](./pkg/mpc/signatures/bls/boldyreva02/) ([Reference](https://link.springer.com/chapter/10.1007/3-540-36288-6_3))
 
 The design of MPC signing protocols are stateless. Orchestrating them is not in scope of this library; this includes implementation of the networking layer as well. For example, to establish the broadcast channel one typically has to do [Echo-Broadcast](./pkg/network/echo/) yet this is implemented as a separate package.
@@ -26,7 +26,7 @@ This library is not designed to be fully side-channel resistant. We build higher
 
 **Important**: This library is intended for use by experienced cryptographers and developers who understand the security implications of the protocols involved. If you are not familiar with the underlying cryptographic primitives, please consult with a cryptography expert before using this library in production.
 
-**Audit**: The MPC signing packages of this library and all their direct and indirect dependencies have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory.
+**Audit**: The MPC signing packages of this library and all their direct and indirect dependencies have been audited by [Trail of Bits](https://github.com/trailofbits/publications?tab=readme-ov-file#cryptography-reviews) and the audit report may be found in the [audits](./audits/) directory. The current Lindell17 MSP adaptation postdates that review; see its [package documentation](./pkg/mpc/signatures/ecdsa/lindell17/) for scope details.
 
 For the full Security Notice, including how to submit bugs, see [SECURITY.md](./SECURITY.md)
 

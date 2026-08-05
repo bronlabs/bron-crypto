@@ -132,6 +132,59 @@ func (m *MSP[E]) IsIdeal() bool {
 // given shareholder IDs. The returned coefficients are ordered by ascending
 // matrix row index. Returns an error if the IDs do not form a qualified set.
 func (m *MSP[E]) ReconstructionVector(IDs ...ID) (*mat.Matrix[E], error) {
+	rows, err := m.selectedRows(IDs...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to select rows for reconstruction")
+	}
+	out, err := m.reconstructionVectorForRows(rows)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction vector")
+	}
+	return out, nil
+}
+
+// ReconstructionCoefficients returns the entries of the selected-set
+// reconstruction vector that correspond to holder's MSP rows. Coefficients are
+// ordered by ascending absolute MSP row index, matching the holder's share
+// component order. This is the MSP analogue of a Shamir reconstruction
+// coefficient; non-ideal MSPs may return multiple coefficients for one holder.
+// The selected IDs must contain holder and form a qualified set.
+func (m *MSP[E]) ReconstructionCoefficients(holder ID, IDs ...ID) ([]E, error) {
+	idSet := hashset.NewComparable(IDs...)
+	if !idSet.Contains(holder) {
+		return nil, ErrValue.WithMessage("holder %d is not in the selected shareholder set", holder)
+	}
+
+	selectedRows, err := m.selectedRows(IDs...)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to select rows for reconstruction coefficients")
+	}
+	reconstructionVector, err := m.reconstructionVectorForRows(selectedRows)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to compute reconstruction coefficients")
+	}
+
+	holderRowsSet, exists := m.holdersToRows.Get(holder)
+	if !exists {
+		return nil, ErrValue.WithMessage("holder %d is not associated with any row in the MSP", holder)
+	}
+	holderRows := holderRowsSet.List()
+	slices.Sort(holderRows)
+	coefficients := make([]E, len(holderRows))
+	for i, absoluteRow := range holderRows {
+		position, found := slices.BinarySearch(selectedRows, absoluteRow)
+		if !found {
+			return nil, ErrValue.WithMessage("holder row %d is absent from selected rows", absoluteRow)
+		}
+		coefficients[i], err = reconstructionVector.Get(position, 0)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("failed to read reconstruction coefficient for MSP row %d", absoluteRow)
+		}
+	}
+	return coefficients, nil
+}
+
+func (m *MSP[E]) selectedRows(IDs ...ID) ([]int, error) {
 	idSet := hashset.NewComparable(IDs...)
 	sortedIDs := idSet.List()
 	slices.Sort(sortedIDs)
@@ -147,6 +200,10 @@ func (m *MSP[E]) ReconstructionVector(IDs ...ID) (*mat.Matrix[E], error) {
 		return nil, ErrValue.WithMessage("no rows selected for given IDs")
 	}
 	slices.Sort(rows)
+	return rows, nil
+}
+
+func (m *MSP[E]) reconstructionVectorForRows(rows []int) (*mat.Matrix[E], error) {
 	MIDs, err := m.matrix.SubMatrixGivenRows(rows...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to extract submatrix for given IDs")

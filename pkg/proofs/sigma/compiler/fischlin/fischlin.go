@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/proofs"
@@ -40,6 +44,32 @@ type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	A []A      `cbor:"a"`
 	E [][]byte `cbor:"e"`
 	Z []Z      `cbor:"z"`
+}
+
+type proofDTO[A sigma.Commitment, Z sigma.Response] struct {
+	A []A      `cbor:"a"`
+	E [][]byte `cbor:"e"`
+	Z []Z      `cbor:"z"`
+}
+
+// UnmarshalCBOR deserialises a Fischlin proof and validates its proof elements.
+func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*proofDTO[A, Z]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("cannot unmarshal proof")
+	}
+	if dto == nil || len(dto.A) == 0 || len(dto.A) != len(dto.E) || len(dto.A) != len(dto.Z) {
+		return proofs.ErrInvalidArgument.WithMessage("invalid proof dimensions")
+	}
+	for i := range dto.A {
+		if utils.IsNil(dto.A[i]) || len(dto.E[i]) == 0 || utils.IsNil(dto.Z[i]) {
+			return proofs.ErrInvalidArgument.WithMessage("proof contains an invalid element at index %d", i)
+		}
+	}
+	p.A = dto.A
+	p.E = dto.E
+	p.Z = dto.Z
+	return nil
 }
 
 // Protocol implements the NonInteractiveProtocol interface for Fischlin proofs.

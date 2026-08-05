@@ -426,3 +426,37 @@ func TestNewPlaintextSymmetric(t *testing.T) {
 		require.Nil(t, p)
 	})
 }
+
+func TestLegacyKeyConstructors(t *testing.T) {
+	t.Parallel()
+
+	key := sampleTestKey(t)
+
+	t.Run("legacy secret key constructor accepts the group", func(t *testing.T) {
+		t.Parallel()
+		sk, err := paillier.NewLegacySecretKey(key.Group())
+		require.NoError(t, err)
+		require.NotNil(t, sk)
+	})
+
+	t.Run("legacy public key constructor accepts the group", func(t *testing.T) {
+		t.Parallel()
+		pk, err := paillier.NewLegacyPublicKey(key.Public().Group())
+		require.NoError(t, err)
+		require.NotNil(t, pk)
+	})
+
+	t.Run("legacy secret key constructor rejects a nil group", func(t *testing.T) {
+		t.Parallel()
+		sk, err := paillier.NewLegacySecretKey(nil)
+		require.Error(t, err)
+		require.Nil(t, sk)
+	})
+
+	t.Run("legacy public key constructor rejects a nil group", func(t *testing.T) {
+		t.Parallel()
+		pk, err := paillier.NewLegacyPublicKey(nil)
+		require.Error(t, err)
+		require.Nil(t, pk)
+	})
+}
