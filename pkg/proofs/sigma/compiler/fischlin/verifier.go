@@ -26,13 +26,16 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // It verifies that all rho challenge/response pairs hash to zero and that
 // each sigma protocol transcript is valid.
 func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
-	if proofBytes == nil {
+	if len(proofBytes) == 0 {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	fischlinProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot deserialize proof")
+		return errs.Join(proofs.ErrInvalidArgument, errs.Wrap(err)).WithMessage("cannot deserialize proof")
+	}
+	if fischlinProof == nil {
+		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
 	}
 
 	// 2. If m, e, and z do not each have ρ elements, then output 'reject'
