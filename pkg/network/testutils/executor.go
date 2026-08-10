@@ -27,6 +27,7 @@ func TestExecuteRunners[O any](tb testing.TB, runners map[sharing.ID]network.Run
 	for id, runner := range runners {
 		errGroup.Go(func() error {
 			rt := network.NewRouter(testCoordinator.DeliveryFor(id))
+			defer rt.Close()
 
 			var notifications []network.Notification
 			notificationCallback := func(n network.Notification) {
@@ -63,6 +64,7 @@ func TestExecuteRunnersWithQuorum[O any](tb testing.TB, quorum network.Quorum, r
 	for id, runner := range runners {
 		errGroup.Go(func() error {
 			rt := network.NewRouter(testCoordinator.DeliveryFor(id))
+			defer rt.Close()
 
 			var notifications []network.Notification
 			notificationCallback := func(n network.Notification) {
