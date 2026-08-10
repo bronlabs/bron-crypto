@@ -5,7 +5,9 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/echo"
 )
@@ -46,7 +48,24 @@ func UnicastExchange[U network.Message[P], P any](ctx context.Context, rt *netwo
 }
 
 // BroadcastExchange performs an echo-broadcast round with the given message.
+// A single-coparty quorum skips the echo round: equivocation between receivers
+// is impossible with one receiver, so a direct exchange is equivalent.
 func BroadcastExchange[B network.Message[P], P any](ctx context.Context, rt *network.Router, correlationID string, quorum network.Quorum, broadcastMessageOut B) (broadcastMessagesIn network.RoundMessages[B, P], err error) {
+	coparties := quorum.Clone().Unfreeze()
+	coparties.Remove(rt.PartyID())
+	if coparties.Size() == 1 {
+		out := hashmap.NewComparable[sharing.ID, B]()
+		out.Put(coparties.List()[0], broadcastMessageOut)
+		if err := network.SendUnicast(ctx, rt, correlationID+broadcastPrefix, out.Freeze()); err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot send pairwise broadcast")
+		}
+		broadcastMessagesIn, err = network.ReceiveUnicast[B, P](ctx, rt, correlationID+broadcastPrefix, quorum)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot receive pairwise broadcast")
+		}
+		return broadcastMessagesIn, nil
+	}
+
 	broadcastMessagesIn, err = echo.ExchangeEchoBroadcast[B, P](ctx, rt, correlationID+broadcastPrefix, quorum, broadcastMessageOut)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot exchange broadcast")
