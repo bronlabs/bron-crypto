@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -233,6 +234,61 @@ func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	}
 	for id := range shareholders.Iter() {
 		if id == baseShard.Share().ID() {
+			continue
+		}
+		if _, ok := info.paillierPublicKeys[id]; !ok {
+			return nil, ErrValidationFailed.WithMessage("missing paillier public key for %d", id)
+		}
+		if _, ok := info.ringPedersenPublicKeys[id]; !ok {
+			return nil, ErrValidationFailed.WithMessage("missing ring pedersen public key for %d", id)
+		}
+	}
+
+	sh := &Shard[P, B, S]{
+		BaseShard: *baseShard,
+		auxInfo:   info,
+	}
+	return sh, nil
+}
+
+// NewSubsetShard returns a shard whose auxiliary information covers only the
+// given quorum — a qualified subset of the base shard's shareholders — instead
+// of the full shareholder set. It is intended for ephemeral, in-session use
+// where the auxiliary-information DKG ran among the signing quorum only;
+// signing with the result requires a session quorum equal to that subset. The
+// full-coverage revalidation in UnmarshalCBOR deliberately rejects such
+// shards, so they do not survive a serialisation round-trip.
+func NewSubsetShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo, quorum ds.Set[sharing.ID]) (*Shard[P, B, S], error) {
+	if baseShard == nil {
+		return nil, ErrNil.WithMessage("base shard")
+	}
+	if info == nil {
+		return nil, ErrNil.WithMessage("auxiliary information")
+	}
+	if quorum == nil {
+		return nil, ErrNil.WithMessage("quorum")
+	}
+	selfID := baseShard.Share().ID()
+	if !quorum.Contains(selfID) {
+		return nil, ErrValidationFailed.WithMessage("own sharing id not in quorum")
+	}
+	shareholders := baseShard.MSP().Shareholders()
+	for id := range quorum.Iter() {
+		if !shareholders.Contains(id) {
+			return nil, ErrValidationFailed.WithMessage("quorum member %d is not a shareholder", id)
+		}
+	}
+	if !baseShard.MSP().Accepts(quorum.List()...) {
+		return nil, ErrValidationFailed.WithMessage("quorum is not a qualified set")
+	}
+	if len(info.paillierPublicKeys) != quorum.Size()-1 {
+		return nil, ErrValidationFailed.WithMessage("paillier public key count does not match quorum")
+	}
+	if len(info.ringPedersenPublicKeys) != quorum.Size()-1 {
+		return nil, ErrValidationFailed.WithMessage("ring pedersen public key count does not match quorum")
+	}
+	for id := range quorum.Iter() {
+		if id == selfID {
 			continue
 		}
 		if _, ok := info.paillierPublicKeys[id]; !ok {
