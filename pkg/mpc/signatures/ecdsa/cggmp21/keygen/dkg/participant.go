@@ -38,13 +38,14 @@ const (
 // secret key material in its state, and its round methods are not safe for
 // concurrent use.
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ctx       *session.Context
-	curve     ecdsa.Curve[P, B, S]
-	baseShard *mpc.BaseShard[P, S]
-	params    *cggmp21.Parameters[P, B, S]
-	prng      io.Reader
-	round     network.Round
-	state     state[P, B, S]
+	ctx          *session.Context
+	curve        ecdsa.Curve[P, B, S]
+	baseShard    *mpc.BaseShard[P, S]
+	params       *cggmp21.Parameters[P, B, S]
+	prng         io.Reader
+	round        network.Round
+	subsetQuorum bool
+	state        state[P, B, S]
 }
 
 type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -80,13 +81,38 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 // be a cryptographically secure source; the Paillier/ring-Pedersen key
 // generation in Round1 draws from it.
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader) (*Participant[P, B, S], error) {
+	return newParticipant(ctx, baseShard, prng, false)
+}
+
+// NewSubsetParticipant is NewParticipant for a session whose quorum is a
+// qualified subset of the base shard's shareholders rather than the full set.
+// The auxiliary information is generated for — and the resulting shard is only
+// usable by — exactly that subset; Round4 assembles it via NewSubsetShard, so
+// the shard does not survive a serialisation round-trip. Intended for
+// ephemeral in-session generation immediately before signing. Everything else
+// matches NewParticipant.
+func NewSubsetParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader) (*Participant[P, B, S], error) {
+	return newParticipant(ctx, baseShard, prng, true)
+}
+
+func newParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader, subsetQuorum bool) (*Participant[P, B, S], error) {
 	if ctx == nil || baseShard == nil || prng == nil {
 		return nil, cggmp21.ErrNil.WithMessage("ctx/baseShard/prng is nil")
 	}
 	if ctx.HolderID() != baseShard.Share().ID() {
 		return nil, cggmp21.ErrValidationFailed.WithMessage("sharing id not part of the quorum")
 	}
-	if !baseShard.MSP().Shareholders().Equal(ctx.Quorum()) {
+	if subsetQuorum {
+		shareholders := baseShard.MSP().Shareholders()
+		for id := range ctx.Quorum().Iter() {
+			if !shareholders.Contains(id) {
+				return nil, cggmp21.ErrValidationFailed.WithMessage("quorum member %d is not a shareholder", id)
+			}
+		}
+		if !baseShard.MSP().Accepts(ctx.Quorum().List()...) {
+			return nil, cggmp21.ErrValidationFailed.WithMessage("quorum is not a qualified subset of the base shard's shareholders")
+		}
+	} else if !baseShard.MSP().Shareholders().Equal(ctx.Quorum()) {
 		return nil, cggmp21.ErrValidationFailed.WithMessage("quorum does not match base shard's shareholders")
 	}
 	ctx.Transcript().AppendDomainSeparator(domainSeparator)
@@ -125,12 +151,13 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	}
 
 	return &Participant[P, B, S]{
-		ctx:       ctx,
-		curve:     curve,
-		baseShard: baseShard,
-		params:    params,
-		prng:      prng,
-		round:     1,
+		ctx:          ctx,
+		curve:        curve,
+		baseShard:    baseShard,
+		params:       params,
+		prng:         prng,
+		round:        1,
+		subsetQuorum: subsetQuorum,
 		state: state[P, B, S]{ //nolint:exhaustruct // state is lazy initialised
 			prmfs:              prmfs,
 			prmVerifierCtx:     make(map[sharing.ID]*session.Context, ctx.Quorum().Size()-1),

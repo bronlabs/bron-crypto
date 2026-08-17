@@ -47,6 +47,21 @@ func NewRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	return r, nil
 }
 
+// NewSubsetRunner wraps a NewSubsetParticipant — the aux-info protocol run by
+// a qualified subset of the base shard's shareholders — as a network.Runner.
+// See NewSubsetParticipant for the argument requirements.
+func NewSubsetRunner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader) (network.Runner[*cggmp21.Shard[P, B, S]], error) {
+	p, err := NewSubsetParticipant(ctx, baseShard, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create participant")
+	}
+
+	r := &runner[P, B, S]{
+		p: p,
+	}
+	return r, nil
+}
+
 // Run executes the four rounds in order over the router, exchanging each round's
 // messages and emitting a round-completion notification after each, and returns
 // the final shard. Any round error is returned wrapped and aborts the run.
