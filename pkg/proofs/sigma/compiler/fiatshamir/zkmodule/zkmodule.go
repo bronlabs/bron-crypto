@@ -86,6 +86,9 @@ func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot unmarshal proof")
 	}
+	if dto == nil {
+		return proofs.ErrInvalidArgument.WithMessage("proof cannot be nil")
+	}
 	if utils.IsNil(dto.A) {
 		return proofs.ErrInvalidArgument.WithMessage("commitment (A) cannot be nil")
 	}

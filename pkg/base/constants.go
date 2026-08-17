@@ -16,6 +16,12 @@ const (
 	// Values based on SP 800-57 Part 1 Rev. 5, Table 2.
 	IFCKeyLength = 3072
 
+	// LegacyIFCKeyLength is the minimum accepted modulus length (in bits) when
+	// deserialising integer-factorization keys stored before IFCKeyLength became the
+	// generation floor (112 bits of security per SP 800-57 Part 1 Rev. 5, Table 2).
+	// It must never be used when generating new keys.
+	LegacyIFCKeyLength = 2048
+
 	// CollisionResistance is the hash digest length to achieve λ-bits of
 	// collision resistance (birthday paradox).
 	CollisionResistance = 2 * ComputationalSecurityBits
