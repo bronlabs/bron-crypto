@@ -5,11 +5,13 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/bronlabs/errs-go/errs"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/trusteddealer"
@@ -49,7 +51,7 @@ func TestLindell17DKGRejectsMalformedNestedProofFields(t *testing.T) {
 			baseShard,
 			1024,
 			curve,
-			pcg.NewRandomised(),
+			baseprng.NewThreadSafeReader(pcg.NewRandomised()),
 			fiatshamir.Name,
 		)
 		require.NoError(t, err)
