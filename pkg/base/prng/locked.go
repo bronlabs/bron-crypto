@@ -12,7 +12,10 @@ import (
 // like crypto/rand.Reader, do not need it. For seedable CSPRNGs prefer
 // csprng.NewThreadSafePrng, which also serialises the seeding methods.
 func NewThreadSafeReader(r io.Reader) io.Reader {
-	return &threadSafeReader{r: r}
+	return &threadSafeReader{
+		mu: sync.Mutex{},
+		r:  r,
+	}
 }
 
 type threadSafeReader struct {
