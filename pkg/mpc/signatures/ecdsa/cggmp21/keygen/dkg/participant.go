@@ -78,8 +78,10 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 // hash-commitment key from the session transcript (domain-separated per this
 // protocol), and instantiates the Fiat-Shamir compilers for the Π_prm and Π_mod
 // proofs. The base shard's public key must live over an ECDSA curve. prng must
-// be a cryptographically secure source; the Paillier/ring-Pedersen key
-// generation in Round1 draws from it.
+// be a cryptographically secure source AND safe for concurrent use (e.g.
+// crypto/rand.Reader, or a wrapper such as csprng.NewThreadSafePrng): Round1
+// samples the Paillier and ring-Pedersen keys from it in concurrent
+// goroutines.
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader) (*Participant[P, B, S], error) {
 	return newParticipant(ctx, baseShard, prng, false)
 }

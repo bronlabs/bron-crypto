@@ -20,6 +20,9 @@ import (
 // safe-prime RSA group and two generators s = tλ of QR(N̂), then discards the
 // trapdoor λ and the factorisation so the returned key is binding. keyLen is the
 // bit length of the modulus N̂. Use SampleTrapdoorKey if you need to retain λ.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleCommitmentKey(keyLen uint, prng io.Reader) (*CommitmentKey, error) {
 	_, s, t, _, err := SamplePedersenParameters(keyLen, prng)
 	if err != nil {
