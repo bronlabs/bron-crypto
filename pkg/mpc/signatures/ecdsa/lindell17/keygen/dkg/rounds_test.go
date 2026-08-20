@@ -8,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/trusteddealer"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -108,7 +109,7 @@ func TestRound2BroadcastRejectsMalformedComponentData(t *testing.T) {
 			baseShard,
 			1024,
 			curve,
-			pcg.NewRandomised(),
+			baseprng.NewThreadSafeReader(pcg.NewRandomised()),
 			fiatshamir.Name,
 		)
 		require.NoError(t, err)
@@ -170,7 +171,7 @@ func TestNewParticipantRejectsPartialMSPQuorum(t *testing.T) {
 		baseShard,
 		1024,
 		curve,
-		pcg.NewRandomised(),
+		baseprng.NewThreadSafeReader(pcg.NewRandomised()),
 		fiatshamir.Name,
 	)
 	require.ErrorContains(t, err, "context quorum must equal the MSP shareholder set")

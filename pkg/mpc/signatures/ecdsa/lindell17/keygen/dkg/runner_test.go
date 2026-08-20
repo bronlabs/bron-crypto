@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/trusteddealer"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -42,7 +43,7 @@ func TestRunnerHappyPath_K256_2of2(t *testing.T) {
 			baseShard,
 			paillierKeyLen,
 			curve,
-			pcg.NewRandomised(),
+			baseprng.NewThreadSafeReader(pcg.NewRandomised()),
 			fiatshamir.Name,
 		)
 		require.NoError(t, err)

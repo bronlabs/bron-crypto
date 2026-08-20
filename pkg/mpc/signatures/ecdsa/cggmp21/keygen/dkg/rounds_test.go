@@ -5,12 +5,14 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/bronlabs/errs-go/errs"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/trusteddealer"
@@ -127,7 +129,7 @@ func runRounds[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 		bs, ok := dealt.Get(id)
 		require.True(tb, ok)
 		baseShards[id] = bs
-		participants[id], err = dkg.NewParticipant[P, B, S](ctxs[id], bs, pcg.NewRandomised())
+		participants[id], err = dkg.NewParticipant[P, B, S](ctxs[id], bs, baseprng.NewThreadSafeReader(pcg.NewRandomised()))
 		require.NoError(tb, err)
 	}
 	parts := slices.Collect(maps.Values(participants))
@@ -242,7 +244,7 @@ func TestRoundOrderEnforcement(t *testing.T) {
 	// mutates the session transcript.
 	newParticipant := func() *dkg.Participant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar] {
 		ctxs := session_testutils.MakeRandomContexts(t, as.Shareholders(), pcg.NewRandomised())
-		p, err := dkg.NewParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](ctxs[id], bs, pcg.NewRandomised())
+		p, err := dkg.NewParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](ctxs[id], bs, baseprng.NewThreadSafeReader(pcg.NewRandomised()))
 		require.NoError(t, err)
 		return p
 	}

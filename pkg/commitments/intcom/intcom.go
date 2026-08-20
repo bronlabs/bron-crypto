@@ -43,6 +43,9 @@ const Name commitments.Name = "Bounded Integer Commitment Scheme (CGGMP21)"
 // open arbitrary Pedersen commitments; they must be kept secret from
 // every other protocol participant and zeroised as soon as they are no
 // longer needed.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SamplePedersenParameters(keyLen uint, prng io.Reader) (group *znstar.RSAGroupKnownOrder, s, t *znstar.RSAGroupElementUnknownOrder, lambda *num.Uint, err error) {
 	if prng == nil {
 		return nil, nil, nil, nil, commitments.ErrIsNil.WithMessage("prng")
