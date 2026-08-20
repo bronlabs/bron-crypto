@@ -18,6 +18,9 @@ import (
 // RSA generator (no additional structural constraint), so the resulting
 // group supports Paillier encryption and homomorphic addition but does not
 // on its own satisfy the Blum / safe-prime structure some ZK proofs require.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
@@ -34,6 +37,9 @@ func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder,
 // residues cyclic of prime order p'q', which eliminates small-subgroup
 // attacks and is required by CGGMP21's Π^{enc} and Π^{log*} proofs that
 // reason about random elements drawn from the N-th residue subgroup.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleSafePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
@@ -53,6 +59,9 @@ func SampleSafePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOr
 // Π^{mod} / Π^{fac} proofs.
 // Note that we effectively skip gcd(N, φ(N)) = 1 check, because it will be reduntant
 // if p and q have the same bit length.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SamplePaillierBlumGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
