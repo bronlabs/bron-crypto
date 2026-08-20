@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/trusteddealer"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -41,7 +42,7 @@ func TestHappyPathRunner(t *testing.T) {
 	for id := range quorum.Iter() {
 		bs, ok := dealt.Get(id)
 		require.True(t, ok)
-		runners[id], err = dkg.NewRunner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](ctxs[id], bs, pcg.NewRandomised())
+		runners[id], err = dkg.NewRunner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](ctxs[id], bs, baseprng.NewThreadSafeReader(pcg.NewRandomised()))
 		require.NoError(t, err)
 	}
 
