@@ -13,7 +13,7 @@ import (
 
 // Round1P2P carries round 1 peer-to-peer messages.
 type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	OtR1 *softspoken.Round1P2P
+	OtR1 *softspoken.Round1P2P `cbor:"OtR1"`
 }
 
 func (m *Round1P2P[P, B, S]) Validate(alice *Alice[P, B, S], from sharing.ID) error {
@@ -29,9 +29,9 @@ func (m *Round1P2P[P, B, S]) Validate(alice *Alice[P, B, S], from sharing.ID) er
 
 // Round2P2P carries round 2 peer-to-peer messages.
 type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ATilde [][]S
-	Eta    []S
-	Mu     []byte
+	ATilde [][]S  `cbor:"ATilde"`
+	Eta    []S    `cbor:"Eta"`
+	Mu     []byte `cbor:"Mu"`
 }
 
 // Validate validates the message payload.

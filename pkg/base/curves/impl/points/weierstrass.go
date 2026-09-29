@@ -33,9 +33,9 @@ type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldElement[FP]] interface
 
 // ShortWeierstrassPointImpl implements Jacobian coordinates for short Weierstrass curves.
 type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldElementPtr[FP, F], C ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
-	X F
-	Y F
-	Z F
+	X F `cbor:"X"`
+	Y F `cbor:"Y"`
+	Z F `cbor:"Z"`
 }
 
 // Encode hashes a message to a curve point with one hash-to-field element.

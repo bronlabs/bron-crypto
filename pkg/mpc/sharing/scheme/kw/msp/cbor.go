@@ -11,8 +11,8 @@ import (
 )
 
 type mspDTO[E algebra.FiniteFieldElement[E]] struct {
-	Matrix        *mat.Matrix[E]
-	RowsToHolders map[int]ID
+	Matrix        *mat.Matrix[E] `cbor:"Matrix"`
+	RowsToHolders map[int]ID     `cbor:"RowsToHolders"`
 }
 
 func (m *MSP[E]) MarshalCBOR() ([]byte, error) {

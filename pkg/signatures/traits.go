@@ -6,7 +6,7 @@ import (
 )
 
 type PublicKeyTrait[PKV algebra.PrimeGroupElement[PKV, S], S algebra.PrimeFieldElement[S]] struct {
-	V PKV
+	V PKV `cbor:"V"`
 }
 
 func (pk *PublicKeyTrait[PKV, S]) Group() algebra.PrimeGroup[PKV, S] {
@@ -49,7 +49,7 @@ func (pk *PublicKeyTrait[PKV, S]) HashCode() base.HashCode {
 type PrivateKeyTrait[PKV algebra.PrimeGroupElement[PKV, S], S algebra.PrimeFieldElement[S]] struct {
 	PublicKeyTrait[PKV, S]
 
-	V S
+	V S `cbor:"V"`
 }
 
 func (sk *PrivateKeyTrait[PKV, S]) ScalarField() algebra.PrimeField[S] {

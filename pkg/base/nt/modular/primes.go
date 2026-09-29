@@ -54,11 +54,11 @@ func NewOddPrimeFactors(p, q *numct.Nat) (factors *OddPrimeFactors, ok ct.Bool) 
 // OddPrimeFactors implements modular arithmetic modulo n = p * q,
 // where p and q are distinct odd primes.
 type OddPrimeFactors struct {
-	Params *crt.ParamsExtended // CRT parameters for p and q
-	N      *numct.Modulus      // n = p * q
-	PhiP   *numct.Modulus      // φ(p) = p - 1
-	PhiQ   *numct.Modulus      // φ(q) = q - 1
-	Phi    *numct.Modulus      // φ(n) = (p - 1)*(q - 1)
+	Params *crt.ParamsExtended `cbor:"Params"` // CRT parameters for p and q
+	N      *numct.Modulus      `cbor:"N"`      // n = p * q
+	PhiP   *numct.Modulus      `cbor:"PhiP"`   // φ(p) = p - 1
+	PhiQ   *numct.Modulus      `cbor:"PhiQ"`   // φ(q) = q - 1
+	Phi    *numct.Modulus      `cbor:"Phi"`    // φ(n) = (p - 1)*(q - 1)
 }
 
 // Modulus returns the modulus n = p * q.

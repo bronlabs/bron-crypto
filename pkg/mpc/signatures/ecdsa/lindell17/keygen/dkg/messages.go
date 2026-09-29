@@ -19,7 +19,7 @@ import (
 // Round1Broadcast carries the first-round commitment to the ordered set of
 // decomposed raw MSP-share component points.
 type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigQCommitment hashcom.Commitment
+	BigQCommitment hashcom.Commitment `cbor:"BigQCommitment"`
 }
 
 // Validate checks the round-1 message at the deserialisation boundary.
@@ -37,18 +37,18 @@ func (m *Round1Broadcast[P, B, S]) Validate(_ *Participant[P, B, S], _ sharing.I
 // share component and proofs of their discrete logarithms. Row is the absolute
 // row identifier in the public MSP.
 type ComponentDecomposition[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Row                  int
-	BigQPrime            P
-	BigQPrimeProof       compiler.NIZKPoKProof
-	BigQDoublePrime      P
-	BigQDoublePrimeProof compiler.NIZKPoKProof
+	Row                  int                   `cbor:"Row"`
+	BigQPrime            P                     `cbor:"BigQPrime"`
+	BigQPrimeProof       compiler.NIZKPoKProof `cbor:"BigQPrimeProof"`
+	BigQDoublePrime      P                     `cbor:"BigQDoublePrime"`
+	BigQDoublePrimeProof compiler.NIZKPoKProof `cbor:"BigQDoublePrimeProof"`
 }
 
 // Round2Broadcast opens the round-1 commitment and proves knowledge of the
 // discrete logarithm of every raw-share component decomposition half.
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigQOpening hashcom.Witness
-	Components  []*ComponentDecomposition[P, B, S]
+	BigQOpening hashcom.Witness                    `cbor:"BigQOpening"`
+	Components  []*ComponentDecomposition[P, B, S] `cbor:"Components"`
 }
 
 // Validate checks the exact sorted MSP row set and the shape of every point.
@@ -83,16 +83,16 @@ func (m *Round2Broadcast[P, B, S]) Validate(participant *Participant[P, B, S], s
 // ComponentCiphertexts contains the Paillier encryptions of both decomposition
 // halves of one raw MSP share component.
 type ComponentCiphertexts struct {
-	Row             int
-	CKeyPrime       *paillier.Ciphertext
-	CKeyDoublePrime *paillier.Ciphertext
+	Row             int                  `cbor:"Row"`
+	CKeyPrime       *paillier.Ciphertext `cbor:"CKeyPrime"`
+	CKeyDoublePrime *paillier.Ciphertext `cbor:"CKeyDoublePrime"`
 }
 
 // Round3Broadcast carries one Paillier public key and raw-share component
 // ciphertext halves under that key.
 type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Components        []*ComponentCiphertexts
-	PaillierPublicKey *paillier.PublicKey
+	Components        []*ComponentCiphertexts `cbor:"Components"`
+	PaillierPublicKey *paillier.PublicKey     `cbor:"PaillierPublicKey"`
 }
 
 // Validate checks the Paillier modulus and exact sorted MSP row set.
@@ -124,16 +124,16 @@ func (m *Round3Broadcast[P, B, S]) Validate(participant *Participant[P, B, S], s
 
 // ComponentLPDLRound1Output carries first-round LPDL messages for one MSP row.
 type ComponentLPDLRound1Output[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Row                         int
-	LpdlPrimeRound1Output       *lpdl.Round1Output[P, B, S]
-	LpdlDoublePrimeRound1Output *lpdl.Round1Output[P, B, S]
+	Row                         int                         `cbor:"Row"`
+	LpdlPrimeRound1Output       *lpdl.Round1Output[P, B, S] `cbor:"LpdlPrimeRound1Output"`
+	LpdlDoublePrimeRound1Output *lpdl.Round1Output[P, B, S] `cbor:"LpdlDoublePrimeRound1Output"`
 }
 
 // Round4P2P carries one first-round LP message and first-round LPDL messages
 // for every component of the prover's raw MSP share.
 type Round4P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	LpRound1Output *lp.Round1Output
-	Components     []*ComponentLPDLRound1Output[P, B, S]
+	LpRound1Output *lp.Round1Output                      `cbor:"LpRound1Output"`
+	Components     []*ComponentLPDLRound1Output[P, B, S] `cbor:"Components"`
 }
 
 // Validate checks all round-4 proof messages against the local prover states.
@@ -177,15 +177,15 @@ func (m *Round4P2P[P, B, S]) Validate(participant *Participant[P, B, S], sender 
 
 // ComponentLPDLRound2Output carries second-round LPDL messages for one MSP row.
 type ComponentLPDLRound2Output[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Row                         int
-	LpdlPrimeRound2Output       *lpdl.Round2Output[P, B, S]
-	LpdlDoublePrimeRound2Output *lpdl.Round2Output[P, B, S]
+	Row                         int                         `cbor:"Row"`
+	LpdlPrimeRound2Output       *lpdl.Round2Output[P, B, S] `cbor:"LpdlPrimeRound2Output"`
+	LpdlDoublePrimeRound2Output *lpdl.Round2Output[P, B, S] `cbor:"LpdlDoublePrimeRound2Output"`
 }
 
 // Round5P2P carries the second LP and component-wise LPDL messages.
 type Round5P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	LpRound2Output *lp.Round2Output
-	Components     []*ComponentLPDLRound2Output[P, B, S]
+	LpRound2Output *lp.Round2Output                      `cbor:"LpRound2Output"`
+	Components     []*ComponentLPDLRound2Output[P, B, S] `cbor:"Components"`
 }
 
 // Validate checks all round-5 proof messages against the local verifier states.
@@ -229,15 +229,15 @@ func (m *Round5P2P[P, B, S]) Validate(participant *Participant[P, B, S], sender 
 
 // ComponentLPDLRound3Output carries third-round LPDL messages for one MSP row.
 type ComponentLPDLRound3Output[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Row                         int
-	LpdlPrimeRound3Output       *lpdl.Round3Output[P, B, S]
-	LpdlDoublePrimeRound3Output *lpdl.Round3Output[P, B, S]
+	Row                         int                         `cbor:"Row"`
+	LpdlPrimeRound3Output       *lpdl.Round3Output[P, B, S] `cbor:"LpdlPrimeRound3Output"`
+	LpdlDoublePrimeRound3Output *lpdl.Round3Output[P, B, S] `cbor:"LpdlDoublePrimeRound3Output"`
 }
 
 // Round6P2P carries the third LP and component-wise LPDL messages.
 type Round6P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	LpRound3Output *lp.Round3Output
-	Components     []*ComponentLPDLRound3Output[P, B, S]
+	LpRound3Output *lp.Round3Output                      `cbor:"LpRound3Output"`
+	Components     []*ComponentLPDLRound3Output[P, B, S] `cbor:"Components"`
 }
 
 // Validate checks all round-6 proof messages against the local prover states.
@@ -275,15 +275,15 @@ func (m *Round6P2P[P, B, S]) Validate(participant *Participant[P, B, S], sender 
 
 // ComponentLPDLRound4Output carries final LPDL responses for one MSP row.
 type ComponentLPDLRound4Output[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Row                         int
-	LpdlPrimeRound4Output       *lpdl.Round4Output[P, B, S]
-	LpdlDoublePrimeRound4Output *lpdl.Round4Output[P, B, S]
+	Row                         int                         `cbor:"Row"`
+	LpdlPrimeRound4Output       *lpdl.Round4Output[P, B, S] `cbor:"LpdlPrimeRound4Output"`
+	LpdlDoublePrimeRound4Output *lpdl.Round4Output[P, B, S] `cbor:"LpdlDoublePrimeRound4Output"`
 }
 
 // Round7P2P carries the final LP and component-wise LPDL responses.
 type Round7P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	LpRound4Output *lp.Round4Output
-	Components     []*ComponentLPDLRound4Output[P, B, S]
+	LpRound4Output *lp.Round4Output                      `cbor:"LpRound4Output"`
+	Components     []*ComponentLPDLRound4Output[P, B, S] `cbor:"Components"`
 }
 
 // Validate checks all round-7 proof messages against the local verifier states.
