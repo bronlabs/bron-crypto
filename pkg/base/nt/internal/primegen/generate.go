@@ -41,7 +41,7 @@ const jobBatch = 4
 // prng is read sequentially by the calling goroutine only, so a single
 // generation call needs no concurrent-safe reader; a PRNG shared across
 // concurrent generation calls must still be safe for concurrent use (e.g.
-// crypto/rand.Reader, or a wrapper such as csprng.NewThreadSafePrng).
+// crypto/rand.Reader, or a wrapper such as prng.NewThreadSafeReader).
 func Generate(class Class, bits uint, lo *big.Int, rounds Rounds, prng io.Reader) (*big.Int, error) {
 	primes, err := run(class, bits, lo, rounds, prng, 1, nil)
 	if err != nil {
@@ -60,19 +60,37 @@ func Generate(class Class, bits uint, lo *big.Int, rounds Rounds, prng io.Reader
 // whichever of the two is still missing. prng consumption is sequential —
 // see Generate.
 func GeneratePair(class Class, bits uint, lo *big.Int, rounds Rounds, prng io.Reader) (p, q *big.Int, err error) {
-	accept := func(have []*big.Int, cand *big.Int) bool {
+	primes, err := run(class, bits, lo, rounds, prng, 2, pairFilter(bits))
+	if err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("failed to generate prime pair")
+	}
+	return primes[0], primes[1], nil
+}
+
+// pairFilter returns GeneratePair's acceptance predicate for primes of the
+// given bit length: cand is accepted iff it satisfies the pair conditions
+// against every prime already collected in have.
+func pairFilter(bits uint) func(have []*big.Int, cand *big.Int) bool {
+	// 2^(bits−100), the FIPS 186-5 A.1.1 2(d) minimum distance; nil when
+	// bits ≤ 100, where the condition is vacuous (distinct odd primes are
+	// already at least 2 apart).
+	var minDist *big.Int
+	if bits > 100 {
+		minDist = new(big.Int).Lsh(big.NewInt(1), bits-100)
+	}
+	return func(have []*big.Int, cand *big.Int) bool {
 		for _, prev := range have {
 			if prev.Cmp(cand) == 0 {
 				return false
 			}
-			// FIPS 186-5 A.1.1 2(d): |p−q| > 2^(bits−100), i.e. the
-			// difference must have more than bits−100 bits. Rejecting only
+			// FIPS 186-5 A.1.1 2(d): |p−q| > 2^(bits−100), strictly — a
+			// difference of exactly 2^(bits−100) is rejected. Rejecting only
 			// the candidate (never the prime already collected) is sound:
 			// the retained prime stays uniform and the replacement is a
 			// fresh uniform draw conditioned on the distance.
-			if bits > 100 {
+			if minDist != nil {
 				diff := new(big.Int).Sub(prev, cand)
-				if uint(diff.BitLen()) <= bits-100 {
+				if diff.Abs(diff).Cmp(minDist) <= 0 {
 					return false
 				}
 			}
@@ -93,11 +111,6 @@ func GeneratePair(class Class, bits uint, lo *big.Int, rounds Rounds, prng io.Re
 		}
 		return true
 	}
-	primes, err := run(class, bits, lo, rounds, prng, 2, accept)
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("failed to generate prime pair")
-	}
-	return primes[0], primes[1], nil
 }
 
 // job is one batch of candidate entropy: jobBatch fixed-size chunks cut from
@@ -163,12 +176,14 @@ func run(class Class, bits uint, lo *big.Int, rounds Rounds, prng io.Reader, wan
 	resolved := make(map[int64][]*big.Int)
 	nextJob, nextResolve := int64(0), int64(0)
 	var pending *job
+	var readErr error
 collect:
 	for {
 		if pending == nil {
 			buf := make([]byte, jobBytes)
 			if _, err := io.ReadFull(prng, buf); err != nil {
-				return nil, errs.Wrap(err).WithMessage("failed to read random bytes")
+				readErr = errs.Wrap(err).WithMessage("failed to read random bytes")
+				break collect
 			}
 			pending = &job{seq: nextJob, buf: buf}
 		}
@@ -203,10 +218,13 @@ collect:
 		}
 	}
 	cancel()
-	// Workers exit via the cooperative cancel; wait for them so no goroutine
-	// outlives the call.
+	// Workers exit via the cooperative cancel; wait for them — after success
+	// and after a PRNG read failure alike — so no goroutine outlives the call.
 	if err := g.Wait(); err != nil && !errs.Is(err, context.Canceled) {
 		return nil, errs.Wrap(err).WithMessage("prime search failed")
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	return out, nil
 }
@@ -301,7 +319,8 @@ func (ps *params) tryCandidate(chunk []byte, lo *big.Int, rounds Rounds, s *scra
 		s.term.Mul(ps.basis[i], s.r)
 		s.x.Add(s.x, s.term)
 	}
-	// x < m·(floor + Σ r_i) < m·2^23, so a single reduction suffices.
+	// x < m·(1 + Σ p_i) < m·2^25 even with the whole table in Π, so the
+	// quotient of this reduction fits one word and the division is linear.
 	s.x.Mod(s.x, ps.m)
 
 	// Step 2: window shift b ←$ [0, bBound); q = x + b·m. Same rejection

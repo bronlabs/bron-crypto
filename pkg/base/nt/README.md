@@ -49,11 +49,11 @@ FIPS 186-5 Appendix C Miller-Rabin rounds. Expected primality tests scale as `n 
 size, up to one per CPU core); successes are consumed in canonical candidate order rather than arrival
 order — a first-past-the-post race would favour primes whose BPSW/Lucas verification happens to run
 faster (a value-dependent time) and measurably bias small-size outputs toward fast-verifying residue
-classes. All PRNG reads happen
-sequentially on the calling goroutine (workers receive pre-cut entropy and never touch the reader), so a
-single generation call accepts any `io.Reader`; a PRNG shared across *concurrent* generation calls must
-still be safe for concurrent use — `crypto/rand.Reader` is, and `csprng.NewThreadSafePrng` wraps one that
-isn't.
+classes. All PRNG reads happen sequentially on the calling goroutine (workers receive pre-cut entropy and
+never touch the reader), so a single generation call accepts any `io.Reader`; a PRNG shared across
+*concurrent* generation calls must still be safe for concurrent use — `crypto/rand.Reader` is, and
+`prng.NewThreadSafeReader` (any `io.Reader`) or `csprng.NewThreadSafePrng` (seedable CSPRNGs) wraps one
+that isn't.
 
 ### Relation to the reference paper
 

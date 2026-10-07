@@ -1,6 +1,6 @@
 module github.com/bronlabs/bron-crypto/tools/edwards25519-tester
 
-go 1.26
+go 1.27
 
 require (
 	filippo.io/edwards25519 v1.1.1

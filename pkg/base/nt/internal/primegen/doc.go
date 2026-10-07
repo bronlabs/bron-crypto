@@ -66,7 +66,7 @@
 // Because only the calling goroutine reads the PRNG, a single generation
 // call needs no concurrent-safe reader. A PRNG shared across CONCURRENT
 // generation calls must still be safe for concurrent use (e.g.
-// crypto/rand.Reader, or a wrapper such as csprng.NewThreadSafePrng); this
+// crypto/rand.Reader, or a wrapper such as prng.NewThreadSafeReader); this
 // package deliberately does not lock the reader itself — a per-call lock
 // cannot protect a PRNG the caller shares with other concurrent calls, and
 // would only disguise that requirement.

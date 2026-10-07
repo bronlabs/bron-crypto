@@ -77,9 +77,9 @@ func TestGeneratePair(t *testing.T) {
 		require.True(t, prime.ProbablyPrime(40))
 		require.GreaterOrEqual(t, prime.Cmp(lo), 0)
 	}
-	// FIPS 186-5 A.1.1 2(d).
+	// FIPS 186-5 A.1.1 2(d): |p−q| > 2^(bits−100), strictly.
 	diff := new(big.Int).Sub(p, q)
-	require.Greater(t, diff.BitLen(), bits-100)
+	require.Equal(t, 1, diff.Abs(diff).Cmp(new(big.Int).Lsh(big.NewInt(1), bits-100)))
 	// The lower bound makes the modulus bit length exact.
 	require.Equal(t, 2*bits, new(big.Int).Mul(p, q).BitLen())
 	// gcd(N, φ(N)) = 1 — Paillier / Π^mod precondition, enforced by the
@@ -87,6 +87,28 @@ func TestGeneratePair(t *testing.T) {
 	n := new(big.Int).Mul(p, q)
 	phi := new(big.Int).Mul(new(big.Int).Sub(p, big.NewInt(1)), new(big.Int).Sub(q, big.NewInt(1)))
 	require.Equal(t, 0, new(big.Int).GCD(nil, nil, n, phi).Cmp(big.NewInt(1)))
+}
+
+// TestPairFilter_DistanceBoundary pins the strictness of the FIPS 186-5
+// A.1.1 2(d) distance condition: a difference of exactly 2^(bits−100) must
+// be rejected and the next admissible (even) distance accepted.
+func TestPairFilter_DistanceBoundary(t *testing.T) {
+	t.Parallel()
+
+	const bits = 128
+	accept := pairFilter(bits)
+	prev := new(big.Int).Lsh(big.NewInt(1), bits-1)
+	prev.Add(prev, big.NewInt(1)) // odd, like every prime the filter sees
+	have := []*big.Int{prev}
+	minDist := new(big.Int).Lsh(big.NewInt(1), bits-100)
+	justOver := new(big.Int).Add(minDist, big.NewInt(2))
+
+	require.True(t, accept(nil, prev), "nothing collected yet")
+	require.False(t, accept(have, prev), "p = q")
+	require.False(t, accept(have, new(big.Int).Add(prev, minDist)), "|p−q| = 2^(bits−100) exactly")
+	require.False(t, accept(have, new(big.Int).Sub(prev, minDist)), "|p−q| = 2^(bits−100) exactly, below")
+	require.True(t, accept(have, new(big.Int).Add(prev, justOver)), "|p−q| = 2^(bits−100) + 2")
+	require.True(t, accept(have, new(big.Int).Sub(prev, justOver)), "|p−q| = 2^(bits−100) + 2, below")
 }
 
 // TestGenerate_SafeCoversQuadraticResidues checks that the safe-prime

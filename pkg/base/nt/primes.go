@@ -64,7 +64,7 @@ func MillerRabinChecks(bits uint) int {
 //
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
-// (crypto/rand.Reader is; csprng.NewThreadSafePrng wraps one that isn't).
+// (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GeneratePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
@@ -101,7 +101,7 @@ func GeneratePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, p
 //
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
-// (crypto/rand.Reader is; csprng.NewThreadSafePrng wraps one that isn't).
+// (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], keyLen uint, prng io.Reader) (p, q N, err error) {
 	var nilN N
 	if keyLen/2 < primegen.MinBits {
@@ -127,7 +127,7 @@ func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], keyLen u
 //
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
-// (crypto/rand.Reader is; csprng.NewThreadSafePrng wraps one that isn't).
+// (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
@@ -155,7 +155,7 @@ func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 //
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
-// (crypto/rand.Reader is; csprng.NewThreadSafePrng wraps one that isn't).
+// (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GenerateBlumPrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyLen uint, prng io.Reader) (p, q E, err error) {
 	if keyLen < 2*primegen.MinBits {
 		return *new(E), *new(E), ErrInvalidArgument.WithMessage("blum prime pair size must be at least 32-bits")
@@ -174,7 +174,7 @@ func GenerateBlumPrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyL
 //
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
-// (crypto/rand.Reader is; csprng.NewThreadSafePrng wraps one that isn't).
+// (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, prng io.Reader) (E, error) {
 	if set == nil {
 		return *new(E), ErrIsNil.WithMessage("nil structure")
@@ -201,7 +201,7 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 //
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
-// (crypto/rand.Reader is; csprng.NewThreadSafePrng wraps one that isn't).
+// (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GenerateSafePrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyLen uint, prng io.Reader) (p, q E, err error) {
 	if keyLen < 2*primegen.MinBits {
 		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 32-bits")
