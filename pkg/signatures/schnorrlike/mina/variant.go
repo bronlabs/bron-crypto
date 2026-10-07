@@ -3,6 +3,7 @@ package mina
 import (
 	"hash"
 	"io"
+	"math/big"
 
 	"golang.org/x/crypto/blake2b"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -19,6 +21,21 @@ import (
 // VariantType identifies this as the Mina Schnorr variant.
 const VariantType schnorrlike.VariantType = "mina"
 
+// signatureFlavor selects the nonce derivation and Poseidon parameters used by
+// a Mina signature variant. Its zero value is the default o1js-compatible behaviour.
+type signatureFlavor uint8
+
+const (
+	signatureFlavorDefault signatureFlavor = iota
+	signatureFlavorLegacy
+)
+
+// packedInput represents one value in o1js's [value, bitLength] packed input.
+type packedInput struct {
+	value  *big.Int
+	bitLen int
+}
+
 var (
 	_ schnorrlike.Variant[*GroupElement, *Scalar, *Message]           = (*Variant)(nil)
 	_ mpcschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, *Message] = (*Variant)(nil)
@@ -26,16 +43,33 @@ var (
 
 // NewDeterministicVariant creates a Mina variant with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using Blake2b,
-// following the legacy Mina/o1js implementation.
+// following the default Mina/o1js implementation.
 func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	return &Variant{
-		nid:  nid,
-		sk:   privateKey,
-		prng: nil,
-		msg:  nil,
+		nid:    nid,
+		sk:     privateKey,
+		prng:   nil,
+		msg:    nil,
+		flavor: signatureFlavorDefault,
+	}, nil
+}
+
+// NewLegacyDeterministicVariant creates a Mina variant with deterministic nonce derivation.
+// The nonce is derived from the private key, public key, and network ID using Blake2b,
+// following the legacy Mina/o1js implementation.
+func NewLegacyDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
+	if privateKey == nil {
+		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
+	}
+	return &Variant{
+		nid:    nid,
+		sk:     privateKey,
+		prng:   nil,
+		msg:    nil,
+		flavor: signatureFlavorLegacy,
 	}, nil
 }
 
@@ -46,10 +80,26 @@ func NewRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
 		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return &Variant{
-		nid:  nid,
-		sk:   nil,
-		prng: prng,
-		msg:  nil,
+		nid:    nid,
+		sk:     nil,
+		prng:   prng,
+		msg:    nil,
+		flavor: signatureFlavorDefault,
+	}, nil
+}
+
+// NewLegacyRandomisedVariant creates a Mina variant with random nonce generation.
+// The variant uses legacy Mina/o1js Poseidon parameters for challenge computation.
+func NewLegacyRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
+	if prng == nil {
+		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
+	}
+	return &Variant{
+		nid:    nid,
+		sk:     nil,
+		prng:   prng,
+		msg:    nil,
+		flavor: signatureFlavorLegacy,
 	}, nil
 }
 
@@ -61,6 +111,8 @@ type Variant struct {
 	sk   *PrivateKey // Private key for deterministic nonce derivation (nil for random)
 	prng io.Reader   // PRNG for random nonce generation (nil for deterministic)
 	msg  *Message    // Message being signed (needed for deterministic nonce derivation)
+
+	flavor signatureFlavor
 }
 
 // Type returns the variant identifier "mina".
@@ -69,8 +121,19 @@ func (*Variant) Type() schnorrlike.VariantType {
 }
 
 // HashFunc returns the Poseidon hash function constructor for challenge computation.
-func (*Variant) HashFunc() func() hash.Hash {
+func (v *Variant) HashFunc() func() hash.Hash {
+	if v.flavor == signatureFlavorLegacy {
+		return legacyHashFunc
+	}
 	return hashFunc
+}
+
+// newPoseidon creates the Poseidon instance selected by the signature flavor.
+func (v *Variant) newPoseidon() *poseidon.Poseidon {
+	if v.flavor == signatureFlavorLegacy {
+		return poseidon.NewLegacy()
+	}
+	return poseidon.NewKimchi()
 }
 
 // IsDeterministic returns true if this variant uses deterministic nonce derivation.
@@ -194,6 +257,150 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	return k, nil
 }
 
+// packToFields converts an ROInput to field elements using o1js's current
+// chunked HashInput packing. Existing message bits are represented as one-bit
+// packed values, while extraPacked contains complete values such as network ID.
+//
+// The packing algorithm:
+//  1. Preserve all directly-added field elements.
+//  2. Accumulate packed values from left to right while the total size is below 255 bits.
+//  3. Start a new field before a packed value would reach or cross the 255-bit boundary.
+//  4. Append the final packed field, including a zero-valued field when packed input exists.
+//
+// Reference: https://github.com/o1-labs/o1js/blob/cda4bce423960d877fe4f6c04feb32036a2e34b5/src/mina-signer/src/poseidon-bigint.ts
+func packToFields(input *ROInput, extraPacked ...packedInput) ([]*pasta.PallasBaseFieldElement, error) {
+	if input == nil {
+		return nil, signatures.ErrInvalidArgument.WithMessage("input is nil")
+	}
+
+	fields := input.Fields()
+	current := new(big.Int)
+	currentSize := 0
+	hasPacked := false
+
+	appendField := func(value *big.Int) error {
+		if value.Sign() < 0 || value.BitLen() > pasta.NewPallasBaseField().BitLen() {
+			return signatures.ErrInvalidArgument.WithMessage("packed value does not fit in base field")
+		}
+		encoded := value.FillBytes(make([]byte, pasta.NewPallasBaseField().ElementSize()))
+		field, err := pasta.NewPallasBaseField().FromBytes(encoded)
+		if err != nil {
+			return errs.Wrap(err).WithMessage("failed to convert packed value to field element")
+		}
+		fields = append(fields, field)
+		return nil
+	}
+
+	appendPacked := func(value *big.Int, bitLen int) error {
+		if value == nil || bitLen <= 0 || value.Sign() < 0 || value.BitLen() > bitLen {
+			return signatures.ErrInvalidArgument.WithMessage("invalid packed input")
+		}
+		hasPacked = true
+		currentSize += bitLen
+		if currentSize < 255 {
+			// Concatenate the next packed value on the right, matching o1js:
+			// currentPackedField * 2^bitLen + value.
+			current.Lsh(current, uint(bitLen))
+			current.Add(current, value)
+			return nil
+		}
+
+		// Packed values are atomic. Flush the current field instead of splitting
+		// the value across the 255-bit boundary.
+		if err := appendField(current); err != nil {
+			return err
+		}
+		current.Set(value)
+		currentSize = bitLen
+		return nil
+	}
+
+	zero := new(big.Int)
+	one := big.NewInt(1)
+	for _, bit := range input.Bits() {
+		value := zero
+		if bit {
+			value = one
+		}
+		if err := appendPacked(value, 1); err != nil {
+			return nil, err
+		}
+	}
+	for _, packed := range extraPacked {
+		if err := appendPacked(packed.value, packed.bitLen); err != nil {
+			return nil, err
+		}
+	}
+	if hasPacked {
+		if err := appendField(current); err != nil {
+			return nil, err
+		}
+	}
+
+	return fields, nil
+}
+
+// deriveNonce computes a deterministic nonce using the default Mina/o1js algorithm.
+// The nonce is derived as:
+//  1. Build HashInput with message fields + [pk.x, pk.y, Field(privateKey)] and packed network ID.
+//  2. Convert the input to fields using chunked packing.
+//  3. Convert every packed field to 255 bits in LSB-first order.
+//  4. Convert the bits to bytes and hash them with Blake2b-256.
+//  5. Clear the top 2 bits of the last byte to obtain a scalar field element.
+//
+// Reference: https://github.com/o1-labs/o1js/blob/cda4bce423960d877fe4f6c04feb32036a2e34b5/src/mina-signer/src/signature.ts
+func (v *Variant) deriveNonce() (*Scalar, error) {
+	if v.msg == nil {
+		return nil, signatures.ErrInvalidArgument.WithMessage("message is nil for deterministic nonce derivation")
+	}
+
+	pkx, err := v.sk.PublicKey().V.AffineX()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to get public key X coordinate")
+	}
+	pky, err := v.sk.PublicKey().V.AffineY()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to get public key Y coordinate")
+	}
+	// Convert the private key from the scalar field to the base field.
+	// In o1js: let d = Field(privateKey)
+	d, err := pasta.NewPallasBaseField().FromBytesBEReduce(v.sk.Value().Bytes())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to reinterpret private key as base field")
+	}
+
+	// Build the HashInput:
+	// HashInput.append(message, { fields: [x, y, d], packed: [id] })
+	input := v.msg.Clone()
+	input.AddFields(pkx, pky, d)
+	id, idBitLen := getNetworkIDHashInput(v.nid)
+	packed, err := packToFields(input, packedInput{value: id, bitLen: idBitLen})
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot pack nonce input")
+	}
+
+	// Convert each packed field to 255 bits before hashing.
+	// In o1js: packedInput.map(Field.toBits).flat()
+	inputBits := make([]bool, 0, len(packed)*255)
+	for _, field := range packed {
+		inputBits = append(inputBits, fieldTo255Bits(field)...)
+	}
+	// Convert bits to bytes using LSB-first ordering and hash with Blake2b-256.
+	digest := blake2b.Sum256(bitsToBytes(inputBits))
+
+	// Drop the top two bits of the last byte.
+	// Reference: bytes[bytes.length - 1] &= 0x3f in o1js.
+	digest[len(digest)-1] &= 0x3f
+
+	// Scalar.fromBytes interprets bytes as little-endian in o1js.
+	// Our sf.FromBytes expects big-endian, so reverse the digest first.
+	k, err := sf.FromBytes(reversedBytes(digest[:]))
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
+	}
+	return k, nil
+}
+
 // scalarTo255Bits converts a scalar to 255 bits in LSB-first order.
 // This matches o1js's Scalar.toBits() which returns 255 bits.
 func scalarTo255Bits(scalar *Scalar) []bool {
@@ -212,7 +419,11 @@ func scalarTo255Bits(scalar *Scalar) []bool {
 // The nonce is adjusted to ensure R has an even y-coordinate.
 func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.IsDeterministic() {
-		k, err = v.deriveNonceLegacy()
+		if v.flavor == signatureFlavorLegacy {
+			k, err = v.deriveNonceLegacy()
+		} else {
+			k, err = v.deriveNonce()
+		}
 	} else {
 		k, err = algebrautils.RandomNonIdentity(sf, v.prng)
 	}
@@ -259,11 +470,16 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	}
 	input.AddFields(pkx, pky, ncx)
 	prefix := SignaturePrefix(v.nid)
-	packed, err := input.PackToFields()
+	var packed []*pasta.PallasBaseFieldElement
+	if v.flavor == signatureFlavorLegacy {
+		packed, err = input.PackToFields()
+	} else {
+		packed, err = packToFields(input)
+	}
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot pack fields")
 	}
-	e, err := hashWithPrefix(prefix, packed...)
+	e, err := hashWithPrefix(v.newPoseidon, prefix, packed...)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to compute challenge")
 	}

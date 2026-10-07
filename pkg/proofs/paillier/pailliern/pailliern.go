@@ -33,7 +33,7 @@ var P = numct.NewNatFromBig(pBig, pBig.BitLen())
 
 // Proof holds the Paillier N proof data.
 type Proof struct {
-	Sigmas []*numct.Nat
+	Sigmas []*numct.Nat `cbor:"Sigmas"`
 }
 
 // Prover generates a Paillier N proof.
