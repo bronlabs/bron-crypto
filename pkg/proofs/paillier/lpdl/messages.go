@@ -15,9 +15,9 @@ import (
 
 // Round1Output carries the verifier's first-round data.
 type Round1Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	RangeVerifierOutput    hashcom.Commitment
-	CPrime                 *paillier.Ciphertext
-	CDoublePrimeCommitment hashcom.Commitment
+	RangeVerifierOutput    hashcom.Commitment   `cbor:"RangeVerifierOutput"`
+	CPrime                 *paillier.Ciphertext `cbor:"CPrime"`
+	CDoublePrimeCommitment hashcom.Commitment   `cbor:"CDoublePrimeCommitment"`
 }
 
 // Validate checks the Round1Output shape.
@@ -40,8 +40,8 @@ func (m *Round1Output[P, B, S]) Validate(p *Prover[P, B, S], _ sharing.ID) error
 
 // Round2Output carries the prover's second-round data.
 type Round2Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	RangeProverOutput *paillierrange.Commitment
-	CHat              hashcom.Commitment
+	RangeProverOutput *paillierrange.Commitment `cbor:"RangeProverOutput"`
+	CHat              hashcom.Commitment        `cbor:"CHat"`
 }
 
 // Validate checks the Round2Output shape.
@@ -58,11 +58,11 @@ func (m *Round2Output[P, B, S]) Validate(_ *Verifier[P, B, S], _ sharing.ID) err
 
 // Round3Output carries the verifier's third-round data.
 type Round3Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	RangeVerifierMessage hashcom.Message
-	RangeVerifierWitness hashcom.Witness
-	A                    *num.Uint
-	B                    *num.Uint
-	CDoublePrimeWitness  hashcom.Witness
+	RangeVerifierMessage hashcom.Message `cbor:"RangeVerifierMessage"`
+	RangeVerifierWitness hashcom.Witness `cbor:"RangeVerifierWitness"`
+	A                    *num.Uint       `cbor:"A"`
+	B                    *num.Uint       `cbor:"B"`
+	CDoublePrimeWitness  hashcom.Witness `cbor:"CDoublePrimeWitness"`
 }
 
 // Validate checks the Round3Output shape.
@@ -88,9 +88,9 @@ func (m *Round3Output[P, B, S]) Validate(_ *Prover[P, B, S], _ sharing.ID) error
 
 // Round4Output carries the prover's final response.
 type Round4Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	RangeProverOutput *paillierrange.Response
-	BigQHat           P
-	BigQHatWitness    hashcom.Witness
+	RangeProverOutput *paillierrange.Response `cbor:"RangeProverOutput"`
+	BigQHat           P                       `cbor:"BigQHat"`
+	BigQHatWitness    hashcom.Witness         `cbor:"BigQHatWitness"`
 }
 
 // Validate checks the Round4Output shape.

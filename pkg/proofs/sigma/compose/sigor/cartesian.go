@@ -17,9 +17,9 @@ import (
 // different statement types. The prover claims to know a witness for at least one.
 type StatementCartesian[X0, X1 sigma.Statement] struct {
 	// X0 is the first statement.
-	X0 X0
+	X0 X0 `cbor:"X0"`
 	// X1 is the second statement.
-	X1 X1
+	X1 X1 `cbor:"X1"`
 }
 
 // Bytes returns the canonical byte representation of the composed statement.
@@ -40,9 +40,9 @@ var _ sigma.Statement = (*StatementCartesian[sigma.Statement, sigma.Statement])(
 // different witness types. Only one needs to be valid for its corresponding statement.
 type WitnessCartesian[W0, W1 sigma.Witness] struct {
 	// W0 is the witness for the first statement.
-	W0 W0
+	W0 W0 `cbor:"W0"`
 	// W1 is the witness for the second statement.
-	W1 W1
+	W1 W1 `cbor:"W1"`
 }
 
 var _ sigma.Witness = (*WitnessCartesian[sigma.Witness, sigma.Witness])(nil)
@@ -50,9 +50,9 @@ var _ sigma.Witness = (*WitnessCartesian[sigma.Witness, sigma.Witness])(nil)
 // CommitmentCartesian represents a binary OR-composed commitment.
 type CommitmentCartesian[A0, A1 sigma.Commitment] struct {
 	// A0 is the commitment for the first branch.
-	A0 A0
+	A0 A0 `cbor:"A0"`
 	// A1 is the commitment for the second branch.
-	A1 A1
+	A1 A1 `cbor:"A1"`
 }
 
 // Bytes returns the canonical byte representation of the composed commitment.
@@ -72,17 +72,17 @@ var _ sigma.Commitment = (*CommitmentCartesian[sigma.Commitment, sigma.Commitmen
 // StateCartesian holds the prover's internal state for binary OR composition.
 type StateCartesian[S0, S1 sigma.State, Z0, Z1 sigma.Response] struct {
 	// B indicates which branch has the valid witness (0 or 1).
-	B uint
+	B uint `cbor:"B"`
 	// S0 is the prover state for the first branch (meaningful only if B=0).
-	S0 S0
+	S0 S0 `cbor:"S0"`
 	// S1 is the prover state for the second branch (meaningful only if B=1).
-	S1 S1
+	S1 S1 `cbor:"S1"`
 	// E is the random challenge used for simulating the false branch.
-	E []byte
+	E []byte `cbor:"E"`
 	// Z0 is the simulated response for the first branch (meaningful only if B=1).
-	Z0 Z0
+	Z0 Z0 `cbor:"Z0"`
 	// Z1 is the simulated response for the second branch (meaningful only if B=0).
-	Z1 Z1
+	Z1 Z1 `cbor:"Z1"`
 }
 
 var _ sigma.State = (*StateCartesian[sigma.State, sigma.State, sigma.Response, sigma.Response])(nil)
@@ -90,14 +90,14 @@ var _ sigma.State = (*StateCartesian[sigma.State, sigma.State, sigma.Response, s
 // ResponseCartesian represents the prover's response for binary OR composition.
 type ResponseCartesian[Z0, Z1 sigma.Response] struct {
 	// E0 is the challenge for the first branch.
-	E0 []byte
+	E0 []byte `cbor:"E0"`
 	// E1 is the challenge for the second branch.
 	// E0 XOR E1 equals the verifier's challenge.
-	E1 []byte
+	E1 []byte `cbor:"E1"`
 	// Z0 is the response for the first branch.
-	Z0 Z0
+	Z0 Z0 `cbor:"Z0"`
 	// Z1 is the response for the second branch.
-	Z1 Z1
+	Z1 Z1 `cbor:"Z1"`
 }
 
 // Bytes returns the canonical byte representation of the response.

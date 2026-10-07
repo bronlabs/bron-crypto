@@ -24,8 +24,8 @@ const Name = "PaillierRange"
 
 // Witness contains the secret inputs for the range proof.
 type Witness struct {
-	X *paillier.Plaintext
-	R *paillier.Nonce
+	X *paillier.Plaintext `cbor:"X"`
+	R *paillier.Nonce     `cbor:"R"`
 }
 
 // Bytes serialises the witness for transcript binding.
@@ -53,7 +53,7 @@ func NewWitness(x *paillier.Plaintext, r *paillier.Nonce) (*Witness, error) {
 
 // Statement defines the public inputs for the range proof.
 type Statement struct {
-	C *paillier.Ciphertext
+	C *paillier.Ciphertext `cbor:"C"`
 }
 
 // Bytes serialises the statement for transcript binding.
@@ -79,8 +79,8 @@ func NewStatement(c *paillier.Ciphertext) (*Statement, error) {
 
 // Commitment holds the prover commitment for the range proof.
 type Commitment struct {
-	C1 []*paillier.Ciphertext
-	C2 []*paillier.Ciphertext
+	C1 []*paillier.Ciphertext `cbor:"C1"`
+	C2 []*paillier.Ciphertext `cbor:"C2"`
 }
 
 // Bytes serialises the commitment for transcript binding.
@@ -100,21 +100,21 @@ func (c *Commitment) Bytes() []byte {
 
 // State stores the prover's internal state between rounds.
 type State struct {
-	W1 []*paillier.Plaintext
-	R1 []*paillier.Nonce
-	W2 []*paillier.Plaintext
-	R2 []*paillier.Nonce
+	W1 []*paillier.Plaintext `cbor:"W1"`
+	R1 []*paillier.Nonce     `cbor:"R1"`
+	W2 []*paillier.Plaintext `cbor:"W2"`
+	R2 []*paillier.Nonce     `cbor:"R2"`
 }
 
 // Response is the prover response for the range proof.
 type Response struct {
-	W1 map[uint]*paillier.Plaintext
-	R1 map[uint]*paillier.Nonce
-	W2 map[uint]*paillier.Plaintext
-	R2 map[uint]*paillier.Nonce
-	Wj map[uint]*paillier.Plaintext
-	Rj map[uint]*paillier.Nonce
-	J  map[uint]uint
+	W1 map[uint]*paillier.Plaintext `cbor:"W1"`
+	R1 map[uint]*paillier.Nonce     `cbor:"R1"`
+	W2 map[uint]*paillier.Plaintext `cbor:"W2"`
+	R2 map[uint]*paillier.Nonce     `cbor:"R2"`
+	Wj map[uint]*paillier.Plaintext `cbor:"Wj"`
+	Rj map[uint]*paillier.Nonce     `cbor:"Rj"`
+	J  map[uint]uint                `cbor:"J"`
 }
 
 // Bytes serialises the response for transcript binding.

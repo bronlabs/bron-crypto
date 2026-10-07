@@ -14,9 +14,9 @@ import (
 // different statement types. The prover claims to know witnesses for both statements.
 type StatementCartesian[X0, X1 sigma.Statement] struct {
 	// X0 is the first statement.
-	X0 X0
+	X0 X0 `cbor:"X0"`
 	// X1 is the second statement.
-	X1 X1
+	X1 X1 `cbor:"X1"`
 }
 
 func (x *StatementCartesian[X0, X1]) Bytes() []byte {
@@ -36,9 +36,9 @@ var _ sigma.Statement = (*StatementCartesian[sigma.Statement, sigma.Statement])(
 // different witness types. Both witnesses must be valid for their corresponding statements.
 type WitnessCartesian[W0, W1 sigma.Witness] struct {
 	// W0 is the witness for the first statement.
-	W0 W0
+	W0 W0 `cbor:"W0"`
 	// W1 is the witness for the second statement.
-	W1 W1
+	W1 W1 `cbor:"W1"`
 }
 
 var _ sigma.Witness = (*WitnessCartesian[sigma.Witness, sigma.Witness])(nil)
@@ -46,9 +46,9 @@ var _ sigma.Witness = (*WitnessCartesian[sigma.Witness, sigma.Witness])(nil)
 // CommitmentCartesian represents a binary AND-composed commitment.
 type CommitmentCartesian[A0, A1 sigma.Commitment] struct {
 	// A0 is the commitment for the first branch.
-	A0 A0
+	A0 A0 `cbor:"A0"`
 	// A1 is the commitment for the second branch.
-	A1 A1
+	A1 A1 `cbor:"A1"`
 }
 
 func (a *CommitmentCartesian[A0, A1]) Bytes() []byte {
@@ -67,9 +67,9 @@ var _ sigma.Commitment = (*CommitmentCartesian[sigma.Commitment, sigma.Commitmen
 // StateCartesian holds the prover's internal state for binary AND composition.
 type StateCartesian[S0, S1 sigma.State] struct {
 	// S0 is the prover state for the first branch.
-	S0 S0
+	S0 S0 `cbor:"S0"`
 	// S1 is the prover state for the second branch.
-	S1 S1
+	S1 S1 `cbor:"S1"`
 }
 
 var _ sigma.State = (*StateCartesian[sigma.State, sigma.State])(nil)
@@ -77,9 +77,9 @@ var _ sigma.State = (*StateCartesian[sigma.State, sigma.State])(nil)
 // ResponseCartesian represents the prover's response for binary AND composition.
 type ResponseCartesian[Z0, Z1 sigma.Response] struct {
 	// Z0 is the response for the first branch.
-	Z0 Z0
+	Z0 Z0 `cbor:"Z0"`
 	// Z1 is the response for the second branch.
-	Z1 Z1
+	Z1 Z1 `cbor:"Z1"`
 }
 
 func (z *ResponseCartesian[Z0, Z1]) Bytes() []byte {

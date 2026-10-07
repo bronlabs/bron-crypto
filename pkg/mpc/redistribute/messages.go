@@ -16,7 +16,7 @@ import (
 type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// ZeroR1 is the sender's broadcast from round 1 of the HJKY zero-sharing
 	// subprotocol run among the previous shareholders.
-	ZeroR1 *hjky.Round1Broadcast[G, S]
+	ZeroR1 *hjky.Round1Broadcast[G, S] `cbor:"ZeroR1"`
 }
 
 // Validate checks that the broadcast contains a well-formed HJKY round-1
@@ -39,7 +39,7 @@ func (m *Round1Broadcast[G, S]) Validate(p *Participant[G, S], fromID sharing.ID
 type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// ZeroR1 is the sender's private round-1 HJKY zero-sharing message for the
 	// recipient.
-	ZeroR1 *hjky.Round1P2P[G, S]
+	ZeroR1 *hjky.Round1P2P[G, S] `cbor:"ZeroR1"`
 }
 
 // Validate checks that the private message contains a well-formed HJKY round-1
@@ -63,16 +63,16 @@ func (m *Round1P2P[G, S]) Validate(p *Participant[G, S], fromID sharing.ID) erro
 type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// PrevMSP is the MSP underlying the previous sharing that the trusted anchor
 	// claims was used for the existing shard.
-	PrevMSP *msp.MSP[S]
+	PrevMSP *msp.MSP[S] `cbor:"PrevMSP"`
 	// PrevVerificationVector authenticates the sender's existing share under the
 	// previous MSP.
-	PrevVerificationVector *feldman.VerificationVector[G, S]
+	PrevVerificationVector *feldman.VerificationVector[G, S] `cbor:"PrevVerificationVector"`
 	// ZeroVerificationVector authenticates the sender's zero-sharing contribution
 	// over the previous-shareholder unanimity access structure.
-	ZeroVerificationVector *feldman.VerificationVector[G, S]
+	ZeroVerificationVector *feldman.VerificationVector[G, S] `cbor:"ZeroVerificationVector"`
 	// NextVerificationVectorContribution authenticates the sender's contribution
 	// to the aggregated verification vector under the next access structure.
-	NextVerificationVectorContribution *feldman.VerificationVector[G, S]
+	NextVerificationVectorContribution *feldman.VerificationVector[G, S] `cbor:"NextVerificationVectorContribution"`
 }
 
 // Validate checks that the broadcast contains well-formed metadata and
@@ -132,7 +132,7 @@ func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], from sharing.ID) 
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	// NextShareContribution is the sender's private contribution to the
 	// recipient's fresh share under the next access structure.
-	NextShareContribution *feldman.Share[S]
+	NextShareContribution *feldman.Share[S] `cbor:"NextShareContribution"`
 }
 
 // Validate checks that the private message contains a well-formed share

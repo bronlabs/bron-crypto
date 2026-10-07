@@ -12,15 +12,15 @@ import (
 // - M_i = N / p_i where N = p_1 * p_2 * ... * p_k
 // - M_i^{-1} mod p_i for each i.
 type ParamsMulti struct {
-	Factors    []*numct.Modulus // p_i as moduli
-	Products   []*numct.Nat     // M_i = N / p_i
-	Inverses   []*numct.Nat     // inv_i = (M_i)^{-1} mod p_i
-	Lifts      []*numct.Nat     // Lift_i = M_i * inv_i mod N
-	Modulus    *numct.Modulus   // N as a modulus object (for Mod reductions)
-	NumFactors int              // number of factors (pairwise coprime, not necessarily prime)
+	Factors    []*numct.Modulus `cbor:"Factors"`    // p_i as moduli
+	Products   []*numct.Nat     `cbor:"Products"`   // M_i = N / p_i
+	Inverses   []*numct.Nat     `cbor:"Inverses"`   // inv_i = (M_i)^{-1} mod p_i
+	Lifts      []*numct.Nat     `cbor:"Lifts"`      // Lift_i = M_i * inv_i mod N
+	Modulus    *numct.Modulus   `cbor:"Modulus"`    // N as a modulus object (for Mod reductions)
+	NumFactors int              `cbor:"NumFactors"` // number of factors (pairwise coprime, not necessarily prime)
 	// Garner's algorithm precomputed values:
 	// GarnerCoeffs[i][j] = (p_1 * ... * p_j)^{-1} mod p_{i+1} for j < i
-	GarnerCoeffs [][]*numct.Nat
+	GarnerCoeffs [][]*numct.Nat `cbor:"GarnerCoeffs"`
 }
 
 // NewParamsMulti constructs multi-factor CRT parameters from given moduli.
