@@ -22,7 +22,7 @@ func Jacobi(a *num.Int, n *num.NatPlus) (int, error) {
 		return -2, ErrInvalidArgument.WithMessage("Jacobi symbol is only defined for odd positive n")
 	}
 	effectiveA := a.Clone()
-	if a.IsNegative() { // BoringSSL does not support negative inputs for Jacobi, so we take the absolute value and adjust the result accordingly
+	if a.IsNegative() { // BoringSSL does not support negative inputs for Jacobi, so we reduce a modulo n first.
 		effectiveA = effectiveA.Mod(n).Lift()
 	}
 	// effectiveA.Bytes() is sign encoded
