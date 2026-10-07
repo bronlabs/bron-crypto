@@ -21,7 +21,7 @@ import (
 // before any opening is revealed stops a rushing adversary from choosing its own
 // keys or rid share as a function of the honest parties' values.
 type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	V hashcom.Commitment
+	V hashcom.Commitment `cbor:"V"`
 }
 
 // Validate is the deserialisation trust boundary for the round-1 message: it
@@ -42,12 +42,12 @@ func (m *Round1Broadcast[P, B, S]) Validate(p *Participant[P, B, S], senderID sh
 // (N̂_i, s_i, t_i), the ring-Pedersen well-formedness proof Psi (Π_prm), and the
 // sender's rid share. SessionID and SharingID bind it to the session and sender.
 type CommitmentMessage[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	SessionID                 network.SID
-	SharingID                 sharing.ID
-	PaillierPublicKey         *paillier.PublicKey
-	RingPedersenCommitmentKey *intcom.CommitmentKey
-	Psi                       compiler.NIZKPoKProof
-	Rid                       []byte
+	SessionID                 network.SID           `cbor:"SessionID"`
+	SharingID                 sharing.ID            `cbor:"SharingID"`
+	PaillierPublicKey         *paillier.PublicKey   `cbor:"PaillierPublicKey"`
+	RingPedersenCommitmentKey *intcom.CommitmentKey `cbor:"RingPedersenCommitmentKey"`
+	Psi                       compiler.NIZKPoKProof `cbor:"Psi"`
+	Rid                       []byte                `cbor:"Rid"`
 }
 
 // Bytes is the canonical encoding hashed by the round-1 commitment and
@@ -75,8 +75,8 @@ func (m *CommitmentMessage[P, B, S]) Bytes() []byte {
 // recipient re-derives the digest from these in round 3 and checks it against
 // the round-1 V_i, which is what binds the sender to its committed contribution.
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Message *CommitmentMessage[P, B, S]
-	U       hashcom.Witness
+	Message *CommitmentMessage[P, B, S] `cbor:"Message"`
+	U       hashcom.Witness             `cbor:"U"`
 }
 
 // Validate is the deserialisation trust boundary for the opening: it requires a
@@ -122,8 +122,8 @@ func (m *Round2Broadcast[P, B, S]) Validate(p *Participant[P, B, S], senderID sh
 // Paillier-Blum modulus proof Π_mod, which is verifier-independent and identical
 // in every recipient's message (replicated rather than broadcast).
 type Round3P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	PsiJI     compiler.NIZKPoKProof
-	PsiIPrime compiler.NIZKPoKProof
+	PsiJI     compiler.NIZKPoKProof `cbor:"PsiJI"`
+	PsiIPrime compiler.NIZKPoKProof `cbor:"PsiIPrime"`
 }
 
 // Validate is the deserialisation trust boundary for the round-3 message: both

@@ -235,7 +235,7 @@ func TestLegacySignatures(t *testing.T) {
 		t.Run(fmt.Sprintf("payment_%d_devnet", i), func(t *testing.T) {
 			msg, err := mina.NewPaymentMessage(publicKey, receiver, test.amount, test.fee, test.nonce, test.validUntil, test.memo)
 			require.NoError(t, err)
-			scheme, err := mina.NewScheme(mina.TestNet, privateKey)
+			scheme, err := mina.NewLegacyScheme(mina.TestNet, privateKey)
 			require.NoError(t, err)
 
 			signer, err := scheme.Signer(privateKey)
@@ -255,7 +255,7 @@ func TestLegacySignatures(t *testing.T) {
 		t.Run(fmt.Sprintf("payment_%d_mainnet", i), func(t *testing.T) {
 			msg, err := mina.NewPaymentMessage(publicKey, receiver, test.amount, test.fee, test.nonce, test.validUntil, test.memo)
 			require.NoError(t, err)
-			scheme, err := mina.NewScheme(mina.MainNet, privateKey)
+			scheme, err := mina.NewLegacyScheme(mina.MainNet, privateKey)
 			require.NoError(t, err)
 
 			signer, err := scheme.Signer(privateKey)
@@ -278,7 +278,7 @@ func TestLegacySignatures(t *testing.T) {
 		t.Run(fmt.Sprintf("delegation_%d_devnet", i), func(t *testing.T) {
 			msg, err := mina.NewDelegationMessage(publicKey, newDelegate, test.fee, test.nonce, test.validUntil, test.memo)
 			require.NoError(t, err)
-			scheme, err := mina.NewScheme(mina.TestNet, privateKey)
+			scheme, err := mina.NewLegacyScheme(mina.TestNet, privateKey)
 			require.NoError(t, err)
 
 			signer, err := scheme.Signer(privateKey)
@@ -298,7 +298,7 @@ func TestLegacySignatures(t *testing.T) {
 		t.Run(fmt.Sprintf("delegation_%d_mainnet", i), func(t *testing.T) {
 			msg, err := mina.NewDelegationMessage(publicKey, newDelegate, test.fee, test.nonce, test.validUntil, test.memo)
 			require.NoError(t, err)
-			scheme, err := mina.NewScheme(mina.MainNet, privateKey)
+			scheme, err := mina.NewLegacyScheme(mina.MainNet, privateKey)
 			require.NoError(t, err)
 
 			signer, err := scheme.Signer(privateKey)
@@ -323,7 +323,7 @@ func TestLegacySignatures(t *testing.T) {
 			msg := new(mina.ROInput).Init()
 			msg.AddString(test.message)
 
-			scheme, err := mina.NewScheme(mina.TestNet, privateKey)
+			scheme, err := mina.NewLegacyScheme(mina.TestNet, privateKey)
 			require.NoError(t, err)
 
 			signer, err := scheme.Signer(privateKey)
@@ -344,7 +344,7 @@ func TestLegacySignatures(t *testing.T) {
 			msg := new(mina.ROInput).Init()
 			msg.AddString(test.message)
 
-			scheme, err := mina.NewScheme(mina.MainNet, privateKey)
+			scheme, err := mina.NewLegacyScheme(mina.MainNet, privateKey)
 			require.NoError(t, err)
 
 			signer, err := scheme.Signer(privateKey)

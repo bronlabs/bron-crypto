@@ -14,8 +14,8 @@ import (
 
 // Round1Output carries the verifier's first-round data.
 type Round1Output struct {
-	NthRootsProverOutput sigand.Commitment[*nthroot.Commitment[*modular.SimpleModulus]]
-	X                    sigand.Statement[*nthroot.Statement[*modular.SimpleModulus]]
+	NthRootsProverOutput sigand.Commitment[*nthroot.Commitment[*modular.SimpleModulus]] `cbor:"NthRootsProverOutput"`
+	X                    sigand.Statement[*nthroot.Statement[*modular.SimpleModulus]]   `cbor:"X"`
 }
 
 // Validate checks the Round1Output shape.
@@ -45,7 +45,7 @@ func (m *Round1Output) Validate(p *Prover, _ sharing.ID) error {
 
 // Round2Output carries the verifier's challenge bytes.
 type Round2Output struct {
-	NthRootsVerifierOutput sigma.ChallengeBytes
+	NthRootsVerifierOutput sigma.ChallengeBytes `cbor:"NthRootsVerifierOutput"`
 }
 
 func (m *Round2Output) Validate(_ *Verifier, _ sharing.ID) error {
@@ -60,7 +60,7 @@ func (m *Round2Output) Validate(_ *Verifier, _ sharing.ID) error {
 
 // Round3Output carries the prover's Nth-root responses.
 type Round3Output struct {
-	NthRootsProverOutput sigand.Response[*nthroot.Response[*modular.SimpleModulus]]
+	NthRootsProverOutput sigand.Response[*nthroot.Response[*modular.SimpleModulus]] `cbor:"NthRootsProverOutput"`
 }
 
 func (m *Round3Output) Validate(p *Prover, _ sharing.ID) error {
@@ -78,7 +78,7 @@ func (m *Round3Output) Validate(p *Prover, _ sharing.ID) error {
 
 // Round4Output carries the final Paillier public-key verification data.
 type Round4Output struct {
-	YPrime []*numct.Nat
+	YPrime []*numct.Nat `cbor:"YPrime"`
 }
 
 // Validate checks the Round4Output shape.

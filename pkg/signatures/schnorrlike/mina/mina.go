@@ -36,9 +36,10 @@ type (
 )
 
 var (
-	hashFunc = hashing.HashFuncTypeErase(poseidon.NewLegacy)
-	group    = pasta.NewPallasCurve()
-	sf       = pasta.NewPallasScalarField()
+	hashFunc       = hashing.HashFuncTypeErase(poseidon.NewKimchi)
+	legacyHashFunc = hashing.HashFuncTypeErase(poseidon.NewLegacy)
+	group          = pasta.NewPallasCurve()
+	sf             = pasta.NewPallasScalarField()
 
 	// SignatureSize is the size of a serialised Mina signature (64 bytes).
 	SignatureSize = group.ElementSize() + sf.ElementSize()
@@ -82,12 +83,24 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 }
 
 // NewScheme creates a Mina signature scheme with deterministic nonce derivation.
-// The nonce is derived from the private key, public key, and network ID using
-// Blake2b, following the legacy Mina/o1js implementation.
+// The scheme uses o1js-compatible chunked input packing and Kimchi Poseidon parameters.
 func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
 	vr, err := NewDeterministicVariant(nid, privateKey)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create variant")
+	}
+	return &Scheme{
+		vr: vr,
+	}, nil
+}
+
+// NewLegacyScheme creates a Mina signature scheme with deterministic nonce derivation.
+// The nonce is derived from the private key, public key, and network ID using
+// Blake2b, following the legacy Mina/o1js implementation.
+func NewLegacyScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
+	vr, err := NewLegacyDeterministicVariant(nid, privateKey)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create legacy variant")
 	}
 	return &Scheme{
 		vr: vr,
@@ -101,6 +114,18 @@ func NewRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
 	vr, err := NewRandomisedVariant(nid, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create variant")
+	}
+	return &Scheme{
+		vr: vr,
+	}, nil
+}
+
+// NewLegacyRandomisedScheme creates a Mina signature scheme with random nonce generation.
+// The scheme preserves legacy Mina/o1js challenge computation.
+func NewLegacyRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
+	vr, err := NewLegacyRandomisedVariant(nid, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create legacy variant")
 	}
 	return &Scheme{
 		vr: vr,

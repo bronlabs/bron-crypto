@@ -37,10 +37,10 @@ func Precompute(p, q *numct.Nat) (params *Params, ok ct.Bool) {
 
 // Params holds reusable data for CRT recombination mod N = p*q.
 type Params struct {
-	P    *numct.Modulus
-	QNat *numct.Nat
-	QInv *numct.Nat
-	Cap  int
+	P    *numct.Modulus `cbor:"P"`
+	QNat *numct.Nat     `cbor:"QNat"`
+	QInv *numct.Nat     `cbor:"QInv"`
+	Cap  int            `cbor:"Cap"`
 }
 
 // Recombine reconstructs m (mod p*q) from residues (mp, mq),
@@ -122,9 +122,9 @@ func NewParamsExtended(p, q *numct.Modulus) (params *ParamsExtended, ok ct.Bool)
 type ParamsExtended struct {
 	Params
 
-	PNat *numct.Nat
-	Q    *numct.Modulus
-	M    *numct.Modulus
+	PNat *numct.Nat     `cbor:"PNat"`
+	Q    *numct.Modulus `cbor:"Q"`
+	M    *numct.Modulus `cbor:"M"`
 }
 
 // Modulus returns the modulus N = p * q.

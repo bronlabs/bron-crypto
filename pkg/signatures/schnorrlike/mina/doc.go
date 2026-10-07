@@ -10,7 +10,7 @@
 //   - Hash: Poseidon algebraic hash over the base field
 //   - Message format: ROInput (structured field elements and bits)
 //   - Byte order: Little-endian for field elements
-//   - Nonce derivation: Deterministic using Blake2b (legacy mode)
+//   - Nonce derivation: Deterministic using Blake2b
 //   - R encoding: Only x-coordinate with implicit even y
 //
 // # Signature Format
