@@ -9,8 +9,7 @@ import (
 // mutex, making a single-threaded reader — such as *pcg.Pcg — safe to share
 // across concurrent consumers (e.g. one PRNG feeding several concurrent
 // key-generation calls). Readers that are already safe for concurrent use,
-// like crypto/rand.Reader, do not need it. For seedable CSPRNGs prefer
-// csprng.NewThreadSafePrng, which also serialises the seeding methods.
+// like crypto/rand.Reader, do not need it.
 func NewThreadSafeReader(r io.Reader) io.Reader {
 	return &threadSafeReader{
 		mu: sync.Mutex{},

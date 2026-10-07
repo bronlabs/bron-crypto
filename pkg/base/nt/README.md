@@ -52,8 +52,7 @@ faster (a value-dependent time) and measurably bias small-size outputs toward fa
 classes. All PRNG reads happen sequentially on the calling goroutine (workers receive pre-cut entropy and
 never touch the reader), so a single generation call accepts any `io.Reader`; a PRNG shared across
 *concurrent* generation calls must still be safe for concurrent use — `crypto/rand.Reader` is, and
-`prng.NewThreadSafeReader` (any `io.Reader`) or `csprng.NewThreadSafePrng` (seedable CSPRNGs) wraps one
-that isn't.
+`prng.NewThreadSafeReader` wraps one that isn't.
 
 ### Relation to the reference paper
 
