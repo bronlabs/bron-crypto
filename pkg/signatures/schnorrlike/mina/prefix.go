@@ -21,6 +21,8 @@ const (
 	// TestNet is the Mina test network, using the legacy "CodaSignature" prefix.
 	// Reference: https://github.com/o1-labs/o1js-bindings/blob/df8c87ed6804465f79196fdff84e5147ae71e92d/crypto/constants.ts#L13
 	TestNet NetworkID = "testnet"
+	// DevNet is equivalent to TestNet for Mina signature domain separation.
+	DevNet NetworkID = "devnet"
 	// MainNet is the Mina main network, using the "MinaSignatureMainnet" prefix.
 	MainNet NetworkID = "mainnet"
 )
@@ -66,7 +68,7 @@ func SignaturePrefix(nid NetworkID) Prefix {
 	switch nid {
 	case MainNet:
 		return []byte("MinaSignatureMainnet")
-	case TestNet:
+	case TestNet, DevNet:
 		return []byte("CodaSignature*******")
 	default:
 		return createCustomPrefix(string(nid) + ("Signature"))
@@ -103,7 +105,7 @@ func getNetworkIDHashInput(nid NetworkID) (val *big.Int, bitLen int) {
 	switch nid {
 	case MainNet:
 		return mainNetHashInput, 8
-	case TestNet:
+	case TestNet, DevNet:
 		return testNetHashInput, 8
 	default:
 		return networkIDOfString(string(nid))
@@ -163,14 +165,17 @@ func reversedBytes(b []byte) []byte {
 
 // hashWithPrefix computes a Poseidon hash with domain separation.
 // The prefix is converted to a field element and prepended to the inputs,
-// then hashed using Poseidon Legacy. The result is returned as a scalar
+// then hashed using the selected Poseidon parameters. The result is returned as a scalar
 // for use as a Fiat-Shamir challenge in signature computation.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/885b50e60ead596cdcd8dc944df55fd3a4467a0a/src/lib/provable/crypto/hash-generic.ts#L23
-func hashWithPrefix(prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Scalar, error) {
-	h := poseidon.NewLegacy()
+func hashWithPrefix(newHasher func() *poseidon.Poseidon, prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Scalar, error) {
+	if newHasher == nil {
+		return nil, signatures.ErrInvalidArgument.WithMessage("hasher constructor is nil")
+	}
+	h := newHasher()
 
-	// The prefix is absorbed as its own salted block in Mina's legacy construction.
+	// The prefix is absorbed as its own salted block in Mina's construction.
 	// Make that block boundary explicit
 	pfe, err := prefix.ToBaseFieldElement()
 	if err != nil {
