@@ -1,10 +1,13 @@
 package nt //nolint:testpackage // to access unexported identifiers
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/errs-go/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -118,6 +121,47 @@ func TestPrimePairGenerator_Regular(t *testing.T) {
 		require.Equal(t, 32, p.AnnouncedLen())
 		require.Equal(t, 32, q.AnnouncedLen())
 	})
+	t.Run("minimum key length", func(t *testing.T) {
+		t.Parallel()
+		p, q, err := GeneratePrimePair(num.NPlus(), 10, pcg.NewRandomised())
+		require.NoError(t, err)
+		require.False(t, p.Equal(q))
+		require.True(t, p.IsProbablyPrime())
+		require.True(t, q.IsProbablyPrime())
+		require.Equal(t, 5, p.Big().BitLen())
+		require.Equal(t, 5, q.Big().BitLen())
+		require.GreaterOrEqual(t, p.Big().Cmp(fipsPairLowerBound(10)), 0)
+		require.GreaterOrEqual(t, q.Big().Cmp(fipsPairLowerBound(10)), 0)
+		require.Equal(t, 10, p.Mul(q).Big().BitLen())
+	})
+}
+
+func TestPrimePairGenerator_InvalidKeyLength(t *testing.T) {
+	t.Parallel()
+
+	for _, keyLen := range []uint{0, 2, 4, 6, 8, 9} {
+		// Invalid sizes must report an argument error, even without entropy.
+		p, q, err := GeneratePrimePair(num.NPlus(), keyLen, bytes.NewReader(nil))
+		require.True(t, errs.Is(err, ErrInvalidArgument), "keyLen=%d: %v", keyLen, err)
+		require.Nil(t, p)
+		require.Nil(t, q)
+	}
+}
+
+func TestPrimePairGenerator_Blum(t *testing.T) {
+	t.Parallel()
+
+	const keyLen = 256
+	p, q, err := GenerateBlumPrimePair(num.NPlus(), keyLen, pcg.NewRandomised())
+	require.NoError(t, err)
+	require.False(t, p.Equal(q))
+	for _, prime := range []*num.NatPlus{p, q} {
+		require.True(t, prime.IsProbablyPrime())
+		require.Equal(t, keyLen/2, prime.AnnouncedLen())
+		require.Equal(t, uint64(3), prime.Big().Uint64()&3)
+		require.GreaterOrEqual(t, prime.Big().Cmp(fipsPairLowerBound(keyLen)), 0)
+	}
+	require.Equal(t, keyLen, p.Mul(q).AnnouncedLen())
 }
 
 func TestPrimePairGenerator_Safe(t *testing.T) {

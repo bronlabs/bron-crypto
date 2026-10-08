@@ -2,11 +2,8 @@ package primegen
 
 import "github.com/bronlabs/errs-go/errs"
 
-// The nt package validates arguments before calling into this package and
-// reports its own sentinels; the sentinels here back the defensive
-// re-validation inside this package and internal invariant checks. They are
-// deliberately distinct values from nt's (importing nt here would be a
-// cycle) — callers outside nt never see them unwrapped.
+// The nt package aliases these sentinels so callers can identify failures
+// originating at either layer through errs.Is.
 var (
 	// ErrInvalidArgument reports a structurally invalid request: bit length
 	// below MinBits, a malformed lower bound, a bad class, or missing

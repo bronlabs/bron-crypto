@@ -1,13 +1,13 @@
 package nt
 
-import "github.com/bronlabs/errs-go/errs"
+import "github.com/bronlabs/bron-crypto/pkg/base/nt/internal/primegen"
 
 var (
 	// ErrInvalidArgument reports a structurally invalid request: a bit length
 	// or key length outside the supported range, or an odd keyLen.
-	ErrInvalidArgument = errs.New("invalid argument")
+	ErrInvalidArgument = primegen.ErrInvalidArgument
 	// ErrIsNil reports a nil structure or PRNG argument.
-	ErrIsNil = errs.New("is nil")
+	ErrIsNil = primegen.ErrIsNil
 	// ErrFailed reports a violated internal invariant.
-	ErrFailed = errs.New("operation failed")
+	ErrFailed = primegen.ErrFailed
 )

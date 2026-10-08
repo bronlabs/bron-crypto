@@ -17,9 +17,9 @@ import (
 // in once before: a first-past-the-post race between workers favoured primes
 // whose BPSW/Lucas verification ran faster (value-dependent via the Lucas
 // D-parameter search), skewing residue classes mod 5 by ±4% — about +2.5σ on
-// this statistic per run. Resolving successes in canonical sampling order
-// (see run) fixed it; this test keeps it fixed. The 5σ gate keeps the
-// false-failure rate below 1 in 10^6.
+// the per-prime statistic per run. Resolving successes in canonical sampling
+// order (see run) fixed it. A separate mod-5 statistic below targets that
+// residue bias, which the per-prime 5σ gate alone has little power to detect.
 func TestGenerate_SafeUniformityChiSquared(t *testing.T) {
 	if testing.Short() {
 		t.Skip("statistical test, ~20s")
@@ -55,4 +55,22 @@ func TestGenerate_SafeUniformityChiSquared(t *testing.T) {
 	df := float64(k - 1)
 	z := (chi - df) / math.Sqrt(2*df)
 	require.Less(t, math.Abs(z), 5.0, "chi-squared rejects uniformity: chi2=%.1f df=%.0f z=%+.2f", chi, df, z)
+
+	// Safe primes here occupy residues 2, 3 and 4 modulo 5. Their finite
+	// population sizes differ, so derive expectations from the enumeration.
+	var population, observed [5]int
+	for q, count := range counts {
+		population[q%5]++
+		observed[q%5] += count
+	}
+	residueChi := 0.0
+	for residue := 2; residue < 5; residue++ {
+		expected := float64(samples) * float64(population[residue]) / float64(k)
+		d := float64(observed[residue]) - expected
+		residueChi += d * d / expected
+	}
+	// For three bins (two degrees of freedom), the chi-squared upper tail
+	// is exp(-x/2). Use its 1e-7 upper-tail cutoff, not a normal z-score.
+	cutoff := -2 * math.Log(1e-7)
+	require.Less(t, residueChi, cutoff, "mod-5 residue bias: chi2=%.2f counts=%v", residueChi, observed)
 }

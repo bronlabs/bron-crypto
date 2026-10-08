@@ -57,8 +57,8 @@ func SampleSafePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOr
 // gives canonical square roots, while gcd(N, φ(N)) = 1 is what makes the
 // map x ↦ x^N bijective on (Z/N²Z)* and is the soundness hinge for
 // Π^{mod} / Π^{fac} proofs.
-// Note that we effectively skip gcd(N, φ(N)) = 1 check, because it will be reduntant
-// if p and q have the same bit length.
+// Equal-length primes imply gcd(N, φ(N)) = 1; the prime-pair generator also
+// checks it explicitly as defence-in-depth.
 // prng is read sequentially by a single goroutine; it must be safe for
 // concurrent use only when shared across concurrent sampling calls (e.g.
 // crypto/rand.Reader).

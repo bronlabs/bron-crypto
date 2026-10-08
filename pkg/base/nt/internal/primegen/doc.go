@@ -20,10 +20,10 @@
 // for Safe additionally q mod p ≠ 1 (else p divides (q−1)/2) and
 // q ≡ 3 (mod 4) (else (q−1)/2 is even). Rather than sampling random numbers
 // and trial-dividing, candidates are assembled from independently sampled
-// admissible residues via the Chinese Remainder Theorem — following the
-// constructive candidate generation of Clavier, Feix, Thierry & Paillier,
+// admissible residues via the Chinese Remainder Theorem — using the generic
+// CRT technique described by Clavier, Feix, Thierry & Paillier,
 // "Generating Provable Primes Efficiently on Embedded Devices" (PKC 2012),
-// Section 3 — so every candidate passes the CRT sieve by construction:
+// Section 2 — so every candidate passes the CRT sieve by construction:
 //
 //	q = (offset + Σᵢ rᵢ·basisᵢ mod m) + b·m,   m = 2Π or 4Π,  Π = Π pᵢ,
 //
@@ -32,7 +32,8 @@
 // it lies in [lo, 2^bits). Because (x, b) ↔ q is a bijection and every
 // component is uniform, accepted candidates are exactly uniform over the
 // admissible set — a superset of all class-C primes in range — and the
-// output is therefore exactly uniform over all class-C primes in range.
+// output, conditional on being prime, is therefore exactly uniform over all
+// class-C primes in range. Primality testing is probabilistic.
 // This deliberately replaces the Joye-Paillier safe-prime generator (CHES
 // 2006), whose quadratic-non-residue sieve loses ≈ 1 bit of output entropy
 // per sieve prime (audit finding TOB-BLCG-4).
@@ -48,8 +49,12 @@
 //
 // Survivors are tested with a two-stage strategy: BPSW (ProbablyPrime(0))
 // as the cheap filter — on (q−1)/2 first for Safe, since that rejects
-// almost all candidates — then the caller-supplied FIPS 186-5 Appendix C
-// Miller-Rabin round counts for the formal error bound.
+// almost all candidates — then ProbablyPrime with caller-supplied round counts.
+// The nt caller derives those counts from FIPS 186-5 Appendix C.1 with target
+// 2^(-base.StatisticalSecurityBits), currently 2^-80. This does not establish
+// FIPS conformance or a formal error bound here: Go derives the test bases
+// from the candidate rather than sampling them independently, and the C.1
+// analysis does not directly cover all our restricted candidate classes.
 //
 // The search is a pipeline: the calling goroutine reads all candidate
 // entropy from the PRNG sequentially and slices it into numbered fixed-size

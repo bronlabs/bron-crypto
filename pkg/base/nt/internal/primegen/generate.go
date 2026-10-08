@@ -17,9 +17,9 @@ import (
 	"github.com/bronlabs/errs-go/errs"
 )
 
-// Rounds carries the Miller-Rabin iteration counts (FIPS 186-5 Appendix C)
-// applied after the BPSW filter: Q rounds for the prime itself and — for
-// Safe only — Half rounds for (q−1)/2.
+// Rounds carries the ProbablyPrime arguments applied after the BPSW filter:
+// Q additional Miller-Rabin rounds for the prime itself and — for Safe only —
+// Half rounds for (q−1)/2. See the package documentation for error-bound limits.
 type Rounds struct {
 	Q    int
 	Half int
@@ -35,8 +35,8 @@ const jobBatch = 4
 
 // Generate samples a uniformly random prime of the given class with exactly
 // `bits` bits, restricted to [lo, 2^bits) when lo is non-nil (lo must then
-// have exactly `bits` bits itself). The output is exactly uniform over all
-// class-conformant primes in the range.
+// have exactly `bits` bits itself). Conditional on being prime, the output is
+// exactly uniform over all class-conformant primes in the range.
 //
 // prng is read sequentially by the calling goroutine only, so a single
 // generation call needs no concurrent-safe reader; a PRNG shared across
@@ -353,8 +353,9 @@ func (ps *params) tryCandidate(chunk []byte, lo *big.Int, rounds Rounds, s *scra
 	}
 
 	// Step 5: primality tests — BPSW (ProbablyPrime(0)) as the cheap filter,
-	// then the FIPS-derived Miller-Rabin counts for the formal 4^{-N}
-	// soundness bound. For Safe, (q−1)/2 = q >> 1 (q is odd) is tested
+	// then ProbablyPrime with the requested additional Miller-Rabin rounds.
+	// These calls do not establish an independent-random-base error bound;
+	// see the package documentation. For Safe, (q−1)/2 = q >> 1 is tested
 	// first: it rejects almost every candidate, so q's own tests almost
 	// never run.
 	if ps.class == Safe {

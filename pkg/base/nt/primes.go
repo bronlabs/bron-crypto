@@ -24,11 +24,13 @@ type PrimeSamplable[E algebra.NatPlusLike[E]] algebra.UnsignedNumericStructure[E
 // properties of any modulus built from a pair of such primes.
 type PrimeSampler[E algebra.NatPlusLike[E]] func(set PrimeSamplable[E], bits uint, prng io.Reader) (E, error)
 
-// MillerRabinChecks returns the number of Miller-Rabin rounds appropriate for
-// primes of the given bit length. The table is indexed by bit length and
-// targets the standard false-acceptance bound for cryptographic primes; for
-// bit lengths below the smallest tabulated entry it falls back to a floor of
-// StatisticalSecurityBits/4 rounds to preserve the security parameter.
+// MillerRabinChecks returns a Miller-Rabin round count derived from FIPS 186-5
+// Appendix C.1 with target 2^(-base.StatisticalSecurityBits). The lookup uses
+// the largest tabulated bit length not exceeding bits; below the first entry
+// it uses at least that entry's count and StatisticalSecurityBits/4 rounds.
+// These counts do not establish FIPS conformance or a formal error bound for
+// Go's ProbablyPrime, whose bases are derived from the candidate rather than
+// sampled independently, or for the restricted candidate classes used here.
 func MillerRabinChecks(bits uint) int {
 	if len(millerRabinIterations) == 0 {
 		panic("millerRabinIterations is not initialised")
@@ -62,6 +64,10 @@ func MillerRabinChecks(bits uint) int {
 // crypto/rand.Prime, which sets the top two bits and is therefore NOT
 // uniform over the full range.
 //
+// Unlike the previous RSA-based generator, this does not restrict primes to
+// the upper part of the interval. Use GeneratePrimePair when the product of
+// two primes must have exactly the requested number of bits.
+//
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
 // (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
@@ -74,7 +80,7 @@ func GeneratePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, p
 	}
 	if bits < primegen.MinBits {
 		// Below the sieve minimum: fall back to crypto/rand.Prime with the
-		// FIPS-count Miller-Rabin double check.
+		// MillerRabinChecks double check.
 		p, err := tinyPrime(bits, prng)
 		if err != nil {
 			return *new(E), errs.Wrap(err).WithMessage("failed to generate prime")
@@ -97,7 +103,8 @@ func GeneratePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uint, p
 // pair and do not apply to this exponent-less API. No further structural
 // constraint (such as p ≡ 3 mod 4 or (p−1)/2 prime) is imposed. Below the
 // sieve minimum (keyLen < 32, test-only sizes) the crypto/rand.Prime
-// fallback applies — see GeneratePrime.
+// fallback applies — see GeneratePrime. keyLen must be even and at least 10;
+// smaller lengths cannot provide two distinct primes satisfying the bound.
 //
 // prng is read sequentially by the calling goroutine only; it must be safe
 // for concurrent use just when shared across concurrent generation calls
@@ -113,6 +120,9 @@ func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], keyLen u
 		}
 		if keyLen%2 != 0 {
 			return nilN, nilN, ErrInvalidArgument.WithMessage("keyLen must be even")
+		}
+		if keyLen < 10 {
+			return nilN, nilN, ErrInvalidArgument.WithMessage("prime pair size must be at least 10 bits")
 		}
 		return generateTinyPrimePair(set, keyLen, prng)
 	}
@@ -136,7 +146,7 @@ func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 		return *new(E), ErrIsNil.WithMessage("nil prng")
 	}
 	if bits < primegen.MinBits {
-		return *new(E), ErrInvalidArgument.WithMessage("blum prime size must be at least 16-bits")
+		return *new(E), ErrInvalidArgument.WithMessage("blum prime size must be at least %d bits", primegen.MinBits)
 	}
 	p, err := primegen.Generate(primegen.Blum, bits, nil, testRounds(bits), prng)
 	if err != nil {
@@ -158,7 +168,7 @@ func GenerateBlumPrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 // (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GenerateBlumPrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyLen uint, prng io.Reader) (p, q E, err error) {
 	if keyLen < 2*primegen.MinBits {
-		return *new(E), *new(E), ErrInvalidArgument.WithMessage("blum prime pair size must be at least 32-bits")
+		return *new(E), *new(E), ErrInvalidArgument.WithMessage("blum prime pair size must be at least %d bits", 2*primegen.MinBits)
 	}
 	return generatePair(set, primegen.Blum, keyLen, prng)
 }
@@ -183,7 +193,7 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 		return *new(E), ErrIsNil.WithMessage("nil prng")
 	}
 	if bits < primegen.MinBits {
-		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least 16-bits")
+		return *new(E), ErrInvalidArgument.WithMessage("safe prime size must be at least %d bits", primegen.MinBits)
 	}
 	p, err := primegen.Generate(primegen.Safe, bits, nil, testRounds(bits), prng)
 	if err != nil {
@@ -204,13 +214,13 @@ func GenerateSafePrime[E algebra.NatPlusLike[E]](set PrimeSamplable[E], bits uin
 // (crypto/rand.Reader is; prng.NewThreadSafeReader wraps one that isn't).
 func GenerateSafePrimePair[E algebra.NatPlusLike[E]](set PrimeSamplable[E], keyLen uint, prng io.Reader) (p, q E, err error) {
 	if keyLen < 2*primegen.MinBits {
-		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least 32-bits")
+		return *new(E), *new(E), ErrInvalidArgument.WithMessage("safe prime pair size must be at least %d bits", 2*primegen.MinBits)
 	}
 	return generatePair(set, primegen.Safe, keyLen, prng)
 }
 
-// testRounds returns the FIPS 186-5 Appendix C Miller-Rabin round counts for
-// a prime of the given bit length: Q for the prime itself and Half for its
+// testRounds returns MillerRabinChecks counts for a prime of the given
+// bit length: Q for the prime itself and Half for its
 // Sophie-Germain half (q−1)/2, which has one bit fewer. Half is consumed
 // only by the Safe class.
 func testRounds(bits uint) primegen.Rounds {
@@ -281,7 +291,7 @@ func fipsPairLowerBound(keyLen uint) *big.Int {
 }
 
 // tinyPrime samples a prime below the sieve minimum via crypto/rand.Prime,
-// double-checked with the FIPS-count Miller-Rabin rounds.
+// double-checked with MillerRabinChecks rounds.
 func tinyPrime(bits uint, prng io.Reader) (*big.Int, error) {
 	checks := MillerRabinChecks(bits)
 	for {

@@ -51,11 +51,16 @@ func TestGenerate_LowerBound(t *testing.T) {
 	if new(big.Int).Mul(lo, lo).Cmp(x) < 0 {
 		lo.Add(lo, big.NewInt(1))
 	}
-	for range 8 {
-		q, err := Generate(Plain, bits, lo, testRoundsFor(bits), pcg.NewRandomised())
-		require.NoError(t, err)
-		require.Equal(t, bits, q.BitLen())
-		require.GreaterOrEqual(t, q.Cmp(lo), 0)
+	for name, class := range map[string]Class{"plain": Plain, "blum": Blum, "safe": Safe} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for range 8 {
+				q, err := Generate(class, bits, lo, testRoundsFor(bits), pcg.NewRandomised())
+				require.NoError(t, err)
+				require.Equal(t, bits, q.BitLen())
+				require.GreaterOrEqual(t, q.Cmp(lo), 0)
+			}
+		})
 	}
 }
 
@@ -69,24 +74,35 @@ func TestGeneratePair(t *testing.T) {
 	if new(big.Int).Mul(lo, lo).Cmp(x) < 0 {
 		lo.Add(lo, big.NewInt(1))
 	}
-	p, q, err := GeneratePair(Plain, bits, lo, testRoundsFor(bits), pcg.NewRandomised())
-	require.NoError(t, err)
-	require.NotEqual(t, 0, p.Cmp(q))
-	for _, prime := range []*big.Int{p, q} {
-		require.Equal(t, bits, prime.BitLen())
-		require.True(t, prime.ProbablyPrime(40))
-		require.GreaterOrEqual(t, prime.Cmp(lo), 0)
+	for name, class := range map[string]Class{"plain": Plain, "blum": Blum, "safe": Safe} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			p, q, err := GeneratePair(class, bits, lo, testRoundsFor(bits), pcg.NewRandomised())
+			require.NoError(t, err)
+			require.NotEqual(t, 0, p.Cmp(q))
+			for _, prime := range []*big.Int{p, q} {
+				require.Equal(t, bits, prime.BitLen())
+				require.True(t, prime.ProbablyPrime(40))
+				require.GreaterOrEqual(t, prime.Cmp(lo), 0)
+				if class == Blum || class == Safe {
+					require.Equal(t, uint64(3), prime.Uint64()&3)
+				}
+				if class == Safe {
+					require.True(t, new(big.Int).Rsh(prime, 1).ProbablyPrime(40))
+				}
+			}
+			// FIPS 186-5 A.1.1 2(d): |p−q| > 2^(bits−100), strictly.
+			diff := new(big.Int).Sub(p, q)
+			require.Equal(t, 1, diff.Abs(diff).Cmp(new(big.Int).Lsh(big.NewInt(1), bits-100)))
+			// The lower bound makes the modulus bit length exact.
+			require.Equal(t, 2*bits, new(big.Int).Mul(p, q).BitLen())
+			// gcd(N, φ(N)) = 1 — Paillier / Π^mod precondition, enforced by the
+			// pair collector (and automatic for equal-length primes).
+			n := new(big.Int).Mul(p, q)
+			phi := new(big.Int).Mul(new(big.Int).Sub(p, big.NewInt(1)), new(big.Int).Sub(q, big.NewInt(1)))
+			require.Equal(t, 0, new(big.Int).GCD(nil, nil, n, phi).Cmp(big.NewInt(1)))
+		})
 	}
-	// FIPS 186-5 A.1.1 2(d): |p−q| > 2^(bits−100), strictly.
-	diff := new(big.Int).Sub(p, q)
-	require.Equal(t, 1, diff.Abs(diff).Cmp(new(big.Int).Lsh(big.NewInt(1), bits-100)))
-	// The lower bound makes the modulus bit length exact.
-	require.Equal(t, 2*bits, new(big.Int).Mul(p, q).BitLen())
-	// gcd(N, φ(N)) = 1 — Paillier / Π^mod precondition, enforced by the
-	// pair collector (and automatic for equal-length primes).
-	n := new(big.Int).Mul(p, q)
-	phi := new(big.Int).Mul(new(big.Int).Sub(p, big.NewInt(1)), new(big.Int).Sub(q, big.NewInt(1)))
-	require.Equal(t, 0, new(big.Int).GCD(nil, nil, n, phi).Cmp(big.NewInt(1)))
 }
 
 // TestPairFilter_DistanceBoundary pins the strictness of the FIPS 186-5
