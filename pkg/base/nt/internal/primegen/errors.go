@@ -2,8 +2,6 @@ package primegen
 
 import "github.com/bronlabs/errs-go/errs"
 
-// The nt package aliases these sentinels so callers can identify failures
-// originating at either layer through errs.Is.
 var (
 	// ErrInvalidArgument reports a structurally invalid request: bit length
 	// below MinBits, a malformed lower bound, a bad class, or missing
