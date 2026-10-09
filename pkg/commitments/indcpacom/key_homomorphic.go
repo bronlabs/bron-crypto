@@ -46,7 +46,7 @@ type HomomorphicCommitmentKey[
 // WitnessOp combines nonces with the encryption scheme's nonce operation. The
 // result is the witness that opens the CommitmentOp of the corresponding
 // commitments.
-func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) WitnessOp(first, second *Witness[N], rest ...*Witness[N]) (*Witness[N], error) {
+func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) WitnessOp(first, second *Witness[N], rest ...*Witness[N]) (*Witness[N], error) { //nolint:dupl // mirrors MessageOp and CommitmentOp over a different type; a generic helper would be too complicated.
 	if first == nil || second == nil {
 		return nil, commitments.ErrIsNil.WithMessage("first and second witnesses must not be nil")
 	}
@@ -100,7 +100,7 @@ func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) WitnessScalarOp(w *Witness[N]
 
 // MessageOp combines plaintexts with the encryption scheme's plaintext operation;
 // a commitment to the result equals the CommitmentOp of the individual commitments.
-func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) MessageOp(first, second *Message[P], rest ...*Message[P]) (*Message[P], error) {
+func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) MessageOp(first, second *Message[P], rest ...*Message[P]) (*Message[P], error) { //nolint:dupl // mirrors WitnessOp and CommitmentOp over a different type; a generic helper would be too complicated.
 	if first == nil || second == nil {
 		return nil, commitments.ErrIsNil.WithMessage("first and second messages must not be nil")
 	}
@@ -153,7 +153,7 @@ func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) MessageScalarOp(m *Message[P]
 
 // CommitmentOp combines commitments using the ciphertext homomorphism. The result
 // is a commitment to the combined message under the combined nonce.
-func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) CommitmentOp(first, second *Commitment[C], rest ...*Commitment[C]) (*Commitment[C], error) {
+func (k *HomomorphicCommitmentKey[EK, P, N, C, S]) CommitmentOp(first, second *Commitment[C], rest ...*Commitment[C]) (*Commitment[C], error) { //nolint:dupl // mirrors WitnessOp and MessageOp over a different type; a generic helper would be too complicated.
 	if first == nil || second == nil {
 		return nil, commitments.ErrIsNil.WithMessage("first and second commitments must not be nil")
 	}

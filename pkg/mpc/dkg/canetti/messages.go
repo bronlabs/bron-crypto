@@ -17,7 +17,7 @@ import (
 
 // Round1Broadcast carries the dealer's commitment digest for round 1.
 type Round1Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	V hashcom.Commitment
+	V hashcom.Commitment `cbor:"V"`
 }
 
 // Validate checks whether the round 1 broadcast is well formed.
@@ -35,11 +35,11 @@ func (m *Round1Broadcast[G, S]) Validate(*Participant[G, S], sharing.ID) error {
 // CommitmentMessage contains the dealer material opened in round 2 and later
 // used to derive the common challenge and verify the proof of knowledge.
 type CommitmentMessage[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	SessionID network.SID
-	SharingID sharing.ID
-	Rho       []byte
-	X         *feldman.VerificationVector[G, S]
-	A         *batch_schnorr.Commitment[G, S]
+	SessionID network.SID                       `cbor:"SessionID"`
+	SharingID sharing.ID                        `cbor:"SharingID"`
+	Rho       []byte                            `cbor:"Rho"`
+	X         *feldman.VerificationVector[G, S] `cbor:"X"`
+	A         *batch_schnorr.Commitment[G, S]   `cbor:"A"`
 }
 
 func (m *CommitmentMessage[G, S]) Bytes() []byte {
@@ -58,8 +58,8 @@ func (m *CommitmentMessage[G, S]) Bytes() []byte {
 
 // Round2Broadcast opens the sender's round 1 commitment.
 type Round2Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	Message *CommitmentMessage[G, S]
-	U       hashcom.Witness
+	Message *CommitmentMessage[G, S] `cbor:"Message"`
+	U       hashcom.Witness          `cbor:"U"`
 }
 
 // Validate checks whether the round 2 broadcast is well formed for the local
@@ -102,7 +102,7 @@ func (m *Round2Broadcast[G, S]) Validate(p *Participant[G, S], senderID sharing.
 
 // Round2P2P carries the sender's private share for the receiver.
 type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	Share *kw.Share[S]
+	Share *kw.Share[S] `cbor:"Share"`
 }
 
 // Validate checks whether the round 2 unicast targets the local participant.
@@ -119,7 +119,7 @@ func (m *Round2P2P[G, S]) Validate(p *Participant[G, S], _ sharing.ID) error {
 
 // Round3Broadcast carries the sender's batch Schnorr response.
 type Round3Broadcast[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	Psi *zkmodule.Proof[*batch_schnorr.Commitment[G, S], *batch_schnorr.Response[S]]
+	Psi *zkmodule.Proof[*batch_schnorr.Commitment[G, S], *batch_schnorr.Response[S]] `cbor:"Psi"`
 }
 
 // Validate checks whether the round 3 broadcast is well formed.

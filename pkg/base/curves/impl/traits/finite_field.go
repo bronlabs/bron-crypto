@@ -101,7 +101,7 @@ func (f *FiniteFieldTrait[FP, WP, W]) OpIdentity() WP {
 
 // FiniteFieldElementTrait implements common arithmetic operations for elements.
 type FiniteFieldElementTrait[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any, WP FiniteFieldElementWrapperPtrConstraint[FP, W], W any] struct {
-	V F
+	V F `cbor:"V"`
 }
 
 // Fp returns the underlying field element pointer.

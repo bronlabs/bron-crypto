@@ -57,16 +57,16 @@ var _ sigma.Commitment = (Commitment[sigma.Commitment])(nil)
 // is the "true" branch and the simulated responses for false branches.
 type State[S sigma.State, Z sigma.Response] struct {
 	// B is the index of the branch for which the prover knows a valid witness.
-	B uint
+	B uint `cbor:"B"`
 	// S contains the prover states for each branch. Only S[B] is meaningful;
 	// other entries are zero values since those branches are simulated.
-	S []S
+	S []S `cbor:"S"`
 	// E contains the random challenges used for simulating false branches.
 	// E[i] is the challenge used for branch i when i != B. E[B] is unused.
-	E [][]byte
+	E [][]byte `cbor:"E"`
 	// Z contains the simulated responses for false branches.
 	// Z[i] is the simulated response for branch i when i != B. Z[B] is unused.
-	Z []Z
+	Z []Z `cbor:"Z"`
 }
 
 var _ sigma.State = (*State[sigma.State, sigma.Response])(nil)
@@ -76,10 +76,10 @@ var _ sigma.State = (*State[sigma.State, sigma.Response])(nil)
 type Response[Z sigma.Response] struct {
 	// E contains the challenges for each branch. These satisfy the constraint:
 	// E[0] XOR E[1] XOR ... XOR E[n-1] = verifier's challenge.
-	E [][]byte
+	E [][]byte `cbor:"E"`
 	// Z contains the responses for each branch. For the true branch, this is
 	// computed honestly; for false branches, these are simulated responses.
-	Z []Z
+	Z []Z `cbor:"Z"`
 }
 
 // Bytes returns the canonical byte representation of the response.

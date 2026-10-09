@@ -1,6 +1,6 @@
 module github.com/bronlabs/bron-crypto
 
-go 1.26
+go 1.27
 
 require (
 	github.com/bronlabs/errs-go v0.2.2

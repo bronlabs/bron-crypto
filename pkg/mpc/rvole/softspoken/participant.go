@@ -83,7 +83,7 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 }
 
 // NewAlice returns a new Alice participant.
-func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader) (*Alice[P, B, S], error) {
+func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader) (*Alice[P, B, S], error) { //nolint:dupl // mirrors NewBob: the sender and receiver constructors are intentionally symmetric.
 	p, err := newParticipant(ctx, suite, prng, 2)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
@@ -112,7 +112,7 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 }
 
 // NewBob returns a new Bob participant.
-func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader) (*Bob[P, B, S], error) {
+func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader) (*Bob[P, B, S], error) { //nolint:dupl // mirrors NewAlice: the sender and receiver constructors are intentionally symmetric.
 	p, err := newParticipant(ctx, suite, prng, 1)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")

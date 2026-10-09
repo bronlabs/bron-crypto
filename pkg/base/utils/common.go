@@ -26,7 +26,7 @@ func IsNil[T any](v T) bool {
 		return true
 	}
 	switch val.Kind() { //nolint:exhaustive // only types that can be nil are checked
-	case reflect.Ptr, reflect.Interface, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func:
+	case reflect.Pointer, reflect.Interface, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func:
 		return val.IsNil()
 	default:
 		return false
