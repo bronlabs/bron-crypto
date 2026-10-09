@@ -27,7 +27,7 @@ import (
 // so signing can convert it for the selected quorum. The dealer is trusted;
 // this path does not produce the DKG package's LP or LPDL proofs. In production,
 // keyLen must be at least base.IFCKeyLength and prng must be cryptographically
-// secure.
+// secure; it is read sequentially.
 func DealRandom[
 	P curves.Point[P, B, S],
 	B algebra.PrimeFieldElement[B],

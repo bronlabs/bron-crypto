@@ -1,6 +1,6 @@
 module github.com/bronlabs/bron-crypto/tools/secparams-codegen
 
-go 1.26
+go 1.27
 
 require github.com/testcontainers/testcontainers-go v0.40.0
 

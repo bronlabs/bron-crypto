@@ -89,7 +89,7 @@ func (sk *PrivateKey[P, B, S]) ToElliptic() (*nativeEcdsa.PrivateKey, error) {
 	}
 	nativeSk := &nativeEcdsa.PrivateKey{
 		PublicKey: *nativePk,
-		D:         sk.sk.Cardinal().Big(),
+		D:         sk.sk.Cardinal().Big(), //nolint:staticcheck // ParseRawPrivateKey rejects non-NIST curves (secp256k1, Pasta)
 	}
 
 	return nativeSk, nil

@@ -1,6 +1,6 @@
 module github.com/bronlabs/bron-crypto/tools/field-codegen
 
-go 1.26
+go 1.27
 
 require (
 	github.com/mmcloughlin/addchain v0.4.0

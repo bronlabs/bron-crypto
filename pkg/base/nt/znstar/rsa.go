@@ -19,6 +19,9 @@ import (
 // length is imposed on p, q; callers that need safe primes, Blum primes,
 // or Paillier-Blum moduli should use SampleSafeRSAGroup,
 // SampleBlumRSAGroup, or SamplePaillierBlumGroup respectively.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
@@ -37,6 +40,9 @@ func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 // except with negligible probability, and (c) makes the discrete logarithm
 // problem in QR_N plausibly hard. This is the group underlying the
 // CGGMP21 ring-Pedersen CRS.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleSafeRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
@@ -53,6 +59,9 @@ func SampleSafeRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error
 // with Jacobi symbol +1, so the four square roots of any QR split into
 // two "sign"-paired cosets of QR_N — which is exactly the structure
 // exploited by Paillier-Blum proofs and Rabin-style commitments.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleBlumRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, ErrIsNil.WithMessage("prng")
