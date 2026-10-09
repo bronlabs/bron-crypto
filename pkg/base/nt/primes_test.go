@@ -150,6 +150,8 @@ func TestPrimePairGenerator_InvalidKeyLength(t *testing.T) {
 
 func TestPrimePairGenerator_Blum(t *testing.T) {
 	t.Parallel()
+	four, err := num.NPlus().FromUint64(4)
+	require.NoError(t, err)
 
 	const keyLen = 256
 	p, q, err := GenerateBlumPrimePair(num.NPlus(), keyLen, pcg.NewRandomised())
@@ -158,7 +160,7 @@ func TestPrimePairGenerator_Blum(t *testing.T) {
 	for _, prime := range []*num.NatPlus{p, q} {
 		require.True(t, prime.IsProbablyPrime())
 		require.Equal(t, keyLen/2, prime.AnnouncedLen())
-		require.Equal(t, uint64(3), prime.Big().Uint64()&3)
+		require.Equal(t, uint64(3), prime.Mod(four).Nat().Uint64())
 		require.GreaterOrEqual(t, prime.Big().Cmp(fipsPairLowerBound(keyLen)), 0)
 	}
 	require.Equal(t, keyLen, p.Mul(q).AnnouncedLen())
