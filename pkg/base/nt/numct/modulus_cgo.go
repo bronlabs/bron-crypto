@@ -73,9 +73,10 @@ func (m *Modulus) cacheMont() {
 }
 
 func (m *Modulus) ensureMont() {
-	if m.mont != nil {
-		return
-	}
+	// No fast-path nil check here: reading m.mont unsynchronised races the
+	// write in cacheMont when two goroutines share the modulus. sync.Once
+	// already provides an atomic fast path and the happens-before edge that
+	// makes the m.mont write visible.
 	m.once.Do(func() { m.cacheMont() })
 }
 

@@ -331,12 +331,12 @@ func TestSignatureO1jsVector(t *testing.T) {
 	require.NoError(t, err)
 	sig, err := signer.Sign(msg)
 	require.NoError(t, err)
-	serialized, err := mina.SerializeSignature(sig)
+	serialised, err := mina.SerializeSignature(sig)
 	require.NoError(t, err)
 
-	// The serialized signature must match o1js signFieldElement byte-for-byte
+	// The serialised signature must match o1js signFieldElement byte-for-byte
 	const expected = "2c7344f8ef01bfabb9c7c5cebe90d22beca036ff677400185c44f380d3e032170c9050c1990344dfaecc418e9ea6a3fcd5a95deabbadb1d25e3fcba5f37dc826"
-	require.Equal(t, expected, hex.EncodeToString(serialized))
+	require.Equal(t, expected, hex.EncodeToString(serialised))
 
 	t.Log("✓ Signature matches the o1js field-element vector")
 }
@@ -369,7 +369,7 @@ func TestSignatureO1jsPackedInputVector(t *testing.T) {
 	t.Log("✓ Signature matches the o1js packed-input vector")
 }
 
-// TestLegacyAndDefaultSignaturesDoNotCrossVerify verifies flavor separation.
+// TestLegacyAndDefaultSignaturesDoNotCrossVerify verifies flavour separation.
 func TestLegacyAndDefaultSignaturesDoNotCrossVerify(t *testing.T) {
 	t.Parallel()
 	// Create a shared private key and field message
@@ -428,9 +428,9 @@ func TestDevNetEqualsTestNet(t *testing.T) {
 		require.NoError(t, err)
 		sig, err := signer.Sign(msg)
 		require.NoError(t, err)
-		serialized, err := mina.SerializeSignature(sig)
+		serialised, err := mina.SerializeSignature(sig)
 		require.NoError(t, err)
-		return serialized
+		return serialised
 	}
 
 	// o1js treats devnet and testnet as the same signature domain

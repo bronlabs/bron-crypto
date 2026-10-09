@@ -49,11 +49,11 @@ func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, e
 		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	return &Variant{
-		nid:    nid,
-		sk:     privateKey,
-		prng:   nil,
-		msg:    nil,
-		flavor: signatureFlavorDefault,
+		nid:     nid,
+		sk:      privateKey,
+		prng:    nil,
+		msg:     nil,
+		flavour: signatureFlavorDefault,
 	}, nil
 }
 
@@ -65,11 +65,11 @@ func NewLegacyDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Vari
 		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	return &Variant{
-		nid:    nid,
-		sk:     privateKey,
-		prng:   nil,
-		msg:    nil,
-		flavor: signatureFlavorLegacy,
+		nid:     nid,
+		sk:      privateKey,
+		prng:    nil,
+		msg:     nil,
+		flavour: signatureFlavorLegacy,
 	}, nil
 }
 
@@ -80,11 +80,11 @@ func NewRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
 		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return &Variant{
-		nid:    nid,
-		sk:     nil,
-		prng:   prng,
-		msg:    nil,
-		flavor: signatureFlavorDefault,
+		nid:     nid,
+		sk:      nil,
+		prng:    prng,
+		msg:     nil,
+		flavour: signatureFlavorDefault,
 	}, nil
 }
 
@@ -95,11 +95,11 @@ func NewLegacyRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error)
 		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return &Variant{
-		nid:    nid,
-		sk:     nil,
-		prng:   prng,
-		msg:    nil,
-		flavor: signatureFlavorLegacy,
+		nid:     nid,
+		sk:      nil,
+		prng:    prng,
+		msg:     nil,
+		flavour: signatureFlavorLegacy,
 	}, nil
 }
 
@@ -112,7 +112,7 @@ type Variant struct {
 	prng io.Reader   // PRNG for random nonce generation (nil for deterministic)
 	msg  *Message    // Message being signed (needed for deterministic nonce derivation)
 
-	flavor signatureFlavor
+	flavour signatureFlavor
 }
 
 // Type returns the variant identifier "mina".
@@ -122,15 +122,15 @@ func (*Variant) Type() schnorrlike.VariantType {
 
 // HashFunc returns the Poseidon hash function constructor for challenge computation.
 func (v *Variant) HashFunc() func() hash.Hash {
-	if v.flavor == signatureFlavorLegacy {
+	if v.flavour == signatureFlavorLegacy {
 		return legacyHashFunc
 	}
 	return hashFunc
 }
 
-// newPoseidon creates the Poseidon instance selected by the signature flavor.
+// newPoseidon creates the Poseidon instance selected by the signature flavour.
 func (v *Variant) newPoseidon() *poseidon.Poseidon {
-	if v.flavor == signatureFlavorLegacy {
+	if v.flavour == signatureFlavorLegacy {
 		return poseidon.NewLegacy()
 	}
 	return poseidon.NewKimchi()
@@ -419,7 +419,7 @@ func scalarTo255Bits(scalar *Scalar) []bool {
 // The nonce is adjusted to ensure R has an even y-coordinate.
 func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
 	if v.IsDeterministic() {
-		if v.flavor == signatureFlavorLegacy {
+		if v.flavour == signatureFlavorLegacy {
 			k, err = v.deriveNonceLegacy()
 		} else {
 			k, err = v.deriveNonce()
@@ -471,7 +471,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	input.AddFields(pkx, pky, ncx)
 	prefix := SignaturePrefix(v.nid)
 	var packed []*pasta.PallasBaseFieldElement
-	if v.flavor == signatureFlavorLegacy {
+	if v.flavour == signatureFlavorLegacy {
 		packed, err = input.PackToFields()
 	} else {
 		packed, err = packToFields(input)

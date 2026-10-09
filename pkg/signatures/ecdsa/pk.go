@@ -92,8 +92,8 @@ func (pk *PublicKey[P, B, S]) ToElliptic() (*nativeEcdsa.PublicKey, error) {
 	nativeY := affineY.Cardinal().Big()
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
-		X:     nativeX,
-		Y:     nativeY,
+		X:     nativeX, //nolint:staticcheck // ParseUncompressedPublicKey rejects non-NIST curves (secp256k1, Pasta)
+		Y:     nativeY, //nolint:staticcheck // ParseUncompressedPublicKey rejects non-NIST curves (secp256k1, Pasta)
 	}
 	return nativePublicKey, nil
 }

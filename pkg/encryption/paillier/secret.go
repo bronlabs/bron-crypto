@@ -24,6 +24,9 @@ import (
 // SampleSecretKey generates a fresh Paillier key pair with a keyLen-bit modulus
 // N = p·q from two random primes. The factorisation (p, q) is the decryption
 // trapdoor and stays secret; prng must be a cryptographically secure source.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SamplePaillierGroup(keyLen, prng)
 	if err != nil {
@@ -39,6 +42,9 @@ func SampleSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 // SampleBlumSecretKey is like SampleSecretKey but draws a Blum modulus (p ≡ q ≡ 3
 // mod 4), as required by several zero-knowledge proofs over a Paillier modulus
 // (e.g. Paillier-Blum modulus / square-freeness proofs).
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleBlumSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SamplePaillierBlumGroup(keyLen, prng)
 	if err != nil {
@@ -54,6 +60,9 @@ func SampleBlumSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 // SampleSafeSecretKey is like SampleSecretKey but uses safe primes (p = 2p′+1,
 // q = 2q′+1), which some protocols require so that QR_N is cyclic of prime-ish
 // order for their soundness/setup assumptions.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleSafeSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SampleSafePaillierGroup(keyLen, prng)
 	if err != nil {

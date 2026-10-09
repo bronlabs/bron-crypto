@@ -32,7 +32,7 @@ func TestNewDeterministicVariant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.True(t, v.IsDeterministic())
-		require.Equal(t, signatureFlavorDefault, v.flavor)
+		require.Equal(t, signatureFlavorDefault, v.flavour)
 	})
 }
 
@@ -53,7 +53,7 @@ func TestNewRandomisedVariant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.False(t, v.IsDeterministic())
-		require.Equal(t, signatureFlavorDefault, v.flavor)
+		require.Equal(t, signatureFlavorDefault, v.flavour)
 	})
 }
 
@@ -77,7 +77,7 @@ func TestNewLegacyDeterministicVariant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.True(t, v.IsDeterministic())
-		require.Equal(t, signatureFlavorLegacy, v.flavor)
+		require.Equal(t, signatureFlavorLegacy, v.flavour)
 	})
 }
 
@@ -98,7 +98,7 @@ func TestNewLegacyRandomisedVariant(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 		require.False(t, v.IsDeterministic())
-		require.Equal(t, signatureFlavorLegacy, v.flavor)
+		require.Equal(t, signatureFlavorLegacy, v.flavour)
 	})
 }
 
