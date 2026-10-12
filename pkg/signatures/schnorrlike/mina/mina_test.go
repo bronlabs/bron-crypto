@@ -116,8 +116,7 @@ func TestLegacySchnorrDeterministicNonce(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create legacy deterministic scheme
-	scheme, err := mina.NewLegacyScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewLegacyScheme(mina.TestNet)
 
 	// Create two signers
 	signer1, err := scheme.Signer(privateKey)
@@ -249,8 +248,7 @@ func TestSchnorrDeterministicNonce(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create deterministic scheme
-	scheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewScheme(mina.TestNet)
 
 	// Create two signers
 	signer1, err := scheme.Signer(privateKey)
@@ -325,8 +323,7 @@ func TestSignatureO1jsVector(t *testing.T) {
 	msg.AddFields(pasta.NewPallasBaseField().FromUint64(42))
 
 	// Sign with the deterministic scheme
-	scheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewScheme(mina.TestNet)
 	signer, err := scheme.Signer(privateKey)
 	require.NoError(t, err)
 	sig, err := signer.Sign(msg)
@@ -353,8 +350,7 @@ func TestSignatureO1jsPackedInputVector(t *testing.T) {
 	msg.AddBits(true, false, true, true, false)
 
 	// Sign with the deterministic scheme
-	scheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewScheme(mina.TestNet)
 	signer, err := scheme.Signer(privateKey)
 	require.NoError(t, err)
 	sig, err := signer.Sign(msg)
@@ -379,16 +375,14 @@ func TestLegacyAndDefaultSignaturesDoNotCrossVerify(t *testing.T) {
 	msg.AddFields(pasta.NewPallasBaseField().FromUint64(42))
 
 	// Create a legacy signature
-	legacyScheme, err := mina.NewLegacyScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	legacyScheme := mina.NewLegacyScheme(mina.TestNet)
 	legacySigner, err := legacyScheme.Signer(privateKey)
 	require.NoError(t, err)
 	legacySignature, err := legacySigner.Sign(msg)
 	require.NoError(t, err)
 
 	// Create a default signature
-	defaultScheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	defaultScheme := mina.NewScheme(mina.TestNet)
 	defaultSigner, err := defaultScheme.Signer(privateKey)
 	require.NoError(t, err)
 	defaultSignature, err := defaultSigner.Sign(msg)
@@ -422,8 +416,7 @@ func TestDevNetEqualsTestNet(t *testing.T) {
 
 	// Sign the same message for testnet and devnet
 	sign := func(network mina.NetworkID) []byte {
-		scheme, err := mina.NewScheme(network, privateKey)
-		require.NoError(t, err)
+		scheme := mina.NewScheme(network)
 		signer, err := scheme.Signer(privateKey)
 		require.NoError(t, err)
 		sig, err := signer.Sign(msg)

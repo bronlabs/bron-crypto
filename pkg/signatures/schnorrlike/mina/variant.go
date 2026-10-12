@@ -41,77 +41,30 @@ var (
 	_ mpcschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, *Message] = (*Variant)(nil)
 )
 
-// NewDeterministicVariant creates a Mina variant with deterministic nonce derivation.
-// The nonce is derived from the private key, public key, and network ID using Blake2b,
-// following the default Mina/o1js implementation.
-func NewDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
-	if privateKey == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
-	}
+// NewVariant creates a Mina variant with o1js-compatible chunked input packing
+// and Kimchi Poseidon parameters. Signing inputs are supplied to its methods.
+func NewVariant(nid NetworkID) *Variant {
 	return &Variant{
 		nid:     nid,
-		sk:      privateKey,
-		prng:    nil,
-		msg:     nil,
 		flavour: signatureFlavorDefault,
-	}, nil
+	}
 }
 
-// NewLegacyDeterministicVariant creates a Mina variant with deterministic nonce derivation.
-// The nonce is derived from the private key, public key, and network ID using Blake2b,
-// following the legacy Mina/o1js implementation.
-func NewLegacyDeterministicVariant(nid NetworkID, privateKey *PrivateKey) (*Variant, error) {
-	if privateKey == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
-	}
+// NewLegacyVariant creates a Mina variant with legacy Mina/o1js input packing
+// and Poseidon parameters. Signing inputs are supplied to its methods.
+func NewLegacyVariant(nid NetworkID) *Variant {
 	return &Variant{
 		nid:     nid,
-		sk:      privateKey,
-		prng:    nil,
-		msg:     nil,
 		flavour: signatureFlavorLegacy,
-	}, nil
-}
-
-// NewRandomisedVariant creates a Mina variant with random nonce generation.
-// This is used for MPC/threshold signing where nonces are collaboratively generated.
-func NewRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
-	if prng == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
-	return &Variant{
-		nid:     nid,
-		sk:      nil,
-		prng:    prng,
-		msg:     nil,
-		flavour: signatureFlavorDefault,
-	}, nil
-}
-
-// NewLegacyRandomisedVariant creates a Mina variant with random nonce generation.
-// The variant uses legacy Mina/o1js Poseidon parameters for challenge computation.
-func NewLegacyRandomisedVariant(nid NetworkID, prng io.Reader) (*Variant, error) {
-	if prng == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
-	}
-	return &Variant{
-		nid:     nid,
-		sk:      nil,
-		prng:    prng,
-		msg:     nil,
-		flavour: signatureFlavorLegacy,
-	}, nil
 }
 
 // Variant implements Mina-specific signing behaviour.
 // It handles deterministic or random nonce generation, Poseidon-based challenge
 // computation, and the even-y constraint on the nonce commitment.
+// It contains only fixed network and algorithm settings and may be shared by signers.
 type Variant struct {
-	nid  NetworkID   // Network ID for domain separation (MainNet, TestNet, or custom)
-	sk   *PrivateKey // Private key for deterministic nonce derivation (nil for random)
-	prng io.Reader   // PRNG for random nonce generation (nil for deterministic)
-	msg  *Message    // Message being signed (needed for deterministic nonce derivation)
-
+	nid     NetworkID // Network ID for domain separation (MainNet, TestNet, or custom)
 	flavour signatureFlavor
 }
 
@@ -134,11 +87,6 @@ func (v *Variant) newPoseidon() *poseidon.Poseidon {
 		return poseidon.NewLegacy()
 	}
 	return poseidon.NewKimchi()
-}
-
-// IsDeterministic returns true if this variant uses deterministic nonce derivation.
-func (v *Variant) IsDeterministic() bool {
-	return v.sk != nil
 }
 
 // fieldTo255Bits converts a field element to 255 bits in LSB-first order.
@@ -182,23 +130,19 @@ func bitsToBytes(bits []bool) []byte {
 //  5. Clear top 2 bits of last byte (to ensure result < field modulus)
 //
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L249
-func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
-	if v.msg == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("message is nil for deterministic nonce derivation")
-	}
-
-	pkx, err := v.sk.PublicKey().V.AffineX()
+func (v *Variant) deriveNonceLegacy(privateKey *PrivateKey, message *Message) (*Scalar, error) {
+	pkx, err := privateKey.PublicKey().V.AffineX()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to get public key X coordinate")
 	}
-	pky, err := v.sk.PublicKey().V.AffineY()
+	pky, err := privateKey.PublicKey().V.AffineY()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to get public key Y coordinate")
 	}
 
 	// Convert private key to bits using Scalar.toBits()
 	// In o1js: let scalarBits = Scalar.toBits(privateKey)
-	scalarBits := scalarTo255Bits(v.sk.Value())
+	scalarBits := scalarTo255Bits(privateKey.Value())
 
 	// Get network ID as bits
 	// In o1js: let idBits = bytesToBits([Number(id)])
@@ -212,8 +156,8 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 
 	// Get message fields and bits separately
 	// o1js: let input = HashInputLegacy.append(message, { fields: [x, y], bits: [...scalarBits, ...idBits] })
-	msgFields := v.msg.Fields()
-	msgBits := v.msg.Bits()
+	msgFields := message.Fields()
+	msgBits := message.Bits()
 
 	// Build all bits using inputToBitsLegacy logic:
 	// fields.flatMap(f => f.toBits()) ++ bits
@@ -349,29 +293,25 @@ func packToFields(input *ROInput, extraPacked ...packedInput) ([]*pasta.PallasBa
 //  5. Clear the top 2 bits of the last byte to obtain a scalar field element.
 //
 // Reference: https://github.com/o1-labs/o1js/blob/cda4bce423960d877fe4f6c04feb32036a2e34b5/src/mina-signer/src/signature.ts
-func (v *Variant) deriveNonce() (*Scalar, error) {
-	if v.msg == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("message is nil for deterministic nonce derivation")
-	}
-
-	pkx, err := v.sk.PublicKey().V.AffineX()
+func (v *Variant) deriveNonce(privateKey *PrivateKey, message *Message) (*Scalar, error) {
+	pkx, err := privateKey.PublicKey().V.AffineX()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to get public key X coordinate")
 	}
-	pky, err := v.sk.PublicKey().V.AffineY()
+	pky, err := privateKey.PublicKey().V.AffineY()
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to get public key Y coordinate")
 	}
 	// Convert the private key from the scalar field to the base field.
 	// In o1js: let d = Field(privateKey)
-	d, err := pasta.NewPallasBaseField().FromBytesBEReduce(v.sk.Value().Bytes())
+	d, err := pasta.NewPallasBaseField().FromBytesBEReduce(privateKey.Value().Bytes())
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to reinterpret private key as base field")
 	}
 
 	// Build the HashInput:
 	// HashInput.append(message, { fields: [x, y, d], packed: [id] })
-	input := v.msg.Clone()
+	input := message.Clone()
 	input.AddFields(pkx, pky, d)
 	id, idBitLen := getNetworkIDHashInput(v.nid)
 	packed, err := packToFields(input, packedInput{value: id, bitLen: idBitLen})
@@ -415,17 +355,21 @@ func scalarTo255Bits(scalar *Scalar) []bool {
 }
 
 // ComputeNonceCommitment generates the nonce k and commitment R = k·G.
-// Uses deterministic derivation if a private key was provided, otherwise uses PRNG.
+// A nil prng selects deterministic derivation from privateKey and message.
+// A non-nil prng selects random sampling and does not use privateKey or message.
 // The nonce is adjusted to ensure R has an even y-coordinate.
-func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
-	if v.IsDeterministic() {
+func (v *Variant) ComputeNonceCommitment(privateKey *PrivateKey, message *Message, prng io.Reader) (R *GroupElement, k *Scalar, err error) {
+	if prng == nil {
+		if privateKey == nil || privateKey.Value() == nil || message == nil {
+			return nil, nil, signatures.ErrInvalidArgument.WithMessage("need both private key and message for deterministic nonce derivation")
+		}
 		if v.flavour == signatureFlavorLegacy {
-			k, err = v.deriveNonceLegacy()
+			k, err = v.deriveNonceLegacy(privateKey, message)
 		} else {
-			k, err = v.deriveNonce()
+			k, err = v.deriveNonce(privateKey, message)
 		}
 	} else {
-		k, err = algebrautils.RandomNonIdentity(sf, v.prng)
+		k, err = algebrautils.RandomNonIdentity(sf, prng)
 	}
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("failed to create scalar from bytes")
@@ -487,7 +431,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 }
 
 // ComputeResponse computes the Mina signature response: s = k + e·x mod n.
-func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
+func (*Variant) ComputeResponse(_ *GroupElement, privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("privateKeyValue, nonce and challenge must not be nil")
 	}

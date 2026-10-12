@@ -16,6 +16,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	dkgtu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
@@ -57,7 +58,7 @@ func doDKG(
 
 	participants := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
 	for id := range ac.Shareholders().Iter() {
-		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, pcg.NewRandomised())
+		p, err := gennaro.NewParticipant(ctxs[id], group, ac, fiatshamir.Name, prng.NewThreadSafeReader(pcg.NewRandomised()))
 		require.NoError(t, err)
 		participants[id] = p
 	}

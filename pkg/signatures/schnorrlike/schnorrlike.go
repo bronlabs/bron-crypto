@@ -71,6 +71,9 @@ type (
 //   - Challenge computation (hash function, input ordering, domain separation)
 //   - Response calculation (s = k + ex vs s = k - ex)
 //   - Signature serialisation format
+//
+// Variants must not retain keys, messages, nonces, or randomness sources between
+// calls. Only fixed algorithm configuration belongs on a variant.
 type Variant[GE GroupElement[GE, S], S Scalar[S], M Message] interface {
 	// Type returns the variant identifier (e.g., "bip340", "mina").
 	Type() VariantType
@@ -80,16 +83,21 @@ type Variant[GE GroupElement[GE, S], S Scalar[S], M Message] interface {
 
 	// ComputeNonceCommitment generates the nonce k and commitment R = k·G.
 	// The implementation may use deterministic derivation (BIP-340, Mina)
-	// or random sampling, and may enforce parity constraints on R.
-	ComputeNonceCommitment() (GE, S, error)
+	// or random sampling, and may enforce parity constraints on R. The key and
+	// message are explicit so nonce derivation cannot depend on another Sign call.
+	// The variant documents whether prng is required or may be nil.
+	ComputeNonceCommitment(privateKey *PrivateKey[GE, S], message M, prng io.Reader) (GE, S, error)
 
 	// ComputeChallenge computes the Fiat-Shamir challenge e = H(R || P || m).
 	// The exact hash function, input ordering, and domain separation vary by variant.
 	ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message M) (S, error)
 
 	// ComputeResponse computes the signature response s from the private key,
-	// nonce, and challenge. Typically s = k + e·x or s = k - e·x.
-	ComputeResponse(privateKeyValue, nonce, challenge S) (S, error)
+	// nonce, and challenge. Typically s = k + e·x or s = k - e·x. The public key
+	// determines any secret-key parity correction. For a partial response, pass
+	// the aggregate public key and the unadjusted secret share; the nonce must
+	// already have its required parity correction applied.
+	ComputeResponse(publicKeyValue GE, privateKeyValue, nonce, challenge S) (S, error)
 
 	// SerializeSignature encodes the signature to bytes in variant-specific format.
 	SerializeSignature(signature *Signature[GE, S]) ([]byte, error)
@@ -336,8 +344,8 @@ type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Me
 //
 // The signature verification step protects against fault attacks that might
 // produce invalid signatures leaking information about the private key.
-func (sg *SignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) {
-	R, k, err := sg.V.ComputeNonceCommitment()
+func (sg *SignerTrait[VR, GE, S, M]) Sign(message M, prng io.Reader) (*Signature[GE, S], error) {
+	R, k, err := sg.V.ComputeNonceCommitment(sg.Sk, message, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("R")
 	}
@@ -345,7 +353,7 @@ func (sg *SignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) 
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("e")
 	}
-	s, err := sg.V.ComputeResponse(sg.Sk.Value(), k, e)
+	s, err := sg.V.ComputeResponse(sg.Sk.PublicKey().Value(), sg.Sk.Value(), k, e)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute response")
 	}
