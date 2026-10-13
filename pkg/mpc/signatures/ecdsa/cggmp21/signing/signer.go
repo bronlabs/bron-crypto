@@ -32,6 +32,7 @@ const (
 	ringPedersenPublicKeyLabel = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_N_HAT"
 	sLabel                     = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_S"
 	tLabel                     = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_T"
+	proofLabel                 = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PROOF-LABEL"
 	proverID                   = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_PROVER-ID"
 )
 
