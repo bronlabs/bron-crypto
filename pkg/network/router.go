@@ -105,7 +105,7 @@ func (r *Router) ReceiveFrom(ctx context.Context, correlationID string, froms ..
 		}
 		message, err := serde.UnmarshalCBOR[routerMessage](serializedMessage)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to decode message")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, from).WithMessage("failed to decode message")
 		}
 
 		if message.CorrelationID == correlationID {
