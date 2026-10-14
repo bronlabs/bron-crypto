@@ -216,3 +216,48 @@ func TestRedAlertRoundOrder(t *testing.T) {
 	// Repeating round 2 must be rejected.
 	require.ErrorIs(t, redAlerts[1].Round2(redAlertIn[1]), cggmp21.ErrInvalidRound)
 }
+
+type k256RedAlertBroadcast = RedAlertBroadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
+
+// TestRedAlertSpuriousMapEntriesRejected checks that a red-alert broadcast whose maps carry an
+// entry for anyone other than a recipient is rejected, even when every recipient's entry is
+// present and well formed. The broadcast is hashed into the transcript, so it must be canonical.
+func TestRedAlertSpuriousMapEntriesRejected(t *testing.T) {
+	t.Parallel()
+
+	cosigners, signingIDs := runSigningToRedAlert(t)
+	redAlerts := map[sharing.ID]*RedAlertParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]{
+		1: newRedAlertNonce(cosigners[1]),
+		2: newRedAlertNonce(cosigners[2]),
+	}
+	redAlertOut := make(map[sharing.ID]*k256RedAlertBroadcast)
+	var err error
+	for _, id := range signingIDs {
+		redAlertOut[id], err = redAlerts[id].Round1()
+		require.NoError(t, err)
+	}
+
+	const sender, recipient, outsider sharing.ID = 1, 2, 99
+	honest := redAlertOut[sender]
+	require.NoError(t, honest.Validate(redAlerts[recipient], sender))
+
+	tampers := []struct {
+		name  string
+		apply func(m *k256RedAlertBroadcast)
+	}{
+		{"BigD keyed by sender", func(m *k256RedAlertBroadcast) { m.BigD[sender] = m.BigD[recipient] }},
+		{"BigF keyed by sender", func(m *k256RedAlertBroadcast) { m.BigF[sender] = m.BigF[recipient] }},
+		{"PhiJ keyed by sender", func(m *k256RedAlertBroadcast) { m.PhiJ[sender] = m.PhiJ[recipient] }},
+		{"BigD keyed by outsider", func(m *k256RedAlertBroadcast) { m.BigD[outsider] = m.BigD[recipient] }},
+	}
+	for _, tc := range tampers {
+		tampered := &k256RedAlertBroadcast{
+			BigD: cloneCiphertextMap(honest.BigD),
+			BigF: cloneCiphertextMap(honest.BigF),
+			Phi:  honest.Phi,
+			PhiJ: maps.Clone(honest.PhiJ),
+		}
+		tc.apply(tampered)
+		require.ErrorIs(t, tampered.Validate(redAlerts[recipient], sender), cggmp21.ErrValidationFailed, tc.name)
+	}
+}

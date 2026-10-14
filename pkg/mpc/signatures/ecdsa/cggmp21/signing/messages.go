@@ -193,6 +193,10 @@ type RedAlertBroadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 }
 
 // Validate checks a red-alert broadcast against the signing state and sender's public parameters.
+// It also enforces that the broadcast is canonical: each map holds exactly one entry per recipient,
+// i.e. per party other than the sender. Round2 serialises every accepted broadcast into the session
+// transcript, so an entry that is never verified would still be hashed; rejecting it here keeps the
+// transcript a function of the verified content only.
 func (a *RedAlertBroadcast[P, B, S]) Validate(p *RedAlertParticipant[P, B, S], sender sharing.ID) error {
 	if a == nil {
 		return cggmp21.ErrNil.WithMessage("red alert broadcast")
@@ -204,6 +208,12 @@ func (a *RedAlertBroadcast[P, B, S]) Validate(p *RedAlertParticipant[P, B, S], s
 		return cggmp21.ErrNil.WithMessage("red alert dec proof")
 	}
 	signer := p.cosigner()
+	// The loop below proves every recipient has an entry in each map; equal cardinality then proves
+	// nobody else does. Checked first so a spurious entry is rejected before any ciphertext is validated.
+	expectedEntries := signer.ctx.Quorum().Size() - 1
+	if len(a.BigD) != expectedEntries || len(a.BigF) != expectedEntries || len(a.PhiJ) != expectedEntries {
+		return cggmp21.ErrValidationFailed.WithMessage("red alert broadcast maps must hold exactly %d entries, one per recipient", expectedEntries)
+	}
 	senderPaillierPublicKey, err := paillierPublicKeyFor(signer, sender)
 	if err != nil {
 		return err
