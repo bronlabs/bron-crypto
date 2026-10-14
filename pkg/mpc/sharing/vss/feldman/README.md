@@ -51,5 +51,8 @@ recovered, _ := scheme.ReconstructAndVerify(V, share1, share2, ...)
 
 ## Reference
 
+<!-- paper: docs/papers/Fel87 -->
+<!-- paper: docs/papers/2024-031_20240321_154555.pdf -->
 - Feldman, P. "A Practical Scheme for Non-interactive Verifiable Secret Sharing." FOCS, 1987.
+<!-- paper: docs/papers/kw.pdf -->
 - Karchmer, M. and Wigderson, A. "On Span Programs." Structure in Complexity Theory Conference, 1993.

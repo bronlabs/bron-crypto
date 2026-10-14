@@ -19,4 +19,5 @@ Supports three algorithms to prevent rogue key attacks:
 - `signing` - Signing protocol with cosigners and aggregator
 
 ## Reference
+<!-- paper: docs/papers/boldyreva02.pdf -->
 - [B02]: [Threshold Signatures, Multisignatures and Blind Signatures Based on the Gap-Diffie-Hellman-Group Signature Scheme](https://link.springer.com/chapter/10.1007/3-540-36288-6_3)

@@ -27,5 +27,7 @@ When $m = 2$ with generators $(g, h)$, a Pedersen commitment $C = g^m \cdot h^r$
 
 ## References
 
+<!-- paper: docs/papers/Maurer09.pdf -->
 - [1] Maurer, U. [Unifying Zero-Knowledge Proofs of Knowledge](https://crypto-test.ethz.ch/publications/files/Maurer09.pdf). AFRICACRYPT 2009.
+<!-- paper: docs/papers/okamoto93.pdf -->
 - [2] Okamoto, T. [Provably Secure and Practical Identification Schemes and Corresponding Signature Schemes](https://link.springer.com/chapter/10.1007/3-540-48071-4_3). CRYPTO 1992.

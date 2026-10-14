@@ -102,5 +102,7 @@ Algorithm Reconstruct(ac, F, quorum Q, shares):
 
 This implementation follows the hierarchical sharing construction and constraints from:
 
+<!-- paper: docs/papers/2017-724_20170731_154337.pdf -->
 - G. Traverso, D. Demirel, J. Buchmann, *Dynamic and Verifiable Hierarchical Secret Sharing* ([IACR ePrint 2017/724](https://eprint.iacr.org/2017/724.pdf)).
+<!-- paper: docs/papers/htss.pdf -->
 - T. Tassa, Hierarchical Threshold Secret Sharing. ([J Cryptology 20, 237–264 (2007)](https://link.springer.com/article/10.1007/s00145-006-0334-8))
