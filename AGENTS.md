@@ -96,12 +96,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Spelling: pick one variant per file; British is common ("serialisation", "flavour"). Don't mix the symbol and message text (e.g., `ErrSerialization = errs.New("serialisation error")` is a smell).
 - All exported types/functions/methods need doc comments. Range checks, secret-handling, and side-channel notes belong in the comments, not external docs.
 - If there exist a constructor for a struct and one of its return types is an error, then it must be used everywhere except possibly in the tests, instead of manually initializing the struct.
-- Formal documentation: Some package's README.md files contain a **Reference** heading. The paper they are citing may be found in `.docs/` directory within that package. Read that. Warn if the `.docs/` directory is empty.
+- Formal documentation: Some package's README.md files contain a **Reference** heading. Under it, an HTML comment `<!-- paper: docs/papers/<file>.pdf [<section or figure>] -->` points at the cited paper. `docs/papers/` is a separate checkout of `bronlabs/bron-crypto-papers` at the repo root; it is gitignored and populated locally. Read that paper at the given locator. Warn if `docs/papers/` is missing or empty, or if a Reference heading has no pointer comment.
 
 ### Crypto-specific guardrails
 
 - Input validation in constructors, like range checks, are **not optional** — they often anchor a security reduction.
 - Deserialization (`UnmarshalCBOR`, custom decoders) MUST sanitize and validate; treat them as a trust boundary.
+- Cryptographic check enforcement cannot live in prover functions. `NewWitness`, `NewStatement`, `ValidateStatement`, prover-side constructors and helpers run only for an honest prover; a malicious prover skips them. Every property the protocol relies on must be checked by the verifier, or by the deserializer on the verifier's side. A check that exists only on the prover's side is not a check.
+- Implement a ZK proof as a single declarative relation (e.g. one Maurer homomorphism over the full witness vector). Do not express a relation whose components share a witness variable as an AND / Cartesian composition of independent sub-proofs: the compositions in `pkg/proofs/sigma/compose` do not share witness variables between sub-proofs, so the shared variable goes unverified.
 - Trapdoor / secret types must say so in their doc comment.
 - PRNG sources are explicit (`io.Reader` parameters); never default to `crypto/rand` silently inside helpers.
 - If the code is designed to be constant time, then don't introduce timing-dependent branches without documentation.

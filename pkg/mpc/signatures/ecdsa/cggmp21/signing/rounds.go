@@ -19,8 +19,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/affg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/encelg"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elcomop"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
@@ -234,7 +232,7 @@ func (s *Cosigner[P, B, S]) Round2(
 
 	// step 2.a
 	bigGamma := s.params.CurveGroup().ScalarBaseMul(s.state.gamma)
-	psi, err := s.proveElog(s.params.CurveGroup().Generator(), s.state.gamma, bigGamma, s.state.b, s.state.bigBJ[s.ctx.HolderID()], bigGamma)
+	psi, err := s.proveElog(s.params.CurveGroup().Generator(), s.state.gamma, s.state.b, s.state.bigBJ[s.ctx.HolderID()], bigGamma)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot prove gamma elog statement")
 	}
@@ -459,7 +457,7 @@ func (s *Cosigner[P, B, S]) Round3(
 	bigS := bigGamma.ScalarMul(chi)
 
 	// step 2.b
-	psiPrime, err := s.proveElog(bigGamma, s.state.k, s.params.CurveGroup().ScalarBaseMul(s.state.k), s.state.a, s.state.bigAJ[s.ctx.HolderID()], bigDelta)
+	psiPrime, err := s.proveElog(bigGamma, s.state.k, s.state.a, s.state.bigAJ[s.ctx.HolderID()], bigDelta)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove k elog statement")
 	}
@@ -720,7 +718,6 @@ func (s *Cosigner[P, B, S]) verifyEncElg(
 func (s *Cosigner[P, B, S]) proveElog(
 	basePoint P,
 	witnessScalar S,
-	elgamalPlaintextPoint P,
 	elgamalWitness *indcpacom.Witness[*elgamal.Nonce[S]],
 	elgamalCommitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 	statementPoint P,
@@ -738,29 +735,11 @@ func (s *Cosigner[P, B, S]) proveElog(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create NI elog protocol")
 	}
-	elgamalPlaintext, err := elgamal.NewPlaintext(elgamalPlaintextPoint)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal plaintext")
-	}
-	elgamalMessage, err := indcpacom.NewMessage(elgamalPlaintext)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal message")
-	}
-	elcomopWitness, err := elcomop.NewWitness(elgamalMessage, elgamalWitness)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create elcomop witness")
-	}
-	schWitness := schnorr.NewWitness(witnessScalar)
-	elogWitness, err := elog.NewWitness(elcomopWitness, schWitness)
+	elogWitness, err := elog.NewWitness(witnessScalar, elgamalWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create elog witness")
 	}
-	elcomopStatement, err := elcomop.NewStatement(elgamalCommitment)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create elcomop statement")
-	}
-	schStatement := schnorr.NewStatement(statementPoint)
-	elogStatement, err := elog.NewStatement(elcomopStatement, schStatement)
+	elogStatement, err := elog.NewStatement(elgamalCommitment, statementPoint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create elog statement")
 	}
@@ -797,12 +776,7 @@ func (s *Cosigner[P, B, S]) verifyElog(
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create NI elog protocol")
 	}
-	elcomopStatement, err := elcomop.NewStatement(elgamalCommitment)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create elcomop statement")
-	}
-	schStatement := schnorr.NewStatement(statementPoint)
-	elogStatement, err := elog.NewStatement(elcomopStatement, schStatement)
+	elogStatement, err := elog.NewStatement(elgamalCommitment, statementPoint)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create elog statement")
 	}

@@ -63,5 +63,6 @@ The signing transcript starts with the package domain separator, public key, and
 
 ## Reference
 
+<!-- paper: docs/papers/2021-060_20241021_172019.pdf [Figure 8, Figure 9, Figure 10] -->
 - Canetti, Gennaro, Goldfeder, Makriyannis, Peled.
   [UC Non-Interactive, Proactive, Threshold ECDSA with Identifiable Aborts](https://eprint.iacr.org/2021/060).

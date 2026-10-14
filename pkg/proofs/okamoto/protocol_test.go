@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersencom"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/okamoto"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -548,4 +549,103 @@ func testPedersenOpening[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 		err = protocol.Verify(invalidStatement, com, challenge, response)
 		require.Error(t, err)
 	})
+}
+
+// Test_Verify_MalformedProofRejected checks that a response of the wrong shape,
+// or a missing commitment or response, fails verification instead of crashing
+// the verifier. Both values are chosen by the prover and arrive over the wire,
+// whichever compiler or interactive verifier is in use. The commitment is a
+// plain group element, so a missing value is its only malformed shape; the
+// response lives in F_q^m and the direct-power decoder accepts any component
+// count.
+func Test_Verify_MalformedProofRejected(t *testing.T) {
+	t.Parallel()
+
+	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
+		testMalformedProofRejected(t, k256.NewCurve())
+	})
+	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
+		testMalformedProofRejected(t, p256.NewCurve())
+	})
+}
+
+func testMalformedProofRejected[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, curve curves.Curve[P, F, S],
+) {
+	tb.Helper()
+	const m = 3
+	prng := pcg.NewRandomised()
+	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
+
+	generators := make([]P, m)
+	for i := range generators {
+		g, err := curve.Random(prng)
+		require.NoError(tb, err)
+		generators[i] = g
+	}
+	protocol, err := okamoto.NewProtocol(generators, prng)
+	require.NoError(tb, err)
+
+	witnessScalars := make([]S, m)
+	statementParts := make([]P, m)
+	for i := range m {
+		w, err := sf.Random(prng)
+		require.NoError(tb, err)
+		witnessScalars[i] = w
+		statementParts[i] = generators[i].ScalarMul(w)
+	}
+	witness, err := okamoto.NewWitness(witnessScalars...)
+	require.NoError(tb, err)
+	statement, err := okamoto.NewStatement(algebrautils.Sum(statementParts[0], statementParts[1:]...))
+	require.NoError(tb, err)
+
+	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+	require.NoError(tb, err)
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(tb, err)
+	response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+	require.NoError(tb, err)
+	require.NoError(tb, protocol.Verify(statement, commitment, challenge, response))
+
+	var nilCommitment P
+	var verifyErr error
+	require.NotPanics(tb, func() {
+		verifyErr = protocol.Verify(statement, &okamoto.Commitment[P, S]{A: nilCommitment}, challenge, response)
+	})
+	require.ErrorIs(tb, verifyErr, proofs.ErrVerificationFailed)
+
+	// A response with any component count other than m. The zero value has no
+	// components, which is what the decoder yields for an empty component list.
+	badResponses := []*constructions.FiniteDirectPowerRingElement[S]{
+		nil,
+		{},
+		mustPowerRingElement(tb, sf, witnessScalars[0], m-1),
+		mustPowerRingElement(tb, sf, witnessScalars[0], m+1),
+	}
+	for _, bad := range badResponses {
+		require.NotPanics(tb, func() {
+			verifyErr = protocol.Verify(statement, commitment, challenge, &okamoto.Response[S]{Z: bad})
+		})
+		require.ErrorIs(tb, verifyErr, proofs.ErrVerificationFailed)
+	}
+}
+
+// mustPowerRingElement builds an element of F_q^arity whose components are all s.
+func mustPowerRingElement[S algebra.PrimeFieldElement[S]](
+	tb testing.TB, sf algebra.PrimeField[S], s S, arity uint,
+) *constructions.FiniteDirectPowerRingElement[S] {
+	tb.Helper()
+
+	ring, err := constructions.NewFiniteDirectPowerRing(sf, arity)
+	require.NoError(tb, err)
+	components := make([]S, arity)
+	for i := range components {
+		components[i] = s
+	}
+	element, err := ring.New(components...)
+	require.NoError(tb, err)
+	return element
 }
