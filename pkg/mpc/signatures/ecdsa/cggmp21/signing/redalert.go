@@ -43,6 +43,7 @@ func newRedAlertNonce[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 	return &RedAlertParticipant[P, B, S]{
 		base:           &redAlertBaseNonce[P, B, S]{s: s},
 		localBroadcast: nil,
+		round:          1,
 	}
 }
 
@@ -103,6 +104,7 @@ func newRedAlertChi[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	return &RedAlertParticipant[P, B, S]{
 		base:           &redAlertBaseChi[P, B, S]{s: s},
 		localBroadcast: nil,
+		round:          1,
 	}
 }
 
@@ -159,6 +161,7 @@ func (c *redAlertBaseChi[P, B, S]) receivedCiphertexts() (d, f map[sharing.ID]*p
 type RedAlertParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	base           redAlertBase[P, B, S]
 	localBroadcast *RedAlertBroadcast[P, B, S]
+	round          network.Round
 }
 
 // SharingID returns the red-alert participant party identifier.
@@ -173,7 +176,10 @@ func (p *RedAlertParticipant[P, B, S]) cosigner() *Cosigner[P, B, S] {
 // Round1 broadcasts the local red-alert openings and their NIZK proofs.
 func (p *RedAlertParticipant[P, B, S]) Round1() (*RedAlertBroadcast[P, B, S], error) {
 	if p.cosigner().state.round != 4 {
-		return nil, cggmp21.ErrInvalidRound.WithMessage("actual=%d expected=%d", p.cosigner().state.round, 4)
+		return nil, cggmp21.ErrInvalidRound.WithMessage("actual_signing_round=%d expected_signing_round=%d", p.cosigner().state.round, 4)
+	}
+	if p.round != 1 {
+		return nil, cggmp21.ErrInvalidRound.WithMessage("actual_red_alert_round=%d expected_red_alert_round=%d", p.round, 1)
 	}
 
 	// step 1
@@ -206,11 +212,19 @@ func (p *RedAlertParticipant[P, B, S]) Round1() (*RedAlertBroadcast[P, B, S], er
 		PhiJ: phiJ,
 	}
 	p.localBroadcast = out
+	p.round++
 	return out, nil
 }
 
 // Round2 verifies all red-alert broadcasts and returns an identifiable abort on the first bad proof.
 func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAlertBroadcast[P, B, S], *RedAlertParticipant[P, B, S]]) error {
+	if p.cosigner().state.round != 4 {
+		return cggmp21.ErrInvalidRound.WithMessage("actual_signing_round=%d expected_signing_round=%d", p.cosigner().state.round, 4)
+	}
+	if p.round != 2 {
+		return cggmp21.ErrInvalidRound.WithMessage("actual_red_alert_round=%d expected_red_alert_round=%d", p.round, 2)
+	}
+
 	if err := network.ValidateIncomingMessages(p, p.cosigner().ctx.OtherPartiesOrdered(), r1b); err != nil {
 		return errs.Wrap(err).WithMessage("invalid red alert broadcasts")
 	}
@@ -260,6 +274,7 @@ func (p *RedAlertParticipant[P, B, S]) Round2(r1b network.RoundMessages[*RedAler
 		}
 		p.cosigner().ctx.Transcript().AppendBytes(redAlertBroadcastTranscriptLabel, id.Bytes(), data)
 	}
+	p.round++
 	return nil
 }
 
