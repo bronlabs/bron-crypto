@@ -76,9 +76,11 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 // context's holder identity and quorum match the base shard, derives the
 // hash-commitment key from the session transcript (domain-separated per this
 // protocol), and instantiates the Fiat-Shamir compilers for the Π_prm and Π_mod
-// proofs. The base shard's public key must live over an ECDSA curve. prng must
-// be a cryptographically secure source; the Paillier/ring-Pedersen key
+// proofs. The base shard's public key must live over an ECDSA curve.
+// prng must be:
+// - a cryptographically secure source; the Paillier/ring-Pedersen key
 // generation in Round1 draws from it.
+// - thread-safe, as safe prime generation algorithm would use it in parallel.
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, baseShard *mpc.BaseShard[P, S], prng io.Reader) (*Participant[P, B, S], error) {
 	if ctx == nil || baseShard == nil || prng == nil {
 		return nil, cggmp21.ErrNil.WithMessage("ctx/baseShard/prng is nil")
