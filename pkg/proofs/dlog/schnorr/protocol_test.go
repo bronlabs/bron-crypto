@@ -257,3 +257,37 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 	require.True(tb, wExtracted.Value().Equal(witness.Value()))
 }
+
+func Test_ChallengeLength(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	curve := k256.NewCurve()
+	protocol, err := schnorr.NewProtocol(curve.Generator(), prng)
+	require.NoError(t, err)
+
+	w, err := curve.ScalarField().Random(prng)
+	require.NoError(t, err)
+	witness := schnorr.NewWitness(w)
+	statement := schnorr.NewStatement(curve.ScalarBaseMul(w))
+
+	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+	require.NoError(t, err)
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(t, err)
+	response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+	require.NoError(t, err)
+	require.NoError(t, protocol.Verify(statement, commitment, challenge, response))
+
+	// Leading zero bytes parse to the same scalar but are a non-canonical encoding.
+	padded := append([]byte{0x00}, challenge...)
+	require.Error(t, protocol.Verify(statement, commitment, padded, response))
+	_, err = protocol.ComputeProverResponse(statement, witness, commitment, state, padded)
+	require.Error(t, err)
+
+	truncated := challenge[1:]
+	require.Error(t, protocol.Verify(statement, commitment, truncated, response))
+	_, err = protocol.ComputeProverResponse(statement, witness, commitment, state, truncated)
+	require.Error(t, err)
+}

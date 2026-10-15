@@ -90,8 +90,8 @@ type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.Sta
 }
 
 // NewCompiler creates a new randomised Fischlin compiler for the given sigma protocol.
-// The sigma protocol must have soundness error at least 2^(-128). The prng is used
-// for randomness during proof generation.
+// The sigma protocol must be (strongly) 2-special sound and have soundness error at
+// least 2^(-128). The prng is used for randomness during proof generation.
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (*Protocol[X, W, A, S, Z], error) {
 	if sigmaProtocol == nil || prng == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol or prng is nil")
@@ -100,6 +100,17 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
 		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
+	}
+
+	// The fixed parameters give a knowledge error of 2^(-L*R) = 2^(-Lambda) only for
+	// 2-special sound protocols ([KS22], Theorem 6.4): the extractor needs two accepting
+	// transcripts with the same commitment, and a cheating prover can only produce one
+	// per commitment. Against a k-special sound protocol a cheating prover can prepare
+	// k-1 accepting transcripts per commitment, each of which is an independent random
+	// oracle query, raising the per-row success probability from 2^(-L) to (k-1)*2^(-L).
+	// Standard Fischlin compensates by enlarging b; here we reject such protocols.
+	if s := sigmaProtocol.SpecialSoundness(); s != 2 {
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol must be 2-special sound (got %d-special soundness)", s)
 	}
 
 	return &Protocol[X, W, A, S, Z]{

@@ -27,11 +27,11 @@ type Prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
 	sessionID := p.ctx.SessionID()
 	p.ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	p.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 	crs, err := p.ctx.Transcript().ExtractBytes(crsLabel, 32)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot extract crs")
 	}
-	p.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
 	a := make([]byte, 0)
 	aI := make([]A, R)
@@ -70,7 +70,7 @@ func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compil
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot generate response")
 			}
-			digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, z.Bytes())
+			digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, z.Bytes(), statement.Bytes())
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot compute digest")
 			}
