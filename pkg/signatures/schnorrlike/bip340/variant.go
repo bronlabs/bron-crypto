@@ -29,7 +29,7 @@ var (
 // and tagged hashing required by BIP-340.
 type Variant struct {
 	sk         *PrivateKey        // Private key for deterministic nonce derivation
-	Aux        [AuxSizeBytes]byte // Auxiliary randomness for nonce derivation
+	Aux        [AuxSizeBytes]byte `cbor:"Aux"` // Auxiliary randomness for nonce derivation
 	msg        Message            // Message being signed (needed for nonce computation)
 	adjustedSk *Scalar            // Private key d adjusted for P.y parity (negated if P.y is odd)
 }

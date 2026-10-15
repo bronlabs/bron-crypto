@@ -55,7 +55,7 @@ type senderState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 }
 
 // NewSender creates a VSOT sender bound to the session, suite, transcript, and randomness source.
-func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Sender[P, B, S], error) {
+func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Sender[P, B, S], error) { //nolint:dupl // mirrors NewReceiver: the sender and receiver constructors are intentionally symmetric.
 	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
@@ -98,7 +98,7 @@ type receiverState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 }
 
 // NewReceiver creates a VSOT receiver bound to the session, suite, transcript, and randomness source.
-func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Receiver[P, B, S], error) {
+func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (*Receiver[P, B, S], error) { //nolint:dupl // mirrors NewSender: the sender and receiver constructors are intentionally symmetric.
 	if suite == nil || ctx == nil || prng == nil {
 		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}

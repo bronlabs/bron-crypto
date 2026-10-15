@@ -8,8 +8,8 @@ import (
 
 // Round1Broadcast carries the commitment key for the session.
 type Round1Broadcast struct {
-	CommonCommitment hashcom.Commitment
-	Ck               *hashcom.CommitmentKey
+	CommonCommitment hashcom.Commitment     `cbor:"CommonCommitment"`
+	Ck               *hashcom.CommitmentKey `cbor:"Ck"`
 }
 
 func (m *Round1Broadcast) Validate(*Participant, sharing.ID) error {
@@ -26,8 +26,8 @@ func (m *Round1Broadcast) Validate(*Participant, sharing.ID) error {
 }
 
 type Round2Broadcast struct {
-	CommonContribution        [base.CollisionResistanceBytesCeil]byte
-	CommonContributionWitness hashcom.Witness
+	CommonContribution        [base.CollisionResistanceBytesCeil]byte `cbor:"CommonContribution"`
+	CommonContributionWitness hashcom.Witness                         `cbor:"CommonContributionWitness"`
 }
 
 func (m *Round2Broadcast) Validate(*Participant, sharing.ID) error {
@@ -46,7 +46,7 @@ func (m *Round2Broadcast) Validate(*Participant, sharing.ID) error {
 
 // Round2P2P carries a commitment to a per-peer contribution.
 type Round2P2P struct {
-	PairwiseContributionCommitment hashcom.Commitment
+	PairwiseContributionCommitment hashcom.Commitment `cbor:"PairwiseContributionCommitment"`
 }
 
 func (m *Round2P2P) Validate(*Participant, sharing.ID) error {
@@ -61,8 +61,8 @@ func (m *Round2P2P) Validate(*Participant, sharing.ID) error {
 
 // Round3P2P carries a contribution and its opening witness.
 type Round3P2P struct {
-	PairwiseContribution        [base.CollisionResistanceBytesCeil]byte
-	PairwiseContributionWitness hashcom.Witness
+	PairwiseContribution        [base.CollisionResistanceBytesCeil]byte `cbor:"PairwiseContribution"`
+	PairwiseContributionWitness hashcom.Witness                         `cbor:"PairwiseContributionWitness"`
 }
 
 func (m *Round3P2P) Validate(*Participant, sharing.ID) error {

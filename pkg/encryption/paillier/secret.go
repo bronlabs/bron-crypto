@@ -24,6 +24,9 @@ import (
 // SampleSecretKey generates a fresh Paillier key pair with a keyLen-bit modulus
 // N = p·q from two random primes. The factorisation (p, q) is the decryption
 // trapdoor and stays secret; prng must be a cryptographically secure source.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SamplePaillierGroup(keyLen, prng)
 	if err != nil {
@@ -39,6 +42,9 @@ func SampleSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 // SampleBlumSecretKey is like SampleSecretKey but draws a Blum modulus (p ≡ q ≡ 3
 // mod 4), as required by several zero-knowledge proofs over a Paillier modulus
 // (e.g. Paillier-Blum modulus / square-freeness proofs).
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleBlumSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SamplePaillierBlumGroup(keyLen, prng)
 	if err != nil {
@@ -54,6 +60,9 @@ func SampleBlumSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 // SampleSafeSecretKey is like SampleSecretKey but uses safe primes (p = 2p′+1,
 // q = 2q′+1), which some protocols require so that QR_N is cyclic of prime-ish
 // order for their soundness/setup assumptions.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleSafeSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 	group, err := znstar.SampleSafePaillierGroup(keyLen, prng)
 	if err != nil {
@@ -70,11 +79,22 @@ func SampleSafeSecretKey(keyLen uint, prng io.Reader) (*SecretKey, error) {
 // precomputing the CRT decryption constants. The factorisation is the secret
 // trapdoor that enables Decrypt and Open.
 func NewSecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
+	return newSecretKey(group, base.IFCKeyLength)
+}
+
+// NewLegacySecretKey builds a secret key like NewSecretKey but accepts moduli down
+// to base.LegacyIFCKeyLength. It exists solely for deserialising keys stored before
+// IFCKeyLength became the generation floor and must never be used for fresh keys.
+func NewLegacySecretKey(group *znstar.PaillierGroupKnownOrder) (*SecretKey, error) {
+	return newSecretKey(group, base.LegacyIFCKeyLength)
+}
+
+func newSecretKey(group *znstar.PaillierGroupKnownOrder, minKeyLen int) (*SecretKey, error) {
 	if group == nil {
 		return nil, encryption.ErrIsNil.WithMessage("group must not be nil")
 	}
-	if !testing.Testing() && group.N().TrueLen() < base.IFCKeyLength {
-		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", base.IFCKeyLength)
+	if !testing.Testing() && group.N().TrueLen() < minKeyLen {
+		return nil, encryption.ErrFailed.WithMessage("Paillier N must be at least %d bits", minKeyLen)
 	}
 	sk := &SecretKey{ //nolint:exhaustruct // other fields are lazily computed.
 		PublicKey: PublicKey{group: group.ForgetOrder()},

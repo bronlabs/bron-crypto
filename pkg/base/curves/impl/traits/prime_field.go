@@ -164,7 +164,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) OpIdentity() WP {
 
 // PrimeFieldElementTrait implements common arithmetic operations for elements.
 type PrimeFieldElementTrait[FP fieldsImpl.PrimeFieldElementPtr[FP, F], F any, WP PrimeFieldElementWrapperPtrConstraint[FP, W], W any] struct {
-	V F
+	V F `cbor:"V"`
 }
 
 // Fp returns the underlying field element pointer.

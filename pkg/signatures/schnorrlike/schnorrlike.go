@@ -292,8 +292,8 @@ func (sig *Signature[GE, S]) HashCode() base.HashCode {
 // KeyGeneratorTrait provides common key generation logic for Schnorr schemes.
 // It generates key pairs by sampling a random non-zero scalar x and computing P = x·G.
 type KeyGeneratorTrait[GE GroupElement[GE, S], S Scalar[S]] struct {
-	Grp Group[GE, S]   // The elliptic curve group
-	SF  ScalarField[S] // The scalar field (integers mod group order)
+	Grp Group[GE, S]   `cbor:"Grp"` // The elliptic curve group
+	SF  ScalarField[S] `cbor:"SF"`  // The scalar field (integers mod group order)
 }
 
 // Generate creates a new Schnorr key pair using randomness from prng.
@@ -322,9 +322,9 @@ func (kg *KeyGeneratorTrait[GE, S]) Generate(prng io.Reader) (*PrivateKey[GE, S]
 // It implements the standard Schnorr signing algorithm using variant-specific
 // nonce generation, challenge computation, and response calculation.
 type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
-	Sk       *PrivateKey[GE, S]                                           // The signing private key
-	V        VR                                                           // The Schnorr variant for algorithm customization
-	Verifier signatures.Verifier[*PublicKey[GE, S], M, *Signature[GE, S]] // Verifier for signature self-check
+	Sk       *PrivateKey[GE, S]                                           `cbor:"Sk"`       // The signing private key
+	V        VR                                                           `cbor:"V"`        // The Schnorr variant for algorithm customization
+	Verifier signatures.Verifier[*PublicKey[GE, S], M, *Signature[GE, S]] `cbor:"Verifier"` // Verifier for signature self-check
 }
 
 // Sign creates a Schnorr signature on the given message.
@@ -370,9 +370,9 @@ func (sg *SignerTrait[VR, GE, S, M]) Variant() VR {
 // It implements signature verification using the standard Schnorr equation:
 // s·G = R + e·P (or s·G = R - e·P when ResponseOperatorIsNegative is true).
 type VerifierTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
-	V                          VR                // The Schnorr variant for challenge computation
-	ChallengePublicKey         *PublicKey[GE, S] // Optional override for partial signature verification
-	ResponseOperatorIsNegative bool              // If true, uses s·G = R - e·P instead of s·G = R + e·P
+	V                          VR                `cbor:"V"`                          // The Schnorr variant for challenge computation
+	ChallengePublicKey         *PublicKey[GE, S] `cbor:"ChallengePublicKey"`         // Optional override for partial signature verification
+	ResponseOperatorIsNegative bool              `cbor:"ResponseOperatorIsNegative"` // If true, uses s·G = R - e·P instead of s·G = R + e·P
 }
 
 // Variant returns the Schnorr variant used by this verifier.

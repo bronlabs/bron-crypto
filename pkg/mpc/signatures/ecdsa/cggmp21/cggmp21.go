@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"maps"
 
+	"github.com/bronlabs/errs-go/errs"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/intcom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
@@ -23,6 +27,14 @@ type AuxInfo struct {
 	ringPedersenPublicKeys map[sharing.ID]*intcom.CommitmentKey
 
 	refreshID []byte
+}
+
+type auxInfoDTO struct {
+	PaillierSecretKey      *paillier.SecretKey                  `cbor:"paillierSecretKey"`
+	PaillierPublicKeys     map[sharing.ID]*paillier.PublicKey   `cbor:"paillierPublicKeys"`
+	RingPedersenSecretKey  *intcom.TrapdoorKey                  `cbor:"ringPedersenSecretKey"`
+	RingPedersenPublicKeys map[sharing.ID]*intcom.CommitmentKey `cbor:"ringPedersenPublicKeys"`
+	RefreshID              []byte                               `cbor:"refreshID"`
 }
 
 // NewAuxInfo constructs CGGMP21 auxiliary information.
@@ -69,6 +81,53 @@ func NewAuxInfo(
 		refreshID:              refreshID,
 	}
 	return info, nil
+}
+
+// MarshalCBOR serialises the auxiliary information. The output contains local
+// Paillier and ring-Pedersen trapdoors and must be protected as secret material.
+func (info *AuxInfo) MarshalCBOR() ([]byte, error) {
+	if info == nil {
+		return nil, ErrNil.WithMessage("auxiliary information")
+	}
+	dto := &auxInfoDTO{
+		PaillierSecretKey:      info.paillierSecretKey,
+		PaillierPublicKeys:     info.paillierPublicKeys,
+		RingPedersenSecretKey:  info.ringPedersenSecretKey,
+		RingPedersenPublicKeys: info.ringPedersenPublicKeys,
+		RefreshID:              info.refreshID,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal auxiliary information to CBOR")
+	}
+	return data, nil
+}
+
+// UnmarshalCBOR deserialises auxiliary information and revalidates it via
+// NewAuxInfo. This is a deserialisation trust boundary carrying secret material.
+func (info *AuxInfo) UnmarshalCBOR(data []byte) error {
+	if info == nil {
+		return ErrNil.WithMessage("auxiliary information")
+	}
+	dto, err := serde.UnmarshalCBOR[*auxInfoDTO](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal auxiliary information from CBOR")
+	}
+	if dto == nil {
+		return ErrNil.WithMessage("auxiliary information DTO")
+	}
+	decoded, err := NewAuxInfo(
+		dto.PaillierSecretKey,
+		dto.PaillierPublicKeys,
+		dto.RingPedersenSecretKey,
+		dto.RingPedersenPublicKeys,
+		dto.RefreshID,
+	)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create auxiliary information from CBOR")
+	}
+	*info = *decoded
+	return nil
 }
 
 // PaillierSecretKey returns the local Paillier secret key.
@@ -153,6 +212,11 @@ type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	auxInfo *AuxInfo
 }
 
+type shardDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Base    *mpc.BaseShard[P, S] `cbor:"base"`
+	AuxInfo *AuxInfo             `cbor:"auxInfo"`
+}
+
 // NewShard returns a new shard.
 func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo) (*Shard[P, B, S], error) {
 	if baseShard == nil {
@@ -187,6 +251,61 @@ func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	return sh, nil
 }
 
+// NewSubsetShard returns a shard whose auxiliary information covers only the
+// given quorum — a qualified subset of the base shard's shareholders — instead
+// of the full shareholder set. It is intended for ephemeral, in-session use
+// where the auxiliary-information DKG ran among the signing quorum only;
+// signing with the result requires a session quorum equal to that subset. The
+// full-coverage revalidation in UnmarshalCBOR deliberately rejects such
+// shards, so they do not survive a serialisation round-trip.
+func NewSubsetShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *mpc.BaseShard[P, S], info *AuxInfo, quorum ds.Set[sharing.ID]) (*Shard[P, B, S], error) {
+	if baseShard == nil {
+		return nil, ErrNil.WithMessage("base shard")
+	}
+	if info == nil {
+		return nil, ErrNil.WithMessage("auxiliary information")
+	}
+	if quorum == nil {
+		return nil, ErrNil.WithMessage("quorum")
+	}
+	selfID := baseShard.Share().ID()
+	if !quorum.Contains(selfID) {
+		return nil, ErrValidationFailed.WithMessage("own sharing id not in quorum")
+	}
+	shareholders := baseShard.MSP().Shareholders()
+	for id := range quorum.Iter() {
+		if !shareholders.Contains(id) {
+			return nil, ErrValidationFailed.WithMessage("quorum member %d is not a shareholder", id)
+		}
+	}
+	if !baseShard.MSP().Accepts(quorum.List()...) {
+		return nil, ErrValidationFailed.WithMessage("quorum is not a qualified set")
+	}
+	if len(info.paillierPublicKeys) != quorum.Size()-1 {
+		return nil, ErrValidationFailed.WithMessage("paillier public key count does not match quorum")
+	}
+	if len(info.ringPedersenPublicKeys) != quorum.Size()-1 {
+		return nil, ErrValidationFailed.WithMessage("ring pedersen public key count does not match quorum")
+	}
+	for id := range quorum.Iter() {
+		if id == selfID {
+			continue
+		}
+		if _, ok := info.paillierPublicKeys[id]; !ok {
+			return nil, ErrValidationFailed.WithMessage("missing paillier public key for %d", id)
+		}
+		if _, ok := info.ringPedersenPublicKeys[id]; !ok {
+			return nil, ErrValidationFailed.WithMessage("missing ring pedersen public key for %d", id)
+		}
+	}
+
+	sh := &Shard[P, B, S]{
+		BaseShard: *baseShard,
+		auxInfo:   info,
+	}
+	return sh, nil
+}
+
 // PublicKey returns the public key.
 func (sh *Shard[P, B, S]) PublicKey() *sigecdsa.PublicKey[P, B, S] {
 	pkValue := sh.PublicKeyValue()
@@ -195,6 +314,44 @@ func (sh *Shard[P, B, S]) PublicKey() *sigecdsa.PublicKey[P, B, S] {
 		panic(err) // this should never happen.
 	}
 	return pk
+}
+
+// MarshalCBOR serialises the shard, including its secret share and auxiliary
+// trapdoor material.
+func (sh *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
+	if sh == nil {
+		return nil, ErrNil.WithMessage("shard")
+	}
+	dto := &shardDTO[P, B, S]{
+		Base:    &sh.BaseShard,
+		AuxInfo: sh.auxInfo,
+	}
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to marshal shard to CBOR")
+	}
+	return data, nil
+}
+
+// UnmarshalCBOR deserialises the shard and revalidates the base shard/aux-info
+// binding through NewShard.
+func (sh *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
+	if sh == nil {
+		return ErrNil.WithMessage("shard")
+	}
+	dto, err := serde.UnmarshalCBOR[*shardDTO[P, B, S]](data)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to unmarshal shard from CBOR")
+	}
+	if dto == nil {
+		return ErrNil.WithMessage("shard DTO")
+	}
+	decoded, err := NewShard(dto.Base, dto.AuxInfo)
+	if err != nil {
+		return errs.Wrap(err).WithMessage("failed to create shard from CBOR")
+	}
+	*sh = *decoded
+	return nil
 }
 
 // AuxInfo returns the auxiliary information.

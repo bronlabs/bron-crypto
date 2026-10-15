@@ -15,14 +15,19 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
+	dkgtu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21"
+	auxdkg "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21/keygen/dkg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21/keygen/trusteddealer"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21/signing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	sigecdsa "github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
@@ -94,6 +99,104 @@ func TestSigning_Threshold2Of3(t *testing.T) {
 			require.Equal(t, expectedTranscript, transcript)
 		}
 	}
+}
+
+func TestSigning_Threshold2Of3_DKG(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	curve := k256.NewCurve()
+	shareholders := sharing.NewOrdinalShareholderSet(3)
+	accessStructure, err := threshold.NewThresholdAccessStructure(2, shareholders)
+	require.NoError(t, err)
+
+	shards := doCGGMP21DKG(t, curve, accessStructure)
+	require.Len(t, shards, 3)
+
+	suite, err := sigecdsa.NewSuite(curve, sha256.New)
+	require.NoError(t, err)
+	message := []byte("hello from cggmp21 threshold signing via dkg")
+	signingQuorum := hashset.NewComparable[sharing.ID](1, 2).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(t, signingQuorum, prng)
+
+	runners := make(map[sharing.ID]network.Runner[*signing.SignResult[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
+	for id := range signingQuorum.Iter() {
+		shard, ok := shards[id]
+		require.True(t, ok)
+		runner, err := signing.NewRunner(ctxs[id], suite, ntu.CBORRoundTrip(t, shard), message, pcg.NewRandomised())
+		require.NoError(t, err)
+		runners[id] = runner
+	}
+
+	results, notifications := ntu.TestExecuteRunners(t, runners)
+	require.Len(t, results, signingQuorum.Size())
+	ntu.RequireRoundCompletedNotifications(t, notifications, signingQuorum, signing.ProtocolName, 4)
+
+	verifier, err := sigecdsa.NewVerifier(suite)
+	require.NoError(t, err)
+
+	partialSignatures := make(map[sharing.ID]*cggmp21.PartialSignature[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	for id, result := range results {
+		require.NotNil(t, result)
+		require.NotNil(t, result.PartialSignature())
+		require.NotNil(t, result.PartialSignatureCosigningAggregator())
+		partialSignatures[id] = result.PartialSignature()
+	}
+
+	var expected *sigecdsa.Signature[*k256.Scalar]
+	for id := range signingQuorum.Iter() {
+		result, ok := results[id]
+		require.True(t, ok)
+		signature, err := result.PartialSignatureCosigningAggregator().Aggregate(partialSignatures)
+		require.NoError(t, err)
+		require.NoError(t, verifier.Verify(signature, shards[1].PublicKey(), message))
+		if expected == nil {
+			expected = signature
+		} else {
+			require.True(t, expected.Equal(signature))
+		}
+	}
+
+	var expectedTranscript []byte
+	for id := range signingQuorum.Iter() {
+		transcript, err := ctxs[id].Transcript().ExtractBytes("transcript consistency", 32)
+		require.NoError(t, err)
+		if expectedTranscript == nil {
+			expectedTranscript = transcript
+		} else {
+			require.Equal(t, expectedTranscript, transcript)
+		}
+	}
+}
+
+func doCGGMP21DKG(
+	t *testing.T,
+	curve *k256.Curve,
+	accessStructure accessstructures.Monotone,
+) map[sharing.ID]*cggmp21.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar] {
+	t.Helper()
+
+	shareholders := accessStructure.Shareholders()
+	baseCtxs := session_testutils.MakeRandomContexts(t, shareholders, pcg.NewRandomised())
+	baseRunners := dkgtu.MakeGennaroDKGRunners(t, baseCtxs, accessStructure, fiatshamir.Name, curve)
+	baseShards, baseNotifications := ntu.TestExecuteRunners(t, baseRunners)
+	require.Len(t, baseShards, shareholders.Size())
+	ntu.RequireRoundCompletedNotifications(t, baseNotifications, shareholders, gennaro.ProtocolName, 3)
+
+	auxCtxs := session_testutils.MakeRandomContexts(t, shareholders, pcg.NewRandomised())
+	auxRunners := make(map[sharing.ID]network.Runner[*cggmp21.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]])
+	for id := range shareholders.Iter() {
+		baseShard, ok := baseShards[id]
+		require.True(t, ok)
+		runner, err := auxdkg.NewRunner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](auxCtxs[id], baseShard, pcg.NewRandomised())
+		require.NoError(t, err)
+		auxRunners[id] = runner
+	}
+
+	shards, auxNotifications := ntu.TestExecuteRunners(t, auxRunners)
+	require.Len(t, shards, shareholders.Size())
+	ntu.RequireRoundCompletedNotifications(t, auxNotifications, shareholders, auxdkg.ProtocolName, 4)
+	return shards
 }
 
 func TestAggregateOffline_Threshold2Of3(t *testing.T) {

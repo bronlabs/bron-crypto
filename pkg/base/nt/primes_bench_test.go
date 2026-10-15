@@ -44,6 +44,17 @@ func Benchmark_GenerateSafePrime(b *testing.B) {
 	}
 }
 
+func Benchmark_GeneratePrimePair(b *testing.B) {
+	for _, bits := range []uint{256, 1024, 2048, 3072} {
+		b.Run(fmt.Sprintf("%d-bit", bits), func(b *testing.B) {
+			for b.Loop() {
+				_, _, err := nt.GeneratePrimePair(num.NPlus(), bits, crand.Reader)
+				require.NoError(b, err)
+			}
+		})
+	}
+}
+
 func Benchmark_GenerateSafePrimePair(b *testing.B) {
 	for _, bits := range []uint{256, 1024, 2048, 3072} {
 		b.Run(fmt.Sprintf("%d-bit", bits), func(b *testing.B) {

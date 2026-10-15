@@ -363,10 +363,10 @@ func ZipTruncate[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2]) iter.Seq2[V1, V2] {
 
 // Zipped represents a pair of values from two sequences, along with flags indicating their presence.
 type Zipped[V1, V2 any] struct {
-	V1  V1
-	Ok1 bool // whether V1 is present (if not, it will be false)
-	V2  V2
-	Ok2 bool // whether V2 is present (if not, it will be false)
+	V1  V1   `cbor:"V1"`
+	Ok1 bool `cbor:"Ok1"` // whether V1 is present (if not, it will be false)
+	V2  V2   `cbor:"V2"`
+	Ok2 bool `cbor:"Ok2"` // whether V2 is present (if not, it will be false)
 }
 
 // Zip zips two sequences together, yielding pairs of values along with presence flags.
@@ -393,12 +393,12 @@ func Zip[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2]) iter.Seq[Zipped[V1, V2]] {
 
 // Zipped2 represents a pair of key-value pairs from two sequences, along with flags indicating their presence.
 type Zipped2[K1, V1, K2, V2 any] struct {
-	K1  K1
-	V1  V1
-	Ok1 bool // whether K1, V1 are present (if not, they will be false)
-	K2  K2
-	V2  V2
-	Ok2 bool // whether K2, V2 are present (if not, they will be false)
+	K1  K1   `cbor:"K1"`
+	V1  V1   `cbor:"V1"`
+	Ok1 bool `cbor:"Ok1"` // whether K1, V1 are present (if not, they will be false)
+	K2  K2   `cbor:"K2"`
+	V2  V2   `cbor:"V2"`
+	Ok2 bool `cbor:"Ok2"` // whether K2, V2 are present (if not, they will be false)
 }
 
 // Zip2 zips two sequences of key-value pairs together, yielding pairs of key-value pairs along with presence flags.

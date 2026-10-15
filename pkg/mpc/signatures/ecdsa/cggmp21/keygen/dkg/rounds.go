@@ -304,7 +304,12 @@ func (p *Participant[P, B, S]) Round4(r3u network.RoundMessages[*Round3P2P[P, B,
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create auxiliary info for shard generation")
 	}
-	shard, err := cggmp21.NewShard(p.baseShard, auxInfo)
+	var shard *cggmp21.Shard[P, B, S]
+	if p.subsetQuorum {
+		shard, err = cggmp21.NewSubsetShard(p.baseShard, auxInfo, p.ctx.Quorum())
+	} else {
+		shard, err = cggmp21.NewShard(p.baseShard, auxInfo)
+	}
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create shard")
 	}

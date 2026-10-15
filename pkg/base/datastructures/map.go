@@ -6,8 +6,8 @@ import (
 
 // MapEntry represents a key-value pair in a map.
 type MapEntry[K any, V any] struct {
-	Key   K
-	Value V
+	Key   K `cbor:"Key"`
+	Value V `cbor:"Value"`
 }
 
 // AbstractMap defines the core operations for any map-like data structure.

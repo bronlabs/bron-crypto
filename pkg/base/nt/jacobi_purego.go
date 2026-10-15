@@ -29,7 +29,7 @@ func Jacobi(x *num.Int, y *num.NatPlus) (int, error) {
 	}
 	a := x.Abs()
 	if x.IsNegative() {
-		a = a.Mod(b).Nat() // BoringSSL does not support negative inputs for Jacobi, so we take the absolute value and adjust the result accordingly
+		a = x.Mod(b).Nat() // BoringSSL does not support negative inputs for Jacobi, so we reduce x modulo y first.
 	}
 
 	// Adapted from logic to compute the Kronecker symbol, originally implemented according to Henri Cohen,

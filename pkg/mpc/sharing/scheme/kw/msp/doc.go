@@ -12,4 +12,6 @@
 //   - [MSP.Accepts]: tests whether a set of IDs is qualified
 //   - [MSP.ReconstructionVector]: computes the linear combination coefficients
 //     that express the target as a combination of the selected rows
+//   - [MSP.ReconstructionCoefficients]: extracts one selected holder's ordered
+//     coefficients from that reconstruction vector
 package msp

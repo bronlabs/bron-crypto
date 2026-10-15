@@ -101,7 +101,7 @@ func (*Gt) Contains(e *GtElement) bool {
 
 // GtElement represents an element of the target group.
 type GtElement struct {
-	V bls12381Impl.Gt
+	V bls12381Impl.Gt `cbor:"V"`
 }
 
 // Clone returns a copy of the element.

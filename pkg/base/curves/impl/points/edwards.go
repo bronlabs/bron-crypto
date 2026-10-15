@@ -30,10 +30,10 @@ type TwistedEdwardsCurveParams[FP fields.FiniteFieldElement[FP]] interface {
 
 // TwistedEdwardsPointImpl implements extended coordinates for Twisted Edwards curves.
 type TwistedEdwardsPointImpl[FP fields.FiniteFieldElementPtr[FP, F], C TwistedEdwardsCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
-	X F
-	Y F
-	T F
-	Z F
+	X F `cbor:"X"`
+	Y F `cbor:"Y"`
+	T F `cbor:"T"`
+	Z F `cbor:"Z"`
 }
 
 // Add sets p = lhs + rhs.

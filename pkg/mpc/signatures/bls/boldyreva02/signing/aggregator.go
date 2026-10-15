@@ -41,7 +41,7 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *boldyreva02.
 
 // NewShortKeyAggregator creates a new Aggregator for the short key variant of BLS signatures.
 // In this variant, public keys are in G1 (smaller) and signatures are in G2 (larger).
-func NewShortKeyAggregator[
+func NewShortKeyAggregator[ //nolint:dupl // mirrors NewLongKeyAggregator with the group roles swapped.
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
@@ -69,7 +69,7 @@ func NewShortKeyAggregator[
 
 // NewLongKeyAggregator creates a new Aggregator for the long key variant of BLS signatures.
 // In this variant, public keys are in G2 (larger) and signatures are in G1 (smaller).
-func NewLongKeyAggregator[
+func NewLongKeyAggregator[ //nolint:dupl // mirrors NewShortKeyAggregator with the group roles swapped.
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
