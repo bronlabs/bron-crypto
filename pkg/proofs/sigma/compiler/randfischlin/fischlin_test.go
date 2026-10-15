@@ -19,6 +19,8 @@ import (
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 )
@@ -305,4 +307,20 @@ func testRandFischlinTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldEl
 	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("final", 32)
 	require.NoError(tb, err)
 	require.True(tb, bytes.Equal(proverBytes, verifierBytes))
+}
+
+func TestRandFischlin_RejectsNonTwoSpecialSound(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	curve := k256.NewCurve()
+
+	// batch_schnorr is (k+1)-special sound; the fixed randomised Fischlin
+	// parameters only give 128-bit knowledge error for 2-special sound protocols.
+	batchProtocol, err := batch_schnorr.NewProtocol(2, curve, prng)
+	require.NoError(t, err)
+	require.Equal(t, uint(3), batchProtocol.SpecialSoundness())
+
+	_, err = randfischlin.NewCompiler(batchProtocol, prng)
+	require.ErrorIs(t, err, proofs.ErrInvalidArgument)
 }

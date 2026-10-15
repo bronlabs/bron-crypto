@@ -21,8 +21,9 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 }
 
 // Verify checks that a randomised Fischlin proof is valid for the given statement.
-// It verifies that all R challenge/response pairs hash to zero and that each
-// sigma protocol transcript is valid.
+// It verifies that every challenge has the canonical length, that all R
+// challenge/response pairs hash to zero and that each sigma protocol transcript
+// is valid.
 func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if len(proofBytes) == 0 {
 		return proofs.ErrInvalidArgument.WithMessage("proof is nil")
@@ -42,11 +43,11 @@ func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	sessionID := v.ctx.SessionID()
 	v.ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
+	v.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 	crs, err := v.ctx.Transcript().ExtractBytes(crsLabel, 32)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot extract crs")
 	}
-	v.ctx.Transcript().AppendBytes(statementLabel, statement.Bytes())
 
 	commitmentSerialized := make([]byte, 0)
 	for i := range R {
@@ -63,7 +64,17 @@ func (v *Verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	// step 2. for each i in [r] verify that hash(a, i, e_i, z_i) == 0 and SigmaV(x, (a_i, e_i, z_i)) is true, abort if not
 	for i := range R {
-		digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), rfProof.E[i], rfProof.Z[i].Bytes())
+		// The row hash is computed over the raw bytes of e_i, so only the canonical
+		// fixed-length encoding may be accepted. A sigma protocol may map differently
+		// encoded byte strings (e.g. the same value with leading zero bytes) to the same
+		// challenge; if such encodings were accepted, a prover could re-encode a single
+		// accepting transcript to obtain unboundedly many random oracle queries per row
+		// and pass the hash-to-zero check without ever answering two distinct challenges,
+		// which breaks straight-line extraction.
+		if len(rfProof.E[i]) != v.sigmaProtocol.GetChallengeBytesLength() {
+			return proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
+		}
+		digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), rfProof.E[i], rfProof.Z[i].Bytes(), statement.Bytes())
 		if err != nil {
 			return errs.Wrap(err).WithMessage("cannot hash")
 		}
