@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -49,9 +48,10 @@ func (*Variant) HashFunc() func() hash.Hash {
 //  3. k' = rand mod n
 //  4. If R.y is odd, k = n - k' (to ensure R has even y)
 //
-// This deterministic derivation prevents nonce reuse vulnerabilities while
-// the auxiliary randomness provides side-channel protection.
+// This derivation binds the nonce to the private key and message.
 // Exactly AuxSizeBytes bytes of auxiliary randomness are read from prng.
+// Fresh randomness for each call improves protection against fault injection
+// and side-channel attacks; fixed auxiliary data is also valid under BIP-340.
 func (*Variant) ComputeNonceCommitment(privateKey *PrivateKey, message Message, prng io.Reader) (R *GroupElement, k *Scalar, err error) {
 	if privateKey == nil || privateKey.Value() == nil || message == nil {
 		return nil, nil, signatures.ErrInvalidArgument.WithMessage("need both private key and message")
@@ -186,35 +186,8 @@ func (*Variant) Clone() *Variant {
 
 var _ mpcschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
 
-// CorrectAdditiveSecretShareParity adjusts a secret share for BIP-340's even-y requirement.
-//
-// In threshold signing, each party holds a share of the private key x.
-// If the aggregate public key P = x·G has odd y, BIP-340 requires using -x instead.
-// This method negates the share if P.y is odd, ensuring all parties use
-// consistent (negated) shares when P.y is odd.
-func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
-	if publicKey == nil || share == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("public key or secret share is nil")
-	}
-	out := share.Clone()
-	pky, err := publicKey.Value().AffineY()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot compute y")
-	}
-	if pky.IsOdd() {
-		// If the public key is odd, we need to negate the additive share
-		// to ensure that the parity of the nonce commitment is correct.
-		var err error
-		out, err = additive.NewShare(share.ID(), share.Value().Neg(), nil)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create negated share")
-		}
-	}
-	return out, nil
-}
-
 // CorrectPublicKeyShareParity applies the same parity correction to a public key share
-// that CorrectAdditiveSecretShareParity applies to private key shares. This is needed
+// that ComputeResponse applies to private key shares. This is needed
 // for partial signature verification where the public key share must be corrected
 // based on the aggregate public key's Y coordinate parity.
 func (*Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {

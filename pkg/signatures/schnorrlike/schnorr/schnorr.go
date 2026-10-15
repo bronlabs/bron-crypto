@@ -8,7 +8,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -367,16 +366,6 @@ func (*Variant[GE, S]) CorrectPartialNonceCommitmentParity(aggregatedNonceCommit
 	}
 	// No change in MPC context
 	return partialNonceCommitment, nil
-}
-
-// CorrectAdditiveSecretShareParity is a no-op for vanilla Schnorr (no parity constraints).
-// Returns a clone of the share unchanged.
-func (*Variant[GE, S]) CorrectAdditiveSecretShareParity(publicKey *schnorrlike.PublicKey[GE, S], share *additive.Share[S]) (*additive.Share[S], error) {
-	if publicKey == nil || share == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("public key or secret share is nil")
-	}
-	// No change in MPC context
-	return share.Clone(), nil
 }
 
 func _[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]]() {

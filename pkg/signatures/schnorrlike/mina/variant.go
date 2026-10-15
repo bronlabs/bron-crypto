@@ -12,7 +12,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -447,16 +446,6 @@ func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 //
 // These methods support threshold/MPC Schnorr signing with Mina.
 // Mina requires R to have an even y-coordinate, similar to BIP-340.
-
-// CorrectAdditiveSecretShareParity is a no-op for Mina since no parity correction
-// is needed for secret shares (only for nonce commitments).
-func (*Variant) CorrectAdditiveSecretShareParity(_ *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
-	if share == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("share is nil")
-	}
-	// no changes needed
-	return share.Clone(), nil
-}
 
 // CorrectPartialNonceParity adjusts a partial nonce for Mina's even-y requirement.
 // If the aggregate nonce commitment R has odd y, each party must negate their
