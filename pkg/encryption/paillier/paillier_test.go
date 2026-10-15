@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
@@ -425,4 +426,32 @@ func TestNewPlaintextSymmetric(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, p)
 	})
+}
+
+// TestPublicKey_CBOR_Malformed checks that a public key whose group or modulus
+// is absent, null or empty is rejected instead of crashing the decoder. This is
+// the path a DKG round 2 broadcast takes when it carries a peer's Paillier key.
+func TestPublicKey_CBOR_Malformed(t *testing.T) {
+	t.Parallel()
+
+	empty := map[string]any{}
+	cases := []struct {
+		name    string
+		payload any
+	}{
+		{"empty map", empty},
+		{"group null", map[string]any{"group": nil}},
+		{"group empty", map[string]any{"group": empty}},
+		{"modulus empty", map[string]any{"group": map[string]any{"n": empty}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := serde.MarshalCBOR(tc.payload)
+			require.NoError(t, err)
+			var pk paillier.PublicKey
+			require.NotPanics(t, func() { err = pk.UnmarshalCBOR(data) })
+			require.Error(t, err)
+		})
+	}
 }

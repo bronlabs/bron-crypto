@@ -227,6 +227,9 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return errs.Wrap(err)
 		}
+		if dto.Arithmetic == nil {
+			return ErrIsNil.WithMessage("arithmetic for known-order Paillier group element")
+		}
 		p, err := num.NPlus().FromModulusCT(dto.Arithmetic.P.Factor)
 		if err != nil {
 			return errs.Wrap(err)
@@ -267,6 +270,9 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 	default:
 		// For initial unmarshal when arith is zero value, try both
 		if dtoKnown, err := serde.UnmarshalCBOR[paillierGroupKnownOrderElementDTO](data); err == nil {
+			if dtoKnown.Arithmetic == nil {
+				return ErrIsNil.WithMessage("arithmetic for known-order Paillier group element")
+			}
 			p, err := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.P.Factor)
 			if err != nil {
 				return errs.Wrap(err)
@@ -419,6 +425,9 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return errs.Wrap(err)
 		}
+		if dto.Arithmetic == nil {
+			return ErrIsNil.WithMessage("arithmetic for known-order RSA group element is nil")
+		}
 		p, err := num.NPlus().FromModulusCT(dto.Arithmetic.Params.P)
 		if err != nil {
 			return errs.Wrap(err)
@@ -458,6 +467,9 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 	default:
 		// For initial unmarshal when arith is zero value, try both
 		if dtoKnown, err := serde.UnmarshalCBOR[rsaGroupKnownOrderElementDTO](data); err == nil {
+			if dtoKnown.Arithmetic == nil {
+				return ErrIsNil.WithMessage("arithmetic for known-order RSA group element is nil")
+			}
 			p, err := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.Params.P)
 			if err != nil {
 				return errs.Wrap(err)

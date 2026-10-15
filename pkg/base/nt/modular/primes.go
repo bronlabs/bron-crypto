@@ -13,7 +13,11 @@ import (
 // NewOddPrimeFactors constructs an OddPrimeFactors modular arithmetic
 // instance from the given odd prime factors p and q.
 // Returns ct.False if the inputs are invalid (not odd primes or equal).
+// Early exits if either p or q is nil.
 func NewOddPrimeFactors(p, q *numct.Nat) (factors *OddPrimeFactors, ok ct.Bool) {
+	if p == nil || q == nil {
+		return nil, ct.False
+	}
 	allOk := p.Equal(q).Not() & p.IsProbablyPrime() & q.IsProbablyPrime() & p.IsOdd() & q.IsOdd()
 
 	params, ok := crt.PrecomputePairExtended(p, q)

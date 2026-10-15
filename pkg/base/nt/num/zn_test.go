@@ -1770,3 +1770,51 @@ func TestZMod_FromNatCTReduced(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+// TestZMod_ElementSize_MatchesEncoding pins ElementSize to the byte length of the
+// modulus value itself and to the length of a serialised reduced element. The
+// moduli are chosen so that the announced length of the NatPlus differs from the
+// true bit length (leading zero byte, increment), which is where a size derived
+// from the wrong length goes wrong.
+func TestZMod_ElementSize_MatchesEncoding(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		modulus   []byte // big-endian
+		increment bool   // add one after decoding so the announced length is not byte aligned
+	}{
+		{"7 from one byte", []byte{7}, false},
+		{"7 from two bytes with a leading zero", []byte{0, 7}, false},
+		{"2^64-1 from eight bytes", []byte{255, 255, 255, 255, 255, 255, 255, 255}, false},
+		{"2^64+1 via increment", []byte{1, 0, 0, 0, 0, 0, 0, 0, 0}, true},
+		{"2^256+1 via increment", append([]byte{1}, make([]byte, 32)...), true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mod, err := num.NPlus().FromBytes(tc.modulus)
+			require.NoError(t, err)
+			expected := new(big.Int).SetBytes(tc.modulus)
+			if tc.increment {
+				mod = mod.Increment()
+				expected.Add(expected, big.NewInt(1))
+			}
+			zmod, err := num.NewZMod(mod)
+			require.NoError(t, err)
+
+			// Independent oracle: the number of bytes needed for the modulus value.
+			expectedSize := (expected.BitLen() + 7) / 8
+			require.Equal(t, expectedSize, zmod.ElementSize())
+			require.Equal(t, 2*expectedSize, zmod.WideElementSize())
+
+			// Reduced elements serialise to exactly ElementSize bytes.
+			r, err := zmod.Random(pcg.NewRandomised())
+			require.NoError(t, err)
+			require.Len(t, r.Bytes(), zmod.ElementSize())
+			h, err := zmod.Hash([]byte(tc.name))
+			require.NoError(t, err)
+			require.Len(t, h.Bytes(), zmod.ElementSize())
+		})
+	}
+}

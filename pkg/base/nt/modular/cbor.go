@@ -50,13 +50,36 @@ func (m *SimpleModulus) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return errs.Wrap(err)
 	}
-	m.m = dto.Modulus
+	out, ok := NewSimple(dto.Modulus)
+	if ok == ct.False {
+		return ErrFailed.WithMessage("failed to create SimpleModulus")
+	}
+	*m = *out
 	return nil
 }
 
 type pairDTO struct {
 	P *numct.Nat `cbor:"p"`
 	Q *numct.Nat `cbor:"q"`
+}
+
+// validateDecodedFactors screens a decoded factor pair before it reaches a
+// constructor. The constructors run in constant-time style: they derive every
+// modulus they need (p, q, p-1, q-1, p^2, p*q, ...) and fold each failure into
+// the returned flag instead of stopping, so they assume both factors are
+// present and at least 2. A nil or zero factor, or the value 1, makes one of
+// those derived moduli zero, numct.NewModulus yields nil for it, and the flow
+// dereferences it. Honest callers never pass such inputs; a CBOR payload is
+// untrusted and is checked here. Oddness and primality stay with the
+// constructor.
+func validateDecodedFactors(p, q *numct.Nat) error {
+	if p == nil || q == nil {
+		return ErrFailed.WithMessage("factor is nil")
+	}
+	if p.TrueLen() < 2 || q.TrueLen() < 2 {
+		return ErrFailed.WithMessage("factor must be greater than one")
+	}
+	return nil
 }
 
 func (m *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
@@ -75,6 +98,9 @@ func (m *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[pairDTO](data)
 	if err != nil {
 		return errs.Wrap(err)
+	}
+	if err := validateDecodedFactors(dto.P, dto.Q); err != nil {
+		return errs.Wrap(err).WithMessage("invalid OddPrimeFactors payload")
 	}
 	out, ok := NewOddPrimeFactors(dto.P, dto.Q)
 	if ok == ct.False {
@@ -100,6 +126,9 @@ func (m *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[pairDTO](data)
 	if err != nil {
 		return errs.Wrap(err)
+	}
+	if err := validateDecodedFactors(dto.P, dto.Q); err != nil {
+		return errs.Wrap(err).WithMessage("invalid OddPrimeSquareFactors payload")
 	}
 	out, ok := NewOddPrimeSquareFactors(dto.P, dto.Q)
 	if ok == ct.False {

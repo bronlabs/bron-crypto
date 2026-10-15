@@ -69,7 +69,11 @@ func (m *OddPrimeSquare) MultiplicativeOrder() algebra.Cardinal {
 // NewOddPrimeSquareFactors constructs an OddPrimeSquareFactors modular arithmetic
 // instance from the given odd prime factors p and q.
 // Returns ct.False if the inputs are invalid (not distinct).
+// Early exits if either firstPrime or secondPrime is nil.
 func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (m *OddPrimeSquareFactors, ok ct.Bool) {
+	if firstPrime == nil || secondPrime == nil {
+		return nil, ct.False
+	}
 	allOk := firstPrime.Equal(secondPrime).Not()
 
 	// Clone the inputs to avoid any possibility of mutation
