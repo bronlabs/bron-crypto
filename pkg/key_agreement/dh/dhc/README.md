@@ -35,6 +35,8 @@ ECSVDP-DHC is the Elliptic Curve Secret Value Derivation Primitive, Diffie-Hellm
 
 
 ## References
+<!-- spec: docs/paper/IEEESTD.2000.92292.pdf [Section 7.2.2] -->
+- section 7.2.2 of [IEEE 1363-2000](https://standards.ieee.org/ieee/1363/2049/)
 - [B47] Diffie, W., and Hellman, M. “New Directions in Cryptography,” IEEE Transactions on Information Theory 22 (1976), pp. 644-654.
 - [B88] Kaliski, B. S., Jr., “Compatible Cofactor Multiplication for Diffie-Hellman Primitives,” Electronics Letters, Vol. 34, no. 25 (December 10, 1998), pp. 2396-2397.
 - [B94] Koblitz, N. “Elliptic Curve Cryptosystems,” Mathematics of Computation 48 (1987), pp. 203-209.

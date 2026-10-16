@@ -168,6 +168,9 @@ func (pg *PaillierGroup[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return errs.Wrap(err)
 		}
+		if dto.N == nil {
+			return errs.Wrap(ErrIsNil).WithMessage("invalid unknown-order Paillier group payload: N is nil")
+		}
 		n2 := dto.N.Square()
 		reconstructed, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
 		if err != nil {
@@ -224,6 +227,9 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return errs.Wrap(err)
 		}
+		if dto.Arithmetic == nil {
+			return ErrIsNil.WithMessage("arithmetic for known-order Paillier group element")
+		}
 		p, err := num.NPlus().FromModulusCT(dto.Arithmetic.P.Factor)
 		if err != nil {
 			return errs.Wrap(err)
@@ -247,6 +253,9 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return errs.Wrap(err)
 		}
+		if dto.N == nil {
+			return errs.Wrap(ErrIsNil).WithMessage("missing modulus for unknown-order Paillier group element")
+		}
 		n2 := dto.N.Square()
 		g, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
 		if err != nil {
@@ -261,6 +270,9 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 	default:
 		// For initial unmarshal when arith is zero value, try both
 		if dtoKnown, err := serde.UnmarshalCBOR[paillierGroupKnownOrderElementDTO](data); err == nil {
+			if dtoKnown.Arithmetic == nil {
+				return ErrIsNil.WithMessage("arithmetic for known-order Paillier group element")
+			}
 			p, err := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.P.Factor)
 			if err != nil {
 				return errs.Wrap(err)
@@ -283,6 +295,9 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
 		if err != nil {
 			return errs.Wrap(err)
+		}
+		if dto.N == nil {
+			return errs.Wrap(ErrIsNil).WithMessage("missing modulus for unknown-order Paillier group element")
 		}
 		n2 := dto.N.Square()
 		g, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
@@ -410,6 +425,9 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return errs.Wrap(err)
 		}
+		if dto.Arithmetic == nil {
+			return ErrIsNil.WithMessage("arithmetic for known-order RSA group element is nil")
+		}
 		p, err := num.NPlus().FromModulusCT(dto.Arithmetic.Params.P)
 		if err != nil {
 			return errs.Wrap(err)
@@ -433,6 +451,9 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return errs.Wrap(err)
 		}
+		if dto.V == nil {
+			return errs.Wrap(ErrIsNil).WithMessage("missing modulus for unknown-order RSA group element")
+		}
 		g, err := NewRSAGroupOfUnknownOrder(dto.V.Modulus())
 		if err != nil {
 			return errs.Wrap(err)
@@ -446,6 +467,9 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 	default:
 		// For initial unmarshal when arith is zero value, try both
 		if dtoKnown, err := serde.UnmarshalCBOR[rsaGroupKnownOrderElementDTO](data); err == nil {
+			if dtoKnown.Arithmetic == nil {
+				return ErrIsNil.WithMessage("arithmetic for known-order RSA group element is nil")
+			}
 			p, err := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.Params.P)
 			if err != nil {
 				return errs.Wrap(err)
@@ -468,6 +492,9 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
 		if err != nil {
 			return errs.Wrap(err)
+		}
+		if dto.V == nil {
+			return errs.Wrap(ErrIsNil).WithMessage("missing modulus for unknown-order RSA group element")
 		}
 		g, err := NewRSAGroupOfUnknownOrder(dto.V.Modulus())
 		if err != nil {

@@ -27,4 +27,7 @@ The secret s is encoded as the constant term of a random polynomial f(x) of degr
 
 ## Reference
 
-Shamir, A. "How to Share a Secret." Communications of the ACM, 1979.
+<!-- paper: docs/papers/shamir79.pdf -->
+- Shamir, A. "How to Share a Secret." Communications of the ACM, 1979.
+<!-- paper: docs/papers/2025-518_20250319_142628.pdf [Section 2.2] -->
+- Section 2.2 of [B25](https://eprint.iacr.org/2025/518.pdf)

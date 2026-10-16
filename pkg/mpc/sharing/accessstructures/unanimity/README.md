@@ -14,4 +14,6 @@ ac, err := unanimity.NewUnanimityAccessStructure(shareholders)
 
 ## Reference
 
+<!-- paper: docs/papers/2025-518_20250319_142628.pdf [Example 1.1] -->
+<!-- paper: docs/papers/2025-518_20250319_142628.pdf [Section 4.2, Figure 4.3] -->
 This is the access structure underlying additive secret sharing.

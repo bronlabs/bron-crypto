@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/errs-go/errs"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -38,7 +39,7 @@ func ReceiveUnicast[U Message[P], P any](ctx context.Context, rt *Router, correl
 	for id, m := range receivedMessagesSerialized {
 		msg, err := serde.UnmarshalCBOR[U](m)
 		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to unmarshal message")
+			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to unmarshal message")
 		}
 		receivedMessages[id] = msg
 	}

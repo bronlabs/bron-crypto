@@ -109,6 +109,7 @@ is replaced by its children, and each replacement appends the local threshold-ga
 required by the paper's LSSS construction.
 
 ## Reference
+<!-- paper: docs/papers/2010-374_20160504_094135.pdf -->
 - [Z. Liu, Z. Cao, and D. S. Wong, "Efficient Generation of Linear Secret Sharing Scheme Matrices from Threshold Access Trees," IACR ePrint 2010/374][1]
 
 [1]: <https://eprint.iacr.org/2010/374.pdf>

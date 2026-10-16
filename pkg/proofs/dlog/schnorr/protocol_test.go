@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -256,4 +257,61 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	wExtracted, err := protocol.Extract(statement, commitment, ei, zi)
 	require.NoError(tb, err)
 	require.True(tb, wExtracted.Value().Equal(witness.Value()))
+}
+
+// Test_Verify_NilMessagesRejected checks that a missing commitment or response
+// fails verification instead of crashing the verifier. Both values are chosen by
+// the prover and arrive over the wire, whichever compiler or interactive
+// verifier is in use. Schnorr works over a plain group, so a missing value is
+// the only malformed shape a decoder can hand over.
+func Test_Verify_NilMessagesRejected(t *testing.T) {
+	t.Parallel()
+
+	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
+		testNilMessagesRejected(t, k256.NewCurve())
+	})
+	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
+		testNilMessagesRejected(t, p256.NewCurve())
+	})
+}
+
+func testNilMessagesRejected[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {
+	tb.Helper()
+
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(prng)
+	require.NoError(tb, err)
+	protocol, err := schnorr.NewProtocol(base, prng)
+	require.NoError(tb, err)
+
+	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
+	require.True(tb, ok)
+	w, err := sf.Random(prng)
+	require.NoError(tb, err)
+	witness := schnorr.NewWitness(w)
+	statement := schnorr.NewStatement(base.ScalarMul(w))
+
+	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+	require.NoError(tb, err)
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(tb, err)
+	response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+	require.NoError(tb, err)
+	require.NoError(tb, protocol.Verify(statement, commitment, challenge, response))
+
+	var nilCommitment P
+	var verifyErr error
+	require.NotPanics(tb, func() {
+		verifyErr = protocol.Verify(statement, &schnorr.Commitment[P, S]{A: nilCommitment}, challenge, response)
+	})
+	require.ErrorIs(tb, verifyErr, proofs.ErrVerificationFailed)
+
+	var nilResponse S
+	require.NotPanics(tb, func() {
+		verifyErr = protocol.Verify(statement, commitment, challenge, &schnorr.Response[S]{Z: nilResponse})
+	})
+	require.ErrorIs(tb, verifyErr, proofs.ErrVerificationFailed)
 }

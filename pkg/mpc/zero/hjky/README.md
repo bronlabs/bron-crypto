@@ -25,4 +25,5 @@ enabling share refresh without changing the underlying secret.
 
 ## Reference
 
+<!-- paper: docs/papers/hjky95.pdf -->
 - [Proactive Secret Sharing Or: How to Cope With Perpetual Leakage](https://link.springer.com/chapter/10.1007/3-540-44750-4_27)

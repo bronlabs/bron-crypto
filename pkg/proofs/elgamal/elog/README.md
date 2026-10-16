@@ -57,51 +57,71 @@ $$
 
 ## Implementation
 
-Rather than instantiating Figure 23 as a single Maurer homomorphism, this
-package realizes $R_{\mathrm{elog}}$ as the AND-composition of two existing
-Maurer protocols, glued by a consistency check on the witnesses:
+This package instantiates Figure 23 directly as a single Maurer
+homomorphism (`maurer09`), with the witness and statement spaces built from
+the direct-power constructions in `pkg/base/algebra/constructions`.
 
-1. **`elcomop`** ([../elcomop](../elcomop)) — proves knowledge of an opening
-   $(M', \lambda) \in G \times \mathbb{F}_q$ of the ElGamal commitment
-   $(L, M) = (g^\lambda,\; M' \cdot X^\lambda)$.
-2. **`schnorr`** ([../../dlog/schnorr](../../dlog/schnorr)) instantiated with
-   base $h$ — proves knowledge of $y \in \mathbb{F}_q$ such that $Y = h^y$.
-
-The AND-composition runs both sub-protocols under the same verifier
-challenge $e$. On its own this would only prove
-"$\exists\, (M', \lambda, y)$ with $L = g^\lambda,\ M = M' X^\lambda,\ Y = h^y$";
-`NewWitness` therefore enforces the binding
+### Witness group
 
 $$
-M' = g^y
+G_w = \mathbb{F}_q \times \mathbb{F}_q
 $$
 
-on the composed witness before any transcript is produced. Substituting
-$M' = g^y$ into the elcomop relation recovers $M = g^y X^\lambda$, exactly the
-$R_{\mathrm{elog}}$ requirement.
+with componentwise addition. The witness is $(y, \lambda)$.
 
-### Transcript
-
-Because elcomop's witness space is $G \times \mathbb{F}_q$ (not
-$\mathbb{F}_q^2$), the transcript carries slightly more data than Figure 23:
-the commitment and response both include an extra group element coming from
-elcomop's plaintext component. Concretely, the first message is
+### Statement group
 
 $$
-\bigl((g^\alpha,\; A' \cdot X^\alpha),\; h^m\bigr)\in(G\times G)\times G,
+H = G \times G \times G
 $$
 
-with $A'\leftarrow G$ and $\alpha\leftarrow\mathbb{F}_q$ sampled by the
-elcomop prover, $m\leftarrow\mathbb{F}_q$ by the Schnorr prover, and the
-response is
+with componentwise multiplication. The statement is $(L, M, Y)$.
+
+### Homomorphism
 
 $$
-\bigl((A'\cdot(g^y)^e,\; \alpha + e\lambda),\; m + ey\bigr)\in(G\times\mathbb{F}_q)\times\mathbb{F}_q.
+\varphi(y, \lambda) = \bigl(g^\lambda,\; g^y X^\lambda,\; h^y\bigr).
 $$
 
-Setting $A' = g^m$ reproduces Figure 23; with general $A'$ the transcript
-verifies the same relation via the two sub-protocols' verifiers.
+The first two components are computed with the same IND-CPA commitment key
+that produced $(L, M)$, so the proof is bound to the committer's encoding;
+the third is $h^y$.
+
+### Sigma protocol in Maurer form
+
+1. Prover samples a mask $(m, \alpha) \leftarrow \mathbb{F}_q^2$ and sends
+
+$$
+t = \varphi(m, \alpha) = \bigl(g^\alpha,\; g^m X^\alpha,\; h^m\bigr) = (A, N, B).
+$$
+
+2. Verifier sends a challenge $e$.
+
+3. Prover responds with
+
+$$
+r = (m, \alpha) + e\,(y, \lambda) = \bigl(m + ey,\; \alpha + e\lambda\bigr) = (u, z).
+$$
+
+Verification checks $\varphi(r) = t \cdot (L, M, Y)^e$ componentwise, which is
+exactly the three equations of Figure 23:
+
+$$
+g^z = A L^e,\qquad g^u X^z = N M^e,\qquad h^u = B Y^e.
+$$
+
+### Why a single homomorphism
+
+An earlier revision realised $R_{\mathrm{elog}}$ as the AND-composition of
+`elcomop` (opening $(M', \lambda)$ of $(L, M)$) and Schnorr ($Y = h^y$), and
+enforced $M' = g^y$ only inside the prover's witness constructor. A verifier
+cannot observe that constructor, so the composed proof only established
+$\exists\,(M', \lambda, y)$ with $L = g^\lambda,\ M = M' X^\lambda,\ Y = h^y$,
+letting a dishonest prover open $(L, M)$ to a value unrelated to $Y$.
+Expressing the relation as one homomorphism over the shared witness
+$(y, \lambda)$ makes $M = g^y X^\lambda$ part of what the verifier checks.
 
 ## Reference
 
+<!-- paper: docs/papers/2021-060_20241021_172019.pdf [Appendix A.1, Figure 23] -->
 Figure 23 of [CGGMP21](https://eprint.iacr.org/2021/060.pdf).

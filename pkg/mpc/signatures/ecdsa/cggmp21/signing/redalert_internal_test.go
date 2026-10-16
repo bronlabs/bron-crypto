@@ -9,12 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures/threshold"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/signatures/ecdsa/cggmp21/keygen/trusteddealer"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -121,5 +123,141 @@ func testRedAlertProofsManual(
 	redAlertIn := ntu.MapBroadcastO2I(t, redAlertParticipants, redAlertOut)
 	for _, id := range signingIDs {
 		require.NoError(t, redAlerts[id].Round2(redAlertIn[id]))
+	}
+}
+
+type k256Cosigner = Cosigner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
+
+// runSigningToRedAlert drives two cosigners through rounds 1-4 and rewinds the round
+// counter so a red-alert participant can be constructed, mirroring testRedAlertProofsManual.
+func runSigningToRedAlert(t *testing.T) (cosigners map[sharing.ID]*k256Cosigner, signingIDs []sharing.ID) {
+	t.Helper()
+
+	prng := pcg.NewRandomised()
+	curve := k256.NewCurve()
+	shareholders := sharing.NewOrdinalShareholderSet(3)
+	accessStructure, err := threshold.NewThresholdAccessStructure(2, shareholders)
+	require.NoError(t, err)
+	shards, err := trusteddealer.Deal(curve, accessStructure, 2048, prng)
+	require.NoError(t, err)
+	suite, err := sigecdsa.NewSuite(curve, sha256.New)
+	require.NoError(t, err)
+
+	signingIDs = []sharing.ID{1, 2}
+	ctxs := session_testutils.MakeRandomContexts(t, hashset.NewComparable(signingIDs...).Freeze(), prng)
+	cosigners = make(map[sharing.ID]*k256Cosigner)
+	for _, id := range signingIDs {
+		cosigners[id], err = NewCosigner(ctxs[id], suite, shards[id], pcg.NewRandomised())
+		require.NoError(t, err)
+	}
+	participants := slices.Collect(maps.Values(cosigners))
+
+	r1bOut := make(map[sharing.ID]*Round1Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	r1uOut := make(map[sharing.ID]network.OutgoingUnicasts[*Round1P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *k256Cosigner])
+	for _, id := range signingIDs {
+		r1bOut[id], r1uOut[id], err = cosigners[id].Round1()
+		require.NoError(t, err)
+	}
+	r2bIn := ntu.MapBroadcastO2I(t, participants, r1bOut)
+	r2uIn := ntu.MapUnicastO2I(t, participants, r1uOut)
+	r2bOut := make(map[sharing.ID]*Round2Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	r2uOut := make(map[sharing.ID]network.OutgoingUnicasts[*Round2P2P[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *k256Cosigner])
+	for _, id := range signingIDs {
+		r2bOut[id], r2uOut[id], err = cosigners[id].Round2(r2bIn[id], r2uIn[id])
+		require.NoError(t, err)
+	}
+	r3bIn := ntu.MapBroadcastO2I(t, participants, r2bOut)
+	r3uIn := ntu.MapUnicastO2I(t, participants, r2uOut)
+	r3bOut := make(map[sharing.ID]*Round3Broadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	for _, id := range signingIDs {
+		r3bOut[id], err = cosigners[id].Round3(r3bIn[id], r3uIn[id])
+		require.NoError(t, err)
+	}
+	r4bIn := ntu.MapBroadcastO2I(t, participants, r3bOut)
+	for _, id := range signingIDs {
+		_, redAlert, err := cosigners[id].Round4(r4bIn[id], []byte("red alert order"))
+		require.NoError(t, err)
+		require.Nil(t, redAlert)
+		cosigners[id].state.round = 4
+	}
+	return cosigners, signingIDs
+}
+
+func TestRedAlertRoundOrder(t *testing.T) {
+	t.Parallel()
+
+	cosigners, signingIDs := runSigningToRedAlert(t)
+	redAlerts := map[sharing.ID]*RedAlertParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]{
+		1: newRedAlertNonce(cosigners[1]),
+		2: newRedAlertNonce(cosigners[2]),
+	}
+	redAlertParticipants := slices.Collect(maps.Values(redAlerts))
+	empty := hashmap.NewComparable[sharing.ID, *RedAlertBroadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]]().Freeze()
+
+	// Round 2 before round 1 must be rejected instead of dereferencing a nil localBroadcast.
+	require.ErrorIs(t, redAlerts[1].Round2(empty), cggmp21.ErrInvalidRound)
+
+	redAlertOut := make(map[sharing.ID]*RedAlertBroadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])
+	var err error
+	for _, id := range signingIDs {
+		redAlertOut[id], err = redAlerts[id].Round1()
+		require.NoError(t, err)
+	}
+
+	// Repeating round 1 must be rejected.
+	_, err = redAlerts[1].Round1()
+	require.ErrorIs(t, err, cggmp21.ErrInvalidRound)
+
+	redAlertIn := ntu.MapBroadcastO2I(t, redAlertParticipants, redAlertOut)
+	for _, id := range signingIDs {
+		require.NoError(t, redAlerts[id].Round2(redAlertIn[id]))
+	}
+
+	// Repeating round 2 must be rejected.
+	require.ErrorIs(t, redAlerts[1].Round2(redAlertIn[1]), cggmp21.ErrInvalidRound)
+}
+
+type k256RedAlertBroadcast = RedAlertBroadcast[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
+
+// TestRedAlertSpuriousMapEntriesRejected checks that a red-alert broadcast whose maps carry an
+// entry for anyone other than a recipient is rejected, even when every recipient's entry is
+// present and well formed. The broadcast is hashed into the transcript, so it must be canonical.
+func TestRedAlertSpuriousMapEntriesRejected(t *testing.T) {
+	t.Parallel()
+
+	cosigners, signingIDs := runSigningToRedAlert(t)
+	redAlerts := map[sharing.ID]*RedAlertParticipant[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]{
+		1: newRedAlertNonce(cosigners[1]),
+		2: newRedAlertNonce(cosigners[2]),
+	}
+	redAlertOut := make(map[sharing.ID]*k256RedAlertBroadcast)
+	var err error
+	for _, id := range signingIDs {
+		redAlertOut[id], err = redAlerts[id].Round1()
+		require.NoError(t, err)
+	}
+
+	const sender, recipient, outsider sharing.ID = 1, 2, 99
+	honest := redAlertOut[sender]
+	require.NoError(t, honest.Validate(redAlerts[recipient], sender))
+
+	tampers := []struct {
+		name  string
+		apply func(m *k256RedAlertBroadcast)
+	}{
+		{"BigD keyed by sender", func(m *k256RedAlertBroadcast) { m.BigD[sender] = m.BigD[recipient] }},
+		{"BigF keyed by sender", func(m *k256RedAlertBroadcast) { m.BigF[sender] = m.BigF[recipient] }},
+		{"PhiJ keyed by sender", func(m *k256RedAlertBroadcast) { m.PhiJ[sender] = m.PhiJ[recipient] }},
+		{"BigD keyed by outsider", func(m *k256RedAlertBroadcast) { m.BigD[outsider] = m.BigD[recipient] }},
+	}
+	for _, tc := range tampers {
+		tampered := &k256RedAlertBroadcast{
+			BigD: cloneCiphertextMap(honest.BigD),
+			BigF: cloneCiphertextMap(honest.BigF),
+			Phi:  honest.Phi,
+			PhiJ: maps.Clone(honest.PhiJ),
+		}
+		tc.apply(tampered)
+		require.ErrorIs(t, tampered.Validate(redAlerts[recipient], sender), cggmp21.ErrValidationFailed, tc.name)
 	}
 }

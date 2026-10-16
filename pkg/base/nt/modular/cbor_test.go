@@ -364,3 +364,40 @@ func TestCBOR_InvalidData(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+// TestCBOR_MalformedFactors feeds the factor decoders payloads an adversary can
+// produce: absent factors, factors encoded as empty maps (which decode to zero),
+// the value one, and equal or composite factors. Each must fail cleanly rather
+// than reach a constructor that assumes well-formed factors.
+func TestCBOR_MalformedFactors(t *testing.T) {
+	t.Parallel()
+
+	empty := map[string]any{}
+	cases := []struct {
+		name    string
+		payload any
+	}{
+		{"empty map", empty},
+		{"nil factors", map[string]any{"p": nil, "q": nil}},
+		{"zero factors", map[string]any{"p": empty, "q": empty}},
+		{"zero q", map[string]any{"p": numct.NewNat(11), "q": empty}},
+		{"factor one", map[string]any{"p": numct.NewNat(1), "q": numct.NewNat(13)}},
+		{"equal factors", map[string]any{"p": numct.NewNat(11), "q": numct.NewNat(11)}},
+		{"composite factors", map[string]any{"p": numct.NewNat(15), "q": numct.NewNat(21)}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := serde.MarshalCBOR(tc.payload)
+			require.NoError(t, err)
+
+			var factors modular.OddPrimeFactors
+			require.NotPanics(t, func() { err = factors.UnmarshalCBOR(data) })
+			require.ErrorIs(t, err, modular.ErrFailed)
+
+			var squares modular.OddPrimeSquareFactors
+			require.NotPanics(t, func() { err = squares.UnmarshalCBOR(data) })
+			require.ErrorIs(t, err, modular.ErrFailed)
+		})
+	}
+}

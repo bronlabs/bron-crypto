@@ -311,7 +311,7 @@ func (p *Protocol) mapToChallenge(
 		return [m]*paillier.Nonce{}, errs.Wrap(err).WithMessage("could not HKDF-extract challenge seed")
 	}
 	info := []byte(Name)
-	info = sliceutils.AppendLengthPrefixed(info, statement.publicKey.Group().N().Bytes())
+	info = sliceutils.AppendLengthPrefixed(info, statement.Bytes())
 	expanded, err := hkdf.Expand(sha3.New256, key, string(info), m*challengeBlockBytes)
 	if err != nil {
 		return [m]*paillier.Nonce{}, errs.Wrap(err).WithMessage("could not HKDF-expand challenge seed")
