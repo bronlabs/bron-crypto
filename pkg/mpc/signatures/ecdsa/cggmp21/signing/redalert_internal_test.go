@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
@@ -42,7 +43,7 @@ func testRedAlertProofsManual(
 ) {
 	t.Helper()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	curve := k256.NewCurve()
 	keyLen := 2048
 	shareholders := sharing.NewOrdinalShareholderSet(3)

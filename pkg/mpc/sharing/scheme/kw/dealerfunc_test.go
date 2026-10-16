@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw"
@@ -244,7 +245,7 @@ func TestDealerFunc_RandomSecretsRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	field := k256.NewScalarField()
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	for _, fx := range allFixtures(t) {
 		t.Run(fx.name, func(t *testing.T) {

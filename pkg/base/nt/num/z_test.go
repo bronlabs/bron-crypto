@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
@@ -389,7 +390,7 @@ func TestZ_Random(t *testing.T) {
 	t.Parallel()
 
 	z := num.Z()
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	t.Run("positive range", func(t *testing.T) {
 		t.Parallel()

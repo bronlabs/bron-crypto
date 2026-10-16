@@ -135,7 +135,7 @@ func encryptionPropertySuite(
 	require.NotNil(tb, decryptionKeyGeneratorFunc, "decryption key generator function must not be nil")
 	return properties.NewGroupHomomorphicEncryptionProperties(
 		tb,
-		prng.FuncTypeErase(pcg.NewRandomised),
+		func() io.Reader { return prng.NewThreadSafeReader(pcg.NewRandomised()) },
 		selfEncrypt,
 		true,
 		decryptionKeyGeneratorFunc(tb, keyLen),
