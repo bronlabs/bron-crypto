@@ -7,7 +7,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/kw/msp"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/vss/feldman"
 	mpcsig "github.com/bronlabs/bron-crypto/pkg/mpc/signatures"
@@ -16,10 +15,9 @@ import (
 )
 
 // MPCFriendlyVariant extends schnorrlike.Variant with methods needed for MPC signing.
-// It provides parity correction for secret shares and nonces required by some Schnorr variants.
+// It provides parity correction for nonces required by some Schnorr variants.
 type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] interface {
 	schnorrlike.Variant[GE, S, M]
-	CorrectAdditiveSecretShareParity(publicKey *schnorrlike.PublicKey[GE, S], share *additive.Share[S]) (*additive.Share[S], error)
 	CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (GE, S, error)
 	CorrectPartialNonceCommitmentParity(aggregatedNonceCommitment GE, partialNonceCommitment GE) (GE, error)
 }

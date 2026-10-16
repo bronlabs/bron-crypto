@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/accessstructures"
@@ -692,7 +693,7 @@ func TestRoundTrip_RandomSecrets(t *testing.T) {
 	t.Parallel()
 
 	field := k256.NewScalarField()
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	for _, fx := range allFixtures(t) {
 		t.Run(fx.name, func(t *testing.T) {

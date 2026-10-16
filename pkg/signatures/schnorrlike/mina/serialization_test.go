@@ -263,8 +263,7 @@ func TestSignedSignatureSerializationRoundTrip(t *testing.T) {
 	publicKey, err := DecodePublicKey("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg")
 	require.NoError(t, err)
 
-	scheme, err := NewScheme(TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := NewScheme(TestNet)
 
 	signer, err := scheme.Signer(privateKey)
 	require.NoError(t, err)

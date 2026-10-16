@@ -193,15 +193,12 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	}
 	ashare = ashare.Add(c.state.zeroShift)
 
-	myAdditiveShare, err := c.variant.CorrectAdditiveSecretShareParity(c.shard.PublicKey(), ashare)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot correct share %d parity", c.shard.Share().ID())
-	}
 	correctedR, correctedK, err := c.variant.CorrectPartialNonceParity(aggregatedNonceCommitment, c.state.k)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot correct nonce parity")
 	}
-	s, err := c.variant.ComputeResponse(myAdditiveShare.Value(), correctedK, challenge)
+	// ComputeResponse applies secret-share parity using the aggregate public key.
+	s, err := c.variant.ComputeResponse(c.shard.PublicKey().Value(), ashare.Value(), correctedK, challenge)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute response")
 	}

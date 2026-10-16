@@ -8,7 +8,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -81,18 +80,19 @@ func NewScheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[
 			g:                                group,
 			sf:                               sf,
 			h:                                f,
-			prng:                             prng,
 			shouldNegateNonce:                shouldNegateNonce,
 			responseOperatorIsNegative:       responseOperatorIsNegative,
 			challengeElementsAreLittleEndian: challengeElementsAreLittleEndian,
 		},
+		prng: prng,
 	}, nil
 }
 
 // Scheme is a configurable generic Schnorr signature scheme.
 // It can be parameterized with any prime-order elliptic curve group.
 type Scheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
-	vr *Variant[GE, S]
+	vr   *Variant[GE, S]
+	prng io.Reader
 }
 
 // Name returns the signature scheme identifier ("SchnorrLike").
@@ -131,11 +131,12 @@ func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOpti
 		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
 	}
 	out := &Signer[GE, S]{
-		schnorrlike.SignerTrait[*Variant[GE, S], GE, S, Message]{
+		SignerTrait: schnorrlike.SignerTrait[*Variant[GE, S], GE, S, Message]{
 			Sk:       privateKey,
 			V:        s.vr,
 			Verifier: verifier,
 		},
+		prng: s.prng,
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
@@ -192,6 +193,18 @@ type SignerOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEleme
 // Signer produces Schnorr signatures using random nonce generation.
 type Signer[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
 	schnorrlike.SignerTrait[*Variant[GE, S], GE, S, Message]
+
+	prng io.Reader
+}
+
+// Sign creates a Schnorr signature using the signer's randomness source.
+// Concurrent calls require a concurrency-safe PRNG and immutable keys and messages.
+func (sg *Signer[GE, S]) Sign(message Message) (*Signature[GE, S], error) {
+	sig, err := sg.SignerTrait.Sign(message, sg.prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("failed to sign message")
+	}
+	return sig, nil
 }
 
 // Variant returns the Schnorr variant used by this signer.
@@ -224,7 +237,6 @@ type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]
 	g                                algebra.PrimeGroup[GE, S]     // underlying group
 	sf                               algebra.PrimeField[S]         // Scalar field of the underlying group
 	h                                func() hash.Hash              // Hash function for challenges
-	prng                             io.Reader                     // Random source for nonces
 	responseOperatorIsNegative       bool                          // Use s = k - ex instead of s = k + ex
 	challengeElementsAreLittleEndian bool                          // Reverse byte order before hashing
 	shouldNegateNonce                func(nonceCommitment GE) bool // Optional parity constraint callback
@@ -245,11 +257,11 @@ func (v *Variant[GE, S]) HashFunc() func() hash.Hash {
 
 // ComputeNonceCommitment generates a random nonce k and commitment R = k·G.
 // If shouldNegateNonce was configured, applies parity correction to k.
-func (v *Variant[GE, S]) ComputeNonceCommitment() (R GE, k S, err error) {
+func (v *Variant[GE, S]) ComputeNonceCommitment(_ *PrivateKey[GE, S], _ Message, prng io.Reader) (R GE, k S, err error) {
 	if v == nil {
 		return *new(GE), *new(S), signatures.ErrInvalidArgument.WithMessage("variant is nil")
 	}
-	ge, s, err := schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng, v.shouldNegateNonce)
+	ge, s, err := schnorrlike.ComputeGenericNonceCommitment(v.g, prng, v.shouldNegateNonce)
 	if err != nil {
 		return *new(GE), *new(S), errs.Wrap(err).WithMessage("failed to compute nonce commitment")
 	}
@@ -280,7 +292,7 @@ func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment, publicKeyValue GE, me
 
 // ComputeResponse computes the signature response: s = k ± e·x mod n.
 // The sign depends on the responseOperatorIsNegative configuration.
-func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S, error) {
+func (v *Variant[GE, S]) ComputeResponse(_ GE, privateKeyValue, nonce, challenge S) (S, error) {
 	if v == nil {
 		return *new(S), signatures.ErrInvalidArgument.WithMessage("variant is nil")
 	}
@@ -354,16 +366,6 @@ func (*Variant[GE, S]) CorrectPartialNonceCommitmentParity(aggregatedNonceCommit
 	}
 	// No change in MPC context
 	return partialNonceCommitment, nil
-}
-
-// CorrectAdditiveSecretShareParity is a no-op for vanilla Schnorr (no parity constraints).
-// Returns a clone of the share unchanged.
-func (*Variant[GE, S]) CorrectAdditiveSecretShareParity(publicKey *schnorrlike.PublicKey[GE, S], share *additive.Share[S]) (*additive.Share[S], error) {
-	if publicKey == nil || share == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("public key or secret share is nil")
-	}
-	// No change in MPC context
-	return share.Clone(), nil
 }
 
 func _[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]]() {
