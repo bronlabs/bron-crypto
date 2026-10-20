@@ -29,7 +29,7 @@ b = \left\lceil \frac{\lambda}{\rho} \right\rceil + \lceil \log_2 (n - 1) \rceil
 t = \begin{cases} b + 5 & \rho \le 64 \\ b + 6 & \rho > 64 \end{cases}
 $$
 
-with $\lambda = 128$ and $n$ the sigma protocol's special soundness. `NewCompiler` rejects $\rho < 2$, $b < 2$ or $t \ge 64$. Parameters are not carried in the proof, so prover and verifier must be created from compilers over the same sigma protocol.
+with $\lambda = 128$ and $n \ge 2$ the sigma protocol's special soundness. `NewCompiler` rejects $n < 2$ (nothing can be extracted from a single transcript), sigma protocols whose challenge is shorter than $\lceil t/8 \rceil$ bytes, and parameter sets with $\rho < 2$, $b < 2$ or $t \ge 64$. Parameters are not carried in the proof, so prover and verifier must be created from compilers over the same sigma protocol.
 
 | Sigma protocol | $n$ | $\rho$ | $b$ | $t$ |
 |---|---|---|---|---|
@@ -45,7 +45,7 @@ Expected prover cost is $\rho$ evaluations of $P_a$ plus $\rho \cdot 2^b$ evalua
 - **Knowledge soundness.** A prover that never queries $H$ on two accepting transcripts with the same prefix $(h, i)$ succeeds with probability $2^{-b}$ per repetition, so with $Q$ oracle queries the knowledge error is at most $(Q + 1) \cdot 2^{-\rho (b - \log_2(n - 1))}$ ([CL24], Sections 3 and 5). The $\lceil \log_2(n-1) \rceil$ term in $b$ pays exactly for $n$-special soundness, so every supported protocol has knowledge error $2^{-128}$ per query.
 - **Completeness.** One attempt fails with probability at most $\rho \cdot e^{-2^{t-b}} \le 2^{-40}$ for the rule above ([CL24], Section 3). The prover restarts on failure, so it always outputs an accepting proof.
 - **Zero knowledge.** Statistical, by programming the random oracle. The prover enumerates $e_i$ from zero and publishes the first hit, so the proof leaks nothing beyond $\vec e$ itself.
-- **Quasi-unique responses.** The extraction argument needs that no efficient prover can find two accepting responses $z \ne z'$ for the same $(x, a, e)$ ([Fis05], Definition 1); otherwise the prover could grind over $z$ instead of $e$ and never answer two distinct challenges. This holds for the protocols in the table but fails for OR compositions, whose response contains a simulated challenge chosen freely by the prover. Use `randfischlin` for those.
+- **Quasi-unique responses.** The extraction argument needs that no efficient prover can find two accepting responses $z \ne z'$ for the same $(x, a, e)$ ([Fis05], Definition 1); otherwise the prover could grind over $z$ instead of $e$ and never answer two distinct challenges. This holds for the protocols in the table and for `dlog/batch_schnorr`, but fails for OR compositions, whose response contains a simulated challenge chosen freely by the prover, and consequently for AND compositions with an OR branch. Use `randfischlin` for those.
 - **Binding.** $x$, $\vec a$ and $\mathsf{sid}$ enter every repetition through $h$, and the transcript key $k$ binds the proof to its position in the session transcript. A proof therefore verifies only for the statement, session and transcript state it was produced for.
 
 ## Transcript

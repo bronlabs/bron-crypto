@@ -169,3 +169,25 @@ func testCartesianAndSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F
 	err = andProtocol.Verify(statement, commitment, challenge, response)
 	require.NoError(tb, err)
 }
+
+type shortChallenge struct {
+	*schnorr.Protocol[*k256.Point, *k256.Scalar]
+}
+
+func (*shortChallenge) GetChallengeBytesLength() int { return 8 }
+
+// Test_CartesianAnd_RejectsMismatchedChallengeLengths: a branch that reads only a prefix
+// of the shared challenge cannot be extracted from transcripts whose challenges differ
+// only in the remaining bytes, so the composition is not special sound.
+func Test_CartesianAnd_RejectsMismatchedChallengeLengths(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	protocol, err := schnorr.NewProtocol(k256.NewCurve().Generator(), prng)
+	require.NoError(t, err)
+
+	_, err = sigand.CartesianCompose(protocol, &shortChallenge{protocol})
+	require.ErrorIs(t, err, sigand.ErrInvalidArgument)
+	_, err = sigand.CartesianCompose(&shortChallenge{protocol}, protocol)
+	require.ErrorIs(t, err, sigand.ErrInvalidArgument)
+}

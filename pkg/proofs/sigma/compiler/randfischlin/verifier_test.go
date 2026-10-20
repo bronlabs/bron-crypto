@@ -63,13 +63,13 @@ func TestVerifier_RejectsNonCanonicalChallengeEncoding(t *testing.T) {
 	type A = *schnorr.Commitment[*k256.Point, *k256.Scalar]
 	type Z = *schnorr.Response[*k256.Scalar]
 	eLen := schnorrProtocol.GetChallengeBytesLength()
-	aI := make([]A, R)
-	zI := make([]Z, R)
-	eI := make([][]byte, R)
+	aI := make([]A, nizk.r)
+	zI := make([]Z, nizk.r)
+	eI := make([][]byte, nizk.r)
 	a := make([]byte, 0)
-	for i := range R {
+	for i := range nizk.r {
 		eI[i] = make([]byte, eLen)
-		_, err = io.ReadFull(prng, eI[i][:TBytes])
+		_, err = io.ReadFull(prng, eI[i][:nizk.tBytes])
 		require.NoError(t, err)
 		// One accepting transcript per row, obtained from the simulator.
 		aI[i], zI[i], err = schnorrProtocol.RunSimulator(statement, eI[i])
@@ -77,10 +77,10 @@ func TestVerifier_RejectsNonCanonicalChallengeEncoding(t *testing.T) {
 		a = append(a, aI[i].Bytes()...)
 	}
 
-	for i := range R {
+	for i := range nizk.r {
 		e := eI[i]
 		for {
-			digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, zI[i].Bytes(), statement.Bytes())
+			digest, err := nizk.hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, zI[i].Bytes(), statement.Bytes())
 			require.NoError(t, err)
 			if isAllZeros(digest) {
 				eI[i] = e

@@ -23,6 +23,8 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 )
 
 func TestRunnerHappyPath(t *testing.T) {
@@ -30,6 +32,8 @@ func TestRunnerHappyPath(t *testing.T) {
 
 	testNiCompilers := []compiler.Name{
 		fiatshamir.Name,
+		fischlin.Name,
+		randfischlin.Name,
 	}
 
 	for _, fx := range allFixtures(t) {
@@ -43,10 +47,15 @@ func TestRunnerHappyPath(t *testing.T) {
 						t.Parallel()
 						testRunnerHappyPath(t, p256.NewCurve(), fx.ac, niCompiler)
 					})
-					t.Run("BLS12381G2", func(t *testing.T) {
-						t.Parallel()
-						testRunnerHappyPath(t, bls12381.NewG2(), fx.ac, niCompiler)
-					})
+					// The Fischlin compilers verify 16 sigma transcripts per proof, which
+					// dominates the test time on BLS12-381 G2; p256 already exercises the
+					// n-special sound batch Schnorr path through both of them.
+					if niCompiler == fiatshamir.Name {
+						t.Run("BLS12381G2", func(t *testing.T) {
+							t.Parallel()
+							testRunnerHappyPath(t, bls12381.NewG2(), fx.ac, niCompiler)
+						})
+					}
 				})
 			}
 		})

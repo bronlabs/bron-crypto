@@ -292,3 +292,103 @@ func testCartesianOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElemen
 	subtle.XORBytes(xored, response.E0, response.E1)
 	require.Equal(tb, challenge, xored, "XOR constraint should hold")
 }
+
+func Test_CartesianOr_SpecialSoundness(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	protocol, err := schnorr.NewProtocol(k256.NewCurve().Generator(), prng)
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		k0, k1, want uint
+	}{
+		{k0: 2, k1: 2, want: 2},
+		{k0: 3, k1: 2, want: 3},
+		{k0: 2, k1: 3, want: 3},
+		{k0: 3, k1: 3, want: 5},
+		{k0: 4, k1: 3, want: 7},
+	} {
+		orProtocol, err := sigor.CartesianCompose(&kSpecialSound{protocol, tc.k0}, &kSpecialSound{protocol, tc.k1}, prng)
+		require.NoError(t, err)
+		require.Equal(t, tc.want, orProtocol.SpecialSoundness(), "k0 = %d, k1 = %d", tc.k0, tc.k1)
+	}
+}
+
+// Test_CartesianOr_RejectsMismatchedChallengeLengths: a branch that reads only a prefix
+// of the shared challenge leaves the remaining bytes free for the prover, which breaks
+// special soundness of the composition.
+func Test_CartesianOr_RejectsMismatchedChallengeLengths(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	protocol, err := schnorr.NewProtocol(k256.NewCurve().Generator(), prng)
+	require.NoError(t, err)
+
+	_, err = sigor.CartesianCompose(protocol, &shortChallenge{protocol}, prng)
+	require.ErrorIs(t, err, sigor.ErrInvalidArgument)
+	_, err = sigor.CartesianCompose(&shortChallenge{protocol}, protocol, prng)
+	require.ErrorIs(t, err, sigor.ErrInvalidArgument)
+}
+
+// Test_CartesianOr_VerifyRejectsMissingBranchChallenges: empty branch challenges XOR to
+// the all-zero string, so an all-zero verifier challenge (the first one tried by the
+// fischlin prover) passed the XOR check and the verifier then indexed past the empty
+// slices. The verifier must reject them instead.
+func Test_CartesianOr_VerifyRejectsMissingBranchChallenges(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.NewCurve()
+	prng := pcg.NewRandomised()
+	base, err := curve.Random(prng)
+	require.NoError(t, err)
+	protocol, err := schnorr.NewProtocol(base, prng)
+	require.NoError(t, err)
+	orProtocol, err := sigor.CartesianCompose(protocol, protocol, prng)
+	require.NoError(t, err)
+
+	sf, ok := curve.ScalarStructure().(algebra.PrimeField[*k256.Scalar])
+	require.True(t, ok)
+	w0, err := sf.Random(prng)
+	require.NoError(t, err)
+	w1, err := sf.Random(prng)
+	require.NoError(t, err)
+
+	statement, err := sigor.CartesianComposeStatements(
+		schnorr.NewStatement(base.ScalarMul(w0)),
+		schnorr.NewStatement(base),
+	)
+	require.NoError(t, err)
+	witness, err := sigor.CartesianComposeWitnesses(schnorr.NewWitness(w0), schnorr.NewWitness(w1))
+	require.NoError(t, err)
+	commitment, state, err := orProtocol.ComputeProverCommitment(statement, witness)
+	require.NoError(t, err)
+
+	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
+	response, err := orProtocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+	require.NoError(t, err)
+	require.NoError(t, orProtocol.Verify(statement, commitment, challenge, response))
+
+	for _, tc := range []struct {
+		name   string
+		e0, e1 []byte
+	}{
+		{name: "both empty", e0: nil, e1: nil},
+		{name: "e0 empty", e0: nil, e1: make([]byte, len(response.E1))},
+		{name: "e1 empty", e0: make([]byte, len(response.E0)), e1: nil},
+		{name: "e0 short", e0: response.E0[:1], e1: response.E1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			malformed := *response
+			malformed.E0 = tc.e0
+			malformed.E1 = tc.e1
+			var err error
+			require.NotPanics(t, func() {
+				err = orProtocol.Verify(statement, commitment, challenge, &malformed)
+			})
+			require.ErrorIs(t, err, sigor.ErrInvalidLength)
+		})
+	}
+}

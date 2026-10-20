@@ -16,14 +16,16 @@ import (
 
 // Prover implements the NIProver interface for randomised Fischlin proofs.
 type Prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+	params
+
 	ctx           *session.Context
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 }
 
 // Prove generates a non-interactive randomised Fischlin proof for the given statement
-// and witness. It runs R parallel executions, randomly sampling challenges until
-// finding ones that hash to zero. Returns the serialised proof containing all R transcripts.
+// and witness. It runs r parallel executions, randomly sampling challenges until
+// finding ones that hash to zero. Returns the serialised proof containing all r transcripts.
 func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
 	sessionID := p.ctx.SessionID()
 	p.ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
@@ -34,11 +36,11 @@ func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compil
 	}
 
 	a := make([]byte, 0)
-	aI := make([]A, R)
-	stateI := make([]S, R)
+	aI := make([]A, p.r)
+	stateI := make([]S, p.r)
 
 	// step 1. for each i in [r] compute SigmaP_a(x, w)
-	for i := range R {
+	for i := range p.r {
 		var err error
 		aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 		if err != nil {
@@ -49,18 +51,16 @@ func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compil
 		a = append(a, aI[i].Bytes()...)
 	}
 
-	eI := make([][]byte, R)
-	zI := make([]Z, R)
+	eI := make([][]byte, p.r)
+	zI := make([]Z, p.r)
 
 	// step 3. for each i [r]
-	for i := range R {
-		// step 3.a set e to empty
-		eSet := make([][]byte, 0)
+	for i := range p.r {
+		// step 3.a set E_i to empty
+		tried := make(map[string]struct{})
 		for {
-			// gather some stats
-
-			// step 3.b sample e_i...
-			e, err := sample(eSet, p.sigmaProtocol.GetChallengeBytesLength(), p.prng)
+			// step 3.b sample e_i from {0,1}^t \ E_i...
+			e, err := p.sample(tried, p.sigmaProtocol.GetChallengeBytesLength(), p.prng)
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot sample challenge bytes")
 			}
@@ -70,23 +70,23 @@ func (p *Prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compil
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot generate response")
 			}
-			digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, z.Bytes(), statement.Bytes())
+			digest, err := p.hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, z.Bytes(), statement.Bytes())
 			if err != nil {
 				return nil, errs.Wrap(err).WithMessage("cannot compute digest")
 			}
 
-			// step 3.c if hash(a, i, e_i, z_i) != 0 append e_i to e and repeat step 3.b
+			// step 3.c if hash(a, i, e_i, z_i) != 0 add e_i to E_i and repeat step 3.b
 			if isAllZeros(digest) {
 				eI[i] = e
 				zI[i] = z
 				break
 			}
-			eSet = append(eSet, e)
+			tried[string(e[:p.tBytes])] = struct{}{}
 		}
 	}
 
 	commitmentSerialized := make([]byte, 0)
-	for i := range R {
+	for i := range p.r {
 		commitmentSerialized = append(commitmentSerialized, aI[i].Bytes()...)
 	}
 	p.ctx.Transcript().AppendBytes(commitmentLabel, commitmentSerialized)

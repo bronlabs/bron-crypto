@@ -8,7 +8,7 @@ Compilers that transform interactive sigma protocols into non-interactive zero-k
 | ---------- | ---------- | ---------- |
 | `fiatshamir` | Sequential | Simple, efficient proofs |
 | `fischlin` | UC-secure | Composable protocols |
-| `randfischlin` | UC-secure | OR composition support |
+| `randfischlin` | UC-secure | Composable protocols, including OR compositions |
 
 ## Usage
 
@@ -31,5 +31,5 @@ err = verifier.Verify(statement, proof)
 
 - `fiatshamir/` - Fiat-Shamir transform
 - `fischlin/` - Fischlin transform with dynamic parameters
-- `randfischlin/` - Randomised Fischlin with fixed parameters
+- `randfischlin/` - Randomised Fischlin transform with parameters derived from the special soundness
 - `zk/` - Interactive 5-round ZK protocol from any sigma protocol

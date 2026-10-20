@@ -124,16 +124,21 @@ redo:
 	return proofBytes, nil
 }
 
-func (p *Prover[X, W, A, S, Z]) challengeBytesAndResponse(t uint64, statement X, witness W, commitment A, state S) (e []byte, response Z, err error) {
-	e = make([]byte, 8)
-	binary.BigEndian.PutUint64(e, t)
+// challengeBytesAndResponse computes the response to the challenge j < 2^t. The sigma
+// protocol receives j in big-endian form, left-padded with zeros to its challenge
+// length; the returned e is the ceil(t / 8) low-order bytes that the proof carries and
+// that the verifier re-pads the same way.
+func (p *Prover[X, W, A, S, Z]) challengeBytesAndResponse(j uint64, statement X, witness W, commitment A, state S) (e []byte, response Z, err error) {
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], j)
+	eLen := int((p.t + 7) / 8)
+	e = buf[len(buf)-eLen:]
 	eBytes := make([]byte, p.sigmaProtocol.GetChallengeBytesLength())
-	copy(eBytes[len(eBytes)-len(e):], e)
+	copy(eBytes[len(eBytes)-eLen:], e)
 	z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, commitment, state, eBytes)
 	if err != nil {
 		return nil, z, errs.Wrap(err).WithMessage("cannot compute z_i")
 	}
 
-	eLen := int((p.t + 7) / 8)
-	return eBytes[len(eBytes)-eLen:], z, nil
+	return e, z, nil
 }
