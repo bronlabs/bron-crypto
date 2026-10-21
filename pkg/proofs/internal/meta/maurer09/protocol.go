@@ -294,9 +294,20 @@ func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness
 // decoder takes the arity from the data, and the group operation and
 // ScalarDiagonal panic on an arity mismatch, so without this check a malformed
 // proof crashes the verifier instead of failing verification.
+//
+// The challenge space is exactly {0,1}^(8*challengeByteLen): the scalar
+// multiplication parses the challenge bytes as an unbounded natural number, so a
+// byte string of any other length is a non-canonical encoding of a (possibly
+// identical) challenge and is rejected. This matters when the challenge is
+// adversarial, e.g. when it arrives inside a non-interactive proof, because the
+// bytes-to-challenge map must be injective for special soundness extraction to
+// apply.
 func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[I], challengeBytes sigma.ChallengeBytes, response *Response[P]) error {
 	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
 		return proofs.ErrInvalidArgument.WithMessage("invalid arguments")
+	}
+	if len(challengeBytes) != p.challengeByteLen {
+		return proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
 	}
 	if !p.imageGroup.Contains(commitment.A) {
 		return proofs.ErrVerificationFailed.WithMessage("commitment is not an element of the image group")
