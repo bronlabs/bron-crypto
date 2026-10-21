@@ -3,6 +3,7 @@ package mina_test
 import (
 	"encoding/hex"
 	"math/big"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -116,8 +117,7 @@ func TestLegacySchnorrDeterministicNonce(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create legacy deterministic scheme
-	scheme, err := mina.NewLegacyScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewLegacyScheme(mina.TestNet)
 
 	// Create two signers
 	signer1, err := scheme.Signer(privateKey)
@@ -143,6 +143,51 @@ func TestLegacySchnorrDeterministicNonce(t *testing.T) {
 	require.True(t, sig1.S.Equal(sig2.S), "S should be the same for deterministic nonces")
 
 	t.Log("✓ Legacy deterministic nonce generation is consistent")
+}
+
+func TestSignConcurrent(t *testing.T) {
+	t.Parallel()
+	for name, scheme := range map[string]*mina.Scheme{
+		"default": mina.NewScheme(mina.TestNet),
+		"legacy":  mina.NewLegacyScheme(mina.TestNet),
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			privateKey, err := mina.NewPrivateKey(pasta.NewPallasScalarField().FromUint64(1))
+			require.NoError(t, err)
+			signer, err := scheme.Signer(privateKey)
+			require.NoError(t, err)
+			verifier, err := scheme.Verifier()
+			require.NoError(t, err)
+
+			const count = 32
+			var messages [count]*mina.Message
+			var signatures [count]*mina.Signature
+			var signErrors [count]error
+			var wg sync.WaitGroup
+			start := make(chan struct{})
+			for i := range count {
+				messages[i] = new(mina.ROInput).Init()
+				messages[i].AddFields(pasta.NewPallasBaseField().FromUint64(uint64(i)))
+				wg.Go(func() {
+					<-start
+					signatures[i], signErrors[i] = signer.Sign(messages[i])
+				})
+			}
+			close(start)
+			wg.Wait()
+
+			seen := make(map[string]int, count)
+			for i, signature := range signatures {
+				require.NoError(t, signErrors[i], "message %d", i)
+				require.NoError(t, verifier.Verify(signature, privateKey.PublicKey(), messages[i]))
+				commitment := string(signature.R.ToCompressed())
+				previous, reused := seen[commitment]
+				require.False(t, reused, "nonce commitment reused for messages %d and %d", previous, i)
+				seen[commitment] = i
+			}
+		})
+	}
 }
 
 // TestLegacySchnorrParityCorrection verifies R has even y-coordinate
@@ -249,8 +294,7 @@ func TestSchnorrDeterministicNonce(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create deterministic scheme
-	scheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewScheme(mina.TestNet)
 
 	// Create two signers
 	signer1, err := scheme.Signer(privateKey)
@@ -325,8 +369,7 @@ func TestSignatureO1jsVector(t *testing.T) {
 	msg.AddFields(pasta.NewPallasBaseField().FromUint64(42))
 
 	// Sign with the deterministic scheme
-	scheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewScheme(mina.TestNet)
 	signer, err := scheme.Signer(privateKey)
 	require.NoError(t, err)
 	sig, err := signer.Sign(msg)
@@ -353,8 +396,7 @@ func TestSignatureO1jsPackedInputVector(t *testing.T) {
 	msg.AddBits(true, false, true, true, false)
 
 	// Sign with the deterministic scheme
-	scheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	scheme := mina.NewScheme(mina.TestNet)
 	signer, err := scheme.Signer(privateKey)
 	require.NoError(t, err)
 	sig, err := signer.Sign(msg)
@@ -379,16 +421,14 @@ func TestLegacyAndDefaultSignaturesDoNotCrossVerify(t *testing.T) {
 	msg.AddFields(pasta.NewPallasBaseField().FromUint64(42))
 
 	// Create a legacy signature
-	legacyScheme, err := mina.NewLegacyScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	legacyScheme := mina.NewLegacyScheme(mina.TestNet)
 	legacySigner, err := legacyScheme.Signer(privateKey)
 	require.NoError(t, err)
 	legacySignature, err := legacySigner.Sign(msg)
 	require.NoError(t, err)
 
 	// Create a default signature
-	defaultScheme, err := mina.NewScheme(mina.TestNet, privateKey)
-	require.NoError(t, err)
+	defaultScheme := mina.NewScheme(mina.TestNet)
 	defaultSigner, err := defaultScheme.Signer(privateKey)
 	require.NoError(t, err)
 	defaultSignature, err := defaultSigner.Sign(msg)
@@ -422,8 +462,7 @@ func TestDevNetEqualsTestNet(t *testing.T) {
 
 	// Sign the same message for testnet and devnet
 	sign := func(network mina.NetworkID) []byte {
-		scheme, err := mina.NewScheme(network, privateKey)
-		require.NoError(t, err)
+		scheme := mina.NewScheme(network)
 		signer, err := scheme.Signer(privateKey)
 		require.NoError(t, err)
 		sig, err := signer.Sign(msg)

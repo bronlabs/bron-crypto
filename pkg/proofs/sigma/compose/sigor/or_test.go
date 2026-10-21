@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -134,7 +135,7 @@ func Test_Or_VerifyRejectsMalformedChallenges(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	base, err := curve.Random(prng)
 	require.NoError(t, err)
 	protocol, err := schnorr.NewProtocol(base, prng)
@@ -174,7 +175,7 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 ) {
 	tb.Helper()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
@@ -236,7 +237,7 @@ func testOrSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 ) {
 	tb.Helper()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 
@@ -274,7 +275,7 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 ) {
 	tb.Helper()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	base, err := curve.Random(pcg.NewRandomised())
 	require.NoError(tb, err)
 

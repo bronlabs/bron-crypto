@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
@@ -158,7 +159,7 @@ func TestPolynomialModuleRandomModuleValuedPolynomial(t *testing.T) {
 	curve := k256.NewCurve()
 	polyMod, err := polynomials.NewPolynomialModule(curve)
 	require.NoError(t, err)
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	t.Run("degree 0", func(t *testing.T) {
 		t.Parallel()

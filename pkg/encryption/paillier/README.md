@@ -45,7 +45,7 @@ are implemented through the GIFT framework as `Representative(m) · IdentityNois
 
 <!-- paper: docs/papers/paillier99.pdf -->
 - [Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes.](https://link.springer.com/chapter/10.1007/3-540-48910-X_16)
-<!-- paper: 2015-864_20150908_060334.pdf -->
+<!-- paper: docs/paper/2015-864_20150908_060334.pdf -->
 - [Jost et al. Encryption Performance Improvements of the Paillier Cryptosystem](https://eprint.iacr.org/2015/864)
 <!-- paper: docs/papers/2010-501_20120106_104554.pdf -->
 - Section 5.2 of [2010/501](https://eprint.iacr.org/2010/501)

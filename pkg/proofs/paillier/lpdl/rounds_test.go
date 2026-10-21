@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -136,6 +137,7 @@ func randomIntInRange(tb testing.TB, qBig *big.Int, prng io.Reader) *num.Nat {
 
 func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, x S, bigQ P, curve curves.Curve[P, B, S], xEncrypted *paillier.Ciphertext, r *paillier.Nonce, pk *paillier.PublicKey, sk *paillier.SecretKey, prng io.Reader) (err error) {
 	tb.Helper()
+	prng = baseprng.NewThreadSafeReader(prng)
 	const proverID = 1
 	const verifierID = 2
 	quorum := hashset.NewComparable[sharing.ID](proverID, verifierID).Freeze()

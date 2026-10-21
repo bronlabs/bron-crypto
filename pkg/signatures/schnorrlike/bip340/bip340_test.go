@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,6 +49,43 @@ func Test_Sanity(t *testing.T) {
 	require.NoError(t, err)
 	err = verifier.Verify(signature, sk.PublicKey(), message)
 	require.NoError(t, err)
+}
+
+func TestSignConcurrent(t *testing.T) {
+	t.Parallel()
+	privateKey, err := bip340.NewPrivateKey(k256.NewScalarField().FromUint64(3))
+	require.NoError(t, err)
+	scheme := bip340.NewSchemeWithAux([bip340.AuxSizeBytes]byte{})
+	signer, err := scheme.Signer(privateKey)
+	require.NoError(t, err)
+	verifier, err := scheme.Verifier()
+	require.NoError(t, err)
+
+	const count = 32
+	var messages [count]bip340.Message
+	var signatures [count]*bip340.Signature
+	var signErrors [count]error
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := range count {
+		messages[i] = []byte(fmt.Sprintf("message %d", i))
+		wg.Go(func() {
+			<-start
+			signatures[i], signErrors[i] = signer.Sign(messages[i])
+		})
+	}
+	close(start)
+	wg.Wait()
+
+	seen := make(map[string]int, count)
+	for i, signature := range signatures {
+		require.NoError(t, signErrors[i], "message %d", i)
+		require.NoError(t, verifier.Verify(signature, privateKey.PublicKey(), messages[i]))
+		commitment := string(signature.R.ToCompressed())
+		previous, reused := seen[commitment]
+		require.False(t, reused, "nonce commitment reused for messages %d and %d", previous, i)
+		seen[commitment] = i
+	}
 }
 
 func Test_BIP340TestVectors(t *testing.T) {

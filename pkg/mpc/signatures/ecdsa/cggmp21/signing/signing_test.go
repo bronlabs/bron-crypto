@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	dkgtu "github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro/testutils"
@@ -34,7 +35,7 @@ import (
 func TestSigning_Threshold2Of3(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	curve := k256.NewCurve()
 	keyLen := 2048
 	shareholders := sharing.NewOrdinalShareholderSet(3)
@@ -188,7 +189,7 @@ func doCGGMP21DKG(
 	for id := range shareholders.Iter() {
 		baseShard, ok := baseShards[id]
 		require.True(t, ok)
-		runner, err := auxdkg.NewRunner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](auxCtxs[id], baseShard, pcg.NewRandomised())
+		runner, err := auxdkg.NewRunner[*k256.Point, *k256.BaseFieldElement, *k256.Scalar](auxCtxs[id], baseShard, baseprng.NewThreadSafeReader(pcg.NewRandomised()))
 		require.NoError(t, err)
 		auxRunners[id] = runner
 	}
@@ -202,7 +203,7 @@ func doCGGMP21DKG(
 func TestAggregateOffline_Threshold2Of3(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	curve := k256.NewCurve()
 	keyLen := 2048
 	shareholders := sharing.NewOrdinalShareholderSet(3)
@@ -280,7 +281,7 @@ func TestAggregateOffline_Threshold2Of3(t *testing.T) {
 func TestSignerErrorHandling(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	curve := k256.NewCurve()
 	keyLen := 2048
 	shareholders := sharing.NewOrdinalShareholderSet(3)

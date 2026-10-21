@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
@@ -24,7 +25,7 @@ func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 
 	runners := make(map[sharing.ID]network.Runner[*mpc.BaseShard[G, S]])
 	for id := range ac.Shareholders().Iter() {
-		runner, err := gennaro.NewRunner(ctxs[id], group, ac, niCompiler, pcg.NewRandomised())
+		runner, err := gennaro.NewRunner(ctxs[id], group, ac, niCompiler, prng.NewThreadSafeReader(pcg.NewRandomised()))
 		require.NoError(tb, err)
 		runners[id] = runner
 	}

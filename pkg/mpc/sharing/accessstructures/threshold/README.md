@@ -14,4 +14,6 @@ ac, err := threshold.NewThresholdAccessStructure(3, shareholders) // 3-of-n
 
 ## Reference
 
+<!-- paper: docs/papers/2025-518_20250319_142628.pdf [Chapter 2] -->
+<!-- paper: docs/papers/shamir79.pdf -->
 This is the standard threshold structure used by Shamir, Feldman, and Pedersen schemes.

@@ -1,6 +1,7 @@
 package bip340
 
 import (
+	"bytes"
 	"io"
 	"slices"
 
@@ -85,7 +86,8 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 
 // NewSchemeWithAux creates a BIP-340 scheme with explicit auxiliary randomness.
 // The aux data is used in nonce derivation: k = H(d XOR H(aux) || P || m).
-// Use this when you need deterministic signatures with known aux data.
+// The same aux data is reused for every signature from the scheme's signers,
+// making signatures deterministic for a given private key and message.
 func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
 	return &Scheme{
 		aux: aux,
@@ -93,8 +95,10 @@ func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
 }
 
 // NewScheme creates a BIP-340 scheme with random auxiliary data.
-// The aux data is sampled from prng and used for nonce derivation.
-// This provides protection against side-channel attacks.
+// The aux data is sampled once from prng and reused for every signature from
+// the scheme's signers. BIP-340 recommends fresh randomness at signing time for
+// stronger fault and side-channel protection; direct variant callers can pass
+// a CSPRNG to ComputeNonceCommitment to obtain fresh aux data for each call.
 func NewScheme(prng io.Reader) (*Scheme, error) {
 	if prng == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
@@ -122,13 +126,8 @@ func (Scheme) Name() signatures.Name {
 }
 
 // Variant returns the BIP-340 variant configuration for this scheme.
-func (s *Scheme) Variant() *Variant {
-	return &Variant{
-		sk:         nil,
-		Aux:        s.aux,
-		msg:        nil,
-		adjustedSk: nil,
-	}
+func (*Scheme) Variant() *Variant {
+	return &Variant{}
 }
 
 // Keygen creates a key generator for BIP-340 key pairs.
@@ -153,13 +152,9 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 	if privateKey == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("private key is nil")
 	}
-	variant := &Variant{
-		sk:         privateKey,
-		Aux:        s.aux,
-		msg:        nil,
-		adjustedSk: nil,
-	}
+	variant := s.Variant()
 	out := &Signer{
+		aux: s.aux,
 		sg: schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]{
 			Sk: privateKey,
 			V:  variant,
@@ -254,16 +249,16 @@ type SignerOption = signatures.SignerOption[*Signer, Message, *Signature]
 
 // Signer produces BIP-340 signatures using deterministic nonce derivation.
 type Signer struct {
-	sg schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]
+	sg  schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]
+	aux [AuxSizeBytes]byte
 }
 
 // Sign creates a BIP-340 signature on the message.
 // The nonce is derived deterministically from the private key, message,
 // and auxiliary randomness per BIP-340 specification.
+// Concurrent calls are safe provided the private key and messages are not mutated.
 func (s *Signer) Sign(message Message) (*Signature, error) {
-	// ComputeNonceCommitment requires a message
-	s.sg.V.msg = message
-	sig, err := s.sg.Sign(message)
+	sig, err := s.sg.Sign(message, bytes.NewReader(s.aux[:]))
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to sign message")
 	}

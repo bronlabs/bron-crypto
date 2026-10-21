@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
@@ -15,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/indcpacom"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
+	"github.com/bronlabs/bron-crypto/pkg/proofs"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elcomop"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -345,4 +347,95 @@ func testAnchor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.Pr
 		require.NoError(tb, err)
 		require.True(tb, algebrautils.ScalarMul(x, anchor.L()).IsOpIdentity())
 	}
+}
+
+// Test_Verify_MalformedProofRejected checks that a commitment of the wrong
+// shape, or a missing response, fails verification instead of crashing the
+// verifier. Both values are chosen by the prover and arrive over the wire,
+// whichever compiler or interactive verifier is in use, and the direct-power
+// decoder accepts any component count.
+func Test_Verify_MalformedProofRejected(t *testing.T) {
+	t.Parallel()
+
+	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
+		testMalformedProofRejected(t, k256.NewCurve())
+	})
+	t.Run("p256", func(t *testing.T) {
+		t.Parallel()
+		testMalformedProofRejected(t, p256.NewCurve())
+	})
+}
+
+func testMalformedProofRejected[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, curve curves.Curve[P, F, S],
+) {
+	tb.Helper()
+	prng := pcg.NewRandomised()
+	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
+
+	_, comKey := mustSetup(tb, curve, prng)
+	g := curve.Generator()
+
+	lambda, err := sf.Random(prng)
+	require.NoError(tb, err)
+	y, err := sf.Random(prng)
+	require.NoError(tb, err)
+
+	witness, com := mustCommit(tb, g, y, lambda, comKey)
+
+	protocol, err := elcomop.NewProtocol(curve, comKey, prng)
+	require.NoError(tb, err)
+	statement, err := elcomop.NewStatement(com)
+	require.NoError(tb, err)
+
+	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+	require.NoError(tb, err)
+	challenge := make([]byte, protocol.GetChallengeBytesLength())
+	_, err = io.ReadFull(prng, challenge)
+	require.NoError(tb, err)
+	response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+	require.NoError(tb, err)
+	require.NoError(tb, protocol.Verify(statement, commitment, challenge, response))
+
+	// A commitment with any component count other than two (Gamma, Delta). The
+	// zero value has no components, which is what the decoder yields for an
+	// empty component list.
+	badCommitments := []*constructions.FiniteDirectPowerModuleElement[P, S]{
+		{},
+		mustPowerModuleElement(tb, curve, g, 1),
+		mustPowerModuleElement(tb, curve, g, 3),
+	}
+	for _, bad := range badCommitments {
+		var verifyErr error
+		require.NotPanics(tb, func() {
+			verifyErr = protocol.Verify(statement, &elcomop.Commitment[P, S]{A: bad}, challenge, response)
+		})
+		require.ErrorIs(tb, verifyErr, proofs.ErrVerificationFailed)
+	}
+
+	// The response lives in the fixed-shape product G x F_q, so a missing value
+	// is the only malformed shape a decoder can hand over.
+	var verifyErr error
+	require.NotPanics(tb, func() {
+		verifyErr = protocol.Verify(statement, commitment, challenge, &elcomop.Response[P, S]{Z: nil})
+	})
+	require.ErrorIs(tb, verifyErr, proofs.ErrVerificationFailed)
+}
+
+// mustPowerModuleElement builds an element of G^arity whose components are all g.
+func mustPowerModuleElement[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	tb testing.TB, curve curves.Curve[P, F, S], g P, arity uint,
+) *constructions.FiniteDirectPowerModuleElement[P, S] {
+	tb.Helper()
+
+	module, err := constructions.NewFiniteDirectPowerModule(curve, arity)
+	require.NoError(tb, err)
+	components := make([]P, arity)
+	for i := range components {
+		components[i] = g
+	}
+	element, err := module.New(components...)
+	require.NoError(tb, err)
+	return element
 }

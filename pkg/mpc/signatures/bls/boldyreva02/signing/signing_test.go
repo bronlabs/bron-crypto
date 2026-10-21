@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -37,7 +38,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 	// Use BLS12-381 G1 for short key (public keys in G1, signatures in G2)
 	group := bls12381.NewG1()
 	curveFamily := &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
@@ -170,7 +171,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 	total := uint(5)
 
 	var curveFamily curves.PairingFriendlyFamily[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar] = &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
@@ -285,7 +286,7 @@ func TestPartialSignatureVerification(t *testing.T) {
 	// Use BLS12-381 G2 for long key (public keys in G2, signatures in G1)
 	group := bls12381.NewG2()
 	curveFamily := &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
@@ -378,7 +379,7 @@ func TestCosignerCreationErrors(t *testing.T) {
 
 	// Setup minimal valid parameters
 	curveFamily := &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	// Create a valid shard for testing
 	group := bls12381.NewG1()
@@ -437,7 +438,7 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 
 	// Setup a valid cosigner
 	curveFamily := &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
@@ -496,7 +497,7 @@ func TestAggregatorCreationErrors(t *testing.T) {
 
 	// Setup minimal valid parameters
 	curveFamily := &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	// Create valid public material
 	group := bls12381.NewG1()
@@ -543,7 +544,7 @@ func TestAggregationErrors(t *testing.T) {
 
 	// Setup valid components
 	curveFamily := &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
 	ac, err := threshold.NewThresholdAccessStructure(2, shareholders)
@@ -634,7 +635,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			curveFamily := &bls12381.FamilyTrait{}
-			prng := pcg.NewRandomised()
+			prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 			// Setup DKG
 			group := bls12381.NewG1()
@@ -696,7 +697,7 @@ func TestCosignerGetters(t *testing.T) {
 
 	// Setup a cosigner
 	curveFamily := &bls12381.FamilyTrait{}
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
@@ -781,7 +782,7 @@ func blsSetup(t *testing.T, thresh, total uint) (
 
 	curveFamily := &bls12381.FamilyTrait{}
 	group := bls12381.NewG1()
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	shareholders := sharing.NewOrdinalShareholderSet(total)
 	ac, err := threshold.NewThresholdAccessStructure(thresh, shareholders)

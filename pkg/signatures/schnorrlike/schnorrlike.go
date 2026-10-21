@@ -71,6 +71,10 @@ type (
 //   - Challenge computation (hash function, input ordering, domain separation)
 //   - Response calculation (s = k + ex vs s = k - ex)
 //   - Signature serialisation format
+//
+// Variants must not retain keys, messages, nonces, or randomness sources between
+// calls. Only fixed algorithm configuration belongs on a variant.
+// Variants are runtime configuration, not part of serialised keys, shards, or signatures.
 type Variant[GE GroupElement[GE, S], S Scalar[S], M Message] interface {
 	// Type returns the variant identifier (e.g., "bip340", "mina").
 	Type() VariantType
@@ -80,16 +84,21 @@ type Variant[GE GroupElement[GE, S], S Scalar[S], M Message] interface {
 
 	// ComputeNonceCommitment generates the nonce k and commitment R = k·G.
 	// The implementation may use deterministic derivation (BIP-340, Mina)
-	// or random sampling, and may enforce parity constraints on R.
-	ComputeNonceCommitment() (GE, S, error)
+	// or random sampling, and may enforce parity constraints on R. The key and
+	// message are explicit so nonce derivation cannot depend on another Sign call.
+	// The variant documents whether prng is required or may be nil.
+	ComputeNonceCommitment(privateKey *PrivateKey[GE, S], message M, prng io.Reader) (GE, S, error)
 
 	// ComputeChallenge computes the Fiat-Shamir challenge e = H(R || P || m).
 	// The exact hash function, input ordering, and domain separation vary by variant.
 	ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message M) (S, error)
 
 	// ComputeResponse computes the signature response s from the private key,
-	// nonce, and challenge. Typically s = k + e·x or s = k - e·x.
-	ComputeResponse(privateKeyValue, nonce, challenge S) (S, error)
+	// nonce, and challenge. Typically s = k + e·x or s = k - e·x. The public key
+	// determines any secret-key parity correction. For a partial response, pass
+	// the aggregate public key and the unadjusted secret share; the nonce must
+	// already have its required parity correction applied.
+	ComputeResponse(publicKeyValue GE, privateKeyValue, nonce, challenge S) (S, error)
 
 	// SerializeSignature encodes the signature to bytes in variant-specific format.
 	SerializeSignature(signature *Signature[GE, S]) ([]byte, error)
@@ -292,8 +301,8 @@ func (sig *Signature[GE, S]) HashCode() base.HashCode {
 // KeyGeneratorTrait provides common key generation logic for Schnorr schemes.
 // It generates key pairs by sampling a random non-zero scalar x and computing P = x·G.
 type KeyGeneratorTrait[GE GroupElement[GE, S], S Scalar[S]] struct {
-	Grp Group[GE, S]   `cbor:"Grp"` // The elliptic curve group
-	SF  ScalarField[S] `cbor:"SF"`  // The scalar field (integers mod group order)
+	Grp Group[GE, S]   // The elliptic curve group
+	SF  ScalarField[S] // The scalar field (integers mod group order)
 }
 
 // Generate creates a new Schnorr key pair using randomness from prng.
@@ -321,10 +330,11 @@ func (kg *KeyGeneratorTrait[GE, S]) Generate(prng io.Reader) (*PrivateKey[GE, S]
 // SignerTrait provides common signing logic for Schnorr schemes.
 // It implements the standard Schnorr signing algorithm using variant-specific
 // nonce generation, challenge computation, and response calculation.
+// It is a runtime object, not a persistence format.
 type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
-	Sk       *PrivateKey[GE, S]                                           `cbor:"Sk"`       // The signing private key
-	V        VR                                                           `cbor:"V"`        // The Schnorr variant for algorithm customization
-	Verifier signatures.Verifier[*PublicKey[GE, S], M, *Signature[GE, S]] `cbor:"Verifier"` // Verifier for signature self-check
+	Sk       *PrivateKey[GE, S]                                           // The signing private key
+	V        VR                                                           // The Schnorr variant for algorithm customization
+	Verifier signatures.Verifier[*PublicKey[GE, S], M, *Signature[GE, S]] // Verifier for signature self-check
 }
 
 // Sign creates a Schnorr signature on the given message.
@@ -336,8 +346,8 @@ type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Me
 //
 // The signature verification step protects against fault attacks that might
 // produce invalid signatures leaking information about the private key.
-func (sg *SignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) {
-	R, k, err := sg.V.ComputeNonceCommitment()
+func (sg *SignerTrait[VR, GE, S, M]) Sign(message M, prng io.Reader) (*Signature[GE, S], error) {
+	R, k, err := sg.V.ComputeNonceCommitment(sg.Sk, message, prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("R")
 	}
@@ -345,7 +355,7 @@ func (sg *SignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) 
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("e")
 	}
-	s, err := sg.V.ComputeResponse(sg.Sk.Value(), k, e)
+	s, err := sg.V.ComputeResponse(sg.Sk.PublicKey().Value(), sg.Sk.Value(), k, e)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not compute response")
 	}
@@ -369,10 +379,11 @@ func (sg *SignerTrait[VR, GE, S, M]) Variant() VR {
 // VerifierTrait provides common verification logic for Schnorr schemes.
 // It implements signature verification using the standard Schnorr equation:
 // s·G = R + e·P (or s·G = R - e·P when ResponseOperatorIsNegative is true).
+// It is a runtime object, not a persistence format.
 type VerifierTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
-	V                          VR                `cbor:"V"`                          // The Schnorr variant for challenge computation
-	ChallengePublicKey         *PublicKey[GE, S] `cbor:"ChallengePublicKey"`         // Optional override for partial signature verification
-	ResponseOperatorIsNegative bool              `cbor:"ResponseOperatorIsNegative"` // If true, uses s·G = R - e·P instead of s·G = R + e·P
+	V                          VR                // The Schnorr variant for challenge computation
+	ChallengePublicKey         *PublicKey[GE, S] // Optional override for partial signature verification
+	ResponseOperatorIsNegative bool              // If true, uses s·G = R - e·P instead of s·G = R + e·P
 }
 
 // Variant returns the Schnorr variant used by this verifier.

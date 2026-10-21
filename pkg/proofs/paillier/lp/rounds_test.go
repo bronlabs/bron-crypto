@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
@@ -51,7 +52,7 @@ func Test_HappyPath(t *testing.T) {
 func doProof(tb testing.TB, k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) {
 	tb.Helper()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	const proverID = 1
 	const verifierID = 2
 	quorum := hashset.NewComparable[sharing.ID](proverID, verifierID).Freeze()

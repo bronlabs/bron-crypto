@@ -1,6 +1,7 @@
 package elgamal_test
 
 import (
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -124,7 +125,7 @@ func encryptionPropertySuite[E elgamal.FiniteCyclicGroupElement[E, S], S algebra
 	tb.Helper()
 	return properties.NewGroupHomomorphicEncryptionProperties(
 		tb,
-		prng.FuncTypeErase(pcg.NewRandomised),
+		func() io.Reader { return prng.NewThreadSafeReader(pcg.NewRandomised()) },
 		selfEncrypt,
 		false,
 		DecryptionKeyGenerator(tb, group),

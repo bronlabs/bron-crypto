@@ -35,7 +35,9 @@ The package provides a unified interface, `PRNG`, implementing three methods:
 This package was validated using the official [NIST CAVP test vectors][6] as part of the [Deterministic Random Bit Generators Validation System (DRBGVS)][7]. The test vectors are included verbatim (directly extracted from the provided [.zip file][8]) in the `testutils/drbgtestvectors` folder, and a test suite is provided in `nist_test.go` with utilities in `testutils/nist_validation_utils.go`.
 
 ## References
+<!-- paper: docs/papers/NIST.SP.800-90Ar1.pdf -->
 [1]: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-90Ar1.pdf (NIST Special Publication 800-90A (Revision 1) Recommendation for Random Number Generation Using Deterministic Random Bit Generators)
+<!-- paper: docs/papers/NIST.SP.800-90Ar1.pdf [Section 10.2] -->
 [2]: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-90Ar1.pdf#page=57 (NIST Special Publication 800-90A (Revision 1) Recommendation for Random Number Generation Using Deterministic Random Bit Generators, Section 10.2)
 [3]: https://eprint.iacr.org/2019/996.pdf (Pseudorandom Black Swans: Cache Attacks on CTR DRBG)
 [4]: https://eprint.iacr.org/2018/349.pdf (An analysis of the NIST SP 800-90A Standard)

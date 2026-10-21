@@ -274,19 +274,35 @@ func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness
 	return &Response[P]{Z: z}, nil
 }
 
-// Verify checks a Maurer09 proof response. The challenge space is exactly
-// {0,1}^(8*challengeByteLen): the scalar multiplication parses the challenge bytes
-// as an unbounded natural number, so a byte string of any other length is a
-// non-canonical encoding of a (possibly identical) challenge and is rejected. This
-// matters when the challenge is adversarial, e.g. when it arrives inside a
-// non-interactive proof, because the bytes-to-challenge map must be injective for
-// special soundness extraction to apply.
+// Verify checks a Maurer09 proof response.
+//
+// This is the one verification path shared by every way of running a protocol
+// built on this package: the interactive sigma verifier, the AND/OR
+// compositions, and the non-interactive compilers (Fiat-Shamir, Fischlin,
+// randomised Fischlin, ZK). In all of them the commitment and the response are
+// chosen by the prover and arrive over the wire, and whatever decodes them (a
+// compiler proof, a composition response, a round message) knows only their Go
+// type, not the image and pre-image groups this instance was constructed with.
+// Group membership can therefore be enforced only here, so it is checked once,
+// before any algebra touches the untrusted values.
+//
+// What the membership check buys depends on the groups. Over a plain group such
+// as a curve or Z_N^* (Schnorr, the Paillier nth-root proof) it is a cheap nil
+// or parameter check that mostly duplicates what the element decoder already
+// guarantees. Over a direct-power or direct-product image or pre-image group
+// (elog, elcomop, Okamoto) it also pins the component count: the direct-power
+// decoder takes the arity from the data, and the group operation and
+// ScalarDiagonal panic on an arity mismatch, so without this check a malformed
+// proof crashes the verifier instead of failing verification.
 func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[I], challengeBytes sigma.ChallengeBytes, response *Response[P]) error {
 	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
 		return proofs.ErrInvalidArgument.WithMessage("invalid arguments")
 	}
-	if len(challengeBytes) != p.challengeByteLen {
-		return proofs.ErrInvalidArgument.WithMessage("invalid challenge length")
+	if !p.imageGroup.Contains(commitment.A) {
+		return proofs.ErrVerificationFailed.WithMessage("commitment is not an element of the image group")
+	}
+	if !p.preImageGroup.Contains(response.Z) {
+		return proofs.ErrVerificationFailed.WithMessage("response is not an element of the pre-image group")
 	}
 	cx, err := p.imageScalarMul(statement.X, challengeBytes)
 	if err != nil {
