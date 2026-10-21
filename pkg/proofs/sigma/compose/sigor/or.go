@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"io"
+	"slices"
 
 	"golang.org/x/sync/errgroup"
 
@@ -384,9 +385,11 @@ func (p *Protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge
 	return a, z, nil
 }
 
-// SpecialSoundness returns the special soundness parameter of the composed protocol.
+// SpecialSoundness returns the special soundness parameter of the composed protocol:
+// (k - 1)^n + 1 for n branches of a k-special sound protocol, see
+// composedSpecialSoundness. It is 2 whenever the underlying protocol is 2-special sound.
 func (p *Protocol[X, W, A, S, Z]) SpecialSoundness() uint {
-	return p.sigma.SpecialSoundness()
+	return composedSpecialSoundness(slices.Repeat([]uint{p.sigma.SpecialSoundness()}, p.count)...)
 }
 
 // GetChallengeBytesLength returns the challenge length in bytes for the composed protocol.
