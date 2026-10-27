@@ -12,7 +12,7 @@ import (
 
 // Round1P2P carries round 1 peer-to-peer messages.
 type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
-	OtR1 *ecbbot.Round1P2P[GE, SE]
+	OtR1 *ecbbot.Round1P2P[GE, SE] `cbor:"OtR1"`
 }
 
 func (m *Round1P2P[GE, SE]) Validate(bob *Bob[GE, SE], from sharing.ID) error {
@@ -28,7 +28,7 @@ func (m *Round1P2P[GE, SE]) Validate(bob *Bob[GE, SE], from sharing.ID) error {
 
 // Round2P2P carries round 2 peer-to-peer messages.
 type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
-	OtR2 *ecbbot.Round2P2P[GE, SE]
+	OtR2 *ecbbot.Round2P2P[GE, SE] `cbor:"OtR2"`
 }
 
 func (m *Round2P2P[GE, SE]) Validate(alice *Alice[GE, SE], from sharing.ID) error {

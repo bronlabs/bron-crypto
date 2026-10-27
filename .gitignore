@@ -56,6 +56,7 @@ docs/build/*
 
 # Codex
 **/.agents/
+**/.codex/
 !/.agents/
 !/.agents/skills/**
 
@@ -63,3 +64,4 @@ docs/build/*
 /docs/papers
 /coverage.out
 /coverage.html
+.mcp.json

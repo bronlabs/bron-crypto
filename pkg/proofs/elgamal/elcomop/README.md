@@ -101,3 +101,4 @@ Accept iff
 $$
 \varphi(r) = t \cdot (\Gamma, \Delta)^e.
 $$
+

@@ -105,4 +105,7 @@ ISN works directly over any finite group without requiring field arithmetic.
 
 ## Reference
 
+<!-- paper: docs/papers/2025-518_20250319_142628.pdf [Section 4.2] -->
 - Section 4.2 of [B25](https://eprint.iacr.org/2025/518.pdf)
+<!-- paper: docs/papers/ItSaNi87.pdf -->
+- Mitsuru Ito, Akira Saito, and Takao Nishizeki. [Secret Sharing Schemes realizing general access structures](https://onlinelibrary.wiley.com/doi/abs/10.1002/ecjc.4430720906)

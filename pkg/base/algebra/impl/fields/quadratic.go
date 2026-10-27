@@ -13,8 +13,8 @@ type QuadraticFieldExtensionArithmetic[BFP impl.FiniteFieldElementLowLevel[BFP]]
 }
 
 type QuadraticFieldExtensionImpl[BFP impl.FiniteFieldElementPtrLowLevel[BFP, BF], A QuadraticFieldExtensionArithmetic[BFP], BF any] struct {
-	U0 BF
-	U1 BF
+	U0 BF `cbor:"U0"`
+	U1 BF `cbor:"U1"`
 }
 
 func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) Set(v *QuadraticFieldExtensionImpl[BFP, A, BF]) {

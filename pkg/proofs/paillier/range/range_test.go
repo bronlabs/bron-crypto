@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -31,7 +32,7 @@ const keyLen = 512
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
@@ -77,7 +78,7 @@ func Test_HappyPath(t *testing.T) {
 func Test_CheatingProverBelowRange(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
 
@@ -131,7 +132,7 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 func Test_CheatingProverAboveRange(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
 
@@ -180,7 +181,7 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 func Test_Simulator(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
 
@@ -220,7 +221,7 @@ func Test_Simulator(t *testing.T) {
 func Test_Interactive(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
 
@@ -273,7 +274,7 @@ func Test_Interactive(t *testing.T) {
 func Test_InteractiveZk(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
 
@@ -328,7 +329,7 @@ func Test_InteractiveZk(t *testing.T) {
 func Test_NonInteractiveFiatShamir(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
 
@@ -382,7 +383,7 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 func Test_InvalidArgumentHandling(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 	sk, err := paillier.SampleSecretKey(keyLen, prng)
 	require.NoError(t, err)
 

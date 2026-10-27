@@ -284,7 +284,7 @@ type plaintextDTO struct {
 	P *num.Uint `cbor:"p"`
 }
 
-// Normalise returns m as a signed integer in the symmetric range (−N/2, N/2], the
+// Normalise returns m as a signed integer in the symmetric range [−N/2, N/2), the
 // canonical signed representative of the residue.
 func (pt *Plaintext) Normalise() *num.Int {
 	out, err := num.Z().FromUintSymmetric(pt.p)

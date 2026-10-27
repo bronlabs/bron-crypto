@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 func TestNatPlus_CBOR(t *testing.T) {
@@ -779,4 +780,31 @@ func BenchmarkRat_CBOR(b *testing.B) {
 			}
 		}
 	})
+}
+
+// TestNatPlus_CBOR_Malformed checks that a NatPlus whose payload is empty, or
+// whose inner value is null or empty, is rejected instead of dereferencing a
+// nil value.
+func TestNatPlus_CBOR_Malformed(t *testing.T) {
+	t.Parallel()
+
+	empty := map[string]any{}
+	cases := []struct {
+		name    string
+		payload any
+	}{
+		{"empty map", empty},
+		{"inner value null", map[string]any{"natPlus": nil}},
+		{"inner value empty", map[string]any{"natPlus": empty}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := serde.MarshalCBOR(tc.payload)
+			require.NoError(t, err)
+			var np num.NatPlus
+			require.NotPanics(t, func() { err = np.UnmarshalCBOR(data) })
+			require.Error(t, err)
+		})
+	}
 }

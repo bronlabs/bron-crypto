@@ -52,5 +52,7 @@ recovered, _ := scheme.ReconstructAndVerify(V, share1, share2, ...)
 
 ## Reference
 
+<!-- paper: docs/papers/ped91.pdf -->
 - Pedersen, T. P. "Non-interactive and Information-Theoretic Secure Verifiable Secret Sharing." CRYPTO, 1991.
+<!-- paper: docs/papers/kw.pdf -->
 - Karchmer, M. and Wigderson, A. "On Span Programs." Structure in Complexity Theory Conference, 1993.

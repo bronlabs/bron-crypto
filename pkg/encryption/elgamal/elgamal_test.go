@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/elgamal"
 )
@@ -200,7 +201,7 @@ func TestNewCiphertext(t *testing.T) {
 func TestNewCiphertextFromGroupElement(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	prng := pcg.NewRandomised()
+	prng := baseprng.NewThreadSafeReader(pcg.NewRandomised())
 
 	t.Run("returns a ciphertext for a valid arity-2 element", func(t *testing.T) {
 		t.Parallel()

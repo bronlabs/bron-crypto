@@ -3,64 +3,43 @@ package mina //nolint:testpackage // to test unexported identifiers
 import (
 	"bytes"
 	"io"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/errs-go/errs"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
-func TestNewDeterministicVariant(t *testing.T) {
+func TestNewVariant(t *testing.T) {
 	t.Parallel()
-
-	t.Run("nil private key", func(t *testing.T) {
-		t.Parallel()
-		v, err := NewDeterministicVariant(TestNet, nil)
-		require.Nil(t, v)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "nil")
-	})
-
-	t.Run("valid private key", func(t *testing.T) {
-		t.Parallel()
-		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
-		require.NoError(t, err)
-
-		v, err := NewDeterministicVariant(TestNet, privateKey)
-		require.NoError(t, err)
-		require.NotNil(t, v)
-		require.True(t, v.IsDeterministic())
-	})
+	for _, nid := range []NetworkID{TestNet, MainNet} {
+		v := NewVariant(nid)
+		require.Equal(t, nid, v.nid)
+		require.Equal(t, signatureFlavorDefault, v.flavour)
+		legacy := NewLegacyVariant(nid)
+		require.Equal(t, nid, legacy.nid)
+		require.Equal(t, signatureFlavorLegacy, legacy.flavour)
+	}
 }
 
-func TestNewRandomisedVariant(t *testing.T) {
+func TestRandomisedSchemeRequiresPRNG(t *testing.T) {
 	t.Parallel()
-
-	t.Run("nil prng", func(t *testing.T) {
-		t.Parallel()
-		v, err := NewRandomisedVariant(TestNet, nil)
-		require.Nil(t, v)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "nil")
-	})
-
-	t.Run("valid prng", func(t *testing.T) {
-		t.Parallel()
-		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
-		require.NoError(t, err)
-		require.NotNil(t, v)
-		require.False(t, v.IsDeterministic())
-	})
+	for _, newScheme := range []func(NetworkID, io.Reader) (*Scheme, error){NewRandomisedScheme, NewLegacyRandomisedScheme} {
+		scheme, err := newScheme(TestNet, nil)
+		require.Nil(t, scheme)
+		require.True(t, errs.Is(err, signatures.ErrInvalidArgument))
+	}
 }
 
 func TestVariantType(t *testing.T) {
 	t.Parallel()
 
-	privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
-	require.NoError(t, err)
-
-	v, err := NewDeterministicVariant(TestNet, privateKey)
-	require.NoError(t, err)
+	v := NewVariant(TestNet)
 
 	require.Equal(t, VariantType, v.Type())
 }
@@ -68,11 +47,7 @@ func TestVariantType(t *testing.T) {
 func TestVariantHashFunc(t *testing.T) {
 	t.Parallel()
 
-	privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
-	require.NoError(t, err)
-
-	v, err := NewDeterministicVariant(TestNet, privateKey)
-	require.NoError(t, err)
+	v := NewVariant(TestNet)
 
 	hashFn := v.HashFunc()
 	require.NotNil(t, hashFn)
@@ -84,7 +59,7 @@ func TestVariantHashFunc(t *testing.T) {
 	// Poseidon hash expects data length to be a multiple of 64 bytes
 	data := make([]byte, 64)
 	copy(data, "test")
-	_, err = h.Write(data)
+	_, err := h.Write(data)
 	require.NoError(t, err)
 	sum := h.Sum(nil)
 	require.NotEmpty(t, sum)
@@ -169,22 +144,62 @@ func TestBitsToBytes(t *testing.T) {
 	})
 }
 
+func TestPackToFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("packs bits in o1js order", func(t *testing.T) {
+		t.Parallel()
+		input := new(ROInput).Init()
+		// The bit sequence 101 represents the packed field value 5
+		input.AddBits(true, false, true)
+
+		packed, err := packToFields(input)
+		require.NoError(t, err)
+		require.Len(t, packed, 1)
+		require.Equal(t, "5", new(big.Int).SetBytes(packed[0].Bytes()).String())
+	})
+
+	t.Run("does not split network tuple at chunk boundary", func(t *testing.T) {
+		t.Parallel()
+		input := new(ROInput).Init()
+		for range 254 {
+			input.AddBits(true)
+		}
+
+		// The complete 8-bit network ID must start a new packed field
+		packed, err := packToFields(input, packedInput{value: big.NewInt(0), bitLen: 8})
+		require.NoError(t, err)
+		require.Len(t, packed, 2)
+		expected := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 254), big.NewInt(1))
+		require.Equal(t, expected.String(), new(big.Int).SetBytes(packed[0].Bytes()).String())
+		require.True(t, packed[1].Equal(pasta.NewPallasBaseField().Zero()))
+	})
+}
+
 func TestComputeNonceCommitment(t *testing.T) {
 	t.Parallel()
+
+	t.Run("deterministic mode without private key", func(t *testing.T) {
+		t.Parallel()
+		for _, v := range []*Variant{NewVariant(TestNet), NewLegacyVariant(TestNet)} {
+			R, k, err := v.ComputeNonceCommitment(nil, new(ROInput).Init(), nil)
+			require.Nil(t, R)
+			require.Nil(t, k)
+			require.True(t, errs.Is(err, signatures.ErrInvalidArgument))
+		}
+	})
 
 	t.Run("deterministic mode without message", func(t *testing.T) {
 		t.Parallel()
 		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
-		v, err := NewDeterministicVariant(TestNet, privateKey)
-		require.NoError(t, err)
-
-		// Should fail because msg is nil
-		R, k, err := v.ComputeNonceCommitment()
-		require.Nil(t, R)
-		require.Nil(t, k)
-		require.Error(t, err)
+		for _, v := range []*Variant{NewVariant(TestNet), NewLegacyVariant(TestNet)} {
+			R, k, err := v.ComputeNonceCommitment(privateKey, nil, nil)
+			require.Nil(t, R)
+			require.Nil(t, k)
+			require.True(t, errs.Is(err, signatures.ErrInvalidArgument))
+		}
 	})
 
 	t.Run("deterministic mode with message", func(t *testing.T) {
@@ -192,15 +207,13 @@ func TestComputeNonceCommitment(t *testing.T) {
 		privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 		require.NoError(t, err)
 
-		v, err := NewDeterministicVariant(TestNet, privateKey)
-		require.NoError(t, err)
+		v := NewVariant(TestNet)
 
 		// Set message
 		msg := new(ROInput).Init()
 		msg.AddString("test message")
-		v.msg = msg
 
-		R, k, err := v.ComputeNonceCommitment()
+		R, k, err := v.ComputeNonceCommitment(privateKey, msg, nil)
 		require.NoError(t, err)
 		require.NotNil(t, R)
 		require.NotNil(t, k)
@@ -213,10 +226,9 @@ func TestComputeNonceCommitment(t *testing.T) {
 
 	t.Run("randomised mode", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
-		require.NoError(t, err)
+		v := NewVariant(TestNet)
 
-		R, k, err := v.ComputeNonceCommitment()
+		R, k, err := v.ComputeNonceCommitment(nil, nil, pcg.NewRandomised())
 		require.NoError(t, err)
 		require.NotNil(t, R)
 		require.NotNil(t, k)
@@ -234,8 +246,7 @@ func TestComputeChallenge(t *testing.T) {
 	privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 	require.NoError(t, err)
 
-	v, err := NewDeterministicVariant(TestNet, privateKey)
-	require.NoError(t, err)
+	v := NewVariant(TestNet)
 
 	publicKey := privateKey.PublicKey()
 	R := group.ScalarBaseMul(sf.One())
@@ -278,8 +289,7 @@ func TestComputeResponse(t *testing.T) {
 	privateKey, err := DecodePrivateKey("EKFKgDtU3rcuFTVSEpmpXSkukjmX4cKefYREi6Sdsk7E7wsT7KRw")
 	require.NoError(t, err)
 
-	v, err := NewDeterministicVariant(TestNet, privateKey)
-	require.NoError(t, err)
+	v := NewVariant(TestNet)
 
 	skValue := privateKey.V
 	nonce := sf.One()
@@ -287,28 +297,28 @@ func TestComputeResponse(t *testing.T) {
 
 	t.Run("nil private key value", func(t *testing.T) {
 		t.Parallel()
-		s, err := v.ComputeResponse(nil, nonce, challenge)
+		s, err := v.ComputeResponse(privateKey.PublicKey().Value(), nil, nonce, challenge)
 		require.Nil(t, s)
 		require.Error(t, err)
 	})
 
 	t.Run("nil nonce", func(t *testing.T) {
 		t.Parallel()
-		s, err := v.ComputeResponse(skValue, nil, challenge)
+		s, err := v.ComputeResponse(privateKey.PublicKey().Value(), skValue, nil, challenge)
 		require.Nil(t, s)
 		require.Error(t, err)
 	})
 
 	t.Run("nil challenge", func(t *testing.T) {
 		t.Parallel()
-		s, err := v.ComputeResponse(skValue, nonce, nil)
+		s, err := v.ComputeResponse(privateKey.PublicKey().Value(), skValue, nonce, nil)
 		require.Nil(t, s)
 		require.Error(t, err)
 	})
 
 	t.Run("valid inputs", func(t *testing.T) {
 		t.Parallel()
-		s, err := v.ComputeResponse(skValue, nonce, challenge)
+		s, err := v.ComputeResponse(privateKey.PublicKey().Value(), skValue, nonce, challenge)
 		require.NoError(t, err)
 		require.NotNil(t, s)
 		// s = k + e*x
@@ -329,8 +339,7 @@ func TestSerializeSignature(t *testing.T) {
 
 	t.Run("nil signature via variant method", func(t *testing.T) {
 		t.Parallel()
-		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
-		require.NoError(t, err)
+		v := NewVariant(TestNet)
 
 		data, err := v.SerializeSignature(nil)
 		require.Nil(t, data)
@@ -356,8 +365,7 @@ func TestSerializeSignature(t *testing.T) {
 		sig, err := signer.Sign(msg)
 		require.NoError(t, err)
 
-		v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
-		require.NoError(t, err)
+		v := NewVariant(TestNet)
 
 		data, err := v.SerializeSignature(sig)
 		require.NoError(t, err)
@@ -446,8 +454,7 @@ func TestDeserializeSignature(t *testing.T) {
 func TestCorrectPartialNonceParity(t *testing.T) {
 	t.Parallel()
 
-	v, err := NewRandomisedVariant(TestNet, pcg.NewRandomised())
-	require.NoError(t, err)
+	v := NewVariant(TestNet)
 
 	t.Run("nil nonce commitment", func(t *testing.T) {
 		t.Parallel()
@@ -522,10 +529,9 @@ func (badReader) Read([]byte) (int, error) {
 func TestRandomisedNonceCommitmentWithBadReader(t *testing.T) {
 	t.Parallel()
 
-	v, err := NewRandomisedVariant(TestNet, badReader{})
-	require.NoError(t, err)
+	v := NewVariant(TestNet)
 
-	R, k, err := v.ComputeNonceCommitment()
+	R, k, err := v.ComputeNonceCommitment(nil, nil, badReader{})
 	require.Nil(t, R)
 	require.Nil(t, k)
 	require.Error(t, err)
@@ -543,11 +549,9 @@ func TestDeterministicNonceIsConsistent(t *testing.T) {
 
 	var nonces []*Scalar
 	for range 3 {
-		v, err := NewDeterministicVariant(TestNet, privateKey)
-		require.NoError(t, err)
-		v.msg = msg
+		v := NewVariant(TestNet)
 
-		R, k, err := v.ComputeNonceCommitment()
+		R, k, err := v.ComputeNonceCommitment(privateKey, msg, nil)
 		require.NoError(t, err)
 		require.NotNil(t, R)
 		nonces = append(nonces, k)
@@ -570,14 +574,12 @@ func TestDifferentMessagesProduceDifferentNonces(t *testing.T) {
 	var nonces []*Scalar
 
 	for _, m := range messages {
-		v, err := NewDeterministicVariant(TestNet, privateKey)
-		require.NoError(t, err)
+		v := NewVariant(TestNet)
 
 		msg := new(ROInput).Init()
 		msg.AddString(m)
-		v.msg = msg
 
-		_, k, err := v.ComputeNonceCommitment()
+		_, k, err := v.ComputeNonceCommitment(privateKey, msg, nil)
 		require.NoError(t, err)
 		nonces = append(nonces, k)
 	}
@@ -608,11 +610,9 @@ func TestDifferentNetworksProduceDifferentNonces(t *testing.T) {
 	var nonces []*Scalar
 
 	for _, nid := range networks {
-		v, err := NewDeterministicVariant(nid, privateKey)
-		require.NoError(t, err)
-		v.msg = msg
+		v := NewVariant(nid)
 
-		_, k, err := v.ComputeNonceCommitment()
+		_, k, err := v.ComputeNonceCommitment(privateKey, msg, nil)
 		require.NoError(t, err)
 		nonces = append(nonces, k)
 	}

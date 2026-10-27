@@ -89,7 +89,7 @@ func (*PrimeCurveTrait[FP, P, W, WT]) Generator() W {
 
 // PointTrait implements common group operations for points.
 type PointTrait[FP fields.FiniteFieldElement[FP], P points.PointPtr[FP, P, T], T any, W PointWrapperPtrConstraint[FP, P, WT], WT any] struct {
-	V T
+	V T `cbor:"V"`
 }
 
 // P returns the underlying point pointer.

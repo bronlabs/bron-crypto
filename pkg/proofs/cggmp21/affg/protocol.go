@@ -440,11 +440,11 @@ func (p *Protocol[G, B, S]) sampleState(statement *Statement[G, B, S]) (*State, 
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample m")
 	}
-	delta, err := intSampleRangeSymmetricBits(p.lPrime+p.epsilon+nHatBitLen, p.prng)
+	delta, err := intSampleRangeSymmetricBits(p.l+p.epsilon+nHatBitLen, p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample delta")
 	}
-	mu, err := intSampleRangeSymmetricBits(p.lPrime+nHatBitLen, p.prng)
+	mu, err := intSampleRangeSymmetricBits(p.l+nHatBitLen, p.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("could not sample mu")
 	}

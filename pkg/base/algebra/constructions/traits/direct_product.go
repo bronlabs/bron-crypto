@@ -50,7 +50,7 @@ func (*DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) Arity() cardinal.Cardinal 
 	return cardinal.New(2)
 }
 
-func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) set(s1 S1, s2 S2) error { //nolint:unused // needed for trait interface compliance.
+func (d *DirectProductSemiGroup[S1, S2, E1, E2, W, WT]) set(s1 S1, s2 S2) error {
 	if utils.IsNil(s1) || utils.IsNil(s2) {
 		return ErrInvalidArgument.WithMessage("components cannot be nil")
 	}

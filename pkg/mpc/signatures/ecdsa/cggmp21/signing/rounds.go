@@ -19,12 +19,17 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/affg"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/cggmp21/encelg"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elcomop"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/elgamal/elog"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	sigecdsa "github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+)
+
+const (
+	encElgProofLabelForK     = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_ENC-ELG-PROOF-K"
+	encElgProofLabelForGamma = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_ENC-ELG-PROOF-GAMMA"
+	affGProofLabel           = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_AFF-G-PROOF"
+	affGHatProofLabel        = "BRON_CRYPTO_MPC_ECDSA_CGGMP21-SIGN_AFF-G-HAT-PROOF"
 )
 
 // Round1 samples the local nonces and publishes the first signing commitments.
@@ -106,11 +111,11 @@ func (s *Cosigner[P, B, S]) Round1() (*Round1Broadcast[P, B, S], network.Outgoin
 	psi0 := make(map[sharing.ID]compiler.NIZKPoKProof)
 	psi1 := make(map[sharing.ID]compiler.NIZKPoKProof)
 	for j := range s.ctx.OtherPartiesOrdered() {
-		proof0, err := s.proveEncElg(j, k, bigK, rho, a, bigY, bigA)
+		proof0, err := s.proveEncElg([]byte(encElgProofLabelForK), j, k, bigK, rho, a, bigY, bigA)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove enc-elg for k to %d", j)
 		}
-		proof1, err := s.proveEncElg(j, gamma, bigG, nu, b, bigY, bigB)
+		proof1, err := s.proveEncElg([]byte(encElgProofLabelForGamma), j, gamma, bigG, nu, b, bigY, bigB)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove enc-elg for gamma to %d", j)
 		}
@@ -194,12 +199,12 @@ func (s *Cosigner[P, B, S]) Round2(
 		bigKJ[j] = b.BigK
 
 		// step 1.a
-		if err := s.verifyEncElg(j, b.BigK, b.BigY, b.BigA, u.Psi0); err != nil {
+		if err := s.verifyEncElg([]byte(encElgProofLabelForK), j, b.BigK, b.BigY, b.BigA, u.Psi0); err != nil {
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify enc-elg statement")
 		}
 
 		// step 1.b
-		if err := s.verifyEncElg(j, b.BigG, b.BigY, b.BigB, u.Psi1); err != nil {
+		if err := s.verifyEncElg([]byte(encElgProofLabelForGamma), j, b.BigG, b.BigY, b.BigB, u.Psi1); err != nil {
 			return nil, nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify enc-elg statement")
 		}
 		s.state.bigAJ[j] = b.BigA
@@ -227,7 +232,7 @@ func (s *Cosigner[P, B, S]) Round2(
 
 	// step 2.a
 	bigGamma := s.params.CurveGroup().ScalarBaseMul(s.state.gamma)
-	psi, err := s.proveElog(s.params.CurveGroup().Generator(), s.state.gamma, bigGamma, s.state.b, s.state.bigBJ[s.ctx.HolderID()], bigGamma)
+	psi, err := s.proveElog(s.params.CurveGroup().Generator(), s.state.gamma, s.state.b, s.state.bigBJ[s.ctx.HolderID()], bigGamma)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot prove gamma elog statement")
 	}
@@ -285,13 +290,13 @@ func (s *Cosigner[P, B, S]) Round2(
 		}
 
 		// step 2.b.iii
-		affgPsi, err := s.proveAffG(j, s.state.gamma, beta, sNonce, rNonce, bigKj, bigDJ, bigFJ, bigGamma)
+		affgPsi, err := s.proveAffG([]byte(affGProofLabel), j, s.state.gamma, beta, sNonce, rNonce, bigKj, bigDJ, bigFJ, bigGamma)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove affg statement for %d", j)
 		}
 
 		// step 2.b.iv
-		affgPsiHat, err := s.proveAffG(j, x, betaHat, sHatNonce, rHatNonce, bigKj, bigDHatJ, bigFHatJ, bigX)
+		affgPsiHat, err := s.proveAffG([]byte(affGHatProofLabel), j, x, betaHat, sHatNonce, rHatNonce, bigKj, bigDHatJ, bigFHatJ, bigX)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot prove affg-hat statement for %d", j)
 		}
@@ -389,7 +394,7 @@ func (s *Cosigner[P, B, S]) Round3(
 		bigGammaJ[j] = b.BigGamma
 
 		// step 1.a
-		if err := s.verifyAffG(j, u.BigD, u.BigF, b.BigGamma, u.Psi); err != nil {
+		if err := s.verifyAffG([]byte(affGProofLabel), j, u.BigD, u.BigF, b.BigGamma, u.Psi); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify affg statement")
 		}
 		bigXJ, ok := s.state.partialPublicKeys[j]
@@ -398,7 +403,7 @@ func (s *Cosigner[P, B, S]) Round3(
 		}
 
 		// step 1.b
-		if err := s.verifyAffG(j, u.BigDHat, u.BigFHat, bigXJ, u.PsiHat); err != nil {
+		if err := s.verifyAffG([]byte(affGHatProofLabel), j, u.BigDHat, u.BigFHat, bigXJ, u.PsiHat); err != nil {
 			return nil, errs.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, j).WithMessage("cannot verify affg-hat statement")
 		}
 
@@ -452,7 +457,7 @@ func (s *Cosigner[P, B, S]) Round3(
 	bigS := bigGamma.ScalarMul(chi)
 
 	// step 2.b
-	psiPrime, err := s.proveElog(bigGamma, s.state.k, s.params.CurveGroup().ScalarBaseMul(s.state.k), s.state.a, s.state.bigAJ[s.ctx.HolderID()], bigDelta)
+	psiPrime, err := s.proveElog(bigGamma, s.state.k, s.state.a, s.state.bigAJ[s.ctx.HolderID()], bigDelta)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot prove k elog statement")
 	}
@@ -611,6 +616,7 @@ func (s *Cosigner[P, B, S]) appendEpidToTranscript() error {
 }
 
 func (s *Cosigner[P, B, S]) proveEncElg(
+	label []byte,
 	recipient sharing.ID,
 	value S,
 	paillierCiphertext *paillier.Ciphertext,
@@ -637,6 +643,7 @@ func (s *Cosigner[P, B, S]) proveEncElg(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create subcontext")
 	}
+	proverCtx.Transcript().AppendBytes(proofLabel, label)
 	proverCtx.Transcript().AppendBytes(proverID, s.shard.Share().ID().Bytes())
 	prover, err := encElg.NewProver(proverCtx)
 	if err != nil {
@@ -647,7 +654,7 @@ func (s *Cosigner[P, B, S]) proveEncElg(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot convert scalar to integer")
 	}
-	witness, err := encelg.NewWitness[S](valueInt, paillierNonce, elgamalWitness)
+	witness, err := encelg.NewWitness(valueInt, paillierNonce, elgamalWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create enc-elg witness")
 	}
@@ -663,6 +670,7 @@ func (s *Cosigner[P, B, S]) proveEncElg(
 }
 
 func (s *Cosigner[P, B, S]) verifyEncElg(
+	label []byte,
 	sender sharing.ID,
 	paillierCiphertext *paillier.Ciphertext,
 	elgamalCommitmentKey *indcpacom.HomomorphicCommitmentKey[
@@ -687,6 +695,7 @@ func (s *Cosigner[P, B, S]) verifyEncElg(
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create subcontext")
 	}
+	verifierCtx.Transcript().AppendBytes(proofLabel, label)
 	verifierCtx.Transcript().AppendBytes(proverID, sender.Bytes())
 	verifier, err := encElg.NewVerifier(verifierCtx)
 	if err != nil {
@@ -709,7 +718,6 @@ func (s *Cosigner[P, B, S]) verifyEncElg(
 func (s *Cosigner[P, B, S]) proveElog(
 	basePoint P,
 	witnessScalar S,
-	elgamalPlaintextPoint P,
 	elgamalWitness *indcpacom.Witness[*elgamal.Nonce[S]],
 	elgamalCommitment *indcpacom.Commitment[*elgamal.Ciphertext[P, S]],
 	statementPoint P,
@@ -727,29 +735,11 @@ func (s *Cosigner[P, B, S]) proveElog(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create NI elog protocol")
 	}
-	elgamalPlaintext, err := elgamal.NewPlaintext(elgamalPlaintextPoint)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal plaintext")
-	}
-	elgamalMessage, err := indcpacom.NewMessage(elgamalPlaintext)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create ElGamal message")
-	}
-	elcomopWitness, err := elcomop.NewWitness(elgamalMessage, elgamalWitness)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create elcomop witness")
-	}
-	schWitness := schnorr.NewWitness(witnessScalar)
-	elogWitness, err := elog.NewWitness(elcomopWitness, schWitness)
+	elogWitness, err := elog.NewWitness(witnessScalar, elgamalWitness)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create elog witness")
 	}
-	elcomopStatement, err := elcomop.NewStatement(elgamalCommitment)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create elcomop statement")
-	}
-	schStatement := schnorr.NewStatement(statementPoint)
-	elogStatement, err := elog.NewStatement(elcomopStatement, schStatement)
+	elogStatement, err := elog.NewStatement(elgamalCommitment, statementPoint)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create elog statement")
 	}
@@ -786,12 +776,7 @@ func (s *Cosigner[P, B, S]) verifyElog(
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create NI elog protocol")
 	}
-	elcomopStatement, err := elcomop.NewStatement(elgamalCommitment)
-	if err != nil {
-		return errs.Wrap(err).WithMessage("cannot create elcomop statement")
-	}
-	schStatement := schnorr.NewStatement(statementPoint)
-	elogStatement, err := elog.NewStatement(elcomopStatement, schStatement)
+	elogStatement, err := elog.NewStatement(elgamalCommitment, statementPoint)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create elog statement")
 	}
@@ -808,6 +793,7 @@ func (s *Cosigner[P, B, S]) verifyElog(
 }
 
 func (s *Cosigner[P, B, S]) proveAffG(
+	label []byte,
 	recipient sharing.ID,
 	x S,
 	beta *num.Int,
@@ -835,6 +821,7 @@ func (s *Cosigner[P, B, S]) proveAffG(
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot create subcontext")
 	}
+	affgProverCtx.Transcript().AppendBytes(proofLabel, label)
 	affgProverCtx.Transcript().AppendBytes(proverID, s.ctx.HolderID().Bytes())
 	affgProver, err := affgNI.NewProver(affgProverCtx)
 	if err != nil {
@@ -873,6 +860,7 @@ func (s *Cosigner[P, B, S]) proveAffG(
 }
 
 func (s *Cosigner[P, B, S]) verifyAffG(
+	label []byte,
 	sender sharing.ID,
 	d *paillier.Ciphertext,
 	y *paillier.Ciphertext,
@@ -896,6 +884,7 @@ func (s *Cosigner[P, B, S]) verifyAffG(
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot create subcontext")
 	}
+	affgVerifierCtx.Transcript().AppendBytes(proofLabel, label)
 	affgVerifierCtx.Transcript().AppendBytes(proverID, sender.Bytes())
 	affgVerifier, err := affgNI.NewVerifier(affgVerifierCtx)
 	if err != nil {

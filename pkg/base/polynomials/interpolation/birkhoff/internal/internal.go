@@ -12,9 +12,9 @@ import (
 )
 
 type Node[F algebra.PrimeFieldElement[F], G any] struct {
-	X F
-	J uint64
-	Y G
+	X F      `cbor:"X"`
+	J uint64 `cbor:"J"`
+	Y G      `cbor:"Y"`
 }
 
 type Nodes[F algebra.PrimeFieldElement[F], G any] []*Node[F, G]

@@ -52,6 +52,9 @@ Each party:
 
 ## Reference
 
+<!-- paper: docs/papers/gjkr07.pdf -->
 - Gennaro, R., Jarecki, S., Krawczyk, H., and Rabin, T. "Secure Distributed Key Generation for Discrete-Log Based Cryptosystems." EUROCRYPT, 1999.
+<!-- paper: docs/papers/kw.pdf -->
 - Karchmer, M. and Wigderson, A. "On Span Programs." Structure in Complexity Theory Conference, 1993.
+<!-- paper: docs/papers/okamoto93.pdf -->
 - Okamoto, T. "Provably Secure and Practical Identification Schemes and Corresponding Signature Schemes." CRYPTO, 1992.

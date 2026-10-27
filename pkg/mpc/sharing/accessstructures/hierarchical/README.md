@@ -28,4 +28,5 @@ It also requires shareholder IDs to lie in the range `1..64`.
 
 ## Reference
 
+<!-- papers: docs/papers/htss.pdf -->
 - T. Tassa, "Hierarchical Threshold Secret Sharing." J Cryptology 20, 237-264 (2007).

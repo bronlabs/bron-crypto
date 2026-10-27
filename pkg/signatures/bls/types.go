@@ -70,15 +70,15 @@ type Message = []byte
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-4.2
 type CipherSuite struct {
-	FamilyName                      string
-	DstSignatureBasicInTwistedGroup string
-	DstSignatureAugInTwistedGroup   string
-	DstSignaturePopInTwistedGroup   string
-	DstPopProofInTwistedGroup       string
-	DstSignatureBasicInSourceGroup  string
-	DstSignatureAugInSourceGroup    string
-	DstSignaturePopInSourceGroup    string
-	DstPopProofInSourceGroup        string
+	FamilyName                      string `cbor:"FamilyName"`
+	DstSignatureBasicInTwistedGroup string `cbor:"DstSignatureBasicInTwistedGroup"`
+	DstSignatureAugInTwistedGroup   string `cbor:"DstSignatureAugInTwistedGroup"`
+	DstSignaturePopInTwistedGroup   string `cbor:"DstSignaturePopInTwistedGroup"`
+	DstPopProofInTwistedGroup       string `cbor:"DstPopProofInTwistedGroup"`
+	DstSignatureBasicInSourceGroup  string `cbor:"DstSignatureBasicInSourceGroup"`
+	DstSignatureAugInSourceGroup    string `cbor:"DstSignatureAugInSourceGroup"`
+	DstSignaturePopInSourceGroup    string `cbor:"DstSignaturePopInSourceGroup"`
+	DstPopProofInSourceGroup        string `cbor:"DstPopProofInSourceGroup"`
 }
 
 // GetDst returns the domain separation tag for signing operations based on the rogue key

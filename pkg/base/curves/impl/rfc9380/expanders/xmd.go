@@ -9,7 +9,7 @@ import (
 
 // Xmd implements expand_message_xmd from RFC 9380.
 type Xmd struct {
-	HashFunc func() hash.Hash
+	HashFunc func() hash.Hash `cbor:"HashFunc"`
 }
 
 // ExpandMessage expands msg to lenInBytes using XMD and dst.

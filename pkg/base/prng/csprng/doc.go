@@ -1,3 +1,3 @@
 // Package csprng defines interfaces and helpers for cryptographically secure
-// PRNGs, including a threadsafe wrapper.
+// PRNGs. For a concurrent-safe reader wrapper, see prng.NewThreadSafeReader.
 package csprng

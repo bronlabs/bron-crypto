@@ -19,6 +19,9 @@ import (
 // safe-prime factorisation (carried as the known-order group) and λ = log_t(s). A
 // holder of λ can equivocate, so the result is secret material — share only the
 // public key returned by Export. keyLen is the bit length of the modulus N̂.
+// prng is read sequentially by a single goroutine; it must be safe for
+// concurrent use only when shared across concurrent sampling calls (e.g.
+// crypto/rand.Reader).
 func SampleTrapdoorKey(keyLen uint, prng io.Reader) (*TrapdoorKey, error) {
 	group, s, t, lambda, err := SamplePedersenParameters(keyLen, prng)
 	if err != nil {

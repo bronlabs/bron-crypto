@@ -42,4 +42,7 @@ secret, _ := scheme.Reconstruct(share1, share2)
 
 ## Reference
 
+<!-- paper: docs/papers/2025-518_20250319_142628.pdf [Section 4.4] -->
+- Section 4.4 of [B25](https://eprint.iacr.org/2025/518.pdf)
+<!-- paper: docs/papers/kw.pdf -->
 - [M. Karchmer and A. Wigderson, "On Span Programs."](https://www.math.ias.edu/~avi/PUBLICATIONS/MYPAPERS/KW93/proc.pdf)

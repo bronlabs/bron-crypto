@@ -22,4 +22,5 @@ cnfAC, err := cnf.ConvertToCNF(monotoneAccessStructure)
 
 ## Reference
 
+<!-- paper: docs/papers/2025-518_20250319_142628.pdf [Figure 4.3] -->
 CNF is the canonical target representation for MSP induction of arbitrary linear access structures.

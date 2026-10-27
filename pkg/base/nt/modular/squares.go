@@ -50,10 +50,10 @@ func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (m *OddPrimeSquare, ok ct.Bool
 // OddPrimeSquare implements modular arithmetic modulo p^2,
 // where p is an odd prime.
 type OddPrimeSquare struct {
-	Factor     *numct.Modulus // p
-	Squared    *numct.Modulus // p^2
-	PhiFactor  *numct.Modulus // φ(p) = p - 1
-	PhiSquared *numct.Modulus // φ(p^2) = p * (p - 1)
+	Factor     *numct.Modulus `cbor:"Factor"`     // p
+	Squared    *numct.Modulus `cbor:"Squared"`    // p^2
+	PhiFactor  *numct.Modulus `cbor:"PhiFactor"`  // φ(p) = p - 1
+	PhiSquared *numct.Modulus `cbor:"PhiSquared"` // φ(p^2) = p * (p - 1)
 }
 
 // ModExp computes out = (base ^ exp) mod p^2.
@@ -69,7 +69,11 @@ func (m *OddPrimeSquare) MultiplicativeOrder() algebra.Cardinal {
 // NewOddPrimeSquareFactors constructs an OddPrimeSquareFactors modular arithmetic
 // instance from the given odd prime factors p and q.
 // Returns ct.False if the inputs are invalid (not distinct).
+// Early exits if either firstPrime or secondPrime is nil.
 func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (m *OddPrimeSquareFactors, ok ct.Bool) {
+	if firstPrime == nil || secondPrime == nil {
+		return nil, ct.False
+	}
 	allOk := firstPrime.Equal(secondPrime).Not()
 
 	// Clone the inputs to avoid any possibility of mutation
@@ -135,14 +139,14 @@ func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (m *OddPrimeSq
 // OddPrimeSquareFactors implements modular arithmetic modulo n^2 = (p * q)^2,
 // where p and q are distinct odd primes.
 type OddPrimeSquareFactors struct {
-	CrtModN  *OddPrimeFactors    // CRT parameters for p and q
-	CrtModN2 *crt.ParamsExtended // CRT parameters for p^2 and q^2
-	P        *OddPrimeSquare     // parameters for p
-	Q        *OddPrimeSquare     // parameters for q
-	N2       *numct.Modulus      // n^2 = (p * q)^2
-	NExpP2   *numct.Nat          // Ep2 = p * (N mod (p-1))
-	NExpQ2   *numct.Nat          // Eq2 = q * (N mod (q-1))
-	PhiN2    *numct.Modulus      // φ(n^2) = φ(p^2)*φ(q^2)
+	CrtModN  *OddPrimeFactors    `cbor:"CrtModN"`  // CRT parameters for p and q
+	CrtModN2 *crt.ParamsExtended `cbor:"CrtModN2"` // CRT parameters for p^2 and q^2
+	P        *OddPrimeSquare     `cbor:"P"`        // parameters for p
+	Q        *OddPrimeSquare     `cbor:"Q"`        // parameters for q
+	N2       *numct.Modulus      `cbor:"N2"`       // n^2 = (p * q)^2
+	NExpP2   *numct.Nat          `cbor:"NExpP2"`   // Ep2 = p * (N mod (p-1))
+	NExpQ2   *numct.Nat          `cbor:"NExpQ2"`   // Eq2 = q * (N mod (q-1))
+	PhiN2    *numct.Modulus      `cbor:"PhiN2"`    // φ(n^2) = φ(p^2)*φ(q^2)
 }
 
 // Modulus returns the modulus n^2 = (p * q)^2.

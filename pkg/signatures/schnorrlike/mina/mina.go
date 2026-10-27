@@ -36,9 +36,10 @@ type (
 )
 
 var (
-	hashFunc = hashing.HashFuncTypeErase(poseidon.NewLegacy)
-	group    = pasta.NewPallasCurve()
-	sf       = pasta.NewPallasScalarField()
+	hashFunc       = hashing.HashFuncTypeErase(poseidon.NewKimchi)
+	legacyHashFunc = hashing.HashFuncTypeErase(poseidon.NewLegacy)
+	group          = pasta.NewPallasCurve()
+	sf             = pasta.NewPallasScalarField()
 
 	// SignatureSize is the size of a serialised Mina signature (64 bytes).
 	SignatureSize = group.ElementSize() + sf.ElementSize()
@@ -82,35 +83,56 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 }
 
 // NewScheme creates a Mina signature scheme with deterministic nonce derivation.
+// The scheme uses o1js-compatible chunked input packing and Kimchi Poseidon parameters.
+// The private key is supplied when creating a signer.
+func NewScheme(nid NetworkID) *Scheme {
+	return &Scheme{
+		vr:   NewVariant(nid),
+		prng: nil,
+	}
+}
+
+// NewLegacyScheme creates a Mina signature scheme with deterministic nonce derivation.
 // The nonce is derived from the private key, public key, and network ID using
 // Blake2b, following the legacy Mina/o1js implementation.
-func NewScheme(nid NetworkID, privateKey *PrivateKey) (*Scheme, error) {
-	vr, err := NewDeterministicVariant(nid, privateKey)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create variant")
-	}
+// The private key is supplied when creating a signer.
+func NewLegacyScheme(nid NetworkID) *Scheme {
 	return &Scheme{
-		vr: vr,
-	}, nil
+		vr:   NewLegacyVariant(nid),
+		prng: nil,
+	}
 }
 
 // NewRandomisedScheme creates a Mina signature scheme with random nonce generation.
 // This is typically used for MPC/threshold signing where nonces are generated
 // collaboratively rather than deterministically.
 func NewRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
-	vr, err := NewRandomisedVariant(nid, prng)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot create variant")
+	if prng == nil {
+		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return &Scheme{
-		vr: vr,
+		vr:   NewVariant(nid),
+		prng: prng,
+	}, nil
+}
+
+// NewLegacyRandomisedScheme creates a Mina signature scheme with random nonce generation.
+// The scheme preserves legacy Mina/o1js challenge computation.
+func NewLegacyRandomisedScheme(nid NetworkID, prng io.Reader) (*Scheme, error) {
+	if prng == nil {
+		return nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
+	}
+	return &Scheme{
+		vr:   NewLegacyVariant(nid),
+		prng: prng,
 	}, nil
 }
 
 // Scheme implements the Mina Schnorr signature scheme.
 // It supports both deterministic and randomised nonce generation modes.
 type Scheme struct {
-	vr *Variant
+	vr   *Variant
+	prng io.Reader
 }
 
 // Name returns the signature scheme identifier ("SchnorrLike").
@@ -149,11 +171,12 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 		return nil, errs.Wrap(err).WithMessage("verifier creation failed")
 	}
 	signer := &Signer{
-		schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, *Message]{
+		SignerTrait: schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, *Message]{
 			Sk:       privateKey,
 			V:        s.vr,
 			Verifier: verifier,
 		},
+		prng: s.prng,
 	}
 	for _, opt := range opts {
 		if err := opt(signer); err != nil {
@@ -208,15 +231,15 @@ type SignerOption = signatures.SignerOption[*Signer, *Message, *Signature]
 // Signer produces Mina signatures.
 type Signer struct {
 	schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, *Message]
+
+	prng io.Reader
 }
 
 // Sign creates a Mina signature on the given message.
-// The message is set on the variant before signing to enable deterministic
-// nonce derivation that includes the message content.
+// Concurrent deterministic calls are safe provided the key and messages are not
+// mutated. Randomised signing additionally requires a concurrency-safe PRNG.
 func (s *Signer) Sign(message *Message) (*Signature, error) {
-	// Set message on variant for deterministic nonce derivation
-	s.V.msg = message
-	sig, err := s.SignerTrait.Sign(message)
+	sig, err := s.SignerTrait.Sign(message, s.prng)
 	if err != nil {
 		return nil, errs.Wrap(err).WithMessage("failed to sign message")
 	}

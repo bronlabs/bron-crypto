@@ -23,7 +23,7 @@ type RingElementInheritterPtrConstraint[E algebra.RingElement[E], T any] interfa
 }
 
 type RegularModule[R algebra.Ring[E], E algebra.RingElement[E], W RingElementInheritterPtrConstraint[E, WT], WT any] struct {
-	Ring R
+	Ring R `cbor:"Ring"`
 }
 
 func (m *RegularModule[R, E, W, WT]) Name() string {

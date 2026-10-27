@@ -3,6 +3,7 @@ package bip340
 import (
 	"crypto/subtle"
 	"hash"
+	"io"
 	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
@@ -10,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing/scheme/additive"
 	mpcschnorr "github.com/bronlabs/bron-crypto/pkg/mpc/signatures/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -27,12 +27,7 @@ var (
 // Variant implements BIP-340 specific signing behaviour.
 // It handles the deterministic nonce derivation, even-y constraints,
 // and tagged hashing required by BIP-340.
-type Variant struct {
-	sk         *PrivateKey        // Private key for deterministic nonce derivation
-	Aux        [AuxSizeBytes]byte // Auxiliary randomness for nonce derivation
-	msg        Message            // Message being signed (needed for nonce computation)
-	adjustedSk *Scalar            // Private key d adjusted for P.y parity (negated if P.y is odd)
-}
+type Variant struct{}
 
 // Type returns the variant identifier "bip340".
 func (*Variant) Type() schnorrlike.VariantType {
@@ -53,22 +48,31 @@ func (*Variant) HashFunc() func() hash.Hash {
 //  3. k' = rand mod n
 //  4. If R.y is odd, k = n - k' (to ensure R has even y)
 //
-// This deterministic derivation prevents nonce reuse vulnerabilities while
-// the auxiliary randomness provides side-channel protection.
-func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err error) {
-	if v.sk == nil || v.msg == nil {
+// This derivation binds the nonce to the private key and message.
+// Exactly AuxSizeBytes bytes of auxiliary randomness are read from prng.
+// Fresh randomness for each call improves protection against fault injection
+// and side-channel attacks; fixed auxiliary data is also valid under BIP-340.
+func (*Variant) ComputeNonceCommitment(privateKey *PrivateKey, message Message, prng io.Reader) (R *GroupElement, k *Scalar, err error) {
+	if privateKey == nil || privateKey.Value() == nil || message == nil {
 		return nil, nil, signatures.ErrInvalidArgument.WithMessage("need both private key and message")
+	}
+	if prng == nil {
+		return nil, nil, signatures.ErrInvalidArgument.WithMessage("prng is nil")
+	}
+	var aux [AuxSizeBytes]byte
+	if _, err := io.ReadFull(prng, aux[:]); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("cannot read auxiliary randomness")
 	}
 	g := k256.NewCurve().Generator()
 	f := k256.NewScalarField()
 	// 1. Let d' = int(sk)
-	dPrime := v.sk.Value()
+	dPrime := privateKey.Value()
 	// 2. Fail if d' = 0 or d' ≥ n
 	if dPrime.IsZero() {
 		return nil, nil, signatures.ErrFailed.WithMessage("d' is invalid")
 	}
 	// 3. Let P = d'⋅G
-	bigP := g.ScalarMul(v.sk.Value())
+	bigP := g.ScalarMul(privateKey.Value())
 	// 4. Let d = d' if P.y even, otherwise let d = n - d'
 	d := dPrime
 	py, err := bigP.AffineY()
@@ -78,10 +82,8 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 	if py.IsOdd() {
 		d = dPrime.Neg()
 	}
-	// Store the adjusted private key for use in ComputeResponse
-	v.adjustedSk = d
 	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
-	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, v.Aux[:])
+	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, aux[:])
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("hash failed")
 	}
@@ -91,7 +93,7 @@ func (v *Variant) ComputeNonceCommitment() (R *GroupElement, k *Scalar, err erro
 	}
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
 	rand, err := hashing.Hash(
-		bip340.NewBip340HashNonce, t, encodePoint(bigP), v.msg,
+		bip340.NewBip340HashNonce, t, encodePoint(bigP), message,
 	)
 	if err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("hash failed")
@@ -144,16 +146,19 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 }
 
 // ComputeResponse computes the BIP-340 signature response: s = k + e·d mod n.
-// Uses the adjusted private key d (negated if P.y was odd during nonce commitment).
-func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
-	if privateKeyValue == nil || nonce == nil || challenge == nil {
+// Negates the supplied private key or secret share when publicKeyValue has odd y.
+// For MPC signing, publicKeyValue is the aggregate public key.
+func (*Variant) ComputeResponse(publicKeyValue *GroupElement, privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
+	if publicKeyValue == nil || privateKeyValue == nil || nonce == nil || challenge == nil {
 		return nil, signatures.ErrInvalidArgument.WithMessage("arguments are nil")
 	}
-	// Use the adjusted private key if available (from ComputeNonceCommitment)
-	// This ensures we use d (not d') when P.y is odd
+	py, err := publicKeyValue.AffineY()
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot compute public key y")
+	}
 	adjustedPrivateKey := privateKeyValue
-	if v.adjustedSk != nil {
-		adjustedPrivateKey = v.adjustedSk
+	if py.IsOdd() {
+		adjustedPrivateKey = privateKeyValue.Neg()
 	}
 	s, err := schnorrlike.ComputeGenericResponse(adjustedPrivateKey, nonce, challenge, false)
 	if err != nil {
@@ -169,23 +174,8 @@ func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 }
 
 // Clone creates a deep copy of the variant.
-func (v *Variant) Clone() *Variant {
-	out := &Variant{
-		sk:         nil,
-		Aux:        v.Aux,
-		msg:        nil,
-		adjustedSk: nil,
-	}
-	if v.sk != nil {
-		out.sk = v.sk.Clone()
-	}
-	if v.msg != nil {
-		out.msg = slices.Clone(v.msg)
-	}
-	if v.adjustedSk != nil {
-		out.adjustedSk = v.adjustedSk.Clone()
-	}
-	return out
+func (*Variant) Clone() *Variant {
+	return &Variant{}
 }
 
 // ============ MPC Methods ============.
@@ -196,35 +186,8 @@ func (v *Variant) Clone() *Variant {
 
 var _ mpcschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
 
-// CorrectAdditiveSecretShareParity adjusts a secret share for BIP-340's even-y requirement.
-//
-// In threshold signing, each party holds a share of the private key x.
-// If the aggregate public key P = x·G has odd y, BIP-340 requires using -x instead.
-// This method negates the share if P.y is odd, ensuring all parties use
-// consistent (negated) shares when P.y is odd.
-func (*Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
-	if publicKey == nil || share == nil {
-		return nil, signatures.ErrInvalidArgument.WithMessage("public key or secret share is nil")
-	}
-	out := share.Clone()
-	pky, err := publicKey.Value().AffineY()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("cannot compute y")
-	}
-	if pky.IsOdd() {
-		// If the public key is odd, we need to negate the additive share
-		// to ensure that the parity of the nonce commitment is correct.
-		var err error
-		out, err = additive.NewShare(share.ID(), share.Value().Neg(), nil)
-		if err != nil {
-			return nil, errs.Wrap(err).WithMessage("failed to create negated share")
-		}
-	}
-	return out, nil
-}
-
 // CorrectPublicKeyShareParity applies the same parity correction to a public key share
-// that CorrectAdditiveSecretShareParity applies to private key shares. This is needed
+// that ComputeResponse applies to private key shares. This is needed
 // for partial signature verification where the public key share must be corrected
 // based on the aggregate public key's Y coordinate parity.
 func (*Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {

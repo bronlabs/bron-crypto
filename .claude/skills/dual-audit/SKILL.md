@@ -82,4 +82,4 @@ ARGUMENTS: `<target>` — a file path, package path, or diff reference (e.g. `pk
 - Codex inherits cwd and shell env, so `git` auth and repo state carry over. If the target is a PR/diff, ensure `gh` auth works locally first.
 - Codex output is whatever its model decides to produce; it may not follow the audit template exactly (severity tags, scope line, etc.). Bucket what's there; don't try to rewrite it. If Codex omits scope, fall back to your own scope determination.
 - If the two reports disagree on a fact (e.g. one claims a missing range check, the other claims it's enforced upstream), put it in `unique to <agent>` rather than `agreed-by-both`. Don't arbitrate — that's the user's job.
-- Reductions / paper-alignment findings are easy to miss for whichever agent didn't read the `.docs/` PDF. If only one side cites the paper, treat that as a real finding, not noise.
+- Reductions / paper-alignment findings are easy to miss for whichever agent didn't read the `docs/papers/` PDF. If only one side cites the paper, treat that as a real finding, not noise.

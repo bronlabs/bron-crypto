@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/mat"
+	baseprng "github.com/bronlabs/bron-crypto/pkg/base/prng"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/mpc"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/dkg/gennaro"
@@ -44,6 +45,7 @@ func shareholders(ids ...sharing.ID) ds.Set[sharing.ID] {
 
 func setup(tb testing.TB, ac accessstructures.Monotone, group *k256.Curve, prng io.Reader) map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar] {
 	tb.Helper()
+	prng = baseprng.NewThreadSafeReader(prng)
 	ctxs := session_testutils.MakeRandomContexts(tb, ac.Shareholders(), prng)
 	parties := make(map[sharing.ID]*gennaro.Participant[*k256.Point, *k256.Scalar])
 	for id, ctx := range ctxs {
