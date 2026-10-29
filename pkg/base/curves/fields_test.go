@@ -37,6 +37,7 @@ func Test_FieldSetBytesRejectsNonCanonical(t *testing.T) {
 		{"bls12381 Fq", func() fieldElement { return new(bls12381Impl.Fq) }, bls12381Impl.FqModulus[:], bls12381Impl.FqBytes},
 		{"pasta Fp", func() fieldElement { return new(pastaImpl.Fp) }, pastaImpl.FpModulus[:], pastaImpl.FpBytes},
 		{"pasta Fq", func() fieldElement { return new(pastaImpl.Fq) }, pastaImpl.FqModulus[:], pastaImpl.FqBytes},
+		{"edwards25519 Fp", func() fieldElement { return new(edwards25519Impl.Fp) }, edwards25519Impl.FpModulus[:], edwards25519Impl.FpBytes},
 		{"edwards25519 Fq", func() fieldElement { return new(edwards25519Impl.Fq) }, edwards25519Impl.FqModulus[:], edwards25519Impl.FqBytes},
 	}
 
@@ -62,4 +63,16 @@ func Test_FieldSetBytesRejectsNonCanonical(t *testing.T) {
 			require.Equal(t, ct.False, tc.newElement().SetBytes(bytes.Repeat([]byte{0xff}, tc.size)))
 		})
 	}
+}
+
+func Test_Edwards25519FpSetBytesWideReducesNonCanonicalHalves(t *testing.T) {
+	t.Parallel()
+
+	wide := make([]byte, edwards25519Impl.FpWideBytes)
+	copy(wide, edwards25519Impl.FpModulus[:])
+	copy(wide[edwards25519Impl.FpBytes:], edwards25519Impl.FpModulus[:])
+
+	var e edwards25519Impl.Fp
+	require.Equal(t, ct.True, e.SetBytesWide(wide))
+	require.Equal(t, make([]byte, edwards25519Impl.FpBytes), e.Bytes())
 }

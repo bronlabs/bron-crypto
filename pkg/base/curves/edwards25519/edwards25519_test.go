@@ -7,8 +7,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
+
+func Test_FromCompressedRejectsNonCanonicalY(t *testing.T) {
+	t.Parallel()
+
+	y := edwards25519Impl.FpModulus
+	for _, sign := range []byte{0x00, 0x80} {
+		encoded := y
+		encoded[edwards25519Impl.FpBytes-1] |= sign
+		_, err := edwards25519.NewCurve().FromCompressed(encoded[:])
+		require.Error(t, err)
+	}
+}
 
 func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 	t.Parallel()

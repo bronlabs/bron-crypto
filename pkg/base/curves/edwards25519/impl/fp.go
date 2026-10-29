@@ -264,6 +264,15 @@ func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 		return 0
 	}
 
+	var dataBE, modulusBE [FpBytes]byte
+	copy(dataBE[:], data)
+	copy(modulusBE[:], FpModulus[:])
+	slices.Reverse(dataBE[:])
+	slices.Reverse(modulusBE[:])
+	if lt, _, _ := ct.CompareBytes(dataBE[:], modulusBE[:]); lt != ct.True {
+		return 0
+	}
+
 	fiatFpFromBytes(&f.v, (*[FpBytes]uint8)(data))
 	return 1
 }
@@ -284,10 +293,10 @@ func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
 	var zero, lo, hi, twoTo256, pLo, pHi Fp
 	zero.SetZero()
 	twoTo256.SetUint64(19 * 2)
-	okLo := lo.SetBytes(wideData[:FpBytes])
-	okHi := hi.SetBytes(wideData[FpBytes:])
+	// Each half may lie in [p, 2^255): SetBytes rejects that, fiatFpFromBytes reduces it.
+	fiatFpFromBytes(&lo.v, (*[FpBytes]uint8)(wideData[:FpBytes]))
+	fiatFpFromBytes(&hi.v, (*[FpBytes]uint8)(wideData[FpBytes:]))
 	hi.Mul(&hi, &twoTo256)
-	ok = okLo & okHi
 	pLo.SetUint64(19)
 	pLo.Select(p255, &zero, &pLo)
 	lo.Add(&lo, &pLo)
@@ -297,8 +306,8 @@ func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
 
 	var out Fp
 	out.Add(&lo, &hi)
-	f.Select(ok, f, &out)
-	return ok
+	f.Set(&out)
+	return 1
 }
 
 // Bytes returns the canonical byte encoding.
