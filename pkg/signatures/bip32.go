@@ -12,7 +12,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -85,13 +84,8 @@ func bip32(publicKey *k256.Point, chainCode []byte, i uint32) (*k256.Scalar, []b
 	childChainCode := digest[32:]
 	sf := k256.NewScalarField()
 	shift, err := sf.FromBytes(digest[:32])
-	if err != nil {
-		return nil, nil, errs.Wrap(err).WithMessage("cannot create scalar from bytes")
-	}
-	// BIP32 §5: the derivation fails if IL == 0 or IL ≥ n; the round-trip byte compare
-	// detects the ≥ n case, IsZero covers the all-zero case.
-	_, isEq, _ := ct.CompareBytes(digest[:32], shift.Bytes())
-	if isEq != ct.True || shift.IsZero() {
+	// BIP32 §5: the derivation fails if IL ≥ n, which FromBytes rejects, or if IL == 0.
+	if err != nil || shift.IsZero() {
 		return nil, nil, ErrInvalidDerivation.WithStackFrame()
 	}
 	return shift, childChainCode, nil
