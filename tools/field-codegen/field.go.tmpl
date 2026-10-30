@@ -64,10 +64,20 @@ func (f *{{- .TypeName }}) SetBytes(data []byte) (ok ct.Bool) {
 		return 0
 	}
 
+	var dataBE, modulusBE [{{ .TypeName -}}Bytes]byte
+	copy(dataBE[:], data)
+	copy(modulusBE[:], {{ .TypeName -}}Modulus[:])
+	slices.Reverse(dataBE[:])
+	slices.Reverse(modulusBE[:])
+	lt, _, _ := ct.CompareBytes(dataBE[:], modulusBE[:])
+
 	var nonMonty {{ .FiatPrefix -}}NonMontgomeryDomainFieldElement
+	var out {{ .TypeName }}
 	{{ .FiatPrefix -}}FromBytes((*[{{ .TypeName -}}Limbs]uint64)(&nonMonty), (*[{{ .TypeName -}}Bytes]uint8)(data))
-	{{ .FiatPrefix -}}ToMontgomery(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &nonMonty)
-	return 1
+	{{ .FiatPrefix -}}ToMontgomery(&out.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &nonMonty)
+
+	f.Select(lt, f, &out)
+	return lt
 }
 
 func (f *{{- .TypeName }}) SetBytesWide(data []byte) (ok ct.Bool) {

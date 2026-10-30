@@ -58,7 +58,7 @@ func TestVariantHashFunc(t *testing.T) {
 
 	// Poseidon hash expects data length to be a multiple of 64 bytes
 	data := make([]byte, 64)
-	copy(data, "test")
+	copy(data[28:32], "test")
 	_, err := h.Write(data)
 	require.NoError(t, err)
 	sum := h.Sum(nil)

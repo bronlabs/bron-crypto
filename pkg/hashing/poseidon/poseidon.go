@@ -93,6 +93,8 @@ func (p *Poseidon) CloneHasher() *Poseidon {
 }
 
 // Write implements io.Writer by converting bytes to field elements and hashing them.
+// Each 32-byte chunk must be the canonical big-endian encoding of a Pallas base field element; a chunk at or
+// above the modulus is rejected rather than reduced, so distinct inputs never map to the same elements.
 // Note: The sponge absorbs bytes in rate-sized blocks, the callers must pad to full blocks before passing,
 // and callers who need injective variable-length hashing must perform their own framing, length encoding,
 // or domain separation before absorption, hence the data length must be a multiple of (32 * rate) bytes.
