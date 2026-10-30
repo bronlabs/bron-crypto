@@ -69,14 +69,15 @@ func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	copy(modulusBE[:], FpModulus[:])
 	slices.Reverse(dataBE[:])
 	slices.Reverse(modulusBE[:])
-	if lt, _, _ := ct.CompareBytes(dataBE[:], modulusBE[:]); lt != ct.True {
-		return 0
-	}
+	lt, _, _ := ct.CompareBytes(dataBE[:], modulusBE[:])
 
 	var nonMonty fiatFpNonMontgomeryDomainFieldElement
+	var out Fp
 	fiatFpFromBytes((*[FpLimbs]uint64)(&nonMonty), (*[FpBytes]uint8)(data))
-	fiatFpToMontgomery(&f.fiatFpMontgomeryDomainFieldElement, &nonMonty)
-	return 1
+	fiatFpToMontgomery(&out.fiatFpMontgomeryDomainFieldElement, &nonMonty)
+
+	f.Select(lt, f, &out)
+	return lt
 }
 
 func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {

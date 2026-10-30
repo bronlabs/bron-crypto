@@ -269,12 +269,13 @@ func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	copy(modulusBE[:], FpModulus[:])
 	slices.Reverse(dataBE[:])
 	slices.Reverse(modulusBE[:])
-	if lt, _, _ := ct.CompareBytes(dataBE[:], modulusBE[:]); lt != ct.True {
-		return 0
-	}
+	lt, _, _ := ct.CompareBytes(dataBE[:], modulusBE[:])
 
-	fiatFpFromBytes(&f.v, (*[FpBytes]uint8)(data))
-	return 1
+	var out Fp
+	fiatFpFromBytes(&out.v, (*[FpBytes]uint8)(data))
+
+	f.Select(lt, f, &out)
+	return lt
 }
 
 // SetBytesWide sets the receiver from wide bytes.
