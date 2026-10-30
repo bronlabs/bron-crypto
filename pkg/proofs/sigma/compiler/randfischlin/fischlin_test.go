@@ -2,7 +2,9 @@ package randfischlin_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,6 +21,7 @@ import (
 	session_testutils "github.com/bronlabs/bron-crypto/pkg/mpc/session/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 )
@@ -305,4 +308,73 @@ func testRandFischlinTranscriptsMatch[P curves.Point[P, B, S], B algebra.FieldEl
 	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("final", 32)
 	require.NoError(tb, err)
 	require.True(tb, bytes.Equal(proverBytes, verifierBytes))
+}
+
+func TestRandFischlin_BatchSchnorr(t *testing.T) {
+	t.Parallel()
+
+	// batch_schnorr is (k+1)-special sound; the compiler enlarges the hash output
+	// by ceil(log2 k) bits to keep the knowledge error at 2^-128.
+	for _, k := range []int{2, 3, 5} {
+		t.Run(fmt.Sprintf("k=%d", k), func(t *testing.T) {
+			t.Parallel()
+			testBatchSchnorr(t, k)
+		})
+	}
+}
+
+func testBatchSchnorr(tb testing.TB, k int) {
+	tb.Helper()
+
+	prng := pcg.NewRandomised()
+	curve := k256.NewCurve()
+
+	batchProtocol, err := batch_schnorr.NewProtocol(k, curve, prng)
+	require.NoError(tb, err)
+	require.Equal(tb, uint(k+1), batchProtocol.SpecialSoundness())
+
+	nizk, err := randfischlin.NewCompiler(batchProtocol, prng)
+	require.NoError(tb, err)
+
+	ws := make([]*k256.Scalar, k)
+	xs := make([]*k256.Point, k)
+	for i := range k {
+		ws[i], err = curve.ScalarField().Random(prng)
+		require.NoError(tb, err)
+		xs[i] = curve.ScalarBaseMul(ws[i])
+	}
+	statement := batch_schnorr.NewStatement(curve.Generator(), xs...)
+	witness := batch_schnorr.NewWitness(ws...)
+
+	const proverId = 1
+	const verifierId = 2
+	quorum := hashset.NewComparable[sharing.ID](proverId, verifierId).Freeze()
+	ctxs := session_testutils.MakeRandomContexts(tb, quorum, prng)
+
+	prover, err := nizk.NewProver(ctxs[proverId])
+	require.NoError(tb, err)
+	proof, err := prover.Prove(statement, witness)
+	require.NoError(tb, err)
+
+	verifier, err := nizk.NewVerifier(ctxs[verifierId])
+	require.NoError(tb, err)
+	require.NoError(tb, verifier.Verify(statement, proof))
+
+	proverBytes, err := ctxs[proverId].Transcript().ExtractBytes("final", 32)
+	require.NoError(tb, err)
+	verifierBytes, err := ctxs[verifierId].Transcript().ExtractBytes("final", 32)
+	require.NoError(tb, err)
+	require.True(tb, bytes.Equal(proverBytes, verifierBytes))
+
+	// A proof for a statement with one unknown discrete log must not verify.
+	wrongWs := slices.Clone(ws)
+	wrongWs[k-1], err = curve.ScalarField().Random(prng)
+	require.NoError(tb, err)
+	wrongProver, err := nizk.NewProver(ctxs[proverId].Clone())
+	require.NoError(tb, err)
+	wrongProof, err := wrongProver.Prove(statement, batch_schnorr.NewWitness(wrongWs...))
+	require.NoError(tb, err)
+	wrongVerifier, err := nizk.NewVerifier(ctxs[verifierId].Clone())
+	require.NoError(tb, err)
+	require.Error(tb, wrongVerifier.Verify(statement, wrongProof))
 }

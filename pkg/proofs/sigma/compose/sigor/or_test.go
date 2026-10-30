@@ -326,3 +326,45 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	}
 	require.Equal(tb, challenge, xored, "XOR constraint should hold")
 }
+
+type kSpecialSound struct {
+	*schnorr.Protocol[*k256.Point, *k256.Scalar]
+
+	k uint
+}
+
+func (p *kSpecialSound) SpecialSoundness() uint { return p.k }
+
+type shortChallenge struct {
+	*schnorr.Protocol[*k256.Point, *k256.Scalar]
+}
+
+func (*shortChallenge) GetChallengeBytesLength() int { return 8 }
+
+// Test_Or_SpecialSoundness pins (k - 1)^n + 1 for n branches of a k-special sound
+// protocol: with fewer transcripts every branch may see at most k - 1 distinct
+// challenges, so nothing is extractable.
+func Test_Or_SpecialSoundness(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+	protocol, err := schnorr.NewProtocol(k256.NewCurve().Generator(), prng)
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		k     uint
+		count uint
+		want  uint
+	}{
+		{k: 2, count: 2, want: 2},
+		{k: 2, count: 5, want: 2},
+		{k: 3, count: 2, want: 5},
+		{k: 3, count: 3, want: 9},
+		{k: 4, count: 2, want: 10},
+		{k: 5, count: 3, want: 65},
+	} {
+		orProtocol, err := sigor.Compose(&kSpecialSound{protocol, tc.k}, tc.count, prng)
+		require.NoError(t, err)
+		require.Equal(t, tc.want, orProtocol.SpecialSoundness(), "k = %d, count = %d", tc.k, tc.count)
+	}
+}

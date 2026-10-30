@@ -176,13 +176,20 @@ func CartesianComposeNamed[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 
 	if sigma0 == nil || sigma1 == nil {
 		return nil, ErrIsNil.WithMessage("protocols cannot be nil")
 	}
-	challengeBytesLength := max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
+	// Both branches must consume the whole shared challenge. If a branch read only a
+	// prefix, the remaining bytes would be free for the prover: transcripts differing
+	// only there would be distinct accepting transcripts without any new challenge for
+	// either branch, which breaks special soundness (and with it straight-line
+	// extraction in the Fischlin compilers).
+	if sigma0.GetChallengeBytesLength() != sigma1.GetChallengeBytesLength() {
+		return nil, ErrInvalidArgument.WithMessage("challenge lengths differ (%d and %d bytes)", sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
+	}
 
 	return &ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
 		name:                 name,
 		sigma0:               sigma0,
 		sigma1:               sigma1,
-		challengeBytesLength: challengeBytesLength,
+		challengeBytesLength: sigma0.GetChallengeBytesLength(),
 		prng:                 prng,
 	}, nil
 }
@@ -220,7 +227,7 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 			return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitment")
 		}
 
-		a.A1, s.Z1, err = p.sigma1.RunSimulator(statement.X1, s.E[:p.sigma1.GetChallengeBytesLength()])
+		a.A1, s.Z1, err = p.sigma1.RunSimulator(statement.X1, s.E)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 		}
@@ -232,7 +239,7 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 			return nil, nil, errs.Wrap(err).WithMessage("cannot compute commitment")
 		}
 
-		a.A0, s.Z0, err = p.sigma0.RunSimulator(statement.X0, s.E[:p.sigma0.GetChallengeBytesLength()])
+		a.A0, s.Z0, err = p.sigma0.RunSimulator(statement.X0, s.E)
 		if err != nil {
 			return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 		}
@@ -259,7 +266,7 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 	case 0:
 		z.E0 = make([]byte, p.challengeBytesLength)
 		subtle.XORBytes(z.E0, state.E, challengeBytes)
-		z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, z.E0[:p.sigma0.GetChallengeBytesLength()])
+		z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, z.E0)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot compute response")
 		}
@@ -270,7 +277,7 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 	case 1:
 		z.E1 = make([]byte, p.challengeBytesLength)
 		subtle.XORBytes(z.E1, state.E, challengeBytes)
-		z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, z.E1[:p.sigma1.GetChallengeBytesLength()])
+		z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, z.E1)
 		if err != nil {
 			return nil, errs.Wrap(err).WithMessage("cannot compute response")
 		}
@@ -296,6 +303,9 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(state
 	if len(challengeBytes) != p.challengeBytesLength {
 		return ErrInvalidLength.WithMessage("invalid challenge bytes length")
 	}
+	if len(response.E0) != p.challengeBytesLength || len(response.E1) != p.challengeBytesLength {
+		return ErrInvalidLength.WithMessage("invalid branch challenge length")
+	}
 
 	e0XorE1 := make([]byte, p.challengeBytesLength)
 	subtle.XORBytes(e0XorE1, response.E0, response.E1)
@@ -304,12 +314,12 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(state
 	}
 
 	// check that conversation (a_0, e_0, z_0) are accepting in Protocol on input x_0
-	if err := p.sigma0.Verify(statement.X0, commitment.A0, response.E0[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
+	if err := p.sigma0.Verify(statement.X0, commitment.A0, response.E0, response.Z0); err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
 	// check that conversation (a_1, e_1, z_1) are accepting in Protocol on input x_1
-	if err := p.sigma1.Verify(statement.X1, commitment.A1, response.E1[:p.sigma1.GetChallengeBytesLength()], response.Z1); err != nil {
+	if err := p.sigma1.Verify(statement.X1, commitment.A1, response.E1, response.Z1); err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
@@ -351,9 +361,11 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator
 	return a, z, nil
 }
 
-// SpecialSoundness returns the special soundness parameter of the composed protocol.
+// SpecialSoundness returns the special soundness parameter of the composed protocol:
+// (k0 - 1) * (k1 - 1) + 1 for k0- and k1-special sound branches, see
+// composedSpecialSoundness. It is 2 whenever both branches are 2-special sound.
 func (p *ProtocolCartesian[_, _, _, _, _, _, _, _, _, _]) SpecialSoundness() uint {
-	return max(p.sigma0.SpecialSoundness(), p.sigma1.SpecialSoundness())
+	return composedSpecialSoundness(p.sigma0.SpecialSoundness(), p.sigma1.SpecialSoundness())
 }
 
 // GetChallengeBytesLength returns the challenge length in bytes for the composed protocol.

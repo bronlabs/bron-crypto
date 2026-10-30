@@ -26,30 +26,16 @@ const (
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"
 	challengeLabel  = "challengeLabel-"
-
-	// Lambda is the computational security parameter in bits.
-	Lambda = base.ComputationalSecurityBits
-	// LambdaLog2 is the ceiling of log2(Lambda).
-	LambdaLog2 = base.ComputationalSecurityLog2Ceil
-	// L is the hash output length parameter.
-	L = 8
-	// R is the number of parallel repetitions.
-	R = Lambda / L
-	// T is the challenge sampling bound in bits.
-	T = LambdaLog2 * L
-	// LBytes is L converted to bytes.
-	LBytes = L / 8
-	// TBytes is T converted to bytes.
-	TBytes = T / 8
 )
 
 var (
 	randomOracle = sha3.New256
 )
 
-// Proof represents a randomised Fischlin non-interactive proof containing R
+// Proof represents a randomised Fischlin non-interactive proof containing r
 // parallel executions of the sigma protocol. Each execution includes a
-// commitment (A), challenge (E), and response (Z).
+// commitment (A), challenge (E), and response (Z). The parameters are not
+// carried in the proof; the verifier derives them from its sigma protocol.
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	A []A      `cbor:"a"`
 	E [][]byte `cbor:"e"`
@@ -63,16 +49,16 @@ type proofDTO[A sigma.Commitment, Z sigma.Response] struct {
 }
 
 // UnmarshalCBOR deserialises a randomised Fischlin proof and validates its
-// proof elements.
+// proof elements. The number of repetitions is checked by the verifier.
 func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*proofDTO[A, Z]](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("cannot unmarshal proof")
 	}
-	if dto == nil || len(dto.A) != R || len(dto.E) != R || len(dto.Z) != R {
+	if dto == nil || len(dto.A) == 0 || len(dto.A) != len(dto.E) || len(dto.A) != len(dto.Z) {
 		return proofs.ErrInvalidArgument.WithMessage("invalid proof dimensions")
 	}
-	for i := range R {
+	for i := range dto.A {
 		if utils.IsNil(dto.A[i]) || len(dto.E[i]) == 0 || utils.IsNil(dto.Z[i]) {
 			return proofs.ErrInvalidArgument.WithMessage("proof contains an invalid element at index %d", i)
 		}
@@ -85,13 +71,18 @@ func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
 
 // Protocol implements the NonInteractiveProtocol interface for randomised Fischlin proofs.
 type Protocol[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+	params
+
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 }
 
 // NewCompiler creates a new randomised Fischlin compiler for the given sigma protocol.
-// The sigma protocol must have soundness error at least 2^(-128). The prng is used
-// for randomness during proof generation.
+// The sigma protocol must be strongly n-special sound for some n >= 2 and have soundness
+// error at least 2^(-128); the transform parameters are derived from n (see newParams),
+// so n-special sound protocols such as batch proofs are supported at the cost of
+// (n - 1) times more hash evaluations for the prover. The prng is used for randomness
+// during proof generation.
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (*Protocol[X, W, A, S, Z], error) {
 	if sigmaProtocol == nil || prng == nil {
 		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol or prng is nil")
@@ -102,7 +93,13 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 			s, base.ComputationalSecurityBits)
 	}
 
+	parameters, err := newParams(sigmaProtocol.SpecialSoundness(), sigmaProtocol.GetChallengeBytesLength())
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot derive parameters")
+	}
+
 	return &Protocol[X, W, A, S, Z]{
+		params:        parameters,
 		sigmaProtocol: sigmaProtocol,
 		prng:          prng,
 	}, nil
@@ -120,6 +117,7 @@ func (c *Protocol[X, W, A, S, Z]) NewProver(ctx *session.Context) (compiler.NIPr
 	ctx.Transcript().AppendDomainSeparator(dst)
 
 	return &Prover[X, W, A, S, Z]{
+		params:        c.params,
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 		prng:          c.prng,
@@ -138,6 +136,7 @@ func (c *Protocol[X, W, A, S, Z]) NewVerifier(ctx *session.Context) (compiler.NI
 	ctx.Transcript().AppendDomainSeparator(dst)
 
 	return &Verifier[X, W, A, S, Z]{
+		params:        c.params,
 		ctx:           ctx,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil

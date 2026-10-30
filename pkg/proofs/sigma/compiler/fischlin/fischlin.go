@@ -38,8 +38,8 @@ var (
 
 // Proof represents a Fischlin non-interactive proof containing rho parallel
 // executions of the sigma protocol. Each execution includes a commitment (A),
-// challenge (E), and response (Z). The Rho and B parameters are included
-// for verification.
+// challenge (E), and response (Z). The parameters are not carried in the proof;
+// the verifier derives them from its sigma protocol.
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	A []A      `cbor:"a"`
 	E [][]byte `cbor:"e"`
@@ -88,16 +88,30 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 		return nil, proofs.ErrInvalidArgument.WithMessage("sigmaProtocol or prng is nil")
 	}
 
+	// Nothing can be extracted from fewer than two transcripts ([CL24], Definition 2).
+	n := sigmaProtocol.SpecialSoundness()
+	if n < 2 {
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigma protocol must be at least 2-special sound (got %d)", n)
+	}
+
+	// [CL24], Sections 3 and 5.1: rho * (b - log2(n - 1)) >= lambda.
 	rho := getRho(sigmaProtocol)
 	b1 := (base.ComputationalSecurityBits + rho - 1) / rho
-	b2 := uint64(mathutils.CeilLog2(int(sigmaProtocol.SpecialSoundness()) - 1))
+	b2 := uint64(mathutils.CeilLog2(int(n) - 1))
 	b := b1 + b2
 	t := b + 5
 	if rho > 64 {
 		t = b + 6
 	}
 	if rho < 2 || b < 2 || t >= 64 {
-		return nil, proofs.ErrInvalidArgument.WithMessage("invalid rho")
+		return nil, proofs.ErrInvalidArgument.WithMessage("unsupported parameters (rho = %d, b = %d, t = %d)", rho, b, t)
+	}
+	// The proof carries the ceil(t / 8) low-order bytes of e_i < 2^t and the sigma
+	// protocol receives e_i left-padded to its challenge length, so the challenge must
+	// be at least that long.
+	if eLen := int((t + 7) / 8); sigmaProtocol.GetChallengeBytesLength() < eLen {
+		return nil, proofs.ErrInvalidArgument.WithMessage("sigma protocol challenge length (%d bytes) is shorter than the %d-bit Fischlin challenge",
+			sigmaProtocol.GetChallengeBytesLength(), t)
 	}
 
 	return &Protocol[X, W, A, S, Z]{

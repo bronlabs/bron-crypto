@@ -153,13 +153,20 @@ func CartesianComposeNamed[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 
 	if sigma0 == nil || sigma1 == nil {
 		return nil, ErrIsNil.WithMessage("protocols cannot be nil")
 	}
-	challengeBytesLength := max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
+	// Both branches must consume the whole shared challenge. If a branch read only a
+	// prefix, two accepting transcripts whose challenges differ only in the remaining
+	// bytes would give that branch a single challenge, so its witness could not be
+	// extracted; a compiler that left-pads short challenges (fischlin) would even
+	// present that branch with a constant challenge.
+	if sigma0.GetChallengeBytesLength() != sigma1.GetChallengeBytesLength() {
+		return nil, ErrInvalidArgument.WithMessage("challenge lengths differ (%d and %d bytes)", sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
+	}
 
 	return &ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
 		name:                 name,
 		sigma0:               sigma0,
 		sigma1:               sigma1,
-		challengeBytesLength: challengeBytesLength,
+		challengeBytesLength: sigma0.GetChallengeBytesLength(),
 	}, nil
 }
 
@@ -188,10 +195,10 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 	var err error
 	z := new(ResponseCartesian[Z0, Z1])
 
-	if z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, challengeBytes[:p.sigma0.GetChallengeBytesLength()]); err != nil {
+	if z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, challengeBytes); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute response")
 	}
-	if z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, challengeBytes[:p.sigma1.GetChallengeBytesLength()]); err != nil {
+	if z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, challengeBytes); err != nil {
 		return nil, errs.Wrap(err).WithMessage("cannot compute response")
 	}
 
@@ -202,10 +209,10 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 //
 // Both branch transcripts are verified using the same challenge.
 func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *StatementCartesian[X0, X1], commitment *CommitmentCartesian[A0, A1], challengeBytes sigma.ChallengeBytes, response *ResponseCartesian[Z0, Z1]) error {
-	if err := p.sigma0.Verify(statement.X0, commitment.A0, challengeBytes[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
+	if err := p.sigma0.Verify(statement.X0, commitment.A0, challengeBytes, response.Z0); err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
-	if err := p.sigma1.Verify(statement.X1, commitment.A1, challengeBytes[:p.sigma1.GetChallengeBytesLength()], response.Z1); err != nil {
+	if err := p.sigma1.Verify(statement.X1, commitment.A1, challengeBytes, response.Z1); err != nil {
 		return errs.Wrap(err).WithMessage("verification failed")
 	}
 
@@ -220,10 +227,10 @@ func (p *ProtocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator
 	a := new(CommitmentCartesian[A0, A1])
 	z := new(ResponseCartesian[Z0, Z1])
 
-	if a.A0, z.Z0, err = p.sigma0.RunSimulator(statement.X0, challengeBytes[:p.sigma0.GetChallengeBytesLength()]); err != nil {
+	if a.A0, z.Z0, err = p.sigma0.RunSimulator(statement.X0, challengeBytes); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 	}
-	if a.A1, z.Z1, err = p.sigma1.RunSimulator(statement.X1, challengeBytes[:p.sigma1.GetChallengeBytesLength()]); err != nil {
+	if a.A1, z.Z1, err = p.sigma1.RunSimulator(statement.X1, challengeBytes); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("cannot run simulator")
 	}
 
