@@ -82,6 +82,11 @@ so the BoringSSL build stays separate from the host build. None of the intermedi
 the host and container builds, and this is by design to avoid polluting the host filesystem and to have consistent
 builds across platforms.
 
+The helper forwards the host's effective `GOPROXY`, `GOSUMDB`, `GOPRIVATE`, `GONOPROXY`, and `GONOSUMDB` settings
+to the container, including values saved with `go env -w`. Shell environment variables take precedence over saved settings.
+If Go is not installed on the host, the helper forwards those variables from the shell environment instead.
+These settings apply when the container runs; they are not baked into the image.
+
 ## Agent workflow (optional)
 
 We have some Claude/Codex skills in the `.claude/` directory. They require working and authenticated Claude Code and OpenAI Codex.
