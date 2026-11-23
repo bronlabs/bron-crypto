@@ -1,156 +1,65 @@
 package rvole_softspoken
 
 import (
-	"encoding/hex"
-	"fmt"
 	"io"
-	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
+	"github.com/bronlabs/bron-crypto/pkg/mpc/rvole"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
-	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/ot/extension/iknp03"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
 
-const (
-	transcriptLabel = "BRON_CRYPTO_SOFTSPOKEN_OT_MULTIPLY-"
-	gadgetLabel     = "BRON_CRYPTO_SOFTSPOKEN_OT_MULTIPLY-G-"
-	aTildeLabel     = "BRON_CRYPTO_SOFTSPOKEN_OT_MULTIPLY-A_TILDE-"
-	thetaLabel      = "BRON_CRYPTO_SOFTSPOKEN_OT_MULTIPLY-THETA-"
-	muVectorLabel   = "BRON_CRYPTO_SOFTSPOKEN_OT_MULTIPLY-MU_VECTOR-"
-	muLabel         = "BRON_CRYPTO_SOFTSPOKEN_OT_MULTIPLY-MU-"
-)
+// sigma is the number of check rows the extension adds to the ξ OTs.
+const sigma = 128
 
-type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ctx       *session.Context
-	copartyID sharing.ID
-	suite     *Suite[P, B, S]
-	xi        int
-	rho       int
-	prng      io.Reader
-	round     int
-}
-
-// Alice represents the sender party.
-type Alice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	participant[P, B, S]
-
+// Alice is the party with input a ∈ Z_q^ℓ; she is the OT-extension sender and
+// therefore holds the base-OT receiver output.
+type Alice[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	core   *rvole.Alice[softspoken.Message, P, B, S]
 	sender *softspoken.Sender
-	g      []S
-	alpha  [][2][]S
+	round  network.Round
 }
 
-// Bob represents the receiver party.
-type Bob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	participant[P, B, S]
-
+// Bob is the party that receives a random b; he is the OT-extension receiver
+// and therefore holds the base-OT sender output.
+type Bob[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	core     *rvole.Bob[softspoken.Message, P, B, S]
 	receiver *softspoken.Receiver
-	g        []S
-	beta     []byte
-	gamma    [][]S
+	round    network.Round
 }
 
-func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader, initialRound int) (*participant[P, B, S], error) {
-	if suite == nil || prng == nil || ctx == nil {
-		return nil, ErrNil.WithMessage("argument")
+// NewAlice builds Alice from the base-OT receiver output (κ chosen 128-bit
+// seeds and their choice bits, see softspoken.NewSender) and a cryptographic
+// prng for the masking column. The gadget vector is derived from the
+// transcript, which already binds the base OT, before the extension is set up.
+func NewAlice[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *rvole.Suite[P, B, S], baseOTReceiverOutput *ot.ReceiverOutput[iknp03.Seed], prng io.Reader) (*Alice[P, B, S], error) {
+	core, err := rvole.NewAlice[softspoken.Message](ctx, suite, prng)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create Alice")
 	}
-	if ctx.Quorum().Size() != 2 {
-		return nil, ErrValidation.WithMessage("invalid quorum size")
+	sender, err := softspoken.NewSender(ctx, baseOTReceiverOutput)
+	if err != nil {
+		return nil, errs.Wrap(err).WithMessage("cannot create the OT-extension sender")
 	}
-
-	kappa := suite.field.ElementSize() * 8
-	xi := kappa + base.CollisionResistance // normally this should be statistical security, but then xi is an invalid parameter for softspoken
-	rho := mathutils.CeilDiv(kappa, base.ComputationalSecurityBits)
-
-	copartyID := slices.Collect(ctx.OtherPartiesOrdered())[0]
-	sessionID := ctx.SessionID()
-	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionID[:])))
-	return &participant[P, B, S]{
-		ctx:       ctx,
-		copartyID: copartyID,
-		suite:     suite,
-		xi:        xi,
-		rho:       rho,
-		prng:      prng,
-		round:     initialRound,
-	}, nil
+	return &Alice[P, B, S]{core: core, sender: sender, round: 2}, nil
 }
 
-// NewAlice returns a new Alice participant.
-func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.ReceiverOutput, prng io.Reader) (*Alice[P, B, S], error) { //nolint:dupl // mirrors NewBob: the sender and receiver constructors are intentionally symmetric.
-	p, err := newParticipant(ctx, suite, prng, 2)
+// NewBob builds Bob from the base-OT sender output (κ pairs of 128-bit seeds,
+// see softspoken.NewReceiver) and a cryptographic prng for the choice bits.
+func NewBob[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *rvole.Suite[P, B, S], baseOTSenderOutput *ot.SenderOutput[iknp03.Seed], prng io.Reader) (*Bob[P, B, S], error) {
+	core, err := rvole.NewBob[softspoken.Message](ctx, suite, prng)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
+		return nil, errs.Wrap(err).WithMessage("cannot create Bob")
 	}
-	softspokenSuite, err := softspoken.NewSuite(p.xi, suite.l+p.rho, suite.hashFunc)
+	receiver, err := softspoken.NewReceiver(ctx, baseOTSenderOutput, prng)
 	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
+		return nil, errs.Wrap(err).WithMessage("cannot create the OT-extension receiver")
 	}
-
-	sender, err := softspoken.NewSender(ctx, seeds, softspokenSuite, prng)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create sender")
-	}
-	gadget, err := p.generateGadgetVector()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create gadget vector")
-	}
-
-	//nolint:exhaustruct // lazy initialisation
-	alice := &Alice[P, B, S]{
-		participant: *p,
-		sender:      sender,
-		g:           gadget,
-	}
-	return alice, nil
-}
-
-// NewBob returns a new Bob participant.
-func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], seeds *vsot.SenderOutput, prng io.Reader) (*Bob[P, B, S], error) { //nolint:dupl // mirrors NewAlice: the sender and receiver constructors are intentionally symmetric.
-	p, err := newParticipant(ctx, suite, prng, 1)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create participant / gadget vector")
-	}
-	softspokenSuite, err := softspoken.NewSuite(p.xi, suite.l+p.rho, suite.hashFunc)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create softspoken suite")
-	}
-
-	receiver, err := softspoken.NewReceiver(ctx, seeds, softspokenSuite, prng)
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create receiver")
-	}
-	gadget, err := p.generateGadgetVector()
-	if err != nil {
-		return nil, errs.Wrap(err).WithMessage("could not create gadget vector")
-	}
-
-	//nolint:exhaustruct // lazy initialisation
-	bob := &Bob[P, B, S]{
-		participant: *p,
-		receiver:    receiver,
-		g:           gadget,
-	}
-	return bob, nil
-}
-
-func (p *participant[P, B, S]) generateGadgetVector() ([]S, error) {
-	gadget := make([]S, p.xi)
-	for i := range gadget {
-		bytes, err := p.ctx.Transcript().ExtractBytes(gadgetLabel, uint(p.suite.field.WideElementSize()))
-		if err != nil {
-			return gadget, errs.Wrap(err).WithMessage("extracting bytes from transcript")
-		}
-		gadget[i], err = p.suite.field.FromWideBytes(bytes)
-		if err != nil {
-			return gadget, errs.Wrap(err).WithMessage("creating gadget scalar from bytes")
-		}
-	}
-	return gadget, nil
+	return &Bob[P, B, S]{core: core, receiver: receiver, round: 1}, nil
 }

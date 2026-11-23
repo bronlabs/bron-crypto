@@ -1,92 +1,52 @@
 package ot
 
-// Suite captures batch and block sizes for an OT instantiation.
-type Suite interface {
-	Xi() int
-	L() int
+import "unsafe"
+
+// Choices packs the receiver's choice bits of a batch of L OTs into L/8
+// elements: the choice bit of OT i is bit i%8 of element i/8, least-significant
+// bit first.
+type Choices []byte
+
+// BitLen returns the number of choice bits L.
+func (c Choices) BitLen() int {
+	return len(c) * 8
 }
 
-// DefaultSuite implements Suite with fixed parameters.
-type DefaultSuite struct {
-	xi int
-	l  int
+// Message is the type set of OT messages: fixed-width byte arrays, so that the
+// message length K is a property of the type and every message of a batch has
+// it by construction.
+type Message interface {
+	~[16]byte | ~[32]byte
 }
 
-// NewDefaultSuite constructs a suite with the given batch size xi and message block length l.
-func NewDefaultSuite(xi, l int) (*DefaultSuite, error) {
-	if xi <= 0 || l <= 0 {
-		return nil, ErrInvalidArgument.WithMessage("invalid args")
+type (
+	// Message128 is a 128-bit OT message.
+	Message128 [16]byte
+	// Message256 is a 256-bit OT message.
+	Message256 [32]byte
+)
+
+// MessageBitLen returns the message length K of M in bits.
+func MessageBitLen[M Message]() int {
+	var m M
+	return len(m) * 8
+}
+
+// MessageAsSlice returns a view of the message's storage. The slice aliases
+// the array: writes through it change the message, and it must not outlive it.
+func MessageAsSlice[M Message](m *M) []byte {
+	return unsafe.Slice(&(*m)[0], len(*m))
+}
+
+// messageFromBytes copies b into a message of type M, rejecting any other
+// width. It is the width check of the deserialisation boundary: the CBOR
+// decoder pads or truncates byte strings into fixed-size arrays silently, so
+// wire data is decoded into slices and converted here.
+func messageFromBytes[M Message](b []byte) (M, error) {
+	var m M
+	if len(b) != len(m) {
+		return m, ErrInvalidArgument.WithMessage("message holds %d bits, expected %d", len(b)*8, len(m)*8)
 	}
-	return &DefaultSuite{xi, l}, nil
-}
-
-// Xi returns the batch size (number of parallel OTs).
-func (s *DefaultSuite) Xi() int {
-	return s.xi
-}
-
-// L returns the message block length.
-func (s *DefaultSuite) L() int {
-	return s.l
-}
-
-// SenderOutput holds the sender's pair of messages for each OT and block index.
-type SenderOutput[D any] struct {
-	Messages [][2][]D `cbor:"messages"`
-}
-
-// InferredXi infers xi from the message count, or returns 0 if inconsistent.
-func (so *SenderOutput[D]) InferredXi() int {
-	return len(so.Messages)
-}
-
-// InferredL infers l from the first entry and validates consistency across all entries.
-func (so *SenderOutput[D]) InferredL() int {
-	if len(so.Messages) == 0 {
-		return 0
-	}
-
-	l := len(so.Messages[0][0])
-	for _, messages := range so.Messages {
-		l0 := len(messages[0])
-		l1 := len(messages[1])
-		if l0 != l {
-			return 0
-		}
-		if l1 != l {
-			return 0
-		}
-	}
-
-	return l
-}
-
-// ReceiverOutput holds the receiver's choice bits and selected messages.
-type ReceiverOutput[D any] struct {
-	Choices  []byte `cbor:"choices"`
-	Messages [][]D  `cbor:"messages"`
-}
-
-// InferredXi infers xi from choice bits and message count, returning 0 on mismatch.
-func (ro *ReceiverOutput[D]) InferredXi() int {
-	xi := len(ro.Messages)
-	if len(ro.Choices)*8 != len(ro.Messages) {
-		return 0
-	}
-
-	return xi
-}
-
-// InferredL infers l from the first row and validates consistency across all entries.
-func (ro *ReceiverOutput[D]) InferredL() int {
-	if len(ro.Messages) == 0 {
-		return 0
-	}
-	l := len(ro.Messages[0])
-	for _, messages := range ro.Messages {
-		if len(messages) != l {
-			return 0
-		}
-	}
-	return l
+	copy(MessageAsSlice(&m), b)
+	return m, nil
 }
