@@ -25,7 +25,7 @@ starts.
 
 ```
 Alice (a ∈ Z_q^ℓ)                                       Bob
-                                                        g = transcript(…) ∈ Z_q^ξ   (both)
+                                                        g = H(sid, ℓ, ξ) ∈ Z_q^ξ    (both)
                    <==== ξ random OTs, see Instantiations ====>
                                                         Choose: β ∈ {0,1}^ξ the choice bits,
 Multiply: both keys k_j^0, k_j^1 of OT j                  k_j the received key of OT j
@@ -47,11 +47,16 @@ Multiply: both keys k_j^0, k_j^1 of OT j                  k_j the received key o
   from the extension or 256 bits from the base OTs, is expanded by cSHAKE256 into
   the ℓ + ρ field elements of its row, so one choice bit governs a whole row by construction, which is the $F_{EOTE}(Z_q^{ℓ+ρ}, ξ)$ model the
   DKLs23 proof assumes.
-- **Gadget vector.** $g$ is extracted from the transcript when the participants are
-  constructed, before the OTs run; this is Variant III's "g fixed at the onset", with
-  the number of OTs raised accordingly. Bob therefore knows $b$ as soon as his OTs
-  complete, which is what DKLs23 signing needs for $ψ = φ − χ$ in the same round as
-  its own Alice messages.
+- **Gadget vector.** $g$ is derived from the session identifier and the parameters
+  ℓ, ξ alone, on a standalone transcript, before any message is exchanged: Variant
+  III's "g fixed at the onset" (Asharov26, Theorem B.17, $g = RO(sid)$), the common
+  reference string of DKLs23 Protocol 5.2, footnote a, with the number of OTs raised
+  accordingly. Neither party can influence it; in particular it does not depend on
+  the OT messages, even when the OTs ran earlier on the same session, since a gadget
+  that Alice could grind through her messages would put her in Asharov26's Variant II
+  game without its extra 2κ OTs. Bob therefore knows $b$ as soon as his OTs complete,
+  which is what DKLs23 signing needs for $ψ = φ − χ$ in the same round as its own
+  Alice messages.
 - **Consistency check.** The challenge $θ$ is extracted from the transcript after $ã$
   is bound to it, and that transcript already holds every OT message: the base-OT
   messages and, for the extension, its columns and check responses. Bob recomputes

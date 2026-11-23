@@ -4,7 +4,8 @@
 // "Revisiting DKLs Threshold ECDSA" (eprint 2026/976, Section 4.4 and Theorem
 // B.17):
 //
-//   - the gadget vector g is fixed from the transcript before the OTs run, as
+//   - the gadget vector g is derived from the session identifier alone, before
+//     any message is exchanged, as
 //     in DKLs23, so the receiver knows b = ⟨g, β⟩ as soon as the OTs complete,
 //     and the number of OTs ξ is raised to the bound of Theorem B.17 so that b
 //     stays statistically close to uniform against an adversary that fixes

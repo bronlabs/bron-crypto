@@ -21,6 +21,11 @@ const (
 	phiLabel                = "BRON_CRYPTO-MRR21-PHI-"
 	kaSaltLabel             = "BRON_CRYPTO-MRR21-KA-SALT-"
 	kaSaltLength            = 32
+
+	// MaxBatch bounds the batch length L. The key-agreement tag encodes the
+	// instance index in 32 bits, and a batch costs one public-key operation
+	// per OT anyway; the bound matches the extension's MaxExtension.
+	MaxBatch = 1 << 20
 )
 
 // participant holds what both roles of the batched OT share: the two-party
@@ -44,7 +49,8 @@ type participantState[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEle
 
 // newParticipant validates the common inputs of both roles: a non-nil session
 // with exactly two parties, a non-nil group whose scalar structure is a prime
-// field (exponents are sampled from it), L a positive multiple of 8, and a
+// field (exponents are sampled from it), L a positive multiple of 8 at most
+// MaxBatch, and a
 // non-nil prng, which must be cryptographically secure since it generates the
 // secret exponents. The constructors of both roles then append the protocol's
 // domain separator through appendDomainSeparator.
@@ -62,8 +68,8 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	if _, ok := group.ScalarStructure().(algebra.PrimeField[S]); !ok {
 		return nilParticipant, ot.ErrInvalidArgument.WithMessage("group scalar structure must be a prime field")
 	}
-	if l <= 0 || l%8 != 0 {
-		return nilParticipant, ot.ErrInvalidArgument.WithMessage("batch length L must be a positive multiple of 8, got %d", l)
+	if l <= 0 || l%8 != 0 || l > MaxBatch {
+		return nilParticipant, ot.ErrInvalidArgument.WithMessage("batch length L must be a positive multiple of 8 at most %d, got %d", MaxBatch, l)
 	}
 	if prng == nil {
 		return nilParticipant, ot.ErrInvalidArgument.WithMessage("prng must not be nil")

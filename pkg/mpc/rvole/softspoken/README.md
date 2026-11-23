@@ -10,7 +10,8 @@ outputs. It is the instantiation `dkls23/signing/softspoken` uses.
 Bob is the extension receiver and holds the base-OT sender output; Alice is the
 extension sender and holds the base-OT receiver output. Both are constructed from
 those outputs on the session the base OTs ran on, so the transcript holds the base-OT
-messages before the gadget $g$ and the extension are derived.
+messages before the extension's challenge and the rVOLE's θ are derived; the gadget
+$g$ depends on the session identifier only.
 
 ```
 Alice (a ∈ Z_q^ℓ)                                        Bob

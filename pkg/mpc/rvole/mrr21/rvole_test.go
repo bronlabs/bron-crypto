@@ -2,6 +2,7 @@ package rvole_mrr21_test
 
 import (
 	"bytes"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -182,6 +183,10 @@ func TestValidation(t *testing.T) {
 
 		a := randomInput(t, l)
 		_, _, err = alice.Round2(bobR1, a[:1])
+		require.ErrorIs(t, err, rvole.ErrInvalidArgument)
+		bad := slices.Clone(a)
+		bad[0] = nil
+		_, _, err = alice.Round2(bobR1, bad)
 		require.ErrorIs(t, err, rvole.ErrInvalidArgument)
 		aliceR2, _, err := alice.Round2(bobR1, a)
 		require.NoError(t, err)

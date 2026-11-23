@@ -26,7 +26,7 @@ func (bob *Bob[P, B, S]) Round1() (*Round1P2P[P, B, S], S, error) {
 	return &Round1P2P[P, B, S]{OT: otMessage}, b, nil
 }
 
-// Round2 checks a has exactly ℓ entries before any state advances, then
+// Round2 validates a before any state advances, then
 // completes the OT extension on Bob's message, which binds the columns
 // and the check responses to the transcript before θ is derived, and runs
 // Alice's multiplication step on the ξ output pairs. A failed OT consistency
@@ -38,8 +38,8 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P[P, B, S], a []S) (*Round2P2P[P
 	if err := r1.Validate(alice, alice.core.CopartyID()); err != nil {
 		return nil, nil, errs.Wrap(err).WithMessage("invalid message")
 	}
-	if l := alice.core.Suite().L(); len(a) != l {
-		return nil, nil, rvole.ErrInvalidArgument.WithMessage("%d inputs, expected %d", len(a), l)
+	if err := alice.core.ValidateInput(a); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid input")
 	}
 	otOutput, err := alice.sender.Extend(r1.OT)
 	if err != nil {

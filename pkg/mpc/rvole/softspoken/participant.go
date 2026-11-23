@@ -36,8 +36,8 @@ type Bob[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Prim
 
 // NewAlice builds Alice from the base-OT receiver output (κ chosen 128-bit
 // seeds and their choice bits, see softspoken.NewSender) and a cryptographic
-// prng for the masking column. The gadget vector is derived from the
-// transcript, which already binds the base OT, before the extension is set up.
+// prng for the masking column. The gadget vector depends on the session
+// identifier only; the extension is set up afterwards on the same session.
 func NewAlice[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *rvole.Suite[P, B, S], baseOTReceiverOutput *ot.ReceiverOutput[iknp03.Seed], prng io.Reader) (*Alice[P, B, S], error) {
 	core, err := rvole.NewAlice[softspoken.Message](ctx, suite, prng)
 	if err != nil {

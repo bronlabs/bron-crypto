@@ -12,10 +12,14 @@ import (
 const (
 	transcriptLabel = "BRON_CRYPTO-RVOLE-"
 	gadgetLabel     = "BRON_CRYPTO-RVOLE-GADGET-"
-	aTildeLabel     = "BRON_CRYPTO-RVOLE-A_TILDE-"
-	thetaLabel      = "BRON_CRYPTO-RVOLE-THETA-"
-	muVectorLabel   = "BRON_CRYPTO-RVOLE-MU_VECTOR-"
-	muLabel         = "BRON_CRYPTO-RVOLE-MU-"
+	// gadgetTranscriptLabel and gadgetSeedLabel name the standalone transcript
+	// the gadget vector is derived from and the seed appended to it.
+	gadgetTranscriptLabel = "BRON_CRYPTO-RVOLE-GADGET-TRANSCRIPT-"
+	gadgetSeedLabel       = "BRON_CRYPTO-RVOLE-GADGET-SEED-"
+	aTildeLabel           = "BRON_CRYPTO-RVOLE-A_TILDE-"
+	thetaLabel            = "BRON_CRYPTO-RVOLE-THETA-"
+	muVectorLabel         = "BRON_CRYPTO-RVOLE-MU_VECTOR-"
+	muLabel               = "BRON_CRYPTO-RVOLE-MU-"
 
 	// rho is the number of masking columns â appended to Alice's input. One
 	// suffices whenever log q ≥ κ + 2·log ξ (Asharov, Claim B.8), which

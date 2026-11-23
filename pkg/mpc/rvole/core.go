@@ -1,6 +1,7 @@
 package rvole
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"slices"
@@ -15,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/mpc/session"
 	"github.com/bronlabs/bron-crypto/pkg/mpc/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 type participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -45,9 +47,9 @@ type Bob[M ot.Message, P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 }
 
 // newParticipant validates the shared inputs, appends the protocol's domain
-// separator and derives the gadget vector g ∈ Z_q^ξ from the transcript. Both
-// roles must construct their participant at the same point of the session, so
-// that g is the same on both sides; the OT protocol is set up afterwards.
+// separator and derives the gadget vector g ∈ Z_q^ξ from the session
+// identifier. Both roles must construct their participant at the same point
+// of the session so that their transcripts stay aligned for θ and μ.
 func newParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S], prng io.Reader) (participant[P, B, S], error) {
 	if ctx == nil || suite == nil || prng == nil {
 		return participant[P, B, S]{}, ErrInvalidArgument.WithMessage("context, suite and prng must not be nil")
@@ -57,16 +59,9 @@ func newParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	}
 	ctx.Transcript().AppendDomainSeparator(fmt.Sprintf("%s%d-%d", transcriptLabel, suite.l, suite.xi))
 
-	g := make([]S, suite.xi)
-	for j := range g {
-		raw, err := ctx.Transcript().ExtractBytes(gadgetLabel, uint(suite.field.WideElementSize()))
-		if err != nil {
-			return participant[P, B, S]{}, errs.Wrap(err).WithMessage("cannot extract gadget element %d", j)
-		}
-		g[j], err = suite.field.FromWideBytes(raw)
-		if err != nil {
-			return participant[P, B, S]{}, errs.Wrap(err).WithMessage("cannot reduce gadget element %d", j)
-		}
+	g, err := deriveGadget(ctx, suite)
+	if err != nil {
+		return participant[P, B, S]{}, errs.Wrap(err).WithMessage("cannot derive the gadget vector")
 	}
 	return participant[P, B, S]{
 		ctx:       ctx,
@@ -75,6 +70,34 @@ func newParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		prng:      prng,
 		g:         g,
 	}, nil
+}
+
+// deriveGadget derives the gadget vector g ∈ Z_q^ξ from the session
+// identifier and the parameters ℓ, ξ alone, as the common reference string of
+// the session (DKLs23 Protocol 5.2, footnote a; Asharov, Theorem B.17, where
+// g = RO(sid)). It is fixed before any message is exchanged, so neither party
+// can influence it, which the Variant III bound on ξ relies on: a g that
+// depended on the OT messages could be ground by Alice into one that weakens
+// the extraction of b, the adversary of Asharov's Variant II. The derivation
+// uses a standalone transcript so that it is independent of whatever else ran
+// on the session.
+func deriveGadget[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *session.Context, suite *Suite[P, B, S]) ([]S, error) {
+	sid := ctx.SessionID()
+	transcript := hagrid.NewTranscript(gadgetTranscriptLabel)
+	transcript.AppendBytes(gadgetSeedLabel, sid[:], binary.LittleEndian.AppendUint64(nil, uint64(suite.l)), binary.LittleEndian.AppendUint64(nil, uint64(suite.xi)))
+
+	g := make([]S, suite.xi)
+	for j := range g {
+		raw, err := transcript.ExtractBytes(gadgetLabel, uint(suite.field.WideElementSize()))
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot extract gadget element %d", j)
+		}
+		g[j], err = suite.field.FromWideBytes(raw)
+		if err != nil {
+			return nil, errs.Wrap(err).WithMessage("cannot reduce gadget element %d", j)
+		}
+	}
+	return g, nil
 }
 
 // CopartyID returns the identifier of the other party.
@@ -106,6 +129,24 @@ func NewBob[M ot.Message, P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 	return &Bob[M, P, B, S]{participant: p, beta: nil, gamma: nil, chosen: false, finished: false}, nil
 }
 
+// ValidateInput checks that a is a well-formed input: exactly ℓ non-nil
+// elements of the suite's field. The instantiations call it before their OT
+// step, so that a bad input never advances the OT state or the transcript.
+func (alice *Alice[M, P, B, S]) ValidateInput(a []S) error {
+	if len(a) != alice.suite.l {
+		return ErrInvalidArgument.WithMessage("input holds %d elements, expected %d", len(a), alice.suite.l)
+	}
+	for i, ai := range a {
+		if utils.IsNil(ai) {
+			return ErrInvalidArgument.WithMessage("input element %d must not be nil", i)
+		}
+		if ai.Structure().Name() != alice.suite.field.Name() {
+			return ErrInvalidArgument.WithMessage("input element %d is of %s, expected %s", i, ai.Structure().Name(), alice.suite.field.Name())
+		}
+	}
+	return nil
+}
+
 // Multiply is Alice's step once the ξ OTs have run: it expands both outputs of
 // every OT into α_j⁰, α_j¹ ∈ Z_q^{ℓ+ρ}, masks the input a (and ρ random masks
 // â) into ã_j = α_j⁰ − α_j¹ + (a ‖ â), derives θ from the transcript, which at
@@ -120,13 +161,8 @@ func (alice *Alice[M, P, B, S]) Multiply(pairs [][2]M, a []S) (*MultiplyMessage[
 	if len(pairs) != xi {
 		return nil, nil, ErrInvalidArgument.WithMessage("%d OT outputs, expected %d", len(pairs), xi)
 	}
-	if len(a) != l {
-		return nil, nil, ErrInvalidArgument.WithMessage("input holds %d elements, expected %d", len(a), l)
-	}
-	for i, ai := range a {
-		if utils.IsNil(ai) {
-			return nil, nil, ErrInvalidArgument.WithMessage("input element %d must not be nil", i)
-		}
+	if err := alice.ValidateInput(a); err != nil {
+		return nil, nil, errs.Wrap(err).WithMessage("invalid input")
 	}
 
 	alpha := make([][2][]S, xi)

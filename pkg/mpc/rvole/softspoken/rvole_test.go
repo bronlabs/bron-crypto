@@ -3,6 +3,7 @@ package rvole_softspoken_test
 import (
 	"bytes"
 	"io"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -237,6 +238,10 @@ func TestValidation(t *testing.T) {
 
 		a := randomInput(t, l)
 		_, _, err = alice.Round2(r1, a[:1])
+		require.ErrorIs(t, err, rvole.ErrInvalidArgument)
+		bad := slices.Clone(a)
+		bad[0] = nil
+		_, _, err = alice.Round2(r1, bad)
 		require.ErrorIs(t, err, rvole.ErrInvalidArgument)
 		_, _, err = alice.Round2(nil, a)
 		require.ErrorIs(t, err, rvole.ErrValidation)

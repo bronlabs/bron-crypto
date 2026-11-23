@@ -148,6 +148,16 @@ func TestMRR21_RoundOrderAndValidation(t *testing.T) {
 		require.ErrorIs(t, err, ot.ErrInvalidArgument)
 	})
 
+	t.Run("constructors reject a batch above MaxBatch", func(t *testing.T) {
+		t.Parallel()
+		prng := pcg.NewRandomised()
+		ctxs := twoPartyContexts(t, prng)
+		_, err := mrr21.NewSender[ot.Message128](ctxs[senderID], curve, mrr21.MaxBatch+8, prng)
+		require.ErrorIs(t, err, ot.ErrInvalidArgument)
+		_, err = mrr21.NewReceiver[ot.Message128](ctxs[receiverID], curve, mrr21.MaxBatch+8, prng)
+		require.ErrorIs(t, err, ot.ErrInvalidArgument)
+	})
+
 	t.Run("nil round 1 messages", func(t *testing.T) {
 		t.Parallel()
 		sender, receiver, _ := newPair(t)

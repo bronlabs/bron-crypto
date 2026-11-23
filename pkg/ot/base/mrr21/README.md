@@ -16,7 +16,8 @@ transformations of MR19, Section 3.
 
 ## Protocol
 
-The batch is parameterised by the number of OTs L, a positive multiple of 8, and by the
+The batch is parameterised by the number of OTs L, a positive multiple of 8 at most
+`MaxBatch` = 2²⁰, and by the
 message type M of `ot` (`Message128` or `Message256`), which fixes the message length
 K. Both parties share a prime-order group G with generator G and scalar field $Z_q$.
 
