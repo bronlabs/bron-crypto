@@ -12,7 +12,7 @@ import (
 
 // benchLengths are the numbers of random OTs l one extension is benchmarked
 // on; the extension adds its 128 check rows on top.
-var benchLengths = []int{1024, 1 << 16}
+var benchLengths = []int{1024, 1 << 15}
 
 // BenchmarkSoftSpoken times one extension (both parties, in process, messages
 // passed without serialisation) per iteration and reports the time per OT:
