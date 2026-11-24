@@ -52,8 +52,9 @@ func (r *Receiver) Extend(l int) (*ot.ReceiverOutput[Message], *RoundExtendP2P, 
 	if l <= 0 || l%sigma != 0 {
 		return nil, nil, ot.ErrInvalidArgument.WithMessage("l must be a positive multiple of %d, got %d", sigma, l)
 	}
-	if l+sigma > iknp03.MaxExtension {
-		return nil, nil, ot.ErrInvalidArgument.WithMessage("l + %d must be at most %d, got %d", sigma, iknp03.MaxExtension, l+sigma)
+	const maxLength = iknp03.MaxExtension - sigma
+	if l > maxLength {
+		return nil, nil, ot.ErrInvalidArgument.WithMessage("l must be at most %d, got %d", maxLength, l)
 	}
 
 	output, message, err := r.extend(l)

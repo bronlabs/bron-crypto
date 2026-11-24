@@ -40,6 +40,9 @@ func NewCosigningAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement
 	if !core.signed {
 		return nil, ErrRound.WithMessage("the cosigner has not produced its partial signature")
 	}
+	if core.aggregated {
+		return nil, ErrRound.WithMessage("the cosigner has already aggregated the signature")
+	}
 	return &cosigningAggregator[P, B, S]{core: core}, nil
 }
 
@@ -50,7 +53,7 @@ func (a *cosigningAggregator[P, B, S]) Aggregate(partialSignatures map[sharing.I
 
 // aggregate is the output step of Segev's refined protocol run by a cosigner.
 func (c *Core[P, B, S]) aggregate(partialSignatures map[sharing.ID]*dkls23.PartialSignature[P, B, S]) (*sigecdsa.Signature[S], error) {
-	if !c.signed {
+	if !c.signed || c.aggregated {
 		return nil, ErrRound.WithMessage("no partial signature to aggregate with, or already aggregated")
 	}
 	field := c.suite.ScalarField()
@@ -99,7 +102,7 @@ func (c *Core[P, B, S]) aggregate(partialSignatures map[sharing.ID]*dkls23.Parti
 		return nil, errs.Join(base.ErrAbort, errs.Wrap(err)).WithMessage("signature is invalid")
 	}
 
-	c.signed = false
+	c.aggregated = true
 	return signature, nil
 }
 
@@ -110,11 +113,10 @@ type nonCosigningAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement
 }
 
 // NewNonCosigningAggregator returns a stateless aggregator for a party that did
-// not take part in the signing session. It cannot know which nonce point the
-// honest cosigners agreed on, so it checks that all partial signatures agree
-// with each other, attributing a mismatch to the first partial signature that
-// differs from the others, and enforces sign consistency through the low-s
-// rule, the alternative Segev allows for Step 4c.
+// not take part in the signing session. It requires all partial signatures to
+// carry the same nonce and reports disagreement as an unattributed abort.
+// It enforces sign consistency through the low-s rule, the alternative Segev
+// allows for Step 4c.
 func NewNonCosigningAggregator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *sigecdsa.Suite[P, B, S], publicKey *sigecdsa.PublicKey[P, B, S], message []byte) (PartialSignatureAggregator[P, B, S], error) {
 	if suite == nil || publicKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("suite and public key must not be nil")
@@ -139,7 +141,7 @@ func (a *nonCosigningAggregator[P, B, S]) Aggregate(partialSignatures map[sharin
 			nonce = psig.R()
 			first = false
 		} else if !psig.R().Equal(nonce) {
-			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("nonce mismatch in partial signature from %d", id)
+			return nil, base.ErrAbort.WithMessage("partial signatures disagree on the nonce")
 		}
 		u = u.Add(psig.U())
 		w = w.Add(psig.W())

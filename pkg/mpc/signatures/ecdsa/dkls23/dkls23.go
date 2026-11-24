@@ -61,7 +61,7 @@ func (ps *PartialSignature[P, B, S]) MarshalCBOR() ([]byte, error) {
 
 // UnmarshalCBOR decodes the partial signature from CBOR.
 func (ps *PartialSignature[P, B, S]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*partialSignatureDTO[P, B, S]](data)
+	dto, err := serde.UnmarshalCBOR[partialSignatureDTO[P, B, S]](data)
 	if err != nil {
 		return errs.Wrap(err).WithMessage("failed to unmarshal dkls23 PartialSignature")
 	}
@@ -96,7 +96,10 @@ func (ps *PartialSignature[P, B, S]) W() S {
 	return ps.w
 }
 
-// NewPartialSignature returns a new partial signature.
+// NewPartialSignature validates and constructs a signing fragment. It rejects
+// zero fragment scalars as degenerate contributions. In the ideal uniform-mask
+// model, with a nonzero reduced x-coordinate of the aggregate nonce, each of u
+// and w is zero with probability 1/q, about 2^-256 on secp256k1 and P-256.
 func NewPartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](r P, u, w S) (*PartialSignature[P, B, S], error) {
 	if utils.IsNil(r) || utils.IsNil(u) || utils.IsNil(w) || r.IsOpIdentity() || w.IsZero() || u.IsZero() {
 		return nil, ErrFailed.WithMessage("invalid arguments")

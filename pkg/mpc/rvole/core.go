@@ -258,7 +258,7 @@ func (bob *Bob[M, P, B, S]) Choose(choices ot.Choices, keys []M) (S, error) {
 			return nilS, errs.Wrap(err).WithMessage("cannot expand row %d", j)
 		}
 	}
-	bob.beta = choices
+	bob.beta = slices.Clone(choices)
 	bob.gamma = gamma
 
 	b := field.Zero()
@@ -324,10 +324,8 @@ func (bob *Bob[M, P, B, S]) Finish(m *MultiplyMessage[P, B, S]) ([]S, error) {
 
 // bitElement returns β_j as a field element.
 func (bob *Bob[M, P, B, S]) bitElement(j int) S {
-	if (bob.beta[j/8]>>(j%8))&0b1 == 1 {
-		return bob.suite.field.One()
-	}
-	return bob.suite.field.Zero()
+	bit := (bob.beta[j/8] >> (j % 8)) & 1
+	return bob.suite.field.FromUint64(uint64(bit))
 }
 
 // deriveTheta binds ã to the transcript and extracts the challenge

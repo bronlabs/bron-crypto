@@ -239,11 +239,16 @@ func TestAggregatorsRejectSplitView(t *testing.T) {
 	require.ErrorIs(t, err, base.ErrAbort)
 
 	// Aggregating succeeds exactly once per cosigner: the state is consumed.
-	online, err = signing.NewCosigningAggregator(cosigners[sharing.ID(2)].Core())
+	core := cosigners[sharing.ID(2)].Core()
+	online, err = signing.NewCosigningAggregator(core)
 	require.NoError(t, err)
 	_, err = online.Aggregate(partialSignatures)
 	require.NoError(t, err)
 	_, err = online.Aggregate(partialSignatures)
+	require.ErrorIs(t, err, signing.ErrRound)
+	_, err = signing.NewCosigningAggregator(core)
+	require.ErrorIs(t, err, signing.ErrRound)
+	_, err = core.Finish(message)
 	require.ErrorIs(t, err, signing.ErrRound)
 }
 

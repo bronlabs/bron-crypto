@@ -32,6 +32,11 @@ extension receiver is the base-OT sender and holds both 128-bit seeds of every b
 OT. One `Extend` call produces ℓ random OTs, ℓ a positive multiple of σ = 128 with
 ℓ + σ at most `iknp03.MaxExtension`.
 
+Run fresh base OTs for each new extension participant pair. Use each role's
+base-OT output to initialise exactly one extension participant. For successive
+`Extend` calls, keep the same participant pair so the PRG streams continue, and
+run matching calls in the same order on both sides.
+
 ```
 Receiver                                                       Sender (Δ)
 

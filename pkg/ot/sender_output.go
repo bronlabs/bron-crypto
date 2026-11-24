@@ -70,7 +70,7 @@ func (s *SenderOutput[M]) MarshalCBOR() ([]byte, error) {
 // data satisfies the same invariants as constructed data. This is a
 // deserialisation trust boundary.
 func (s *SenderOutput[M]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*senderOutputDTO](data)
+	dto, err := serde.UnmarshalCBOR[senderOutputDTO](data)
 	if err != nil {
 		return errs.Join(ErrSerialisation, errs.Wrap(err)).WithMessage("failed to unmarshal sender output")
 	}
@@ -171,7 +171,7 @@ func (s *SenderCorrelatedOutput[M]) MarshalCBOR() ([]byte, error) {
 // data satisfies the same invariants as constructed data. This is a
 // deserialisation trust boundary.
 func (s *SenderCorrelatedOutput[M]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*senderCorrelatedOutputDTO](data)
+	dto, err := serde.UnmarshalCBOR[senderCorrelatedOutputDTO](data)
 	if err != nil {
 		return errs.Join(ErrSerialisation, errs.Wrap(err)).WithMessage("failed to unmarshal sender correlated output")
 	}

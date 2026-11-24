@@ -77,6 +77,10 @@ A cosigning aggregator can be used once: aggregation consumes the session state.
 
 ## Transcript binding
 
+Run [session setup](../../../../session/README.md) for every signing run and pass the
+resulting `session.Context` to `NewCosigner` or `NewRunner`. Its pairwise seeds are used
+to derive that run's zero shares.
+
 The signing transcript starts with the instantiation's domain separator and the
 session identifier; the commitment key is extracted from it in round 1. Every pairwise
 sub-session, derived by `Core.PairContext` for an ordered pair (Alice, Bob), carries

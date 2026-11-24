@@ -30,6 +30,8 @@ Round2: Extend on the message, consistency                 Choose → b
 - `NewAlice(ctx, suite, baseOTReceiverOutput, prng)` and
   `NewBob(ctx, suite, baseOTSenderOutput, prng)` take the outputs of κ base OTs with
   `Message128` outputs, for example `ot/base/mrr21`, run with the roles reversed.
+  Run fresh base OTs for each rVOLE participant pair and use each role's output
+  to initialise exactly one participant.
 - `Alice.Round2` checks that $a$ has exactly ℓ entries before running the extension:
   the extension advances the sender's PRG state, so a bad input must not consume it.
 

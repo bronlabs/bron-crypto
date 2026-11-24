@@ -2,13 +2,15 @@
 
 ## Description
 The setup protocol must run before other higher-level MPC protocols (DKG, threshold signing, etc.).
+For each new protocol session, run setup and use the `Context` it returns. The context,
+its clones, and its sub-contexts belong to that session.
 
 Its job is to build a shared session foundation:
 1. A common `SessionID` for domain separation.
 2. A synchronized transcript root that all parties derive in the same way.
 3. Deterministic pairwise seeds between each pair of parties.
 
-Those pairwise seeds are then reused by other building blocks, including additive zero-share sampling,
+Within that session, the pairwise seeds support additive zero-share sampling,
 sub-context derivation, and transcript-scoped randomness.
 
 Higher-level protocols need consistent shared context, but without introducing a dealer.

@@ -47,7 +47,10 @@ type Opening[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.
 }
 
 // ValidateOpening checks that an opening is complete and that its points are
-// non-zero elements of the prime-order group.
+// non-identity elements of the prime-order group. Signing rejects degenerate
+// point contributions at the message boundary. In the honest uniform model,
+// each opening point is the identity with probability 1/q, where q is the
+// scalar field order. This is about 2^-256 on secp256k1 and P-256.
 func ValidateOpening[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](opening *Opening[P, B, S]) error {
 	if opening == nil || utils.IsNil(opening.BigR) || utils.IsNil(opening.Pk) {
 		return ErrValidation.WithMessage("opening and its points must not be nil")
@@ -73,7 +76,8 @@ type CheckValues[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 }
 
 // ValidateCheckValues checks that the values are present and that the check
-// points are non-zero elements of the prime-order group.
+// points satisfy the same non-identity rule as opening points. In the ideal
+// rVOLE model, each check point is the identity with probability 1/q.
 func ValidateCheckValues[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](check *CheckValues[P, B, S]) error {
 	if check == nil || utils.IsNil(check.GammaU) || utils.IsNil(check.GammaV) || utils.IsNil(check.Psi) {
 		return ErrValidation.WithMessage("check values must not be nil")
@@ -125,6 +129,7 @@ type Core[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pri
 	committed      bool
 	keyed          bool
 	signed         bool
+	aggregated     bool
 
 	// Kept after Finish for the cosigning aggregator: the aggregated nonce
 	// point R, its x-coordinate r_x as a scalar and the message scalar H(m).
@@ -414,7 +419,7 @@ func (c *Core[P, B, S]) Verify(id sharing.ID, d []S, check *CheckValues[P, B, S]
 //
 // and returns the partial signature (R, u_i, w_i). Every counterparty must
 // have been verified. The aggregated nonce, r_x and H(m) are kept for the
-// cosigning aggregator.
+// cosigning aggregator. Finish succeeds at most once per core.
 func (c *Core[P, B, S]) Finish(message []byte) (*dkls23.PartialSignature[P, B, S], error) {
 	if c.signed {
 		return nil, ErrRound.WithMessage("already signed")

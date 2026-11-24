@@ -81,7 +81,7 @@ func (m *RoundExtendP2P) MarshalCBOR() ([]byte, error) {
 // F_{2^sigma}. This is a deserialisation trust boundary; the structural checks
 // that need the sender's parameters are done by Validate.
 func (m *RoundExtendP2P) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*roundExtendP2PDTO](data)
+	dto, err := serde.UnmarshalCBOR[roundExtendP2PDTO](data)
 	if err != nil {
 		return errs.Join(ot.ErrSerialisation, errs.Wrap(err)).WithMessage("failed to unmarshal extend message")
 	}

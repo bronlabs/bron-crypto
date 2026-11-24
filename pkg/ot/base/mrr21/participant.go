@@ -22,10 +22,9 @@ const (
 	kaSaltLabel             = "BRON_CRYPTO-MRR21-KA-SALT-"
 	kaSaltLength            = 32
 
-	// MaxBatch bounds the batch length L. The key-agreement tag encodes the
-	// instance index in 32 bits, and a batch costs one public-key operation
-	// per OT anyway; the bound matches the extension's MaxExtension.
-	MaxBatch = 1 << 20
+	// MaxBatch bounds the batch length L below the CBOR array limit. The
+	// receiver's message contains one POPF per OT.
+	MaxBatch = 1 << 16
 )
 
 // participant holds what both roles of the batched OT share: the two-party

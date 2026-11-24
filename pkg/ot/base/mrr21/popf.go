@@ -129,7 +129,7 @@ func (popf *MasnyRindalPopf[G, S]) MarshalCBOR() ([]byte, error) {
 // deserialisation trust boundary: a POPF comes from the OT receiver, who may be
 // malicious.
 func (popf *MasnyRindalPopf[G, S]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*masnyRindalPopfDTO[G, S]](data)
+	dto, err := serde.UnmarshalCBOR[masnyRindalPopfDTO[G, S]](data)
 	if err != nil {
 		return errs.Join(ot.ErrSerialisation, errs.Wrap(err)).WithMessage("failed to unmarshal popf")
 	}

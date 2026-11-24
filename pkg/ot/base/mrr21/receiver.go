@@ -2,6 +2,7 @@ package mrr21
 
 import (
 	"io"
+	"slices"
 
 	"github.com/bronlabs/errs-go/errs"
 
@@ -55,6 +56,7 @@ func (r *Receiver[M, G, S]) Round1(choices ot.Choices) (*ReceiverRound1P2P[M, G,
 	if choices.BitLen() != r.l {
 		return nil, ot.ErrInvalidArgument.WithMessage("choices holds %d bits, expected %d", choices.BitLen(), r.l)
 	}
+	choices = slices.Clone(choices)
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](r.group.ScalarStructure())
 	b := make([]S, r.l)

@@ -83,7 +83,7 @@ func (r *ReceiverOutput[M]) MarshalCBOR() ([]byte, error) {
 // satisfies the same invariants as constructed data. This is a deserialisation
 // trust boundary.
 func (r *ReceiverOutput[M]) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[*receiverOutputDTO](data)
+	dto, err := serde.UnmarshalCBOR[receiverOutputDTO](data)
 	if err != nil {
 		return errs.Join(ErrSerialisation, errs.Wrap(err)).WithMessage("failed to unmarshal receiver output")
 	}

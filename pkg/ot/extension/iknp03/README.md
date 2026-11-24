@@ -26,6 +26,9 @@ are κ bits long: 128 base OTs for `Message128`, 256 for `Message256`. The base-
 messages are always 128-bit seeds (`Seed = ot.Message128`), the input of one
 cSHAKE256 PRG each.
 
+Run fresh base OTs for each new extension participant pair. Use each role's
+base-OT output to initialise exactly one extension participant.
+
 ```
 Receiver (base-OT sender: k_i^0, k_i^1)              Sender (base-OT receiver: Δ_i, k_i^{Δ_i})
 
@@ -46,7 +49,7 @@ output t_j                                                         output (q_j, 
   figure consumes. cSHAKE256 on a uniform secret seed is a PRG in the random-oracle
   model, which the extension built on top assumes anyway; no paper is cited for it.
 - **Columns.** The receiver sends $u_i = t_i^0 ⊕ t_i^1 ⊕ x$ for every base OT, l bits
-  each; l must be a positive multiple of 64 and at most `MaxExtension` = 2²⁰. The
+  each; l must be a positive multiple of 64 and at most `MaxExtension` = 2¹⁶. The
   sender forms $q_i = Δ_i·u_i ⊕ t_i$, which equals $t_i^0 ⊕ Δ_i·x$.
 - **Transposition.** Both parties transpose their κ × l bit matrix in 64 × 64 blocks
   with the recursive block-swap method of [Chou17](https://eprint.iacr.org/2017/793)
